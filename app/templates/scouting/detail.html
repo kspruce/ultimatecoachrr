@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ report.team_name }}</h1>
+            <p class="lead">
+                {% if report.date %}
+                    {{ report.date.strftime('%B %d, %Y') }}
+                {% endif %}
+                {% if report.tournament %}
+                    | {{ report.tournament.name }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-outline-primary">Edit Report</a>
+                <a href="{{ url_for('scouting.index') }}" class="btn btn-secondary">Back to Reports</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Team Analysis</h5>
+                </div>
+                <div class="card-body">
+                    {% if report.offense_strategy %}
+                    <h6>Offensive Strategy</h6>
+                    <p>{{ report.offense_strategy|nl2br }}</p>
+                    <hr>
+                    {% endif %}
+                    
+                    {% if report.defense_strategy %}
+                    <h6>Defensive Strategy</h6>
+                    <p>{{ report.defense_strategy|nl2br }}</p>
+                    <hr>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Strengths</h6>
+                            <p>{{ report.strengths|nl2br or 'No strengths recorded' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Weaknesses</h6>
+                            <p>{{ report.weaknesses|nl2br or 'No weaknesses recorded' }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if report.notes %}
+                    <hr>
+                    <h6>Additional Notes</h6>
+                    <p>{{ report.notes|nl2br }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Clips</h5>
+                    <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">Manage Clips</a>
+                </div>
+                <div class="card-body">
+                    {% if clips %}
+                    <div class="row">
+                        {% for clip in clips[:3] %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ clip.title }}</h6>
+                                    <p class="text-muted">{{ clip.clip_type|replace('_', ' ')|capitalize if clip.clip_type else 'General' }}</p>
+                                    <a href="{{ url_for('scouting.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if clips|length > 3 %}
+                        <div class="col-12 text-center mt-2">
+                            <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-outline-primary">View All {{ clips|length }} Clips</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No clips added yet. <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}">Add a clip</a> to record key plays.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Key Players</h5>
+                    <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">Manage Players</a>
+                </div>
+                <div class="card-body">
+                    {% if players %}
+                    <div class="list-group">
+                        {% for player in players[:5] %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    {% if player.jersey_number %}#{{ player.jersey_number }} {% endif %}
+                                    {{ player.name }}
+                                </h6>
+                                <span class="badge bg-primary">{{ player.position|capitalize if player.position else 'Unknown' }}</span>
+                            </div>
+                            <div class="mt-2">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small>Throwing: {{ player.throwing_ability or '-' }}/5</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <small>Cutting: {{ player.cutting_ability or '-' }}/5</small>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small>Defense: {{ player.defensive_ability or '-' }}/5</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <small>Athletic: {{ player.athletic_ability or '-' }}/5</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if players|length > 5 %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="btn btn-outline-primary">View All {{ players|length }} Players</a>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-center">No players added yet. <a href="{{ url_for('scouting.add_player', report_id=report.id) }}">Add a player</a> to track key opponents.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-outline-primary">Add Player</a>
+                        <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-outline-primary">Add Clip</a>
+                        <a href="#" class="btn btn-outline-secondary" onclick="window.print()">Print Report</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

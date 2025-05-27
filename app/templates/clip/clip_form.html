@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">Back to Clips</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    {% if not tags_exist %}
+                    <div class="alert alert-info mb-3">
+                        No tags have been created yet. You can <a href="{{ url_for('clip.add_tag') }}">add tags</a> to better organize your clips, but they are not required.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.game_id.label(class="form-label") }}
+                                {{ form.game_id(class="form-select", id="game-select") }}
+                                {% for error in form.game_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.point_id.label(class="form-label") }}
+                                {{ form.point_id(class="form-select", id="point-select") }}
+                                {% for error in form.point_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.youtube_link.label(class="form-label") }}
+                            {{ form.youtube_link(class="form-control") }}
+                            <div class="form-text">Enter a YouTube URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID)</div>
+                            {% for error in form.youtube_link.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.start_time.label(class="form-label") }}
+                                {{ form.start_time(class="form-control") }}
+                                <div class="form-text">Time in seconds where the clip should start</div>
+                                {% for error in form.start_time.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.end_time.label(class="form-label") }}
+                                {{ form.end_time(class="form-control") }}
+                                <div class="form-text">Time in seconds where the clip should end</div>
+                                {% for error in form.end_time.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3) }}
+                            {% for error in form.description.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.tags.label(class="form-label") }}
+                            {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
+                            <div class="form-text">
+                                Select tags to categorize this clip 
+                                {% if not tags_exist %}
+                                or <a href="{{ url_for('clip.add_tag') }}" target="_blank">create new tags</a>
+                                {% endif %}
+                            </div>
+                            {% for error in form.tags.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.players.label(class="form-label") }}
+                            {{ form.players(class="form-select", id="players-select", multiple="multiple") }}
+                            <div class="form-text">Select players who appear in this clip</div>
+                            {% for error in form.players.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize Select2 for tags and players
+        $('#tags-select').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select tags',
+            allowClear: true
+        });
+        
+        $('#players-select').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select players',
+            allowClear: true
+        });
+        
+        // Handle game selection to populate points
+        $('#game-select').change(function() {
+            const gameId = $(this).val();
+            if (gameId > 0) {
+                // Fetch points for the selected game
+                $.getJSON(`/clips/get_points/${gameId}`, function(data) {
+                    const pointSelect = $('#point-select');
+                    pointSelect.empty();
+                    pointSelect.append(new Option('Select Point', 0));
+                    
+                    $.each(data, function(index, point) {
+                        pointSelect.append(new Option(point.name, point.id));
+                    });
+                });
+            } else {
+                // Reset point select if no game is selected
+                const pointSelect = $('#point-select');
+                pointSelect.empty();
+                pointSelect.append(new Option('Select Point', 0));
+            }
+        });
+        
+        // If editing and game is already selected, trigger change to load points
+        if ($('#game-select').val() > 0) {
+            $('#game-select').trigger('change');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Scouting Reports</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('scouting.add_report') }}" class="btn btn-primary">Add Scouting Report</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Reports</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('scouting.index') }}">
+                        <div class="row">
+                            <div class="col-md-10">
+                                {{ form.tournament_id.label(class="form-label") }}
+                                {{ form.tournament_id(class="form-select") }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% if reports %}
+            {% for report in reports %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">{{ report.team_name }}</h5>
+                        <span class="text-muted small">{{ report.date.strftime('%Y-%m-%d') if report.date else 'No date' }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% if report.tournament %}
+                        <p><strong>Tournament:</strong> {{ report.tournament.name }}</p>
+                        {% endif %}
+                        
+                        {% if report.game %}
+                        <p><strong>Game:</strong> vs {{ report.game.opponent }}</p>
+                        {% endif %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Players</h6>
+                                <p>{{ report.players.count() }} players scouted</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Clips</h6>
+                                <p>{{ report.clips.count() }} clips recorded</p>
+                            </div>
+                        </div>
+                        
+                        {% if report.strengths %}
+                        <h6>Strengths</h6>
+                        <p class="card-text">{{ report.strengths|truncate(100) }}</p>
+                        {% endif %}
+                        
+                        {% if report.weaknesses %}
+                        <h6>Weaknesses</h6>
+                        <p class="card-text">{{ report.weaknesses|truncate(100) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ report.id }}">Delete</button>
+                        </div>
+                        
+                        <!-- Delete Confirmation Modal -->
+                        <div class="modal fade" id="deleteModal{{ report.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ report.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteModalLabel{{ report.id }}">Confirm Delete</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Are you sure you want to delete the scouting report for "{{ report.team_name }}"?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <form action="{{ url_for('scouting.delete_report', report_id=report.id) }}" method="post">
+                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No scouting reports found. <a href="{{ url_for('scouting.add_report') }}">Add a scouting report</a> to get started.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

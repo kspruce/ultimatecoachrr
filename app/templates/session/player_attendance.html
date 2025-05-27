@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .attendance-rate-high {
+        color: #28a745;
+    }
+    
+    .attendance-rate-medium {
+        color: #ffc107;
+    }
+    
+    .attendance-rate-low {
+        color: #dc3545;
+    }
+    
+    .attendance-chart {
+        height: 300px;
+    }
+    
+    .status-present {
+        background-color: rgba(40, 167, 69, 0.2);
+    }
+    
+    .status-late {
+        background-color: rgba(255, 193, 7, 0.2);
+    }
+    
+    .status-absent {
+        background-color: rgba(220, 53, 69, 0.2);
+    }
+    
+    .status-excused {
+        background-color: rgba(23, 162, 184, 0.2);
+    }
+    
+    .status-unknown {
+        background-color: rgba(108, 117, 125, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Attendance for {{ player.name }}</h1>
+            <p class="lead">Jersey #{{ player.jersey_number }} | {{ player.position|capitalize }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('session.attendance_analytics') }}" class="btn btn-outline-primary">All Attendance</a>
+                <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-primary">Player Profile</a>
+                <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Attendance Summary</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h1 class="display-4 
+                        {% if attendance_rate >= 80 %}attendance-rate-high
+                        {% elif attendance_rate >= 60 %}attendance-rate-medium
+                        {% else %}attendance-rate-low{% endif %}">
+                        {{ attendance_rate|round(1) }}%
+                    </h1>
+                    <p class="lead">Attendance rate</p>
+                    <p>{{ present_count + late_count }} out of {{ sessions|length }} sessions attended</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-3">
+                            <h5 class="text-success">{{ present_count }}</h5>
+                            <small>Present</small>
+                        </div>
+                        <div class="col-3">
+                            <h5 class="text-warning">{{ late_count }}</h5>
+                            <small>Late</small>
+                        </div>
+                        <div class="col-3">
+                            <h5 class="text-danger">{{ absent_count }}</h5>
+                            <small>Absent</small>
+                        </div>
+                        <div class="col-3">
+                            <h5 class="text-info">{{ excused_count }}</h5>
+                            <small>Excused</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Attendance Trend</h5>
+                </div>
+                <div class="card-body">
+                    <div class="attendance-chart" id="attendance-trend-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Session Attendance History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Session</th>
+                                    <th>Focus Area</th>
+                                    <th>Status</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in sessions %}
+                                {% set attendance = attendance_by_session.get(session.id) %}
+                                <tr class="status-{{ attendance.status if attendance else 'unknown' }}">
+                                    <td>{{ session.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('session.detail', session_id=session.id) }}">
+                                            {{ session.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ session.focus_area }}</td>
+                                    <td>
+                                        {% if attendance %}
+                                            <span class="
+                                                {% if attendance.status == 'present' %}text-success
+                                                {% elif attendance.status == 'late' %}text-warning
+                                                {% elif attendance.status == 'absent' %}text-danger
+                                                {% elif attendance.status == 'excused' %}text-info
+                                                {% endif %}">
+                                                {{ attendance.status|capitalize }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ attendance.notes if attendance and attendance.notes else '' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTable
+        $('#attendance-table').DataTable({
+            "pageLength": 25,
+            "order": [[0, "desc"]]
+        });
+        
+        // Parse trend data
+        const trendData = {{ trend_data|safe }};
+        
+        // Map status to numeric value for chart
+        const statusMap = {
+            'present': 3,
+            'late': 2,
+            'excused': 1,
+            'absent': 0,
+            'unknown': -1
+        };
+        
+        // Create attendance trend chart
+        const ctx = document.getElementById('attendance-trend-chart').getContext('2d');
+        const attendanceTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.map(d => d.date),
+                datasets: [{
+                    label: 'Attendance Status',
+                    data: trendData.map(d => statusMap[d.status] || -1),
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointBackgroundColor: trendData.map(d => {
+                        switch(d.status) {
+                            case 'present': return 'rgba(40, 167, 69, 1)';
+                            case 'late': return 'rgba(255, 193, 7, 1)';
+                            case 'absent': return 'rgba(220, 53, 69, 1)';
+                            case 'excused': return 'rgba(23, 162, 184, 1)';
+                            default: return 'rgba(108, 117, 125, 1)';
+                        }
+                    }),
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: -1,
+                        max: 3,
+                        ticks: {
+                            callback: function(value) {
+                                switch(value) {
+                                    case 3: return 'Present';
+                                    case 2: return 'Late';
+                                    case 1: return 'Excused';
+                                    case 0: return 'Absent';
+                                    case -1: return 'Unknown';
+                                    default: return '';
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const index = tooltipItems[0].dataIndex;
+                                return trendData[index].title + ' (' + trendData[index].date + ')';
+                            },
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                return 'Status: ' + (trendData[index].status || 'unknown').charAt(0).toUpperCase() + (trendData[index].status || 'unknown').slice(1);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

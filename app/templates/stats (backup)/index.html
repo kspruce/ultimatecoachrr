@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<style>
+    .stat-card {
+        text-align: center;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    #player-stats-table th, 
+    #player-stats-table td {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Statistics Dashboard</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary">Team Stats</a>
+                <a href="{{ url_for('stats_dashboard.visualizations') }}" class="btn btn-outline-primary">Visualizations</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Optimal O-Line</h5>
+                </div>
+                <div class="card-body">
+                    {% if o_line_players %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in o_line_players %}
+                                <tr>
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">Not enough player data to generate optimal line.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Optimal D-Line</h5>
+                </div>
+                <div class="card-body">
+                    {% if d_line_players %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in d_line_players %}
+                                <tr>
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">Not enough player data to generate optimal line.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Game Performance</h5>
+                </div>
+                <div class="card-body">
+                    {% if team_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Game</th>
+                                    <th>Result</th>
+                                    <th>O-Line Efficiency</th>
+                                    <th>D-Line Efficiency</th>
+                                    <th>Breaks</th>
+                                    <th>Holds</th>
+                                    <th>Turnovers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in team_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.game_stats', game_id=item.game.id) }}">
+                                            vs {{ item.game.opponent }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if item.game.is_win %}bg-success{% elif item.game.is_loss %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ item.game.result_string }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.stats.o_line_conversion_rate|round(1) }}%</td>
+                                    <td>{{ item.stats.d_line_conversion_rate|round(1) }}%</td>
+                                    <td>{{ item.stats.breaks }}</td>
+                                    <td>{{ item.stats.holds }}</td>
+                                    <td>{{ item.stats.turnovers }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No recent games found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="player-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Points</th>
+                                    <th>Catch</th>
+                                    <th>Throw</th>
+                                    <th>Assist</th>
+                                    <th>Hockey Assist</th>
+                                    <th>Throwaway</th>
+                                    <th>Drop</th>
+                                    <th>Turnover</th>
+                                    <th>Goal</th>
+                                    <th>Block</th>
+                                    <th>Total Throw Dist</th>
+                                    <th>Avg Throw Dist</th>
+                                    <th>Comp %</th>
+                                    <th>Catch %</th>
+                                    <th>AUDL +/-</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.points_played }}</td>
+                                    <td>{{ player_stats[player.id].catches if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].throws if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].assists if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].hockey_assists if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].throwaways if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].drops if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].turnovers if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].goals if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].blocks if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].total_throw_distance|round(1) if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].avg_throw_distance|round(1) if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].completion_rate|round(1) if player.id in player_stats else 0 }}%</td>
+                                    <td>{{ player_stats[player.id].catch_rate|round(1) if player.id in player_stats else 0 }}%</td>
+                                    <td>{{ player_stats[player.id].per|round(2) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#player-stats-table').DataTable({
+            "pageLength": 10,
+            "order": [[15, "desc"]],  // Sort by AUDL +/- column (index 15)
+            "scrollX": true,  // Enable horizontal scrolling for many columns
+            "language": {
+                "search": "Search players:",
+                "lengthMenu": "Show _MENU_ players per page",
+                "info": "Showing _START_ to _END_ of _TOTAL_ players"
+            }
+        });
+    });
+</script>
+{% endblock %}

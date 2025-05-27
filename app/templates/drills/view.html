@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ drill.title }} - Ultimate Frisbee Drill{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/drill_viewer.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="drill-viewer-container">
+    <div class="drill-header">
+        <h1>{{ drill.title }}</h1>
+        <p class="drill-meta">
+            Created by: {{ drill.creator.username if drill.creator else 'Unknown' }} | 
+            {{ drill.created_at.strftime('%Y-%m-%d') }}
+        </p>
+        <div class="drill-description">
+            {{ drill.description }}
+        </div>
+        
+        {% if current_user.is_authenticated and current_user.id == drill.created_by %}
+        <div class="drill-actions">
+            <a href="{{ url_for('drills.editor', drill_id=drill.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Drill
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="viewer-main">
+        <div class="canvas-container">
+            <canvas id="drill-canvas"></canvas>
+        </div>
+    </div>
+    
+    <div class="viewer-controls">
+        <div class="playback-controls">
+            <button id="prev-frame" class="btn btn-sm btn-secondary">
+                <i class="fas fa-step-backward"></i>
+            </button>
+            <button id="play-pause" class="btn btn-sm btn-primary">
+                <i class="fas fa-play"></i>
+            </button>
+            <button id="next-frame" class="btn btn-sm btn-secondary">
+                <i class="fas fa-step-forward"></i>
+            </button>
+        </div>
+        
+        <div class="frame-info">
+            Frame <span id="current-frame-num">1</span> of <span id="total-frames">1</span>
+        </div>
+        
+        <div class="playback-speed">
+            <label for="speed-control">Speed:</label>
+            <select id="speed-control">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for initialization -->
+<div id="drill-data" data-drill-id="{{ drill.id }}" style="display: none;"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="{{ url_for('static', filename='js/drill_viewer.js') }}"></script>
+{% endblock %}

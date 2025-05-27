@@ -1,0 +1,506 @@
+{% extends "session/drills/editor_base.html" %}
+
+{% block title %}Drill Editor - Ultimate Coach{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        height: 100vh;
+    }
+
+    .editor-container {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        height: calc(100vh - 56px); /* Account for navbar */
+        overflow: hidden;
+    }
+
+    /* Header Styles */
+    .editor-header {
+        background: #fff;
+        border-bottom: 1px solid #dee2e6;
+        padding: 1rem;
+        z-index: 100;
+    }
+
+    /* Main Editor Layout */
+    .editor-main {
+        display: grid;
+        grid-template-columns: 80px 1fr 250px;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        overflow: hidden;
+    }
+
+    /* Toolbar Styles */
+    .toolbar {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .tool-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .tool-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .tool-btn {
+        width: 40px;
+        height: 40px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tool-label {
+        font-size: 11px;
+        color: #666;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Canvas Area Styles */
+    .canvas-area {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .field-settings {
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .canvas-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Animation Panel Styles */
+    .animation-panel {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        width: 250px;
+    }
+
+    .animation-controls {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .frames-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .frame-item {
+        border: 2px solid #dee2e6;
+        border-radius: 6px;
+        overflow: hidden;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .frame-preview {
+        width: 100%;
+        height: 120px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .frame-info {
+        padding: 0.5rem;
+        background: #fff;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Tool Preview Styles */
+    .preview-circle {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .preview-circle.offense {
+        background: #ff6666;
+        color: white;
+    }
+
+    .preview-circle.defense {
+        background: #6666ff;
+        color: white;
+    }
+
+    .preview-circle.disc {
+        background: white;
+        border: 2px solid #000;
+    }
+
+    .preview-triangle {
+        width: 0;
+        height: 0;
+        border-left: 12px solid transparent;
+        border-right: 12px solid transparent;
+        border-bottom: 20px solid #ffa500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <!-- Header -->
+    <div class="editor-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <input type="text" id="drill-title" 
+                       class="form-control form-control-lg border-0 bg-transparent"
+                       style="width: 300px; font-size: 1.5rem;" 
+                       placeholder="Untitled Drill"
+                       value="{{ drill.title if drill else '' }}">
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#drillPropertiesModal">
+                    <i class="fas fa-cog"></i> Properties
+                </button>
+                <button id="preview-drill" class="btn btn-outline-primary">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
+                <button id="save-drill" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Editor Area -->
+    <div class="editor-main">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <!-- Selection Tool -->
+            <div class="tool-group">
+                <div class="tool-wrapper">
+                    <button class="tool-btn active" data-tool="select" title="Select Tool (V)">
+                        <i class="fas fa-mouse-pointer"></i>
+                    </button>
+                    <span class="tool-label">Select</span>
+                </div>
+            </div>
+
+            <!-- Players -->
+            <div class="tool-group">
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="player-o" title="Offensive Player (O)">
+                        <div class="preview-circle offense">O</div>
+                    </button>
+                    <span class="tool-label">Offense</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="player-d" title="Defensive Player (D)">
+                        <div class="preview-circle defense">D</div>
+                    </button>
+                    <span class="tool-label">Defense</span>
+                </div>
+            </div>
+
+            <!-- Equipment -->
+            <div class="tool-group">
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="disc" title="Disc (F)">
+                        <div class="preview-circle disc"></div>
+                    </button>
+                    <span class="tool-label">Disc</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="cone" title="Cone (C)">
+                        <div class="preview-triangle"></div>
+                    </button>
+                    <span class="tool-label">Cone</span>
+                </div>
+            </div>
+
+            <!-- Drawing -->
+            <div class="tool-group">
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="path" title="Draw Path (P)">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <span class="tool-label">Path</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="text" title="Add Text (T)">
+                        <i class="fas fa-font"></i>
+                    </button>
+                    <span class="tool-label">Text</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="tool-group">
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-action="delete" title="Delete Selected (Del)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <span class="tool-label">Delete</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-action="clear" title="Clear Canvas">
+                        <i class="fas fa-broom"></i>
+                    </button>
+                    <span class="tool-label">Clear</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="field-settings">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="field-info">
+                        <span class="badge bg-light text-dark me-2">
+                            Field: <span id="field-size">70×40 yards</span>
+                        </span>
+                        <span class="badge bg-light text-dark">
+                            Endzones: <span id="endzone-size">20 yards</span>
+                        </span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" 
+                            data-bs-target="#fieldSettingsModal">
+                        <i class="fas fa-cog"></i> Field Settings
+                    </button>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="drill-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Field Settings Modal -->
+<div class="modal fade" id="fieldSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Field Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Field Dimensions</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="field-length" 
+                               min="40" max="120" value="70" placeholder="Length">
+                        <span class="input-group-text">×</span>
+                        <input type="number" class="form-control" id="field-width" 
+                               min="20" max="60" value="40" placeholder="Width">
+                        <span class="input-group-text">yards</span>
+                    </div>
+                    <div class="form-text">Standard field is 70×40 yards</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Endzone Depth</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="endzone-depth" 
+                               min="10" max="40" value="20" placeholder="Depth">
+                        <span class="input-group-text">yards</span>
+                    </div>
+                    <div class="form-text">Standard endzone is 20 yards deep</div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="show-grid">
+                        <label class="form-check-label">Show Grid</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="show-yard-markers">
+                        <label class="form-check-label">Show Yard Markers</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="apply-field-settings">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Drill Properties Modal -->
+<div class="modal fade" id="drillPropertiesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Drill Properties</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea id="drill-description" class="form-control" rows="3"
+                            placeholder="Describe the drill...">{{ drill.description if drill else '' }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Setup Instructions</label>
+                    <textarea id="setup-instructions" class="form-control" rows="3"
+                            placeholder="How to set up this drill...">{{ drill.setup_instructions if drill else '' }}</textarea>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Skill Level</label>
+                        <select id="skill-level" class="form-select">
+                            <option value="">Any Level</option>
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Focus Area</label>
+                        <input type="text" class="form-control" id="focus-area" 
+                               placeholder="e.g., Cutting, Defense"
+                               value="{{ drill.focus_area if drill else '' }}">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Duration (minutes)</label>
+                        <input type="number" class="form-control" id="recommended-duration" 
+                               min="1" max="60" placeholder="Duration"
+                               value="{{ drill.recommended_duration if drill else '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Equipment Needed</label>
+                        <input type="text" class="form-control" id="equipment-needed" 
+                               placeholder="e.g., Cones, Discs"
+                               value="{{ drill.equipment_needed if drill else '' }}">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label">Players Needed</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="min-players" 
+                                   placeholder="Min" min="1"
+                                   value="{{ drill.min_players if drill else '' }}">
+                            <span class="input-group-text">to</span>
+                            <input type="number" class="form-control" id="max-players" 
+                                   placeholder="Max" min="1"
+                                   value="{{ drill.max_players if drill else '' }}">
+                            <span class="input-group-text">players</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is-public"
+                               {% if drill and drill.is_public %}checked{% endif %}>
+                        <label class="form-check-label">Make this drill public</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-properties">Save Properties</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keyboard Shortcuts Help Modal -->
+<div class="modal fade" id="keyboardShortcutsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Keyboard Shortcuts</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h6>Tools</h6>
+                        <ul class="list-unstyled">
+                            <li><kbd>V</kbd> Select</li>
+                            <li><kbd>O</kbd> Offense Player</li>
+                            <li><kbd>D</kbd> Defense Player</li>
+                            <li><kbd>F</kbd> Disc</li>
+                            <li><kbd>C</kbd> Cone</li>
+                            <li><kbd>P</kbd> Path</li>
+                            <li><kbd>T</kbd> Text</li>
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <h6>Actions</h6>
+                        <ul class="list-unstyled">
+                            <li><kbd>Delete</kbd> Delete Selected</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>S</kbd> Save Drill</li>
+                            <li><kbd>Space</kbd> Play/Pause</li>
+                            <li><kbd>←</kbd> Previous Frame</li>
+                            <li><kbd>→</kbd> Next Frame</li>
+                            <li><kbd>+</kbd> Add Frame</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>D</kbd> Duplicate Frame</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for initialization -->
+{% if drill %}
+<div id="drill-data" data-drill-id="{{ drill.id }}" style="display: none;"></div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="{{ url_for('static', filename='js/drill_editor.js') }}"></script>
+{% endblock %}

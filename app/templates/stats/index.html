@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<style>
+    .stat-card {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .trend-indicator {
+        font-size: 0.9rem;
+        margin-left: 5px;
+    }
+    
+    .trend-up { color: #2ecc71; }
+    .trend-down { color: #e74c3c; }
+    
+    .line-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .player-card {
+        border-left: 4px solid transparent;
+    }
+    
+    .o-line { border-left-color: #3498db; }
+    .d-line { border-left-color: #e74c3c; }
+    
+    .field-container {
+        position: relative;
+        width: 100%;
+        height: 400px;
+        background-color: #4CAF50;
+        border: 2px solid #333;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    
+    .endzone {
+        position: absolute;
+        height: 100%;
+        width: 18%;
+        background-color: #388E3C;
+        z-index: 1;
+    }
+    
+    .endzone-left { left: 0; }
+    .endzone-right { right: 0; }
+    
+    #field-heatmap canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+    }
+
+    .heatmap-canvas {
+        z-index: 2;
+    }
+    
+    .network-chart {
+        height: 400px;
+        width: 100%;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+    
+    .tooltip-inner {
+        max-width: 300px;
+        text-align: left;
+    }
+
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .chart-container {
+        position: relative;
+        min-height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Team Statistics Dashboard</h1>
+            <p class="text-muted">Real-time analytics and performance metrics</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary"
+                   data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                   title="View comprehensive team statistics">
+                    <i class="bi bi-bar-chart-fill"></i> Team Stats
+                </a>
+                {% if recent_games %}
+                <a href="{{ url_for('stats_dashboard.game_stats', game_id=recent_games[0].id) }}" 
+                   class="btn btn-outline-primary"
+                   data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                   title="View latest game statistics">
+                    <i class="bi bi-graph-up"></i> Latest Game
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <!-- Quick Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="stat-label">Season Record</h6>
+                    <div class="stat-value">
+                        {{ team_summary.wins }}-{{ team_summary.losses }}
+                        {% if team_summary.ties > 0 %}-{{ team_summary.ties }}{% endif %}
+                    </div>
+                    <div class="text-muted">
+                        Win Rate: {{ team_summary.win_percentage|round(1) }}%
+                        {% if team_summary.win_percentage > 50 %}
+                        <span class="trend-indicator trend-up"><i class="bi bi-arrow-up"></i></span>
+                        {% else %}
+                        <span class="trend-indicator trend-down"><i class="bi bi-arrow-down"></i></span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="stat-label">O-Line Efficiency</h6>
+                    <div class="stat-value">{{ team_summary.o_line_conversion_rate|round(1) }}%</div>
+                    <div class="text-muted">
+                        {{ team_summary.o_line_conversions }}/{{ team_summary.o_line_points }} Points
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="stat-label">D-Line Efficiency</h6>
+                    <div class="stat-value">{{ team_summary.d_line_conversion_rate|round(1) }}%</div>
+                    <div class="text-muted">
+                        {{ team_summary.d_line_conversions }}/{{ team_summary.d_line_points }} Points
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Visualization Sections -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Field Heatmap
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                           title="Heat map showing concentration of throws on the field"></i>
+                    </h5>
+                    <div class="btn-group btn-group-sm mt-2">
+                        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
+                        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
+                        <button class="btn btn-outline-primary" data-filter="goals">Goals</button>
+                        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
+                        <button class="btn btn-outline-primary" data-filter="scored_on">Scored On</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="field-container" id="field-heatmap">
+                        <div class="endzone endzone-left"></div>
+                        <div class="endzone endzone-right"></div>
+                        {% if not heatmap_data %}
+                        <div class="loading-overlay">
+                            <p>No throw data available</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Connections Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Connections
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                           title="Network diagram showing throw connections between players"></i>
+                    </h5>
+                    <div class="btn-group btn-group-sm mt-2">
+                        <button class="btn btn-outline-primary active" data-strength="all">All Connections</button>
+                        <button class="btn btn-outline-primary" data-strength="strong">Strong Connections</button>
+                        <button class="btn btn-outline-primary" data-strength="weak">Weak Connections</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="network-chart" id="player-connections">
+                        {% if not connection_data %}
+                        <div class="loading-overlay">
+                            <p>No connection data available</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Optimal Lines -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card line-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Optimal O-Line
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                           title="Suggested O-line based on throw completion efficiency"></i>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if o_line_players %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>Efficiency</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in o_line_players %}
+                                <tr class="player-card o-line">
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize }}</td>
+                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 100 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">Not enough data to generate optimal line.</p>
+                    {% endif %}
+                </div>
+        
+        <!-- D-Line card -->
+        <div class="col-md-6">
+            <div class="card line-card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Optimal D-Line
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                           title="Suggested D-line based on throw completion efficiency"></i>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if d_line_players %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>Efficiency</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in d_line_players %}
+                                <tr class="player-card d-line">
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize }}</td>
+                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">Not enough data to generate optimal line.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Statistics Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Player Statistics
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                           title="Comprehensive player statistics from recent games"></i>
+                    </h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary active" data-view="all">All Stats</button>
+                        <button class="btn btn-outline-primary" data-view="offense">Offensive Stats</button>
+                        <button class="btn btn-outline-primary" data-view="defense">Defensive Stats</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if players and player_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="player-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th data-toggle="tooltip" title="Games Played">Games</th>
+                                    <th data-toggle="tooltip" title="Points Played">Points</th>
+                                    <th data-toggle="tooltip" title="Goals Scored">Goals</th>
+                                    <th data-toggle="tooltip" title="Assists Thrown">Assists</th>
+                                    <th data-toggle="tooltip" title="Hockey Assists">Hockey</th>
+                                    <th data-toggle="tooltip" title="Blocks Made">Blocks</th>
+                                    <th data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
+                                    <th data-toggle="tooltip" title="Turnovers (Throwaways + Drops)">Turns</th>
+                                    <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
+                                    <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                {% if player.id in player_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                            <small class="text-muted">#{{ player.jersey_number }}</small>
+                                        </a>
+                                    </td>
+                                    <td>{{ player_stats[player.id].games_played }}</td>
+                                    <td>{{ player_stats[player.id].points_played }}</td>
+                                    <td>{{ player_stats[player.id].goals }}</td>
+                                    <td>{{ player_stats[player.id].assists }}</td>
+                                    <td>{{ player_stats[player.id].hockey_assists }}</td>
+                                    <td>{{ player_stats[player.id].blocks }}</td>
+                                    <td>
+                                        {{ player_stats[player.id].completions }}
+                                        <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
+                                    </td>
+                                    <td>{{ player_stats[player.id].turnovers }}</td>
+                                    <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
+                                           player_stats[player.id].blocks - player_stats[player.id].turnovers)|round(1) }}</td>
+                                    <td>{{ player_stats[player.id].per|round(1) }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">No player statistics available yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/heatmap.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Initialize DataTable
+    const playerStatsTable = $('#player-stats-table').DataTable({
+        pageLength: 25,
+        order: [[10, "desc"]], // Sort by PER by default
+        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+             "<'row'<'col-sm-12'tr>>" +
+             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        language: {
+            search: "Search players:",
+            lengthMenu: "Show _MENU_ players"
+        },
+        columnDefs: [
+            { targets: [7], // Completion percentage column
+                render: function(data, type, row) {
+                    if (type === 'sort') {
+                        return parseFloat(data.match(/\((.*?)%\)/)[1]);
+                    }
+                    return data;
+                }
+            }
+        ]
+    });
+
+    // Initialize Heatmap
+    if (document.getElementById('field-heatmap')) {
+        const heatmapContainer = document.getElementById('field-heatmap');
+        const heatmapInstance = h337.create({
+            container: heatmapContainer,
+            radius: 15,
+            maxOpacity: 0.6,
+            minOpacity: 0.1,
+            blur: 0.75,
+            gradient: {
+                '.5': 'blue',
+                '.8': 'red',
+                '.95': 'white'
+            }
+        });
+
+        {% if heatmap_data %}
+        const heatmapData = {{ heatmap_data|safe }};
+        
+        // Convert field coordinates to pixel coordinates
+        const fieldWidth = heatmapContainer.offsetWidth;
+        const fieldHeight = heatmapContainer.offsetHeight;
+        const fieldLengthMeters = 100;  // Length in meters
+        const fieldWidthMeters = 37;    // Width in meters
+        
+        function updateHeatmap(filter = 'all') {
+            let filteredData = heatmapData;
+            if (filter !== 'all') {
+                filteredData = heatmapData.filter(point => {
+                    switch(filter) {
+                        case 'throws':
+                            return point.type === 'throw_start';  // Only show throw start positions
+                        case 'goals':
+                            return point.type === 'goal';  // Only show goal locations
+                        case 'turnovers':
+                            return point.type === 'throwaway';  // Only show throwaways
+                        case 'scored_on':
+                            return point.type === 'scored_on';  // Only show scored-on events
+                        default:
+                            return true;
+                    }
+                });
+            }
+        
+            // Use different gradients based on the filter
+            if (filter === 'turnovers') {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': '#ff9999',
+                        '.8': '#ff0000'
+                    }
+                });
+            } else if (filter === 'goals') {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': '#90EE90',
+                        '.8': '#006400'
+                    }
+                });
+            } else if (filter === 'scored_on') {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': '#FFB6C1',
+                        '.8': '#8B0000'
+                    }
+                });
+            } else {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': 'blue',
+                        '.4': 'cyan',
+                        '.6': 'lime',
+                        '.8': 'yellow',
+                        '.95': 'red'
+                    }
+                });
+            }
+        
+            const pixelData = {
+                max: Math.max(1, filteredData.length / 10),
+                min: 0,
+                data: filteredData.map(point => ({
+                    x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
+                    y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
+                    value: 1
+                }))
+            };
+        
+            heatmapInstance.setData(pixelData);
+        }
+
+
+        // Initialize with all data
+        updateHeatmap();
+
+        // Add event listeners to heatmap filter buttons
+        document.querySelectorAll('[data-filter]').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                updateHeatmap(this.dataset.filter);
+            });
+        });
+        {% endif %}
+    }
+
+    // Initialize Player Connections Network
+    if (document.getElementById('player-connections')) {
+        {% if connection_data %}
+        const connections = {{ connection_data|safe }};
+        const width = document.getElementById('player-connections').offsetWidth;
+        const height = 400;
+
+        const svg = d3.select('#player-connections')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        // Create force simulation
+        const simulation = d3.forceSimulation(connections.nodes)
+            .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(width / 2, height / 2));
+
+        // Draw links
+        const link = svg.append('g')
+            .selectAll('line')
+            .data(connections.links)
+            .enter().append('line')
+            .attr('stroke-width', d => Math.sqrt(d.value))
+            .attr('stroke', '#999')
+            .attr('stroke-opacity', 0.6);
+
+        // Draw nodes
+        const node = svg.append('g')
+            .selectAll('circle')
+            .data(connections.nodes)
+            .enter().append('circle')
+            .attr('r', 15)
+            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
+                             (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+
+        // Add labels
+        const label = svg.append('g')
+            .selectAll('text')
+            .data(connections.nodes)
+            .enter().append('text')
+            .text(d => {
+                if (d.name) {
+                    return d.name.split(' ').map(n => n[0]).join('');
+                }
+                return d.jersey_number;
+            })
+            .attr('font-size', 10)
+            .attr('dx', -8)
+            .attr('dy', 4)
+            .attr('fill', 'white');
+
+        // Update positions on tick
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+
+            label
+                .attr('x', d => d.x)
+                .attr('y', d => d.y);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Add connection strength filter functionality
+        document.querySelectorAll('[data-strength]').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                const strength = this.dataset.strength;
+                
+                link.style('display', d => {
+                    if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
+                    if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
+                    return 'block';
+                });
+            });
+        });
+        {% endif %}
+    }
+
+    // Add window resize handler
+    window.addEventListener('resize', debounce(function() {
+        // Redraw visualizations on window resize
+        if (typeof heatmapInstance !== 'undefined') {
+            updateHeatmap();
+        }
+        if (typeof simulation !== 'undefined') {
+            const width = document.getElementById('player-connections').offsetWidth;
+            simulation.force('center', d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.3).restart();
+        }
+    }, 250));
+
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function() {
+            const context = this, args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+                func.apply(context, args);
+            }, wait);
+        };
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Team Roster</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('team.add_player') }}" class="btn btn-primary">Add Player</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Players</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('team.index') }}">
+                        <div class="row">
+                            <div class="col-md-2">
+                                {{ form.position.label(class="form-label") }}
+                                {{ form.position(class="form-select") }}
+                            </div>
+                            <div class="col-md-2">
+                                {{ form.line_preference.label(class="form-label") }}
+                                {{ form.line_preference(class="form-select") }}
+                            </div>
+                            <div class="col-md-2">
+                                {{ form.gender_match.label(class="form-label") }}
+                                {{ form.gender_match(class="form-select") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.team.label(class="form-label") }}
+                                {{ form.team(class="form-select") }}
+                                {% for error in form.team.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4">
+                                    {{ form.active_only(class="form-check-input") }}
+                                    {{ form.active_only.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Line</th>
+                            <th>Gender</th>
+                            <th>Team</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for player in players %}
+                        <tr>
+                            <td>{{ player.jersey_number or '-' }}</td>
+                            <td>
+                                <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
+                                    {{ player.name }}
+                                </a>
+                            </td>
+                            <td>{{ player.position|capitalize if player.position else '-' }}</td>
+                            <td>{{ player.line_preference if player.line_preference else '-' }}</td>
+                            <td>{{ player.gender_match|capitalize if player.gender_match else '-' }}</td>
+                            <td>{{ player.team if player.team else '-' }}</td>
+                            <td>
+                                {% if player.active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">Delete</button>
+                                
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteModal{{ player.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ player.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel{{ player.id }}">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete {{ player.name }}?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('team.delete_player', player_id=player.id) }}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center">No players found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

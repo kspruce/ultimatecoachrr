@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .jumbotron {
+        padding: 2rem;
+        margin-bottom: 2rem;
+        background-color: #e9ecef;
+        border-radius: .3rem;
+    }
+
+    .feature-card {
+        transition: transform 0.3s ease-in-out;
+        height: 100%;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .quick-action-btn {
+        transition: all 0.3s ease;
+    }
+
+    .quick-action-btn:hover {
+        transform: scale(1.05);
+    }
+
+    .recent-activity {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .stat-highlight {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #3498db;
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        text-align: center;
+        border-radius: 50%;
+        margin-right: 15px;
+    }
+
+    .activity-icon.game {
+        background-color: #e74c3c;
+        color: white;
+    }
+
+    .activity-icon.practice {
+        background-color: #2ecc71;
+        color: white;
+    }
+
+    .activity-icon.stats {
+        background-color: #f1c40f;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to Ultimate Coach</h1>
+    <p class="lead">Your all-in-one solution for Ultimate Frisbee team management, game analysis, and coaching.</p>
+    <hr class="my-4">
+    <p>Manage your team, track game statistics, analyze performance, and develop training sessions all in one place.</p>
+    
+    <!-- Main Feature Cards -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-people-fill me-2"></i>
+                        Team Management
+                    </h5>
+                    <p class="card-text">Manage your roster, assign roles, and track player information.</p>
+                    <a href="{{ url_for('team.index') }}" class="btn btn-primary">
+                        Manage Team
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-trophy-fill me-2"></i>
+                        Game Statistics
+                    </h5>
+                    <p class="card-text">Track game results, record detailed statistics, and analyze performance.</p>
+                    <a href="{{ url_for('game.index') }}" class="btn btn-primary">
+                        View Games
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-calendar-check-fill me-2"></i>
+                        Training Sessions
+                    </h5>
+                    <p class="card-text">Create and manage practice plans, drills, and track attendance.</p>
+                    <a href="{{ url_for('session.index') }}" class="btn btn-primary">
+                        Plan Sessions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Feature Cards -->
+    <div class="row mt-2">
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Statistics Analysis
+                    </h5>
+                    <p class="card-text">Visualize player and team performance with detailed analytics.</p>
+                    <div class="btn-group">
+                        <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-primary">
+                            View Stats
+                        </a>
+                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">Team Stats</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('game.index') }}">Game Stats</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-camera-video-fill me-2"></i>
+                        Clip Library
+                    </h5>
+                    <p class="card-text">Store and organize video clips of games and plays for review.</p>
+                    <a href="{{ url_for('clip.index') }}" class="btn btn-primary">
+                        Browse Clips
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-binoculars-fill me-2"></i>
+                        Scouting Reports
+                    </h5>
+                    <p class="card-text">Track information about opposing teams and players for game preparation.</p>
+                    <a href="{{ url_for('scouting.index') }}" class="btn btn-primary">
+                        View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_authenticated %}
+<div class="mt-4">
+    <h2>
+        <i class="bi bi-lightning-fill me-2"></i>
+        Quick Actions
+    </h2>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('team.add_player') }}" class="btn btn-outline-primary quick-action-btn">
+                    <i class="bi bi-person-plus-fill me-2"></i>
+                    Add New Player
+                </a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('game.add') }}" class="btn btn-outline-primary quick-action-btn">
+                    <i class="bi bi-plus-circle-fill me-2"></i>
+                    Record New Game
+                </a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('session.add_session') }}" class="btn btn-outline-primary quick-action-btn">
+                    <i class="bi bi-calendar-plus-fill me-2"></i>
+                    Create Practice Session
+                </a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary quick-action-btn">
+                    <i class="bi bi-graph-up me-2"></i>
+                    View Team Stats
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h2>
+        <i class="bi bi-clock-history me-2"></i>
+        Recent Activity
+    </h2>
+    <div class="card">
+        <div class="card-body">
+            <div class="recent-activity">
+                {% if recent_activities %}
+                    {% for activity in recent_activities %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="activity-icon {{ activity.type }}">
+                            <i class="bi {{ activity.icon }}"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold">{{ activity.title }}</div>
+                            <small class="text-muted">{{ activity.timestamp }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Recent activity will be displayed here as you use the application.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_admin %}
+<div class="mt-4">
+    <h2>
+        <i class="bi bi-speedometer2 me-2"></i>
+        Quick Stats
+    </h2>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Active Players</h6>
+                    <div class="stat-highlight">{{ active_players_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Games This Season</h6>
+                    <div class="stat-highlight">{{ games_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Win Rate</h6>
+                    <div class="stat-highlight">{{ win_rate }}%</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Next Game</h6>
+                    <div class="stat-highlight">{{ next_game_date|default('None scheduled') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="mt-4 text-center">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Get Started</h5>
+            <p class="card-text">Please log in or register to access all features of Ultimate Coach.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                    Log In
+                </a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-person-plus me-2"></i>
+                    Register
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Initialize tooltips for dynamic content
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Points for Game vs {{ game.opponent }}</h1>
+            <p class="lead">
+                {% if game.date %}
+                    {{ game.date.strftime('%B %d, %Y') }}
+                {% endif %}
+                {% if game.tournament %}
+                    | {{ game.tournament.name }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('point.add_point', game_id=game.id) }}" class="btn btn-primary">Add Point</a>
+            <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-secondary">Back to Game</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Points</h5>
+                </div>
+                <div class="card-body">
+                    {% if points %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Line</th>
+                                    <th>Starting Position</th>
+                                    <th>Score Before</th>
+                                    <th>Outcome</th>
+                                    <th>Score After</th>
+                                    <th>Players</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for point in points %}
+                                <tr>
+                                    <td>{{ point.point_number }}</td>
+                                    <td>{{ point.our_line_type }}</td>
+                                    <td>{{ point.starting_position|capitalize }}</td>
+                                    <td>{{ point.our_score_before }}-{{ point.their_score_before }}</td>
+                                    <td>
+                                        <span class="badge {% if point.we_scored %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if point.we_scored %}Scored{% else %}Conceded{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ point.our_score_after }}-{{ point.their_score_after }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#players{{ point.id }}">
+                                            Show Players
+                                        </button>
+                                        <div class="collapse mt-2" id="players{{ point.id }}">
+                                            <ul class="list-group">
+                                                {% for lineup in point.lineups %}
+                                                <li class="list-group-item">{{ lineup.player.name }} (#{{ lineup.player.jersey_number }})</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('point.point_detail', point_id=point.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-sm btn-outline-success">Stats</a>
+                                        <a href="{{ url_for('point.edit_point', point_id=point.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ point.id }}">Delete</button>
+                                        
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ point.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ point.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ point.id }}">Confirm Delete</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete Point {{ point.point_number }}?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form action="{{ url_for('point.delete_point', point_id=point.id) }}" method="post">
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No points recorded for this game yet.</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('point.add_point', game_id=game.id) }}" class="btn btn-primary">Add First Point</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+                

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Tournaments</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('tournament.add') }}" class="btn btn-primary">Add Tournament</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Tournaments</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('tournament.index') }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.season.label(class="form-label") }}
+                                {{ form.season(class="form-control") }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Dates</th>
+                            <th>Location</th>
+                            <th>Season</th>
+                            <th>Games</th>
+                            <th>Record</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tournament in tournaments %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}">
+                                    {{ tournament.name }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if tournament.start_date %}
+                                    {{ tournament.start_date.strftime('%b %d, %Y') }}
+                                    {% if tournament.end_date and tournament.end_date != tournament.start_date %}
+                                        - {{ tournament.end_date.strftime('%b %d, %Y') }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>{{ tournament.location or 'N/A' }}</td>
+                            <td>{{ tournament.season or 'N/A' }}</td>
+                            <td>{{ tournament.game_count }}</td>
+                            <td>{{ tournament.win_count }}-{{ tournament.loss_count }}</td>
+                            <td>
+                                <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tournament.id }}">Delete</button>
+                                
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteModal{{ tournament.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tournament.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteModalLabel{{ tournament.id }}">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete {{ tournament.name }}?
+                                                {% if tournament.game_count > 0 %}
+                                                <div class="alert alert-warning mt-2">
+                                                    This tournament has {{ tournament.game_count }} games associated with it. You cannot delete it until those games are removed or reassigned.
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('tournament.delete', tournament_id=tournament.id) }}" method="post">
+                                                    <button type="submit" class="btn btn-danger" {% if tournament.game_count > 0 %}disabled{% endif %}>Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No tournaments found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

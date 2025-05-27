@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<style>
+    .attendance-rate-high {
+        color: #28a745;
+    }
+    
+    .attendance-rate-medium {
+        color: #ffc107;
+    }
+    
+    .attendance-rate-low {
+        color: #dc3545;
+    }
+    
+    .attendance-chart {
+        height: 400px;
+    }
+    
+    .player-filter-container {
+        width: 250px;
+    }
+    
+    .status-present {
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+    
+    .status-late {
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+    
+    .status-absent {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    
+    .status-excused {
+        background-color: rgba(23, 162, 184, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Attendance Analytics</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Overall Attendance</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h1 class="display-4 
+                        {% if overall_attendance_rate >= 80 %}attendance-rate-high
+                        {% elif overall_attendance_rate >= 60 %}attendance-rate-medium
+                        {% else %}attendance-rate-low{% endif %}">
+                        {{ overall_attendance_rate|round(1) }}%
+                    </h1>
+                    <p class="lead">Average attendance rate</p>
+                    <p>Based on {{ sessions|length }} sessions and {{ players|length }} players</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>
+                        {% if selected_player %}
+                            Attendance for {{ selected_player.name }}
+                        {% else %}
+                            Team Attendance
+                        {% endif %}
+                    </h5>
+                    <div class="player-filter-container">
+                        <select id="player-filter" class="form-select form-select-sm">
+                            <option value="">Overall Team Attendance</option>
+                            {% for player in players %}
+                            <option value="{{ player.id }}" {% if selected_player and selected_player.id == player.id %}selected{% endif %}>
+                                {{ player.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if sessions|length > 0 %}
+                        <canvas id="attendance-trend-chart" class="attendance-chart"></canvas>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No sessions found with recorded dates. Please add sessions with dates to view attendance trends.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Attendance Statistics</h5>
+                </div>
+                <div class="card-body">
+                    {% if players|length > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Present</th>
+                                        <th>Late</th>
+                                        <th>Absent</th>
+                                        <th>Excused</th>
+                                        <th>Total Attended</th>
+                                        <th>Attendance Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in player_stats %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('session.player_attendance', player_id=stat.player.id) }}">
+                                                {{ stat.player.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ stat.present }}</td>
+                                        <td>{{ stat.late }}</td>
+                                        <td>{{ stat.absent }}</td>
+                                        <td>{{ stat.excused }}</td>
+                                        <td>{{ stat.total_attended }} / {{ sessions|length }}</td>
+                                        <td>
+                                            <span class="
+                                                {% if stat.attendance_rate >= 80 %}attendance-rate-high
+                                                {% elif stat.attendance_rate >= 60 %}attendance-rate-medium
+                                                {% else %}attendance-rate-low{% endif %}">
+                                                {{ stat.attendance_rate|round(1) }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No active players found. Please add players to track attendance.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if selected_player %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Session History for {{ selected_player.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="player-sessions-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Session</th>
+                                    <th>Focus Area</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in sessions %}
+                                {% set attendance = None %}
+                                {% for a in selected_player.attendances %}
+                                    {% if a.session_id == session.id %}
+                                        {% set attendance = a %}
+                                    {% endif %}
+                                {% endfor %}
+                                <tr class="status-{{ attendance.status if attendance else 'absent' }}">
+                                    <td>{{ session.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('session.detail', session_id=session.id) }}">
+                                            {{ session.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ session.focus_area }}</td>
+                                    <td>
+                                        {% if attendance %}
+                                            <span class="
+                                                {% if attendance.status == 'present' %}text-success
+                                                {% elif attendance.status == 'late' %}text-warning
+                                                {% elif attendance.status == 'absent' %}text-danger
+                                                {% elif attendance.status == 'excused' %}text-info
+                                                {% endif %}">
+                                                {{ attendance.status|capitalize }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-danger">Absent</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTable
+        $('#attendance-table').DataTable({
+            "pageLength": 25,
+            "order": [[6, "desc"]]
+        });
+        
+        {% if selected_player %}
+        $('#player-sessions-table').DataTable({
+            "pageLength": 25,
+            "order": [[0, "desc"]]
+        });
+        {% endif %}
+        
+        // Parse trend data
+        const trendData = {{ trend_data|safe }};
+        console.log("Trend Data:", trendData); // Debug output
+        
+        // Create attendance trend chart
+        const ctx = document.getElementById('attendance-trend-chart');
+        
+        if (!ctx) {
+            console.error("Could not find chart canvas element");
+            return;
+        }
+        
+        {% if selected_player %}
+        // Individual player chart
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.map(d => d.date),
+                datasets: [{
+                    label: 'Attendance',
+                    data: trendData.map(d => d.value),
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointBackgroundColor: trendData.map(d => {
+                        if (d.value === 1) return 'rgba(40, 167, 69, 1)';      // Present: green
+                        if (d.value === 0.5) return 'rgba(255, 193, 7, 1)';    // Late: yellow
+                        if (d.value === 0.25) return 'rgba(23, 162, 184, 1)';  // Excused: blue
+                        return 'rgba(220, 53, 69, 1)';                         // Absent: red
+                    }),
+                    pointRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 1,
+                        ticks: {
+                            callback: function(value) {
+                                if (value === 1) return 'Present';
+                                if (value === 0.5) return 'Late';
+                                if (value === 0.25) return 'Excused';
+                                if (value === 0) return 'Absent';
+                                return '';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const index = tooltipItems[0].dataIndex;
+                                return trendData[index].title + ' (' + trendData[index].date + ')';
+                            },
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                return 'Status: ' + (trendData[index].status || 'unknown').charAt(0).toUpperCase() + (trendData[index].status || 'unknown').slice(1);
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Attendance for {{ selected_player.name }}'
+                    }
+                }
+            }
+        });
+        {% else %}
+        // Team chart
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: trendData.map(d => d.date),
+                datasets: [
+                    {
+                        label: 'Present',
+                        data: trendData.map(d => d.present),
+                        backgroundColor: 'rgba(40, 167, 69, 0.7)'
+                    },
+                    {
+                        label: 'Late',
+                        data: trendData.map(d => d.late),
+                        backgroundColor: 'rgba(255, 193, 7, 0.7)'
+                    },
+                    {
+                        label: 'Absent',
+                        data: trendData.map(d => d.absent),
+                        backgroundColor: 'rgba(220, 53, 69, 0.7)'
+                    },
+                    {
+                        label: 'Excused',
+                        data: trendData.map(d => d.excused),
+                        backgroundColor: 'rgba(23, 162, 184, 0.7)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const index = tooltipItems[0].dataIndex;
+                                return trendData[index].title + ' (' + trendData[index].date + ')';
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Team Attendance'
+                    }
+                }
+            }
+        });
+        {% endif %}
+        
+        // Handle player filter change
+        document.getElementById('player-filter').addEventListener('change', function() {
+            const playerId = this.value;
+            if (playerId) {
+                window.location.href = "{{ url_for('session.attendance_analytics') }}?player_id=" + playerId;
+            } else {
+                window.location.href = "{{ url_for('session.attendance_analytics') }}";
+            }
+        });
+    });
+</script>
+{% endblock %}

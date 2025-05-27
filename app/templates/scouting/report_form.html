@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('scouting.index') }}" class="btn btn-secondary">Back to Scouting Reports</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                {{ form.team_name.label(class="form-label") }}
+                                {{ form.team_name(class="form-control") }}
+                                {% for error in form.team_name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.date.label(class="form-label") }}
+                                {{ form.date(class="form-control", type="date") }}
+                                {% for error in form.date.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.tournament_id.label(class="form-label") }}
+                                {{ form.tournament_id(class="form-select") }}
+                                {% for error in form.tournament_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.game_id.label(class="form-label") }}
+                                {{ form.game_id(class="form-select") }}
+                                {% for error in form.game_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.offense_strategy.label(class="form-label") }}
+                            {{ form.offense_strategy(class="form-control", rows=3) }}
+                            <div class="form-text">Describe their offensive strategies, formations, and tendencies.</div>
+                            {% for error in form.offense_strategy.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.defense_strategy.label(class="form-label") }}
+                            {{ form.defense_strategy(class="form-control", rows=3) }}
+                            <div class="form-text">Describe their defensive strategies, formations, and tendencies.</div>
+                            {% for error in form.defense_strategy.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.strengths.label(class="form-label") }}
+                            {{ form.strengths(class="form-control", rows=3) }}
+                            <div class="form-text">What are this team's key strengths and advantages?</div>
+                            {% for error in form.strengths.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.weaknesses.label(class="form-label") }}
+                            {{ form.weaknesses(class="form-control", rows=3) }}
+                            <div class="form-text">What are this team's key weaknesses and vulnerabilities?</div>
+                            {% for error in form.weaknesses.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=3) }}
+                            <div class="form-text">Any additional notes or observations about this team.</div>
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

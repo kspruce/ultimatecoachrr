@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ tournament.name }}</h1>
+            <p class="lead">
+                {% if tournament.start_date %}
+                    {{ tournament.start_date.strftime('%b %d, %Y') }}
+                    {% if tournament.end_date and tournament.end_date != tournament.start_date %}
+                        - {{ tournament.end_date.strftime('%b %d, %Y') }}
+                    {% endif %}
+                {% endif %}
+                {% if tournament.location %}
+                    | {{ tournament.location }}
+                {% endif %}
+                {% if tournament.season %}
+                    | Season: {{ tournament.season }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-primary">Add Game</a>
+            <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Edit Tournament</a>
+            <a href="{{ url_for('tournament.index') }}" class="btn btn-secondary">Back to Tournaments</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Tournament Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Games:</strong> {{ tournament.game_count }}</p>
+                    <p><strong>Record:</strong> {{ tournament.win_count }}-{{ tournament.loss_count }}</p>
+                    <p><strong>Win Percentage:</strong> 
+                        {% if tournament.game_count > 0 %}
+                            {{ (tournament.win_count / tournament.game_count * 100) | round(1) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Games</h5>
+                </div>
+                <div class="card-body">
+                    {% if games %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Opponent</th>
+                                    <th>Result</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in games %}
+                                <tr>
+                                    <td>{{ game.date.strftime('%b %d, %Y') if game.date else 'N/A' }}</td>
+                                    <td>{{ game.opponent }}</td>
+                                    <td>
+                                        <span class="badge {% if game.is_win %}bg-success{% elif game.is_loss %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ game.result_string }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No games recorded for this tournament yet.</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-primary">Add Game</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

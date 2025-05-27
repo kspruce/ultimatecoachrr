@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Record Pull for Point {{ point.point_number }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('point.game_points', game_id=point.game_id) }}" class="btn btn-secondary">Back to Points</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.player_id.label(class="form-label") }}
+                            {{ form.player_id(class="form-select") }}
+                            {% for error in form.player_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.is_inbounds.label(class="form-label") }}
+                            {{ form.is_inbounds(class="form-select") }}
+                            {% for error in form.is_inbounds.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

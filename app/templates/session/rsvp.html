@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>RSVP for Session</h1>
+            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Session Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <p><strong>Date:</strong> {{ session.formatted_date }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Time:</strong> {{ session.formatted_time }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Location:</strong> {{ session.location or 'TBD' }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if session.focus_area %}
+                    <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
+                    {% endif %}
+                    
+                    {% if session.notes %}
+                    <p><strong>Notes:</strong> {{ session.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Your RSVP</h5>
+                </div>
+                <div class="card-body">
+                    {% if existing_rsvp %}
+                    <div class="alert alert-info">
+                        You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-select") }}
+                            {% for error in form.status.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=2) }}
+                            <div class="form-text">Optional notes about your attendance (e.g., arriving late, leaving early)</div>
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

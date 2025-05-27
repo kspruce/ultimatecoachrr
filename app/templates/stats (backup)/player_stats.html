@@ -1,0 +1,980 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<!-- Load D3.js from CDN -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+<style>
+    .field-container {
+        position: relative;
+        width: 100%;
+        height: 400px;
+        min-height: 400px;
+        border: 2px solid #4CAF50;
+        background-color: #E8F5E9;
+        margin-bottom: 20px;
+    }
+    .field-line {
+        position: absolute;
+        background-color: white;
+    }
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .per-gauge {
+        width: 200px;
+        height: 200px;
+        margin: 0 auto;
+    }
+    .throw-vector {
+        stroke: blue;
+        stroke-width: 2;
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    .throwaway-location {
+        fill: red;
+        opacity: 0.7;
+    }
+    .throwaway-vector {
+        stroke: red;
+        stroke-width: 2;
+        stroke-dasharray: 5,5;
+        opacity: 0.7;
+    }
+    .nav-tabs .nav-link {
+        color: #495057;
+    }
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ player.name }}</h1>
+            <p class="lead">
+                {% if player.jersey_number %}#{{ player.jersey_number }} | {% endif %}
+                {{ player.position|capitalize if player.position else 'No position' }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
+                <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Stats</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <label for="tournament_id" class="form-label">Tournament</label>
+                                <select name="tournament_id" id="tournament_id" class="form-select">
+                                    <option value="">All Tournaments</option>
+                                    {% for tournament in tournaments %}
+                                    <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                                        {{ tournament.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="game_id" class="form-label">Game</label>
+                                <select name="game_id" id="game_id" class="form-select">
+                                    <option value="">All Games</option>
+                                    {% for game_data in player_games %}
+                                    <option value="{{ game_data.game.id }}" {% if selected_game == game_data.game.id %}selected{% endif %}>
+                                        vs {{ game_data.game.opponent }} ({{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PER and Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Player Efficiency Rating (PER)</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="per-gauge" id="perGauge"></div>
+                    <h2 class="mt-3">{{ stats.per|round(2) }}</h2>
+                    <p class="text-muted">Unadjusted PER: {{ stats.unadjusted_per|round(2) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Summary Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Games Played</th>
+                                    <td>{{ stats.games_played }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Points Played</th>
+                                    <td>{{ stats.points_played }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Goals</th>
+                                    <td>{{ stats.goals }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Assists</th>
+                                    <td>{{ stats.assists }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Blocks</th>
+                                    <td>{{ stats.blocks }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Completion Rate</th>
+                                    <td>{{ stats.completion_rate|round(1) }}%</td>
+                                </tr>
+                                <tr>
+                                    <th>Catch Rate</th>
+                                    <td>{{ stats.catch_rate|round(1) }}%</td>
+                                </tr>
+                                <tr>
+                                    <th>Throwaways</th>
+                                    <td>{{ stats.throwaways }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Drops</th>
+                                    <td>{{ stats.drops }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Hockey Assists</th>
+                                    <td>{{ stats.hockey_assists }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Stats -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Offensive Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Throws</th>
+                                    <td>{{ stats.throws }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Completions</th>
+                                    <td>{{ stats.completions }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Catches</th>
+                                    <td>{{ stats.catches }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Goals</th>
+                                    <td>{{ stats.goals }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Assists</th>
+                                    <td>{{ stats.assists }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Hockey Assists</th>
+                                    <td>{{ stats.hockey_assists }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Avg Throw Distance</th>
+                                    <td>{{ stats.avg_throw_distance|round(1) }} m</td>
+                                </tr>
+                                <tr>
+                                    <th>O-Line Points</th>
+                                    <td>{{ stats.o_line_points_played }}</td>
+                                </tr>
+                                <tr>
+                                    <th>O-Line +/-</th>
+                                    <td>{{ stats.o_line_plus_minus }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Callahans</th>
+                                    <td>{{ stats.callahans }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Defensive Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Blocks</th>
+                                    <td>{{ stats.blocks }}</td>
+                                </tr>
+                                <tr>
+                                    <th>D-Line Points</th>
+                                    <td>{{ stats.d_line_points_played }}</td>
+                                </tr>
+                                <tr>
+                                    <th>D-Line +/-</th>
+                                    <td>{{ stats.d_line_plus_minus }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Throwaways</th>
+                                    <td>{{ stats.throwaways }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Drops</th>
+                                    <td>{{ stats.drops }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Stalls</th>
+                                    <td>{{ stats.stalls }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Throw Visualizations -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="throwVisualizationTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="field-tab" data-bs-toggle="tab" data-bs-target="#field-content" type="button" role="tab" aria-controls="field-content" aria-selected="true">Field View</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="centralized-tab" data-bs-toggle="tab" data-bs-target="#centralized-content" type="button" role="tab" aria-controls="centralized-content" aria-selected="false">Centralized View</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="rose-tab" data-bs-toggle="tab" data-bs-target="#rose-content" type="button" role="tab" aria-controls="rose-content" aria-selected="false">Rose Diagram</button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="throwVisualizationTabContent">
+                        <div class="tab-pane fade show active" id="field-content" role="tabpanel" aria-labelledby="field-tab">
+                            <div class="field-container" id="throwVectorsField" style="height: 400px; min-height: 400px;">
+                                <!-- Field will be drawn here -->
+                            </div>
+                            <p class="text-center text-muted">Blue lines represent completed throws, orange lines represent assists</p>
+                        </div>
+                        <div class="tab-pane fade" id="centralized-content" role="tabpanel" aria-labelledby="centralized-tab">
+                            <div class="field-container" id="centralizedVectorsField" style="height: 400px; min-height: 400px;">
+                                <!-- Centralized vectors will be drawn here -->
+                            </div>
+                            <p class="text-center text-muted">All throws shown from a central point</p>
+                        </div>
+                        <div class="tab-pane fade" id="rose-content" role="tabpanel" aria-labelledby="rose-tab">
+                            <div id="throwRoseDiagram" style="height: 400px; min-height: 400px;">
+                                <!-- Rose diagram will be drawn here -->
+                            </div>
+                            <p class="text-center text-muted">Distribution of throws by direction</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Throwaway Locations -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Throwaway Locations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="field-container" id="throwawayLocationsField" style="height: 400px; min-height: 400px;">
+                        <!-- Field will be drawn here -->
+                    </div>
+                    <p class="text-center text-muted">Red dots represent throwaway locations, dashed lines show attempted throws</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Game History -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Game History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Opponent</th>
+                                <th>Points</th>
+                                <th>Goals</th>
+                                <th>Assists</th>
+                                <th>Blocks</th>
+                                <th>Throwaways</th>
+                                <th>PER</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for game_data in player_games %}
+                            <tr>
+                                <td>{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else 'No date' }}</td>
+                                <td>
+                                    <a href="{{ url_for('game.detail', game_id=game_data.game.id) }}">
+                                        vs {{ game_data.game.opponent }}
+                                    </a>
+                                </td>
+                                <td>{{ game_data.stats.points_played }}</td>
+                                <td>{{ game_data.stats.goals }}</td>
+                                <td>{{ game_data.stats.assists }}</td>
+                                <td>{{ game_data.stats.blocks }}</td>
+                                <td>{{ game_data.stats.throwaways }}</td>
+                                <td>{{ game_data.stats.per|round(2) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Define all functions first
+function initializeVisualizations() {
+    console.log('Initializing visualizations');
+    
+    // PER Gauge
+    const perValue = {{ stats.per|round(2) }};
+    console.log(`PER value: ${perValue}`);
+    const perGauge = d3.select('#perGauge');
+    
+    // Create PER gauge
+    createPERGauge(perGauge, perValue);
+    
+    // Draw fields and visualizations
+    drawField('throwVectorsField');
+    drawField('throwawayLocationsField');
+    
+    // Draw throw vectors
+    const throwVectors = {{ throw_vectors|safe }};
+    drawThrowVectors('throwVectorsField', throwVectors, false);
+    
+    // Draw throwaway locations
+    const throwawayLocations = {{ throwaway_locations|safe }};
+    drawThrowawayLocations('throwawayLocationsField', throwawayLocations);
+    
+    // Add event listeners for tab changes
+    document.getElementById('centralized-tab').addEventListener('click', function() {
+        if (document.getElementById('centralizedVectorsField').innerHTML === '') {
+            drawField('centralizedVectorsField');
+            drawThrowVectors('centralizedVectorsField', throwVectors, true);
+        }
+    });
+    
+    document.getElementById('rose-tab').addEventListener('click', function() {
+        if (document.getElementById('throwRoseDiagram').innerHTML === '') {
+            drawThrowRoseDiagram('throwRoseDiagram', throwVectors);
+        }
+    });
+}
+
+function createPERGauge(container, value) {
+    const width = 200;
+    const height = 200;
+    const radius = Math.min(width, height) / 2;
+    
+    const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .append('g')
+        .attr('transform', `translate(${width/2},${height/2})`);
+    
+    // PER gauge scale
+    const scale = d3.scaleLinear()
+        .domain([0, 30])
+        .range([-Math.PI/2, Math.PI/2]);
+    
+    // Arc generator
+    const arc = d3.arc()
+        .innerRadius(radius * 0.6)
+        .outerRadius(radius * 0.8)
+        .startAngle(-Math.PI/2);
+    
+    // Background arc
+    svg.append('path')
+        .datum({endAngle: Math.PI/2})
+        .style('fill', '#e6e6e6')
+        .attr('d', arc);
+    
+    // Value arc
+    const valueArc = svg.append('path')
+        .datum({endAngle: scale(value)})
+        .style('fill', getPerColor(value))
+        .attr('d', arc);
+    
+    // Add text
+    svg.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.5em')
+        .attr('class', 'gauge-value')
+        .style('font-size', '24px')
+        .style('font-weight', 'bold')
+        .text(value);
+    
+    // Add label
+    svg.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '2em')
+        .style('font-size', '14px')
+        .text('PER');
+}
+
+function getPerColor(value) {
+    if (value >= 20) return '#28a745'; // Excellent - Green
+    if (value >= 15) return '#17a2b8'; // Good - Blue
+    if (value >= 10) return '#ffc107'; // Average - Yellow
+    if (value >= 5) return '#fd7e14';  // Below Average - Orange
+    return '#dc3545';                  // Poor - Red
+}
+
+function drawField(containerId) {
+    const container = d3.select(`#${containerId}`);
+    
+    // Clear any existing content
+    container.html('');
+    
+    // Get container dimensions
+    const containerWidth = container.node().getBoundingClientRect().width;
+    const containerHeight = 400; // Fixed height
+    
+    console.log(`Drawing field in ${containerId} with dimensions ${containerWidth}x${containerHeight}`);
+    
+    // Create SVG with responsive dimensions
+    const svg = container.append('svg')
+        .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet')
+        .attr('width', '100%')
+        .attr('height', '100%');
+    
+    // Store the original dimensions as data attributes
+    svg.attr('data-width', containerWidth);
+    svg.attr('data-height', containerHeight);
+    
+    // Draw field outline
+    svg.append('rect')
+        .attr('width', containerWidth)
+        .attr('height', containerHeight)
+        .attr('fill', '#E8F5E9')
+        .attr('stroke', '#4CAF50')
+        .attr('stroke-width', 2);
+    
+    // Draw center line
+    svg.append('line')
+        .attr('x1', containerWidth / 2)
+        .attr('y1', 0)
+        .attr('x2', containerWidth / 2)
+        .attr('y2', containerHeight)
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2);
+    
+    // Draw end zones
+    svg.append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', containerWidth * 0.2)
+        .attr('height', containerHeight)
+        .attr('fill', 'none')
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2);
+    
+    svg.append('rect')
+        .attr('x', containerWidth * 0.8)
+        .attr('y', 0)
+        .attr('width', containerWidth * 0.2)
+        .attr('height', containerHeight)
+        .attr('fill', 'none')
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2);
+    
+    return svg;
+}
+
+function drawThrowVectors(containerId, vectors, centralizeVectors = false) {
+    console.log(`Drawing throw vectors: ${JSON.stringify(vectors)}`);
+    
+    if (!vectors || vectors.length === 0) {
+        console.log('No throw vectors to draw');
+        return;
+    }
+    
+    const svg = d3.select(`#${containerId} svg`);
+    if (!svg.node()) {
+        console.error(`SVG not found in container ${containerId}`);
+        return;
+    }
+    
+    // Get the original dimensions from data attributes
+    const width = parseFloat(svg.attr('data-width'));
+    const height = parseFloat(svg.attr('data-height'));
+    
+    console.log(`Drawing ${vectors.length} throw vectors on field of size ${width}x${height}`);
+    
+    // Create a group for the vectors
+    const vectorGroup = svg.append('g').attr('class', 'vector-group');
+    
+    // Define the central point if centralizing vectors
+    const centerX = width / 2;
+    const centerY = height / 2;
+    
+    // Draw each vector
+    vectors.forEach((vector, i) => {
+        let startX, startY, endX, endY;
+        
+        if (centralizeVectors) {
+            // All vectors start from the center
+            startX = centerX;
+            startY = centerY;
+            
+            // Calculate the vector direction and length
+            const dx = vector.end_x - vector.start_x;
+            const dy = vector.end_y - vector.start_y;
+            
+            // Apply the same direction and length from the center
+            endX = centerX + (dx * width);
+            endY = centerY + (dy * height);
+        } else {
+            // Normal vector drawing
+            startX = vector.start_x * width;
+            startY = vector.start_y * height;
+            endX = vector.end_x * width;
+            endY = vector.end_y * height;
+        }
+        
+        console.log(`Vector ${i}: (${startX}, ${startY}) -> (${endX}, ${endY})`);
+        
+        // Draw the line
+        vectorGroup.append('line')
+            .attr('x1', startX)
+            .attr('y1', startY)
+            .attr('x2', endX)
+            .attr('y2', endY)
+            .attr('class', 'throw-vector')
+            .attr('stroke', vector.type === 'assist' ? '#ff9900' : 'blue')  // Different color for assists
+            .attr('stroke-width', 2)
+            .attr('marker-end', 'url(#arrowhead)');
+        
+        // Draw a small circle at the start point
+        vectorGroup.append('circle')
+            .attr('cx', startX)
+            .attr('cy', startY)
+            .attr('r', 3)
+            .attr('fill', vector.type === 'assist' ? '#ff9900' : 'blue');
+    });
+    
+    // Add arrowhead marker
+    svg.append('defs').append('marker')
+        .attr('id', 'arrowhead')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 8)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'blue');
+}
+
+function drawThrowawayLocations(containerId, locations) {
+    if (!locations || locations.length === 0) {
+        console.log('No throwaway locations to draw');
+        return;
+    }
+    
+    const svg = d3.select(`#${containerId} svg`);
+    if (!svg.node()) {
+        console.error(`SVG not found in container ${containerId}`);
+        return;
+    }
+    
+    const width = parseInt(svg.attr('width'));
+    const height = parseInt(svg.attr('height'));
+    
+    // Create a group for the throwaway locations
+    const throwawayGroup = svg.append('g').attr('class', 'throwaway-group');
+    
+    // Draw each throwaway location
+    locations.forEach(location => {
+        // Scale coordinates to fit the field
+        const x = location.x * width;
+        const y = location.y * height;
+        
+        // Draw the throwaway point
+        throwawayGroup.append('circle')
+            .attr('cx', x)
+            .attr('cy', y)
+            .attr('r', 5)
+            .attr('class', 'throwaway-location');
+        
+        // If we have previous position data, draw a vector
+        if (location.prev_x !== undefined && location.prev_y !== undefined) {
+            const prevX = location.prev_x * width;
+            const prevY = location.prev_y * height;
+            
+            throwawayGroup.append('line')
+                .attr('x1', prevX)
+                .attr('y1', prevY)
+                .attr('x2', x)
+                .attr('y2', y)
+                .attr('class', 'throwaway-vector')
+                .attr('marker-end', 'url(#throwaway-arrowhead)');
+            
+            // Draw a small circle at the start point
+            throwawayGroup.append('circle')
+                .attr('cx', prevX)
+                .attr('cy', prevY)
+                .attr('r', 3)
+                .attr('fill', 'red');
+        }
+    });
+    
+    // Add arrowhead marker for throwaways
+    svg.append('defs').append('marker')
+        .attr('id', 'throwaway-arrowhead')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 8)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', 'red');
+}
+
+function drawThrowRoseDiagram(containerId, vectors) {
+    if (!vectors || vectors.length === 0) {
+        console.log('No throw vectors to draw rose diagram');
+        return;
+    }
+    
+    const container = d3.select(`#${containerId}`);
+    const width = container.node().getBoundingClientRect().width;
+    const height = 400;
+    const radius = Math.min(width, height) / 2 - 40;
+    
+    // Clear container
+    container.html('');
+    
+    const svg = container.append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .append('g')
+        .attr('transform', `translate(${width/2},${height/2})`);
+    
+    // Calculate angles and distances for each throw
+    const throwData = vectors.map(vector => {
+        const dx = vector.end_x - vector.start_x;
+        const dy = vector.end_y - vector.start_y;
+        const angle = Math.atan2(dy, dx);
+        const distance = Math.sqrt(dx*dx + dy*dy);
+        return {
+            angle: angle,
+            distance: distance,
+            type: vector.type
+        };
+    });
+    
+    // Group throws by angle (in 30-degree bins)
+    const bins = {};
+    for (let i = 0; i < 12; i++) {
+        bins[i] = {count: 0, assists: 0, throws: 0};
+    }
+    
+    throwData.forEach(throw_data => {
+        // Convert angle from radians to 0-360 degrees
+        let degrees = (throw_data.angle * 180 / Math.PI + 360) % 360;
+        // Determine which bin (0-11) this belongs to
+        let bin = Math.floor(degrees / 30);
+        bins[bin].count++;
+        if (throw_data.type === 'assist') {
+            bins[bin].assists++;
+        } else {
+            bins[bin].throws++;
+        }
+    });
+    
+    // Create a scale for the radius
+    const maxCount = Math.max(...Object.values(bins).map(b => b.count));
+    const radiusScale = d3.scaleLinear()
+        .domain([0, maxCount])
+        .range([0, radius]);
+    
+    // Create the pie layout
+    const pie = d3.pie()
+        .value(d => 1)
+        .sort(null)
+        .startAngle(0)
+        .endAngle(2 * Math.PI);
+    
+    // Create the arc generator
+    const arc = d3.arc()
+        .innerRadius(0)
+        .outerRadius(d => radiusScale(bins[d.index].count));
+    
+    // Draw the rose diagram
+    svg.selectAll('path')
+        .data(pie(Object.keys(bins)))
+        .enter()
+        .append('path')
+        .attr('d', arc)
+        .attr('fill', d => {
+            const bin = bins[d.index];
+            // Color based on the ratio of assists to total throws in this bin
+            const assistRatio = bin.count > 0 ? bin.assists / bin.count : 0;
+            return d3.interpolate('blue', '#ff9900')(assistRatio);
+        })
+        .attr('stroke', 'white')
+        .attr('stroke-width', 1)
+        .append('title')
+        .text(d => {
+            const bin = bins[d.index];
+            const direction = ['E', 'ENE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW'][d.index];
+            return `Direction: ${direction}\nTotal throws: ${bin.count}\nAssists: ${bin.assists}\nRegular throws: ${bin.throws}`;
+        });
+    
+    // Add direction labels
+    const directions = ['E', 'ENE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW'];
+    svg.selectAll('.direction-label')
+        .data(directions)
+        .enter()
+        .append('text')
+        .attr('class', 'direction-label')
+        .attr('x', (d, i) => (radius + 20) * Math.cos((i * 30 - 90) * Math.PI / 180))
+        .attr('y', (d, i) => (radius + 20) * Math.sin((i * 30 - 90) * Math.PI / 180))
+        .attr('text-anchor', 'middle')
+        .attr('alignment-baseline', 'middle')
+        .text(d => d)
+        .style('font-size', '12px')
+        .style('font-weight', 'bold');
+    
+    // Add a legend
+    const legend = svg.append('g')
+        .attr('transform', `translate(${-width/2 + 20},${-height/2 + 20})`);
+    
+    legend.append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', 15)
+        .attr('height', 15)
+        .attr('fill', 'blue');
+    
+    legend.append('text')
+        .attr('x', 20)
+        .attr('y', 12)
+        .text('Regular Throws')
+        .style('font-size', '12px');
+    
+    legend.append('rect')
+        .attr('x', 0)
+        .attr('y', 20)
+        .attr('width', 15)
+        .attr('height', 15)
+        .attr('fill', '#ff9900');
+    
+    legend.append('text')
+        .attr('x', 20)
+        .attr('y', 32)
+        .text('Assists')
+        .style('font-size', '12px');
+}
+
+// Now load D3.js and initialize visualizations
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded');
+    
+    // Debug info
+    console.log('Throw vectors data:', {{ throw_vectors|safe }});
+    console.log('Throwaway locations data:', {{ throwaway_locations|safe }});
+    
+    // Load D3.js dynamically if not already loaded
+    if (typeof d3 === 'undefined') {
+        console.log('Loading D3.js dynamically');
+        const script = document.createElement('script');
+        script.src = 'https://d3js.org/d3.v7.min.js';
+        script.onload = function() {
+            console.log('D3.js loaded successfully');
+            setupVisualizationsAndTabs();
+        };
+        document.head.appendChild(script);
+    } else {
+        console.log('D3.js already loaded');
+        setupVisualizationsAndTabs();
+    }
+});
+
+function setupVisualizationsAndTabs() {
+    // Initialize the first tab
+    initializeVisualizations();
+    
+    // Set up tab event listeners
+    const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    console.log(`Found ${tabElements.length} tab elements`);
+    
+    tabElements.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            console.log(`Tab activated: ${event.target.id}`);
+            
+            if (event.target.id === 'centralized-tab') {
+                console.log('Initializing centralized view');
+                if (document.querySelector('#centralizedVectorsField svg') === null) {
+                    drawField('centralizedVectorsField');
+                    drawThrowVectors('centralizedVectorsField', {{ throw_vectors|safe }}, true);
+                }
+            }
+            
+            if (event.target.id === 'rose-tab') {
+                console.log('Initializing rose diagram');
+                if (document.querySelector('#throwRoseDiagram svg') === null) {
+                    drawThrowRoseDiagram('throwRoseDiagram', {{ throw_vectors|safe }});
+                }
+            }
+        });
+    });
+    
+    // Also add direct click handlers as a backup
+    document.getElementById('centralized-tab').addEventListener('click', function() {
+        console.log('Centralized tab clicked');
+        setTimeout(() => {
+            if (document.querySelector('#centralizedVectorsField svg') === null) {
+                drawField('centralizedVectorsField');
+                drawThrowVectors('centralizedVectorsField', {{ throw_vectors|safe }}, true);
+            }
+        }, 100);
+    });
+    
+    document.getElementById('rose-tab').addEventListener('click', function() {
+        console.log('Rose tab clicked');
+        setTimeout(() => {
+            if (document.querySelector('#throwRoseDiagram svg') === null) {
+                drawThrowRoseDiagram('throwRoseDiagram', {{ throw_vectors|safe }});
+            }
+        }, 100);
+    });
+}
+// Add window resize handler
+window.addEventListener('resize', debounce(function() {
+    console.log('Window resized, redrawing visualizations');
+    
+    // Get the active tab
+    const activeTab = document.querySelector('.tab-pane.active');
+    if (!activeTab) return;
+    
+    const activeTabId = activeTab.id;
+    console.log(`Active tab: ${activeTabId}`);
+    
+    // Redraw the appropriate visualization
+    if (activeTabId === 'field-content') {
+        document.getElementById('throwVectorsField').innerHTML = '';
+        drawField('throwVectorsField');
+        drawThrowVectors('throwVectorsField', {{ throw_vectors|safe }}, false);
+    } else if (activeTabId === 'centralized-content') {
+        document.getElementById('centralizedVectorsField').innerHTML = '';
+        drawField('centralizedVectorsField');
+        drawThrowVectors('centralizedVectorsField', {{ throw_vectors|safe }}, true);
+    } else if (activeTabId === 'rose-content') {
+        document.getElementById('throwRoseDiagram').innerHTML = '';
+        drawThrowRoseDiagram('throwRoseDiagram', {{ throw_vectors|safe }});
+    }
+    
+    // Also redraw the throwaway locations
+    document.getElementById('throwawayLocationsField').innerHTML = '';
+    drawField('throwawayLocationsField');
+    drawThrowawayLocations('throwawayLocationsField', {{ throwaway_locations|safe }});
+}, 250));
+
+// Debounce function to limit how often a function is called
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this, args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
+            func.apply(context, args);
+        }, wait);
+    };
+}
+</script>
+{% endblock %}

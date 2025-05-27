@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ clip.title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">Edit Clip</a>
+                <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-secondary">Back to Clips</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="ratio ratio-16x9 mb-3">
+                        <iframe src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Team:</strong> {{ report.team_name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Type:</strong> {{ clip.clip_type|replace('_', ' ')|capitalize if clip.clip_type else 'General' }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if clip.description %}
+                    <h5>Description</h5>
+                    <p>{{ clip.description|nl2br }}</p>
+                    {% endif %}
+                    
+                    <h5>Video Link</h5>
+                    <p><a href="{{ clip.youtube_link }}" target="_blank">{{ clip.youtube_link }}</a></p>
+                    
+                    {% if clip.start_time or clip.end_time %}
+                    <h5>Clip Timing</h5>
+                    <p>
+                        {% if clip.start_time %}
+                        Start: {{ clip.start_time // 60 }}:{{ '%02d' % (clip.start_time % 60) }}
+                        {% endif %}
+                        {% if clip.end_time %}
+                        End: {{ clip.end_time // 60 }}:{{ '%02d' % (clip.end_time % 60) }}
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Scouting Report</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ report.team_name }}</h6>
+                    <p>
+                        {% if report.date %}
+                            {{ report.date.strftime('%B %d, %Y') }}
+                        {% endif %}
+                        {% if report.tournament %}
+                            | {{ report.tournament.name }}
+                        {% endif %}
+                    </p>
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-primary">View Full Report</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

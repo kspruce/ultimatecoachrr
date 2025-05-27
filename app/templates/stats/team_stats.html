@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<style>
+    .stat-card {
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Team Statistics</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('stats_dashboard.team_stats') }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="season" class="form-label">Season</label>
+                                <select name="season" id="season" class="form-select">
+                                    <option value="">All Seasons</option>
+                                    {% for season in seasons %}
+                                    <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>
+                                        {{ season }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="tournament_id" class="form-label">Tournament</label>
+                                <select name="tournament_id" id="tournament_id" class="form-select">
+                                    <option value="">All Tournaments</option>
+                                    {% for tournament in tournaments %}
+                                    <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                                        {{ tournament.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.games_played }}</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.wins }}-{{ team_summary.losses }}{% if team_summary.ties > 0 %}-{{ team_summary.ties }}{% endif %}</div>
+                <div class="stat-label">Record</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.win_percentage|round(1) }}%</div>
+                <div class="stat-label">Win Percentage</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.total_points }}</div>
+                <div class="stat-label">Total Points Played</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Offensive Efficiency</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ team_summary.o_line_conversion_rate|round(1) }}%</div>
+                                <div class="stat-label">O-Line Conversion Rate</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ team_summary.o_line_conversions }} / {{ team_summary.o_line_points }}</div>
+                                <div class="stat-label">O-Line Points Converted</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Defensive Efficiency</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ team_summary.d_line_conversion_rate|round(1) }}%</div>
+                                <div class="stat-label">D-Line Conversion Rate</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card">
+                                <div class="stat-value">{{ team_summary.d_line_conversions }} / {{ team_summary.d_line_points }}</div>
+                                <div class="stat-label">D-Line Points Converted</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Update optimal line selection -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Optimal Lines
+                <i class="bi bi-info-circle" 
+                   data-bs-toggle="tooltip" 
+                   title="Lines are optimized based on PER, position compatibility, and historical performance">
+                </i>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>O-Line</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>PER</th>
+                                    <th>O-Line Rating</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in o_line_players %}
+                                <tr>
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize }}</td>
+                                    <td>{{ get_player_per(player, player_stats)|round(1) }}</td>
+                                    <td>{{ get_o_line_rating(player, player_stats)|round(1) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Similar update for D-Line -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Improve filtering interface -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Filter Statistics</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Season</label>
+                    <select name="season" class="form-select">
+                        <option value="">All Seasons</option>
+                        {% for season in seasons %}
+                        <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>
+                            {{ season }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tournament</label>
+                    <select name="tournament_id" class="form-select">
+                        <option value="">All Tournaments</option>
+                        {% for tournament in tournaments %}
+                        <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                            {{ tournament.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="player-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Position</th>
+                                    <th>Points</th>
+                                    <th>Goals</th>
+                                    <th>Assists</th>
+                                    <th>Blocks</th>
+                                    <th>Comp %</th>
+                                    <th>Turnovers</th>
+                                    <th>+/-</th>
+                                    <th>PER</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in player_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=item.player.id) }}">
+                                            {{ item.player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ item.player.position|capitalize }}</td>
+                                    <td>{{ item.stats.points_played }}</td>
+                                    <td>{{ item.stats.goals }}</td>
+                                    <td>{{ item.stats.assists }}</td>
+                                    <td>{{ item.stats.blocks }}</td>
+                                    <td>{{ item.stats.completion_rate|round(1) }}%</td>
+                                    <td>{{ item.stats.throwaways + item.stats.drops }}</td>
+                                    <td>{{ item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.throwaways - item.stats.drops }}</td>
+                                    <td>{{ item.stats.per|round(1) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#player-stats-table').DataTable({
+            "pageLength": 10,
+            "order": [[10, "desc"]]
+        });
+    });
+</script>
+{% endblock %}

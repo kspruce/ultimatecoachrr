@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Drill Library</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">Add Basic Drill</a>
+                <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>All Drills</h5>
+                </div>
+                <div class="card-body">
+                    {% if drills %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Focus Area</th>
+                                    <th>Duration</th>
+                                    <th>Skill Level</th>
+                                    <th>Players</th>
+                                    <th>Usage</th>
+                                    <th>Diagram</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for drill in drills %}
+                                <tr>
+                                    <td>
+                                        {% if drill.has_visual_diagram %}
+                                        <a href="{{ url_for('session.drill_viewer', drill_id=drill.id) }}">
+                                            {{ drill.title }}
+                                        </a>
+                                        {% else %}
+                                        <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}">
+                                            {{ drill.title }}
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ drill.focus_area }}</td>
+                                    <td>{{ drill.recommended_duration }} min</td>
+                                    <td>{{ drill.skill_level|capitalize if drill.skill_level else 'All levels' }}</td>
+                                    <td>
+                                        {% if drill.min_players and drill.max_players %}
+                                            {{ drill.min_players }}-{{ drill.max_players }}
+                                        {% elif drill.min_players %}
+                                            {{ drill.min_players }}+
+                                        {% elif drill.max_players %}
+                                            Up to {{ drill.max_players }}
+                                        {% else %}
+                                            Any
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ drill.components.count() }} sessions</td>
+                                    <td>
+                                        {% if drill.has_visual_diagram %}
+                                        <span class="badge bg-success">Interactive</span>
+                                        {% elif drill.diagram_url %}
+                                        <span class="badge bg-info">Static</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            {% if drill.has_visual_diagram %}
+                                            <a href="{{ url_for('session.drill_viewer', drill_id=drill.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="{{ url_for('session.drill_editor', drill_id=drill.id) }}" 
+                                               class="btn btn-sm btn-outline-success">Edit Diagram</a>
+                                            {% else %}
+                                            <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" 
+                                               class="btn btn-sm btn-outline-secondary">Edit</a>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal{{ drill.id }}">Delete</button>
+                                        </div>
+
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ drill.id }}" tabindex="-1" 
+                                             aria-labelledby="deleteModalLabel{{ drill.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ drill.id }}">
+                                                            Confirm Delete
+                                                        </h5>
+                                                        <button type="button" class="btn-close" 
+                                                                data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete the drill "{{ drill.title }}"?
+                                                        {% if drill.components.count() > 0 %}
+                                                        <div class="alert alert-warning mt-2">
+                                                            This drill is used in {{ drill.components.count() }} 
+                                                            session components. Deleting it will affect those sessions.
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" 
+                                                                data-bs-dismiss="modal">Cancel</button>
+                                                        <form action="{{ url_for('session.delete_drill', drill_id=drill.id) }}" 
+                                                              method="post">
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No drills found. 
+                        <a href="{{ url_for('session.add_drill') }}">Add a drill</a> to get started.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

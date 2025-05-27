@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Clips - {{ report.team_name }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-primary">Add Clip</a>
+                <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-secondary">Back to Report</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% if clips %}
+            {% for clip in clips %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title">{{ clip.title }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="embed-responsive embed-responsive-16by9 mb-3">
+                            <iframe class="embed-responsive-item" src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
+                        </div>
+                        
+                        <p><strong>Type:</strong> {{ clip.clip_type|replace('_', ' ')|capitalize if clip.clip_type else 'General' }}</p>
+                        
+                        {% if clip.description %}
+                        <p class="card-text">{{ clip.description|truncate(100) }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <a href="{{ url_for('scouting.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">Delete</button>
+                        </div>
+                        
+                        <!-- Delete Confirmation Modal -->
+                        <div class="modal fade" id="deleteModal{{ clip.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ clip.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">Confirm Delete</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Are you sure you want to delete the clip "{{ clip.title }}"?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <form action="{{ url_for('scouting.delete_clip', clip_id=clip.id) }}" method="post">
+                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No clips added yet. <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}">Add a clip</a> to record key plays.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

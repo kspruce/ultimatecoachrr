@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Debug: All Players</h1>
+    <p>Total players: {{ players|length }}</p>
+    <ul>
+        {% for player in players %}
+        <li>{{ player.name }} (ID: {{ player.id }}, Jersey: {{ player.jersey_number }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

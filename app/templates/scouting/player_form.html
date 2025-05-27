@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+            <p class="lead">{{ report.team_name }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="btn btn-secondary">Back to Players</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control") }}
+                                {% for error in form.name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.jersey_number.label(class="form-label") }}
+                                {{ form.jersey_number(class="form-control") }}
+                                {% for error in form.jersey_number.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                {{ form.position.label(class="form-label") }}
+                                {{ form.position(class="form-select") }}
+                                {% for error in form.position.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.height.label(class="form-label") }}
+                                {{ form.height(class="form-control") }}
+                                {% for error in form.height.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.gender.label(class="form-label") }}
+                                {{ form.gender(class="form-select") }}
+                                {% for error in form.gender.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                {{ form.throwing_ability.label(class="form-label") }}
+                                {{ form.throwing_ability(class="form-select") }}
+                                {% for error in form.throwing_ability.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.cutting_ability.label(class="form-label") }}
+                                {{ form.cutting_ability(class="form-select") }}
+                                {% for error in form.cutting_ability.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.defensive_ability.label(class="form-label") }}
+                                {{ form.defensive_ability(class="form-select") }}
+                                {% for error in form.defensive_ability.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.athletic_ability.label(class="form-label") }}
+                                {{ form.athletic_ability(class="form-select") }}
+                                {% for error in form.athletic_ability.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.preferred_throws.label(class="form-label") }}
+                            {{ form.preferred_throws(class="form-control") }}
+                            <div class="form-text">E.g., backhand, forehand, hammer, scoober, etc.</div>
+                            {% for error in form.preferred_throws.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=3) }}
+                            <div class="form-text">Any additional notes about this player's tendencies, strengths, or weaknesses.</div>
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+         

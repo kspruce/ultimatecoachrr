@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Your Profile</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Account Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Username:</strong> {{ current_user.username }}</p>
+                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                    <p><strong>Role:</strong> {{ current_user.role|capitalize }}</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Linked Player</h5>
+                    <a href="{{ url_for('auth.link_player') }}" class="btn btn-sm btn-outline-primary">Change</a>
+                </div>
+                <div class="card-body">
+                    {% if current_user.player %}
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <h5>{{ current_user.player.name }}</h5>
+                            <p class="mb-0">
+                                {% if current_user.player.jersey_number %}
+                                #{{ current_user.player.jersey_number }} |
+                                {% endif %}
+                                {{ current_user.player.position|capitalize if current_user.player.position else 'No position' }}
+                            </p>
+                        </div>
+                        <div class="ms-auto">
+                            <a href="{{ url_for('team.player_detail', player_id=current_user.player.id) }}" class="btn btn-outline-primary">View Profile</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-center">
+                        You don't have a linked player profile yet.
+                        <a href="{{ url_for('auth.link_player') }}" class="btn btn-sm btn-primary mt-2">Link to Player</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Your RSVPs</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_user.player and current_user.player.session_rsvps %}
+                    <div class="list-group">
+                        {% for rsvp in current_user.player.session_rsvps %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">{{ rsvp.session.title }}</h6>
+                                    <small>{{ rsvp.session.formatted_date }} | {{ rsvp.session.formatted_time }}</small>
+                                </div>
+                                <span class="badge 
+                                    {% if rsvp.status == 'attending' %}bg-success
+                                    {% elif rsvp.status == 'maybe' %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ rsvp.status|replace('_', ' ')|capitalize }}
+                                </span>
+                            </div>
+                            {% if rsvp.notes %}
+                            <small class="text-muted">{{ rsvp.notes }}</small>
+                            {% endif %}
+                            <div class="mt-2">
+                                <a href="{{ url_for('session.rsvp', session_id=rsvp.session_id) }}" class="btn btn-sm btn-outline-primary">Update RSVP</a>
+                                <a href="{{ url_for('session.detail', session_id=rsvp.session_id) }}" class="btn btn-sm btn-outline-secondary">View Session</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">You haven't RSVP'd to any sessions yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

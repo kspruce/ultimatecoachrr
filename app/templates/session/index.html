@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+<head>
+    <!-- Other head elements -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Practice Sessions</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('session.add_session') }}" class="btn btn-primary">Add Session</a>
+                <a href="{{ url_for('session.drills') }}" class="btn btn-outline-primary">Drill Library</a>
+                <a href="{{ url_for('session.attendance_analytics') }}" class="btn btn-outline-info">Attendance Analytics</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Sessions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('session.index') }}">
+                        <div class="row">
+                            <div class="col-md-5">
+                                {{ form.focus_area.label(class="form-label") }}
+                                {{ form.focus_area(class="form-select") }}
+                            </div>
+                            <div class="col-md-5">
+                                {{ form.date_range.label(class="form-label") }}
+                                {{ form.date_range(class="form-select") }}
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Upcoming Sessions</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_sessions %}
+                    <div class="list-group">
+                        {% for session in upcoming_sessions %}
+                        <a href="{{ url_for('session.detail', session_id=session.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ session.title }}</h6>
+                                <small>{{ session.date.strftime('%b %d') }}</small>
+                            </div>
+                            <p class="mb-1">{{ session.focus_area }}</p>
+                            <small>{{ session.formatted_time }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No upcoming sessions scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>All Sessions</h5>
+                </div>
+                <div class="card-body">
+                    {% if sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Title</th>
+                                    <th>Focus Area</th>
+                                    <th>Location</th>
+                                    <th>Time</th>
+                                    <th>Components</th>
+                                    <th>Attendance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in sessions %}
+                                <tr>
+                                    <td>{{ session.date.strftime('%Y-%m-%d') if session.date else 'No date' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('session.detail', session_id=session.id) }}">
+                                            {{ session.title }}
+                                        </a>
+                                        {% if session.is_recurring %}
+                                        <span class="badge bg-info">{{ session.recurrence_pattern }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ session.focus_area }}</td>
+                                    <td>{{ session.location }}</td>
+                                    <td>{{ session.formatted_time }}</td>
+                                    <td>{{ session.component_count }}</td>
+                                    <td>{{ session.attendance_count }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                            <button onclick="deleteSession({{ session.id }})" class="btn btn-outline-danger">
+                                                <i class="fas fa-trash"></i> Delete Session
+                                            </button>                                     
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No sessions found. <a href="{{ url_for('session.add_session') }}">Add a session</a> to get started.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function deleteSession(sessionId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    if (confirm('Are you sure you want to delete this session? This cannot be undone.')) {
+        fetch(`/sessions/delete/${sessionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken.content
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/sessions';  // Redirect to sessions list
+            } else {
+                throw new Error('Failed to delete session');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete session');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .diagram-preview {
+        max-width: 100%;
+        max-height: 300px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .drawing-canvas {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background: #fff;
+        cursor: crosshair;
+    }
+
+    .drawing-tools {
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+
+    .preview-container {
+        text-align: center;
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .preview-container img {
+        max-width: 100%;
+        max-height: 300px;
+        object-fit: contain;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('session.drills') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Drills
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+
+                        <!-- Basic Information -->
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3) }}
+                            {% for error in form.description.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.setup_instructions.label(class="form-label") }}
+                            {{ form.setup_instructions(class="form-control", rows=3) }}
+                            {% for error in form.setup_instructions.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Requirements -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.recommended_duration.label(class="form-label") }}
+                                {{ form.recommended_duration(class="form-control", type="number") }}
+                                {% for error in form.recommended_duration.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.skill_level.label(class="form-label") }}
+                                {{ form.skill_level(class="form-select") }}
+                                {% for error in form.skill_level.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.min_players.label(class="form-label") }}
+                                {{ form.min_players(class="form-control", type="number") }}
+                                {% for error in form.min_players.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.max_players.label(class="form-label") }}
+                                {{ form.max_players(class="form-control", type="number") }}
+                                {% for error in form.max_players.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.focus_area.label(class="form-label") }}
+                            {{ form.focus_area(class="form-control") }}
+                            {% for error in form.focus_area.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.equipment_needed.label(class="form-label") }}
+                            {{ form.equipment_needed(class="form-control") }}
+                            {% for error in form.equipment_needed.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Diagram Section -->
+                        <div class="mb-4">
+                            <label class="form-label">Drill Diagram</label>
+                            
+                            <!-- Tabs for upload options -->
+                            <ul class="nav nav-tabs mb-3" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#upload-tab">
+                                        <i class="fas fa-upload"></i> Upload Image
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#url-tab">
+                                        <i class="fas fa-link"></i> Use URL
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#drawing-tab">
+                                        <i class="fas fa-pencil-alt"></i> Draw Diagram
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <!-- Tab content -->
+                            <div class="tab-content">
+                                <!-- Upload Tab -->
+                                <div class="tab-pane fade show active" id="upload-tab">
+                                    <div class="mb-3">
+                                        {{ form.diagram_file.label(class="form-label") }}
+                                        {{ form.diagram_file(class="form-control") }}
+                                        <div class="form-text">
+                                            Supported formats: JPG, PNG, GIF. Max size: 5MB
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Image preview -->
+                                    <div id="image-preview" class="preview-container" style="display: none;">
+                                        <img src="" alt="Preview">
+                                    </div>
+                                </div>
+
+                                <!-- URL Tab -->
+                                <div class="tab-pane fade" id="url-tab">
+                                    <div class="mb-3">
+                                        {{ form.diagram_url.label(class="form-label") }}
+                                        {{ form.diagram_url(class="form-control", placeholder="https://...") }}
+                                        <div class="form-text">
+                                            Enter the URL of an existing image
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- URL preview -->
+                                    <div id="url-preview" class="preview-container" style="display: none;">
+                                        <img src="" alt="Preview">
+                                    </div>
+                                </div>
+
+                                <!-- Drawing Tab -->
+                                <div class="tab-pane fade" id="drawing-tab">
+                                    <div class="drawing-tools">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="pen-tool">
+                                                <i class="fas fa-pen"></i> Pen
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="eraser-tool">
+                                                <i class="fas fa-eraser"></i> Eraser
+                                            </button>
+                                        </div>
+                                        <input type="color" id="color-picker" class="ms-2">
+                                        <input type="range" id="line-width" min="1" max="20" value="2" class="ms-2">
+                                    </div>
+                                    <canvas id="drawing-canvas" class="drawing-canvas" width="600" height="400"></canvas>
+                                    <div class="btn-group mt-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearCanvas()">
+                                            <i class="fas fa-eraser"></i> Clear
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="saveDrawing()">
+                                            <i class="fas fa-save"></i> Use Drawing
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Video URL -->
+                        <div class="mb-3">
+                            {{ form.video_url.label(class="form-label") }}
+                            {{ form.video_url(class="form-control", placeholder="https://youtube.com/...") }}
+                            {% for error in form.video_url.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Public/Private -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_public(class="form-check-input") }}
+                                {{ form.is_public.label(class="form-check-label") }}
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Image preview for file upload
+document.getElementById('diagram_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.querySelector('#image-preview img');
+            preview.src = e.target.result;
+            document.getElementById('image-preview').style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+// URL preview
+document.getElementById('diagram_url').addEventListener('input', function(e) {
+    const url = e.target.value;
+    if (url) {
+        const preview = document.querySelector('#url-preview img');
+        preview.src = url;
+        document.getElementById('url-preview').style.display = 'block';
+    }
+});
+
+// Drawing functionality
+const canvas = document.getElementById('drawing-canvas');
+const ctx = canvas.getContext('2d');
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+
+// Initialize drawing settings
+ctx.strokeStyle = '#000000';
+ctx.lineWidth = 2;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+// Drawing event listeners
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
+
+// Tool controls
+document.getElementById('pen-tool').addEventListener('click', () => {
+    ctx.globalCompositeOperation = 'source-over';
+});
+
+document.getElementById('eraser-tool').addEventListener('click', () => {
+    ctx.globalCompositeOperation = 'destination-out';
+});
+
+document.getElementById('color-picker').addEventListener('input', (e) => {
+    ctx.strokeStyle = e.target.value;
+});
+
+document.getElementById('line-width').addEventListener('input', (e) => {
+    ctx.lineWidth = e.target.value;
+});
+
+function startDrawing(e) {
+    isDrawing = true;
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+    
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+}
+
+function stopDrawing() {
+    isDrawing = false;
+}
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function saveDrawing() {
+    const dataUrl = canvas.toDataURL('image/png');
+    // Create hidden input to store the drawing
+    let input = document.getElementById('drawing-data');
+    if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.id = 'drawing-data';
+        input.name = 'drawing_data';
+        canvas.parentNode.appendChild(input);
+    }
+    input.value = dataUrl;
+}
+</script>
+{% endblock %}

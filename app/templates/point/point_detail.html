@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Point {{ point.point_number }} - Game vs {{ game.opponent }}</h1>
+            <p class="lead">
+                {{ point.our_line_type }} | 
+                Starting on {{ point.starting_position }} | 
+                {% if point.we_scored %}Scored{% else %}Conceded{% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-success">Record Stats</a>
+            <a href="{{ url_for('point.edit_point', point_id=point.id) }}" class="btn btn-outline-primary">Edit Point</a>
+            <a href="{{ url_for('point.game_points', game_id=point.game_id) }}" class="btn btn-secondary">Back to Points</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Point Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Score Before:</strong> {{ point.our_score_before }}-{{ point.their_score_before }}</p>
+                    <p><strong>Score After:</strong> {{ point.our_score_after }}-{{ point.their_score_after }}</p>
+                    <p><strong>Outcome:</strong> 
+                        <span class="badge {% if point.we_scored %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if point.we_scored %}We Scored{% else %}They Scored{% endif %}
+                        </span>
+                    </p>
+                    <p><strong>Point Type:</strong> 
+                        {% if point.is_break %}
+                        <span class="badge bg-warning">Break</span>
+                        {% else %}
+                        <span class="badge bg-info">Hold</span>
+                        {% endif %}
+                    </p>
+                    {% if point.duration %}
+                    <p><strong>Duration:</strong> {{ point.duration // 60 }}:{{ '%02d' % (point.duration % 60) }}</p>
+                    {% endif %}
+                    {% if point.timestamp_in_video %}
+                    <p><strong>Video Timestamp:</strong> {{ point.timestamp_in_video // 60 }}:{{ '%02d' % (point.timestamp_in_video % 60) }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Clips</h5>
+                        <a href="{{ url_for('clip.point_clips', point_id=point.id) }}" class="btn btn-sm btn-primary">View All Clips</a>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-center">
+                            <a href="{{ url_for('clip.add_clip', game_id=point.game_id, point_id=point.id) }}" class="btn btn-outline-primary">Add Clip for This Point</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Players on Line</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for lineup in point.lineups %}
+                        <div class="col-md-6 mb-2">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary me-2">{{ lineup.player.jersey_number }}</span>
+                                <a href="{{ url_for('team.player_detail', player_id=lineup.player.id) }}">
+                                    {{ lineup.player.name }}
+                                </a>
+                                <span class="ms-auto text-muted">{{ lineup.player.position|capitalize }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Events</h5>
+                </div>
+                <div class="card-body">
+                    {% if events %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event</th>
+                                    <th>Player</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in events %}
+                                <tr>
+                                    <td>
+                                        {% if event.timestamp %}
+                                        {{ event.timestamp // 60 }}:{{ '%02d' % (event.timestamp % 60) }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ event.event_type|capitalize }}</td>
+                                    <td>{{ event.player.name }}</td>
+                                    <td>
+                                        {% if event.event_type in ['throw', 'assist'] %}
+                                            {{ event.throw_type|capitalize if event.throw_type else 'Throw' }} 
+                                            {% if event.receiver %}
+                                                to {{ event.receiver.name }}
+                                            {% endif %}
+                                            {% if event.is_break_throw %}
+                                                <span class="badge bg-warning">Break</span>
+                                            {% endif %}
+                                            {% if event.throw_distance %}
+                                                ({{ event.throw_distance|round(1) }}m)
+                                            {% endif %}
+                                        {% elif event.event_type == 'goal' %}
+                                            Goal scored
+                                        {% elif event.event_type == 'block' %}
+                                            Defensive play
+                                        {% elif event.event_type == 'throwaway' %}
+                                            Turnover
+                                        {% elif event.event_type == 'drop' %}
+                                            Dropped pass
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No events recorded for this point yet.</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-primary">Record Events</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

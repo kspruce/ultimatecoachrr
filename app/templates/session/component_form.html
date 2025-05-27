@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('session.components', session_id=session.id) }}" class="btn btn-secondary">Back to Components</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.drill_id.label(class="form-label") }}
+                            {{ form.drill_id(class="form-select", id="drill-select") }}
+                            <div class="form-text">Select a drill from the library to auto-fill details</div>
+                            {% for error in form.drill_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                {{ form.component_type.label(class="form-label") }}
+                                {{ form.component_type(class="form-select") }}
+                                {% for error in form.component_type.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.duration_minutes.label(class="form-label") }}
+                                {{ form.duration_minutes(class="form-control") }}
+                                {% for error in form.duration_minutes.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.order.label(class="form-label") }}
+                                {{ form.order(class="form-control") }}
+                                {% for error in form.order.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.focus_area.label(class="form-label") }}
+                            {{ form.focus_area(class="form-control") }}
+                            {% for error in form.focus_area.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3) }}
+                            {% for error in form.description.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=2) }}
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const drillSelect = document.getElementById('drill-select');
+        const titleInput = document.getElementById('title');
+        const descriptionTextarea = document.getElementById('description');
+        const durationInput = document.getElementById('duration_minutes');
+        const focusAreaInput = document.getElementById('focus_area');
+        
+        drillSelect.addEventListener('change', function() {
+            const drillId = this.value;
+            if (drillId > 0) {
+                // Fetch drill details
+                fetch(`/sessions/get_drill/${drillId}`)
+                    .then(response => response.json())
+                    .then(drill => {
+                        // Auto-fill form fields
+                        titleInput.value = drill.title;
+                        descriptionTextarea.value = drill.description || '';
+                        durationInput.value = drill.recommended_duration || '';
+                        focusAreaInput.value = drill.focus_area || '';
+                    })
+                    .catch(error => console.error('Error fetching drill details:', error));
+            }
+        });
+    });
+</script>
+{% endblock %}

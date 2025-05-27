@@ -1,0 +1,665 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .ultimate-field {
+        width: 100%;
+        max-width: 800px;
+        height: 400px;
+        margin: 0 auto;
+        background-color: #4CAF50;
+        position: relative;
+        border: 2px solid #333;
+    }
+    
+    .endzone {
+        position: absolute;
+        height: 100%;
+        width: 18%;
+        background-color: #388E3C;
+    }
+    
+    .endzone-left {
+        left: 0;
+    }
+    
+    .endzone-right {
+        right: 0;
+    }
+    
+    .field-line {
+        position: absolute;
+        background-color: white;
+    }
+    
+    .center-line {
+        left: 50%;
+        height: 100%;
+        width: 2px;
+    }
+    
+    .brick-mark {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: white;
+        border-radius: 50%;
+    }
+    
+    .event-marker {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        z-index: 10;
+    }
+    
+    .event-catch {
+        background-color: #2196F3;
+        border: 2px solid #0D47A1;
+    }
+    
+    .event-throw, .event-assist {
+        background-color: #FFC107;
+        border: 2px solid #FF6F00;
+    }
+    
+    .event-goal {
+        background-color: #4CAF50;
+        border: 2px solid #1B5E20;
+    }
+    
+    .event-block {
+        background-color: #9C27B0;
+        border: 2px solid #4A148C;
+    }
+    
+    .event-throwaway, .event-drop, .event-stall {
+        background-color: #F44336;
+        border: 2px solid #B71C1C;
+    }
+    
+    .event-callahan {
+        background-color: #E91E63;
+        border: 2px solid #880E4F;
+    }
+    
+    .event-form {
+        position: absolute;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 15px;
+        width: 300px;
+        z-index: 100;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .event-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Record Stats for Point {{ point.point_number }}</h1>
+            <p class="lead">
+                Game vs {{ game.opponent }} | 
+                {{ point.our_line_type }} | 
+                Starting on {{ point.starting_position }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button id="finish-btn" class="btn btn-success">Finish Recording</button>
+            <a href="{{ url_for('point.point_detail', point_id=point.id) }}" class="btn btn-secondary">Back to Point</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Ultimate Field</h5>
+                    <p class="text-muted mb-0">Click on the field to record events</p>
+                </div>
+                <div class="card-body">
+                    <div class="ultimate-field" id="ultimate-field">
+                        <div class="endzone endzone-left"></div>
+                        <div class="endzone endzone-right"></div>
+                        <div class="field-line center-line"></div>
+                        <div class="brick-mark" style="left: 20%; top: 50%;"></div>
+                        <div class="brick-mark" style="left: 80%; top: 50%;"></div>
+                        
+                        <!-- Event markers will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Players on Line</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for lineup in point.lineups %}
+                        <div class="col-md-6 mb-2">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary me-2">{{ lineup.player.jersey_number }}</span>
+                                <span>{{ lineup.player.name }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recorded Events</h5>
+                </div>
+                <div class="card-body">
+                    <div class="event-list" id="event-list">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event</th>
+                                    <th>Player</th>
+                                    <th>Details</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="events-tbody">
+                                {% for event in events %}
+                                <tr data-event-id="{{ event.id }}">
+                                    <td>
+                                        {% if event.timestamp %}
+                                        {{ event.timestamp // 60 }}:{{ '%02d' % (event.timestamp % 60) }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ event.event_type|capitalize }}</td>
+                                    <td>{{ event.player.name }}</td>
+                                    <td>
+                                        {% if event.event_type in ['throw', 'assist'] %}
+                                            {{ event.throw_type|capitalize if event.throw_type else 'Throw' }} 
+                                            {% if event.receiver %}
+                                                to {{ event.receiver.name }}
+                                            {% endif %}
+                                        {% elif event.event_type == 'goal' %}
+                                            Goal scored
+                                        {% elif event.event_type == 'block' %}
+                                            Defensive play
+                                        {% elif event.event_type == 'throwaway' %}
+                                            Turnover
+                                        {% elif event.event_type == 'drop' %}
+                                            Dropped pass
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger delete-event" data-event-id="{{ event.id }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Event Form (hidden by default) -->
+    <div class="event-form" id="event-form" style="display: none;">
+        <h5>Record Event</h5>
+        <div class="mb-3">
+            <label for="event-type" class="form-label">Event Type</label>
+            <select class="form-select" id="event-type">
+                <option value="catch">Catch</option>
+                <option value="throw">Throw</option>
+                <option value="assist">Assist</option>
+                <option value="hockey_assist">Hockey Assist</option>
+                <option value="throwaway">Throwaway</option>
+                <option value="drop">Drop</option>
+                <option value="goal">Goal</option>
+                <option value="block">Block</option>
+                <option value="stall">Stall</option>
+                <option value="callahan">Callahan</option>
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="player-id" class="form-label">Player</label>
+            <select class="form-select" id="player-id">
+                {% for lineup in point.lineups %}
+                <option value="{{ lineup.player.id }}">{{ lineup.player.name }} (#{{ lineup.player.jersey_number }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3 throw-options" style="display: none;">
+            <label for="throw-type" class="form-label">Throw Type</label>
+            <select class="form-select" id="throw-type">
+                <option value="">Select Throw Type</option>
+                <option value="backhand">Backhand</option>
+                <option value="forehand">Forehand</option>
+                <option value="hammer">Hammer</option>
+                <option value="scoober">Scoober</option>
+                <option value="blade">Blade</option>
+                <option value="push_pass">Push Pass</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        
+        <div class="mb-3 throw-options" style="display: none;">
+            <label for="force-direction" class="form-label">Force Direction</label>
+            <select class="form-select" id="force-direction">
+                <option value="">Select Force</option>
+                <option value="forehand">Forehand</option>
+                <option value="backhand">Backhand</option>
+                <option value="no_force">No Force</option>
+            </select>
+        </div>
+        
+        <div class="mb-3 receiver-options" style="display: none;">
+            <label for="receiver-id" class="form-label">Receiver</label>
+            <select class="form-select" id="receiver-id">
+                <option value="0">None</option>
+                {% for lineup in point.lineups %}
+                <option value="{{ lineup.player.id }}">{{ lineup.player.name }} (#{{ lineup.player.jersey_number }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label for="timestamp" class="form-label">Timestamp (seconds)</label>
+            <input type="number" class="form-control" id="timestamp" min="0">
+        </div>
+        
+        <div class="mb-3">
+            <label for="notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="notes" rows="2"></textarea>
+        </div>
+        
+        <input type="hidden" id="field-position-x">
+        <input type="hidden" id="field-position-y">
+        <input type="hidden" id="event-id">
+        
+        <div class="d-flex justify-content-between">
+            <button type="button" class="btn btn-secondary" id="cancel-event">Cancel</button>
+            <button type="button" class="btn btn-primary" id="save-event">Save Event</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const field = document.getElementById('ultimate-field');
+        const eventForm = document.getElementById('event-form');
+        const eventType = document.getElementById('event-type');
+        const throwOptions = document.querySelectorAll('.throw-options');
+        const receiverOptions = document.querySelectorAll('.receiver-options');
+        const cancelEventBtn = document.getElementById('cancel-event');
+        const saveEventBtn = document.getElementById('save-event');
+        const finishBtn = document.getElementById('finish-btn');
+        const eventsTbody = document.getElementById('events-tbody');
+        
+        // Field dimensions in meters
+        const fieldWidth = 37;  // width in meters
+        const fieldLength = 100;  // length in meters
+        
+        // Load existing events
+        const existingEvents = [
+            {% for event in events %}
+            {
+                id: {{ event.id }},
+                event_type: "{{ event.event_type }}",
+                player_id: {{ event.player_id }},
+                field_position_x: {{ event.field_position_x or 'null' }},
+                field_position_y: {{ event.field_position_y or 'null' }},
+                throw_type: "{{ event.throw_type or '' }}",
+                force_direction: "{{ event.force_direction or '' }}",
+                receiver_id: {{ event.receiver_id or 'null' }},
+                timestamp: {{ event.timestamp or 'null' }},
+                notes: "{{ event.notes or '' }}"
+            },
+            {% endfor %}
+        ];
+        
+        // Display existing events on the field
+        existingEvents.forEach(event => {
+            if (event.field_position_x !== null && event.field_position_y !== null) {
+                addEventMarker(event.field_position_x, event.field_position_y, event.event_type, event.id);
+            }
+        });
+        
+        // Handle field click
+        field.addEventListener('click', function(e) {
+            const rect = field.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Convert to percentage of field
+            const xPercent = x / rect.width;
+            const yPercent = y / rect.height;
+            
+            // Convert to meters
+            const xMeters = xPercent * fieldLength;
+            const yMeters = yPercent * fieldWidth;
+            
+            // Show event form
+            showEventForm(xMeters, yMeters, x, y);
+        });
+        
+        // Handle event type change
+        eventType.addEventListener('change', function() {
+            updateFormFields();
+        });
+        
+        // Handle cancel button
+        cancelEventBtn.addEventListener('click', function() {
+            hideEventForm();
+        });
+        
+        // Handle save button
+        saveEventBtn.addEventListener('click', function() {
+            saveEvent();
+        });
+        
+        // Handle finish button
+        finishBtn.addEventListener('click', function() {
+            finishRecording();
+        });
+        
+        // Handle delete event buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-event') || e.target.parentElement.classList.contains('delete-event')) {
+                const button = e.target.classList.contains('delete-event') ? e.target : e.target.parentElement;
+                const eventId = button.dataset.eventId;
+                deleteEvent(eventId);
+            }
+        });
+        
+        function showEventForm(xMeters, yMeters, xPixels, yPixels) {
+            // Set position values
+            document.getElementById('field-position-x').value = xMeters;
+            document.getElementById('field-position-y').value = yMeters;
+            
+            // Position the form near the click
+            eventForm.style.left = (xPixels + 20) + 'px';
+            eventForm.style.top = (yPixels - 100) + 'px';
+            
+            // Make sure form is within viewport
+            const formRect = eventForm.getBoundingClientRect();
+            const fieldRect = field.getBoundingClientRect();
+            
+            if (formRect.right > fieldRect.right) {
+                eventForm.style.left = (xPixels - formRect.width - 20) + 'px';
+            }
+            
+            if (formRect.bottom > fieldRect.bottom) {
+                eventForm.style.top = (yPixels - formRect.height - 20) + 'px';
+            }
+            
+            // Reset form
+            document.getElementById('event-id').value = '';
+            document.getElementById('event-type').value = 'catch';
+            document.getElementById('player-id').selectedIndex = 0;
+            document.getElementById('throw-type').value = '';
+            document.getElementById('force-direction').value = '';
+            document.getElementById('receiver-id').value = '0';
+            document.getElementById('timestamp').value = '';
+            document.getElementById('notes').value = '';
+            
+            // Update form fields based on event type
+            updateFormFields();
+            
+            // Show the form
+            eventForm.style.display = 'block';
+        }
+        
+        function hideEventForm() {
+            eventForm.style.display = 'none';
+        }
+        
+        function updateFormFields() {
+            const selectedEventType = eventType.value;
+            
+            // Show/hide throw options
+            if (['throw', 'assist', 'throwaway'].includes(selectedEventType)) {
+                throwOptions.forEach(el => el.style.display = 'block');
+            } else {
+                throwOptions.forEach(el => el.style.display = 'none');
+            }
+            
+            // Show/hide receiver options
+            if (['throw', 'assist'].includes(selectedEventType)) {
+                receiverOptions.forEach(el => el.style.display = 'block');
+            } else {
+                receiverOptions.forEach(el => el.style.display = 'none');
+            }
+        }
+        
+        function saveEvent() {
+            const eventId = document.getElementById('event-id').value;
+            const eventData = {
+                event_type: document.getElementById('event-type').value,
+                player_id: parseInt(document.getElementById('player-id').value),
+                field_position_x: parseFloat(document.getElementById('field-position-x').value),
+                field_position_y: parseFloat(document.getElementById('field-position-y').value),
+                throw_type: document.getElementById('throw-type').value,
+                force_direction: document.getElementById('force-direction').value,
+                receiver_id: parseInt(document.getElementById('receiver-id').value) || null,
+                timestamp: document.getElementById('timestamp').value ? parseInt(document.getElementById('timestamp').value) : null,
+                notes: document.getElementById('notes').value
+            };
+            
+            // If receiver is 0, set to null
+            if (eventData.receiver_id === 0) {
+                eventData.receiver_id = null;
+            }
+            
+            if (eventId) {
+                // Update existing event
+                fetch(`/stats/edit_event/${eventId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(eventData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh the page to show updated events
+                        location.reload();
+                    }
+                });
+            } else {
+                // Create new event
+                fetch(`/stats/add_event/{{ point.id }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(eventData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Add event marker to field
+                    addEventMarker(eventData.field_position_x, eventData.field_position_y, eventData.event_type, data.id);
+                    
+                    // Add event to table
+                    addEventToTable(data);
+                    
+                    // Hide the form
+                    hideEventForm();
+                });
+            }
+        }
+        
+        function addEventMarker(xMeters, yMeters, eventType, eventId) {
+            // Convert meters to percentage of field
+            const xPercent = xMeters / fieldLength;
+            const yPercent = yMeters / fieldWidth;
+            
+            // Create marker element
+            const marker = document.createElement('div');
+            marker.className = `event-marker event-${eventType}`;
+            marker.dataset.eventId = eventId;
+            marker.style.left = (xPercent * 100) + '%';
+            marker.style.top = (yPercent * 100) + '%';
+            
+            // Add marker to field
+            field.appendChild(marker);
+            
+            // Add click handler to edit event
+            marker.addEventListener('click', function(e) {
+                e.stopPropagation();
+                editEvent(eventId);
+            });
+        }
+        
+        function addEventToTable(event) {
+            const row = document.createElement('tr');
+            row.dataset.eventId = event.id;
+            
+            // Format timestamp
+            let timeDisplay = '-';
+            if (event.timestamp !== null) {
+                const minutes = Math.floor(event.timestamp / 60);
+                const seconds = event.timestamp % 60;
+                timeDisplay = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            // Format details
+            let details = '';
+            if (['throw', 'assist'].includes(event.event_type)) {
+                details = `${event.throw_type ? event.throw_type.charAt(0).toUpperCase() + event.throw_type.slice(1) : 'Throw'}`;
+                if (event.receiver_name) {
+                    details += ` to ${event.receiver_name}`;
+                }
+            } else if (event.event_type === 'goal') {
+                details = 'Goal scored';
+            } else if (event.event_type === 'block') {
+                details = 'Defensive play';
+            } else if (event.event_type === 'throwaway') {
+                details = 'Turnover';
+            } else if (event.event_type === 'drop') {
+                details = 'Dropped pass';
+            }
+            
+            row.innerHTML = `
+                <td>${timeDisplay}</td>
+                <td>${event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}</td>
+                <td>${event.player_name}</td>
+                <td>${details}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger delete-event" data-event-id="${event.id}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            eventsTbody.appendChild(row);
+        }
+        
+        function editEvent(eventId) {
+            // Find the event data
+            const event = existingEvents.find(e => e.id == eventId);
+            
+            if (!event) return;
+            
+            // Set form values
+            document.getElementById('event-id').value = event.id;
+            document.getElementById('event-type').value = event.event_type;
+            document.getElementById('player-id').value = event.player_id;
+            document.getElementById('field-position-x').value = event.field_position_x;
+            document.getElementById('field-position-y').value = event.field_position_y;
+            document.getElementById('throw-type').value = event.throw_type || '';
+            document.getElementById('force-direction').value = event.force_direction || '';
+            document.getElementById('receiver-id').value = event.receiver_id || '0';
+            document.getElementById('timestamp').value = event.timestamp || '';
+            document.getElementById('notes').value = event.notes || '';
+            
+            // Update form fields based on event type
+            updateFormFields();
+            
+            // Position the form near the marker
+            const marker = document.querySelector(`.event-marker[data-event-id="${eventId}"]`);
+            if (marker) {
+                const rect = marker.getBoundingClientRect();
+                const fieldRect = field.getBoundingClientRect();
+                
+                eventForm.style.left = (rect.left - fieldRect.left + 20) + 'px';
+                eventForm.style.top = (rect.top - fieldRect.top - 100) + 'px';
+                
+                // Make sure form is within viewport
+                const formRect = eventForm.getBoundingClientRect();
+                
+                if (formRect.right > fieldRect.right) {
+                    eventForm.style.left = (rect.left - fieldRect.left - formRect.width - 20) + 'px';
+                }
+                
+                if (formRect.bottom > fieldRect.bottom) {
+                    eventForm.style.top = (rect.top - fieldRect.top - formRect.height - 20) + 'px';
+                }
+            }
+            
+            // Show the form
+            eventForm.style.display = 'block';
+        }
+        
+        function deleteEvent(eventId) {
+            if (confirm('Are you sure you want to delete this event?')) {
+                fetch(`/stats/delete_event/${eventId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove marker from field
+                        const marker = document.querySelector(`.event-marker[data-event-id="${eventId}"]`);
+                        if (marker) {
+                            marker.remove();
+                        }
+                        
+                        // Remove row from table
+                        const row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+                        if (row) {
+                            row.remove();
+                        }
+                    }
+                });
+            }
+        }
+        
+        function finishRecording() {
+            fetch(`/stats/finish_point/{{ point.id }}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = `/points/game/{{ point.game_id }}`;
+            });
+        }
+    });
+</script>
+{% endblock %}

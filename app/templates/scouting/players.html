@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Players - {{ report.team_name }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-primary">Add Player</a>
+                <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-secondary">Back to Report</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Opponent Players</h5>
+                </div>
+                <div class="card-body">
+                    {% if players %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>Height</th>
+                                    <th>Gender</th>
+                                    <th>Throwing</th>
+                                    <th>Cutting</th>
+                                    <th>Defense</th>
+                                    <th>Athletic</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                <tr>
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>{{ player.name }}</td>
+                                    <td>{{ player.position|capitalize if player.position else '-' }}</td>
+                                    <td>{{ player.height or '-' }}</td>
+                                    <td>{{ player.gender|capitalize if player.gender else '-' }}</td>
+                                    <td>{{ player.throwing_ability or '-' }}/5</td>
+                                    <td>{{ player.cutting_ability or '-' }}/5</td>
+                                    <td>{{ player.defensive_ability or '-' }}/5</td>
+                                    <td>{{ player.athletic_ability or '-' }}/5</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('scouting.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">Delete</button>
+                                        </div>
+                                        
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ player.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ player.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ player.id }}">Confirm Delete</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete the player "{{ player.name }}"?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form action="{{ url_for('scouting.delete_player', player_id=player.id) }}" method="post">
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No players added yet. <a href="{{ url_for('scouting.add_player', report_id=report.id) }}">Add a player</a> to track key opponents.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if players %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="playerAccordion">
+                        {% for player in players %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ player.id }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ player.id }}" aria-expanded="false" aria-controls="collapse{{ player.id }}">
+                                    {% if player.jersey_number %}#{{ player.jersey_number }} {% endif %}
+                                    {{ player.name }} - {{ player.position|capitalize if player.position else 'Unknown Position' }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ player.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ player.id }}" data-bs-parent="#playerAccordion">
+                                <div class="accordion-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Basic Information</h6>
+                                            <ul class="list-unstyled">
+                                                <li><strong>Position:</strong> {{ player.position|capitalize if player.position else 'Unknown' }}</li>
+                                                <li><strong>Height:</strong> {{ player.height or 'Unknown' }}</li>
+                                                <li><strong>Gender:</strong> {{ player.gender|capitalize if player.gender else 'Unknown' }}</li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Skills Assessment</h6>
+                                            <ul class="list-unstyled">
+                                                <li><strong>Throwing Ability:</strong> {{ player.throwing_ability or 'Not rated' }}/5</li>
+                                                <li><strong>Cutting Ability:</strong> {{ player.cutting_ability or 'Not rated' }}/5</li>
+                                                <li><strong>Defensive Ability:</strong> {{ player.defensive_ability or 'Not rated' }}/5</li>
+                                                <li><strong>Athletic Ability:</strong> {{ player.athletic_ability or 'Not rated' }}/5</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if player.preferred_throws %}
+                                    <h6>Preferred Throws</h6>
+                                    <p>{{ player.preferred_throws }}</p>
+                                    {% endif %}
+                                    
+                                    {% if player.notes %}
+                                    <h6>Notes</h6>
+                                    <p>{{ player.notes|nl2br }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="mt-3">
+                                        <a href="{{ url_for('scouting.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">Edit Player</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

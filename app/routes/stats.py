@@ -1,0 +1,1311 @@
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask_login import login_required, current_user
+from app import db
+from app.models.player import Player
+from app.models.game import Game
+from app.models.tournament import Tournament
+from app.models.point import Point, LineUp
+from app.models.event import Event
+from app.models.stats import PlayerPointStats#
+from app.models.throws import Throw
+import json
+import math
+
+bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
+
+# --- Core Statistical Calculation Functions ---
+def get_player_throw_stats(player, games=None):
+    """Get comprehensive throwing statistics for a player"""
+    query = Throw.query.filter(
+        (Throw.thrower_id == player.id) |
+        (Throw.receiver_id == player.id)
+    )
+    
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        query = query.filter(Throw.point_id.in_(point_ids))
+    
+    throws = query.all()
+    
+    stats = {
+        'throws_made': len([t for t in throws if t.thrower_id == player.id]),
+        'throws_received': len([t for t in throws if t.receiver_id == player.id]),
+        'assists': len([t for t in throws if t.thrower_id == player.id and t.throw_type == 'assist']),
+        'hockey_assists': len([t for t in throws if t.thrower_id == player.id and t.throw_type == 'hockey_assist']),
+        'throw_vectors': [
+            {
+                'start_x': t.x_start,  
+                'start_y': t.y_start,  
+                'end_x': t.x_end,      
+                'end_y': t.y_end,      
+                'type': t.throw_type
+            }
+            for t in throws if t.thrower_id == player.id
+        ],
+        'total_throw_distance': sum(t.distance for t in throws if t.thrower_id == player.id),
+        'avg_throw_distance': 0
+    }
+    
+    if stats['throws_made'] > 0:
+        stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws_made']
+    
+    return stats
+
+
+def calculate_per(player, games=None, team_avgs=None):
+    """
+    Standardized PER calculation incorporating all factors
+    """
+    stats = get_player_base_stats(player, games)
+    
+    if stats['points_played'] == 0:
+        return 0
+        
+    # Define weights
+    WEIGHTS = {
+        'scoring': 0.5,
+        'assist': 0.5,
+        'turnover': -0.75,
+        'defense': 0.75,
+        'throw': 0.05,
+        'plus_minus': 0.1
+    }
+
+    # Calculate raw PER
+    uper = (1 / stats['points_played']) * (
+        (WEIGHTS['scoring'] * (stats['goals'] ** 0.75)) +
+        (WEIGHTS['assist'] * (stats['assists'] ** 0.75)) +
+        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)) +
+        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
+        (WEIGHTS['defense'] * (stats['blocks'] ** 0.75)) +
+        (WEIGHTS['throw'] * (
+            (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
+            (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
+        )) +
+        (WEIGHTS['plus_minus'] * (
+            stats['o_line_plus_minus_per_point'] - team_avgs['avg_o_line_plus_minus_per_point'] +
+            stats['d_line_plus_minus_per_point'] - team_avgs['avg_d_line_plus_minus_per_point']
+        ))
+    )
+
+    # Normalize to league average
+    per = normalize_per(uper * (15 / team_avgs['avg_uper']) if team_avgs['avg_uper'] > 0 else 0)
+    
+    return per
+
+def get_player_base_stats(player, games=None):
+    """Get comprehensive player statistics"""
+    print(f"Calculating stats for player {player.id}")
+    # Start with default values for ALL possible stats
+    stats = {
+        # Basic stats
+        'points_played': 0,
+        'games_played': 0,
+        'goals': 0,
+        'assists': 0,
+        'hockey_assists': 0,
+        'blocks': 0,
+        'catches': 0,
+        'throws': 0,
+        'completions': 0,
+        'throwaways': 0,
+        'drops': 0,
+        'turnovers': 0,
+        
+        # Calculated rates
+        'completion_rate': 0,
+        'catch_rate': 0,
+        
+        # O/D line stats
+        'o_line_points_played': 0,
+        'd_line_points_played': 0,
+        'o_line_plus_minus': 0,
+        'd_line_plus_minus': 0,
+        'o_line_plus_minus_per_point': 0,
+        'd_line_plus_minus_per_point': 0,
+        
+        # Throw statistics
+        'total_throw_distance': 0,
+        'avg_throw_distance': 0,
+        'throw_vectors': [], #store throw vectors
+        'break_throws': 0,
+        'break_throw_percentage': 0,
+        
+        # Efficiency metrics
+        'per': 0,
+        'plus_minus': 0,
+        
+        # Additional stats
+        'callahans': 0,
+        'stalls': 0,
+        'offensive_points_played': 0,
+        'defensive_points_played': 0,
+        'offensive_conversion_rate': 0,
+        'defensive_conversion_rate': 0
+    }
+    
+   
+    try:
+        # Get points played
+        lineup_query = LineUp.query.filter_by(player_id=player.id)
+        if games:
+            if isinstance(games, list):
+                point_ids = [p.id for g in games for p in g.points]
+            else:
+                point_ids = [p.id for p in games.points]
+            lineup_query = lineup_query.filter(LineUp.point_id.in_(point_ids))
+        
+        points_played = lineup_query.all()
+        stats['points_played'] = len(points_played)
+        
+        if stats['points_played'] == 0:
+            return stats
+
+        # Get games played
+        if games:
+            stats['games_played'] = len(games) if isinstance(games, list) else 1
+        else:
+            stats['games_played'] = len(set(lineup.point.game_id for lineup in points_played))
+
+        # Get all throws for this player
+        throws_query = Throw.query.filter(Throw.thrower_id == player.id)
+        if games:
+            throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+
+        # Get unique throws by coordinates and timestamp
+        unique_throws = {}
+        for throw in throws_query.all():
+            # Create a key based on coordinates
+            key = (throw.x_start, throw.y_start, throw.x_end, throw.y_end)
+            if key not in unique_throws:
+                unique_throws[key] = throw
+
+        # Count different types of throws
+        stats['throws'] = len(unique_throws)
+        stats['completions'] = sum(1 for t in unique_throws.values() if t.is_completion)
+        stats['assists'] = sum(1 for t in unique_throws.values() if t.throw_type == 'assist')
+        stats['hockey_assists'] = sum(1 for t in unique_throws.values() if t.throw_type == 'hockey_assist')
+        stats['throwaways'] = sum(1 for t in unique_throws.values() if t.throw_type == 'throwaway')
+
+        # Calculate throw distances
+        total_distance = sum(t.calculate_distance() for t in unique_throws.values() if t.calculate_distance())
+        stats['total_throw_distance'] = total_distance
+        stats['avg_throw_distance'] = total_distance / stats['throws'] if stats['throws'] > 0 else 0
+
+        # Store throw vectors for visualization
+        stats['throw_vectors'] = [
+            {
+                'start_x': t.x_start,
+                'start_y': t.y_start,
+                'end_x': t.x_end,
+                'end_y': t.y_end,
+                'type': t.throw_type,
+                'distance': t.calculate_distance()
+            }
+            for t in unique_throws.values()
+        ]
+
+        # Get all events for this player
+        events_query = Event.query.filter_by(player_id=player.id)
+        if games:
+            events_query = events_query.filter(Event.point_id.in_(point_ids))
+        
+        # Count each event type
+        for event in events_query.all():
+            if event.event_type == 'goal':
+                stats['goals'] += 1
+            elif event.event_type == 'block':
+                stats['blocks'] += 1
+            elif event.event_type == 'catch':
+                stats['catches'] += 1
+            elif event.event_type == 'drop':
+                stats['drops'] += 1
+
+        # Calculate derived stats
+        stats['turnovers'] = stats['throwaways'] + stats['drops']
+        
+        # Calculate rates
+        if stats['throws'] > 0:
+            stats['completion_rate'] = (stats['completions'] / stats['throws']) * 100
+        if stats['catches'] + stats['drops'] > 0:
+            stats['catch_rate'] = (stats['catches'] / (stats['catches'] + stats['drops'])) * 100
+
+        # Calculate plus/minus
+        stats['plus_minus'] = (
+            stats['goals'] + 
+            stats['assists'] + 
+            stats['blocks'] - 
+            stats['turnovers']
+        )
+
+        print(f"Stats retrieved for {player.name}:")
+        print(f"Throws: {stats['throws']}")
+        print(f"Total Distance: {stats['total_throw_distance']:.1f}m")
+        print(f"Avg Distance: {stats['avg_throw_distance']:.1f}m")
+        print(f"Goals: {stats['goals']}")
+        print(f"Assists: {stats['assists']}")
+        print(f"Blocks: {stats['blocks']}")
+        print(f"Turnovers: {stats['turnovers']}")
+        print(f"Plus/Minus: {stats['plus_minus']}")
+
+        # Calculate O-line and D-line stats
+        o_line_points = [p for p in points_played if p.point.our_line_type == 'O-line']
+        d_line_points = [p for p in points_played if p.point.our_line_type == 'D-line']
+
+        stats['o_line_points_played'] = len(o_line_points)
+        stats['d_line_points_played'] = len(d_line_points)
+
+        # Calculate plus/minus for each line
+        for point in o_line_points:
+            if point.point.we_scored:
+                stats['o_line_plus_minus'] += 1
+            if point.point.they_scored:
+                stats['o_line_plus_minus'] -= 1
+
+        for point in d_line_points:
+            if point.point.we_scored:
+                stats['d_line_plus_minus'] += 1
+            if point.point.they_scored:
+                stats['d_line_plus_minus'] -= 1
+
+        # Calculate per point stats
+        if stats['o_line_points_played'] > 0:
+            stats['o_line_plus_minus_per_point'] = stats['o_line_plus_minus'] / stats['o_line_points_played']
+        if stats['d_line_points_played'] > 0:
+            stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['d_line_points_played']
+
+    except Exception as e:
+        print(f"Error getting stats for {player.name}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    
+    return stats
+
+
+
+
+
+def process_heatmap_data(team_name=None, player_id=None, opposition_team=None):
+    """Process throw data for heatmap visualization"""
+    query = Throw.query
+    
+    if player_id:
+        query = query.filter(Throw.thrower_id == player_id)
+    if opposition_team:
+        query = query.filter(Throw.opposition_team == opposition_team)
+    if team_name:
+        query = query.join(Throw.thrower).filter(Player.team == team_name)
+    
+    throws = query.all()
+    heatmap_data = []
+    
+    # Add throw start positions
+    for throw in throws:
+        if throw.x_start is not None and throw.y_start is not None:
+            heatmap_data.append({
+                'x': throw.x_start,
+                'y': throw.y_start,
+                'value': 1,
+                'type': 'throw_start'
+            })
+    
+    # For throwaways, still use Events model
+    throwaway_query = Event.query.filter_by(event_type='throwaway')
+    if player_id:
+        throwaway_query = throwaway_query.filter_by(player_id=player_id)
+    if team_name:
+        throwaway_query = throwaway_query.join(Event.player).filter(Player.team == team_name)
+    
+    for event in throwaway_query.all():
+        if event.field_position_x is not None and event.field_position_y is not None:
+            heatmap_data.append({
+                'x': event.field_position_x,
+                'y': event.field_position_y,
+                'value': 1,
+                'type': 'throwaway'
+            })
+    
+    return heatmap_data
+
+def generate_player_connections(team_name=None, opposition_team=None):
+    """Generate player connection data using Throws model"""
+    query = Throw.query.filter(Throw.receiver_id.isnot(None))
+    
+    if team_name:
+        query = query.join(Throw.thrower).filter(Player.team == team_name)
+    if opposition_team:
+        query = query.filter(Throw.opposition_team == opposition_team)
+    
+    throws = query.all()
+    
+    # Track unique players and their connections
+    players = set()
+    connections = {}
+    
+    for throw in throws:
+        players.add(throw.thrower_id)
+        players.add(throw.receiver_id)
+        
+        key = f"{throw.thrower_id}-{throw.receiver_id}"
+        if key in connections:
+            connections[key]['value'] += 1
+        else:
+            connections[key] = {
+                'source': throw.thrower_id,
+                'target': throw.receiver_id,
+                'value': 1
+            }
+    
+    # Create nodes list
+    nodes = []
+    for player_id in players:
+        player = Player.query.get(player_id)
+        if player:
+            nodes.append({
+                'id': player.id,
+                'name': player.name,
+                'jersey_number': player.jersey_number,
+                'position': player.position
+            })
+    
+    return {
+        'nodes': nodes,
+        'links': list(connections.values())
+    }
+
+
+
+# --- Additional Helper Functions ---
+
+def calculate_team_averages(games=None):
+    """
+    Calculate team averages for PER normalization
+    """
+    players = Player.query.filter_by(active=True).all()
+    
+    totals = {
+        'o_line_plus_minus': 0,
+        'o_line_points': 0,
+        'd_line_plus_minus': 0,
+        'd_line_points': 0,
+        'uper_total': 0,
+        'player_count': 0
+    }
+
+    for player in players:
+        stats = get_player_base_stats(player, games)
+        if stats['points_played'] > 0:
+            totals['player_count'] += 1
+            totals['o_line_plus_minus'] += stats.get('o_line_plus_minus', 0)
+            totals['o_line_points'] += stats.get('o_line_points_played', 0)
+            totals['d_line_plus_minus'] += stats.get('d_line_plus_minus', 0)
+            totals['d_line_points'] += stats.get('d_line_points_played', 0)
+            totals['uper_total'] += calculate_unadjusted_per(stats)
+
+    return {
+        'avg_o_line_plus_minus_per_point': (totals['o_line_plus_minus'] / totals['o_line_points']) if totals['o_line_points'] > 0 else 0,
+        'avg_d_line_plus_minus_per_point': (totals['d_line_plus_minus'] / totals['d_line_points']) if totals['d_line_points'] > 0 else 0,
+        'avg_uper': totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
+    }
+
+def calculate_game_stats(game):
+    """
+    Calculate comprehensive game statistics
+    """
+    stats = {
+        'o_line_points': len(game.o_line_points),
+        'o_line_conversions': sum(1 for p in game.o_line_points if p.we_scored),
+        'd_line_points': len(game.d_line_points),
+        'd_line_conversions': sum(1 for p in game.d_line_points if p.we_scored),
+        'breaks': sum(1 for p in game.points if p.is_break),
+        'holds': sum(1 for p in game.points if p.is_hold),
+        'turnovers': 0,
+        'possessions': 0,
+        'point_flow': []
+    }
+    
+    # Calculate conversion rates
+    stats['o_line_conversion_rate'] = (stats['o_line_conversions'] / stats['o_line_points'] * 100) if stats['o_line_points'] > 0 else 0
+    stats['d_line_conversion_rate'] = (stats['d_line_conversions'] / stats['d_line_points'] * 100) if stats['d_line_points'] > 0 else 0
+    
+    # Calculate point flow data
+    for point in sorted(game.points, key=lambda p: p.point_number):
+        stats['point_flow'].append({
+            'point_number': point.point_number,
+            'our_score_before': point.our_score_before,
+            'their_score_before': point.their_score_before,
+            'our_score_after': point.our_score_after,
+            'their_score_after': point.their_score_after,
+            'our_line_type': point.our_line_type,
+            'starting_position': point.starting_position,
+            'point_outcome': point.point_outcome,
+            'is_break': point.is_break
+        })
+        
+        # Count turnovers and possessions
+        point_events = Event.query.filter_by(point_id=point.id).order_by(Event.timestamp).all()
+        stats['turnovers'] += sum(1 for e in point_events if e.event_type in ['throwaway', 'drop', 'stall'])
+        stats['possessions'] += count_possessions(point_events)
+    
+    return stats
+
+# --- Routes ---
+
+@bp.route('/debug/throws')
+@login_required
+def debug_throws():
+    """Debug view for throws model"""
+    throws = Throw.query.order_by(Throw.created_at.desc()).limit(100).all()
+    return render_template('stats/debug_throws.html', throws=throws)
+
+@bp.route('/')
+@login_required
+def index():
+    # Default values for all required variables
+    default_context = {
+        'team_summary': {
+            'wins': 0,
+            'losses': 0,
+            'ties': 0,
+            'total_points': 0,
+            'o_line_points': 0,
+            'o_line_conversions': 0,
+            'd_line_points': 0,
+            'd_line_conversions': 0,
+            'breaks': 0,
+            'win_percentage': 0,
+            'o_line_conversion_rate': 0,
+            'd_line_conversion_rate': 0
+        },
+        'players': [],
+        'recent_games': [],
+        'team_stats': [],
+        'player_stats': {},
+        'o_line_players': [],
+        'd_line_players': [],
+        'heatmap_data': [],
+        'connection_data': {'nodes': [], 'links': []}
+    }
+
+    try:
+        # Get team name from current user's player
+        team_name = None
+        if hasattr(current_user, 'player') and current_user.player:
+            team_name = current_user.player.team
+
+        # Get active players
+        players = Player.query.filter_by(active=True)
+        if team_name:
+            players = players.filter_by(team=team_name)
+        players = players.all()
+        
+        if not players:
+            flash("No active players found", "warning")
+            return render_template('stats/index.html', **default_context)
+
+        # Calculate team summary and stats
+        recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
+        if recent_games:
+            team_summary = calculate_team_summary(recent_games)
+            team_stats = []
+            for game in recent_games:
+                try:
+                    stats = calculate_game_stats(game)
+                    team_stats.append({'stats': stats})
+                except Exception as e:
+                    print(f"Error calculating stats for game {game.id}: {str(e)}")
+                    continue
+        else:
+            team_summary = default_context['team_summary']
+            team_stats = []
+
+        # Calculate team averages
+        team_avgs = calculate_team_averages()
+        
+        # Calculate player stats
+        player_stats = {}
+        for player in players:
+            try:
+                stats = get_player_base_stats(player)
+                if stats['points_played'] > 0:
+                    stats['per'] = calculate_per(player, team_avgs=team_avgs)
+                    player_stats[player.id] = stats
+            except Exception as e:
+                print(f"Error calculating stats for player {player.id}: {str(e)}")
+                continue
+
+        # Determine O-line and D-line players based on point participation
+        o_line_candidates = []
+        d_line_candidates = []
+
+        for player in players:
+            # Get all points where player was in lineup
+            lineup_query = LineUp.query.join(Point).filter(LineUp.player_id == player.id)
+            
+            # Count O-line and D-line points
+            o_line_points = lineup_query.filter(Point.our_line_type == 'O-line').count()
+            d_line_points = lineup_query.filter(Point.our_line_type == 'D-line').count()
+
+            print(f"Player {player.name}: O-line points = {o_line_points}, D-line points = {d_line_points}")
+
+            # Add player to respective lists based on participation
+            if o_line_points > 0:
+                o_line_candidates.append(player)
+            if d_line_points > 0:
+                d_line_candidates.append(player)
+
+        print(f"Found {len(o_line_candidates)} O-line candidates")
+        print(f"Found {len(d_line_candidates)} D-line candidates")
+
+        # Calculate efficiency for each line
+        def calculate_line_efficiency(players, is_offensive=True):
+            player_efficiency = {}
+            for player in players:
+                # Get points where player was in lineup
+                lineup_query = LineUp.query.join(Point).filter(
+                    LineUp.player_id == player.id,
+                    Point.our_line_type == ('O-line' if is_offensive else 'D-line')
+                )
+                
+                points = lineup_query.all()
+                points_played = len(points)
+                
+                if points_played > 0:
+                    # Count points where we scored using the Point.we_scored property
+                    points_scored = sum(1 for lineup in points if lineup.point.we_scored)
+                    
+                    # Calculate efficiency as scoring percentage
+                    efficiency = points_scored / points_played
+        
+                    player_efficiency[player] = efficiency
+        
+                    print(f"{'O' if is_offensive else 'D'}-line efficiency for {player.name}: "
+                          f"{efficiency:.2f} ({points_scored}/{points_played} points scored)")
+        
+            return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
+
+
+        # Calculate efficiencies and get top players
+        o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
+        d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
+
+        # Take top 7 players for each line
+        o_line_players = [player for player, _ in o_line_efficiency][:7]
+        d_line_players = [player for player, _ in d_line_efficiency][:7]
+
+        print(f"Selected {len(o_line_players)} O-line players")
+        print(f"Selected {len(d_line_players)} D-line players")
+
+        # Generate heatmap data
+        throws_query = Throw.query
+        if team_name:
+            throws_query = throws_query.join(Throw.thrower).filter(Player.team == team_name)
+        
+        throws = throws_query.all()
+        heatmap_data = []
+        
+        # Process throws for heatmap
+        for throw in throws:
+            if throw.x_start is not None and throw.y_start is not None:
+                throw_type = 'throwaway' if throw.throw_type == 'throwaway' else 'throw_start'
+                heatmap_data.append({
+                    'x': throw.x_start,
+                    'y': throw.y_start,
+                    'value': 1,
+                    'type': throw_type
+                })
+                
+                if throw.throw_type == 'assist' and throw.x_end is not None and throw.y_end is not None:
+                    heatmap_data.append({
+                        'x': throw.x_end,
+                        'y': throw.y_end,
+                        'value': 1,
+                        'type': 'goal'
+                    })
+
+        # Add scored-on events
+        scored_on_query = Event.query.filter_by(event_type='scored_on')
+        if team_name:
+            scored_on_query = scored_on_query.join(Event.player).filter(Player.team == team_name)
+        
+        for event in scored_on_query.all():
+            if event.field_position_x is not None and event.field_position_y is not None:
+                heatmap_data.append({
+                    'x': event.field_position_x,
+                    'y': event.field_position_y,
+                    'value': 1,
+                    'type': 'scored_on'
+                })
+
+        # Generate connection data
+        connection_data = {
+            'nodes': [],
+            'links': []
+        }
+        
+        players_in_connections = set()
+        connections = {}
+        
+        for throw in throws:
+            if throw.receiver_id:
+                players_in_connections.add(throw.thrower_id)
+                players_in_connections.add(throw.receiver_id)
+                
+                key = f"{throw.thrower_id}-{throw.receiver_id}"
+                if key in connections:
+                    connections[key]['value'] += 1
+                else:
+                    connections[key] = {
+                        'source': throw.thrower_id,
+                        'target': throw.receiver_id,
+                        'value': 1
+                    }
+        
+        for player_id in players_in_connections:
+            player = Player.query.get(player_id)
+            if player:
+                connection_data['nodes'].append({
+                    'id': player.id,
+                    'name': player.name,
+                    'jersey_number': player.jersey_number,
+                    'position': player.position
+                })
+        
+        connection_data['links'] = list(connections.values())
+
+        return render_template(
+            'stats/index.html',
+            team_summary=team_summary,
+            players=players,
+            recent_games=recent_games,
+            team_stats=team_stats,
+            player_stats=player_stats,
+            o_line_players=o_line_players,
+            d_line_players=d_line_players,
+            o_line_efficiency=dict(o_line_efficiency),
+            d_line_efficiency=dict(d_line_efficiency),
+            heatmap_data=json.dumps(heatmap_data),
+            connection_data=json.dumps(connection_data)
+        )
+
+    except Exception as e:
+        print(f"Error in index route: {str(e)}")
+        traceback.print_exc()
+        flash(f"An error occurred: {str(e)}", "danger")
+        return render_template('stats/index.html', **default_context)
+
+
+
+
+
+# Add these helper functions:
+
+def calculate_player_recent_performance(player, recent_games):
+    """Calculate player's performance trends over recent games"""
+    performance = []
+    for game in recent_games:
+        game_stats = get_player_base_stats(player, game)
+        if game_stats['points_played'] > 0:
+            performance.append({
+                'date': game.date,
+                'per': calculate_per(player, game, calculate_team_averages([game])),
+                'plus_minus': (game_stats['goals'] + game_stats['assists'] + 
+                             game_stats['blocks'] - game_stats['turnovers'])
+            })
+    return performance
+
+def calculate_performance_trends(games):
+    """Calculate team performance trends"""
+    return {
+        'dates': [game.date.strftime('%Y-%m-%d') for game in games],
+        'o_line_efficiency': [
+            calculate_game_stats(game)['o_line_conversion_rate'] 
+            for game in games
+        ],
+        'd_line_efficiency': [
+            calculate_game_stats(game)['d_line_conversion_rate'] 
+            for game in games
+        ],
+        'break_percentage': [
+            (calculate_game_stats(game)['breaks'] / 
+             len(game.points) * 100) if len(game.points) > 0 else 0
+            for game in games
+        ]
+    }
+
+
+@bp.route('/player/<int:player_id>')
+@login_required
+def player_stats(player_id):
+    player = Player.query.get_or_404(player_id)
+    
+    # Get filter parameters
+    tournament_id = request.args.get('tournament_id', type=int)
+    game_id = request.args.get('game_id', type=int)
+
+    # Determine which games to analyze
+    if game_id:
+        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+    elif tournament_id:
+        tournament = Tournament.query.get(tournament_id)
+        games = tournament.games.all() if tournament else []
+    else:
+        games = Game.query.all()
+
+    # Get point IDs for filtering if games are selected
+    point_ids = [p.id for g in games for p in g.points] if games else None
+
+    # Query throws
+    throws_query = Throw.query.filter_by(thrower_id=player_id)
+    if point_ids:
+        throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+    
+    throws = throws_query.order_by(Throw.created_at).all()
+    print(f"Found {len(throws)} throws for player")
+
+    # Generate throw vectors
+    throw_vectors = []
+    normalized_vectors = []
+    for throw in throws:
+        if (throw.x_start is not None and throw.y_start is not None and 
+            throw.x_end is not None and throw.y_end is not None):
+            
+            # Regular vector
+            vector = {
+                'start_x': throw.x_start,
+                'start_y': throw.y_start,
+                'end_x': throw.x_end,
+                'end_y': throw.y_end,
+                'type': throw.throw_type,
+                'distance': throw.calculate_distance()
+            }
+            throw_vectors.append(vector)
+
+            # Normalized vector (centered on field)
+            center_x, center_y = 50, 18.5  # Center of field
+            dx = throw.x_end - throw.x_start
+            dy = throw.y_end - throw.y_start
+            distance = throw.calculate_distance()
+            if distance:
+                scale = 20 / distance  # Standardize to 20 meters length
+                normalized_vector = {
+                    'start_x': center_x,
+                    'start_y': center_y,
+                    'end_x': center_x + (dx * scale),
+                    'end_y': center_y + (dy * scale),
+                    'type': throw.throw_type,
+                    'distance': distance
+                }
+                normalized_vectors.append(normalized_vector)
+
+    print(f"Generated {len(throw_vectors)} throw vectors")
+    print("Sample vector:", throw_vectors[0] if throw_vectors else "No vectors")
+
+    # Get throwaway locations
+    throwaway_throws = throws_query.filter_by(throw_type='throwaway').all()
+    throwaway_locations = []
+    
+    for throw in throwaway_throws:
+        if throw.x_start is not None and throw.y_start is not None:
+            location = {
+                'x': throw.x_end,  # For throwaways, reception position is where the throw ended
+                'y': throw.y_end,
+                'prev_x': throw.x_start,  # Throw position is where it started
+                'prev_y': throw.y_start
+            }
+            throwaway_locations.append(location)
+
+    print(f"Generated {len(throwaway_locations)} throwaway locations")
+    print("Sample throwaway:", throwaway_locations[0] if throwaway_locations else "No throwaways")
+
+    # Calculate regular stats
+    stats = get_player_base_stats(player, games)
+    if stats['points_played'] > 0:
+        team_avgs = calculate_team_averages(games)
+        stats['per'] = calculate_per(player, games, team_avgs)
+
+    # Get player's game history
+    player_games = []
+    games_query = Game.query
+    if tournament_id:
+        games_query = games_query.filter_by(tournament_id=tournament_id)
+    elif game_id:
+        games_query = games_query.filter_by(id=game_id)
+    
+    for game in games_query.order_by(Game.date.desc()).all():
+        if any(player.id in [lineup.player_id for lineup in point.lineups] 
+              for point in game.points):
+            game_stats = get_player_base_stats(player, game)
+            game_stats['per'] = calculate_per(
+                player, game, 
+                calculate_team_averages([game])
+            )
+            player_games.append({
+                'game': game,
+                'stats': game_stats
+            })
+
+    # Get tournaments for filter
+    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+
+    # Calculate throw statistics
+    throw_stats = {
+        'total_throws': len(throws),
+        'completions': len([t for t in throws if t.is_completion]),
+        'assists': len([t for t in throws if t.throw_type == 'assist']),
+        'hockey_assists': len([t for t in throws if t.throw_type == 'hockey_assist']),
+        'average_distance': (sum(t.calculate_distance() or 0 for t in throws) / 
+                           len(throws) if throws else 0)
+    }
+
+    total_distance = sum(vector['distance'] for vector in throw_vectors)
+    avg_distance = total_distance / len(throw_vectors) if throw_vectors else 0
+
+
+    return render_template(
+        'stats/player_stats.html',
+        player=player,
+        stats=stats,
+        player_games=player_games,
+        tournaments=tournaments,
+        selected_tournament=tournament_id,
+        selected_game=game_id,
+        throw_vectors=throw_vectors,
+        normalized_vectors=normalized_vectors,
+        throwaway_locations=throwaway_locations,
+        throw_stats=throw_stats,
+        total_throw_distance=total_distance,
+        avg_throw_distance=avg_distance
+    )
+
+
+
+@bp.route('/game/<int:game_id>')
+@login_required
+def game_stats(game_id):
+    """
+    Comprehensive game statistics and visualizations
+    """
+    game = Game.query.get_or_404(game_id)
+    
+    # Calculate team statistics
+    team_stats = calculate_game_stats(game)
+    
+    # Calculate player statistics for this game
+    player_stats = []
+    players_in_game = set()
+    
+    for point in game.points:
+        for lineup in point.lineups:
+            players_in_game.add(lineup.player)
+    
+    team_avgs = calculate_team_averages([game])
+    
+    for player in players_in_game:
+        stats = get_player_base_stats(player, game)
+        stats['per'] = calculate_per(player, game, team_avgs)
+        player_stats.append({
+            'player': player,
+            'stats': stats
+        })
+    
+    # Sort by points played
+    player_stats.sort(key=lambda x: x['stats']['points_played'], reverse=True)
+    
+    # Generate visualization data
+    events = []
+    for point in game.points:
+        events.extend(point.events.all())
+    
+    heatmap_data = process_heatmap_data(events)
+    connection_data = generate_player_connections(events)
+    
+    return render_template(
+        'stats/game_stats.html',
+        game=game,
+        team_stats=team_stats,
+        player_stats=player_stats,
+        heatmap_data=json.dumps(heatmap_data),
+        connections=json.dumps(connection_data)
+    )
+
+@bp.route('/team')
+@login_required
+def team_stats():
+    """
+    Team-level statistics and analysis
+    """
+    # Get filter parameters
+    season = request.args.get('season', '')
+    tournament_id = request.args.get('tournament_id', type=int)
+    
+    # Get filtered games
+    games_query = Game.query
+    if tournament_id:
+        games_query = games_query.filter_by(tournament_id=tournament_id)
+    elif season:
+        tournament_ids = [t.id for t in Tournament.query.filter_by(season=season).all()]
+        games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
+    
+    games = games_query.all()
+    
+    # Calculate team summary stats
+    team_summary = calculate_team_summary(games)
+    
+    # Calculate player statistics
+    players = Player.query.filter_by(active=True).all()
+    team_avgs = calculate_team_averages(games)
+    
+    player_stats = []
+    for player in players:
+        stats = get_player_base_stats(player, games)
+        if stats['points_played'] > 0:
+            stats['per'] = calculate_per(player, games, team_avgs)
+            player_stats.append({
+                'player': player,
+                'stats': stats
+            })
+    
+    # Sort by PER
+    player_stats.sort(key=lambda x: x['stats']['per'], reverse=True)
+    
+    # Get optimal lines
+    o_line_players = sorted(
+        [p for p in players if p.line_preference in ['O-line', 'both']],
+        key=lambda p: next((s['stats']['per'] for s in player_stats if s['player'].id == p.id), 0),
+        reverse=True
+    )[:7]
+    
+    d_line_players = sorted(
+        [p for p in players if p.line_preference in ['D-line', 'both']],
+        key=lambda p: next((s['stats']['per'] for s in player_stats if s['player'].id == p.id), 0),
+        reverse=True
+    )[:7]
+    
+    # Get filter options
+    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    seasons = db.session.query(Tournament.season).distinct().all()
+    seasons = [s[0] for s in seasons if s[0]]
+    
+    return render_template(
+        'stats/team_stats.html',
+        player_stats=player_stats,
+        team_summary=team_summary,
+        tournaments=tournaments,
+        seasons=seasons,
+        selected_tournament=tournament_id,
+        selected_season=season,
+        o_line_players=o_line_players,
+        d_line_players=d_line_players
+    )
+
+# --- Helper functions for visualization data ---
+
+def generate_throw_vectors(player, games=None):
+    """Generate throw vector data based on consecutive catches"""
+    events_query = Event.query.filter(
+        Event.player_id == player.id,
+        Event.event_type.in_(['catch', 'goal'])
+    )
+
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        events_query = events_query.filter(Event.point_id.in_(point_ids))
+
+    throw_vectors = []
+    for event in events_query.all():
+        if event.previous_catch_id:
+            previous_catch = Event.query.get(event.previous_catch_id)
+            if previous_catch:
+                throw_vectors.append({
+                    'start_x': previous_catch.field_position_x,
+                    'start_y': previous_catch.field_position_y,
+                    'end_x': event.field_position_x,
+                    'end_y': event.field_position_y,
+                    'distance': event.inferred_throw_distance,
+                    'direction': event.inferred_throw_direction
+                })
+
+    return throw_vectors
+
+
+
+def generate_throwaway_locations(player, games=None):
+    """
+    Generate throwaway location data for visualization
+    """
+    events_query = Event.query.filter_by(player_id=player.id, event_type='throwaway')
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        events_query = events_query.filter(Event.point_id.in_(point_ids))
+    
+    throwaway_locations = []
+    for event in events_query.all():
+        if event.field_position_x is not None and event.field_position_y is not None:
+            location_data = {
+                'x': event.field_position_x,
+                'y': event.field_position_y
+            }
+            
+            # Try to find the previous event to show throw trajectory
+            prev_event = Event.query.filter(
+                Event.point_id == event.point_id,
+                Event.timestamp < event.timestamp
+            ).order_by(Event.timestamp.desc()).first()
+            
+            if prev_event and prev_event.field_position_x is not None and prev_event.field_position_y is not None:
+                location_data.update({
+                    'prev_x': prev_event.field_position_x,
+                    'prev_y': prev_event.field_position_y
+                })
+            
+            throwaway_locations.append(location_data)
+    
+    return throwaway_locations
+
+def count_points_played(player, games=None):
+    """Count number of points played by a player"""
+    query = LineUp.query.filter_by(player_id=player.id)
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        query = query.filter(LineUp.point_id.in_(point_ids))
+    return query.count()
+
+def count_events(query_base, event_types):
+    """Count events of specific types from a base query"""
+    return query_base.filter(Event.event_type.in_(event_types)).count()
+
+def calculate_completion_rate(stats):
+    """Calculate completion rate from stats dictionary"""
+    total_throws = stats['completions'] + stats.get('throwaways', 0)
+    return (stats['completions'] / total_throws * 100) if total_throws > 0 else 0
+
+def calculate_catch_rate(stats):
+    """Calculate catch rate from stats dictionary"""
+    total_catches = stats['catches'] + stats.get('drops', 0)
+    return (stats['catches'] / total_catches * 100) if total_catches > 0 else 0
+
+def calculate_o_d_line_stats(player, games=None):
+    """Calculate O-line and D-line statistics"""
+    stats = {
+        'o_line_points_played': 0,
+        'd_line_points_played': 0,
+        'o_line_plus_minus': 0,
+        'd_line_plus_minus': 0,
+        'o_line_plus_minus_per_point': 0,
+        'd_line_plus_minus_per_point': 0  # Added these two fields
+    }
+
+    try:
+        query = LineUp.query.filter_by(player_id=player.id).join(Point)
+        if games:
+            if isinstance(games, list):
+                game_ids = [g.id for g in games]
+            else:
+                game_ids = [games.id]
+            query = query.filter(Point.game_id.in_(game_ids))
+
+        o_line_points = query.filter(Point.our_line_type == 'O-line').all()
+        d_line_points = query.filter(Point.our_line_type == 'D-line').all()
+
+        stats['o_line_points_played'] = len(o_line_points)
+        stats['d_line_points_played'] = len(d_line_points)
+
+        for point in o_line_points:
+            plus_minus = calculate_point_plus_minus(point)
+            stats['o_line_plus_minus'] += plus_minus
+        
+        for point in d_line_points:
+            plus_minus = calculate_point_plus_minus(point)
+            stats['d_line_plus_minus'] += plus_minus
+
+        # Calculate per point stats
+        stats['o_line_plus_minus_per_point'] = (
+            stats['o_line_plus_minus'] / stats['o_line_points_played'] 
+            if stats['o_line_points_played'] > 0 else 0
+        )
+        
+        stats['d_line_plus_minus_per_point'] = (
+            stats['d_line_plus_minus'] / stats['d_line_points_played']
+            if stats['d_line_points_played'] > 0 else 0
+        )
+
+    except Exception as e:
+        print(f"Error calculating O/D line stats for player {player.id}: {str(e)}")
+
+    return stats
+
+def calculate_point_plus_minus(point):
+    """Calculate plus/minus for a single point with null checking"""
+    try:
+        our_score_before = point.our_score_before or 0
+        our_score_after = point.our_score_after or 0
+        their_score_before = point.their_score_before or 0
+        their_score_after = point.their_score_after or 0
+        
+        return (our_score_after - our_score_before) - (
+            their_score_after - their_score_before
+        )
+    except AttributeError:
+        return 0
+
+
+def calculate_team_summary(games):
+    """Calculate team summary statistics"""
+    summary = {
+        'games_played': len(games),
+        'wins': sum(1 for g in games if g.is_win),
+        'losses': sum(1 for g in games if g.is_loss),
+        'ties': sum(1 for g in games if g.is_tie),
+        'total_points': sum(len(g.points.all()) for g in games),
+        'o_line_points': 0,
+        'o_line_conversions': 0,
+        'd_line_points': 0,
+        'd_line_conversions': 0,
+        'breaks': 0,
+        'holds': 0
+    }
+
+    for game in games:
+        o_points = game.o_line_points
+        d_points = game.d_line_points
+        
+        summary['o_line_points'] += len(o_points)
+        summary['o_line_conversions'] += sum(1 for p in o_points if p.we_scored)
+        summary['d_line_points'] += len(d_points)
+        summary['d_line_conversions'] += sum(1 for p in d_points if p.we_scored)
+        summary['breaks'] += sum(1 for p in game.points if p.is_break)
+        summary['holds'] += sum(1 for p in game.points if p.is_hold)
+
+    summary['win_percentage'] = (
+        (summary['wins'] / summary['games_played'] * 100) 
+        if summary['games_played'] > 0 else 0
+    )
+    summary['o_line_conversion_rate'] = (
+        (summary['o_line_conversions'] / summary['o_line_points'] * 100)
+        if summary['o_line_points'] > 0 else 0
+    )
+    summary['d_line_conversion_rate'] = (
+        (summary['d_line_conversions'] / summary['d_line_points'] * 100)
+        if summary['d_line_points'] > 0 else 0
+    )
+
+    return summary
+
+def calculate_unadjusted_per(stats):
+    """Calculate unadjusted PER from stats dictionary"""
+    if stats['points_played'] == 0:
+        return 0
+
+    return (1 / stats['points_played']) * (
+        (0.5 * (stats['goals'] ** 0.75)) +
+        (0.5 * (stats['assists'] ** 0.75)) +
+        (0.5 * 0.5 * (stats['hockey_assists'] ** 0.75)) -
+        (0.75 * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
+        (0.75 * (stats['blocks'] ** 0.75)) +
+        (0.05 * (
+            (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
+            (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
+        ))
+    )
+
+def normalize_per(value):
+    """Normalize PER to a 0-30 scale"""
+    return min(max(value, 0), 300)
+
+def count_possessions(events):
+    """Count number of possessions in a sequence of events"""
+    possessions = 1
+    current_team = True  # True for our team, False for opponent
+
+    for event in events:
+        if event.event_type in ['throwaway', 'drop', 'stall']:
+            if current_team:
+                current_team = False
+                possessions += 1
+        elif event.event_type == 'block':
+            if not current_team:
+                current_team = True
+                possessions += 1
+
+    return possessions
+
+
+
+def get_optimal_lines(points, players):
+    """Calculate optimal lines based on actual performance"""
+    o_line_performances = {}
+    d_line_performances = {}
+    
+    for point in points:
+        # Get the players who were on this point
+        point_players = [lineup.player for lineup in point.lineups]
+        
+        # Calculate success rate for this combination
+        success = point.point_outcome == 'scored'
+        
+        if point.our_line_type == 'O-line':
+            key = tuple(sorted(p.id for p in point_players))
+            if key not in o_line_performances:
+                o_line_performances[key] = {'players': point_players, 'success': 0, 'total': 0}
+            o_line_performances[key]['success'] += 1 if success else 0
+            o_line_performances[key]['total'] += 1
+        else:
+            key = tuple(sorted(p.id for p in point_players))
+            if key not in d_line_performances:
+                d_line_performances[key] = {'players': point_players, 'success': 0, 'total': 0}
+            d_line_performances[key]['success'] += 1 if success else 0
+            d_line_performances[key]['total'] += 1
+    
+    # Sort by success rate
+    best_o_line = sorted(
+        o_line_performances.values(),
+        key=lambda x: (x['success'] / x['total'] if x['total'] > 0 else 0),
+        reverse=True
+    )
+    
+    best_d_line = sorted(
+        d_line_performances.values(),
+        key=lambda x: (x['success'] / x['total'] if x['total'] > 0 else 0),
+        reverse=True
+    )
+    
+    return (
+        best_o_line[0]['players'] if best_o_line else [],
+        best_d_line[0]['players'] if best_d_line else []
+    )
+
+@bp.route('/debug_stats/<int:player_id>')
+@login_required
+def debug_stats(player_id):
+    player = Player.query.get_or_404(player_id)
+    point_stats = PlayerPointStats.query.filter_by(player_id=player_id).all()
+    events = Event.query.filter_by(player_id=player_id).all()
+    
+    return jsonify({
+        'player': player.name,
+        'num_point_stats': len(point_stats),
+        'num_events': len(events),
+        'point_stats': [{
+            'point_id': ps.point_id,
+            'o_line_plus_minus': ps.o_line_plus_minus,
+            'd_line_plus_minus': ps.d_line_plus_minus
+        } for ps in point_stats],
+        'events': [{
+            'event_type': e.event_type,
+            'point_id': e.point_id,
+            'is_offensive': e.is_offensive
+        } for e in events]
+    })
