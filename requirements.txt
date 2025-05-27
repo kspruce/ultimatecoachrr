@@ -41,7 +41,7 @@ pyparsing==3.2.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 pytz==2024.1
-scipy==1.24.0
+scipy==1.15.3  # Changed from 1.24.0 to 1.15.3 (latest available version)
 seaborn==0.13.2
 six==1.17.0
 SQLAlchemy==2.0.39
