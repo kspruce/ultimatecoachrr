@@ -2,7 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
-from config import Config, DevelopmentConfig
+from config import Config
 from flask_wtf.csrf import CSRFProtect
 import os
 
@@ -13,19 +13,8 @@ login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
 
-
-
-
-def create_app(config_class=None):
+def create_app(config_class=Config):
     app = Flask(__name__)
-    
-    # Choose configuration based on environment
-    if config_class is None:
-        if os.environ.get('FLASK_ENV') == 'production':
-            config_class = Config
-        else:
-            config_class = DevelopmentConfig
-    
     app.config.from_object(config_class)
 
     db.init_app(app)
@@ -33,11 +22,7 @@ def create_app(config_class=None):
     login.init_app(app)
     csrf.init_app(app)
     
-    # Ensure instance folder exists
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
     # Configure static file serving for uploads
     app.static_folder = 'static'
@@ -52,6 +37,7 @@ def create_app(config_class=None):
     
     init_filters(app)
     
+   
     # Add custom Jinja2 filters
     @app.template_filter('nl2br')
     def nl2br_filter(s):

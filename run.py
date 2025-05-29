@@ -63,19 +63,11 @@ else:
     application = app
     
 
-@app.route('/db-test')
-def db_test():
-    try:
-        # Test database connection
-        db.session.execute('SELECT 1')
-        return jsonify({
-            'database': 'connected',
-            'db_uri': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite',
-            'tables': [str(table) for table in db.metadata.tables.keys()]
-        })
-    except Exception as e:
-        return jsonify({
-            'database': 'error',
-            'error': str(e),
-            'db_uri': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite'
-        })
+@app.route('/debug/config')
+def debug_config():
+    return {
+        'DATABASE_URL': app.config['SQLALCHEMY_DATABASE_URI'],
+        'UPLOAD_FOLDER': app.config['UPLOAD_FOLDER'],
+        'ENV': app.config['ENV'],
+        'DEBUG': app.config['DEBUG']
+    }
