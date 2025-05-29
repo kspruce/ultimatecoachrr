@@ -3,6 +3,7 @@ from app.models import User, Player, Tournament, Game, Point, LineUp, Event, Pul
 from app.models import Clip, ClipTag, ClipTagRelation, ClipPlayer, ClipAnnotation
 from app.models import ScoutingReport, SessionPlan, SessionComponent, Attendance, SavedDrill
 from app.models import PlayerPointStats, ExportLog
+from flask import jsonify
 import os 
 import re
 
@@ -60,3 +61,21 @@ if __name__ == "__main__":
 else:
     # This helps Gunicorn find the app
     application = app
+    
+
+@app.route('/db-test')
+def db_test():
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        return jsonify({
+            'database': 'connected',
+            'db_uri': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite',
+            'tables': [str(table) for table in db.metadata.tables.keys()]
+        })
+    except Exception as e:
+        return jsonify({
+            'database': 'error',
+            'error': str(e),
+            'db_uri': app.config['SQLALCHEMY_DATABASE_URI'].split('@')[1] if '@' in app.config['SQLALCHEMY_DATABASE_URI'] else 'sqlite'
+        })

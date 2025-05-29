@@ -2,51 +2,81 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from urllib.parse import urlparse
 from app import db
 from app.models.user import User
-# We'll create these forms later
 from app.forms.auth import LoginForm, RegistrationForm
 from flask_login import login_user, logout_user, current_user, login_required
-
-
+import logging
 from app.models.player import Player
 from app.forms.auth import UserForm
+
+
+
+
+
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('auth', __name__)
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user is None or not user.check_password(form.password.data):
-            flash('Invalid username or password')
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('main.index'))
+        
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(username=form.username.data).first()
+            logger.info(f"Login attempt for user: {form.username.data}")
+            
+            if user is None or not user.check_password(form.password.data):
+                logger.warning(f"Failed login attempt for user: {form.username.data}")
+                flash('Invalid username or password')
+                return redirect(url_for('auth.login'))
+            
+            login_user(user, remember=form.remember_me.data)
+            logger.info(f"Successful login for user: {user.username}")
+            
+            next_page = request.args.get('next')
+            if not next_page or urlparse(next_page).netloc != '':
+                next_page = url_for('main.index')
+            return redirect(next_page)
+        
+        return render_template('auth/login.html', title='Sign In', form=form)
+    
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        flash('An error occurred during login. Please try again.')
+        return redirect(url_for('auth.login'))
+
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('main.index'))
+        
+        form = RegistrationForm()
+        if form.validate_on_submit():
+            user = User(username=form.username.data, email=form.email.data)
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            logger.info(f"New user registered: {user.username}")
+            flash('Congratulations, you are now a registered user!')
             return redirect(url_for('auth.login'))
-        login_user(user, remember=form.remember_me.data)
-        next_page = request.args.get('next')
-        if not next_page or urlparse(next_page).netloc != '':
-            next_page = url_for('main.index')
-        return redirect(next_page)
-    return render_template('auth/login.html', title='Sign In', form=form)
+        
+        return render_template('auth/register.html', title='Register', form=form)
+    
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        flash('An error occurred during registration. Please try again.')
+        return redirect(url_for('auth.register'))
 
 @bp.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
-
-@bp.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        flash('Congratulations, you are now a registered user!')
-        return redirect(url_for('auth.login'))
-    return render_template('auth/register.html', title='Register', form=form)
 
 @bp.route('/users')
 @login_required

@@ -5,11 +5,18 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
+    @staticmethod
+    def get_database_url():
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url and database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        return database_url or 'sqlite:///' + os.path.join(basedir, 'app.db')
+    
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     
     # Update database URI configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'app.db')
+    SQLALCHEMY_DATABASE_URI = get_database_url()
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # If using PostgreSQL locally, use this format:
     # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
