@@ -3,31 +3,31 @@ from app.models import User, Player, Tournament, Game, Point, LineUp, Event, Pul
 from app.models import Clip, ClipTag, ClipTagRelation, ClipPlayer, ClipAnnotation
 from app.models import ScoutingReport, SessionPlan, SessionComponent, Attendance, SavedDrill
 from app.models import PlayerPointStats, ExportLog
-from flask import jsonify
-import os 
-import re
+import os
+import sys
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = create_app()
 
-def fix_postgres_url(url):
-    """Fix PostgreSQL URL for SQLAlchemy 1.4+"""
-    if url and url.startswith('postgres://'):
-        url = url.replace('postgres://', 'postgresql://', 1)
-    return url
-
-# In create_app or where you set up the database
-app.config['SQLALCHEMY_DATABASE_URI'] = fix_postgres_url(
-    os.environ.get('DATABASE_URL')
-)
-
 @app.route('/debug-info')
 def debug_info():
-    return {
-        'port': os.environ.get('PORT'),
-        'database_url': app.config['SQLALCHEMY_DATABASE_URI'],
-        'environment': os.environ.get('FLASK_ENV', 'not set'),
-        'debug': os.environ.get('FLASK_DEBUG', 'not set')
-    }
+    try:
+        return {
+            'port': os.environ.get('PORT'),
+            'database_url': app.config.get('SQLALCHEMY_DATABASE_URI', 'not set').replace('://:@', '://****:****@'),
+            'environment': os.environ.get('FLASK_ENV', 'not set'),
+            'debug': os.environ.get('FLASK_DEBUG', 'not set'),
+            'python_path': sys.executable,
+            'working_directory': os.getcwd(),
+            'upload_folder': app.config.get('UPLOAD_FOLDER', 'not set')
+        }
+    except Exception as e:
+        logger.error(f"Error in debug-info: {str(e)}")
+        return {'error': str(e)}
 
 @app.shell_context_processor
 def make_shell_context():
@@ -55,19 +55,22 @@ def make_shell_context():
         'ExportLog': ExportLog
     }
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
-else:
-    # This helps Gunicorn find the app
-    application = app
-    
+def create_app_instance():
+    """Function to create app instance with error handling"""
+    try:
+        return app
+    except Exception as e:
+        logger.error(f"Error creating app: {str(e)}")
+        raise
 
-@app.route('/debug/config')
-def debug_config():
-    return {
-        'DATABASE_URL': app.config['SQLALCHEMY_DATABASE_URI'],
-        'UPLOAD_FOLDER': app.config['UPLOAD_FOLDER'],
-        'ENV': app.config['ENV'],
-        'DEBUG': app.config['DEBUG']
-    }
+# This helps Gunicorn find the app
+application = create_app_instance()
+
+if __name__ == "__main__":
+    try:
+        port = int(os.environ.get("PORT", 5000))
+        debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+        app.run(host="0.0.0.0", port=port, debug=debug)
+    except Exception as e:
+        logger.error(f"Error starting app: {str(e)}")
+        raise

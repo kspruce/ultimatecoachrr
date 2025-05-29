@@ -7,12 +7,21 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     
-    # Simplified database URL handling
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'app.db'))
-    if SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+    # Database configuration
+    def get_database_url():
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url:
+            # Handle Heroku-style DATABASE_URL
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            return database_url
+        return 'sqlite:///' + os.path.join(basedir, 'app.db')
     
+    SQLALCHEMY_DATABASE_URI = get_database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Ensure debug is properly set
+    DEBUG = os.environ.get('FLASK_DEBUG', '0') == '1'
     
     # Mail settings
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
