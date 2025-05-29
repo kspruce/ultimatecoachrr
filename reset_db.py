@@ -1,15 +1,44 @@
 from app import create_app, db
-import os
+from sqlalchemy import text
 
 app = create_app()
 
 def reset_database():
     with app.app_context():
-        # Execute SQL script
-        with open('reset_database.sql', 'r') as f:
-            sql = f.read()
-            db.session.execute(sql)
-            db.session.commit()
+        # Execute raw SQL commands
+        commands = [
+            "DROP SCHEMA public CASCADE",
+            "CREATE SCHEMA public",
+            "GRANT ALL ON SCHEMA public TO postgres",
+            "GRANT ALL ON SCHEMA public TO public",
+            """
+            CREATE TABLE "user" (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(64) UNIQUE NOT NULL,
+                email VARCHAR(120) UNIQUE NOT NULL,
+                password_hash VARCHAR(128),
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE player (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(64) NOT NULL,
+                jersey_number INTEGER,
+                position VARCHAR(20),
+                gender VARCHAR(20),
+                gender_match VARCHAR(20),
+                team VARCHAR(64),
+                user_id INTEGER REFERENCES "user"(id)
+            )
+            """
+        ]
+        
+        # Execute each command
+        for command in commands:
+            db.session.execute(text(command))
+        db.session.commit()
         print("Reset database schema")
         
         # Create admin user
