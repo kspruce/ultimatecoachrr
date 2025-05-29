@@ -2,7 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
-from config import Config
+from config import Config, DevelopmentConfig
 from flask_wtf.csrf import CSRFProtect
 import os
 
@@ -16,14 +16,22 @@ csrf = CSRFProtect()
 
 
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
     app = Flask(__name__)
+    
+    # Choose configuration based on environment
+    if config_class is None:
+        if os.environ.get('FLASK_ENV') == 'production':
+            config_class = Config
+        else:
+            config_class = DevelopmentConfig
+    
     app.config.from_object(config_class)
 
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
-    csrf.init_app(app)  # Initialize CSRF protection
+    csrf.init_app(app)
     
     # Ensure instance folder exists
     try:

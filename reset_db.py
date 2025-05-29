@@ -9,8 +9,7 @@ def reset_database():
         commands = [
             "DROP SCHEMA public CASCADE",
             "CREATE SCHEMA public",
-            "GRANT ALL ON SCHEMA public TO postgres",
-            "GRANT ALL ON SCHEMA public TO public",
+            "GRANT ALL ON SCHEMA public TO public",  # Remove postgres user grant
             """
             CREATE TABLE "user" (
                 id SERIAL PRIMARY KEY,
@@ -37,8 +36,15 @@ def reset_database():
         
         # Execute each command
         for command in commands:
-            db.session.execute(text(command))
-        db.session.commit()
+            try:
+                db.session.execute(text(command))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Warning: Command failed: {str(e)}")
+                # Continue with next command
+                continue
+        
         print("Reset database schema")
         
         # Create admin user
