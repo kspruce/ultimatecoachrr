@@ -2,7 +2,7 @@ from app import db
 from datetime import datetime
 
 class Player(db.Model):
-    __tablename__ = 'players'  # Using plural form consistently
+    __tablename__ = 'player'  
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -23,7 +23,7 @@ class Player(db.Model):
     games_played= db.Column(db.Integer, default=0)
     
     # User relationship
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))  # Updated to 'users.id'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Updated to 'users.id'
     user_account = db.relationship('User', back_populates='player_profile')
     
     # Other relationships
