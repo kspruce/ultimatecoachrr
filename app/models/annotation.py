@@ -1,6 +1,33 @@
 from app import db
 from datetime import datetime
 
+def seconds_to_timestamp(seconds):
+    """Convert seconds to HH:MM:SS format"""
+    if seconds is None:
+        return ""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+def timestamp_to_seconds(timestamp):
+    """Convert HH:MM:SS format to seconds"""
+    if not timestamp:
+        return None
+    try:
+        # Split timestamp into components
+        parts = timestamp.split(':')
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+        elif len(parts) == 2:
+            minutes, seconds = parts
+            return int(minutes) * 60 + int(seconds)
+        else:
+            return int(parts[0])
+    except (ValueError, IndexError):
+        return None
+
 class ClipAnnotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), nullable=False)
@@ -19,10 +46,9 @@ class ClipAnnotation(db.Model):
     
     @property
     def formatted_timestamp(self):
-        """Return the timestamp formatted as MM:SS."""
-        minutes = self.timestamp // 60
-        seconds = self.timestamp % 60
-        return f"{minutes}:{seconds:02d}"
+        """Return timestamp in HH:MM:SS format"""
+        return seconds_to_timestamp(self.timestamp)
+    
     
     @property
     def youtube_timestamp_link(self):

@@ -59,31 +59,36 @@ def point_clips(point_id):
     clips = Clip.query.filter_by(point_id=point_id).order_by(Clip.created_at.desc()).all()
     return render_template('clip/point_clips.html', point=point, clips=clips)
 
-@bp.route('/add', methods=['GET', 'POST'])
+
+
+@bp.route('/add_clip', methods=['GET', 'POST'])
 @login_required
 def add_clip():
     form = ClipForm()
-    
-    # Check if there are any tags
     tags_exist = ClipTag.query.count() > 0
-    
+
     if form.validate_on_submit():
-        # Extract video ID from YouTube link
-        youtube_link = form.youtube_link.data
-        video_id = extract_youtube_id(youtube_link)
+        video_source = form.video_source.data
+        video_link = form.youtube_link.data
         
-        if not video_id:
-            flash('Invalid YouTube link. Please provide a valid YouTube URL.', 'danger')
-            return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
-        
-        # Create standardized YouTube link
-        standard_link = f'https://www.youtube.com/watch?v={video_id}'
-        
+        if video_source == 'youtube':
+            video_id = extract_youtube_id(video_link)
+            if not video_id:
+                flash('Invalid YouTube link. Please provide a valid YouTube URL.', 'danger')
+                return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
+            standard_link = f'https://www.youtube.com/watch?v={video_id}'
+        elif video_source == 'veo':
+            if not validate_veo_link(video_link):
+                flash('Invalid Veo link. Please provide a valid Veo URL.', 'danger')
+                return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
+            standard_link = video_link
+
         clip = Clip(
             title=form.title.data,
+            video_source=video_source,
+            youtube_link=standard_link,  # We'll keep using youtube_link field for now
             game_id=form.game_id.data if form.game_id.data and form.game_id.data > 0 else None,
             point_id=form.point_id.data if form.point_id.data and form.point_id.data > 0 else None,
-            youtube_link=standard_link,
             start_time=form.start_time.data,
             end_time=form.end_time.data,
             description=form.description.data
@@ -123,6 +128,18 @@ def add_clip():
     
     return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
 
+def validate_veo_link(url):
+    """Validate Veo video URL"""
+    # Add Veo-specific URL validation
+    veo_pattern = r'https?://app\.veo\.co/matches/[a-zA-Z0-9-]+'
+    return bool(re.match(veo_pattern, url))
+
+def get_veo_embed_url(url):
+    """Convert Veo URL to embed URL"""
+    # Implement Veo embed URL conversion
+    # You'll need to check Veo's documentation for proper embed URL format
+    match_id = url.split('matches/')[1]
+    return f'https://app.veo.co/embed/{match_id}'
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
@@ -223,9 +240,15 @@ def add_annotation(clip_id):
     form = AnnotationForm()
     
     if form.validate_on_submit():
+        # Convert timestamp to seconds
+        seconds = timestamp_to_seconds(form.timestamp.data)
+        if seconds is None:
+            flash('Invalid timestamp format', 'danger')
+            return redirect(url_for('clip.view_clip', clip_id=clip.id))
+            
         annotation = ClipAnnotation(
             clip_id=clip.id,
-            timestamp=form.timestamp.data,
+            timestamp=seconds,  # Store as seconds in database
             event_type=form.event_type.data,
             our_score=form.our_score.data,
             their_score=form.their_score.data,
@@ -251,8 +274,18 @@ def edit_annotation(annotation_id):
     annotation = ClipAnnotation.query.get_or_404(annotation_id)
     form = AnnotationForm(obj=annotation)
     
+    if request.method == 'GET':
+        # Convert seconds to timestamp for display
+        form.timestamp.data = seconds_to_timestamp(annotation.timestamp)
+    
     if form.validate_on_submit():
-        annotation.timestamp = form.timestamp.data
+        # Convert timestamp to seconds
+        seconds = timestamp_to_seconds(form.timestamp.data)
+        if seconds is None:
+            flash('Invalid timestamp format', 'danger')
+            return render_template('clip/edit_annotation.html', form=form, annotation=annotation)
+            
+        annotation.timestamp = seconds
         annotation.event_type = form.event_type.data
         annotation.our_score = form.our_score.data
         annotation.their_score = form.their_score.data
@@ -261,7 +294,6 @@ def edit_annotation(annotation_id):
         annotation.notes = form.notes.data
         
         db.session.commit()
-        
         flash('Annotation updated successfully!', 'success')
         return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
     
@@ -362,3 +394,30 @@ def extract_youtube_id(url):
             return match.group(1)
     
     return None
+
+def seconds_to_timestamp(seconds):
+    """Convert seconds to HH:MM:SS format"""
+    if seconds is None:
+        return ""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+def timestamp_to_seconds(timestamp):
+    """Convert HH:MM:SS format to seconds"""
+    if not timestamp:
+        return None
+    try:
+        # Split timestamp into components
+        parts = timestamp.split(':')
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+        elif len(parts) == 2:
+            minutes, seconds = parts
+            return int(minutes) * 60 + int(seconds)
+        else:
+            return int(parts[0])
+    except (ValueError, IndexError):
+        return None

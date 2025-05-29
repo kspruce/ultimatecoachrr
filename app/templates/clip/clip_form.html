@@ -55,9 +55,17 @@
                         </div>
                         
                         <div class="mb-3">
+                            {{ form.video_source.label(class="form-label") }}
+                            {{ form.video_source(class="form-select") }}
+                            {% for error in form.video_source.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
                             {{ form.youtube_link.label(class="form-label") }}
                             {{ form.youtube_link(class="form-control") }}
-                            <div class="form-text">Enter a YouTube URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID)</div>
+                            <div class="form-text">Enter a video URL from the selected platform</div>
                             {% for error in form.youtube_link.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}

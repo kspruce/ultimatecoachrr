@@ -25,7 +25,12 @@ def create_app(config_class=Config):
     login.init_app(app)
     csrf.init_app(app)  # Initialize CSRF protection
     
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Ensure instance folder exists
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
+    
     # Configure static file serving for uploads
     app.static_folder = 'static'
     app.static_url_path = '/static'

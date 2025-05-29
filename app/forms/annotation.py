@@ -1,9 +1,14 @@
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, StringField, SelectField, TextAreaField, SubmitField
-from wtforms.validators import DataRequired, Optional, NumberRange
+from wtforms.validators import DataRequired, Optional, NumberRange, Regexp
 
 class AnnotationForm(FlaskForm):
-    timestamp = IntegerField('Timestamp (seconds)', validators=[DataRequired(), NumberRange(min=0)])
+    timestamp = StringField('Timestamp', 
+        validators=[
+            DataRequired(),
+            Regexp(r'^(?:(?:[0-9]{1,2}:)?[0-5]?[0-9]:)?[0-5]?[0-9]$', 
+                message='Invalid timestamp format. Use HH:MM:SS, MM:SS, or SS')
+        ])
     event_type = SelectField('Event Type', choices=[
         ('point_start', 'Point Start'),
         ('point_end', 'Point End'),

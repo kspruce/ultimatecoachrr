@@ -4,14 +4,26 @@ from app.models import Clip, ClipTag, ClipTagRelation, ClipPlayer, ClipAnnotatio
 from app.models import ScoutingReport, SessionPlan, SessionComponent, Attendance, SavedDrill
 from app.models import PlayerPointStats, ExportLog
 import os 
+import re
 
 app = create_app()
+
+def fix_postgres_url(url):
+    """Fix PostgreSQL URL for SQLAlchemy 1.4+"""
+    if url and url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+# In create_app or where you set up the database
+app.config['SQLALCHEMY_DATABASE_URI'] = fix_postgres_url(
+    os.environ.get('DATABASE_URL')
+)
 
 @app.route('/debug-info')
 def debug_info():
     return {
         'port': os.environ.get('PORT'),
-        'database_url': os.environ.get('DATABASE_URL', 'not set'),
+        'database_url': app.config['SQLALCHEMY_DATABASE_URI'],
         'environment': os.environ.get('FLASK_ENV', 'not set'),
         'debug': os.environ.get('FLASK_DEBUG', 'not set')
     }
@@ -44,8 +56,7 @@ def make_shell_context():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host="0.0.0.0", port=port, debug=True)
 else:
     # This helps Gunicorn find the app
     application = app

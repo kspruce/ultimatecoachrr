@@ -55,7 +55,11 @@
             <div class="card">
                 <div class="card-body">
                     <div class="ratio ratio-16x9 mb-3">
-                        <iframe id="youtube-player" src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
+                        {% if clip.video_source == 'youtube' %}
+                            <iframe id="youtube-player" src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
+                        {% elif clip.video_source == 'veo' %}
+                            <iframe id="veo-player" src="{{ clip.veo_embed_url }}" allowfullscreen></iframe>
+                        {% endif %}
                     </div>
                     
                     {% if clip.description %}
@@ -241,7 +245,8 @@
                                                 
                                                 <div class="mb-3">
                                                     {{ form.timestamp.label(class="form-label") }}
-                                                    {{ form.timestamp(class="form-control", value=annotation.timestamp) }}
+                                                    {{ form.timestamp(class="form-control", value=annotation.formatted_timestamp) }}
+                                                    <div class="form-text">Enter time in HH:MM:SS, MM:SS, or SS format</div>
                                                 </div>
                                                 
                                                 <div class="mb-3">
@@ -430,5 +435,27 @@
         const match = url.match(regExp);
         return (match && match[7].length === 11) ? match[7] : false;
     }
+    
+    // Add this to your view_clip.html scripts section
+    function getCurrentVideoTime() {
+        const iframe = document.getElementById('youtube-player');
+        // You'll need to use the YouTube Player API to get the current time
+        // This is a placeholder for the actual implementation
+        const player = new YT.Player(iframe);
+        const seconds = player.getCurrentTime();
+        
+        // Convert seconds to HH:MM:SS
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Add button to get current time
+    document.getElementById('get-current-time').addEventListener('click', function() {
+        document.getElementById('annotation-timestamp').value = getCurrentVideoTime();
+    });
+
 </script>
 {% endblock %}

@@ -1,0 +1,9 @@
+*.pyc
+__pycache__/
+.env
+*.db
+venv/
+.venv/
+instance/
+app/static/images/drills/*
+!app/static/images/drills/.gitkeep

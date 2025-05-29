@@ -3,12 +3,13 @@ from datetime import datetime
 
 class Clip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=True)  # Change to nullable=True
+    game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=True)
+    video_source = db.Column(db.String(20), nullable=False, default='youtube')
     title = db.Column(db.String(100), nullable=False)
     youtube_link = db.Column(db.String(200), nullable=False)
-    start_time = db.Column(db.Integer, nullable=True)  # in seconds
-    end_time = db.Column(db.Integer, nullable=True)  # in seconds
+    start_time = db.Column(db.Integer, nullable=True)
+    end_time = db.Column(db.Integer, nullable=True)
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -25,6 +26,17 @@ class Clip(db.Model):
     def tag_list(self):
         """Return a list of tags for this clip."""
         return [relation.tag for relation in self.tags]
+    
+    @property
+    def embed_url(self):
+        """Return the appropriate embed URL based on video source"""
+        if self.video_source == 'youtube':
+            return self.youtube_embed_url
+        elif self.video_source == 'veo':
+            # Implement Veo embed URL logic
+            return self.veo_embed_url
+        # Add more platforms as needed
+        return None
     
     @property
     def player_list(self):
@@ -55,6 +67,7 @@ class Clip(db.Model):
             embed_url += f'?end={self.end_time}'
         
         return embed_url
+
 
 
 

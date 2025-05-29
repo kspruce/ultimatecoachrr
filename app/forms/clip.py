@@ -5,13 +5,22 @@ from app.models.game import Game
 from app.models.player import Player
 from app.models.clip import ClipTag
 
+
 class ClipForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     game_id = SelectField('Game', coerce=int, validators=[Optional()])
     point_id = SelectField('Point', coerce=int, validators=[Optional()])
-    youtube_link = StringField('YouTube Link', validators=[DataRequired(), URL()])
-    start_time = IntegerField('Start Time (seconds)', validators=[Optional(), NumberRange(min=0)])
-    end_time = IntegerField('End Time (seconds)', validators=[Optional(), NumberRange(min=0)])
+    video_source = SelectField('Video Source', 
+        choices=[
+            ('youtube', 'YouTube'),
+            ('veo', 'Veo')
+        ],
+        default='youtube',
+        validators=[DataRequired()]
+    )
+    youtube_link = StringField('Video Link', validators=[DataRequired(), URL()])
+    start_time = IntegerField('Start Time (seconds)', validators=[Optional()])
+    end_time = IntegerField('End Time (seconds)', validators=[Optional()])
     description = TextAreaField('Description', validators=[Optional()])
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     players = SelectMultipleField('Players', coerce=int, validators=[Optional()])
