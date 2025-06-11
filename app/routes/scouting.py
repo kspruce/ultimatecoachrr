@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.models.scouting import ScoutingReport, OpponentPlayer, ScoutingClip
@@ -6,6 +6,9 @@ from app.models.tournament import Tournament
 from app.models.game import Game
 from app.forms.scouting import ScoutingReportForm, OpponentPlayerForm, ScoutingClipForm, ScoutingFilterForm
 import re
+from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect()
+
 
 bp = Blueprint('scouting', __name__, url_prefix='/scouting')
 
@@ -85,14 +88,27 @@ def edit_report(report_id):
 @bp.route('/delete/<int:report_id>', methods=['POST'])
 @login_required
 def delete_report(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
-    team_name = report.team_name
-    
-    db.session.delete(report)
-    db.session.commit()
-    
-    flash(f'Scouting report for "{team_name}" has been deleted!', 'success')
-    return redirect(url_for('scouting.index'))
+    try:
+        report = ScoutingReport.query.get_or_404(report_id)
+        team_name = report.team_name
+        
+        db.session.delete(report)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Scouting report for "{team_name}" has been deleted!'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting scouting report: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+
 
 @bp.route('/<int:report_id>')
 @login_required
@@ -293,3 +309,18 @@ def extract_youtube_id(url):
             return match.group(1)
     
     return None
+
+@bp.errorhandler(400)
+def bad_request_error(error):
+    return jsonify({
+        'success': False,
+        'message': 'Bad request - CSRF token missing or invalid'
+    }), 400
+
+@bp.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return jsonify({
+        'success': False,
+        'message': 'Internal server error'
+    }), 500

@@ -1,0 +1,115 @@
+{# templates/theory/topic.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('theory.index') }}">Theory</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">
+                    {{ topic.section.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active">{{ topic.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h1 class="h2 mb-0">{{ topic.name }}</h1>
+                    {% if current_user.is_admin %}
+                    <div class="btn-group">
+                        <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}" 
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if topic.image_url %}
+                    <div class="topic-image mb-4">
+                        <img src="{{ url_for('static', filename=topic.image_url) }}" 
+                             class="img-fluid rounded" 
+                             alt="{{ topic.name }}">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="topic-content">
+                        {{ topic.content|markdown|safe }}
+                    </div>
+                </div>
+            </div>
+
+            {% if topic.related_videos %}
+            <!-- Videos Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h4 mb-0">Related Videos</h3>
+                </div>
+                <div class="card-body">
+                    {% for video in topic.related_videos %}
+                    <div class="mb-4">
+                        <div class="ratio ratio-16x9">
+                            <iframe src="{{ video.url|safe }}" 
+                                    allowfullscreen></iframe>
+                        </div>
+                        <h5 class="mt-2">{{ video.title }}</h5>
+                        {% if video.description %}
+                        <p class="text-muted">{{ video.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Section Topics -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="h5 mb-0">In This Section</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for section_topic in topic.section.topics %}
+                        <a href="{{ url_for('theory.topic', topic_id=section_topic.id) }}" 
+                           class="list-group-item list-group-item-action {% if section_topic.id == topic.id %}active{% endif %}">
+                            {{ section_topic.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            {% if topic.related_drills %}
+            <!-- Related Drills -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="h5 mb-0">Related Drills</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for drill in topic.related_drills %}
+                        <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
+                           class="list-group-item list-group-item-action">
+                            {{ drill.title }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

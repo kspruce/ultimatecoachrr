@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Team Playbook</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">Add Play</a>
+                <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-primary">Add Formation</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formations Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Formations</h5>
+                </div>
+                <div class="card-body">
+                    {% if formations %}
+                    <div class="row">
+                        {% for formation in formations %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                {% if formation.diagram_url %}
+                                <img src="{{ url_for('static', filename=formation.diagram_url) }}" 
+                                     class="card-img-top" alt="{{ formation.name }}">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ formation.name }}</h5>
+                                    <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
+                                        {{ formation.type|title }}
+                                    </span>
+                                    <p class="card-text">{{ formation.description|truncate(100) }}</p>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="btn-group w-100">
+                                        <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <button type="button" 
+                                                onclick="playbookManager.deleteFormation({{ formation.id }})" 
+                                                class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No formations added yet. 
+                        <a href="{{ url_for('playbook.add_formation') }}">Add your first formation</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plays Section -->
+    <div class="row">
+        <!-- Offensive Plays -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Offensive Plays</h5>
+                </div>
+                <div class="card-body">
+                    {% if offensive_plays %}
+                    <div class="list-group">
+                        {% for play in offensive_plays %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+                                        {{ play.name }}
+                                    </a>
+                                </h6>
+                                {% if play.formation %}
+                                <small class="text-muted">{{ play.formation.name }}</small>
+                                {% endif %}
+                            </div>
+                            {% if play.tags %}
+                            <div class="mb-1">
+                                {% for tag in play.tags %}
+                                <span class="badge bg-secondary">{{ tag.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                                   class="btn btn-outline-secondary">Edit</a>
+                                <button type="button" 
+                                        onclick="playbookManager.deletePlay({{ play.id }})" 
+                                        class="btn btn-outline-danger">Delete</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No offensive plays added yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Defensive Plays -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Defensive Plays</h5>
+                </div>
+                <div class="card-body">
+                    {% if defensive_plays %}
+                    <div class="list-group">
+                        {% for play in defensive_plays %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
+                                        {{ play.name }}
+                                    </a>
+                                </h6>
+                                {% if play.formation %}
+                                <small class="text-muted">{{ play.formation.name }}</small>
+                                {% endif %}
+                            </div>
+                            {% if play.tags %}
+                            <div class="mb-1">
+                                {% for tag in play.tags %}
+                                <span class="badge bg-secondary">{{ tag.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                                   class="btn btn-outline-secondary">Edit</a>
+                                <button type="button" 
+                                        onclick="playbookManager.deletePlay({{ play.id }})" 
+                                        class="btn btn-outline-danger">Delete</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No defensive plays added yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/playbook.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
+{% endblock %}

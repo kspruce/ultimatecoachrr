@@ -5,6 +5,9 @@ from flask_login import LoginManager
 from config import Config
 from flask_wtf.csrf import CSRFProtect
 import os
+from flask_wtf.csrf import CSRFError
+import json
+import markdown
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -27,6 +30,13 @@ def create_app(config_class=Config):
     # Configure static file serving for uploads
     app.static_folder = 'static'
     app.static_url_path = '/static'
+    
+    def markdown_filter(text):
+        if text:
+            return markdown.markdown(text, extensions=['fenced_code', 'tables'])
+        return ''
+    
+    app.jinja_env.filters['markdown'] = markdown_filter
     
     def init_filters(app):
         @app.template_filter('initials')
@@ -81,6 +91,12 @@ def create_app(config_class=Config):
 
     from app.routes.drill_routes import drill_bp
     app.register_blueprint(drill_bp)
+
+    from app.routes.playbook import bp as playbook_bp
+    app.register_blueprint(playbook_bp)
+
+    from app.routes.theory import bp as theory_bp
+    app.register_blueprint(theory_bp)
     
     # Import all models to ensure they're registered with SQLAlchemy
     from app.models.user import User

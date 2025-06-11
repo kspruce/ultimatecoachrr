@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Playbook
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <!-- Play Name -->
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                                    {% for error in form.name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Play Type -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    {{ form.type.label(class="form-label") }}
+                                    {{ form.type(class="form-select" + (" is-invalid" if form.type.errors else "")) }}
+                                    {% for error in form.type.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formation Selection -->
+                        <div class="form-group mb-3">
+                            {{ form.formation_id.label(class="form-label") }}
+                            {{ form.formation_id(class="form-select" + (" is-invalid" if form.formation_id.errors else "")) }}
+                            {% for error in form.formation_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">
+                                Select the formation this play is based on, or 
+                                <a href="{{ url_for('playbook.add_formation') }}" target="_blank">create a new formation</a>
+                            </small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-group mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), 
+                                              rows="4", 
+                                              placeholder="Describe the play and its execution...") }}
+                            {% for error in form.description.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="form-group mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), 
+                                        rows="3", 
+                                        placeholder="Additional notes, coaching points, or variations...") }}
+                            {% for error in form.notes.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="form-group mb-3">
+                            {{ form.tags.label(class="form-label") }}
+                            {{ form.tags(class="form-select" + (" is-invalid" if form.tags.errors else ""), 
+                                       multiple="multiple",
+                                       **{"data-placeholder": "Select tags..."}) }}
+                            {% for error in form.tags.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">
+                                Hold Ctrl/Cmd to select multiple tags
+                            </small>
+                        </div>
+
+                        <!-- Diagram Upload -->
+                        <div class="form-group mb-3">
+                            <label class="form-label">Play Diagram</label>
+                            {% if play and play.diagram_url %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename=play.diagram_url) }}" 
+                                     class="img-fluid mb-2" 
+                                     alt="Current diagram"
+                                     style="max-height: 200px;">
+                                <br>
+                                <small class="text-muted">Upload a new image to replace the current one</small>
+                            </div>
+                            {% endif %}
+                            {{ form.diagram_file.label(class="form-label") }}
+                            {{ form.diagram_file(class="form-control" + (" is-invalid" if form.diagram_file.errors else "")) }}
+                            {% for error in form.diagram_file.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">
+                                Accepted formats: JPG, JPEG, PNG, GIF
+                            </small>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="form-group d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                {% if play %}Update Play{% else %}Create Play{% endif %}
+                            </button>
+                            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Tips for Creating Plays</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            Give your play a clear, descriptive name
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            Select a formation or create a new one
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            Include detailed execution steps
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            Add coaching points in the notes
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            Upload a clear diagram if available
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize any form-specific JavaScript here
+    
+    // Preview uploaded image
+    const fileInput = document.querySelector('input[type="file"]');
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.createElement('img');
+                preview.src = e.target.result;
+                preview.classList.add('img-fluid', 'mb-2');
+                preview.style.maxHeight = '200px';
+                
+                const existingPreview = fileInput.parentElement.querySelector('img');
+                if (existingPreview) {
+                    existingPreview.replaceWith(preview);
+                } else {
+                    fileInput.parentElement.insertBefore(preview, fileInput);
+                }
+            }
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+});
+</script>
+{% endblock %}

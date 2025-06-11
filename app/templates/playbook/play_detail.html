@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ play.name }}</h1>
+            <div class="mb-2">
+                <span class="badge bg-{{ 'primary' if play.type == 'offense' else 'danger' }}">
+                    {{ play.type|title }}
+                </span>
+                {% if play.formation %}
+                <span class="badge bg-secondary">
+                    Formation: {{ play.formation.name }}
+                </span>
+                {% endif %}
+                {% for tag in play.tags %}
+                <span class="badge bg-info">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit Play
+                </a>
+                <a href="{{ url_for('playbook.index') }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Playbook
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- Diagram Section -->
+            {% if play.diagram_url %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Play Diagram</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ url_for('static', filename=play.diagram_url) }}" 
+                         class="img-fluid" 
+                         alt="{{ play.name }} diagram"
+                         style="max-height: 400px;">
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Description Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Description</h5>
+                </div>
+                <div class="card-body">
+                    {% if play.description %}
+                    {{ play.description|nl2br|safe }}
+                    {% else %}
+                    <p class="text-muted">No description provided.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Coaching Notes</h5>
+                </div>
+                <div class="card-body">
+                    {% if play.notes %}
+                    {{ play.notes|nl2br|safe }}
+                    {% else %}
+                    <p class="text-muted">No coaching notes provided.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Formation Details -->
+            {% if play.formation %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Formation Details</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ play.formation.name }}</h6>
+                    {% if play.formation.diagram_url %}
+                    <img src="{{ url_for('static', filename=play.formation.diagram_url) }}" 
+                         class="img-fluid mb-2" 
+                         alt="{{ play.formation.name }}">
+                    {% endif %}
+                    {% if play.formation.description %}
+                    <p class="mb-0">{{ play.formation.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Metadata -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Play Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <strong>Created:</strong> 
+                            {{ play.created_at.strftime('%Y-%m-%d') }}
+                        </li>
+                        <li class="mb-2">
+                            <strong>Last Updated:</strong> 
+                            {{ play.updated_at.strftime('%Y-%m-%d') }}
+                        </li>
+                        {% if play.tags %}
+                        <li class="mb-2">
+                            <strong>Tags:</strong><br>
+                            {% for tag in play.tags %}
+                            <span class="badge bg-info">{{ tag.name }}</span>
+                            {% endfor %}
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                class="btn btn-outline-danger"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#deletePlayModal">
+                            <i class="bi bi-trash"></i> Delete Play
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deletePlayModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Play</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "{{ play.name }}"? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" 
+                        class="btn btn-danger" 
+                        onclick="playbookManager.deletePlay({{ play.id }})">
+                    Delete Play
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/playbook.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Handle successful deletion
+    window.addEventListener('playDeleted', function(event) {
+        window.location.href = "{{ url_for('playbook.index') }}";
+    });
+});
+</script>
+{% endblock %}

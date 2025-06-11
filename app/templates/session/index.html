@@ -1,8 +1,5 @@
 {% extends "base.html" %}
-<head>
-    <!-- Other head elements -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-</head>
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -36,7 +33,7 @@
                                 {{ form.date_range(class="form-select") }}
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">&nbsp;</label>
+                                <label class="form-label"> </label>
                                 <button type="submit" class="btn btn-primary w-100">Filter</button>
                             </div>
                         </div>
@@ -115,9 +112,9 @@
                                         <div class="btn-group">
                                             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                                             <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                            <button onclick="deleteSession({{ session.id }})" class="btn btn-outline-danger">
-                                                <i class="fas fa-trash"></i> Delete Session
-                                            </button>                                     
+                                            <button type="button" onclick="sessionManager.deleteSession({{ session.id }})" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -137,35 +134,10 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
-function deleteSession(sessionId) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]');
-    if (!csrfToken) {
-        console.error('CSRF token not found');
-        return;
-    }
-
-    if (confirm('Are you sure you want to delete this session? This cannot be undone.')) {
-        fetch(`/sessions/delete/${sessionId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken.content
-            },
-            credentials: 'same-origin'
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.href = '/sessions';  // Redirect to sessions list
-            } else {
-                throw new Error('Failed to delete session');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to delete session');
-        });
-    }
-}
+<script src="{{ url_for('static', filename='js/session.js') }}"></script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Session management initialized:', typeof window.sessionManager);
+});
 </script>
 {% endblock %}

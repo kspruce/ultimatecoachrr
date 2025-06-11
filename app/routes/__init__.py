@@ -10,3 +10,4 @@ from app.routes.stats import bp as stats_dashboard_bp
 from app.routes.clip import bp as clip_bp
 from app.routes.session import bp as session_bp
 from app.routes.scouting import bp as scouting_bp
+from app.routes.theory import bp as theory_bp

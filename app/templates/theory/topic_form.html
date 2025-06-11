@@ -1,0 +1,184 @@
+{# templates/theory/topic_form.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('theory.index') }}">Theory</a>
+                    </li>
+                    <li class="breadcrumb-item active">
+                        {% if topic %}Edit Topic{% else %}New Topic{% endif %}
+                    </li>
+                </ol>
+            </nav>
+            <h1>{{ title }}</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Topic Name -->
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
+                                       placeholder="Enter topic name") }}
+                            {% for error in form.name.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Section Selection -->
+                        <div class="mb-3">
+                            {{ form.section_id.label(class="form-label") }}
+                            {{ form.section_id(class="form-select select2-single" + (" is-invalid" if form.section_id.errors else "")) }}
+                            {% for error in form.section_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Image Upload -->
+                        <div class="mb-3">
+                            {{ form.image.label(class="form-label") }}
+                            {% if topic and topic.image_url %}
+                            <div class="current-image mb-2">
+                                <img src="{{ url_for('static', filename=topic.image_url) }}" 
+                                     alt="Current image" 
+                                     class="img-fluid mb-2" 
+                                     style="max-height: 200px;">
+                                <p class="text-muted">Upload a new image to replace the current one</p>
+                            </div>
+                            {% endif %}
+                            {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else "")) }}
+                            {% for error in form.image.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">
+                                Supported formats: JPG, JPEG, PNG, GIF. Max size: 5MB
+                            </small>
+                            <div id="image-preview" class="mt-2" style="display: none;">
+                                <h6>Preview:</h6>
+                                <img src="" alt="Preview" class="img-fluid" style="max-height: 200px;">
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="mb-3">
+                            {{ form.content.label(class="form-label") }}
+                            {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""),
+                                          rows="15",
+                                          placeholder="Enter topic content (supports Markdown)") }}
+                            {% for error in form.content.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Order -->
+                        <div class="mb-3">
+                            {{ form.order.label(class="form-label") }}
+                            {{ form.order(class="form-control" + (" is-invalid" if form.order.errors else ""),
+                                        type="number",
+                                        placeholder="Display order (optional)") }}
+                            {% for error in form.order.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                {% if topic %}Update Topic{% else %}Create Topic{% endif %}
+                            </button>
+                            <a href="{{ url_for('theory.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Content Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div id="content-preview"></div>
+                </div>
+            </div>
+
+            <!-- Markdown Help -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Markdown Guide</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><code># Heading 1</code></li>
+                        <li class="mb-2"><code>## Heading 2</code></li>
+                        <li class="mb-2"><code>**bold text**</code></li>
+                        <li class="mb-2"><code>*italic text*</code></li>
+                        <li class="mb-2"><code>- bullet point</code></li>
+                        <li class="mb-2"><code>[link text](URL)</code></li>
+                        <li class="mb-2"><code>![image alt text](URL)</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('.select2-single').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+
+    // Content preview
+    const contentInput = document.getElementById('content');
+    const previewDiv = document.getElementById('content-preview');
+
+    function updatePreview() {
+        const content = contentInput.value;
+        previewDiv.innerHTML = marked.parse(content);
+    }
+
+    contentInput.addEventListener('input', updatePreview);
+    updatePreview();
+
+    // Image preview
+    const imageInput = document.querySelector('input[type="file"]');
+    const previewContainer = document.getElementById('image-preview');
+    const previewImg = previewContainer.querySelector('img');
+
+    imageInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+            
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            previewContainer.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -12,6 +12,8 @@ from app.models.session import (
     Attendance,
     SessionRSVP
 )
+from app.models.playbook import Play, Formation, PlayTag
+from app.models.theory import TheorySection, TheoryTopic, TheoryVideo
 
 # Game and Tournament models
 from app.models.tournament import Tournament
@@ -40,6 +42,12 @@ __all__ = [
     'SessionComponent',
     'Attendance',
     'SessionRSVP',
+    'Play',
+    'Formation',
+    'PlayTag',
+    'TheorySection',
+    'TheoryTopic',
+    'TheoryVideo',
     
     # Game and Tournament models
     'Tournament',

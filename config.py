@@ -23,6 +23,12 @@ class Config:
     # Ensure debug is properly set
     DEBUG = os.environ.get('FLASK_DEBUG', '0') == '1'
     
+    # Maximum file size (5MB)
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
+    
+    # Allowed file extensions
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    
     # Mail settings
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)

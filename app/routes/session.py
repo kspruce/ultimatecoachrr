@@ -19,6 +19,8 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 from io import BytesIO
 import base64
+from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect()
 
 
 
@@ -865,30 +867,44 @@ def edit_session(session_id):
 def delete_session(session_id):
     """Delete a session plan"""
     try:
+        # Log the request
+        current_app.logger.info(f"Delete request received for session {session_id}")
+        
         session = SessionPlan.query.get_or_404(session_id)
+        
+        # Check if user has permission (optional)
+        if not current_user.is_admin:  # Add any permission checks you need
+            current_app.logger.warning(f"User {current_user.id} attempted to delete session {session_id} without permission")
+            return jsonify({
+                'success': False,
+                'message': 'Permission denied'
+            }), 403
+
         title = session.title
 
-        # Delete associated components first
+        # Delete associated records first
         SessionComponent.query.filter_by(session_id=session_id).delete()
-        
-        # Delete associated attendances
         Attendance.query.filter_by(session_id=session_id).delete()
-            
-        # Delete associated RSVPs
         SessionRSVP.query.filter_by(session_id=session_id).delete()
-        
+
         # Delete the session
         db.session.delete(session)
         db.session.commit()
+
+        current_app.logger.info(f"Successfully deleted session {session_id}")
         
-        flash(f'Session plan "{title}" has been deleted!', 'success')
-        return redirect(url_for('session.index'))
+        return jsonify({
+            'success': True,
+            'message': f'Session "{title}" has been deleted!'
+        })
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error deleting session: {str(e)}")
-        flash('An error occurred while deleting the session.', 'danger')
-        return redirect(url_for('session.detail', session_id=session_id))
+        current_app.logger.error(f"Error deleting session {session_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 
 @bp.route('/drills/edit/<int:drill_id>', methods=['GET', 'POST'])

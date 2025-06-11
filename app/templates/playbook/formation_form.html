@@ -1,0 +1,188 @@
+{# templates/playbook/formation_form.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Playbook
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Form Column -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <!-- Formation Name -->
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
+                                               placeholder="e.g., Horizontal Stack, Vertical Stack") }}
+                                    {% for error in form.name.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Formation Type -->
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    {{ form.type.label(class="form-label") }}
+                                    {{ form.type(class="form-select" + (" is-invalid" if form.type.errors else "")) }}
+                                    {% for error in form.type.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-group mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""),
+                                              rows="4",
+                                              placeholder="Describe the formation setup and key positions...") }}
+                            {% for error in form.description.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Diagram Upload -->
+                        <div class="form-group mb-4">
+                            <label class="form-label">Formation Diagram</label>
+                            {% if formation and formation.diagram_url %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename=formation.diagram_url) }}"
+                                     class="img-fluid mb-2"
+                                     alt="Current formation diagram"
+                                     style="max-height: 200px;">
+                                <br>
+                                <small class="text-muted">Upload a new image to replace the current one</small>
+                            </div>
+                            {% endif %}
+                            {{ form.diagram_file.label(class="form-label") }}
+                            {{ form.diagram_file(class="form-control" + (" is-invalid" if form.diagram_file.errors else "")) }}
+                            {% for error in form.diagram_file.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">
+                                Accepted formats: JPG, JPEG, PNG, GIF. Max size: 5MB
+                            </small>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="form-group d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                {% if formation %}Update Formation{% else %}Create Formation{% endif %}
+                            </button>
+                            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Formation Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Clear Name:</strong>
+                            <p class="text-muted small">Use a descriptive name that clearly identifies the formation.</p>
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Detailed Description:</strong>
+                            <p class="text-muted small">Include player positions and spacing guidelines.</p>
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <strong>Visual Diagram:</strong>
+                            <p class="text-muted small">Upload a clear diagram showing player positions and movement options.</p>
+                        </li>
+                        <li class="mb-3">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            <strong>Best Practices:</strong>
+                            <ul class="small text-muted">
+                                <li>Mark handler positions</li>
+                                <li>Show spacing between players</li>
+                                <li>Indicate primary cutting lanes</li>
+                                <li>Note any specific positioning requirements</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Preview Card (shows up when image is selected) -->
+            <div class="card mt-3" id="previewCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Diagram Preview</h5>
+                </div>
+                <div class="card-body">
+                    <img id="diagramPreview" src="" alt="Formation diagram preview" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Image preview functionality
+    const fileInput = document.querySelector('input[type="file"]');
+    const previewCard = document.getElementById('previewCard');
+    const previewImage = document.getElementById('diagramPreview');
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewCard.style.display = 'block';
+                
+                // Also update the inline preview if it exists
+                const inlinePreview = fileInput.parentElement.querySelector('img');
+                if (inlinePreview) {
+                    inlinePreview.src = e.target.result;
+                }
+            }
+            
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            previewCard.style.display = 'none';
+        }
+    });
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

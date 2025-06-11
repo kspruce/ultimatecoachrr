@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from flask_wtf import FlaskForm
 from app import db
 from app.models.clip import Clip, ClipTag, ClipTagRelation, ClipPlayer
 from app.models.game import Game
@@ -16,6 +17,7 @@ bp = Blueprint('clip', __name__, url_prefix='/clips')
 @login_required
 def index():
     form = ClipFilterForm()
+    delete_form = FlaskForm()  # Add this line
     
     # Get filter parameters
     game_id = request.args.get('game_id', type=int)
@@ -43,7 +45,10 @@ def index():
     # Get clips and sort by creation date (newest first)
     clips = query.order_by(Clip.created_at.desc()).all()
     
-    return render_template('clip/index.html', clips=clips, form=form)
+    return render_template('clip/index.html', 
+                         clips=clips, 
+                         form=form, 
+                         delete_form=delete_form)  # Add delete_form
 
 @bp.route('/game/<int:game_id>')
 @login_required

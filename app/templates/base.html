@@ -77,6 +77,103 @@
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="strategyDropdown" 
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                           title="Team strategy and plays">
+                            Strategy
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="strategyDropdown">
+                            <!-- Playbook Section -->
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('playbook.index') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="View team playbook">
+                                    <i class="bi bi-book"></i> Playbook
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('playbook.add_play') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="Add new play">
+                                    <i class="bi bi-plus-circle"></i> New Play
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('playbook.add_formation') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="Add new formation">
+                                    <i class="bi bi-diagram-3"></i> New Formation
+                                </a>
+                            </li>
+                            
+                            <!-- Divider before other strategy items -->
+                            <li><hr class="dropdown-divider"></li>  
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('scouting.index') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="View scouting reports">
+                                    <i class="bi bi-binoculars"></i> Scouting
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                           title="Ultimate Theory and Learning Resources">
+                            Theory
+                        </a>
+                        <ul class="dropdown-menu">
+                            <!-- Main Theory Pages -->
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.index') }}">
+                                    <i class="bi bi-book"></i> Theory Hub
+                                </a>
+                            </li>
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Core Sections -->
+                            <li><h6 class="dropdown-header">Core Concepts</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.section', slug='defense') }}">
+                                    <i class="bi bi-shield"></i> Defense
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.section', slug='throwing') }}">
+                                    <i class="bi bi-disc"></i> Throwing
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.section', slug='cutting') }}">
+                                    <i class="bi bi-lightning"></i> Cutting
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.section', slug='handler-offense') }}">
+                                    <i class="bi bi-diagram-3"></i> Handler Offense
+                                </a>
+                            </li>
+                
+                            {% if current_user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Management</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.add_section') }}">
+                                    <i class="bi bi-plus-circle"></i> Add Section
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('theory.add_topic') }}">
+                                    <i class="bi bi-plus-circle"></i> Add Topic
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </li>                                                                  
+                    <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             Session Plans
                         </a>
@@ -91,12 +188,7 @@
                         <a class="nav-link" href="{{ url_for('clip.index') }}"
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Manage video clips">Clips</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('scouting.index') }}"
-                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                           title="View scouting reports">Scouting</a>
-                    </li>                  
+                    </li>              
                 </ul>
                 {% if current_user.is_authenticated %}
                 <ul class="navbar-nav">
