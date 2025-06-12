@@ -32,6 +32,10 @@ def index():
 @bp.route('/plays/add', methods=['GET', 'POST'])
 @login_required
 def add_play():
+    if not current_user.is_admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+
     form = PlayForm()
     
     if form.validate_on_submit():
@@ -40,24 +44,28 @@ def add_play():
             type=form.type.data,
             description=form.description.data,
             notes=form.notes.data,
-            ultiplay_embed=form.ultiplay_embed.data,  # Add this line
+            ultiplay_embed=form.ultiplay_embed.data,
             created_by=current_user.id
         )
         
         if form.formation_id.data and form.formation_id.data > 0:
             play.formation_id = form.formation_id.data
-        
-        db.session.add(play)
-        try:
-            db.session.commit()
-            flash(f'Play "{play.name}" has been created!', 'success')
-            return redirect(url_for('playbook.index'))
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error creating play: {str(e)}")
-            flash('Error creating play.', 'danger')
+            
+        # Handle tags if any are selected
+        if form.tags.data:
+            for tag_id in form.tags.data:
+                tag = PlayTag.query.get(tag_id)
+                if tag:
+                    play.tags.append(tag)
 
-    return render_template('playbook/play_form.html', form=form)
+        db.session.add(play)
+        db.session.commit()
+        
+        flash(f'Play "{play.name}" has been created!', 'success')
+        return redirect(url_for('playbook.index'))
+    
+    return render_template('playbook/play_form.html', form=form, title='Add Play')
+
 
 @bp.route('/plays/<int:play_id>')
 @login_required
