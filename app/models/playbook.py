@@ -1,3 +1,6 @@
+from app import db  # Add this import at the top
+from datetime import datetime
+
 class Play(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
