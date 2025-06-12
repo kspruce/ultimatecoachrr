@@ -29,32 +29,39 @@ class SessionPlanForm(FlaskForm):
     submit = SubmitField('Save Session Plan')
 
 class DrillForm(FlaskForm):
-    title = StringField('Title', validators=[DataRequired()])
+    title = StringField('Title', validators=[
+        DataRequired(), 
+        Length(max=100)
+    ])
     description = TextAreaField('Description')
     setup_instructions = TextAreaField('Setup Instructions')
-    recommended_duration = IntegerField('Recommended Duration (minutes)')
-    min_players = IntegerField('Minimum Players')
-    max_players = IntegerField('Maximum Players')
-    skill_level = SelectField('Skill Level', choices=[
-        ('', 'Any Level'),
-        ('beginner', 'Beginner'),
-        ('intermediate', 'Intermediate'),
-        ('advanced', 'Advanced')
-    ])
+    recommended_duration = IntegerField('Recommended Duration (minutes)', 
+        validators=[Optional(), NumberRange(min=1, max=120)]
+    )
+    min_players = IntegerField('Minimum Players',
+        validators=[Optional(), NumberRange(min=1)]
+    )
+    max_players = IntegerField('Maximum Players',
+        validators=[Optional(), NumberRange(min=1)]
+    )
+    skill_level = SelectField('Skill Level',
+        choices=[
+            ('', 'Any Level'),
+            ('beginner', 'Beginner'),
+            ('intermediate', 'Intermediate'),
+            ('advanced', 'Advanced')
+        ],
+        validators=[Optional()]
+    )
     focus_area = StringField('Focus Area')
     equipment_needed = StringField('Equipment Needed')
-    # Remove diagram_file and diagram_url fields
-    ultiplay_embed = TextAreaField('Ultiplay Embed Code')  # Add this field
+    ultiplay_embed = TextAreaField('Ultiplay Embed Code')
     is_public = BooleanField('Make this drill public')
 
     def __init__(self, *args, **kwargs):
-        drill_type = kwargs.pop('drill_type', 'basic') if 'drill_type' in kwargs else 'basic'
         super(DrillForm, self).__init__(*args, **kwargs)
-        self.has_visual_diagram.data = (drill_type == 'visual')
-        
-        # Hide diagram_url field for visual drills
-        if drill_type == 'visual':
-            del self.diagram_url
+        # Remove the has_visual_diagram initialization
+        # It's no longer needed since we're using embed codes
 
 class SessionComponentForm(FlaskForm):
     title = StringField('Component Title', validators=[DataRequired(), Length(max=100)])
