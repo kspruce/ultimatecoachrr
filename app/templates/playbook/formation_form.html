@@ -63,7 +63,7 @@
                             <label class="form-label">Formation Diagram</label>
                             {% if formation and formation.diagram_url %}
                             <div class="mb-2">
-                                <img src="{{ url_for('static', filename=formation.diagram_url) }}"
+                                <img src="{{ formation.diagram_url }}"
                                      class="img-fluid mb-2"
                                      alt="Current formation diagram"
                                      style="max-height: 200px;">

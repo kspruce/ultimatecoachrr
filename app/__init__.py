@@ -19,18 +19,31 @@ csrf = CSRFProtect()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-
+    
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app)
     
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Configure S3
+    with app.app_context():
+        from app.utils.s3_utils import check_s3_configuration
+        if not check_s3_configuration():
+            app.logger.warning("S3 storage is not properly configured!")
+            
+        # Add S3 URL to template context
+        @app.context_processor
+        def inject_s3_url():
+            return {
+                's3_bucket_url': f"https://{app.config['AWS_BUCKET_NAME']}.s3.amazonaws.com" if app.config['AWS_BUCKET_NAME'] else None
+            }
     
-    # Configure static file serving for uploads
+    # Configure static file serving
     app.static_folder = 'static'
     app.static_url_path = '/static'
     
+    # Template filters
     def markdown_filter(text):
         if text:
             return markdown.markdown(text, extensions=['fenced_code', 'tables'])
@@ -38,23 +51,33 @@ def create_app(config_class=Config):
     
     app.jinja_env.filters['markdown'] = markdown_filter
     
-    def init_filters(app):
-        @app.template_filter('initials')
-        def initials_filter(name):
-            """Convert a name to initials."""
-            words = name.split()
-            return ''.join(word[0].upper() for word in words if word)
+    @app.template_filter('initials')
+    def initials_filter(name):
+        """Convert a name to initials."""
+        words = name.split()
+        return ''.join(word[0].upper() for word in words if word)
     
-    init_filters(app)
-    
-   
-    # Add custom Jinja2 filters
     @app.template_filter('nl2br')
     def nl2br_filter(s):
         if s is None:
             return ''
         return s.replace('\n', '<br>')
-
+    
+    # Error handlers
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        return jsonify({
+            'success': False,
+            'message': 'CSRF token missing or invalid'
+        }), 400
+    
+    @app.errorhandler(413)
+    def too_large(e):
+        return jsonify({
+            'success': False,
+            'message': f'File too large. Maximum size is {app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)}MB'
+        }), 413
+    
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -98,7 +121,7 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
     
-    # Import all models to ensure they're registered with SQLAlchemy
+    # Import models
     from app.models.user import User
     from app.models.player import Player
     from app.models.tournament import Tournament
@@ -109,9 +132,24 @@ def create_app(config_class=Config):
     from app.models.annotation import ClipAnnotation
     from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
     
-    # Create database tables if they don't exist
+    # Initialize storage
+    try:
+        # Create upload directories
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        for subdir in ['drills', 'playbook', 'theory', 'temp']:
+            os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], subdir), exist_ok=True)
+            
+        # Test write permissions
+        test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+    except Exception as e:
+        app.logger.error(f"Storage initialization error: {str(e)}")
+        raise
+    
+    # Create database tables
     with app.app_context():
         db.create_all()
     
     return app
-

@@ -14,16 +14,14 @@ from datetime import datetime, timedelta
 import json
 import os
 import uuid
-from app.utils.utils import save_uploaded_file, delete_file
 from werkzeug.utils import secure_filename
 from PIL import Image
 from io import BytesIO
 import base64
 from flask_wtf.csrf import CSRFProtect
+from app.utils.storage import store_file, delete_file, get_file_url
+
 csrf = CSRFProtect()
-
-
-
 
 bp = Blueprint('session', __name__, url_prefix='/sessions')
 
@@ -38,22 +36,29 @@ def save_drill_image(base64_string, drill_id):
         # Decode base64 string
         image_data = base64.b64decode(base64_string)
         
-        # Create directory if it doesn't exist
-        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'drills', str(drill_id))
-        os.makedirs(upload_dir, exist_ok=True)
+        # Create file-like object
+        file_obj = BytesIO(image_data)
+        file_obj.content_type = 'image/png'
         
-        # Save file
-        filename = f'diagram_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
-        filepath = os.path.join(upload_dir, filename)
+        # Generate unique filename
+        filename = f'diagram_{uuid.uuid4().hex}_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.png'
         
-        with open(filepath, 'wb') as f:
-            f.write(image_data)
+        # Store file using storage utility
+        url, path = store_file(
+            file=file_obj,
+            folder=f'drills/{drill_id}',
+            filename=filename,
+            allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
+        )
+        
+        if not url:
+            current_app.logger.error("Failed to save drill image")
+            return None, None
             
-        # Return relative path for database storage
-        return os.path.join('drills', str(drill_id), filename)
+        return url, path
     except Exception as e:
         current_app.logger.error(f"Error saving drill image: {str(e)}")
-        return None
+        return None, None
     
 # Existing Session Routes
 @bp.route('/')
@@ -130,6 +135,7 @@ def add_session():
     return render_template('session/session_form.html', form=form, title='Add Session Plan')
 
 # Drill Library Routes
+# Drill Library Routes
 @bp.route('/drills')
 @login_required
 def drills():
@@ -138,44 +144,41 @@ def drills():
     return render_template('session/drills/list.html', drills=drills)
 
 @bp.route('/drills/add', methods=['GET', 'POST'])
-@bp.route('/drills/add/<string:drill_type>', methods=['GET', 'POST'])
 @login_required
-def add_drill(drill_type='basic'):
+def add_drill():
     form = DrillForm()
     
     if form.validate_on_submit():
-        diagram_path = None
+        diagram_url = None
+        file_path = None
         
         # Handle file upload
         if form.diagram_file.data:
-            diagram_path = save_uploaded_file(form.diagram_file.data, 'drills')
-            if not diagram_path:
-                flash('Invalid file type or upload failed', 'error')
+            try:
+                url, path = store_file(
+                    file=form.diagram_file.data,
+                    folder='drills',
+                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
+                )
+                if not url:
+                    flash('Failed to upload file', 'error')
+                    return render_template('session/drills/form.html', form=form)
+                diagram_url = url
+                file_path = path
+            except Exception as e:
+                current_app.logger.error(f"Error uploading drill file: {str(e)}")
+                flash('Error uploading file', 'error')
                 return render_template('session/drills/form.html', form=form)
         
         # Handle drawing data
         elif 'drawing_data' in request.form:
-            try:
-                # Convert drawing data to file-like object
-                drawing_data = request.form['drawing_data']
-                if drawing_data.startswith('data:image/'):
-                    
-                    # Extract base64 data
-                    image_data = drawing_data.split(',')[1]
-                    image_binary = BytesIO(base64.b64decode(image_data))
-                    
-                    # Save as file
-                    filename = f"drawing_{uuid.uuid4().hex}.png"
-                    diagram_path = save_uploaded_file(image_binary, 'drills')
-            except Exception as e:
-                current_app.logger.error(f"Drawing save error: {str(e)}")
+            url, path = save_drill_image(request.form['drawing_data'], 'new')
+            if url:
+                diagram_url = url
+                file_path = path
+            else:
                 flash('Failed to save drawing', 'error')
         
-        # Use URL if provided and no file/drawing
-        elif form.diagram_url.data:
-            diagram_path = form.diagram_url.data
-
-        # Create drill
         drill = SavedDrill(
             title=form.title.data,
             description=form.description.data,
@@ -186,18 +189,51 @@ def add_drill(drill_type='basic'):
             skill_level=form.skill_level.data,
             focus_area=form.focus_area.data,
             equipment_needed=form.equipment_needed.data,
-            diagram_url=diagram_path,
+            diagram_url=diagram_url,
+            s3_key=file_path,
             video_url=form.video_url.data,
             created_by=current_user.id
         )
         
         db.session.add(drill)
+        try:
+            db.session.commit()
+            flash(f'Drill "{drill.title}" has been created!', 'success')
+            return redirect(url_for('session.drills'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error creating drill: {str(e)}")
+            flash('Error creating drill.', 'danger')
+            return render_template('session/drills/form.html', form=form)
+
+@bp.route('/drills/delete/<int:drill_id>', methods=['POST'])
+@login_required
+def delete_drill(drill_id):
+    drill = SavedDrill.query.get_or_404(drill_id)
+    
+    if drill.created_by != current_user.id and not current_user.is_admin:
+        abort(403)
+    
+    try:
+        # Delete file from storage if exists
+        if drill.s3_key:
+            if not delete_file(drill.s3_key):
+                current_app.logger.error(f"Failed to delete file: {drill.s3_key}")
+        
+        # Delete associated components
+        SessionComponent.query.filter_by(drill_id=drill.id).delete()
+        
+        title = drill.title
+        db.session.delete(drill)
         db.session.commit()
         
-        flash(f'Drill "{drill.title}" has been created!', 'success')
-        return redirect(url_for('session.drills'))
-        
-    return render_template('session/drills/form.html', form=form)
+        flash(f'Drill "{title}" has been deleted!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting drill: {str(e)}")
+        flash('An error occurred while deleting the drill.', 'danger')
+    
+    return redirect(url_for('session.drills'))
 
 @bp.route('/drills/editor')
 @bp.route('/drills/editor/<int:drill_id>')
@@ -939,62 +975,7 @@ def edit_drill(drill_id):
         title='Edit Drill'
     )
 
-@bp.route('/drills/delete/<int:drill_id>', methods=['POST'])
-@login_required
-def delete_drill(drill_id):
-    """Delete a drill (form-based deletion)"""
-    drill = SavedDrill.query.get_or_404(drill_id)
-    
-    if drill.created_by != current_user.id and not current_user.is_admin:
-        abort(403)
-
-    try:
-        if drill.diagram_url:
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], drill.diagram_url)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-
-        # Delete associated components
-        SessionComponent.query.filter_by(drill_id=drill.id).delete()
-        
-        title = drill.title
-        db.session.delete(drill)
-        db.session.commit()
-        
-        flash(f'Drill "{title}" has been deleted!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting drill: {str(e)}")
-        flash('An error occurred while deleting the drill.', 'danger')
-
-    return redirect(url_for('session.drills'))
-
-@bp.route('/test-delete/<int:drill_id>')
-def test_delete_page(drill_id):
-    return """
-    <script>
-    function testDelete(drillId) {
-        fetch(`/sessions/api/drills/${drillId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(JSON.stringify(data));
-            if (data.success) {
-                window.location.href = '/sessions/drills';
-            }
-        })
-        .catch(error => alert('Error: ' + error));
-    }
-    </script>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <button onclick="testDelete(""" + str(drill_id) + """)">Test Delete</button>
-    """
-    
+ 
 @bp.errorhandler(401)
 def unauthorized_error(error):
     return jsonify({
@@ -1072,10 +1053,16 @@ def debug_files():
                 'id': drill.id,
                 'title': drill.title,
                 'diagram_url': drill.diagram_url,
-                'file_exists': os.path.exists(os.path.join(upload_folder, drill.diagram_url)) if drill.diagram_url else False
+                's3_key': drill.s3_key,
+                'file_exists': bool(drill.diagram_url)
             }
             for drill in drills_with_diagrams
-        ]
+        ],
+        'storage_config': {
+            'using_s3': bool(current_app.config.get('AWS_ACCESS_KEY')),
+            'bucket': current_app.config.get('AWS_BUCKET_NAME'),
+            'region': current_app.config.get('AWS_REGION')
+        }
     }
     
     return jsonify(debug_info)

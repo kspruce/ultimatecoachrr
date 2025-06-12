@@ -7,33 +7,12 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.playbook import Play, Formation, PlayTag
 from app.forms.playbook import PlayForm, FormationForm
-from app.utils.utils import save_uploaded_file, delete_file
 from werkzeug.utils import secure_filename
 import os
 import json
+from app.utils.storage import store_file, delete_file, get_file_url
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
-
-# Helper Functions
-def save_diagram(file, folder_type, item_id):
-    """Save a diagram file and return the path"""
-    if not file:
-        return None
-    
-    try:
-        # Create specific folder for plays or formations
-        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], folder_type, str(item_id))
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(upload_dir, filename)
-        file.save(filepath)
-        
-        # Return relative path for database storage
-        return os.path.join(folder_type, str(item_id), filename)
-    except Exception as e:
-        current_app.logger.error(f"Error saving diagram: {str(e)}")
-        return None
 
 # Main Routes
 @bp.route('/')
@@ -55,39 +34,51 @@ def index():
 def add_play():
     form = PlayForm()
     
-    # Populate formation choices
-    form.formation_id.choices = [(0, 'None')] + [
-        (f.id, f.name) for f in Formation.query.order_by(Formation.name).all()
-    ]
-    
-    # Populate tag choices if you have any
-    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.order_by(PlayTag.name).all()]
-    
     if form.validate_on_submit():
+        # Handle diagram upload
+        diagram_url = None
+        file_path = None
+        
+        if form.diagram_file.data:
+            try:
+                url, path = store_file(
+                    file=form.diagram_file.data,
+                    folder='plays',
+                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
+                )
+                if url:
+                    diagram_url = url
+                    file_path = path
+                else:
+                    flash('Failed to upload diagram', 'error')
+                    return render_template('playbook/play_form.html', form=form)
+            except Exception as e:
+                current_app.logger.error(f"Error uploading play diagram: {str(e)}")
+                flash('Error uploading diagram', 'error')
+                return render_template('playbook/play_form.html', form=form)
+        
         play = Play(
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
             notes=form.notes.data,
+            diagram_url=diagram_url,
+            s3_key=file_path,
             created_by=current_user.id
         )
         
         if form.formation_id.data and form.formation_id.data > 0:
             play.formation_id = form.formation_id.data
-            
-        # Handle diagram upload
-        if form.diagram_file.data:
-            diagram_path = save_diagram(form.diagram_file.data, 'plays', play.id)
-            if diagram_path:
-                play.diagram_url = diagram_path
         
         db.session.add(play)
-        db.session.commit()
-        
-        flash(f'Play "{play.name}" has been created!', 'success')
-        return redirect(url_for('playbook.index'))
-        
-    return render_template('playbook/play_form.html', form=form, title='Add Play')
+        try:
+            db.session.commit()
+            flash(f'Play "{play.name}" has been created!', 'success')
+            return redirect(url_for('playbook.index'))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error creating play: {str(e)}")
+            flash('Error creating play.', 'danger')
 
 @bp.route('/plays/<int:play_id>')
 @login_required
@@ -101,7 +92,6 @@ def edit_play(play_id):
     play = Play.query.get_or_404(play_id)
     form = PlayForm(obj=play)
     
-    # Populate choices as in add_play
     form.formation_id.choices = [(0, 'None')] + [
         (f.id, f.name) for f in Formation.query.order_by(Formation.name).all()
     ]
@@ -119,16 +109,25 @@ def edit_play(play_id):
             play.formation_id = None
             
         if form.diagram_file.data:
-            # Delete old diagram if it exists
-            if play.diagram_url:
-                old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], play.diagram_url)
-                if os.path.exists(old_path):
-                    os.remove(old_path)
-            
-            # Save new diagram
-            diagram_path = save_diagram(form.diagram_file.data, 'plays', play.id)
-            if diagram_path:
-                play.diagram_url = diagram_path
+            try:
+                # Delete old file if it exists
+                if play.s3_key:
+                    delete_file(play.s3_key)
+                
+                # Upload new file
+                url, path = store_file(
+                    file=form.diagram_file.data,
+                    folder='plays',
+                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
+                )
+                if url:
+                    play.diagram_url = url
+                    play.s3_key = path
+                else:
+                    flash('Failed to upload new diagram', 'error')
+            except Exception as e:
+                current_app.logger.error(f"Error updating play diagram: {str(e)}")
+                flash('Error updating diagram', 'error')
         
         db.session.commit()
         flash(f'Play "{play.name}" has been updated!', 'success')
@@ -139,14 +138,6 @@ def edit_play(play_id):
 @bp.route('/plays/<int:play_id>/delete', methods=['POST'])
 @login_required
 def delete_play(play_id):
-    """Delete a play with CSRF protection"""
-    if not request.is_json:
-        # If it's a form submission, verify CSRF token
-        form = PlayForm()
-        if not form.validate():
-            flash('CSRF token missing or invalid', 'danger')
-            return redirect(url_for('playbook.index'))
-    
     try:
         play = Play.query.get_or_404(play_id)
         
@@ -157,11 +148,10 @@ def delete_play(play_id):
                 'message': 'Permission denied'
             }), 403
         
-        # Delete associated diagram if it exists
-        if play.diagram_url:
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], play.diagram_url)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+        # Delete file from storage if exists
+        if play.s3_key:
+            if not delete_file(play.s3_key):
+                current_app.logger.error(f"Failed to delete file: {play.s3_key}")
         
         name = play.name
         db.session.delete(play)
@@ -185,27 +175,46 @@ def delete_play(play_id):
                 'success': False,
                 'message': str(e)
             }), 500
-            
+        
         flash(f'Error deleting play: {str(e)}', 'danger')
         return redirect(url_for('playbook.index'))
 
-# Formation Routes (similar structure to Play routes)
+# Formation Routes
 @bp.route('/formations/add', methods=['GET', 'POST'])
 @login_required
 def add_formation():
     form = FormationForm()
     if form.validate_on_submit():
+        # Handle diagram upload
+        diagram_url = None
+        file_path = None
+        
+        if form.diagram_file.data:
+            try:
+                url, path = store_file(
+                    file=form.diagram_file.data,
+                    folder='formations',
+                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
+                )
+                if url:
+                    diagram_url = url
+                    file_path = path
+                else:
+                    flash('Failed to upload diagram', 'error')
+                    return render_template('playbook/formation_form.html', form=form)
+            except Exception as e:
+                current_app.logger.error(f"Error uploading formation diagram: {str(e)}")
+                flash('Error uploading diagram', 'error')
+                return render_template('playbook/formation_form.html', form=form)
+        
         formation = Formation(
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
+            diagram_url=diagram_url,
+            s3_key=file_path,
             created_by=current_user.id
         )
-        
-        if form.diagram_file.data:
-            diagram_path = save_diagram(form.diagram_file.data, 'formations', formation.id)
-            if diagram_path:
-                formation.diagram_url = diagram_path
         
         db.session.add(formation)
         db.session.commit()

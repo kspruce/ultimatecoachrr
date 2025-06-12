@@ -28,8 +28,9 @@
                         <div class="col-md-4 mb-3">
                             <div class="card h-100">
                                 {% if formation.diagram_url %}
-                                <img src="{{ url_for('static', filename=formation.diagram_url) }}" 
-                                     class="card-img-top" alt="{{ formation.name }}">
+                                <img src="{{ formation.diagram_url }}" 
+                                     class="card-img-top" 
+                                     alt="{{ formation.name }}">
                                 {% endif %}
                                 <div class="card-body">
                                     <h5 class="card-title">{{ formation.name }}</h5>

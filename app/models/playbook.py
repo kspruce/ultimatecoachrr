@@ -13,6 +13,8 @@ class Play(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    diagram_url = db.Column(db.String(512))
+    s3_key = db.Column(db.String(255))
     
     # Relationships
     formation = db.relationship('Formation', backref='plays')
