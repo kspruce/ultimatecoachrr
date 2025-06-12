@@ -68,8 +68,19 @@ def reset_database():
         )
         admin.set_password('password')
         db.session.add(admin)
+
+        # Create bonus user
+        bonus = User(
+            username='bonus',
+            email='bonus@example.com',
+            is_admin=False
+        )
+        bonus.set_password('bonusboys')
+        db.session.add(bonus)
+
         db.session.commit()
         print("Created admin user (username: admin, password: password)")
+        print("Created bonus user (username: bonus, password: bonusboys)")
         
         # Add test players
         from app.models.player import Player
@@ -95,6 +106,7 @@ def reset_database():
 
         # Create theory sections
         create_initial_sections()
+
 
 def verify_database():
     with app.app_context():

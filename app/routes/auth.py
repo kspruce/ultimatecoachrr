@@ -226,5 +226,9 @@ def link_player():
                 
                 flash(f'You are now linked to player {player.name}!', 'success')
                 return redirect(url_for('auth.profile'))
+            else:
+                flash('Invalid player selected.', 'error')
+        else:
+            flash('Please select a player.', 'error')
     
     return render_template('auth/link_player.html', players=available_players)
