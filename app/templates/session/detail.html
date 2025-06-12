@@ -1,298 +1,169 @@
 {% extends "base.html" %}
+
 {% block styles %}
 {{ super() }}
 <style>
-    .drill-image-container {
-        height: 300px;  /* Adjust this value as needed */
-        width: 100%;
-        overflow: hidden;
+    .embed-container {
         position: relative;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        margin: 15px 0;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        height: 0;
+        overflow: hidden;
+        margin-bottom: 1rem;
     }
 
-    .drill-image {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
+    .embed-container iframe {
         position: absolute;
         top: 0;
         left: 0;
-        padding: 15px;
+        width: 100%;
+        height: 100%;
+        border: 0;
     }
 
-    /* Make the container responsive */
-    @media (min-width: 768px) {
-        .drill-image-container {
-            height: 400px;  /* Larger on bigger screens */
-        }
-    }
-
-    /* Optional: Add a subtle border and shadow */
-    .drill-image-container {
-        border: 1px solid #dee2e6;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Optional: Add hover effect */
-    .drill-image-container:hover .drill-image {
-        transform: scale(1.02);
-        transition: transform 0.3s ease;
-    }
-
-    /* Adjust layout for the component cards */
-    .component-card .card {
+    .component-card {
         margin-bottom: 1.5rem;
     }
 
-    .component-card .card-body {
-        padding: 1.5rem;
+    .component-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    /* Improve spacing in the drill meta section */
-    .drill-meta {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 4px;
-        margin-bottom: 15px;
-    }
-
-    .drill-meta p {
-        margin-bottom: 0.5rem;
-    }
-
-    .drill-meta p:last-child {
-        margin-bottom: 0;
+    .drill-details {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Session Plan</h1>
-
-    {% if session_id %}
-        <a href="{{ url_for('session.components', session_id=session_id) }}" class="btn btn-sm btn-outline-primary">Manage Components</a>
-        <a href="{{ url_for('session.edit_session', session_id=session_id) }}" class="btn btn-outline-primary">Edit Session</a>
-    {% endif %}
-    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ session.title }}</h1>
+            <p class="lead">{{ session.formatted_date }} | {{ session.formatted_time }}</p>
+        </div>
         <div class="col-md-4 text-end">
-            <div class="btn-group">       
-                <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
+            <div class="btn-group">
+                <a href="{{ url_for('session.edit_session', session_id=session.id) }}" 
+                   class="btn btn-outline-primary">
+                    <i class="fas fa-edit"></i> Edit Session
+                </a>
+                <a href="{{ url_for('session.index') }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Sessions
+                </a>
             </div>
         </div>
     </div>
 
-    <div class="row mb-4">
+    <div class="row">
+        <!-- Session Details -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Session Details</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Location:</strong> {{ session.location or 'TBD' }}</p>
+                    <p><strong>Focus Area:</strong> {{ session.focus_area or 'Not specified' }}</p>
+                    {% if session.notes %}
+                    <p><strong>Notes:</strong> {{ session.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Attendance/RSVP Summary -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Attendance</h5>
+                    <a href="{{ url_for('session.attendance', session_id=session.id) }}" 
+                       class="btn btn-sm btn-outline-primary">Manage</a>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>RSVPs</h6>
+                        <p class="mb-1">
+                            <span class="badge bg-success">{{ attendance_by_status.present|length }}</span> Present
+                        </p>
+                        <p class="mb-1">
+                            <span class="badge bg-warning">{{ attendance_by_status.late|length }}</span> Late
+                        </p>
+                        <p class="mb-1">
+                            <span class="badge bg-danger">{{ attendance_by_status.absent|length }}</span> Absent
+                        </p>
+                        <p class="mb-0">
+                            <span class="badge bg-secondary">{{ attendance_by_status.excused|length }}</span> Excused
+                        </p>
+                    </div>
+                    <a href="{{ url_for('session.rsvps', session_id=session.id) }}" 
+                       class="btn btn-sm btn-outline-secondary">View All RSVPs</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Components -->
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Session Plan</h5>
-                    <a href="{{ url_for('session.components', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">Manage Components</a>
+                    <h5 class="card-title mb-0">Session Components</h5>
+                    <a href="{{ url_for('session.add_component', session_id=session.id) }}" 
+                       class="btn btn-sm btn-primary">Add Component</a>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <p><strong>Date:</strong> {{ session.formatted_date }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Time:</strong> {{ session.formatted_time }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Duration:</strong> 
-                                {% if session.duration_minutes %}
-                                    {{ session.duration_minutes }} minutes
-                                {% else %}
-                                    Not specified
+                    {% if components %}
+                        {% for component in components %}
+                        <div class="component-card">
+                            <div class="component-header">
+                                <h5>{{ component.title }}</h5>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('session.edit_component', component_id=component.id) }}" 
+                                       class="btn btn-outline-secondary">Edit</a>
+                                </div>
+                            </div>
+                            
+                            <div class="component-details">
+                                {% if component.duration_minutes %}
+                                <span class="badge bg-info">{{ component.duration_minutes }} minutes</span>
                                 {% endif %}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Location:</strong> {{ session.location or 'Not specified' }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Focus Area:</strong> {{ session.focus_area or 'Not specified' }}</p>
-                        </div>
-                    </div>
-                    
-                    {% if session.is_recurring %}
-                    <div class="mb-3">
-                        <p><strong>Recurrence:</strong> {{ session.recurrence_pattern|capitalize }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    {% if session.notes %}
-                    <div class="mb-3">
-                        <h6>Notes:</h6>
-                        <p>{{ session.notes }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    <h5>Session Components</h5>
-                </div>
-                <div class="card-body">
-                    {% for component in session.components %}
-                    <div class="component-card mb-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">{{ component.saved_drill.title }}</h5>
-                                    <span class="badge bg-primary">{{ component.duration }} min</span>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        {% if component.saved_drill.description %}
-                                            <p>{{ component.saved_drill.description }}</p>
-                                        {% endif %}
-                                        
-                                        {% if component.saved_drill.setup_instructions %}
-                                            <h6>Setup Instructions</h6>
-                                            <p>{{ component.saved_drill.setup_instructions }}</p>
-                                        {% endif %}
-                                        
-                                        {% if component.saved_drill.diagram_url %}
-                                        <div class="drill-image-container mt-3">
-                                            {% if component.saved_drill.diagram_url.startswith('http') %}
-                                                <img src="{{ component.saved_drill.diagram_url }}" 
-                                                     alt="Drill diagram" 
-                                                     class="drill-image">
-                                            {% else %}
-                                                <img src="{{ url_for('static', filename='images/drills/' + component.saved_drill.diagram_url) }}" 
-                                                     alt="Drill diagram" 
-                                                     class="drill-image">
-                                            {% endif %}
-                                        </div>
-                                        {% endif %}
+                                {% if component.focus_area %}
+                                <span class="badge bg-secondary">{{ component.focus_area }}</span>
+                                {% endif %}
+                                
+                                {% if component.description %}
+                                <p class="mt-2">{{ component.description }}</p>
+                                {% endif %}
+
+                                {% if component.saved_drill %}
+                                <div class="drill-details">
+                                    <h6>Drill: {{ component.saved_drill.title }}</h6>
+                                    {% if component.saved_drill.ultiplay_embed %}
+                                    <div class="embed-container">
+                                        {{ component.saved_drill.ultiplay_embed|safe }}
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="drill-meta">
-                                            {% if component.saved_drill.min_players or component.saved_drill.max_players %}
-                                                <p><strong>Players:</strong> 
-                                                    {% if component.saved_drill.min_players and component.saved_drill.max_players %}
-                                                        {{ component.saved_drill.min_players }}-{{ component.saved_drill.max_players }}
-                                                    {% elif component.saved_drill.min_players %}
-                                                        {{ component.saved_drill.min_players }}+
-                                                    {% else %}
-                                                        Up to {{ component.saved_drill.max_players }}
-                                                    {% endif %}
-                                                </p>
-                                            {% endif %}
-                                            
-                                            {% if component.saved_drill.skill_level %}
-                                                <p><strong>Skill Level:</strong> {{ component.saved_drill.skill_level|capitalize }}</p>
-                                            {% endif %}
-                                            
-                                            {% if component.saved_drill.focus_area %}
-                                                <p><strong>Focus Area:</strong> {{ component.saved_drill.focus_area }}</p>
-                                            {% endif %}
-                                            
-                                            {% if component.saved_drill.equipment_needed %}
-                                                <p><strong>Equipment:</strong> {{ component.saved_drill.equipment_needed }}</p>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        {% if component.saved_drill.video_url %}
-                                            <div class="mt-3">
-                                                <a href="{{ component.saved_drill.video_url }}" 
-                                                   class="btn btn-outline-secondary w-100" 
-                                                   target="_blank">
-                                                    <i class="fas fa-video"></i> Watch Demo Video
-                                                </a>
-                                            </div>
-                                        {% endif %}
-                                    </div>
+                                    {% endif %}
+                                    {% if component.saved_drill.description %}
+                                    <p>{{ component.saved_drill.description }}</p>
+                                    {% endif %}
+                                    <a href="{{ url_for('session.drill_detail', drill_id=component.saved_drill.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">View Full Drill Details</a>
                                 </div>
+                                {% endif %}
+
+                                {% if component.notes %}
+                                <div class="mt-2">
+                                    <strong>Notes:</strong> {{ component.notes }}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Attendance</h5>
-                    <a href="{{ url_for('session.attendance', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">Manage Attendance</a>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <h6>Present</h6>
-                            <p class="h3 text-success">{{ attendance_by_status['present']|length }}</p>
-                        </div>
-                        <div class="col-6">
-                            <h6>Absent</h6>
-                            <p class="h3 text-danger">{{ attendance_by_status['absent']|length }}</p>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-6">
-                            <h6>Late</h6>
-                            <p class="h3 text-warning">{{ attendance_by_status['late']|length }}</p>
-                        </div>
-                        <div class="col-6">
-                            <h6>Excused</h6>
-                            <p class="h3 text-info">{{ attendance_by_status['excused']|length }}</p>
-                        </div>
-                    </div>
-                    
-                    {% if attendance_by_status['present'] %}
-                    <div class="mt-3">
-                        <h6>Present Players:</h6>
-                        <div class="d-flex flex-wrap">
-                            {% for attendance in attendance_by_status['present'] %}
-                            <span class="badge bg-success me-1 mb-1">{{ attendance.player.name }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
+                        {% if not loop.last %}<hr>{% endif %}
+                        {% endfor %}
+                    {% else %}
+                    <p class="text-center">No components added to this session yet.</p>
                     {% endif %}
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>RSVPs</h5>
-                    <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View All RSVPs</a>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-4 text-center">
-                            <h6 class="text-success">Attending</h6>
-                            <p class="h3">{{ session.rsvps.filter_by(status='attending').count() }}</p>
-                        </div>
-                        <div class="col-4 text-center">
-                            <h6 class="text-warning">Maybe</h6>
-                            <p class="h3">{{ session.rsvps.filter_by(status='maybe').count() }}</p>
-                        </div>
-                        <div class="col-4 text-center">
-                            <h6 class="text-danger">Not Attending</h6>
-                            <p class="h3">{{ session.rsvps.filter_by(status='not_attending').count() }}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2 mt-3">
-                        <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-primary">Submit Your RSVP</a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5>Quick Actions</h5>
-                </div>
-                <div class="d-grid gap-2">
-                    <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-outline-primary">Add Component</a>
-                    <a href="{{ url_for('session.attendance', session_id=session.id) }}" class="btn btn-outline-primary">Take Attendance</a>
-                    <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-success">RSVP for Session</a>
-                    <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-outline-info">View RSVPs</a>
-                    <a href="#" class="btn btn-outline-secondary" onclick="window.print()">Print Session Plan</a>
                 </div>
             </div>
         </div>
