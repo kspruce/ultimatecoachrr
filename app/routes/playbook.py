@@ -122,29 +122,6 @@ def edit_play(play_id):
         
     return render_template('playbook/play_form.html', form=form, play=play, title='Edit Play')
 
-@bp.route('/plays/delete/<int:play_id>', methods=['POST'])
-@login_required
-def delete_play(play_id):
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    
-    play = Play.query.get_or_404(play_id)
-    
-    try:
-        title = play.name
-        db.session.delete(play)
-        db.session.commit()
-        
-        flash(f'Play "{title}" has been deleted!', 'success')
-        return redirect(url_for('playbook.index'))
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting play: {str(e)}")
-        flash('An error occurred while deleting the play.', 'danger')
-        return redirect(url_for('playbook.index'))
-
 
 # Formation Routes
 @bp.route('/formations/add', methods=['GET', 'POST'])
@@ -219,23 +196,67 @@ def edit_formation(formation_id):
     )
 
 # Also add a delete route for formations
-@bp.route('/formations/delete/<int:formation_id>', methods=['POST'])
+@bp.route('/plays/<int:play_id>/delete', methods=['POST'])  # Changed to match JS URL
+@login_required
+def delete_play(play_id):
+    if not current_user.is_admin:
+        return jsonify({
+            'success': False,
+            'message': 'Permission denied'
+        }), 403
+    
+    play = Play.query.get_or_404(play_id)
+    
+    try:
+        title = play.name
+        db.session.delete(play)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Play "{title}" has been deleted!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting play: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while deleting the play.'
+        }), 500
+
+@bp.route('/formations/<int:formation_id>/delete', methods=['POST'])  # Changed to match JS URL
 @login_required
 def delete_formation(formation_id):
     if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
+        return jsonify({
+            'success': False,
+            'message': 'Permission denied'
+        }), 403
     
     formation = Formation.query.get_or_404(formation_id)
     
     # Check if formation is being used by any plays
     if formation.plays:
-        flash('Cannot delete formation that is being used by plays.', 'danger')
-        return redirect(url_for('playbook.index'))
+        return jsonify({
+            'success': False,
+            'message': 'Cannot delete formation that is being used by plays.'
+        }), 400
     
-    name = formation.name
-    db.session.delete(formation)
-    db.session.commit()
-    
-    flash(f'Formation "{name}" has been deleted!', 'success')
-    return redirect(url_for('playbook.index'))
+    try:
+        name = formation.name
+        db.session.delete(formation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Formation "{name}" has been deleted!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting formation: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while deleting the formation.'
+        }), 500
