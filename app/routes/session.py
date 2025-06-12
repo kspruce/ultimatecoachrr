@@ -149,7 +149,7 @@ def add_drill(drill_type='basic'):
 
     if form.validate_on_submit():
         diagram_url = None
-        file_path = None
+        s3_key = None  # Initialize s3_key
 
         if form.diagram_file.data:
             try:
@@ -160,26 +160,27 @@ def add_drill(drill_type='basic'):
                 )
                 if url:
                     diagram_url = url
-                    file_path = path
+                    s3_key = path  # Store the S3 key if upload successful
                 else:
                     flash('Failed to upload file', 'error')
-                    return render_template('session/drills/form.html', form=form)  # Return here
+                    return render_template('session/drills/form.html', form=form)
             except Exception as e:
                 current_app.logger.error(f"Error uploading drill file: {str(e)}")
                 flash('Error uploading file', 'error')
-                return render_template('session/drills/form.html', form=form)  # And here
+                return render_template('session/drills/form.html', form=form)
 
         elif 'drawing_data' in request.form:
             url, path = save_drill_image(request.form['drawing_data'], 'new')
             if url:
                 diagram_url = url
-                file_path = path
+                s3_key = path  # Store file path if drawing is saved
             else:
                 flash('Failed to save drawing', 'error')
-                return render_template('session/drills/form.html', form=form) # Return here too
+                return render_template('session/drills/form.html', form=form)
 
         elif form.diagram_url.data:
             diagram_url = form.diagram_url.data
+            # No s3_key in this case, as it's a URL
 
         drill = SavedDrill(
             title=form.title.data,
@@ -192,19 +193,18 @@ def add_drill(drill_type='basic'):
             focus_area=form.focus_area.data,
             equipment_needed=form.equipment_needed.data,
             diagram_url=diagram_url,
-            s3_key = file_path,
+            s3_key=s3_key,  # Assign s3_key to the model
             video_url=form.video_url.data,
             created_by=current_user.id
         )
 
         db.session.add(drill)
         db.session.commit()
-        
+
         flash(f'Drill "{drill.title}" has been created!', 'success')
         return redirect(url_for('session.drills'))
 
-    return render_template('session/drills/form.html', form=form)  # Return template for GET or failed validation
-
+    return render_template('session/drills/form.html', form=form)
 @bp.route('/drills/editor')
 @bp.route('/drills/editor/<int:drill_id>')
 @login_required

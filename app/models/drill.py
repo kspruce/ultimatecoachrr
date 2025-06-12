@@ -40,7 +40,8 @@ class SavedDrill(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    s3_key = db.Column(db.String(255), nullable=True)
+    
     # Relationship to SessionComponent
     components = db.relationship('SessionComponent', back_populates='saved_drill', lazy='dynamic')
 
