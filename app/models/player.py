@@ -20,13 +20,13 @@ class Player(db.Model):
     active = db.Column(db.Boolean, default=True)
     notes = db.Column(db.Text)
     points_played = db.Column(db.Integer, default=0)
-    games_played= db.Column(db.Integer, default=0)
+    games_played = db.Column(db.Integer, default=0)
     
     # User relationship
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Updated to 'users.id'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
     user_account = db.relationship('User', back_populates='player_profile')
     
-    # Other relationships
+    # Other relationships remain the same
     lineups = db.relationship('LineUp', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     player_events = db.relationship(
         "Event",
@@ -40,7 +40,6 @@ class Player(db.Model):
         back_populates='receiver',
         lazy='dynamic'
     )
-    receptions = db.relationship('Event', foreign_keys='Event.receiver_id', backref='receiver', lazy='dynamic')
     pulls = db.relationship('Pull', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     clip_appearances = db.relationship('ClipPlayer', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
@@ -51,13 +50,11 @@ class Player(db.Model):
 
     @property
     def receptions(self):
-        # Update this to use receiver_events instead of events
         return self.receiver_events.filter_by(event_type='catch').all()
-
 
     @property
     def throws(self):
-        return self.events.filter_by(event_type='throw').all()    
+        return self.player_events.filter_by(event_type='throw').all()    
     
     @property
     def age(self):
