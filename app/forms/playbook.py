@@ -14,10 +14,8 @@ class PlayForm(FlaskForm):
     description = TextAreaField('Description', validators=[Optional()])
     notes = TextAreaField('Notes', validators=[Optional()])
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
-    diagram_file = FileField('Upload Diagram', validators=[
-        Optional(),
-        FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!')
-    ])
+    # Replace diagram_file with ultiplay_embed
+    ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])
 
 class FormationForm(FlaskForm):
     name = StringField('Formation Name', validators=[DataRequired(), Length(max=100)])
@@ -26,7 +24,5 @@ class FormationForm(FlaskForm):
         ('defense', 'Defense')
     ], validators=[DataRequired()])
     description = TextAreaField('Description', validators=[Optional()])
-    diagram_file = FileField('Upload Diagram', validators=[
-        Optional(),
-        FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!')
-    ])
+    # Replace diagram_file with ultiplay_embed
+    ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])

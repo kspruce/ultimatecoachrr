@@ -2,34 +2,40 @@
 {% block styles %}
 {{ super() }}
 <style>
-    .drill-image-container {
-        height: 200px;  /* Fixed height container */
-        width: 100%;
-        overflow: hidden;
+    .drill-video-container {
         position: relative;
-        background-color: #f8f9fa;  /* Light background for empty space */
+        padding-bottom: 56.25%;  /* 16:9 aspect ratio */
+        height: 0;
+        overflow: hidden;
+        background-color: #f8f9fa;
+        border-radius: 4px;
     }
 
-    .drill-image {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;  /* This will maintain aspect ratio */
+    .drill-video-container iframe {
         position: absolute;
         top: 0;
         left: 0;
-        padding: 10px;  /* Add some padding around the image */
+        width: 100%;
+        height: 100%;
+        border: 0;
     }
 
-    /* Optional: Add hover effect */
-    .drill-image-container:hover .drill-image {
-        transform: scale(1.05);
-        transition: transform 0.3s ease;
+    .drill-placeholder {
+        height: 200px;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
     }
 
-    /* Optional: Add card hover effect */
     .card:hover {
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         transition: box-shadow 0.3s ease;
+    }
+
+    .badge {
+        margin-right: 0.5rem;
     }
 </style>
 {% endblock %}
@@ -42,12 +48,9 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    Add New Drill
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('session.add_drill', drill_type='basic') }}">Basic Drill</a></li>
-                </ul>
+                <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New Drill
+                </a>
             </div>
         </div>
     </div>
@@ -88,23 +91,16 @@
         {% for drill in drills %}
         <div class="col">
             <div class="card h-100">
-                {% if drill.diagram_url %}
-                    {% if drill.diagram_url.startswith('http') %}
-                        <div class="drill-image-container">
-                            <img src="{{ drill.diagram_url }}" class="card-img-top drill-image" alt="{{ drill.title }}">
-                        </div>
-                    {% else %}
-                        <div class="drill-image-container">
-                            <img src="{{ url_for('static', filename='images/drills/' + drill.diagram_url) }}" 
-                                 class="card-img-top drill-image" alt="{{ drill.title }}">
-                        </div>
-                    {% endif %}
+                {% if drill.ultiplay_embed %}
+                    <div class="drill-video-container">
+                        {{ drill.ultiplay_embed|safe }}
+                    </div>
                 {% else %}
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                         style="height: 200px;">
-                        <i class="fas fa-running fa-3x text-muted"></i>
+                    <div class="drill-placeholder">
+                        <i class="fas fa-video fa-3x text-muted"></i>
                     </div>
                 {% endif %}
+                
                 <div class="card-body">
                     <h5 class="card-title">{{ drill.title }}</h5>
                     {% if drill.description %}
@@ -137,21 +133,10 @@
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="btn-group w-100">
-                        {% if drill.has_visual_diagram %}
-                        <div class="btn-group">
-                            <a href="{{ url_for('session.drill_viewer', drill_id=drill.id) }}" 
-                               class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ url_for('session.drill_editor', drill_id=drill.id) }}" 
-                               class="btn btn-sm btn-outline-success">Edit Diagram</a>
-                        </div>
-                        {% else %}
-                        <div class="btn-group">
-                            <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
-                               class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" 
-                               class="btn btn-sm btn-outline-secondary">Edit</a>
-                        </div>
-                        {% endif %}
+                        <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
+                           class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" 
+                           class="btn btn-sm btn-outline-secondary">Edit</a>
                     </div>
                 </div>
             </div>
@@ -180,6 +165,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
             </div>
@@ -197,7 +183,7 @@ function confirmDelete(drillId, drillTitle) {
     const deleteForm = document.getElementById('deleteForm');
     
     modalBody.textContent = `Are you sure you want to delete "${drillTitle}"? This action cannot be undone.`;
-    deleteForm.action = "{{ url_for('session.manage_drill', drill_id=0) }}".replace('0', drillId);
+    deleteForm.action = "{{ url_for('session.delete_drill', drill_id=0) }}".replace('0', drillId);
     
     new bootstrap.Modal(modal).show();
 }

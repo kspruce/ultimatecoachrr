@@ -1,5 +1,64 @@
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    .embed-container {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        overflow: hidden;
+        max-width: 100%;
+        background: #f8f9fa;
+        border-radius: 4px 4px 0 0;
+    }
+
+    .embed-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    .video-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        text-align: center;
+    }
+
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .badge {
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .list-group-item {
+        transition: background-color 0.2s ease;
+    }
+
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -8,8 +67,12 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">Add Play</a>
-                <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-primary">Add Formation</a>
+                <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Play
+                </a>
+                <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus"></i> Add Formation
+                </a>
             </div>
         </div>
     </div>
@@ -25,19 +88,29 @@
                     {% if formations %}
                     <div class="row">
                         {% for formation in formations %}
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="card h-100">
-                                {% if formation.diagram_url %}
-                                <img src="{{ formation.diagram_url }}" 
-                                     class="card-img-top" 
-                                     alt="{{ formation.name }}">
+                                {% if formation.ultiplay_embed %}
+                                <div class="embed-container">
+                                    {{ formation.ultiplay_embed|safe }}
+                                </div>
+                                {% else %}
+                                <div class="embed-container">
+                                    <div class="video-placeholder">
+                                        <div>
+                                            <i class="fas fa-video fa-3x mb-2"></i>
+                                            <br>
+                                            No video available
+                                        </div>
+                                    </div>
+                                </div>
                                 {% endif %}
                                 <div class="card-body">
                                     <h5 class="card-title">{{ formation.name }}</h5>
                                     <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
                                         {{ formation.type|title }}
                                     </span>
-                                    <p class="card-text">{{ formation.description|truncate(100) }}</p>
+                                    <p class="card-text mt-2">{{ formation.description|truncate(100) }}</p>
                                 </div>
                                 <div class="card-footer">
                                     <div class="btn-group w-100">
@@ -53,7 +126,8 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="text-center">No formations added yet. 
+                    <p class="text-center">
+                        No formations added yet. 
                         <a href="{{ url_for('playbook.add_formation') }}">Add your first formation</a>
                     </p>
                     {% endif %}
@@ -75,6 +149,11 @@
                     <div class="list-group">
                         {% for play in offensive_plays %}
                         <div class="list-group-item">
+                            {% if play.ultiplay_embed %}
+                            <div class="embed-container mb-3">
+                                {{ play.ultiplay_embed|safe }}
+                            </div>
+                            {% endif %}
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">
                                     <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
@@ -86,7 +165,7 @@
                                 {% endif %}
                             </div>
                             {% if play.tags %}
-                            <div class="mb-1">
+                            <div class="mb-2">
                                 {% for tag in play.tags %}
                                 <span class="badge bg-secondary">{{ tag.name }}</span>
                                 {% endfor %}
@@ -120,6 +199,11 @@
                     <div class="list-group">
                         {% for play in defensive_plays %}
                         <div class="list-group-item">
+                            {% if play.ultiplay_embed %}
+                            <div class="embed-container mb-3">
+                                {{ play.ultiplay_embed|safe }}
+                            </div>
+                            {% endif %}
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">
                                     <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
@@ -131,7 +215,7 @@
                                 {% endif %}
                             </div>
                             {% if play.tags %}
-                            <div class="mb-1">
+                            <div class="mb-2">
                                 {% for tag in play.tags %}
                                 <span class="badge bg-secondary">{{ tag.name }}</span>
                                 {% endfor %}

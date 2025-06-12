@@ -35,35 +35,12 @@ def add_play():
     form = PlayForm()
     
     if form.validate_on_submit():
-        # Handle diagram upload
-        diagram_url = None
-        file_path = None
-        
-        if form.diagram_file.data:
-            try:
-                url, path = store_file(
-                    file=form.diagram_file.data,
-                    folder='plays',
-                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
-                )
-                if url:
-                    diagram_url = url
-                    file_path = path
-                else:
-                    flash('Failed to upload diagram', 'error')
-                    return render_template('playbook/play_form.html', form=form)
-            except Exception as e:
-                current_app.logger.error(f"Error uploading play diagram: {str(e)}")
-                flash('Error uploading diagram', 'error')
-                return render_template('playbook/play_form.html', form=form)
-        
         play = Play(
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
             notes=form.notes.data,
-            diagram_url=diagram_url,
-            s3_key=file_path,
+            ultiplay_embed=form.ultiplay_embed.data,  # Add this line
             created_by=current_user.id
         )
         
@@ -79,6 +56,8 @@ def add_play():
             db.session.rollback()
             current_app.logger.error(f"Error creating play: {str(e)}")
             flash('Error creating play.', 'danger')
+
+    return render_template('playbook/play_form.html', form=form)
 
 @bp.route('/plays/<int:play_id>')
 @login_required
@@ -185,34 +164,11 @@ def delete_play(play_id):
 def add_formation():
     form = FormationForm()
     if form.validate_on_submit():
-        # Handle diagram upload
-        diagram_url = None
-        file_path = None
-        
-        if form.diagram_file.data:
-            try:
-                url, path = store_file(
-                    file=form.diagram_file.data,
-                    folder='formations',
-                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
-                )
-                if url:
-                    diagram_url = url
-                    file_path = path
-                else:
-                    flash('Failed to upload diagram', 'error')
-                    return render_template('playbook/formation_form.html', form=form)
-            except Exception as e:
-                current_app.logger.error(f"Error uploading formation diagram: {str(e)}")
-                flash('Error uploading diagram', 'error')
-                return render_template('playbook/formation_form.html', form=form)
-        
         formation = Formation(
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
-            diagram_url=diagram_url,
-            s3_key=file_path,
+            ultiplay_embed=form.ultiplay_embed.data,  # Add this line
             created_by=current_user.id
         )
         

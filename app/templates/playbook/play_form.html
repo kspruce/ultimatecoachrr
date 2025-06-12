@@ -1,5 +1,49 @@
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    .embed-preview {
+        position: relative;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        height: 0;
+        overflow: hidden;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-top: 10px;
+        background: #f8f9fa;
+    }
+
+    .embed-preview iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    .preview-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+
+    .embed-help {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -17,40 +61,25 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST">
                         {{ form.hidden_tag() }}
                         
+                        <!-- Basic Information -->
                         <div class="row mb-3">
-                            <!-- Play Name -->
                             <div class="col-md-8">
-                                <div class="form-group">
-                                    {{ form.name.label(class="form-label") }}
-                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
-                                    {% for error in form.name.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-control") }}
                             </div>
-                            
-                            <!-- Play Type -->
                             <div class="col-md-4">
-                                <div class="form-group">
-                                    {{ form.type.label(class="form-label") }}
-                                    {{ form.type(class="form-select" + (" is-invalid" if form.type.errors else "")) }}
-                                    {% for error in form.type.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                {{ form.type.label(class="form-label") }}
+                                {{ form.type(class="form-select") }}
                             </div>
                         </div>
 
                         <!-- Formation Selection -->
                         <div class="form-group mb-3">
                             {{ form.formation_id.label(class="form-label") }}
-                            {{ form.formation_id(class="form-select" + (" is-invalid" if form.formation_id.errors else "")) }}
-                            {% for error in form.formation_id.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
+                            {{ form.formation_id(class="form-select") }}
                             <small class="form-text text-muted">
                                 Select the formation this play is based on, or 
                                 <a href="{{ url_for('playbook.add_formation') }}" target="_blank">create a new formation</a>
@@ -60,59 +89,57 @@
                         <!-- Description -->
                         <div class="form-group mb-3">
                             {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), 
-                                              rows="4", 
-                                              placeholder="Describe the play and its execution...") }}
-                            {% for error in form.description.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
+                            {{ form.description(class="form-control", rows="4") }}
                         </div>
 
                         <!-- Notes -->
                         <div class="form-group mb-3">
                             {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), 
-                                        rows="3", 
-                                        placeholder="Additional notes, coaching points, or variations...") }}
-                            {% for error in form.notes.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
+                            {{ form.notes(class="form-control", rows="3") }}
+                        </div>
+
+                        <!-- Ultiplay Embed -->
+                        <div class="form-group mb-4">
+                            <label class="form-label">Play Video</label>
+                            
+                            <div class="mb-3">
+                                {{ form.ultiplay_embed.label(class="form-label") }}
+                                {{ form.ultiplay_embed(class="form-control", rows=3, 
+                                    placeholder="Paste the embed code from Ultiplay here...",
+                                    oninput="previewEmbed(this.value)") }}
+                            </div>
+
+                            <!-- Embed Preview -->
+                            <div class="embed-preview">
+                                <div id="embed-preview-content">
+                                    <div class="preview-placeholder">
+                                        <div class="text-center">
+                                            <i class="fas fa-video fa-3x mb-2"></i>
+                                            <br>
+                                            Video preview will appear here
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Help Text -->
+                            <div class="embed-help">
+                                <h6><i class="fas fa-info-circle"></i> How to get the embed code:</h6>
+                                <ol>
+                                    <li>Go to your video on Ultiplay</li>
+                                    <li>Click the "Share" button</li>
+                                    <li>Select "Embed"</li>
+                                    <li>Copy the entire embed code and paste it above</li>
+                                </ol>
+                            </div>
                         </div>
 
                         <!-- Tags -->
                         <div class="form-group mb-3">
                             {{ form.tags.label(class="form-label") }}
-                            {{ form.tags(class="form-select" + (" is-invalid" if form.tags.errors else ""), 
-                                       multiple="multiple",
-                                       **{"data-placeholder": "Select tags..."}) }}
-                            {% for error in form.tags.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
+                            {{ form.tags(class="form-select", multiple="multiple") }}
                             <small class="form-text text-muted">
                                 Hold Ctrl/Cmd to select multiple tags
-                            </small>
-                        </div>
-
-                        <!-- Diagram Upload -->
-                        <div class="form-group mb-3">
-                            <label class="form-label">Play Diagram</label>
-                            {% if play and play.diagram_url %}
-                            <div class="mb-2">
-                                <img src="{{ play.diagram_url }}" 
-                                     class="img-fluid mb-2" 
-                                     alt="Current diagram"
-                                     style="max-height: 200px;">
-                                <br>
-                                <small class="text-muted">Upload a new image to replace the current one</small>
-                            </div>
-                            {% endif %}
-                            {{ form.diagram_file.label(class="form-label") }}
-                            {{ form.diagram_file(class="form-control" + (" is-invalid" if form.diagram_file.errors else "")) }}
-                            {% for error in form.diagram_file.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
-                            <small class="form-text text-muted">
-                                Accepted formats: JPG, JPEG, PNG, GIF
                             </small>
                         </div>
 
@@ -154,7 +181,7 @@
                         </li>
                         <li class="mb-2">
                             <i class="bi bi-info-circle text-primary"></i>
-                            Upload a clear diagram if available
+                            Add a video demonstration if available
                         </li>
                     </ul>
                 </div>
@@ -167,30 +194,41 @@
 {% block scripts %}
 {{ super() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize any form-specific JavaScript here
+function previewEmbed(embedCode) {
+    const previewContainer = document.getElementById('embed-preview-content');
     
-    // Preview uploaded image
-    const fileInput = document.querySelector('input[type="file"]');
-    fileInput.addEventListener('change', function(e) {
-        if (this.files && this.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const preview = document.createElement('img');
-                preview.src = e.target.result;
-                preview.classList.add('img-fluid', 'mb-2');
-                preview.style.maxHeight = '200px';
-                
-                const existingPreview = fileInput.parentElement.querySelector('img');
-                if (existingPreview) {
-                    existingPreview.replaceWith(preview);
-                } else {
-                    fileInput.parentElement.insertBefore(preview, fileInput);
-                }
-            }
-            reader.readAsDataURL(this.files[0]);
+    if (embedCode.trim()) {
+        // Basic XSS protection by only allowing iframe tags with specific attributes
+        const sanitized = embedCode.replace(/[<>]/g, match => {
+            return {
+                '<': '<',
+                '>': '>'
+            }[match];
+        });
+        
+        // Only process if it looks like an iframe embed code
+        if (sanitized.toLowerCase().includes('iframe')) {
+            previewContainer.innerHTML = embedCode;
         }
-    });
+    } else {
+        previewContainer.innerHTML = `
+            <div class="preview-placeholder">
+                <div class="text-center">
+                    <i class="fas fa-video fa-3x mb-2"></i>
+                    <br>
+                    Video preview will appear here
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Initialize preview if there's existing embed code
+document.addEventListener('DOMContentLoaded', function() {
+    const embedInput = document.querySelector('#ultiplay_embed');
+    if (embedInput && embedInput.value) {
+        previewEmbed(embedInput.value);
+    }
 });
 </script>
 {% endblock %}
