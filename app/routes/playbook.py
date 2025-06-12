@@ -199,3 +199,55 @@ def internal_error(error):
             'message': 'Internal server error'
         }), 500
     return render_template('500.html'), 500
+
+@bp.route('/formations/edit/<int:formation_id>', methods=['GET', 'POST'])
+@login_required
+def edit_formation(formation_id):
+    if not current_user.is_admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    formation = Formation.query.get_or_404(formation_id)
+    form = FormationForm(obj=formation)
+    
+    if form.validate_on_submit():
+        formation.name = form.name.data
+        formation.type = form.type.data
+        formation.description = form.description.data
+        
+        # Handle ultiplay embed update
+        if form.ultiplay_embed.data:
+            formation.ultiplay_embed = form.ultiplay_embed.data
+        
+        db.session.commit()
+        flash(f'Formation "{formation.name}" has been updated!', 'success')
+        return redirect(url_for('playbook.index'))
+    
+    return render_template(
+        'playbook/formation_form.html',
+        form=form,
+        formation=formation,
+        title='Edit Formation'
+    )
+
+# Also add a delete route for formations
+@bp.route('/formations/delete/<int:formation_id>', methods=['POST'])
+@login_required
+def delete_formation(formation_id):
+    if not current_user.is_admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    formation = Formation.query.get_or_404(formation_id)
+    
+    # Check if formation is being used by any plays
+    if formation.plays:
+        flash('Cannot delete formation that is being used by plays.', 'danger')
+        return redirect(url_for('playbook.index'))
+    
+    name = formation.name
+    db.session.delete(formation)
+    db.session.commit()
+    
+    flash(f'Formation "{name}" has been deleted!', 'success')
+    return redirect(url_for('playbook.index'))
