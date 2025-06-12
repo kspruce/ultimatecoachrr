@@ -7,11 +7,11 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
+    # Increase the length to 255 to accommodate scrypt hashes
+    password_hash = db.Column(db.String(255))
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Remove the player_id and relationship from here
     # The relationship will be handled from the Player model
     player_profile = db.relationship('Player', back_populates='user_account', uselist=False)
 
