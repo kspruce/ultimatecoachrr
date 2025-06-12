@@ -39,6 +39,17 @@ class Config:
     
     # Temporary upload folder for processing
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or '/tmp/uploads'
+
+    @staticmethod
+    def init_app(app):
+        # Create upload folders with correct permissions
+        try:
+            os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+            # Create subdirectories
+            for subdir in ['drills', 'playbook', 'theory', 'temp']:
+                os.makedirs(os.path.join(Config.UPLOAD_FOLDER, subdir), exist_ok=True)
+        except Exception as e:
+            print(f"Warning: Could not create upload directories: {e}")
     
     # Mail settings
     MAIL_SERVER = os.environ.get('MAIL_SERVER')

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -132,12 +132,14 @@ def create_app(config_class=Config):
     from app.models.annotation import ClipAnnotation
     from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
     
-    # Initialize storage
+        # Create upload directory in /tmp
     try:
-        # Create upload directories
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        # Create subdirectories
         for subdir in ['drills', 'playbook', 'theory', 'temp']:
             os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], subdir), exist_ok=True)
+    except Exception as e:
+        app.logger.warning(f"Could not create upload directories: {e}")
             
         # Test write permissions
         test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
