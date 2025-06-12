@@ -5,7 +5,7 @@
 <style>
     .embed-container {
         position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        padding-bottom: 56.25%;
         height: 0;
         overflow: hidden;
         margin-bottom: 1rem;
@@ -60,8 +60,50 @@
     </div>
 
     <div class="row">
-        <!-- Session Details -->
+        <!-- Sidebar -->
         <div class="col-md-4">
+            <!-- RSVP Card -->
+            {% if current_user.player %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Your RSVP</h5>
+                </div>
+                <div class="card-body">
+                    {% set user_rsvp = current_user.player.session_rsvps.filter_by(session_id=session.id).first() %}
+                    {% if user_rsvp %}
+                    <div class="mb-3">
+                        <p class="mb-2">Current Status:</p>
+                        <h4>
+                            <span class="badge 
+                                {% if user_rsvp.status == 'attending' %}bg-success
+                                {% elif user_rsvp.status == 'maybe' %}bg-warning
+                                {% else %}bg-danger{% endif %}">
+                                {{ user_rsvp.status|replace('_', ' ')|title }}
+                            </span>
+                        </h4>
+                        {% if user_rsvp.notes %}
+                        <p class="text-muted small mt-2">{{ user_rsvp.notes }}</p>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('session.rsvp', session_id=session.id) }}" 
+                       class="btn btn-outline-primary">Update RSVP</a>
+                    {% else %}
+                    <p class="mb-3">You haven't RSVP'd to this session yet.</p>
+                    <a href="{{ url_for('session.rsvp', session_id=session.id) }}" 
+                       class="btn btn-primary">RSVP Now</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p class="mb-3">You need to link your account to a player profile to RSVP.</p>
+                    <a href="{{ url_for('auth.link_player') }}" class="btn btn-primary">Link Player Profile</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Session Details Card -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Session Details</h5>
