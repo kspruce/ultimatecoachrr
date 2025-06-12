@@ -25,6 +25,10 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app)
+
+    # Ensure the SECRET_KEY is set
+    if not app.config.get('SECRET_KEY'):
+        app.config['SECRET_KEY'] = os.urandom(24)
     
     # Configure S3
     with app.app_context():
@@ -120,6 +124,10 @@ def create_app(config_class=Config):
 
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
+    
+    # Register CLI commands
+    from app.commands import create_admin
+    app.cli.add_command(create_admin)
     
     # Import models
     from app.models.user import User
