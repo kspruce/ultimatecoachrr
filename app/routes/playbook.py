@@ -122,49 +122,29 @@ def edit_play(play_id):
         
     return render_template('playbook/play_form.html', form=form, play=play, title='Edit Play')
 
-@bp.route('/plays/<int:play_id>/delete', methods=['POST'])
+@bp.route('/plays/delete/<int:play_id>', methods=['POST'])
 @login_required
 def delete_play(play_id):
+    if not current_user.is_admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    play = Play.query.get_or_404(play_id)
+    
     try:
-        play = Play.query.get_or_404(play_id)
-        
-        # Check permissions
-        if play.created_by != current_user.id and not current_user.is_admin:
-            return jsonify({
-                'success': False,
-                'message': 'Permission denied'
-            }), 403
-        
-        # Delete file from storage if exists
-        if play.s3_key:
-            if not delete_file(play.s3_key):
-                current_app.logger.error(f"Failed to delete file: {play.s3_key}")
-        
-        name = play.name
+        title = play.name
         db.session.delete(play)
         db.session.commit()
         
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'message': f'Play "{name}" has been deleted!'
-            })
-        
-        flash(f'Play "{name}" has been deleted!', 'success')
+        flash(f'Play "{title}" has been deleted!', 'success')
         return redirect(url_for('playbook.index'))
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error deleting play {play_id}: {str(e)}")
-        
-        if request.is_json:
-            return jsonify({
-                'success': False,
-                'message': str(e)
-            }), 500
-        
-        flash(f'Error deleting play: {str(e)}', 'danger')
+        current_app.logger.error(f"Error deleting play: {str(e)}")
+        flash('An error occurred while deleting the play.', 'danger')
         return redirect(url_for('playbook.index'))
+
 
 # Formation Routes
 @bp.route('/formations/add', methods=['GET', 'POST'])
