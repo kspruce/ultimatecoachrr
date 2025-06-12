@@ -244,3 +244,40 @@ def not_found_error(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('500.html'), 500
+
+@bp.route('/edit_section/<int:section_id>', methods=['GET', 'POST'])
+@login_required
+def edit_section(section_id):
+    section = TheorySection.query.get_or_404(section_id)
+    form = TheorySectionForm(obj=section)
+    
+    if form.validate_on_submit():
+        section.name = form.name.data
+        section.description = form.description.data
+        section.order = form.order.data
+        
+        try:
+            db.session.commit()
+            flash(f'Section "{section.name}" has been updated!', 'success')
+            return redirect(url_for('theory.section', slug=section.slug))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating section: {str(e)}', 'danger')
+    
+    return render_template('theory/section_form.html', form=form, section=section, title='Edit Section')
+
+@bp.route('/delete_section/<int:section_id>', methods=['POST'])
+@login_required
+def delete_section(section_id):
+    section = TheorySection.query.get_or_404(section_id)
+    name = section.name
+    
+    try:
+        db.session.delete(section)
+        db.session.commit()
+        flash(f'Section "{name}" has been deleted!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting section: {str(e)}', 'danger')
+    
+    return redirect(url_for('theory.index'))
