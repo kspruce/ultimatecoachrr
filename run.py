@@ -12,19 +12,27 @@ from logging.handlers import RotatingFileHandler
 import boto3
 from botocore.exceptions import ClientError
 
-# Setup logging
+# Setup basic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Add file handler for persistent logging
-if not os.path.exists('logs'):
-    os.mkdir('logs')
-file_handler = RotatingFileHandler('logs/ultimate_coach.log', maxBytes=10240, backupCount=10)
-file_handler.setFormatter(logging.Formatter(
-    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-))
-file_handler.setLevel(logging.INFO)
-logger.addHandler(file_handler)
+# Setup file logging in /tmp
+log_dir = '/tmp/logs'
+try:
+    os.makedirs(log_dir, exist_ok=True)
+    file_handler = RotatingFileHandler(
+        os.path.join(log_dir, 'ultimate_coach.log'),
+        maxBytes=10240,
+        backupCount=10
+    )
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
+except Exception as e:
+    print(f"Could not set up file logging: {e}")
+    # Continue without file logging
 
 logger.info('Ultimate Coach startup')
 
@@ -60,6 +68,23 @@ def check_aws_credentials():
         logger.error(f"Unexpected error checking AWS credentials: {str(e)}")
         return False
 
+def ensure_upload_directories():
+    """Ensure all required upload directories exist"""
+    try:
+        upload_folder = app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Create subdirectories
+        for subdir in ['drills', 'playbook', 'theory', 'temp']:
+            subdir_path = os.path.join(upload_folder, subdir)
+            os.makedirs(subdir_path, exist_ok=True)
+            
+        logger.info(f"Upload directories created successfully in {upload_folder}")
+        return True
+    except Exception as e:
+        logger.error(f"Error creating upload directories: {str(e)}")
+        return False
+
 @app.route('/debug-info')
 def debug_info():
     """Endpoint for debugging deployment issues"""
@@ -73,12 +98,15 @@ def debug_info():
         
         # Get directory sizes
         def get_dir_size(path):
-            total = 0
-            for dirpath, dirnames, filenames in os.walk(path):
-                for f in filenames:
-                    fp = os.path.join(dirpath, f)
-                    total += os.path.getsize(fp)
-            return total / (1024 * 1024)  # Convert to MB
+            try:
+                total = 0
+                for dirpath, dirnames, filenames in os.walk(path):
+                    for f in filenames:
+                        fp = os.path.join(dirpath, f)
+                        total += os.path.getsize(fp)
+                return total / (1024 * 1024)  # Convert to MB
+            except Exception:
+                return 0
         
         return {
             # System information
@@ -112,7 +140,11 @@ def debug_info():
                     'writable': os.access(os.path.join(upload_folder, d), os.W_OK) if os.path.exists(os.path.join(upload_folder, d)) else False
                 }
                 for d in ['drills', 'playbook', 'theory', 'temp']
-            ]
+            ],
+            
+            # Logging information
+            'log_directory': log_dir,
+            'log_directory_writable': os.access(log_dir, os.W_OK) if os.path.exists(log_dir) else False
         }
     except Exception as e:
         logger.error(f"Error in debug-info: {str(e)}")
@@ -148,11 +180,8 @@ def make_shell_context():
 def create_app_instance():
     """Function to create app instance with error handling"""
     try:
-        # Verify storage configuration
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            logger.error(f"Upload folder does not exist: {app.config['UPLOAD_FOLDER']}")
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            logger.info(f"Created upload folder: {app.config['UPLOAD_FOLDER']}")
+        # Ensure upload directories exist
+        ensure_upload_directories()
         
         # Verify S3 configuration if enabled
         if app.config.get('AWS_ACCESS_KEY'):
@@ -183,9 +212,9 @@ if __name__ == "__main__":
                 raise
             
             # Check storage configuration
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                logger.error(f"Upload folder does not exist: {app.config['UPLOAD_FOLDER']}")
-                raise RuntimeError("Upload folder not found")
+            if not ensure_upload_directories():
+                logger.error("Failed to create required directories")
+                raise RuntimeError("Failed to create required directories")
             
             # Check S3 if configured
             if app.config.get('AWS_ACCESS_KEY'):
