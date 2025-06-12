@@ -125,10 +125,7 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
     
-    # Register CLI commands
-    from app.commands import create_admin
-    app.cli.add_command(create_admin)
-    
+   
     # Import models
     from app.models.user import User
     from app.models.player import Player
