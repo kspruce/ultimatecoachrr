@@ -21,7 +21,7 @@ class Point(db.Model):
 
     # Relationships
     game = db.relationship('Game', back_populates='points')
-    lineups = db.relationship('LineUp', back_populates='point', cascade='all, delete-orphan')
+    lineups = db.relationship('LineUp', backref='point')  # Changed to backref
     events = db.relationship('Event', back_populates='point', cascade='all, delete-orphan')
     pulls = db.relationship('Pull', back_populates='point', cascade='all, delete-orphan')
     clips = db.relationship('Clip', back_populates='point')
@@ -64,10 +64,15 @@ class Point(db.Model):
 
 
 class LineUp(db.Model):
+    __tablename__ = 'line_up'  # Explicitly set table name
+    
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # The relationship to Point is handled by the backref in Point model
+    player = db.relationship('Player', backref='lineups')
 
     def __repr__(self):
         return f'<LineUp: Player {self.player_id} in Point {self.point_id}>'

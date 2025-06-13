@@ -25,24 +25,14 @@ class Player(db.Model):
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
     user_account = db.relationship('User', back_populates='player_profile', uselist=False)
-    lineups = db.relationship('LineUp', backref='player', lazy='dynamic', cascade='all, delete-orphan')
-    player_events = db.relationship(
-        "Event",
-        foreign_keys='Event.player_id',
-        back_populates="player",
-        lazy='dynamic'
-    )
-    receiver_events = db.relationship(
-        'Event',
-        foreign_keys='Event.receiver_id',
-        back_populates='receiver',
-        lazy='dynamic'
-    )
+    # lineups relationship is handled by backref in LineUp model
+    player_events = db.relationship('Event', foreign_keys='Event.player_id', back_populates='player', lazy='dynamic')
+    receiver_events = db.relationship('Event', foreign_keys='Event.receiver_id', back_populates='receiver', lazy='dynamic')
     pulls = db.relationship('Pull', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     clip_appearances = db.relationship('ClipPlayer', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
     session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
-    point_stats = db.relationship("PlayerPointStats", back_populates="player", cascade="all, delete-orphan")
+    point_stats = db.relationship('PlayerPointStats', back_populates='player', cascade='all, delete-orphan')
 
 
     def __repr__(self):
