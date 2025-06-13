@@ -92,42 +92,49 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                <a href="{{ url_for('game.edit', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                
-                                {% if current_user.is_admin %}
-                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ game.id }}">Delete</button>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('game.edit', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                     
-                                    <!-- Delete Confirmation Modal -->
-                                    <div class="modal fade" id="deleteModal{{ game.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ game.id }}" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="deleteModalLabel{{ game.id }}">Confirm Delete</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    Are you sure you want to delete the game against {{ game.opponent }}?
-                                                    {% if game.point_count > 0 or game.clips.count() > 0 %}
-                                                    <div class="alert alert-warning mt-2">
-                                                        This game has points or clips associated with it. You cannot delete it until those are removed.
+                                    {% if current_user.is_admin %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ game.id }}">Delete</button>
+                                        
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ game.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ game.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ game.id }}">Confirm Delete</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <form action="{{ url_for('game.delete', game_id=game.id) }}" method="POST" class="d-inline">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                        <button type="submit" class="btn btn-danger" 
-                                                                {% if game.point_count > 0 or game.clips.count() > 0 %}disabled{% endif %}>
-                                                            Delete Game
-                                                        </button>
-                                                    </form>
+                                                    <div class="modal-body">
+                                                        <p>Are you sure you want to delete the game against {{ game.opponent }}?</p>
+                                                        {% if game.point_count > 0 or game.clips.count() > 0 %}
+                                                        <div class="alert alert-warning">
+                                                            Warning: This will also delete:
+                                                            <ul class="mb-0">
+                                                                {% if game.point_count > 0 %}
+                                                                    <li>{{ game.point_count }} points and their associated data</li>
+                                                                {% endif %}
+                                                                {% if game.clips.count() > 0 %}
+                                                                    <li>{{ game.clips.count() }} clips</li>
+                                                                {% endif %}
+                                                            </ul>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form action="{{ url_for('game.delete', game_id=game.id) }}" method="POST" class="d-inline">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                            <button type="submit" class="btn btn-danger">Delete Game</button>
+                                                        </form>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                {% endif %}
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% else %}
