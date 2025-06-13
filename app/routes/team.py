@@ -8,6 +8,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
+from flask_wtf import FlaskForm
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 
@@ -15,6 +16,7 @@ bp = Blueprint('team', __name__, url_prefix='/team')
 @login_required
 def index():
     form = PlayerFilterForm()
+    delete_form = FlaskForm()  # Add this for CSRF protection
     
     # Get filter parameters
     position = request.args.get('position', '')
@@ -56,7 +58,7 @@ def index():
     for player in players:
         print(f"Player: {player.name}, Jersey: {player.jersey_number}")
     
-    return render_template('team/index.html', players=players, form=form)
+    return render_template('team/index.html', players=players, form=form,delete_form=delete_form)
 
 
 
@@ -119,42 +121,33 @@ def edit_player(player_id):
 @login_required
 @admin_required
 def delete_player(player_id):
-    player = Player.query.get_or_404(player_id)
-    
     try:
-        # Delete clip associations
+        player = Player.query.get_or_404(player_id)
+        name = player.name  # Store name before deletion
+
+        # Delete related records
         ClipPlayer.query.filter_by(player_id=player_id).delete()
-        
-        # Delete lineup entries
         LineUp.query.filter_by(player_id=player_id).delete()
-        
-        # Set receiver_id to NULL in events where this player is the receiver
         Event.query.filter_by(receiver_id=player_id).update({Event.receiver_id: None})
-        
-        # Delete events where this player is the actor
         Event.query.filter_by(player_id=player_id).delete()
-        
-        # Delete pulls by this player
         Pull.query.filter_by(player_id=player_id).delete()
-        
-        # Delete attendance records
         Attendance.query.filter_by(player_id=player_id).delete()
         
-        # Delete RSVPs
-        if 'SessionRSVP' in globals():  # Check if SessionRSVP model exists
+        if hasattr(player, 'session_rsvps'):
             SessionRSVP.query.filter_by(player_id=player_id).delete()
-        
-        # Now delete the player
+
+        # Delete the player
         db.session.delete(player)
         db.session.commit()
         
-        flash(f'Player {player.name} has been deleted.', 'success')
+        flash(f'Player {name} has been deleted successfully.', 'success')
+        return redirect(url_for('team.index'))
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting player: {str(e)}', 'danger')
-        print(f"Error deleting player: {str(e)}")
-    
-    return redirect(url_for('team.index'))
+        return redirect(url_for('team.index'))
+
 
 @bp.route('/player/<int:player_id>')
 @login_required
