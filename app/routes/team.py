@@ -1,17 +1,16 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
 from app import db
 from app.models.player import Player
+from app.models.user import User
 from app.forms.team import PlayerForm, PlayerFilterForm
 from app.models.clip import ClipPlayer
 from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
-
-
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 
@@ -61,9 +60,7 @@ def index():
     return render_template('team/index.html', 
                          players=players, 
                          form=form,
-                         csrf_form=csrf_form)  # Pass the CSRF form
-
-
+                         csrf_form=csrf_form)
 
 @bp.route('/add_player', methods=['GET', 'POST'])
 @login_required
@@ -71,28 +68,51 @@ def index():
 def add_player():
     form = PlayerForm()
     if form.validate_on_submit():
-        player = Player(
-            name=form.name.data,
-            jersey_number=form.jersey_number.data,
-            position=form.position.data,
-            height=form.height.data if hasattr(form, 'height') else None,
-            weight=form.weight.data if hasattr(form, 'weight') else None,
-            gender=form.gender_match.data,  # Set gender = gender_match
-            gender_match=form.gender_match.data,
-            team=form.team.data if hasattr(form, 'team') else None,
-            birth_date=form.birth_date.data if hasattr(form, 'birth_date') else None,
-            email=form.email.data,
-            phone=form.phone.data if hasattr(form, 'phone') else None,
-            line_preference=form.line_preference.data,
-            active=form.active.data,
-            notes=form.notes.data if hasattr(form, 'notes') else None
-        )
-        db.session.add(player)
-        db.session.commit()
-        flash(f'Player {player.name} has been added!', 'success')
-        return redirect(url_for('team.index'))
+        try:
+            # Create the player
+            player = Player(
+                name=form.name.data,
+                jersey_number=form.jersey_number.data,
+                position=form.position.data,
+                gender=form.gender_match.data,
+                gender_match=form.gender_match.data,
+                team=form.team.data if hasattr(form, 'team') else None,
+                email=form.email.data,
+                line_preference=form.line_preference.data,
+                active=form.active.data
+            )
+            
+            db.session.add(player)
+            
+            # Create user account if requested
+            if form.create_account.data and form.username.data and form.password.data:
+                user = User(
+                    username=form.username.data,
+                    email=form.email.data,
+                    role='player',
+                    is_admin=False
+                )
+                user.set_password(form.password.data)
+                db.session.add(user)
+                db.session.flush()  # Get user.id
+                
+                # Link player to user
+                player.user_id = user.id
+            
+            db.session.commit()
+            flash(f'Player {player.name} has been added!', 'success')
+            
+            # Check if "Save and Add Another" was clicked
+            if 'add_another' in request.form:
+                return redirect(url_for('team.add_player'))
+            return redirect(url_for('team.index'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding player: {str(e)}', 'danger')
+            return render_template('team/player_form.html', title='Add Player', form=form)
+            
     return render_template('team/player_form.html', title='Add Player', form=form)
-
 
 @bp.route('/edit_player/<int:player_id>', methods=['GET', 'POST'])
 @login_required
@@ -100,25 +120,53 @@ def add_player():
 def edit_player(player_id):
     player = Player.query.get_or_404(player_id)
     form = PlayerForm(obj=player)
+    
+    if request.method == 'GET' and player.user_account:
+        form.create_account.data = True
+        form.username.data = player.user_account.username
+    
     if form.validate_on_submit():
-        player.name = form.name.data
-        player.jersey_number = form.jersey_number.data
-        player.position = form.position.data
-        player.height = form.height.data if hasattr(form, 'height') else None
-        player.weight = form.weight.data if hasattr(form, 'weight') else None
-        player.gender = form.gender_match.data  # Set gender = gender_match
-        player.gender_match = form.gender_match.data
-        player.team = form.team.data if hasattr(form, 'team') else None
-        player.birth_date = form.birth_date.data if hasattr(form, 'birth_date') else None
-        player.email = form.email.data
-        player.phone = form.phone.data if hasattr(form, 'phone') else None
-        player.line_preference = form.line_preference.data
-        player.active = form.active.data
-        player.notes = form.notes.data if hasattr(form, 'notes') else None
-        db.session.commit()
-        flash(f'Player {player.name} has been updated!', 'success')
-        return redirect(url_for('team.index'))
-    return render_template('team/player_form.html', title='Edit Player', form=form)
+        try:
+            player.name = form.name.data
+            player.jersey_number = form.jersey_number.data
+            player.position = form.position.data
+            player.gender = form.gender_match.data
+            player.gender_match = form.gender_match.data
+            player.team = form.team.data if hasattr(form, 'team') else None
+            player.email = form.email.data
+            player.line_preference = form.line_preference.data
+            player.active = form.active.data
+
+            # Handle user account
+            if form.create_account.data:
+                if player.user_account:
+                    # Update existing user account
+                    if form.username.data != player.user_account.username:
+                        player.user_account.username = form.username.data
+                    if form.password.data:
+                        player.user_account.set_password(form.password.data)
+                else:
+                    # Create new user account
+                    user = User(
+                        username=form.username.data,
+                        email=form.email.data,
+                        role='player',
+                        is_admin=False
+                    )
+                    user.set_password(form.password.data)
+                    db.session.add(user)
+                    db.session.flush()
+                    player.user_id = user.id
+            
+            db.session.commit()
+            flash(f'Player {player.name} has been updated!', 'success')
+            return redirect(url_for('team.index'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating player: {str(e)}', 'danger')
+    
+    return render_template('team/player_form.html', title='Edit Player', form=form, player=player)
 
 @bp.route('/delete_player/<int:player_id>', methods=['POST'])
 @login_required
@@ -140,7 +188,7 @@ def delete_player(player_id):
             {"player_id": player_id}
         )
 
-        # Now we can delete events
+        # Delete related records
         ClipPlayer.query.filter_by(player_id=player_id).delete()
         LineUp.query.filter_by(player_id=player_id).delete()
         Event.query.filter_by(receiver_id=player_id).update({Event.receiver_id: None})
@@ -150,6 +198,10 @@ def delete_player(player_id):
         
         if hasattr(player, 'session_rsvps'):
             SessionRSVP.query.filter_by(player_id=player_id).delete()
+
+        # Delete associated user account if it exists
+        if player.user_account:
+            db.session.delete(player.user_account)
 
         # Finally delete the player
         db.session.delete(player)
@@ -162,7 +214,6 @@ def delete_player(player_id):
         db.session.rollback()
         flash(f'Error deleting player: {str(e)}', 'danger')
         return redirect(url_for('team.index'))
-
 
 @bp.route('/player/<int:player_id>')
 @login_required

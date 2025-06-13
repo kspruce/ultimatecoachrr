@@ -4,10 +4,50 @@
 <div class="container">
     <h1>Debug: All Players</h1>
     <p>Total players: {{ players|length }}</p>
-    <ul>
-        {% for player in players %}
-        <li>{{ player.name }} (ID: {{ player.id }}, Jersey: {{ player.jersey_number }})</li>
-        {% endfor %}
-    </ul>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Jersey</th>
+                    <th>Position</th>
+                    <th>Line</th>
+                    <th>Gender</th>
+                    <th>Team</th>
+                    <th>Status</th>
+                    <th>User ID</th>
+                    <th>Lineups</th>
+                    <th>Events</th>
+                    <th>Pulls</th>
+                    <th>Clips</th>
+                    <th>Attendance</th>
+                    <th>RSVPs</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in players %}
+                <tr>
+                    <td>{{ player.id }}</td>
+                    <td>{{ player.name }}</td>
+                    <td>{{ player.jersey_number }}</td>
+                    <td>{{ player.position }}</td>
+                    <td>{{ player.line_preference }}</td>
+                    <td>{{ player.gender_match }}</td>
+                    <td>{{ player.team }}</td>
+                    <td>{{ 'Active' if player.active else 'Inactive' }}</td>
+                    <td>{{ player.user_id }}</td>
+                    <td>{{ player.lineups.count() }}</td>
+                    <td>{{ player.player_events.count() }}</td>
+                    <td>{{ player.pulls.count() }}</td>
+                    <td>{{ player.clip_appearances.count() }}</td>
+                    <td>{{ player.attendances.count() }}</td>
+                    <td>{{ player.session_rsvps.count() }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

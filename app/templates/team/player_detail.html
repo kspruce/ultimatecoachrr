@@ -5,9 +5,14 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>{{ player.name }}</h1>
+            {% if player.jersey_number %}
+                <h3>#{{ player.jersey_number }}</h3>
+            {% endif %}
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-primary">Edit Player</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-primary">Edit Player</a>
+            {% endif %}
             <a href="{{ url_for('team.index') }}" class="btn btn-secondary">Back to Roster</a>
         </div>
     </div>
@@ -34,10 +39,28 @@
                     {% if player.email %}
                     <p><strong>Email:</strong> <a href="mailto:{{ player.email }}">{{ player.email }}</a></p>
                     {% endif %}
+                    {% if player.phone %}
+                    <p><strong>Phone:</strong> {{ player.phone }}</p>
+                    {% endif %}
+                    {% if player.birth_date %}
+                    <p><strong>Birth Date:</strong> {{ player.birth_date.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
+                    {% if player.age %}
+                    <p><strong>Age:</strong> {{ player.age }}</p>
+                    {% endif %}
+                    {% if player.height %}
+                    <p><strong>Height:</strong> {{ player.height }}</p>
+                    {% endif %}
+                    {% if player.weight %}
+                    <p><strong>Weight:</strong> {{ player.weight }}</p>
+                    {% endif %}
+                    {% if player.notes %}
+                        <p><strong>Notes:</strong> {{ player.notes }}</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-8">
             <div class="card mb-4">
                 <div class="card-header">
@@ -47,11 +70,8 @@
                     <p><strong>Games Played:</strong> {{ player.games_played }}</p>
                     <p><strong>Points Played:</strong> {{ player.points_played }}</p>
                     
-                    <!-- We'll add more statistics here as we implement them -->
-                    <p class="text-muted">More detailed statistics will be available once games are recorded.</p>
-                    
                     <div class="mt-3">
-                        <a href="#" class="btn btn-outline-primary">View Full Statistics</a>
+                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}" class="btn btn-outline-primary">View Full Statistics</a>
                     </div>
                 </div>
             </div>
@@ -61,8 +81,19 @@
                     <h5>Recent Games</h5>
                 </div>
                 <div class="card-body">
-                    <!-- We'll populate this with actual game data later -->
-                    <p class="text-muted">Game history will be displayed once games are recorded.</p>
+                    {% if player.lineups %}
+                        <ul>
+                        {% for lineup in player.lineups.limit(5).all() %}
+                            <li>
+                                <a href="{{ url_for('game.detail', game_id=lineup.point.game.id) }}">
+                                    vs {{ lineup.point.game.opponent }} ({{ lineup.point.game.date.strftime('%Y-%m-%d') }})
+                                </a>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">Game history will be displayed once games are recorded.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -1,69 +1,62 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, DateField, TextAreaField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Email, Optional
+from wtforms import StringField, SelectField, BooleanField, SubmitField, PasswordField
+from wtforms.validators import DataRequired, Email, Optional, Length
 
 class PlayerForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])
-    jersey_number = StringField('Jersey Number')
+    email = StringField('Email', validators=[Optional(), Email()])  # Email is optional
+    jersey_number = StringField('Jersey Number', validators=[Optional()])
     position = SelectField('Position', choices=[
-        ('', 'Select...'),
+        ('', 'Select Position'),  # Add a placeholder
         ('handler', 'Handler'),
         ('cutter', 'Cutter'),
         ('hybrid', 'Hybrid')
     ])
-    height = StringField('Height')
-    weight = StringField('Weight')
-    # Remove the gender field
     gender_match = SelectField('Gender Match', choices=[
-        ('', 'Select...'),
+        ('', 'Select Gender'),  # Add a placeholder
         ('male', 'Male'),
         ('female', 'Female'),
+        ('other', 'Other')
+    ])
+    line_preference = SelectField('Line Preference', choices=[
+        ('', 'Select Line'),  # Add a placeholder
+        ('O-line', 'O-line'),
+        ('D-line', 'D-line'),
         ('both', 'Both')
     ])
     team = SelectField('Team', choices=[
-        ('', 'Select...'),
-        ('team1', 'Team 1'),
-        ('team2', 'Team 2')
-    ])
-    birth_date = DateField('Birth Date', format='%Y-%m-%d', validators=[Optional()])
-    email = StringField('Email', validators=[Optional(), Email()])
-    phone = StringField('Phone')
-    line_preference = SelectField('Line Preference', choices=[
-        ('', 'Select...'),
-        ('o-line', 'O-line'),
-        ('d-line', 'D-line'),
-        ('both', 'Both')
+        ('', 'Select Team'),  # Add a placeholder
+        ('A', 'Team A'),  # Replace with your actual teams
+        ('B', 'Team B'),
+        ('C', 'Team C')
     ])
     active = BooleanField('Active', default=True)
-    notes = TextAreaField('Notes')
+    
+    # User account fields
+    create_account = BooleanField('Create User Account')
+    username = StringField('Username', validators=[Optional(), Length(min=3, max=64)])
+    password = PasswordField('Password', validators=[Optional(), Length(min=6)])
+    
     submit = SubmitField('Save Player')
+
 
 class PlayerFilterForm(FlaskForm):
     position = SelectField('Position', choices=[
-        ('', 'All Positions'),
-        ('handler', 'Handler'),
+        ('', 'All'),
         ('cutter', 'Cutter'),
+        ('handler', 'Handler'),
         ('hybrid', 'Hybrid')
-    ], validators=[Optional()])
-    line_preference = SelectField('Line Preference', choices=[
-        ('', 'All Lines'),
-        ('o-line', 'O-line'),
-        ('d-line', 'D-line'),
+    ])
+    line_preference = SelectField('Line', choices=[
+        ('', 'All'),
+        ('O-line', 'O-Line'),
+        ('D-line', 'D-Line'),
         ('both', 'Both')
-    ], validators=[Optional()])
-    gender_match = SelectField('Gender Match', choices=[
+    ])
+    gender_match = SelectField('Gender', choices=[
         ('', 'All'),
         ('male', 'Male'),
-        ('female', 'Female'),
-        ('both', 'Both')
-    ], validators=[Optional()])
-    # Add this field
-    team = SelectField('Team', choices=[
-        ('', 'All Teams'),
-        ('team1', 'Team 1'),
-        ('team2', 'Team 2')
-        # Add more teams as needed
-    ], validators=[Optional()])
-    active_only = BooleanField('Active Players Only', default=True)
-    submit = SubmitField('Filter')
-
+        ('female', 'Female')
+    ])
+    team = SelectField('Team', choices=[('', 'All')])  # Dynamically populated in route
+    active_only = BooleanField('Active Only', default=True)
