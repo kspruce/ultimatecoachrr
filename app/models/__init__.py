@@ -22,8 +22,7 @@ from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
 
 # Video and Analysis models
-from app.models.clip import Clip, ClipTag, ClipTagRelation, ClipPlayer
-from app.models.annotation import ClipAnnotation
+from app.models.clip import Clip, ClipTag, ClipAnnotation
 from app.models.scouting import ScoutingReport
 
 # Statistics and Export models
@@ -60,8 +59,6 @@ __all__ = [
     # Video and Analysis models
     'Clip',
     'ClipTag',
-    'ClipTagRelation',
-    'ClipPlayer',
     'ClipAnnotation',
     'ScoutingReport',
     
