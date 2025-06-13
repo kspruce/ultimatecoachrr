@@ -12,7 +12,8 @@ class PlayerPointStats(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Update relationships to be more specific
-    player = db.relationship('Player', backref=db.backref('point_stats', lazy='dynamic'))
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    player = db.relationship("Player", back_populates="point_stats")  # Use back_populates
     point = db.relationship('Point', backref=db.backref('player_stats', lazy='dynamic'))
     
     def __repr__(self):
