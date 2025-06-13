@@ -1,50 +1,29 @@
 from app import create_app, db
 from sqlalchemy import text
 from app.models.theory import TheorySection
-from app.models.player import Player  # Import Player model
-from app.models.user import User  # Import User model
-from sqlalchemy.orm import configure_mappers  # Import configure_mappers
+from app.models.player import Player
+from app.models.user import User
+from sqlalchemy.orm import configure_mappers
 
 app = create_app()
 
 def create_initial_sections():
     with app.app_context():
-        # Check if sections already exist
         if TheorySection.query.first():
             print("Theory sections already exist, skipping creation.")
             return
 
         sections = [
-            {
-                'name': 'Defense',
-                'slug': 'defense',
-                'description': 'Master defensive techniques including footwork, positioning, forcing, and guarding resets.',
-                'order': 1
-            },
-            {
-                'name': 'Throwing',
-                'slug': 'throwing',
-                'description': 'Perfect your throwing technique: release points, angles and tilts, give and go, break side throws.',
-                'order': 2
-            },
-            {
-                'name': 'Cutting',
-                'slug': 'cutting',
-                'description': 'Learn cutting types, techniques, deep cutting, aerial contests, and triple threat positioning.',
-                'order': 3
-            },
-            {
-                'name': 'Handler Offense',
-                'slug': 'handler-offense',
-                'description': 'Develop handler movement: dump swing, resets, moment of attack, give-go offense, dishy huck, three handler offense.',
-                'order': 4
-            }
+            {'name': 'Defense', 'slug': 'defense', 'description': 'Master defensive techniques including footwork, positioning, forcing, and guarding resets.', 'order': 1},
+            {'name': 'Throwing', 'slug': 'throwing', 'description': 'Perfect your throwing technique: release points, angles and tilts, give and go, break side throws.', 'order': 2},
+            {'name': 'Cutting', 'slug': 'cutting', 'description': 'Learn cutting types, techniques, deep cutting, aerial contests, and triple threat positioning.', 'order': 3},
+            {'name': 'Handler Offense', 'slug': 'handler-offense', 'description': 'Develop handler movement: dump swing, resets, moment of attack, give-go offense, dishy huck, three handler offense.', 'order': 4}
         ]
-        
+
         for section_data in sections:
             section = TheorySection(**section_data)
             db.session.add(section)
-        
+
         try:
             db.session.commit()
             print("Successfully created initial theory sections!")
@@ -55,6 +34,7 @@ def create_initial_sections():
 def reset_database():
     with app.app_context():
         db.drop_all()
+        configure_mappers()  # Call before db.create_all()
         db.create_all()
 
         print("Reset database schema")
@@ -64,6 +44,7 @@ def reset_database():
         admin.set_password('password')
         db.session.add(admin)
 
+        # Create bonus user
         bonus = User(username='bonus', email='bonus@example.com', is_admin=False)
         bonus.set_password('bonusboys')
         db.session.add(bonus)
@@ -85,7 +66,7 @@ def reset_database():
 
         for player in test_players:
             db.session.add(player)
-        
+
         try:
             db.session.commit()
             print("Added test players.")
@@ -93,6 +74,7 @@ def reset_database():
             db.session.rollback()
             print(f"Error adding players: {str(e)}")
 
+        # Create theory sections
         create_initial_sections()
 
 
