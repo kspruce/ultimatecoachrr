@@ -127,15 +127,11 @@ def create_app(config_class=Config):
     
    
     # Import models
-    from app.models.user import User
-    from app.models.player import Player
-    from app.models.tournament import Tournament
-    from app.models.game import Game
-    from app.models.point import Point, LineUp
-    from app.models.event import Event, Pull
-    from app.models.clip import Clip, ClipTag
-    from app.models.annotation import ClipAnnotation
-    from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
+    from app.models import (
+       User, Player, Tournament, Game, Point, LineUp,
+       Event, Pull, Clip, ClipTag, ClipAnnotation,
+       SessionPlan, SessionComponent, SavedDrill, Attendance
+   )
     
         # Create upload directory in /tmp
     try:

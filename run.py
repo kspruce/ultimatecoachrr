@@ -1,7 +1,7 @@
 from app import create_app, db
 from app.models import (
     User, Player, Tournament, Game, Point, LineUp, Event, Pull,
-    Clip, ClipTag, ClipTagRelation, ClipPlayer, ClipAnnotation,
+    Clip, ClipTag, ClipAnnotation,
     ScoutingReport, SessionPlan, SessionComponent, Attendance, SavedDrill,
     PlayerPointStats, ExportLog
 )

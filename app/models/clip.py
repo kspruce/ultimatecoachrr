@@ -103,18 +103,3 @@ class ClipTag(db.Model):
         return f'<ClipTag {self.name}>'
 
 
-class ClipAnnotation(db.Model):
-    __tablename__ = 'clip_annotation'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), nullable=False)
-    text = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.Integer)  # timestamp within the clip
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationship
-    clip = db.relationship('Clip', back_populates='annotations')
-
-    def __repr__(self):
-        return f'<ClipAnnotation {self.id} for Clip {self.clip_id}>'
