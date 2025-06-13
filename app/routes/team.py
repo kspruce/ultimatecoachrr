@@ -188,8 +188,10 @@ def delete_player(player_id):
             {"player_id": player_id}
         )
 
-        # Delete related records
-        ClipPlayer.query.filter_by(player_id=player_id).delete()
+        # Delete related records - Updated to use new relationship pattern
+        # Remove player from clips (many-to-many relationship)
+        player.clips = []  # This will remove the associations without deleting clips
+        
         LineUp.query.filter_by(player_id=player_id).delete()
         Event.query.filter_by(receiver_id=player_id).update({Event.receiver_id: None})
         Event.query.filter_by(player_id=player_id).delete()

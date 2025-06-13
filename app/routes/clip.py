@@ -18,38 +18,30 @@ bp = Blueprint('clip', __name__, url_prefix='/clips')
 @login_required
 def index():
     form = ClipFilterForm()
-    delete_form = FlaskForm()  # Add this line
-    
+    delete_form = FlaskForm()
+
     # Get filter parameters
     game_id = request.args.get('game_id', type=int)
     tag_id = request.args.get('tag_id', type=int)
     player_id = request.args.get('player_id', type=int)
-    
-    # Set form values from query parameters
-    if game_id:
-        form.game_id.data = game_id
-    if tag_id:
-        form.tag_id.data = tag_id
-    if player_id:
-        form.player_id.data = player_id
-    
+
     # Build query based on filters
     query = Clip.query
-    
+
     if game_id:
         query = query.filter(Clip.game_id == game_id)
     if tag_id:
-        query = query.join(ClipTagRelation).filter(ClipTagRelation.tag_id == tag_id)
+        query = query.filter(Clip.tags.any(ClipTag.id == tag_id))
     if player_id:
-        query = query.join(ClipPlayer).filter(ClipPlayer.player_id == player_id)
-    
+        query = query.filter(Clip.players.any(Player.id == player_id))
+
     # Get clips and sort by creation date (newest first)
     clips = query.order_by(Clip.created_at.desc()).all()
-    
+
     return render_template('clip/index.html', 
                          clips=clips, 
                          form=form, 
-                         delete_form=delete_form)  # Add delete_form
+                         delete_form=delete_form)
 
 @bp.route('/game/<int:game_id>')
 @login_required
@@ -72,68 +64,32 @@ def point_clips(point_id):
 @admin_required
 def add_clip():
     form = ClipForm()
-    tags_exist = ClipTag.query.count() > 0
-
     if form.validate_on_submit():
-        video_source = form.video_source.data
-        video_link = form.youtube_link.data
-        
-        if video_source == 'youtube':
-            video_id = extract_youtube_id(video_link)
-            if not video_id:
-                flash('Invalid YouTube link. Please provide a valid YouTube URL.', 'danger')
-                return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
-            standard_link = f'https://www.youtube.com/watch?v={video_id}'
-        elif video_source == 'veo':
-            if not validate_veo_link(video_link):
-                flash('Invalid Veo link. Please provide a valid Veo URL.', 'danger')
-                return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
-            standard_link = video_link
-
         clip = Clip(
             title=form.title.data,
-            video_source=video_source,
-            youtube_link=standard_link,  # We'll keep using youtube_link field for now
-            game_id=form.game_id.data if form.game_id.data and form.game_id.data > 0 else None,
-            point_id=form.point_id.data if form.point_id.data and form.point_id.data > 0 else None,
+            video_source=form.video_source.data,
+            youtube_link=form.youtube_link.data,
+            game_id=form.game_id.data if form.game_id.data else None,
+            point_id=form.point_id.data if form.point_id.data else None,
             start_time=form.start_time.data,
             end_time=form.end_time.data,
             description=form.description.data
         )
-        
+
+        # Add tags and players using the new relationship pattern
+        if form.tags.data:
+            tags = ClipTag.query.filter(ClipTag.id.in_(form.tags.data)).all()
+            clip.tags = tags
+
+        if form.players.data:
+            players = Player.query.filter(Player.id.in_(form.players.data)).all()
+            clip.players = players
+
         db.session.add(clip)
         db.session.commit()
-        
-        # Add tags if selected
-        if form.tags.data:
-            for tag_id in form.tags.data:
-                tag_relation = ClipTagRelation(clip_id=clip.id, tag_id=tag_id)
-                db.session.add(tag_relation)
-        
-        # Add players if selected
-        if form.players.data:
-            for player_id in form.players.data:
-                player_relation = ClipPlayer(clip_id=clip.id, player_id=player_id)
-                db.session.add(player_relation)
-        
-        db.session.commit()
-        
+
         flash(f'Clip "{clip.title}" has been added!', 'success')
         return redirect(url_for('clip.index'))
-    
-    # Pre-select game and point if coming from game or point page
-    game_id = request.args.get('game_id', type=int)
-    point_id = request.args.get('point_id', type=int)
-    
-    if game_id:
-        form.game_id.data = game_id
-    if point_id:
-        point = Point.query.get(point_id)
-        if point:
-            form.game_id.data = point.game_id
-            form.point_id.data = point_id
-    
-    return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
 
 def validate_veo_link(url):
     """Validate Veo video URL"""
@@ -216,14 +172,14 @@ def edit_clip(clip_id):
 def delete_clip(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     title = clip.title
-    
-    # Delete related records
-    ClipTagRelation.query.filter_by(clip_id=clip.id).delete()
-    ClipPlayer.query.filter_by(clip_id=clip.id).delete()
+
+    # Clear relationships
+    clip.tags = []
+    clip.players = []
     
     db.session.delete(clip)
     db.session.commit()
-    
+
     flash(f'Clip "{title}" has been deleted!', 'success')
     return redirect(url_for('clip.index'))
 
