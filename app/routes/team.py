@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from flask_wtf import FlaskForm
+from sqlalchemy import text
 from app import db
 from app.models.player import Player
 from app.forms.team import PlayerForm, PlayerFilterForm
@@ -9,7 +9,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
-from sqlalchemy import text
+
 
 
 bp = Blueprint('team', __name__, url_prefix='/team')
@@ -127,13 +127,19 @@ def delete_player(player_id):
         player = Player.query.get_or_404(player_id)
         name = player.name
 
-        # Delete player_point_stats first
+        # Delete player_point_stats
         db.session.execute(
             text("DELETE FROM player_point_stats WHERE player_id = :player_id"),
             {"player_id": player_id}
         )
 
-        # Delete other related records
+        # Delete throws first (both as thrower and receiver)
+        db.session.execute(
+            text("DELETE FROM throw WHERE thrower_id = :player_id OR receiver_id = :player_id"),
+            {"player_id": player_id}
+        )
+
+        # Now we can delete events
         ClipPlayer.query.filter_by(player_id=player_id).delete()
         LineUp.query.filter_by(player_id=player_id).delete()
         Event.query.filter_by(receiver_id=player_id).update({Event.receiver_id: None})
@@ -144,7 +150,7 @@ def delete_player(player_id):
         if hasattr(player, 'session_rsvps'):
             SessionRSVP.query.filter_by(player_id=player_id).delete()
 
-        # Delete the player
+        # Finally delete the player
         db.session.delete(player)
         db.session.commit()
         
@@ -155,7 +161,6 @@ def delete_player(player_id):
         db.session.rollback()
         flash(f'Error deleting player: {str(e)}', 'danger')
         return redirect(url_for('team.index'))
-
 
 
 @bp.route('/player/<int:player_id>')
