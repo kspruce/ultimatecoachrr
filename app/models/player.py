@@ -42,12 +42,7 @@ class Player(db.Model):
     clip_appearances = db.relationship('ClipPlayer', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
     session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
-    point_stats = db.relationship(
-        "PlayerPointStats",
-        back_populates="player",  # Use back_populates
-        cascade="all, delete-orphan",
-        lazy='dynamic'
-    )
+    point_stats = db.relationship("PlayerPointStats", back_populates="point_stats", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f'<Player {self.name}>'
