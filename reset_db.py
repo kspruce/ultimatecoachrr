@@ -11,35 +11,19 @@ def print_status(message):
     """Helper function to print status messages"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
-def create_initial_sections():
-    """Create initial theory sections"""
-    if TheorySection.query.first():
-        print_status("Theory sections already exist, skipping creation.")
-        return
-
-    sections = [
-        {'name': 'Defense', 'slug': 'defense', 
-         'description': 'Master defensive techniques including footwork, positioning, forcing, and guarding resets.', 'order': 1},
-        {'name': 'Throwing', 'slug': 'throwing', 
-         'description': 'Perfect your throwing technique: release points, angles and tilts, give and go, break side throws.', 'order': 2},
-        {'name': 'Cutting', 'slug': 'cutting', 
-         'description': 'Learn cutting types, techniques, deep cutting, aerial contests, and triple threat positioning.', 'order': 3},
-        {'name': 'Handler Offense', 'slug': 'handler-offense', 
-         'description': 'Develop handler movement: dump swing, resets, moment of attack, give-go offense, dishy huck, three handler offense.', 'order': 4}
-    ]
-
-    for section_data in sections:
-        section = TheorySection(**section_data)
-        db.session.add(section)
-
-    db.session.commit()
-    print_status("Successfully created initial theory sections!")
+# Configure all mappers before creating tables
+@event.listens_for(mapper, 'after_configured')
+def receive_after_configured():
+    print_status("SQLAlchemy mappers configured")
 
 def reset_database():
     """Reset and initialize the database"""
     with app.app_context():
         try:
             print_status("Starting database reset...")
+            
+            # Configure mappers first
+            configure_mappers()
             
             # Drop and recreate all tables
             db.drop_all()
@@ -80,7 +64,34 @@ def reset_database():
             print_status(f"Added {len(test_players)} test players")
 
             # Create theory sections
-            create_initial_sections()
+            sections = [
+                {'name': 'Defense', 'slug': 'defense', 
+                 'description': 'Master defensive techniques including footwork, positioning, forcing, and guarding resets.', 'order': 1},
+                {'name': 'Throwing', 'slug': 'throwing', 
+                 'description': 'Perfect your throwing technique: release points, angles and tilts, give and go, break side throws.', 'order': 2},
+                {'name': 'Cutting', 'slug': 'cutting', 
+                 'description': 'Learn cutting types, techniques, deep cutting, aerial contests, and triple threat positioning.', 'order': 3},
+                {'name': 'Handler Offense', 'slug': 'handler-offense', 
+                 'description': 'Develop handler movement: dump swing, resets, moment of attack, give-go offense, dishy huck, three handler offense.', 'order': 4}
+            ]
+
+            for section_data in sections:
+                section = TheorySection(**section_data)
+                db.session.add(section)
+
+            db.session.commit()
+            print_status("Created theory sections")
+
+            # Create a test tournament
+            tournament = Tournament(
+                name="Test Tournament 2025",
+                start_date=datetime.now().date(),
+                location="Test Location",
+                season="2025"
+            )
+            db.session.add(tournament)
+            db.session.commit()
+            print_status("Created test tournament")
 
             # Verify the database
             print_status("\nVerifying database contents:")
@@ -100,10 +111,16 @@ def reset_database():
             for section in sections:
                 print_status(f"- {section.name} (slug: {section.slug})")
 
+            tournaments = Tournament.query.all()
+            print_status("\nTournaments:")
+            for tournament in tournaments:
+                print_status(f"- {tournament.name} ({tournament.season})")
+
             print_status("\nDatabase reset completed successfully!")
 
         except Exception as e:
             print_status(f"Error: {str(e)}")
+            db.session.rollback()
             sys.exit(1)
 
 if __name__ == "__main__":

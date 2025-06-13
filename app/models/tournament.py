@@ -11,8 +11,8 @@ class Tournament(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    games = db.relationship('Game', back_populates='tournament')
+    # Relationship with Game
+    games = db.relationship('Game', backref='tournament', lazy='dynamic')
     
     def __repr__(self):
         return f'<Tournament {self.name}>'
