@@ -6,7 +6,7 @@ from app.models.clip import Clip, ClipTag
 from app.models.game import Game
 from app.models.point import Point
 from app.models.player import Player
-from app.models.annotation import ClipAnnotation
+from app.models import ClipAnnotation 
 from app.forms.annotation import AnnotationForm
 from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
 import re

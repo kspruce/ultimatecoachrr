@@ -1,7 +1,7 @@
 from app import db
 from datetime import datetime
 
-# Association tables defined at module level
+# Association tables
 clip_tag_relation = db.Table('clip_tag_relation',
     db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('clip_tag.id'), primary_key=True),

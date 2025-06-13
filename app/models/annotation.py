@@ -30,16 +30,16 @@ def timestamp_to_seconds(timestamp):
 
 class ClipAnnotation(db.Model):
     __tablename__ = 'clip_annotation'
-    __table_args__ = {'extend_existing': True}  # Add this line
-    
+    __table_args__ = {'extend_existing': True}
+
     id = db.Column(db.Integer, primary_key=True)
     clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), nullable=False)
-    timestamp = db.Column(db.Integer)  # timestamp within the clip
+    timestamp = db.Column(db.Integer)
     event_type = db.Column(db.String(50))
     our_score = db.Column(db.Integer)
     their_score = db.Column(db.Integer)
-    offense = db.Column(db.String(20))  # horo, vert, flow
-    defense = db.Column(db.String(20))  # match_flick, match_backhand, match_middle, zone
+    offense = db.Column(db.String(20))
+    defense = db.Column(db.String(20))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -49,7 +49,6 @@ class ClipAnnotation(db.Model):
 
     @property
     def formatted_timestamp(self):
-        """Convert timestamp to HH:MM:SS format"""
         if self.timestamp is None:
             return ""
         hours = self.timestamp // 3600
