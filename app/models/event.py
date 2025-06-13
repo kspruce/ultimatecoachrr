@@ -20,7 +20,8 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_offensive = db.Column(db.Boolean, nullable=False, default=True)  # Track possession
-
+    point = db.relationship('Point', back_populates='events')
+    
     # Define valid event types
     VALID_EVENT_TYPES = [
         'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events

@@ -14,8 +14,8 @@ class Game(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    points = db.relationship('Point', backref='game', lazy='dynamic', cascade='all, delete-orphan')
-    clips = db.relationship('Clip', backref='game', lazy='dynamic', cascade='all, delete-orphan')
+    points = db.relationship('Point', back_populates='game', cascade='all, delete-orphan')
+    clips = db.relationship('Clip', back_populates='game', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Game vs {self.opponent}>'

@@ -37,7 +37,7 @@ class Throw(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    point = db.relationship('Point', backref='throws')
+    point = db.relationship('Point', back_populates='throws')
     thrower = db.relationship('Player', foreign_keys=[thrower_id], backref='throws_made')
     receiver = db.relationship('Player', foreign_keys=[receiver_id], backref='throws_received')
     throwing_event = db.relationship('Event', foreign_keys=[throwing_event_id])
