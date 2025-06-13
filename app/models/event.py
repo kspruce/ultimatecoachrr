@@ -69,9 +69,9 @@ class Pull(db.Model):
     is_inbounds = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Use backref instead of back_populates
-    point = db.relationship('Point', backref='pulls')
-    player = db.relationship('Player', backref='pulls')
+    # Relationships
+    point = db.relationship('Point', back_populates='pulls')
+    player = db.relationship('Player', back_populates='pulls')
 
     def __repr__(self):
         return f'<Pull by Player {self.player_id} in Point {self.point_id}>'

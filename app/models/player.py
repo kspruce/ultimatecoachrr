@@ -34,7 +34,7 @@ class Player(db.Model):
                                     foreign_keys='Event.receiver_id',
                                     back_populates='receiver',
                                     lazy='dynamic')
-    pulls = db.relationship('Pull', backref='player', lazy='dynamic', cascade='all, delete-orphan')
+    pulls = db.relationship('Pull', back_populates='player', lazy='dynamic', cascade='all, delete-orphan')
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
     session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
     point_stats = db.relationship('PlayerPointStats', back_populates='player', cascade='all, delete-orphan')
