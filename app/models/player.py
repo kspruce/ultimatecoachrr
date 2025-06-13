@@ -38,7 +38,15 @@ class Player(db.Model):
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
     session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
     point_stats = db.relationship('PlayerPointStats', back_populates='player', cascade='all, delete-orphan')
-
+    throws_made = db.relationship('Throw',
+                                foreign_keys='Throw.thrower_id',
+                                back_populates='thrower',
+                                lazy='dynamic')
+    throws_received = db.relationship('Throw',
+                                    foreign_keys='Throw.receiver_id',
+                                    back_populates='receiver',
+                                    lazy='dynamic')
+    
     def __repr__(self):
         return f'<Player {self.name}>'
 

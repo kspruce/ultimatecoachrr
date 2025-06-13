@@ -38,11 +38,15 @@ class Throw(db.Model):
     
     # Relationships
     point = db.relationship('Point', back_populates='throws')
-    thrower = db.relationship('Player', foreign_keys=[thrower_id], backref='throws_made')
-    receiver = db.relationship('Player', foreign_keys=[receiver_id], backref='throws_received')
+    thrower = db.relationship('Player', 
+                            foreign_keys=[thrower_id], 
+                            back_populates='throws_made')  # Change backref to back_populates
+    receiver = db.relationship('Player', 
+                             foreign_keys=[receiver_id], 
+                             back_populates='throws_received')  # Change backref to back_populates
     throwing_event = db.relationship('Event', foreign_keys=[throwing_event_id])
     receiving_event = db.relationship('Event', foreign_keys=[receiving_event_id])
-
+    
     def calculate_distance(self):
         """Calculate the distance of the throw"""
         if (self.x_start is not None and self.y_start is not None and 
