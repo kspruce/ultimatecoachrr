@@ -1,6 +1,9 @@
 from app import create_app, db
 from sqlalchemy import text
 from app.models.theory import TheorySection
+from app.models.player import Player  # Import Player model
+from app.models.user import User  # Import User model
+from sqlalchemy.orm import configure_mappers  # Import configure_mappers
 
 app = create_app()
 
@@ -51,39 +54,25 @@ def create_initial_sections():
 
 def reset_database():
     with app.app_context():
-        # Drop all tables
         db.drop_all()
-        
-        # Create all tables
         db.create_all()
-        
+
         print("Reset database schema")
-        
+
         # Create admin user
-        from app.models.user import User
-        admin = User(
-            username='admin',
-            email='admin@example.com',
-            is_admin=True
-        )
+        admin = User(username='admin', email='admin@example.com', is_admin=True)
         admin.set_password('password')
         db.session.add(admin)
 
-        # Create bonus user
-        bonus = User(
-            username='bonus',
-            email='bonus@example.com',
-            is_admin=False
-        )
+        bonus = User(username='bonus', email='bonus@example.com', is_admin=False)
         bonus.set_password('bonusboys')
         db.session.add(bonus)
 
         db.session.commit()
         print("Created admin user (username: admin, password: password)")
         print("Created bonus user (username: bonus, password: bonusboys)")
-        
+
         # Add test players
-        from app.models.player import Player
         test_players = [
             Player(name="Alice", jersey_number=1, position="handler", gender="female", gender_match="female", team="team1"),
             Player(name="Bob", jersey_number=2, position="cutter", gender="male", gender_match="male", team="team1"),
@@ -93,7 +82,7 @@ def reset_database():
             Player(name="Jona", jersey_number=8, position="cutter", gender="female", gender_match="female", team="team1"),
             Player(name="Mallory", jersey_number=10, position="handler", gender="female", gender_match="female", team="team1"),
         ]
-        
+
         for player in test_players:
             db.session.add(player)
         
@@ -104,12 +93,12 @@ def reset_database():
             db.session.rollback()
             print(f"Error adding players: {str(e)}")
 
-        # Create theory sections
         create_initial_sections()
 
 
 def verify_database():
     with app.app_context():
+        configure_mappers()  # Call configure_mappers here
         # Verify users
         from app.models.user import User
         users = User.query.all()
