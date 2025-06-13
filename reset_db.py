@@ -1,6 +1,4 @@
 from app import create_app, db
-from sqlalchemy import event
-from sqlalchemy.orm import Mapper  # Updated import
 from app.models import *
 from datetime import datetime
 import sys
@@ -11,20 +9,11 @@ def print_status(message):
     """Helper function to print status messages"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
-# Updated decorator to use Mapper instead of mapper
-@event.listens_for(Mapper, 'after_configured')
-def receive_after_configured():
-    print_status("SQLAlchemy mappers configured")
-
 def reset_database():
     """Reset and initialize the database"""
     with app.app_context():
         try:
             print_status("Starting database reset...")
-            
-            # Configure mappers first
-            from sqlalchemy.orm import configure_mappers
-            configure_mappers()
             
             # Drop and recreate all tables
             db.drop_all()
@@ -82,40 +71,6 @@ def reset_database():
 
             db.session.commit()
             print_status("Created theory sections")
-
-            # Create a test tournament
-            tournament = Tournament(
-                name="Test Tournament 2025",
-                start_date=datetime.now().date(),
-                location="Test Location",
-                season="2025"
-            )
-            db.session.add(tournament)
-            db.session.commit()
-            print_status("Created test tournament")
-
-            # Verify the database
-            print_status("\nVerifying database contents:")
-            
-            users = User.query.all()
-            print_status("\nUsers:")
-            for user in users:
-                print_status(f"- {user.username} (Admin: {user.is_admin})")
-
-            players = Player.query.all()
-            print_status("\nPlayers:")
-            for player in players:
-                print_status(f"- {player.name} (#{player.jersey_number})")
-
-            sections = TheorySection.query.all()
-            print_status("\nTheory Sections:")
-            for section in sections:
-                print_status(f"- {section.name} (slug: {section.slug})")
-
-            tournaments = Tournament.query.all()
-            print_status("\nTournaments:")
-            for tournament in tournaments:
-                print_status(f"- {tournament.name} ({tournament.season})")
 
             print_status("\nDatabase reset completed successfully!")
 
