@@ -115,9 +115,9 @@ def edit_clip(clip_id):
     tags_exist = ClipTag.query.count() > 0
     
     if request.method == 'GET':
-        # Pre-select tags and players
-        form.tags.data = [relation.tag_id for relation in clip.tags]
-        form.players.data = [relation.player_id for relation in clip.players]
+        # Pre-select tags and players using the new relationship pattern
+        form.tags.data = [tag.id for tag in clip.tags]
+        form.players.data = [player.id for player in clip.players]
         
         # If clip has a point, populate the point choices
         if clip.game_id:
@@ -125,38 +125,27 @@ def edit_clip(clip_id):
             form.point_id.choices = [(0, 'Select Point')] + [(p.id, f"Point {p.point_number}") for p in points]
     
     if form.validate_on_submit():
-        # Extract video ID from YouTube link
-        youtube_link = form.youtube_link.data
-        video_id = extract_youtube_id(youtube_link)
-        
-        if not video_id:
-            flash('Invalid YouTube link. Please provide a valid YouTube URL.', 'danger')
-            return render_template('clip/clip_form.html', form=form, title='Edit Clip', tags_exist=tags_exist)
-        
-        # Create standardized YouTube link
-        standard_link = f'https://www.youtube.com/watch?v={video_id}'
-        
         clip.title = form.title.data
         clip.game_id = form.game_id.data if form.game_id.data and form.game_id.data > 0 else None
         clip.point_id = form.point_id.data if form.point_id.data and form.point_id.data > 0 else None
-        clip.youtube_link = standard_link
+        clip.youtube_link = form.youtube_link.data
         clip.start_time = form.start_time.data
         clip.end_time = form.end_time.data
         clip.description = form.description.data
         
-        # Update tags
-        ClipTagRelation.query.filter_by(clip_id=clip.id).delete()
+        # Update tags using the new relationship pattern
         if form.tags.data:
-            for tag_id in form.tags.data:
-                tag_relation = ClipTagRelation(clip_id=clip.id, tag_id=tag_id)
-                db.session.add(tag_relation)
+            tags = ClipTag.query.filter(ClipTag.id.in_(form.tags.data)).all()
+            clip.tags = tags
+        else:
+            clip.tags = []
         
-        # Update players
-        ClipPlayer.query.filter_by(clip_id=clip.id).delete()
+        # Update players using the new relationship pattern
         if form.players.data:
-            for player_id in form.players.data:
-                player_relation = ClipPlayer(clip_id=clip.id, player_id=player_id)
-                db.session.add(player_relation)
+            players = Player.query.filter(Player.id.in_(form.players.data)).all()
+            clip.players = players
+        else:
+            clip.players = []
         
         db.session.commit()
         
@@ -336,8 +325,9 @@ def delete_tag(tag_id):
     tag = ClipTag.query.get_or_404(tag_id)
     name = tag.name
     
-    # Delete related records
-    ClipTagRelation.query.filter_by(tag_id=tag.id).delete()
+    # Clear relationships using the new pattern
+    for clip in tag.clips:
+        clip.tags.remove(tag)
     
     db.session.delete(tag)
     db.session.commit()

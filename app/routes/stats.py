@@ -8,6 +8,7 @@ from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.stats import PlayerPointStats#
 from app.models.throws import Throw
+from app.models.clip import Clip
 import json
 import math
 from app.utils.utils import admin_required
@@ -145,10 +146,13 @@ def get_player_base_stats(player, games=None):
         'offensive_points_played': 0,
         'defensive_points_played': 0,
         'offensive_conversion_rate': 0,
-        'defensive_conversion_rate': 0
+        'defensive_conversion_rate': 0,
+        
+        # Clip statistics
+        'clips': 0,
+        'highlight_plays': 0
     }
     
-   
     try:
         # Get points played
         lineup_query = LineUp.query.filter_by(player_id=player.id)
@@ -278,12 +282,25 @@ def get_player_base_stats(player, games=None):
         if stats['d_line_points_played'] > 0:
             stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['d_line_points_played']
 
+        # Get clips statistics using new relationship pattern
+        clips_query = player.clip_appearances
+        if games:
+            if isinstance(games, list):
+                game_ids = [g.id for g in games]
+                clips_query = clips_query.filter(Clip.game_id.in_(game_ids))
+            else:
+                clips_query = clips_query.filter(Clip.game_id == games.id)
+        
+        stats['clips'] = clips_query.count()
+        # You could add more clip-related statistics here if needed
+
     except Exception as e:
         print(f"Error getting stats for {player.name}: {str(e)}")
         import traceback
         traceback.print_exc()
     
     return stats
+
 
 
 
