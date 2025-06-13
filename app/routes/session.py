@@ -22,6 +22,7 @@ import base64
 from flask_wtf.csrf import CSRFProtect
 from app.utils.s3_utils import upload_file_to_s3, delete_file_from_s3
 from app.utils.storage import store_file
+from app.utils.utils import admin_required
 
 csrf = CSRFProtect()
 
@@ -372,6 +373,7 @@ def edit_component(component_id):
 
 @bp.route('/delete_component/<int:component_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_component(component_id):
     component = SessionComponent.query.get_or_404(component_id)
     session_id = component.session_id
@@ -386,6 +388,7 @@ def delete_component(component_id):
 # Attendance Routes
 @bp.route('/<int:session_id>/attendance', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def attendance(session_id):
     session = SessionPlan.query.get_or_404(session_id)
     form = AttendanceForm()
@@ -775,6 +778,7 @@ def detail(session_id):
 
 @bp.route('/edit/<int:session_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_session(session_id):
     """Edit an existing session"""
     session = SessionPlan.query.get_or_404(session_id)
@@ -805,6 +809,7 @@ def edit_session(session_id):
 
 @bp.route('/delete/<int:session_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_session(session_id):
     """Delete a session plan"""
     try:
@@ -850,6 +855,7 @@ def delete_session(session_id):
 
 @bp.route('/drills/edit/<int:drill_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_drill(drill_id):
     """Edit an existing drill"""
     drill = SavedDrill.query.get_or_404(drill_id)
@@ -882,6 +888,7 @@ def edit_drill(drill_id):
 
 @bp.route('/drills/delete/<int:drill_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_drill(drill_id):
     """Delete a drill (form-based deletion)"""
     drill = SavedDrill.query.get_or_404(drill_id)
@@ -904,33 +911,6 @@ def delete_drill(drill_id):
         flash('An error occurred while deleting the drill.', 'danger')
 
     return redirect(url_for('session.drills'))
-
-
-@bp.route('/test-delete/<int:drill_id>')
-def test_delete_page(drill_id):
-    return """
-    <script>
-    function testDelete(drillId) {
-        fetch(`/sessions/api/drills/${drillId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(JSON.stringify(data));
-            if (data.success) {
-                window.location.href = '/sessions/drills';
-            }
-        })
-        .catch(error => alert('Error: ' + error));
-    }
-    </script>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <button onclick="testDelete(""" + str(drill_id) + """)">Test Delete</button>
-    """
     
 @bp.errorhandler(401)
 def unauthorized_error(error):
