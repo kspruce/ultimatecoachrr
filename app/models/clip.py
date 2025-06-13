@@ -14,8 +14,13 @@ class Clip(db.Model):
     # Relationships
     game = db.relationship('Game', back_populates='clips')
     point = db.relationship('Point', back_populates='clips')
-    tags = db.relationship('ClipTag', secondary='clip_tag_relation', back_populates='clips')
-    players = db.relationship('Player', secondary='clip_player', back_populates='clip_appearances')
+    # Use backref for many-to-many relationship
+    tags = db.relationship('ClipTag', 
+                         secondary='clip_tag_relation',
+                         backref=db.backref('clips', lazy='dynamic'))
+    players = db.relationship('Player', 
+                            secondary='clip_player',
+                            backref=db.backref('clips', lazy='dynamic'))
     annotations = db.relationship('ClipAnnotation', back_populates='clip', cascade='all, delete-orphan')
 
     
@@ -72,15 +77,30 @@ class Clip(db.Model):
 
 
 class ClipTag(db.Model):
+    __tablename__ = 'clip_tag'
+    
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(50), nullable=False)
+    category = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Association table for Clip-Tag relationship
+    clip_tag_relation = db.Table('clip_tag_relation',
+        db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
+        db.Column('tag_id', db.Integer, db.ForeignKey('clip_tag.id'), primary_key=True),
+        db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    )
     
-    # Relationships
-    clips = db.relationship('ClipTagRelation', backref='tag', lazy='dynamic')
-    
+    # Association table for Clip-Player relationship
+    clip_player = db.Table('clip_player',
+        db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
+        db.Column('player_id', db.Integer, db.ForeignKey('player.id'), primary_key=True),
+        db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    )
+
     def __repr__(self):
         return f'<ClipTag {self.name}>'
+
 
 
 class ClipTagRelation(db.Model):

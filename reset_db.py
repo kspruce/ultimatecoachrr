@@ -72,6 +72,21 @@ def reset_database():
             db.session.commit()
             print_status("Created theory sections")
 
+            # Create some default clip tags
+            default_tags = [
+                {'name': 'Offense', 'category': 'phase'},
+                {'name': 'Defense', 'category': 'phase'},
+                {'name': 'Goal', 'category': 'outcome'},
+                {'name': 'Turnover', 'category': 'outcome'},
+            ]
+
+            for tag_data in default_tags:
+                tag = ClipTag(**tag_data)
+                db.session.add(tag)
+
+            db.session.commit()
+            print_status("Created default clip tags")
+
             print_status("\nDatabase reset completed successfully!")
 
         except Exception as e:
