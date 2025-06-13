@@ -1,5 +1,3 @@
-# app/models/__init__.py
-
 # Core models
 from app.models.user import User
 from app.models.player import Player
@@ -29,40 +27,14 @@ from app.models.scouting import ScoutingReport
 from app.models.stats import PlayerPointStats
 from app.models.export import ExportLog
 
-# Define which models should be available when importing from models
 __all__ = [
-    # Core models
-    'User',
-    'Player',
-    
-    # Drill and Session models
-    'SavedDrill',
-    'SessionPlan',
-    'SessionComponent',
-    'Attendance',
-    'SessionRSVP',
-    'Play',
-    'Formation',
-    'PlayTag',
-    'TheorySection',
-    'TheoryTopic',
-    'TheoryVideo',
-    
-    # Game and Tournament models
-    'Tournament',
-    'Game',
-    'Point',
-    'LineUp',
-    'Event',
-    'Pull',
-    
-    # Video and Analysis models
-    'Clip',
-    'ClipTag',
-    'ClipAnnotation',
+    'User', 'Player',
+    'SavedDrill', 'SessionPlan', 'SessionComponent', 'Attendance', 'SessionRSVP',
+    'Play', 'Formation', 'PlayTag',
+    'TheorySection', 'TheoryTopic', 'TheoryVideo',
+    'Tournament', 'Game', 'Point', 'LineUp',
+    'Event', 'Pull',
+    'Clip', 'ClipTag', 'ClipAnnotation',
     'ScoutingReport',
-    
-    # Statistics and Export models
-    'PlayerPointStats',
-    'ExportLog'
+    'PlayerPointStats', 'ExportLog'
 ]

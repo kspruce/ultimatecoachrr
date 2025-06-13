@@ -6,7 +6,6 @@ from app import db
 from app.models.player import Player
 from app.models.user import User
 from app.forms.team import PlayerForm, PlayerFilterForm
-from app.models.clip import ClipPlayer
 from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
