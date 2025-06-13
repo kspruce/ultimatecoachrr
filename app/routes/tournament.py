@@ -4,7 +4,7 @@ from app import db
 from app.models.tournament import Tournament
 from app.models.game import Game  # Add this import
 from app.forms.tournament import TournamentForm, TournamentFilterForm
-
+from app.utils.utils import admin_required
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -32,6 +32,7 @@ def index():
 
 @bp.route('/<int:tournament_id>')
 @login_required
+@admin_required
 def detail(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     # Change this line to order by Game.date instead of Tournament.start_date
@@ -41,6 +42,7 @@ def detail(tournament_id):
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add():
     form = TournamentForm()
     if form.validate_on_submit():
@@ -59,6 +61,7 @@ def add():
 
 @bp.route('/edit/<int:tournament_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     form = TournamentForm(obj=tournament)
@@ -78,6 +81,7 @@ def edit(tournament_id):
 
 @bp.route('/delete/<int:tournament_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     name = tournament.name

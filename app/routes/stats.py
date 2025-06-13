@@ -10,6 +10,7 @@ from app.models.stats import PlayerPointStats#
 from app.models.throws import Throw
 import json
 import math
+from app.utils.utils import admin_required
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
@@ -693,7 +694,6 @@ def index():
 
     except Exception as e:
         print(f"Error in index route: {str(e)}")
-        traceback.print_exc()
         flash(f"An error occurred: {str(e)}", "danger")
         return render_template('stats/index.html', **default_context)
 

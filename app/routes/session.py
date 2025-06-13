@@ -82,6 +82,7 @@ def index():
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_session():
     form = SessionPlanForm()
     
@@ -177,6 +178,7 @@ def drill_detail(drill_id):
 # Drill API Routes
 @bp.route('/api/drills', methods=['POST'])
 @login_required
+@admin_required
 def create_drill():
     """Create a new drill via API"""
     try:
@@ -293,6 +295,7 @@ def components(session_id):
 
 @bp.route('/<int:session_id>/add_component', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_component(session_id):
     session = SessionPlan.query.get_or_404(session_id)
     form = SessionComponentForm()
@@ -341,6 +344,7 @@ def add_component(session_id):
 
 @bp.route('/edit_component/<int:component_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_component(component_id):
     component = SessionComponent.query.get_or_404(component_id)
     session = SessionPlan.query.get(component.session_id)
@@ -721,6 +725,7 @@ def search_drills():
 
 @bp.route('/api/drills/duplicate/<int:drill_id>', methods=['POST'])
 @login_required
+@admin_required
 def duplicate_drill(drill_id):
     """Create a copy of an existing drill"""
     original_drill = SavedDrill.query.get_or_404(drill_id)

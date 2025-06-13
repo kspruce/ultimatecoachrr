@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 import os
 import json
 from app.utils.storage import store_file, delete_file, get_file_url
+from app.utils.utils import admin_required
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
@@ -31,6 +32,7 @@ def index():
 # Play Routes
 @bp.route('/plays/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_play():
     if not current_user.is_admin:
         flash('You do not have permission to access this page.', 'danger')
@@ -75,6 +77,7 @@ def view_play(play_id):
 
 @bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_play(play_id):
     play = Play.query.get_or_404(play_id)
     form = PlayForm(obj=play)
@@ -126,6 +129,7 @@ def edit_play(play_id):
 # Formation Routes
 @bp.route('/formations/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_formation():
     form = FormationForm()
     if form.validate_on_submit():
@@ -167,6 +171,7 @@ def internal_error(error):
 
 @bp.route('/formations/edit/<int:formation_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_formation(formation_id):
     if not current_user.is_admin:
         flash('You do not have permission to access this page.', 'danger')
@@ -198,6 +203,7 @@ def edit_formation(formation_id):
 # Also add a delete route for formations
 @bp.route('/plays/<int:play_id>/delete', methods=['POST'])  # Changed to match JS URL
 @login_required
+@admin_required
 def delete_play(play_id):
     if not current_user.is_admin:
         return jsonify({
@@ -227,6 +233,7 @@ def delete_play(play_id):
 
 @bp.route('/formations/<int:formation_id>/delete', methods=['POST'])  # Changed to match JS URL
 @login_required
+@admin_required
 def delete_formation(formation_id):
     if not current_user.is_admin:
         return jsonify({

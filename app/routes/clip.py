@@ -10,6 +10,7 @@ from app.models.annotation import ClipAnnotation
 from app.forms.annotation import AnnotationForm
 from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
 import re
+from app.utils.utils import admin_required
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
@@ -68,6 +69,7 @@ def point_clips(point_id):
 
 @bp.route('/add_clip', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_clip():
     form = ClipForm()
     tags_exist = ClipTag.query.count() > 0
@@ -148,6 +150,7 @@ def get_veo_embed_url(url):
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_clip(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     form = ClipForm(obj=clip)
@@ -209,6 +212,7 @@ def edit_clip(clip_id):
 
 @bp.route('/delete/<int:clip_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_clip(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     title = clip.title
@@ -240,6 +244,7 @@ def view_clip(clip_id):
 
 @bp.route('/add_annotation/<int:clip_id>', methods=['POST'])
 @login_required
+@admin_required
 def add_annotation(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     form = AnnotationForm()
@@ -275,6 +280,7 @@ def add_annotation(clip_id):
 
 @bp.route('/edit_annotation/<int:annotation_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_annotation(annotation_id):
     annotation = ClipAnnotation.query.get_or_404(annotation_id)
     form = AnnotationForm(obj=annotation)
@@ -306,6 +312,7 @@ def edit_annotation(annotation_id):
 
 @bp.route('/delete_annotation/<int:annotation_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_annotation(annotation_id):
     annotation = ClipAnnotation.query.get_or_404(annotation_id)
     clip_id = annotation.clip_id
@@ -324,6 +331,7 @@ def tags():
 
 @bp.route('/tags/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_tag():
     form = ClipTagForm()
     
@@ -345,6 +353,7 @@ def add_tag():
 
 @bp.route('/tags/edit/<int:tag_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_tag(tag_id):
     tag = ClipTag.query.get_or_404(tag_id)
     form = ClipTagForm(obj=tag)
@@ -366,6 +375,7 @@ def edit_tag(tag_id):
 
 @bp.route('/tags/delete/<int:tag_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_tag(tag_id):
     tag = ClipTag.query.get_or_404(tag_id)
     name = tag.name
