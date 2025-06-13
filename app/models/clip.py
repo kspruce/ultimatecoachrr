@@ -5,19 +5,19 @@ class Clip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=True)
-    video_source = db.Column(db.String(20), nullable=False, default='youtube')
-    title = db.Column(db.String(100), nullable=False)
-    youtube_link = db.Column(db.String(200), nullable=False)
-    start_time = db.Column(db.Integer, nullable=True)
-    end_time = db.Column(db.Integer, nullable=True)
-    description = db.Column(db.Text, nullable=True)
+    title = db.Column(db.String(100))
+    start_time = db.Column(db.Integer)  # in seconds
+    end_time = db.Column(db.Integer)    # in seconds
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
-    tags = db.relationship('ClipTagRelation', backref='clip', lazy='dynamic', cascade='all, delete-orphan')
-    players = db.relationship('ClipPlayer', backref='clip', lazy='dynamic', cascade='all, delete-orphan')
-    annotations = db.relationship('ClipAnnotation', backref='clip', lazy='dynamic', cascade='all, delete-orphan')
+    game = db.relationship('Game', back_populates='clips')
+    point = db.relationship('Point', back_populates='clips')
+    tags = db.relationship('ClipTag', secondary='clip_tag_relation', back_populates='clips')
+    players = db.relationship('Player', secondary='clip_player', back_populates='clip_appearances')
+    annotations = db.relationship('ClipAnnotation', back_populates='clip', cascade='all, delete-orphan')
+
     
     def __repr__(self):
         return f'<Clip {self.title}>'

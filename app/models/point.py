@@ -25,7 +25,7 @@ class Point(db.Model):
     events = db.relationship('Event', back_populates='point', cascade='all, delete-orphan')
     pulls = db.relationship('Pull', back_populates='point', cascade='all, delete-orphan')
     clips = db.relationship('Clip', back_populates='point')
-    point_stats = db.relationship("PlayerPointStats", back_populates="point")
+    point_stats = db.relationship('PlayerPointStats', back_populates='point')
 
     def __repr__(self):
         return f'<Point {self.point_number} in Game {self.game_id}>'

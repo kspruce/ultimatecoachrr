@@ -13,10 +13,11 @@ class Game(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Use back_populates to match Tournament model
+    # Relationships
     tournament = db.relationship('Tournament', back_populates='games')
     points = db.relationship('Point', back_populates='game', cascade='all, delete-orphan')
     clips = db.relationship('Clip', back_populates='game', cascade='all, delete-orphan')
+
     
     def __repr__(self):
         return f'<Game vs {self.opponent}>'
