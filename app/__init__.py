@@ -116,8 +116,8 @@ def create_app(config_class=Config):
     from app.routes.scouting import bp as scouting_bp
     app.register_blueprint(scouting_bp)
 
-    from app.routes.drill_routes import drill_bp
-    app.register_blueprint(drill_bp)
+    #from app.routes.drill_routes import drill_bp
+    #app.register_blueprint(drill_bp)
 
     from app.routes.playbook import bp as playbook_bp
     app.register_blueprint(playbook_bp)
