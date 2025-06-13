@@ -23,6 +23,7 @@ from app.models.throws import Throw
 # Video and Analysis models
 from app.models.clip import Clip, ClipTag
 from app.models.annotation import ClipAnnotation
+from app.models.scouting import ScoutingReport
 
 # Statistics and Export models
 from app.models.stats import PlayerPointStats
@@ -35,6 +36,6 @@ __all__ = [
     'TheorySection', 'TheoryTopic', 'TheoryVideo',
     'Tournament', 'Game', 'Point', 'LineUp',
     'Event', 'Pull',
-    'Clip', 'ClipTag', 'ClipAnnotation',
+    'Clip', 'ClipTag', 'ClipAnnotation', 'ScoutingReport',
     'PlayerPointStats', 'ExportLog'
 ]
