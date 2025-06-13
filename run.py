@@ -165,8 +165,6 @@ def make_shell_context():
         'Pull': Pull,
         'Clip': Clip,
         'ClipTag': ClipTag,
-        'ClipTagRelation': ClipTagRelation,
-        'ClipPlayer': ClipPlayer,
         'ClipAnnotation': ClipAnnotation,
         'ScoutingReport': ScoutingReport,
         'SessionPlan': SessionPlan,
