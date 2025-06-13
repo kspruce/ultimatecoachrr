@@ -21,9 +21,8 @@ class Point(db.Model):
 
     # Relationships
     game = db.relationship('Game', back_populates='points')
-    lineups = db.relationship('LineUp', backref='point')  # Changed to backref
+    lineups = db.relationship('LineUp', backref='point')
     events = db.relationship('Event', back_populates='point', cascade='all, delete-orphan')
-    pulls = db.relationship('Pull', back_populates='point', cascade='all, delete-orphan')
     clips = db.relationship('Clip', back_populates='point')
     point_stats = db.relationship('PlayerPointStats', back_populates='point')
 
