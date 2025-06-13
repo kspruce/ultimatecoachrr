@@ -94,8 +94,10 @@
                             </td>
                             <td>
                                 <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">Delete</button>
-                                
+                                {% if current_user.is_admin %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">Delete</button>
+                                {% endif %}
+
                                 <!-- Delete Confirmation Modal -->
                                 <div class="modal fade" id="deleteModal{{ player.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ player.id }}" aria-hidden="true">
                                     <div class="modal-dialog">
@@ -105,12 +107,26 @@
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                Are you sure you want to delete {{ player.name }}?
+                                                <p>Are you sure you want to delete {{ player.name }}?</p>
+                                                {% if player.lineups.count() > 0 or player.player_events.count() > 0 %}
+                                                <div class="alert alert-warning">
+                                                    Warning: This will also delete:
+                                                    <ul class="mb-0">
+                                                        {% if player.lineups.count() > 0 %}
+                                                            <li>{{ player.lineups.count() }} lineup entries</li>
+                                                        {% endif %}
+                                                        {% if player.player_events.count() > 0 %}
+                                                            <li>{{ player.player_events.count() }} game events</li>
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                                {% endif %}
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{{ url_for('team.delete_player', player_id=player.id) }}" method="post">
-                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                <form action="{{ url_for('team.delete_player', player_id=player.id) }}" method="POST">
+                                                    {{ csrf_form.csrf_token }}
+                                                    <button type="submit" class="btn btn-danger">Delete Player</button>
                                                 </form>
                                             </div>
                                         </div>

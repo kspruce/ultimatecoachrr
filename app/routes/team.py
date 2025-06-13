@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
+from flask_wtf import FlaskForm
 from app import db
 from app.models.player import Player
 from app.forms.team import PlayerForm, PlayerFilterForm
@@ -8,7 +9,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
-from flask_wtf import FlaskForm
+
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 
@@ -16,7 +17,6 @@ bp = Blueprint('team', __name__, url_prefix='/team')
 @login_required
 def index():
     form = PlayerFilterForm()
-    delete_form = FlaskForm()  # Add this for CSRF protection
     
     # Get filter parameters
     position = request.args.get('position', '')
@@ -53,12 +53,13 @@ def index():
     # Get players and sort by jersey number
     players = query.order_by(Player.jersey_number).all()
     
-    # Debug output
-    print(f"Found {len(players)} players")
-    for player in players:
-        print(f"Player: {player.name}, Jersey: {player.jersey_number}")
+    # Create a form instance for CSRF token
+    csrf_form = FlaskForm()
     
-    return render_template('team/index.html', players=players, form=form,delete_form=delete_form)
+    return render_template('team/index.html', 
+                         players=players, 
+                         form=form,
+                         csrf_form=csrf_form)  # Pass the CSRF form
 
 
 
@@ -121,9 +122,13 @@ def edit_player(player_id):
 @login_required
 @admin_required
 def delete_player(player_id):
+    if not request.form.get('csrf_token'):
+        flash('CSRF token missing. Please try again.', 'danger')
+        return redirect(url_for('team.index'))
+
     try:
         player = Player.query.get_or_404(player_id)
-        name = player.name  # Store name before deletion
+        name = player.name
 
         # Delete related records
         ClipPlayer.query.filter_by(player_id=player_id).delete()
@@ -147,6 +152,7 @@ def delete_player(player_id):
         db.session.rollback()
         flash(f'Error deleting player: {str(e)}', 'danger')
         return redirect(url_for('team.index'))
+
 
 
 @bp.route('/player/<int:player_id>')
