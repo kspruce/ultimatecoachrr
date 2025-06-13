@@ -20,9 +20,10 @@ class Point(db.Model):
     force_direction = db.Column(db.String(10))
 
     # Relationships
-    lineups = db.relationship('LineUp', backref='point', lazy='dynamic', cascade='all, delete-orphan')
-    events = db.relationship('Event', backref='point', lazy='dynamic', cascade='all, delete-orphan')
-    pulls = db.relationship('Pull', backref='point', lazy='dynamic', cascade='all, delete-orphan')
+    lineups = db.relationship('LineUp', back_populates='point', cascade='all, delete-orphan')
+    events = db.relationship('Event', back_populates='point', cascade='all, delete-orphan')
+    pulls = db.relationship('Pull', back_populates='point', cascade='all, delete-orphan')
+    clips = db.relationship('Clip', back_populates='point')
     clips = db.relationship('Clip', backref='point', lazy='dynamic')
     point_stats = db.relationship("PlayerPointStats", back_populates="point") # Added relationship
 

@@ -1,9 +1,22 @@
 from app import create_app, db
-from sqlalchemy import text
+from sqlalchemy import text, event
+from sqlalchemy.orm import configure_mappers, mapper
 from app.models.theory import TheorySection
 from app.models.player import Player
 from app.models.user import User
-from sqlalchemy.orm import configure_mappers
+from app.models.point import Point
+from app.models.stats import PlayerPointStats
+
+# Flag to prevent multiple calls to configure_mappers
+_configured_mappers = False
+
+# Decorator to delay relationship configuration until after mappers are configured
+@event.listens_for(mapper, "after_configured")
+def setup_mappers():
+    global _configured_mappers
+    if not _configured_mappers:
+        configure_mappers()
+        _configured_mappers = True
 
 app = create_app()
 
@@ -31,11 +44,11 @@ def create_initial_sections():
             db.session.rollback()
             print(f"Error creating theory sections: {str(e)}")
 
+
 def reset_database():
     with app.app_context():
         db.drop_all()
-        configure_mappers()  # Call before db.create_all()
-        db.create_all()
+        db.create_all()  # Create tables after dropping
 
         print("Reset database schema")
 
@@ -49,7 +62,7 @@ def reset_database():
         bonus.set_password('bonusboys')
         db.session.add(bonus)
 
-        db.session.commit()
+        db.session.commit()  # Commit users
         print("Created admin user (username: admin, password: password)")
         print("Created bonus user (username: bonus, password: bonusboys)")
 
@@ -66,7 +79,6 @@ def reset_database():
 
         for player in test_players:
             db.session.add(player)
-
         try:
             db.session.commit()
             print("Added test players.")
@@ -74,7 +86,6 @@ def reset_database():
             db.session.rollback()
             print(f"Error adding players: {str(e)}")
 
-        # Create theory sections
         create_initial_sections()
 
 
