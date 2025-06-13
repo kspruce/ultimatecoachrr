@@ -23,9 +23,10 @@ class Point(db.Model):
     lineups = db.relationship('LineUp', back_populates='point', cascade='all, delete-orphan')
     events = db.relationship('Event', back_populates='point', cascade='all, delete-orphan')
     pulls = db.relationship('Pull', back_populates='point', cascade='all, delete-orphan')
-    clips = db.relationship('Clip', back_populates='point')
     clips = db.relationship('Clip', backref='point', lazy='dynamic')
     point_stats = db.relationship("PlayerPointStats", back_populates="point") # Added relationship
+    # Add this to the Point model in point.py
+    throws = db.relationship('Throw', back_populates='point')
 
     def __repr__(self):
         return f'<Point {self.point_number} in Game {self.game_id}>'
