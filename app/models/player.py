@@ -25,7 +25,7 @@ class Player(db.Model):
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
     user_account = db.relationship('User', back_populates='player_profile', uselist=False)
-    lineups = db.relationship('LineUp', backref='player', lazy='dynamic', cascade='all, delete-orphan')
+    lineups = db.relationship('LineUp', back_populates='player', lazy='dynamic', cascade='all, delete-orphan')
     player_events = db.relationship('Event', 
                                   foreign_keys='Event.player_id',
                                   back_populates='player',
@@ -38,7 +38,6 @@ class Player(db.Model):
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
     session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
     point_stats = db.relationship('PlayerPointStats', back_populates='player', cascade='all, delete-orphan')
-
 
     def __repr__(self):
         return f'<Player {self.name}>'
