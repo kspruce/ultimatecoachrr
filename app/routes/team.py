@@ -9,6 +9,7 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
+from sqlalchemy import text
 
 
 bp = Blueprint('team', __name__, url_prefix='/team')
@@ -122,15 +123,17 @@ def edit_player(player_id):
 @login_required
 @admin_required
 def delete_player(player_id):
-    if not request.form.get('csrf_token'):
-        flash('CSRF token missing. Please try again.', 'danger')
-        return redirect(url_for('team.index'))
-
     try:
         player = Player.query.get_or_404(player_id)
         name = player.name
 
-        # Delete related records
+        # Delete player_point_stats first
+        db.session.execute(
+            text("DELETE FROM player_point_stats WHERE player_id = :player_id"),
+            {"player_id": player_id}
+        )
+
+        # Delete other related records
         ClipPlayer.query.filter_by(player_id=player_id).delete()
         LineUp.query.filter_by(player_id=player_id).delete()
         Event.query.filter_by(receiver_id=player_id).update({Event.receiver_id: None})
