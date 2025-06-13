@@ -1,7 +1,7 @@
 from app import create_app, db
-from sqlalchemy import text, event
-from sqlalchemy.orm import configure_mappers, mapper
-from app.models import *  # Import all models from __init__.py
+from sqlalchemy import event
+from sqlalchemy.orm import Mapper  # Updated import
+from app.models import *
 from datetime import datetime
 import sys
 
@@ -11,8 +11,8 @@ def print_status(message):
     """Helper function to print status messages"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
-# Configure all mappers before creating tables
-@event.listens_for(mapper, 'after_configured')
+# Updated decorator to use Mapper instead of mapper
+@event.listens_for(Mapper, 'after_configured')
 def receive_after_configured():
     print_status("SQLAlchemy mappers configured")
 
@@ -23,6 +23,7 @@ def reset_database():
             print_status("Starting database reset...")
             
             # Configure mappers first
+            from sqlalchemy.orm import configure_mappers
             configure_mappers()
             
             # Drop and recreate all tables

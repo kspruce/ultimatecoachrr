@@ -14,6 +14,7 @@ class Game(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
+    tournament = db.relationship('Tournament', back_populates='games')
     points = db.relationship('Point', back_populates='game', cascade='all, delete-orphan')
     clips = db.relationship('Clip', back_populates='game', cascade='all, delete-orphan')
     
