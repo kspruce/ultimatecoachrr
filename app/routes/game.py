@@ -1,12 +1,14 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
+from sqlalchemy import text
 from app import db
 from app.models.game import Game
 from app.models.tournament import Tournament
 from app.forms.game import GameForm, GameFilterForm
 from app.models.point import Point, LineUp
 from app.models.player import Player
+from app.models.event import Event, Pull
 from app.utils.utils import admin_required
 
 bp = Blueprint('game', __name__, url_prefix='/games')
@@ -153,19 +155,57 @@ def delete(game_id):
     try:
         game = Game.query.get_or_404(game_id)
         opponent = game.opponent
-        
-        # Check if game has points or clips
-        if game.points.count() > 0 or game.clips.count() > 0:
-            message = f'Cannot delete game against {opponent} because it has points or clips associated with it.'
-            if request.is_json:
-                return jsonify({'success': False, 'message': message}), 400
-            flash(message, 'danger')
-            return redirect(url_for('game.detail', game_id=game.id))
-        
+
+        # Delete all related data for each point
+        for point in game.points:
+            # Delete throws associated with events in this point
+            db.session.execute(
+                text("DELETE FROM throw WHERE point_id = :point_id"),
+                {"point_id": point.id}
+            )
+            
+            # Delete player point stats
+            db.session.execute(
+                text("DELETE FROM player_point_stats WHERE point_id = :point_id"),
+                {"point_id": point.id}
+            )
+
+            # Delete events
+            Event.query.filter_by(point_id=point.id).delete()
+            
+            # Delete pulls
+            Pull.query.filter_by(point_id=point.id).delete()
+            
+            # Delete lineups
+            LineUp.query.filter_by(point_id=point.id).delete()
+
+        # Delete all points
+        Point.query.filter_by(game_id=game_id).delete()
+
+        # Delete clips if any
+        if hasattr(game, 'clips'):
+            for clip in game.clips:
+                # Delete clip tags
+                db.session.execute(
+                    text("DELETE FROM clip_tag_relation WHERE clip_id = :clip_id"),
+                    {"clip_id": clip.id}
+                )
+                # Delete clip players
+                db.session.execute(
+                    text("DELETE FROM clip_player WHERE clip_id = :clip_id"),
+                    {"clip_id": clip.id}
+                )
+            # Delete clips
+            db.session.execute(
+                text("DELETE FROM clip WHERE game_id = :game_id"),
+                {"game_id": game_id}
+            )
+
+        # Finally delete the game
         db.session.delete(game)
         db.session.commit()
         
-        message = f'Game against {opponent} has been deleted!'
+        message = f'Game against {opponent} and all associated data has been deleted!'
         if request.is_json:
             return jsonify({'success': True, 'message': message})
             
@@ -178,7 +218,7 @@ def delete(game_id):
         if request.is_json:
             return jsonify({'success': False, 'message': message}), 500
         flash(message, 'danger')
-        return redirect(url_for('game.detail', game_id=game.id))
+        return redirect(url_for('game.detail', game_id=game_id))
 
 @bp.route('/<int:game_id>/update_players', methods=['POST'])
 @login_required
