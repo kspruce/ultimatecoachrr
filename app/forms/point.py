@@ -29,7 +29,7 @@ class PointForm(FlaskForm):
     ], validators=[DataRequired()])
     duration = IntegerField('Duration (seconds)', validators=[Optional(), NumberRange(min=0)])
     timestamp_in_video = IntegerField('Timestamp in Video (seconds)', validators=[Optional(), NumberRange(min=0)])
-    # Replace SelectMultipleField with FlexibleSelectMultipleField
+    # Use FlexibleSelectMultipleField instead of SelectMultipleField
     players = FlexibleSelectMultipleField('Players on Line', coerce=int, validators=[Optional()])
     gender_ratio = SelectField('Gender Ratio', choices=[
         ('4-3', '4 MMP - 3 FMP'),
@@ -50,6 +50,7 @@ class PointForm(FlaskForm):
         self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
                                for p in Player.query.filter_by(active=True).order_by(Player.jersey_number).all()]
 
+# Add the PullForm class back to avoid import errors
 class PullForm(FlaskForm):
     point_id = HiddenField('Point ID')
     player_id = SelectField('Puller', coerce=int, validators=[DataRequired()])

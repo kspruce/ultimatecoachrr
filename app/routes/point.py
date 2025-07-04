@@ -259,6 +259,8 @@ def add_point(game_id):
     if request.method == 'POST':
         # Get the selected players from the form data
         selected_players_str = request.form.get('players', '')
+        print(f"DEBUG: Raw players field value: '{selected_players_str}'")
+        
         if selected_players_str:
             try:
                 # Convert comma-separated string to list of integers
@@ -267,6 +269,9 @@ def add_point(game_id):
                 
                 # Set the players field in the form data
                 form.players.data = selected_players
+                
+                # Also set the hidden field
+                form.players_hidden.data = selected_players_str
             except ValueError as e:
                 print(f"DEBUG: Error converting player IDs: {e}")
                 form.players.data = []
@@ -276,9 +281,16 @@ def add_point(game_id):
     
     if form.validate_on_submit():
         try:
+            # Get player IDs from the hidden field if it exists
+            selected_players = []
+            if form.players_hidden.data:
+                selected_players = [int(pid) for pid in form.players_hidden.data.split(',') if pid]
+            elif form.players.data:
+                selected_players = form.players.data
+                
             # Check if we have exactly 7 players
-            if len(form.players.data) != 7:
-                flash(f'You must select exactly 7 players. You selected {len(form.players.data)}.', 'danger')
+            if len(selected_players) != 7:
+                flash(f'You must select exactly 7 players. You selected {len(selected_players)}.', 'danger')
                 return render_template('point/point_form.html',
                                      form=form,
                                      game=game,
@@ -478,25 +490,7 @@ def delete_point(point_id):
     flash(f'Point {point_number} has been deleted!', 'success')
     return redirect(url_for('point.game_points', game_id=game_id))
 
-@bp.route('/add_pull/<int:point_id>', methods=['GET', 'POST'])
-@login_required
-def add_pull(point_id):
-    point = Point.query.get_or_404(point_id)
-    form = PullForm(point=point)
-    
-    if form.validate_on_submit():
-        pull = Pull(
-            point_id=point_id,
-            player_id=form.player_id.data,
-            is_inbounds=form.is_inbounds.data
-        )
-        db.session.add(pull)
-        db.session.commit()
-        
-        flash('Pull has been recorded!', 'success')
-        return redirect(url_for('stat.record_events', point_id=point_id))
-    
-    return render_template('point/pull_form.html', form=form, point=point)
+
 
 @bp.route('/<int:point_id>')
 @login_required
