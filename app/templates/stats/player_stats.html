@@ -584,8 +584,10 @@ function createRadarCharts() {
         // Defensive stats
         blocks: {{ stats.blocks|default(0) }},
         stalls: {{ stats.stalls|default(0) }},
+        shutdowns: {{ stats.shutdowns|default(0) }}, // Add shutdown stat
         d_line_plus_minus: {{ stats.d_line_plus_minus|default(0) }},
         d_line_points_played: {{ stats.d_line_points_played|default(0) }},
+        o_line_points_played: {{ stats.o_line_points_played|default(0) }},
         
         // Calculate hucks (throws over 20m)
         hucks: {{ stats.hucks|default(0) }}
@@ -597,6 +599,29 @@ function createRadarCharts() {
         // Calculate derived metrics
         const totalThrows = stats.throws || 1; // Avoid division by zero
         const totalCatches = stats.catches || 1;
+        const oLinePoints = Math.max(1, stats.o_line_points_played); // Avoid division by zero
+        const dLinePoints = Math.max(1, stats.d_line_points_played); // Avoid division by zero
+        
+        // Calculate per-point statistics for offensive stats
+        const perPointOffensive = {
+            assists: stats.assists / oLinePoints,
+            hockey_assists: stats.hockey_assists / oLinePoints,
+            goals: stats.goals / oLinePoints,
+            hucks: stats.hucks / oLinePoints,
+            throws: stats.throws / oLinePoints,
+        };
+        
+        // Calculate per-point statistics for defensive stats
+        const perPointDefensive = {
+            blocks: stats.blocks / dLinePoints,
+            stalls: stats.stalls / dLinePoints,
+            shutdowns: stats.shutdowns / dLinePoints,
+            turnovers_forced: (stats.blocks + stats.stalls) / dLinePoints,
+            plus_minus: (stats.d_line_plus_minus + 10) / dLinePoints, // Adjust for negative values
+        };
+        
+        console.log('Per-point offensive stats:', perPointOffensive);
+        console.log('Per-point defensive stats:', perPointDefensive);
         
         // Normalize values for radar chart (0-100 scale)
         const normalizeValue = (value, max) => Math.min(100, (value / max) * 100);
@@ -608,24 +633,24 @@ function createRadarCharts() {
             data: {
                 labels: [
                     'Completion %', 
-                    'Assists', 
-                    'Hockey Assists',
-                    'Goals',
+                    'Assists/Point', 
+                    'Hockey Assists/Point',
+                    'Goals/Point',
                     'Avg Distance',
-                    'Hucks',
-                    'Throw Volume',
+                    'Hucks/Point',
+                    'Throws/Point',
                     'Catch Rate'
                 ],
                 datasets: [{
                     label: 'Offensive Stats',
                     data: [
                         stats.completion_rate,
-                        normalizeValue(stats.assists, 10),
-                        normalizeValue(stats.hockey_assists, 5),
-                        normalizeValue(stats.goals, 10),
+                        normalizeValue(perPointOffensive.assists, 0.5),
+                        normalizeValue(perPointOffensive.hockey_assists, 0.3),
+                        normalizeValue(perPointOffensive.goals, 0.5),
                         normalizeValue(stats.avg_throw_distance, 30),
-                        normalizeValue(stats.hucks, 20),
-                        normalizeValue(stats.throws, 100),
+                        normalizeValue(perPointOffensive.hucks, 0.5),
+                        normalizeValue(perPointOffensive.throws, 5),
                         stats.catch_rate
                     ],
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -657,12 +682,12 @@ function createRadarCharts() {
                             label: function(context) {
                                 const originalValues = [
                                     stats.completion_rate.toFixed(1) + '%',
-                                    stats.assists + ' assists',
-                                    stats.hockey_assists + ' hockey assists',
-                                    stats.goals + ' goals',
+                                    perPointOffensive.assists.toFixed(2) + ' assists/point',
+                                    perPointOffensive.hockey_assists.toFixed(2) + ' hockey assists/point',
+                                    perPointOffensive.goals.toFixed(2) + ' goals/point',
                                     stats.avg_throw_distance.toFixed(1) + 'm',
-                                    stats.hucks + ' hucks',
-                                    stats.throws + ' throws',
+                                    perPointOffensive.hucks.toFixed(2) + ' hucks/point',
+                                    perPointOffensive.throws.toFixed(1) + ' throws/point',
                                     stats.catch_rate.toFixed(1) + '%'
                                 ];
                                 return originalValues[context.dataIndex];
@@ -681,20 +706,20 @@ function createRadarCharts() {
             type: 'radar',
             data: {
                 labels: [
-                    'Blocks', 
-                    'D-Line +/-', 
-                    'Stalls',
-                    'Turnovers Forced',
-                    'Defensive Points'
+                    'Blocks/Point', 
+                    'D-Line +/-/Point', 
+                    'Stalls/Point',
+                    'Shutdowns/Point',
+                    'Turnovers Forced/Point'
                 ],
                 datasets: [{
                     label: 'Defensive Stats',
                     data: [
-                        normalizeValue(stats.blocks, 10),
-                        normalizeValue(stats.d_line_plus_minus + 10, 20), // Adjust for negative values
-                        normalizeValue(stats.stalls, 5),
-                        normalizeValue(stats.blocks + stats.stalls, 15), // Approximation of forced turnovers
-                        normalizeValue(stats.d_line_points_played, 50)
+                        normalizeValue(perPointDefensive.blocks, 0.5),
+                        normalizeValue(perPointDefensive.plus_minus, 1.0),
+                        normalizeValue(perPointDefensive.stalls, 0.3),
+                        normalizeValue(perPointDefensive.shutdowns, 0.3),
+                        normalizeValue(perPointDefensive.turnovers_forced, 0.8)
                     ],
                     backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderColor: 'rgba(255, 99, 132, 1)',
@@ -724,11 +749,11 @@ function createRadarCharts() {
                         callbacks: {
                             label: function(context) {
                                 const originalValues = [
-                                    stats.blocks + ' blocks',
-                                    stats.d_line_plus_minus.toFixed(1) + ' +/-',
-                                    stats.stalls + ' stalls',
-                                    (stats.blocks + stats.stalls) + ' forced turnovers',
-                                    stats.d_line_points_played + ' points'
+                                    perPointDefensive.blocks.toFixed(2) + ' blocks/point',
+                                    perPointDefensive.plus_minus.toFixed(2) + ' +/-/point',
+                                    perPointDefensive.stalls.toFixed(2) + ' stalls/point',
+                                    perPointDefensive.shutdowns.toFixed(2) + ' shutdowns/point',
+                                    perPointDefensive.turnovers_forced.toFixed(2) + ' turnovers forced/point'
                                 ];
                                 return originalValues[context.dataIndex];
                             }
@@ -743,6 +768,7 @@ function createRadarCharts() {
         console.error('Error creating radar charts:', error);
     }
 }
+
 
 // Visualization functions
 function createPERGauge() {

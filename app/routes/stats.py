@@ -847,6 +847,12 @@ def player_stats(player_id):
     #add hucks to player stats
     stats['hucks'] = calculate_hucks(player, games)
     
+    # Add shutdowns calculation (if not already included)
+    stats['shutdowns'] = count_events(
+        Event.query.filter_by(player_id=player.id),
+        ['shutdown']
+    )
+    
     # Get player's game history
     player_games = []
     games_query = Game.query
