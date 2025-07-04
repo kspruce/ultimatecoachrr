@@ -5,6 +5,10 @@
 <!-- Load D3.js from CDN -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+<!-- 07-2025 -- Add Chart.js and Radar plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js"></script>
+
 <style>
     .field-container {
         position: relative;
@@ -52,6 +56,20 @@
     .nav-tabs .nav-link.active {
         color: #007bff;
         font-weight: bold;
+    }
+<!-- Add Radar style -->
+   .radar-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
     }
 </style>
 {% endblock %}
@@ -329,7 +347,36 @@
             </div>
         </div>
     </div>
-
+ 
+    <!-- Radar Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Offensive Radar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="radar-container">
+                        <canvas id="offensiveRadar"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Defensive Radar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="radar-container">
+                        <canvas id="defensiveRadar"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        
     <!-- Throw Visualizations -->
     <div class="row mb-4">
         <div class="col-12">
@@ -822,6 +869,194 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Add radar chart initialization
+function initializeRadarCharts() {
+    // Get player stats from the template
+    const stats = {
+        // Offensive stats
+        throws: {{ stats.throws|default(0) }},
+        completions: {{ stats.completions|default(0) }},
+        completion_rate: {{ stats.completion_rate|default(0) }},
+        assists: {{ stats.assists|default(0) }},
+        hockey_assists: {{ stats.hockey_assists|default(0) }},
+        goals: {{ stats.goals|default(0) }},
+        throwaways: {{ stats.throwaways|default(0) }},
+        drops: {{ stats.drops|default(0) }},
+        avg_throw_distance: {{ stats.avg_throw_distance|default(0) }},
+        
+        // Defensive stats
+        blocks: {{ stats.blocks|default(0) }},
+        stalls: {{ stats.stalls|default(0) }},
+        d_line_plus_minus: {{ stats.d_line_plus_minus|default(0) }},
+        
+        // Calculate hucks (throws over 20m)
+        hucks: {{ throw_vectors|selectattr('distance', 'ge', 20)|list|length }}
+    };
+    
+    // Calculate derived metrics
+    const totalThrows = stats.throws || 1; // Avoid division by zero
+    const totalCatches = stats.catches || 1;
+    
+    // Normalize values for radar chart (0-100 scale)
+    const normalizeValue = (value, max) => Math.min(100, (value / max) * 100);
+    
+    // Create offensive radar chart
+    const offensiveCtx = document.getElementById('offensiveRadar').getContext('2d');
+    const offensiveRadar = new Chart(offensiveCtx, {
+        type: 'radar',
+        data: {
+            labels: [
+                'Completion %', 
+                'Assists', 
+                'Hockey Assists',
+                'Goals',
+                'Avg Distance',
+                'Hucks',
+                'Throw Volume',
+                'Catch Rate'
+            ],
+            datasets: [{
+                label: 'Offensive Stats',
+                data: [
+                    stats.completion_rate,
+                    normalizeValue(stats.assists, 10),
+                    normalizeValue(stats.hockey_assists, 5),
+                    normalizeValue(stats.goals, 10),
+                    normalizeValue(stats.avg_throw_distance, 30),
+                    normalizeValue(stats.hucks, 20),
+                    normalizeValue(stats.throws, 100),
+                    stats.catch_rate
+                ],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100,
+                    ticks: {
+                        stepSize: 20
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const originalValues = [
+                                stats.completion_rate.toFixed(1) + '%',
+                                stats.assists + ' assists',
+                                stats.hockey_assists + ' hockey assists',
+                                stats.goals + ' goals',
+                                stats.avg_throw_distance.toFixed(1) + 'm',
+                                stats.hucks + ' hucks',
+                                stats.throws + ' throws',
+                                stats.catch_rate.toFixed(1) + '%'
+                            ];
+                            return originalValues[context.dataIndex];
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Create defensive radar chart
+    const defensiveCtx = document.getElementById('defensiveRadar').getContext('2d');
+    const defensiveRadar = new Chart(defensiveCtx, {
+        type: 'radar',
+        data: {
+            labels: [
+                'Blocks', 
+                'D-Line +/-', 
+                'Stalls',
+                'Turnovers Forced',
+                'Defensive Points'
+            ],
+            datasets: [{
+                label: 'Defensive Stats',
+                data: [
+                    normalizeValue(stats.blocks, 10),
+                    normalizeValue(stats.d_line_plus_minus + 10, 20), // Adjust for negative values
+                    normalizeValue(stats.stalls, 5),
+                    normalizeValue(stats.blocks + stats.stalls, 15), // Approximation of forced turnovers
+                    normalizeValue(stats.d_line_points_played, 50)
+                ],
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100,
+                    ticks: {
+                        stepSize: 20
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const originalValues = [
+                                stats.blocks + ' blocks',
+                                stats.d_line_plus_minus.toFixed(1) + ' +/-',
+                                stats.stalls + ' stalls',
+                                (stats.blocks + stats.stalls) + ' forced turnovers',
+                                stats.d_line_points_played + ' points'
+                            ];
+                            return originalValues[context.dataIndex];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Add to main initialization
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded');
+    console.log('Visualization data:', vizData);
+    
+    if (typeof d3 === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://d3js.org/d3.v7.min.js';
+        script.onload = function() {
+            initializeVisualizations();
+            setupTabHandlers();
+            initializeRadarCharts(); // Add radar charts initialization
+        };
+        document.head.appendChild(script);
+    } else {
+        initializeVisualizations();
+        setupTabHandlers();
+        initializeRadarCharts(); // Add radar charts initialization
+    }
+});
 </script>
 {% endblock %}
 

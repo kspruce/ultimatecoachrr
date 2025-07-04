@@ -843,7 +843,10 @@ def player_stats(player_id):
     if stats['points_played'] > 0:
         team_avgs = calculate_team_averages(games)
         stats['per'] = calculate_per(player, games, team_avgs)
-
+    
+    #add hucks to player stats
+    stats['hucks'] = calculate_hucks(player, games)
+    
     # Get player's game history
     player_games = []
     games_query = Game.query
@@ -1326,3 +1329,28 @@ def debug_stats(player_id):
             'is_offensive': e.is_offensive
         } for e in events]
     })
+
+
+### 07/2025 Update Radar Chart
+
+def calculate_hucks(player, games=None):
+    """Calculate number of hucks (throws over 20m)"""
+    query = Throw.query.filter_by(thrower_id=player.id)
+    
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        query = query.filter(Throw.point_id.in_(point_ids))
+    
+    # Count throws with distance > 20m
+    hucks = 0
+    for throw in query.all():
+        distance = throw.calculate_distance()
+        if distance and distance > 20:
+            hucks += 1
+    
+    return hucks
+
+
