@@ -874,12 +874,46 @@ document.head.appendChild(style);
 function initializeRadarCharts() {
     // Check if Chart is defined
     if (typeof Chart === 'undefined') {
-        console.error('Chart.js is not loaded yet. Will retry in 100ms...');
-        setTimeout(initializeRadarCharts, 100);
+        console.log('Chart.js is not loaded yet. Loading Chart.js dynamically...');
+        
+        // Keep track of retry attempts
+        if (!window.chartLoadAttempts) {
+            window.chartLoadAttempts = 1;
+        } else {
+            window.chartLoadAttempts++;
+            if (window.chartLoadAttempts > 3) {
+                console.error('Failed to load Chart.js after multiple attempts');
+                return;
+            }
+        }
+        
+        // Load Chart.js dynamically
+        const chartScript = document.createElement('script');
+        chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+        chartScript.onload = function() {
+            console.log('Chart.js loaded successfully');
+            // Load Radar plugin after Chart.js is loaded
+            const radarPlugin = document.createElement('script');
+            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js';
+            radarPlugin.onload = function() {
+                console.log('Radar plugin loaded successfully');
+                // Wait a moment for everything to initialize
+                setTimeout(function() {
+                    createRadarCharts();
+                }, 100);
+            };
+            document.head.appendChild(radarPlugin);
+        };
+        document.head.appendChild(chartScript);
         return;
     }
     
-    console.log('Chart.js is loaded, creating radar charts...');
+    createRadarCharts();
+}
+
+// Separate function to create the actual charts
+function createRadarCharts() {
+    console.log('Creating radar charts...');
     
     // Get player stats from the template
     const stats = {
@@ -906,169 +940,166 @@ function initializeRadarCharts() {
         hucks: {{ throw_vectors|selectattr('distance', 'ge', 20)|list|length }}
     };
     
-    // Calculate derived metrics
-    const totalThrows = stats.throws || 1; // Avoid division by zero
-    const totalCatches = stats.catches || 1;
-    
-    // Normalize values for radar chart (0-100 scale)
-    const normalizeValue = (value, max) => Math.min(100, (value / max) * 100);
-    
-    // Create offensive radar chart
-    const offensiveCtx = document.getElementById('offensiveRadar').getContext('2d');
-    const offensiveRadar = new Chart(offensiveCtx, {
-        type: 'radar',
-        data: {
-            labels: [
-                'Completion %', 
-                'Assists', 
-                'Hockey Assists',
-                'Goals',
-                'Avg Distance',
-                'Hucks',
-                'Throw Volume',
-                'Catch Rate'
-            ],
-            datasets: [{
-                label: 'Offensive Stats',
-                data: [
-                    stats.completion_rate,
-                    normalizeValue(stats.assists, 10),
-                    normalizeValue(stats.hockey_assists, 5),
-                    normalizeValue(stats.goals, 10),
-                    normalizeValue(stats.avg_throw_distance, 30),
-                    normalizeValue(stats.hucks, 20),
-                    normalizeValue(stats.throws, 100),
-                    stats.catch_rate
+    try {
+        // Check if elements exist
+        const offensiveCanvas = document.getElementById('offensiveRadar');
+        const defensiveCanvas = document.getElementById('defensiveRadar');
+        
+        if (!offensiveCanvas || !defensiveCanvas) {
+            console.error('Canvas elements not found');
+            return;
+        }
+        
+        // Calculate derived metrics
+        const totalThrows = stats.throws || 1; // Avoid division by zero
+        const totalCatches = stats.catches || 1;
+        
+        // Normalize values for radar chart (0-100 scale)
+        const normalizeValue = (value, max) => Math.min(100, (value / max) * 100);
+        
+        // Create offensive radar chart
+        const offensiveCtx = offensiveCanvas.getContext('2d');
+        const offensiveRadar = new Chart(offensiveCtx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Completion %', 
+                    'Assists', 
+                    'Hockey Assists',
+                    'Goals',
+                    'Avg Distance',
+                    'Hucks',
+                    'Throw Volume',
+                    'Catch Rate'
                 ],
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                pointRadius: 4
-            }]
-        },
-        options: {
-            scales: {
-                r: {
-                    angleLines: {
-                        display: true
-                    },
-                    suggestedMin: 0,
-                    suggestedMax: 100,
-                    ticks: {
-                        stepSize: 20
-                    }
-                }
+                datasets: [{
+                    label: 'Offensive Stats',
+                    data: [
+                        stats.completion_rate,
+                        normalizeValue(stats.assists, 10),
+                        normalizeValue(stats.hockey_assists, 5),
+                        normalizeValue(stats.goals, 10),
+                        normalizeValue(stats.avg_throw_distance, 30),
+                        normalizeValue(stats.hucks, 20),
+                        normalizeValue(stats.throws, 100),
+                        stats.catch_rate
+                    ],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    pointRadius: 4
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const originalValues = [
-                                stats.completion_rate.toFixed(1) + '%',
-                                stats.assists + ' assists',
-                                stats.hockey_assists + ' hockey assists',
-                                stats.goals + ' goals',
-                                stats.avg_throw_distance.toFixed(1) + 'm',
-                                stats.hucks + ' hucks',
-                                stats.throws + ' throws',
-                                stats.catch_rate.toFixed(1) + '%'
-                            ];
-                            return originalValues[context.dataIndex];
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const originalValues = [
+                                    stats.completion_rate.toFixed(1) + '%',
+                                    stats.assists + ' assists',
+                                    stats.hockey_assists + ' hockey assists',
+                                    stats.goals + ' goals',
+                                    stats.avg_throw_distance.toFixed(1) + 'm',
+                                    stats.hucks + ' hucks',
+                                    stats.throws + ' throws',
+                                    stats.catch_rate.toFixed(1) + '%'
+                                ];
+                                return originalValues[context.dataIndex];
+                            }
                         }
                     }
                 }
             }
-        }
-    });
-    
-    // Create defensive radar chart
-    const defensiveCtx = document.getElementById('defensiveRadar').getContext('2d');
-    const defensiveRadar = new Chart(defensiveCtx, {
-        type: 'radar',
-        data: {
-            labels: [
-                'Blocks', 
-                'D-Line +/-', 
-                'Stalls',
-                'Turnovers Forced',
-                'Defensive Points'
-            ],
-            datasets: [{
-                label: 'Defensive Stats',
-                data: [
-                    normalizeValue(stats.blocks, 10),
-                    normalizeValue(stats.d_line_plus_minus + 10, 20), // Adjust for negative values
-                    normalizeValue(stats.stalls, 5),
-                    normalizeValue(stats.blocks + stats.stalls, 15), // Approximation of forced turnovers
-                    normalizeValue(stats.d_line_points_played, 50)
+        });
+        
+        console.log('Offensive radar chart created');
+        
+        // Create defensive radar chart
+        const defensiveCtx = defensiveCanvas.getContext('2d');
+        const defensiveRadar = new Chart(defensiveCtx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Blocks', 
+                    'D-Line +/-', 
+                    'Stalls',
+                    'Turnovers Forced',
+                    'Defensive Points'
                 ],
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                pointRadius: 4
-            }]
-        },
-        options: {
-            scales: {
-                r: {
-                    angleLines: {
-                        display: true
-                    },
-                    suggestedMin: 0,
-                    suggestedMax: 100,
-                    ticks: {
-                        stepSize: 20
-                    }
-                }
+                datasets: [{
+                    label: 'Defensive Stats',
+                    data: [
+                        normalizeValue(stats.blocks, 10),
+                        normalizeValue(stats.d_line_plus_minus + 10, 20), // Adjust for negative values
+                        normalizeValue(stats.stalls, 5),
+                        normalizeValue(stats.blocks + stats.stalls, 15), // Approximation of forced turnovers
+                        normalizeValue(stats.d_line_points_played, 50)
+                    ],
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                    pointRadius: 4
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const originalValues = [
-                                stats.blocks + ' blocks',
-                                stats.d_line_plus_minus.toFixed(1) + ' +/-',
-                                stats.stalls + ' stalls',
-                                (stats.blocks + stats.stalls) + ' forced turnovers',
-                                stats.d_line_points_played + ' points'
-                            ];
-                            return originalValues[context.dataIndex];
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const originalValues = [
+                                    stats.blocks + ' blocks',
+                                    stats.d_line_plus_minus.toFixed(1) + ' +/-',
+                                    stats.stalls + ' stalls',
+                                    (stats.blocks + stats.stalls) + ' forced turnovers',
+                                    stats.d_line_points_played + ' points'
+                                ];
+                                return originalValues[context.dataIndex];
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        
+        console.log('Defensive radar chart created');
+    } catch (error) {
+        console.error('Error creating radar charts:', error);
+    }
 }
 
-// Add to main initialization
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded');
-    console.log('Visualization data:', vizData);
-    
-    if (typeof d3 === 'undefined') {
-        const script = document.createElement('script');
-        script.src = 'https://d3js.org/d3.v7.min.js';
-        script.onload = function() {
-            initializeVisualizations();
-            setupTabHandlers();
-            initializeRadarCharts(); // Add radar charts initialization
-        };
-        document.head.appendChild(script);
-    } else {
-        initializeVisualizations();
-        setupTabHandlers();
-        initializeRadarCharts(); // Add radar charts initialization
-    }
-});
 </script>
 {% endblock %}
 
