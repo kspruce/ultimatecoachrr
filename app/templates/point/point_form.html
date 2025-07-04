@@ -151,8 +151,8 @@
                     <form method="post" novalidate id="point-form">
                         {{ form.hidden_tag() }}
                         
-                        <!-- Hidden field to store selected players -->
-                        {{ form.players_hidden(id="players-hidden-input") }}
+                        <!-- Make sure the name attribute is set correctly -->
+                        <input type="hidden" name="players_hidden" id="players-hidden-input" value="">
 
                         <!-- Basic Point Info -->
                         <div class="row mb-3">
@@ -478,6 +478,8 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
+        console.log("Document ready, initializing player selection form...");
+        
         // Initialize DataTables for stats
         const statsTable = $('#player-stats-table').DataTable({
             "order": [[1, "desc"]], // Sort by points played by default
@@ -533,7 +535,7 @@
             const searchText = $(this).val().toLowerCase();
             
             // Filter both tables
-            $('#mmp-player-table .player-row, #fmp-player-table .player-row').each(function() { // More specific selectors
+            $('#mmp-player-table .player-row, #fmp-player-table .player-row').each(function() {
                 const name = $(this).find('td:eq(2)').text().toLowerCase();
                 const jersey = $(this).find('td:eq(1)').text().toLowerCase();
                 
@@ -544,6 +546,17 @@
                 }
             });
         });
+        
+        // Function to update debug information
+        function updateDebugInfo() {
+            const selectedValue = $('#players-hidden-input').val();
+            $('#debug-players-value').text(selectedValue || 'None');
+            
+            const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
+            $('#debug-players-count').text(selectedCount);
+            
+            console.log("Debug info updated. Selected players:", selectedValue);
+        }
         
         // Gender ratio tracking and player selection
         function updateGenderCounts() {
@@ -583,34 +596,26 @@
                     .html(`${mmpCount} MMP + ${fmpCount} FMP = 7/7 (perfect!)`);
             }
             
-            // Update the hidden input with selected player IDs
+            // CRITICAL FIX: Update the hidden input with selected player IDs
             const selectedPlayerIds = $('.player-checkbox:checked').map(function() {
                 return $(this).val();
             }).get();
             
-            // Update the hidden input - IMPORTANT: Make sure this ID matches the one in the form
+            // Set the value to the hidden input
             $('#players-hidden-input').val(selectedPlayerIds.join(','));
             
-            // Update the preview
+            // Update the preview text
             $('#selected-players-preview').text(selectedPlayerIds.join(',') || 'None');
             
-            console.log("Selected players:", selectedPlayerIds.join(','));
+            console.log("Selected players updated:", selectedPlayerIds.join(','));
             
             // Update debug information
             updateDebugInfo();
         }
         
-        // Function to update debug information
-        function updateDebugInfo() {
-            const selectedValue = $('#players-hidden-input').val();
-            $('#debug-players-value').text(selectedValue || 'None');
-            
-            const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
-            $('#debug-players-count').text(selectedCount);
-        }
-        
         // Update when checkboxes change
         $(document).on('change', '.player-checkbox', function() {
+            console.log("Player checkbox changed");
             const totalChecked = $('.player-checkbox:checked').length;
             
             // Toggle row highlighting
@@ -623,32 +628,54 @@
                 alert('You can only select 7 players for a line!');
             }
             
+            // CRITICAL FIX: Directly update the hidden input here as well
+            const selectedPlayerIds = $('.player-checkbox:checked').map(function() {
+                return $(this).val();
+            }).get();
+            
+            $('#players-hidden-input').val(selectedPlayerIds.join(','));
+            console.log("Player selection changed. New value:", $('#players-hidden-input').val());
+            
             updateGenderCounts();
         });
         
         // Update when gender ratio changes
         $('#gender_ratio').on('change', function() {
+            console.log("Gender ratio changed");
             updateGenderCounts();
         });
         
         // Form submission validation
         $('#point-form').on('submit', function(e) {
+            console.log("Form submission attempted");
+            
+            // CRITICAL FIX: Make sure the hidden input is updated one last time before submission
+            const selectedPlayerIds = $('.player-checkbox:checked').map(function() {
+                return $(this).val();
+            }).get();
+            
+            $('#players-hidden-input').val(selectedPlayerIds.join(','));
+            
             const selectedPlayers = $('#players-hidden-input').val();
-            console.log("Form submitted");
-            console.log("Selected players in hidden input:", selectedPlayers);
+            console.log("Form submitted, players_hidden value:", selectedPlayers);
+            
+            // Log all form data for debugging
+            console.log("Form data:", $(this).serialize());
             
             const totalChecked = $('.player-checkbox:checked').length;
             
             // If no players are selected, prevent submission
-            if (!selectedPlayers || totalChecked === 0) {
+            if (!selectedPlayers || selectedPlayers.trim() === '') {
                 e.preventDefault();
                 alert("No players selected. Please select 7 players before submitting.");
+                console.log("Form submission prevented: No players selected");
                 return false;
             }
             
             if (totalChecked !== 7) {
                 e.preventDefault();
                 alert('You must select exactly 7 players for a line!');
+                console.log("Form submission prevented: Wrong number of players");
                 return false;
             }
             
@@ -663,14 +690,12 @@
             if (mmpCount !== requiredMMP || fmpCount !== requiredFMP) {
                 e.preventDefault();
                 alert(`Selected players don't match the required gender ratio of ${requiredMMP} MMP and ${requiredFMP} FMP.`);
+                console.log("Form submission prevented: Wrong gender ratio");
                 return false;
             }
             
-            // Log all form data
-            const formData = $(this).serializeArray();
-            console.log("All form data:", formData);
-            
             // If we get here, form is valid
+            console.log("Form validation passed, submitting with players:", selectedPlayers);
             return true;
         });
         
@@ -690,8 +715,25 @@
             });
         }
         
+        // CRITICAL FIX: Make sure the hidden input is properly initialized
+        const initialSelectedPlayerIds = $('.player-checkbox:checked').map(function() {
+            return $(this).val();
+        }).get();
+        
+        $('#players-hidden-input').val(initialSelectedPlayerIds.join(','));
+        console.log("Initial players_hidden value:", $('#players-hidden-input').val());
+        
         // Initial update of gender counts
         updateGenderCounts();
+        
+        // Add a click handler to the submit button for additional debugging
+        $('#point-form button[type="submit"]').on('click', function() {
+            console.log("Submit button clicked");
+            console.log("Current players_hidden value:", $('#players-hidden-input').val());
+        });
+        
+        // Log that initialization is complete
+        console.log("Player selection form initialization complete");
     });
 </script>
 {% endblock %}
