@@ -12,6 +12,7 @@ class FlexibleSelectMultipleField(SelectMultipleField):
 
 class PointForm(FlaskForm):
     game_id = HiddenField('Game ID')
+    players_hidden = HiddenField('Players Hidden')
     point_number = IntegerField('Point Number', validators=[DataRequired(), NumberRange(min=1)])
     our_line_type = SelectField('Line Type', choices=[
         ('O-line', 'Offense Line'),
