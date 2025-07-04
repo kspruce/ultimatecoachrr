@@ -552,7 +552,7 @@
             const searchText = $(this).val().toLowerCase();
             
             // Filter both tables
-            $('.player-row').each(function() {
+            $('#mmp-player-table .player-row, #fmp-player-table .player-row').each(function() { // More specific selectors
                 const name = $(this).find('td:eq(2)').text().toLowerCase();
                 const jersey = $(this).find('td:eq(1)').text().toLowerCase();
                 
