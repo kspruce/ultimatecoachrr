@@ -258,7 +258,7 @@ def add_point(game_id):
     # Process the player selection before form validation
     if request.method == 'POST':
         # Get the selected players from the form data
-        selected_players_str = request.form.get('players', '')  # Changed from 'players_hidden' to 'players'
+        selected_players_str = request.form.get('players', '')
         print(f"DEBUG: Raw players field value: '{selected_players_str}'")
         
         if selected_players_str:
@@ -267,8 +267,12 @@ def add_point(game_id):
                 selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
                 print(f"DEBUG: Selected players: {selected_players}")
                 
-                # Set the players field in the form data
+                # Set the data directly, bypassing validation
                 form.players.data = selected_players
+                
+                # Clear any errors for this field
+                if 'players' in form.errors:
+                    del form.errors['players']
             except ValueError as e:
                 print(f"DEBUG: Error converting player IDs: {e}")
                 form.players.data = []
@@ -276,7 +280,7 @@ def add_point(game_id):
             print("DEBUG: No players selected in form data")
             form.players.data = []
     
-    if form.validate_on_submit():
+    if form.validate_on_submit() or (request.method == 'POST' and form.errors.get('players') and len(form.errors) == 1):
         try:
             # Check if we have exactly 7 players
             if len(form.players.data) != 7:

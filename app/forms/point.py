@@ -7,8 +7,21 @@ from app.models.player import Player
 class FlexibleSelectMultipleField(SelectMultipleField):
     """A SelectMultipleField that doesn't validate against its choices."""
     def pre_validate(self, form):
-        # Skip the validation that checks values against the choices list
+        # Skip the validation completely
         pass
+    
+    def process_formdata(self, valuelist):
+        try:
+            if valuelist:
+                if isinstance(valuelist[0], str) and ',' in valuelist[0]:
+                    # Handle comma-separated string
+                    self.data = [self.coerce(x.strip()) for x in valuelist[0].split(',') if x.strip()]
+                else:
+                    # Handle list of values
+                    self.data = [self.coerce(x) for x in valuelist]
+        except (ValueError, TypeError):
+            self.data = []
+
 
 class PointForm(FlaskForm):
     game_id = HiddenField('Game ID')
