@@ -603,20 +603,20 @@ function createRadarCharts() {
     // Define scaling factors for different stat types
     const maxPerPointValues = {
         // Offensive stats (per O-line point)
-        assists: 0.3,        // 1 assist every 3 points is excellent
-        hockey_assists: 0.3, // 1 hockey assist every 3 points is excellent
+        assists: 0.5,        // 1 assist every 2 points is excellent
+        hockey_assists: 0.5, // 1 hockey assist every 2 points is excellent
         goals: 0.5,          // 1 goal every 2 points is excellent
         hucks: 0.5,          // 1 huck every 2 points is excellent
         throws: 10.0,        // 10 throws per point is a high volume
-        catches: 10.0,        // 10 catches per point is a high volume
-        avg_throw_distance: 130.0, // 130m is the length of the field
+        catches: 8.0,        // 8 catches per point is a high volume
+        avg_throw_distance: 70.0, // 70m as the maximum average throw distance
         
         // Defensive stats (per D-line point)
         blocks: 0.5,         // 1 block every 2 points is excellent
         stalls: 0.3,         // 1 stall every 3-4 points is excellent
-        shutdowns: 5,      // 5 shutdown every point is excellent
+        shutdowns: 0.3,      // 1 shutdown every 3-4 points is excellent
         turnovers_forced: 0.8, // Forcing ~1 turnover per point is excellent
-        plus_minus: 3.0      // +3 per point is excellent
+        plus_minus: 1.0      // +1 per point is excellent
     };
     
     try {
@@ -662,7 +662,7 @@ function createRadarCharts() {
                     'Assists/Point', 
                     'Hockey Assists/Point',
                     'Goals/Point',
-                    'Avg Distance',
+                    'Avg Distance (max 70m)',
                     'Hucks/Point',
                     'Throws/Point',
                     'Catch Rate'
@@ -674,7 +674,7 @@ function createRadarCharts() {
                         normalizeValue(perPointOffensive.assists, 'assists'),
                         normalizeValue(perPointOffensive.hockey_assists, 'hockey_assists'),
                         normalizeValue(perPointOffensive.goals, 'goals'),
-                        normalizeValue(stats.avg_throw_distance, 30), // Using 30m as excellent
+                        normalizeValue(stats.avg_throw_distance, 'avg_throw_distance'),
                         normalizeValue(perPointOffensive.hucks, 'hucks'),
                         normalizeValue(perPointOffensive.throws, 'throws'),
                         stats.catch_rate
@@ -711,7 +711,7 @@ function createRadarCharts() {
                                     perPointOffensive.assists.toFixed(2) + ' assists/point',
                                     perPointOffensive.hockey_assists.toFixed(2) + ' hockey assists/point',
                                     perPointOffensive.goals.toFixed(2) + ' goals/point',
-                                    stats.avg_throw_distance.toFixed(1) + 'm',
+                                    stats.avg_throw_distance.toFixed(1) + 'm (max 70m)',
                                     perPointOffensive.hucks.toFixed(2) + ' hucks/point',
                                     perPointOffensive.throws.toFixed(1) + ' throws/point',
                                     stats.catch_rate.toFixed(1) + '%'
