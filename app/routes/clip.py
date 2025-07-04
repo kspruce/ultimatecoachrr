@@ -64,6 +64,10 @@ def point_clips(point_id):
 @admin_required
 def add_clip():
     form = ClipForm()
+    
+    # Check if there are any tags
+    tags_exist = ClipTag.query.count() > 0
+    
     if form.validate_on_submit():
         clip = Clip(
             title=form.title.data,
@@ -90,6 +94,10 @@ def add_clip():
 
         flash(f'Clip "{clip.title}" has been added!', 'success')
         return redirect(url_for('clip.index'))
+    
+    # Add this return statement for GET requests or failed form validation
+    return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
+
 
 def validate_veo_link(url):
     """Validate Veo video URL"""
