@@ -244,6 +244,7 @@ def add_point(game_id):
     
     # Get all active players
     all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    print(f"DEBUG: Found {len(all_players)} active players")
     
     # Get player stats
     player_stats = get_player_stats(game_id)
@@ -251,7 +252,10 @@ def add_point(game_id):
     # Create a dictionary for quick player stats lookup
     player_stats_dict = {}
     for stat in player_stats:
-        player_stats_dict[stat['player_id']] = stat
+        if 'player_id' in stat:
+            player_stats_dict[stat['player_id']] = stat
+        else:
+            print(f"DEBUG: Missing player_id in stat: {stat}")
     
     # Get the last point for this game
     last_point = Point.query.filter_by(game_id=game_id)\
@@ -277,11 +281,58 @@ def add_point(game_id):
         form.starting_position.data = starting_position
     
     if form.validate_on_submit():
-        # Process the comma-separated player IDs from the hidden input
-        if request.form.get('selected-players-input'):
-            form.players.data = [int(pid) for pid in request.form.get('selected-players-input').split(',') if pid]
-        
         try:
+            # Process the comma-separated player IDs from the hidden input
+            selected_players = []
+            if request.form.get('players'):
+                selected_players = [int(pid) for pid in request.form.get('players').split(',') if pid]
+                print(f"DEBUG: Selected players from form: {selected_players}")
+                
+                # Update the form.players.data with these values
+                form.players.data = selected_players
+            else:
+                print("DEBUG: No players field found in form data")
+                print(f"DEBUG: Form data keys: {list(request.form.keys())}")
+            
+            # Check if we have exactly 7 players
+            if len(form.players.data) != 7:
+                flash(f'You must select exactly 7 players. You selected {len(form.players.data)}.', 'danger')
+                return render_template('point/point_form.html',
+                                     form=form,
+                                     game=game,
+                                     title='Add Point',
+                                     completion_rate=calculate_completion_rate(game_id),
+                                     player_stats=player_stats,
+                                     all_players=all_players,
+                                     player_stats_dict=player_stats_dict)
+            
+            # Validate gender ratio
+            male_count = 0
+            female_count = 0
+            
+            for player_id in form.players.data:
+                player = Player.query.get(player_id)
+                if player:
+                    if player.gender == "male":
+                        male_count += 1
+                    elif player.gender == "female":
+                        female_count += 1
+            
+            # Get required ratio
+            required_male, required_female = map(int, form.gender_ratio.data.split('-'))
+            
+            if male_count != required_male or female_count != required_female:
+                flash(f'Selected players do not match the gender ratio. Need {required_male} male and {required_female} female players. You selected {male_count} male and {female_count} female players.', 'danger')
+                return render_template('point/point_form.html',
+                                     form=form,
+                                     game=game,
+                                     title='Add Point',
+                                     completion_rate=calculate_completion_rate(game_id),
+                                     player_stats=player_stats,
+                                     all_players=all_players,
+                                     player_stats_dict=player_stats_dict)
+            
+            # Create the point
             point = Point(
                 game_id=game_id,
                 point_number=form.point_number.data,
@@ -323,8 +374,17 @@ def add_point(game_id):
             
         except Exception as e:
             db.session.rollback()
+            import traceback
             print(f"Error saving point: {str(e)}")
-            flash(f'Error saving point: {str(e)}', 'error')
+            print(traceback.format_exc())
+            flash(f'Error saving point: {str(e)}', 'danger')
+    else:
+        # If form validation failed, print the errors
+        if form.errors:
+            print(f"DEBUG: Form validation errors: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{field}: {error}", 'danger')
     
     return render_template('point/point_form.html',
                          form=form,
@@ -334,6 +394,7 @@ def add_point(game_id):
                          player_stats=player_stats,
                          all_players=all_players,
                          player_stats_dict=player_stats_dict)
+
 
 
 
