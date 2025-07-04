@@ -25,6 +25,7 @@ class Clip(db.Model):
     video_source = db.Column(db.String(20), default='youtube')  # Added for multiple video sources
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    description = db.Column(db.Text, nullable=True)
 
     # Relationships
     game = db.relationship('Game', back_populates='clips')
