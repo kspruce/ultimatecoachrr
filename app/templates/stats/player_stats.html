@@ -556,11 +556,6 @@ function createRadarCharts() {
     const offensiveCanvas = document.getElementById('offensiveRadar');
     const defensiveCanvas = document.getElementById('defensiveRadar');
     
-    console.log('Canvas elements found:', {
-        offensiveCanvas: !!offensiveCanvas,
-        defensiveCanvas: !!defensiveCanvas
-    });
-    
     if (!offensiveCanvas || !defensiveCanvas) {
         console.error('Canvas elements not found');
         return;
@@ -584,7 +579,7 @@ function createRadarCharts() {
         // Defensive stats
         blocks: {{ stats.blocks|default(0) }},
         stalls: {{ stats.stalls|default(0) }},
-        shutdowns: {{ stats.shutdowns|default(0) }}, // Add shutdown stat
+        shutdowns: {{ stats.shutdowns|default(0) }},
         d_line_plus_minus: {{ stats.d_line_plus_minus|default(0) }},
         d_line_points_played: {{ stats.d_line_points_played|default(0) }},
         o_line_points_played: {{ stats.o_line_points_played|default(0) }},
@@ -593,12 +588,26 @@ function createRadarCharts() {
         hucks: {{ stats.hucks|default(0) }}
     };
     
-    console.log('Player stats for charts:', stats);
+    // Define scaling factors for different stat types
+    const maxPerPointValues = {
+        // Offensive stats (per O-line point)
+        assists: 0.3,        // 1 assist every 3 points is excellent
+        hockey_assists: 0.3, // 1 hockey assist every 3 points is excellent
+        goals: 0.5,          // 1 goal every 2 points is excellent
+        hucks: 0.5,          // 1 huck every 2 points is excellent
+        throws: 10.0,        // 10 throws per point is a high volume
+        catches: 10.0,        // 10 catches per point is a high volume
+        
+        // Defensive stats (per D-line point)
+        blocks: 0.5,         // 1 block every 2 points is excellent
+        stalls: 0.3,         // 1 stall every 3-4 points is excellent
+        shutdowns: 5,      // 5 shutdown every point is excellent
+        turnovers_forced: 0.8, // Forcing ~1 turnover per point is excellent
+        plus_minus: 3.0      // +3 per point is excellent
+    };
     
     try {
         // Calculate derived metrics
-        const totalThrows = stats.throws || 1; // Avoid division by zero
-        const totalCatches = stats.catches || 1;
         const oLinePoints = Math.max(1, stats.o_line_points_played); // Avoid division by zero
         const dLinePoints = Math.max(1, stats.d_line_points_played); // Avoid division by zero
         
@@ -609,6 +618,7 @@ function createRadarCharts() {
             goals: stats.goals / oLinePoints,
             hucks: stats.hucks / oLinePoints,
             throws: stats.throws / oLinePoints,
+            catches: stats.catches / oLinePoints
         };
         
         // Calculate per-point statistics for defensive stats
@@ -617,14 +627,17 @@ function createRadarCharts() {
             stalls: stats.stalls / dLinePoints,
             shutdowns: stats.shutdowns / dLinePoints,
             turnovers_forced: (stats.blocks + stats.stalls) / dLinePoints,
-            plus_minus: (stats.d_line_plus_minus + 10) / dLinePoints, // Adjust for negative values
+            plus_minus: (stats.d_line_plus_minus + 10) / dLinePoints // Adjust for negative values
         };
         
         console.log('Per-point offensive stats:', perPointOffensive);
         console.log('Per-point defensive stats:', perPointDefensive);
         
-        // Normalize values for radar chart (0-100 scale)
-        const normalizeValue = (value, max) => Math.min(100, (value / max) * 100);
+        // Normalize values for radar chart (0-100 scale) using our scaling factors
+        const normalizeValue = (value, statType) => {
+            const maxValue = maxPerPointValues[statType] || 1.0;
+            return Math.min(100, (value / maxValue) * 100);
+        };
         
         // Create offensive radar chart
         const offensiveCtx = offensiveCanvas.getContext('2d');
@@ -645,12 +658,12 @@ function createRadarCharts() {
                     label: 'Offensive Stats',
                     data: [
                         stats.completion_rate,
-                        normalizeValue(perPointOffensive.assists, 0.5),
-                        normalizeValue(perPointOffensive.hockey_assists, 0.3),
-                        normalizeValue(perPointOffensive.goals, 0.5),
-                        normalizeValue(stats.avg_throw_distance, 30),
-                        normalizeValue(perPointOffensive.hucks, 0.5),
-                        normalizeValue(perPointOffensive.throws, 5),
+                        normalizeValue(perPointOffensive.assists, 'assists'),
+                        normalizeValue(perPointOffensive.hockey_assists, 'hockey_assists'),
+                        normalizeValue(perPointOffensive.goals, 'goals'),
+                        normalizeValue(stats.avg_throw_distance, 30), // Using 30m as excellent
+                        normalizeValue(perPointOffensive.hucks, 'hucks'),
+                        normalizeValue(perPointOffensive.throws, 'throws'),
                         stats.catch_rate
                     ],
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -698,8 +711,6 @@ function createRadarCharts() {
             }
         });
         
-        console.log('Offensive radar chart created');
-        
         // Create defensive radar chart
         const defensiveCtx = defensiveCanvas.getContext('2d');
         const defensiveRadar = new Chart(defensiveCtx, {
@@ -715,11 +726,11 @@ function createRadarCharts() {
                 datasets: [{
                     label: 'Defensive Stats',
                     data: [
-                        normalizeValue(perPointDefensive.blocks, 0.5),
-                        normalizeValue(perPointDefensive.plus_minus, 1.0),
-                        normalizeValue(perPointDefensive.stalls, 0.3),
-                        normalizeValue(perPointDefensive.shutdowns, 0.3),
-                        normalizeValue(perPointDefensive.turnovers_forced, 0.8)
+                        normalizeValue(perPointDefensive.blocks, 'blocks'),
+                        normalizeValue(perPointDefensive.plus_minus, 'plus_minus'),
+                        normalizeValue(perPointDefensive.stalls, 'stalls'),
+                        normalizeValue(perPointDefensive.shutdowns, 'shutdowns'),
+                        normalizeValue(perPointDefensive.turnovers_forced, 'turnovers_forced')
                     ],
                     backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     borderColor: 'rgba(255, 99, 132, 1)',
@@ -763,11 +774,12 @@ function createRadarCharts() {
             }
         });
         
-        console.log('Defensive radar chart created');
+        console.log('Radar charts created successfully');
     } catch (error) {
         console.error('Error creating radar charts:', error);
     }
 }
+
 
 
 // Visualization functions
