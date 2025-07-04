@@ -244,7 +244,6 @@ def add_point(game_id):
     
     # Get all active players
     all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
-    print(f"DEBUG: Found {len(all_players)} active players")
     
     # Get player stats
     player_stats = get_player_stats(game_id)
@@ -254,8 +253,6 @@ def add_point(game_id):
     for stat in player_stats:
         if 'player_id' in stat:
             player_stats_dict[stat['player_id']] = stat
-        else:
-            print(f"DEBUG: Missing player_id in stat: {stat}")
     
     # Get the last point for this game
     last_point = Point.query.filter_by(game_id=game_id)\
@@ -280,20 +277,25 @@ def add_point(game_id):
         form.our_line_type.data = line_type
         form.starting_position.data = starting_position
     
+    # Process the player selection before form validation
+    if request.method == 'POST':
+        # Get the selected players from the form data
+        selected_players_str = request.form.get('players', '')
+        if selected_players_str:
+            # Convert comma-separated string to list of integers
+            selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
+            
+            # Set the players field in the form data
+            form.players.data = selected_players
+            
+            print(f"DEBUG: Selected players: {selected_players}")
+        else:
+            print("DEBUG: No players selected in form data")
+            print(f"DEBUG: Form data keys: {list(request.form.keys())}")
+            print(f"DEBUG: Form data: {request.form}")
+    
     if form.validate_on_submit():
         try:
-            # Process the comma-separated player IDs from the hidden input
-            selected_players = []
-            if request.form.get('players'):
-                selected_players = [int(pid) for pid in request.form.get('players').split(',') if pid]
-                print(f"DEBUG: Selected players from form: {selected_players}")
-                
-                # Update the form.players.data with these values
-                form.players.data = selected_players
-            else:
-                print("DEBUG: No players field found in form data")
-                print(f"DEBUG: Form data keys: {list(request.form.keys())}")
-            
             # Check if we have exactly 7 players
             if len(form.players.data) != 7:
                 flash(f'You must select exactly 7 players. You selected {len(form.players.data)}.', 'danger')
