@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
 <style>
     /* Custom styling for DataTables */
     .dataTables_wrapper .dataTables_length select {
@@ -108,8 +113,8 @@
         top: 10px;
         color: #6c757d;
     }
-
 </style>
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -135,7 +140,6 @@
             <a href="{{ url_for('point.game_points', game_id=game.id) }}" class="btn btn-secondary">Back to Points</a>
         </div>
     </div>
-
     <!-- Point Form Card -->
     <div class="row">
         <div class="col-12">
@@ -148,7 +152,7 @@
                         {{ form.hidden_tag() }}
                         
                         <!-- Hidden field to store selected players -->
-                        {{ form.players_hidden(id="selected-players-input") }}
+                        {{ form.players_hidden(id="players-hidden-input") }}
 
                         <!-- Basic Point Info -->
                         <div class="row mb-3">
@@ -230,7 +234,6 @@
                                 {% endfor %}
                             </div>
                         </div>
-
                         <!-- Player Selection -->
                         <div class="mb-4">
                             <label class="form-label">Players on Line (Select exactly 7)</label>
@@ -244,7 +247,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             
                             <!-- Player filter -->
                             <div id="player-filter-container" class="mb-3">
@@ -356,9 +358,6 @@
                             </div>
                         </div>
 
-
-
-
                         <!-- Submit Button -->
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary btn-lg") }}
@@ -368,7 +367,6 @@
             </div>
         </div>
     </div>
-
     <!-- Stats Summary Card -->
     <div class="row mt-4 mb-4">
         <div class="col-12">
@@ -430,73 +428,68 @@
             </div>
         </div>
     </div>
-</div>
-<!-- Debug information -->
-<div class="card mb-3">
-    <div class="card-header bg-secondary text-white">
-        <h5>Debug Information</h5>
-    </div>
-    <div class="card-body">
-        <p><strong>Form Data:</strong></p>
-        <p>Selected Players (hidden input): <code id="debug-players-value"></code></p>
-        <p>Selected Players Count: <span id="debug-players-count">0</span></p>
-        <p>Form Action: <code>{{ url_for('point.add_point', game_id=game.id) }}</code></p>
-        
-        <script>
-            function updateDebugInfo() {
-                const selectedValue = $('#selected-players-input').val();
-                $('#debug-players-value').text(selectedValue);
+
+    <!-- Debug information -->
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white">
+            <h5>Debug Information</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Form Data:</strong></p>
+            <p>Selected Players (hidden input): <code id="debug-players-value"></code></p>
+            <p>Selected Players Count: <span id="debug-players-count">0</span></p>
+            <p>Form Action: <code>{{ url_for('point.add_point', game_id=game.id) }}</code></p>
+            
+            <script>
+                function updateDebugInfo() {
+                    const selectedValue = $('#players-hidden-input').val();
+                    $('#debug-players-value').text(selectedValue || 'None');
+                    
+                    const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
+                    $('#debug-players-count').text(selectedCount);
+                }
                 
-                const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
-                $('#debug-players-count').text(selectedCount);
-            }
-            
-            // Update debug info when checkboxes change
-            $(document).on('change', '.player-checkbox', function() {
-                setTimeout(updateDebugInfo, 100);
-            });
-            
-            // Initial update
-            $(document).ready(function() {
-                setTimeout(updateDebugInfo, 500);
-            });
-        </script>
+                // Update debug info when checkboxes change
+                $(document).on('change', '.player-checkbox', function() {
+                    setTimeout(updateDebugInfo, 100);
+                });
+                
+                // Initial update
+                $(document).ready(function() {
+                    setTimeout(updateDebugInfo, 500);
+                });
+            </script>
+        </div>
     </div>
-</div>
-<!-- Test Form -->
-<div class="card mt-4">
-    <div class="card-header bg-warning">
-        <h5>Test Form</h5>
-    </div>
-    <div class="card-body">
-        <form method="post" action="{{ url_for('point.add_point', game_id=game.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="point_number" value="{{ form.point_number.data }}">
-            <input type="hidden" name="our_line_type" value="{{ form.our_line_type.data }}">
-            <input type="hidden" name="our_score_before" value="{{ form.our_score_before.data }}">
-            <input type="hidden" name="their_score_before" value="{{ form.their_score_before.data }}">
-            <input type="hidden" name="starting_position" value="{{ form.starting_position.data }}">
-            <input type="hidden" name="point_outcome" value="{{ form.point_outcome.data }}">
-            <input type="hidden" name="gender_ratio" value="{{ form.gender_ratio.data }}">
-            <input type="hidden" name="force_direction" value="{{ form.force_direction.data }}">
-            
-            <div class="mb-3">
-                <label class="form-label">Enter Player IDs (comma-separated):</label>
-                <input type="text" name="players" class="form-control" value="12,15,17,16,25,24,1">
-            </div>
-            
-            <button type="submit" class="btn btn-warning">Test Submit</button>
-        </form>
-    </div>
-</div>
 
-{% block styles %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
+    <!-- Test Form -->
+    <div class="card mt-4">
+        <div class="card-header bg-warning">
+            <h5>Test Form</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('point.add_point', game_id=game.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="point_number" value="{{ form.point_number.data }}">
+                <input type="hidden" name="our_line_type" value="{{ form.our_line_type.data }}">
+                <input type="hidden" name="our_score_before" value="{{ form.our_score_before.data }}">
+                <input type="hidden" name="their_score_before" value="{{ form.their_score_before.data }}">
+                <input type="hidden" name="starting_position" value="{{ form.starting_position.data }}">
+                <input type="hidden" name="point_outcome" value="{{ form.point_outcome.data }}">
+                <input type="hidden" name="gender_ratio" value="{{ form.gender_ratio.data }}">
+                <input type="hidden" name="force_direction" value="{{ form.force_direction.data }}">
+                
+                <div class="mb-3">
+                    <label class="form-label">Enter Player IDs (comma-separated):</label>
+                    <input type="text" name="players_hidden" class="form-control" value="12,15,17,16,25,24,1">
+                </div>
+                
+                <button type="submit" class="btn btn-warning">Test Submit</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
-
 {% block scripts %}
 <!-- Make sure jQuery is loaded first -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -614,8 +607,8 @@
                 return $(this).val();
             }).get();
             
-            // Update the hidden input
-            $('#selected-players-input').val(selectedPlayerIds.join(','));
+            // Update the hidden input - IMPORTANT: Make sure this ID matches the one in the form
+            $('#players-hidden-input').val(selectedPlayerIds.join(','));
             
             // Update the preview
             $('#selected-players-preview').text(selectedPlayerIds.join(',') || 'None');
@@ -624,17 +617,6 @@
             
             // Update debug information
             updateDebugInfo();
-        }
-        
-        // Debug information update
-        function updateDebugInfo() {
-            const selectedValue = $('#selected-players-input').val();
-            if ($('#debug-players-value').length) {
-                $('#debug-players-value').text(selectedValue || 'None');
-                
-                const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
-                $('#debug-players-count').text(selectedCount);
-            }
         }
         
         // Update when checkboxes change
@@ -661,7 +643,7 @@
         
         // Form submission validation
         $('#point-form').on('submit', function(e) {
-            const selectedPlayers = $('#selected-players-input').val();
+            const selectedPlayers = $('#players-hidden-input').val();
             console.log("Form submitted");
             console.log("Selected players in hidden input:", selectedPlayers);
             
@@ -723,4 +705,3 @@
     });
 </script>
 {% endblock %}
-
