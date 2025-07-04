@@ -181,31 +181,7 @@ def calculate_completion_rate(game_id):
     return round((completions / (completions + throwaways)) * 100, 1)
 
 
-def calculate_completion_rate(game_id):
-    """Calculate the team's completion rate for the game so far."""
-    # Get all points for this game
-    points = Point.query.filter_by(game_id=game_id).all()
-    point_ids = [p.id for p in points]
-    
-    if not point_ids:
-        return 0
-    
-    # Count completions (including regular throws, assists, and hockey assists)
-    completions = Event.query.filter(
-        Event.point_id.in_(point_ids),
-        Event.event_type.in_(['regular', 'assist', 'hockey_assist'])
-    ).count()
-    
-    # Count throwaways
-    throwaways = Event.query.filter(
-        Event.point_id.in_(point_ids),
-        Event.event_type == 'throwaway'
-    ).count()
-    
-    if completions + throwaways == 0:
-        return 0
-        
-    return round((completions / (completions + throwaways)) * 100, 1)
+
 
 
 def determine_gender_ratio(point_number):
@@ -235,6 +211,8 @@ def determine_line_and_position(previous_point):
     else:
         # They scored, so we're now on offense
         return 'O-line', 'offense'
+
+
 
 @bp.route('/add/<int:game_id>', methods=['GET', 'POST'])
 @login_required
@@ -282,17 +260,19 @@ def add_point(game_id):
         # Get the selected players from the form data
         selected_players_str = request.form.get('players', '')
         if selected_players_str:
-            # Convert comma-separated string to list of integers
-            selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
-            
-            # Set the players field in the form data
-            form.players.data = selected_players
-            
-            print(f"DEBUG: Selected players: {selected_players}")
+            try:
+                # Convert comma-separated string to list of integers
+                selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
+                print(f"DEBUG: Selected players: {selected_players}")
+                
+                # Set the players field in the form data
+                form.players.data = selected_players
+            except ValueError as e:
+                print(f"DEBUG: Error converting player IDs: {e}")
+                form.players.data = []
         else:
             print("DEBUG: No players selected in form data")
-            print(f"DEBUG: Form data keys: {list(request.form.keys())}")
-            print(f"DEBUG: Form data: {request.form}")
+            form.players.data = []
     
     if form.validate_on_submit():
         try:
@@ -408,9 +388,37 @@ def edit_point(point_id):
     game = Game.query.get(point.game_id)
     form = PointForm(obj=point)
     
+    # Get all active players
+    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    
+    # Get player stats
+    player_stats = get_player_stats(game.id)
+    
+    # Create a dictionary for quick player stats lookup
+    player_stats_dict = {}
+    for stat in player_stats:
+        if 'player_id' in stat:
+            player_stats_dict[stat['player_id']] = stat
+    
     # Pre-select players
     if request.method == 'GET':
         form.players.data = [lineup.player_id for lineup in point.lineups]
+    
+    # Process the player selection before form validation
+    if request.method == 'POST':
+        # Get the selected players from the form data
+        selected_players_str = request.form.get('players', '')
+        if selected_players_str:
+            try:
+                # Convert comma-separated string to list of integers
+                selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
+                print(f"DEBUG: Selected players for edit: {selected_players}")
+                
+                # Set the players field in the form data
+                form.players.data = selected_players
+            except ValueError as e:
+                print(f"DEBUG: Error converting player IDs: {e}")
+                form.players.data = []
     
     if form.validate_on_submit():
         point.point_number = form.point_number.data
@@ -444,7 +452,14 @@ def edit_point(point_id):
         flash(f'Point {point.point_number} has been updated!', 'success')
         return redirect(url_for('point.game_points', game_id=point.game_id))
     
-    return render_template('point/point_form.html', form=form, game=game, point=point, title='Edit Point')
+    return render_template('point/point_form.html', 
+                          form=form, 
+                          game=game, 
+                          point=point, 
+                          title='Edit Point',
+                          player_stats=player_stats,
+                          all_players=all_players,
+                          player_stats_dict=player_stats_dict)
 
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
