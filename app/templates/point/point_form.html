@@ -346,7 +346,23 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Debug form data -->
+                            <div class="alert alert-info">
+                                <p><strong>Form Data Preview:</strong></p>
+                                <p>Selected Players: <span id="selected-players-preview">None</span></p>
+                                <p>Gender Ratio: {{ form.gender_ratio.data }}</p>
+                                <script>
+                                    function updatePreview() {
+                                        const selectedIds = $('#selected-players-input').val();
+                                        $('#selected-players-preview').text(selectedIds || 'None');
+                                    }
+                                    $(document).on('change', '.player-checkbox', updatePreview);
+                                    updatePreview();
+                                </script>
+                            </div>
                         </div>
+
 
 
 
