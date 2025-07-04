@@ -439,26 +439,6 @@
             <p>Selected Players (hidden input): <code id="debug-players-value"></code></p>
             <p>Selected Players Count: <span id="debug-players-count">0</span></p>
             <p>Form Action: <code>{{ url_for('point.add_point', game_id=game.id) }}</code></p>
-            
-            <script>
-                function updateDebugInfo() {
-                    const selectedValue = $('#players-hidden-input').val();
-                    $('#debug-players-value').text(selectedValue || 'None');
-                    
-                    const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
-                    $('#debug-players-count').text(selectedCount);
-                }
-                
-                // Update debug info when checkboxes change
-                $(document).on('change', '.player-checkbox', function() {
-                    setTimeout(updateDebugInfo, 100);
-                });
-                
-                // Initial update
-                $(document).ready(function() {
-                    setTimeout(updateDebugInfo, 500);
-                });
-            </script>
         </div>
     </div>
 
@@ -490,6 +470,7 @@
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <!-- Make sure jQuery is loaded first -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -617,6 +598,15 @@
             
             // Update debug information
             updateDebugInfo();
+        }
+        
+        // Function to update debug information
+        function updateDebugInfo() {
+            const selectedValue = $('#players-hidden-input').val();
+            $('#debug-players-value').text(selectedValue || 'None');
+            
+            const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
+            $('#debug-players-count').text(selectedCount);
         }
         
         // Update when checkboxes change

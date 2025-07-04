@@ -409,18 +409,23 @@ def edit_point(point_id):
     # Process the player selection before form validation
     if request.method == 'POST':
         # Get the selected players from the form data
-        selected_players_str = request.form.get('players', '')
+        selected_players_str = request.form.get('players_hidden', '')
+        print(f"DEBUG: Raw players_hidden field value: '{selected_players_str}'")
+        
         if selected_players_str:
             try:
                 # Convert comma-separated string to list of integers
                 selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
-                print(f"DEBUG: Selected players for edit: {selected_players}")
+                print(f"DEBUG: Selected players: {selected_players}")
                 
                 # Set the players field in the form data
                 form.players.data = selected_players
             except ValueError as e:
                 print(f"DEBUG: Error converting player IDs: {e}")
                 form.players.data = []
+        else:
+            print("DEBUG: No players selected in form data")
+            form.players.data = []
     
     if form.validate_on_submit():
         point.point_number = form.point_number.data
