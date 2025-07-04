@@ -307,15 +307,15 @@
                                                         </div>
                                                         <div class="modal-body">
                                                             <p>Are you sure you want to delete {{ player.name }}?</p>
-                                                            {% if player.lineups|length > 0 or player.player_events|length > 0 %}
+                                                            {% if player.lineups.count() > 0 or player.player_events.count() > 0 %}
                                                             <div class="alert alert-warning">
                                                                 Warning: This will also delete:
                                                                 <ul class="mb-0">
-                                                                    {% if player.lineups|length > 0 %}
-                                                                        <li>{{ player.lineups|length }} lineup entries</li>
+                                                                    {% if player.lineups.count() > 0 %}
+                                                                        <li>{{ player.lineups.count() }} lineup entries</li>
                                                                     {% endif %}
-                                                                    {% if player.player_events|length > 0 %}
-                                                                        <li>{{ player.player_events|length }} game events</li>
+                                                                    {% if player.player_events.count() > 0 %}
+                                                                        <li>{{ player.player_events.count() }} game events</li>
                                                                     {% endif %}
                                                                 </ul>
                                                             </div>
