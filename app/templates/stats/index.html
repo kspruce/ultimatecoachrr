@@ -549,35 +549,41 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     }
 
-    // Initialize Player Connections Network
+    // Enhanced Player Connections Network
     if (document.getElementById('player-connections')) {
         {% if connection_data %}
         const connections = {{ connection_data|safe }};
         const width = document.getElementById('player-connections').offsetWidth;
         const height = 400;
-
+    
         const svg = d3.select('#player-connections')
             .append('svg')
             .attr('width', width)
-            .attr('height', height);
-
+            .attr('height', height)
+            .call(d3.zoom().on("zoom", function(event) {
+                g.attr("transform", event.transform);
+            }));
+    
+        // Create a group for all elements to enable zooming
+        const g = svg.append("g");
+    
         // Create force simulation
         const simulation = d3.forceSimulation(connections.nodes)
             .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
             .force('charge', d3.forceManyBody().strength(-300))
             .force('center', d3.forceCenter(width / 2, height / 2));
-
+    
         // Draw links
-        const link = svg.append('g')
+        const link = g.append('g')
             .selectAll('line')
             .data(connections.links)
             .enter().append('line')
             .attr('stroke-width', d => Math.sqrt(d.value))
             .attr('stroke', '#999')
             .attr('stroke-opacity', 0.6);
-
+    
         // Draw nodes
-        const node = svg.append('g')
+        const node = g.append('g')
             .selectAll('circle')
             .data(connections.nodes)
             .enter().append('circle')
@@ -588,9 +594,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 .on('start', dragstarted)
                 .on('drag', dragged)
                 .on('end', dragended));
-
+    
+        // Add tooltips for nodes
+        node.append("title")
+            .text(d => `${d.name} (#${d.jersey_number})\nPosition: ${d.position}`);
+    
         // Add labels
-        const label = svg.append('g')
+        const label = g.append('g')
             .selectAll('text')
             .data(connections.nodes)
             .enter().append('text')
@@ -604,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr('dx', -8)
             .attr('dy', 4)
             .attr('fill', 'white');
-
+    
         // Update positions on tick
         simulation.on('tick', () => {
             link
@@ -612,34 +622,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr('y1', d => d.source.y)
                 .attr('x2', d => d.target.x)
                 .attr('y2', d => d.target.y);
-
+    
             node
                 .attr('cx', d => d.x)
                 .attr('cy', d => d.y);
-
+    
             label
                 .attr('x', d => d.x)
                 .attr('y', d => d.y);
         });
-
+    
+        // Add reset zoom button
+        svg.append("rect")
+            .attr("x", 10)
+            .attr("y", 10)
+            .attr("width", 80)
+            .attr("height", 30)
+            .attr("rx", 5)
+            .attr("fill", "rgba(255,255,255,0.7)")
+            .attr("stroke", "#999");
+            
+        svg.append("text")
+            .attr("x", 50)
+            .attr("y", 30)
+            .attr("text-anchor", "middle")
+            .text("Reset Zoom")
+            .style("font-size", "12px")
+            .style("cursor", "pointer")
+            .on("click", function() {
+                svg.transition().duration(750).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                );
+            });
+    
         // Drag functions
         function dragstarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
             d.fy = d.y;
         }
-
+    
         function dragged(event, d) {
             d.fx = event.x;
             d.fy = event.y;
         }
-
+    
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
         }
-
+    
         // Add connection strength filter functionality
         document.querySelectorAll('[data-strength]').forEach(button => {
             button.addEventListener('click', function() {
@@ -656,6 +690,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         {% endif %}
     }
+
 
     // Add window resize handler
     window.addEventListener('resize', debounce(function() {
