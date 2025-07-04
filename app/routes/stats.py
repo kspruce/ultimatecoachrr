@@ -1021,6 +1021,7 @@ def player_stats(player_id):
         'stats/player_stats.html',
         player=player,
         stats=stats,
+        team_stats=team_stats,
         player_games=player_games,
         tournaments=tournaments,
         selected_tournament=tournament_id,
