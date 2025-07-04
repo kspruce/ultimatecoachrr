@@ -56,6 +56,129 @@ def get_player_throw_stats(player, games=None):
     
     return stats
 
+def calculate_team_radar_stats(games, team_name):
+    """Calculate team average statistics for radar charts"""
+    # Get all active players from the team
+    players = Player.query.filter_by(active=True, team=team_name).all()
+    
+    if not players or not games:
+        return default_team_stats()
+    
+    # Initialize counters
+    total_stats = {
+        # Offensive stats
+        'throws': 0,
+        'completions': 0,
+        'completion_rate_sum': 0,
+        'assists': 0,
+        'hockey_assists': 0,
+        'goals': 0,
+        'catches': 0,
+        'catch_rate_sum': 0,
+        'avg_throw_distance_sum': 0,
+        'hucks': 0,
+        'o_line_points_played': 0,
+        
+        # Defensive stats
+        'blocks': 0,
+        'stalls': 0,
+        'shutdowns': 0,
+        'd_line_plus_minus': 0,
+        'd_line_points_played': 0,
+        
+        # Player counters
+        'players_with_stats': 0,
+        'players_with_o_line_points': 0,
+        'players_with_d_line_points': 0
+    }
+    
+    # Aggregate stats from all players
+    for player in players:
+        player_stats = get_player_base_stats(player, games)
+        
+        if player_stats['points_played'] > 0:
+            total_stats['players_with_stats'] += 1
+            
+            # Offensive stats
+            total_stats['throws'] += player_stats['throws']
+            total_stats['completions'] += player_stats['completions']
+            if player_stats['completion_rate'] > 0:
+                total_stats['completion_rate_sum'] += player_stats['completion_rate']
+            total_stats['assists'] += player_stats['assists']
+            total_stats['hockey_assists'] += player_stats['hockey_assists']
+            total_stats['goals'] += player_stats['goals']
+            total_stats['catches'] += player_stats['catches']
+            if player_stats['catch_rate'] > 0:
+                total_stats['catch_rate_sum'] += player_stats['catch_rate']
+            if player_stats['avg_throw_distance'] > 0:
+                total_stats['avg_throw_distance_sum'] += player_stats['avg_throw_distance']
+            
+            # Add hucks
+            total_stats['hucks'] += calculate_hucks(player, games)
+            
+            # O-line stats
+            if player_stats['o_line_points_played'] > 0:
+                total_stats['o_line_points_played'] += player_stats['o_line_points_played']
+                total_stats['players_with_o_line_points'] += 1
+            
+            # D-line stats
+            if player_stats['d_line_points_played'] > 0:
+                total_stats['blocks'] += player_stats['blocks']
+                total_stats['stalls'] += player_stats.get('stalls', 0)
+                total_stats['shutdowns'] += player_stats.get('shutdowns', 0)
+                total_stats['d_line_plus_minus'] += player_stats['d_line_plus_minus']
+                total_stats['d_line_points_played'] += player_stats['d_line_points_played']
+                total_stats['players_with_d_line_points'] += 1
+    
+    # Calculate averages
+    team_avgs = {}
+    
+    # Avoid division by zero
+    players_with_stats = max(1, total_stats['players_with_stats'])
+    o_line_points = max(1, total_stats['o_line_points_played'])
+    d_line_points = max(1, total_stats['d_line_points_played'])
+    
+    # Offensive averages
+    team_avgs['completion_rate'] = total_stats['completion_rate_sum'] / players_with_stats
+    team_avgs['catch_rate'] = total_stats['catch_rate_sum'] / players_with_stats
+    team_avgs['avg_throw_distance'] = total_stats['avg_throw_distance_sum'] / players_with_stats
+    
+    # Per-point averages
+    team_avgs['assists_per_point'] = total_stats['assists'] / o_line_points
+    team_avgs['hockey_assists_per_point'] = total_stats['hockey_assists'] / o_line_points
+    team_avgs['goals_per_point'] = total_stats['goals'] / o_line_points
+    team_avgs['throws_per_point'] = total_stats['throws'] / o_line_points
+    team_avgs['catches_per_point'] = total_stats['catches'] / o_line_points
+    team_avgs['hucks_per_point'] = total_stats['hucks'] / o_line_points
+    
+    # Defensive averages
+    team_avgs['blocks_per_point'] = total_stats['blocks'] / d_line_points
+    team_avgs['stalls_per_point'] = total_stats['stalls'] / d_line_points
+    team_avgs['shutdowns_per_point'] = total_stats['shutdowns'] / d_line_points
+    team_avgs['d_line_plus_minus_per_point'] = total_stats['d_line_plus_minus'] / d_line_points
+    team_avgs['turnovers_forced_per_point'] = (total_stats['blocks'] + total_stats['stalls']) / d_line_points
+    
+    return team_avgs
+
+def default_team_stats():
+    """Return default team stats when no data is available"""
+    return {
+        'completion_rate': 0,
+        'catch_rate': 0,
+        'avg_throw_distance': 0,
+        'assists_per_point': 0,
+        'hockey_assists_per_point': 0,
+        'goals_per_point': 0,
+        'throws_per_point': 0,
+        'catches_per_point': 0,
+        'hucks_per_point': 0,
+        'blocks_per_point': 0,
+        'stalls_per_point': 0,
+        'shutdowns_per_point': 0,
+        'd_line_plus_minus_per_point': 0,
+        'turnovers_forced_per_point': 0
+    }
+
 
 def calculate_per(player, games=None, team_avgs=None):
     """
@@ -852,6 +975,9 @@ def player_stats(player_id):
         Event.query.filter_by(player_id=player.id),
         ['shutdown']
     )
+    
+    # Calculate team averages for radar charts
+    team_stats = calculate_team_radar_stats(games, player.team)
     
     # Get player's game history
     player_games = []
