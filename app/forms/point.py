@@ -49,3 +49,19 @@ class PointForm(FlaskForm):
         # Populate player choices
         self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
                                for p in Player.query.filter_by(active=True).order_by(Player.jersey_number).all()]
+
+class PullForm(FlaskForm):
+    point_id = HiddenField('Point ID')
+    player_id = SelectField('Puller', coerce=int, validators=[DataRequired()])
+    is_inbounds = SelectField('Pull Result', choices=[
+        (True, 'In Bounds'),
+        (False, 'Out of Bounds')
+    ], coerce=lambda x: x == 'True', validators=[DataRequired()])
+    submit = SubmitField('Record Pull')
+
+    def __init__(self, point=None, *args, **kwargs):
+        super(PullForm, self).__init__(*args, **kwargs)
+        if point:
+            # Only show players who were on this point
+            self.player_id.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
+                                     for p in point.players]
