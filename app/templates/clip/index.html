@@ -108,9 +108,9 @@
                                         </div>
                                         <div class="modal-body">
                                             <p>Are you sure you want to delete the clip "{{ clip.title }}"?</p>
-                                            {% if clip.annotations.count() > 0 %}
+                                            {% if clip.annotations|length > 0 %}
                                             <div class="alert alert-warning">
-                                                This clip has {{ clip.annotations.count() }} annotations that will also be deleted.
+                                                This clip has {{ clip.annotations|length }} annotations that will also be deleted.
                                             </div>
                                             {% endif %}
                                         </div>
