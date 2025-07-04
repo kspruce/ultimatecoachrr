@@ -258,7 +258,7 @@ def add_point(game_id):
     # Process the player selection before form validation
     if request.method == 'POST':
         # Get the selected players from the form data
-        selected_players_str = request.form.get('players_hidden', '')
+        selected_players_str = request.form.get('players', '')  # Changed from 'players_hidden' to 'players'
         print(f"DEBUG: Raw players field value: '{selected_players_str}'")
         
         if selected_players_str:
@@ -269,7 +269,6 @@ def add_point(game_id):
                 
                 # Set the players field in the form data
                 form.players.data = selected_players
-                form.players_hidden.data = selected_players_str
             except ValueError as e:
                 print(f"DEBUG: Error converting player IDs: {e}")
                 form.players.data = []
