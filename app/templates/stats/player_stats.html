@@ -807,17 +807,31 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded');
     console.log('Visualization data:', vizData);
     
+    // First, check if Chart.js is already loaded
+    const chartLoaded = typeof Chart !== 'undefined';
+    console.log('Chart.js loaded on page load:', chartLoaded);
+    
+    // Function to initialize everything once dependencies are loaded
+    function initializeAll() {
+        initializeVisualizations();
+        setupTabHandlers();
+        
+        // Add a slight delay before initializing radar charts
+        setTimeout(function() {
+            console.log('Initializing radar charts...');
+            initializeRadarCharts();
+        }, 300);
+    }
+    
     if (typeof d3 === 'undefined') {
         const script = document.createElement('script');
         script.src = 'https://d3js.org/d3.v7.min.js';
         script.onload = function() {
-            initializeVisualizations();
-            setupTabHandlers();
+            initializeAll();
         };
         document.head.appendChild(script);
     } else {
-        initializeVisualizations();
-        setupTabHandlers();
+        initializeAll();
     }
 });
 
@@ -870,50 +884,25 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Add radar chart initialization
-function initializeRadarCharts() {
-    // Check if Chart is defined
-    if (typeof Chart === 'undefined') {
-        console.log('Chart.js is not loaded yet. Loading Chart.js dynamically...');
-        
-        // Keep track of retry attempts
-        if (!window.chartLoadAttempts) {
-            window.chartLoadAttempts = 1;
-        } else {
-            window.chartLoadAttempts++;
-            if (window.chartLoadAttempts > 3) {
-                console.error('Failed to load Chart.js after multiple attempts');
-                return;
-            }
-        }
-        
-        // Load Chart.js dynamically
-        const chartScript = document.createElement('script');
-        chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
-        chartScript.onload = function() {
-            console.log('Chart.js loaded successfully');
-            // Load Radar plugin after Chart.js is loaded
-            const radarPlugin = document.createElement('script');
-            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js';
-            radarPlugin.onload = function() {
-                console.log('Radar plugin loaded successfully');
-                // Wait a moment for everything to initialize
-                setTimeout(function() {
-                    createRadarCharts();
-                }, 100);
-            };
-            document.head.appendChild(radarPlugin);
-        };
-        document.head.appendChild(chartScript);
-        return;
-    }
-    
-    createRadarCharts();
-}
+
 
 // Separate function to create the actual charts
 function createRadarCharts() {
     console.log('Creating radar charts...');
+    
+    // Check if canvas elements exist
+    const offensiveCanvas = document.getElementById('offensiveRadar');
+    const defensiveCanvas = document.getElementById('defensiveRadar');
+    
+    console.log('Canvas elements found:', {
+        offensiveCanvas: !!offensiveCanvas,
+        defensiveCanvas: !!defensiveCanvas
+    });
+    
+    if (!offensiveCanvas || !defensiveCanvas) {
+        console.error('Canvas elements not found');
+        return;
+    }
     
     // Get player stats from the template
     const stats = {
@@ -937,8 +926,10 @@ function createRadarCharts() {
         d_line_points_played: {{ stats.d_line_points_played|default(0) }},
         
         // Calculate hucks (throws over 20m)
-        hucks: {{ throw_vectors|selectattr('distance', 'ge', 20)|list|length }}
+        hucks: {{ stats.hucks|default(0) }}
     };
+    
+    console.log('Player stats for charts:', stats);
     
     try {
         // Check if elements exist
