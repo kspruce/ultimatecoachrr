@@ -71,6 +71,44 @@
     #player-filter {
         padding-left: 30px;
     }
+
+    /* Styling for the gender-specific tables */
+    #mmp-player-table, #fmp-player-table {
+        font-size: 0.9rem;
+    }
+    
+    .card-header.bg-primary {
+        background-color: #0d6efd !important;
+    }
+    
+    .card-header.bg-info {
+        background-color: #0dcaf0 !important;
+    }
+    
+    /* Highlight selected players more prominently */
+    tr.selected-player {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        font-weight: 500;
+    }
+    
+    /* Make the tables more compact */
+    .table-sm td, .table-sm th {
+        padding: 0.3rem 0.5rem;
+    }
+    
+    /* Improve the filter input */
+    #player-filter {
+        border-radius: 20px;
+        padding-left: 35px;
+    }
+    
+    #player-filter-container i {
+        position: absolute;
+        left: 15px;
+        top: 10px;
+        color: #6c757d;
+    }
+
 </style>
 
 {% block content %}
@@ -199,7 +237,7 @@
                                         Required ratio: <span id="required-ratio">{{ form.gender_ratio.data.replace('-', ' MMP - ') }} FMP</span>
                                     </div>
                                     <div id="ratio-status" class="badge bg-warning">
-                                        <span id="mmp-count">0</span> MMP and <span id="fmp-count">0</span> FMP selected (0/7)
+                                        <span id="mmp-count">0</span> MMP + <span id="fmp-count">0</span> FMP = <span id="total-count">0</span>/7
                                     </div>
                                 </div>
                             </div>
@@ -213,40 +251,103 @@
                                 <input type="text" id="player-filter" class="form-control" placeholder="Filter players by name or jersey number...">
                             </div>
                             
-                            <div class="table-responsive">
-                                <table id="player-selection-table" class="table table-sm table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px">Select</th>
-                                            <th style="width: 80px">Jersey #</th>
-                                            <th>Name</th>
-                                            <th style="width: 80px">Gender</th>
-                                            <th style="width: 100px">Points Played</th>
-                                            <th style="width: 80px">+/-</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for player in all_players %}
-                                        <tr class="player-row" data-player-id="{{ player.id }}">
-                                            <td class="text-center">
-                                                <div class="form-check">
-                                                    <input class="form-check-input player-checkbox" type="checkbox" 
-                                                           value="{{ player.id }}" id="player-{{ player.id }}"
-                                                           data-gender="{{ player.gender_matching_preference }}"
-                                                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                                                </div>
-                                            </td>
-                                            <td>{{ player.jersey_number }}</td>
-                                            <td>{{ player.name }}</td>
-                                            <td>{{ player.gender_matching_preference }}</td>
-                                            <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('points_played', 0) }}</td>
-                                            <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('plus_minus', 0) }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div class="row">
+                                <!-- MMP Players Table -->
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h5 class="mb-0">MMP Players</h5>
+                                                <span class="badge bg-light text-dark" id="mmp-selected-count">0 selected</span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive">
+                                                <table id="mmp-player-table" class="table table-sm table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 50px">Select</th>
+                                                            <th style="width: 60px">Jersey</th>
+                                                            <th>Name</th>
+                                                            <th style="width: 60px">Points</th>
+                                                            <th style="width: 60px">+/-</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for player in all_players %}
+                                                            {% if player.gender_matching_preference == "MMP" %}
+                                                            <tr class="player-row" data-player-id="{{ player.id }}">
+                                                                <td class="text-center">
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input player-checkbox mmp-checkbox" type="checkbox" 
+                                                                               value="{{ player.id }}" id="player-{{ player.id }}"
+                                                                               data-gender="MMP"
+                                                                               {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
+                                                                    </div>
+                                                                </td>
+                                                                <td>{{ player.jersey_number }}</td>
+                                                                <td>{{ player.name }}</td>
+                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('points_played', 0) }}</td>
+                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('plus_minus', 0) }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- FMP Players Table -->
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-info text-white">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h5 class="mb-0">FMP Players</h5>
+                                                <span class="badge bg-light text-dark" id="fmp-selected-count">0 selected</span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive">
+                                                <table id="fmp-player-table" class="table table-sm table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 50px">Select</th>
+                                                            <th style="width: 60px">Jersey</th>
+                                                            <th>Name</th>
+                                                            <th style="width: 60px">Points</th>
+                                                            <th style="width: 60px">+/-</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for player in all_players %}
+                                                            {% if player.gender_matching_preference == "FMP" %}
+                                                            <tr class="player-row" data-player-id="{{ player.id }}">
+                                                                <td class="text-center">
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input player-checkbox fmp-checkbox" type="checkbox" 
+                                                                               value="{{ player.id }}" id="player-{{ player.id }}"
+                                                                               data-gender="FMP"
+                                                                               {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
+                                                                    </div>
+                                                                </td>
+                                                                <td>{{ player.jersey_number }}</td>
+                                                                <td>{{ player.name }}</td>
+                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('points_played', 0) }}</td>
+                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('plus_minus', 0) }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
 
                         <!-- Submit Button -->
                         <div class="d-grid gap-2">
@@ -333,7 +434,7 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Initialize DataTable for stats
+        // Initialize DataTables for stats
         const statsTable = $('#player-stats-table').DataTable({
             "order": [[1, "desc"]], // Sort by points played by default
             "pageLength": 25,
@@ -342,28 +443,37 @@
                   '<"row"<"col-sm-12"tr>>' +
                   '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
             "columnDefs": [
-                { "type": "num", "targets": [1,2,3,4,5,6,7] }, // Numeric sorting for stats columns
+                { "type": "num", "targets": [1,2,3,4,5,6,7] },
                 { 
-                    "targets": 2, // Completion rate column
+                    "targets": 2,
                     "render": function(data, type, row) {
                         if (type === 'sort') {
-                            // Extract the percentage for sorting
                             return parseFloat(data);
                         }
-                        return data; // Return the original format for display
+                        return data;
                     }
                 }
             ]
         });
         
-        // Initialize DataTable for player selection with minimal features
-        const playerTable = $('#player-selection-table').DataTable({
+        // Initialize DataTables for player selection
+        const mmpTable = $('#mmp-player-table').DataTable({
             "paging": false,
             "info": false,
-            "searching": false, // We'll handle searching manually
+            "searching": false,
             "order": [[1, "asc"]], // Sort by jersey number
             "columnDefs": [
-                { "orderable": false, "targets": 0 } // Disable sorting on checkbox column
+                { "orderable": false, "targets": 0 }
+            ]
+        });
+        
+        const fmpTable = $('#fmp-player-table').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": false,
+            "order": [[1, "asc"]], // Sort by jersey number
+            "columnDefs": [
+                { "orderable": false, "targets": 0 }
             ]
         });
         
@@ -378,6 +488,7 @@
         $('#player-filter').on('keyup', function() {
             const searchText = $(this).val().toLowerCase();
             
+            // Filter MMP table
             $('.player-row').each(function() {
                 const name = $(this).find('td:eq(2)').text().toLowerCase();
                 const jersey = $(this).find('td:eq(1)').text().toLowerCase();
@@ -392,12 +503,17 @@
         
         // Gender ratio tracking
         function updateGenderCounts() {
-            let mmpCount = $('.player-checkbox:checked[data-gender="MMP"]').length;
-            let fmpCount = $('.player-checkbox:checked[data-gender="FMP"]').length;
+            let mmpCount = $('.mmp-checkbox:checked').length;
+            let fmpCount = $('.fmp-checkbox:checked').length;
             let totalSelected = mmpCount + fmpCount;
             
             $('#mmp-count').text(mmpCount);
             $('#fmp-count').text(fmpCount);
+            $('#total-count').text(totalSelected);
+            
+            // Update the count badges
+            $('#mmp-selected-count').text(mmpCount + ' selected');
+            $('#fmp-selected-count').text(fmpCount + ' selected');
             
             // Get required ratio
             const ratio = $('#gender_ratio').val();
@@ -464,8 +580,8 @@
             }
             
             // Get gender counts
-            const mmpCount = $('.player-checkbox:checked[data-gender="MMP"]').length;
-            const fmpCount = $('.player-checkbox:checked[data-gender="FMP"]').length;
+            const mmpCount = $('.mmp-checkbox:checked').length;
+            const fmpCount = $('.fmp-checkbox:checked').length;
             
             // Get required ratio
             const ratio = $('#gender_ratio').val();
@@ -490,4 +606,5 @@
         updateGenderCounts();
     });
 </script>
+
 {% endblock %}
