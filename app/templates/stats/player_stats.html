@@ -872,6 +872,15 @@ document.head.appendChild(style);
 
 // Add radar chart initialization
 function initializeRadarCharts() {
+    // Check if Chart is defined
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded yet. Will retry in 100ms...');
+        setTimeout(initializeRadarCharts, 100);
+        return;
+    }
+    
+    console.log('Chart.js is loaded, creating radar charts...');
+    
     // Get player stats from the template
     const stats = {
         // Offensive stats
@@ -884,11 +893,14 @@ function initializeRadarCharts() {
         throwaways: {{ stats.throwaways|default(0) }},
         drops: {{ stats.drops|default(0) }},
         avg_throw_distance: {{ stats.avg_throw_distance|default(0) }},
+        catches: {{ stats.catches|default(0) }},
+        catch_rate: {{ stats.catch_rate|default(0) }},
         
         // Defensive stats
         blocks: {{ stats.blocks|default(0) }},
         stalls: {{ stats.stalls|default(0) }},
         d_line_plus_minus: {{ stats.d_line_plus_minus|default(0) }},
+        d_line_points_played: {{ stats.d_line_points_played|default(0) }},
         
         // Calculate hucks (throws over 20m)
         hucks: {{ throw_vectors|selectattr('distance', 'ge', 20)|list|length }}
