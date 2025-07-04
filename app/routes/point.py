@@ -119,6 +119,7 @@ def get_player_stats(game_id):
             completion_rate = round((stats['completions'] / stats['throws']) * 100, 1)
         
         player_stats[player.id] = {
+            'player_id': player.id,  # Add this line to include player ID
             'player_name': player.name,
             'jersey_number': player.jersey_number,
             'points_played': points_played,
@@ -274,33 +275,12 @@ def add_point(game_id):
         line_type, starting_position = determine_line_and_position(last_point)
         form.our_line_type.data = line_type
         form.starting_position.data = starting_position
-
-    if form.validate_on_submit():
-        # Validate player count and gender ratio
-        selected_players = form.players.data
-        if len(selected_players) != 7:
-            flash('You must select exactly 7 players for a line.', 'danger')
-            return render_template('point/point_form.html', form=form, game=game, 
-                                  title='Add Point', completion_rate=calculate_completion_rate(game_id),
-                                  player_stats=get_player_stats(game_id), all_players=all_players,
-                                  player_stats_dict=player_stats_dict)
-        
-        # Get gender counts
-        mmp_count = Player.query.filter(Player.id.in_(selected_players), 
-                                       Player.gender_matching_preference == 'MMP').count()
-        fmp_count = Player.query.filter(Player.id.in_(selected_players), 
-                                       Player.gender_matching_preference == 'FMP').count()
-        
-        # Validate against selected ratio
-        required_mmp, required_fmp = map(int, form.gender_ratio.data.split('-'))
-        if mmp_count != required_mmp or fmp_count != required_fmp:
-            flash(f'Selected players do not match the gender ratio. Need {required_mmp} MMP and {required_fmp} FMP.', 'danger')
-            return render_template('point/point_form.html', form=form, game=game, 
-                                  title='Add Point', completion_rate=calculate_completion_rate(game_id),
-                                  player_stats=get_player_stats(game_id), all_players=all_players,
-                                  player_stats_dict=player_stats_dict)    
     
     if form.validate_on_submit():
+        # Process the comma-separated player IDs from the hidden input
+        if request.form.get('selected-players-input'):
+            form.players.data = [int(pid) for pid in request.form.get('selected-players-input').split(',') if pid]
+        
         try:
             point = Point(
                 game_id=game_id,
