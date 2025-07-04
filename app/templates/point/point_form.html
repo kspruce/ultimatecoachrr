@@ -30,6 +30,47 @@
         display: block;
         font-size: 0.75rem;
     }
+    
+    /* Player selection table styling */
+    #player-selection-table {
+        font-size: 0.9rem;
+    }
+    
+    #player-selection-table .form-check {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+    }
+    
+    /* Highlight selected players */
+    tr.selected-player {
+        background-color: rgba(0, 123, 255, 0.1) !important;
+    }
+    
+    /* Gender ratio indicator */
+    #ratio-status {
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    
+    /* Filter input styling */
+    #player-filter-container {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    #player-filter-container i {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: #6c757d;
+    }
+    
+    #player-filter {
+        padding-left: 30px;
+    }
 </style>
 
 {% block content %}
@@ -57,71 +98,15 @@
         </div>
     </div>
 
-    <!-- Stats Summary Card -->
-    <div class="row mb-4">
+    <!-- Point Form Card -->
+    <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5>Game Stats So Far</h5>
+                    <h5>Point Details</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card mb-3">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title">Team Completion Rate</h6>
-                                    <p class="display-4">{{ completion_rate }}%</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <h6>Player Statistics</h6>
-                            <div class="table-responsive">
-                                <table id="player-stats-table" class="table table-sm table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Player</th>
-                                            <th class="text-center">Points</th>
-                                            <th class="text-center">Comp %</th>
-                                            <th class="text-center">Goals</th>
-                                            <th class="text-center">Assists</th>
-                                            <th class="text-center">Blocks</th>
-                                            <th class="text-center">Drops</th>
-                                            <th class="text-center">+/-</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for stat in player_stats %}
-                                        <tr>
-                                            <td>{{ stat.player_name }} (#{{ stat.jersey_number }})</td>
-                                            <td class="text-center">{{ stat.points_played }}</td>
-                                            <td class="text-center" data-order="{{ stat.completion_rate }}">
-                                                {{ stat.completion_rate }}%
-                                                <small class="text-muted">({{ stat.completions }}/{{ stat.throws }})</small>
-                                            </td>
-                                            <td class="text-center">{{ stat.goals }}</td>
-                                            <td class="text-center">{{ stat.assists }}</td>
-                                            <td class="text-center">{{ stat.blocks }}</td>
-                                            <td class="text-center">{{ stat.drops }}</td>
-                                            <td class="text-center">{{ stat.plus_minus }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Point Form Card -->
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-body">
-                    <form method="post" novalidate>
+                    <form method="post" novalidate id="point-form">
                         {{ form.hidden_tag() }}
 
                         <!-- Basic Point Info -->
@@ -187,23 +172,6 @@
                                 {% endfor %}
                             </div>
                         </div>
-
-                        <!-- Player Selection -->
-                        <div class="mb-4">
-                            {{ form.players.label(class="form-label") }}
-                            <div class="alert alert-info">
-                                Select exactly 7 players who will be on the line for this point.
-                            </div>
-                            <select id="players-select" class="form-select" name="players" multiple data-placeholder="Select players..." style="width: 100%;">
-                                {% for value, label in form.players.choices %}
-                                <option value="{{ value }}" {% if form.players.data and value in form.players.data %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                            {% for error in form.players.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
                         <!-- Additional Info -->
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -222,6 +190,64 @@
                             </div>
                         </div>
 
+                        <!-- Player Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">Players on Line (Select exactly 7)</label>
+                            <div class="alert alert-info">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        Required ratio: <span id="required-ratio">{{ form.gender_ratio.data.replace('-', ' MMP - ') }} FMP</span>
+                                    </div>
+                                    <div id="ratio-status" class="badge bg-warning">
+                                        <span id="mmp-count">0</span> MMP and <span id="fmp-count">0</span> FMP selected (0/7)
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden field to store selected players -->
+                            <input type="hidden" name="players" id="selected-players-input" value="">
+                            
+                            <!-- Player filter -->
+                            <div id="player-filter-container" class="mb-3">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="player-filter" class="form-control" placeholder="Filter players by name or jersey number...">
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table id="player-selection-table" class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px">Select</th>
+                                            <th style="width: 80px">Jersey #</th>
+                                            <th>Name</th>
+                                            <th style="width: 80px">Gender</th>
+                                            <th style="width: 100px">Points Played</th>
+                                            <th style="width: 80px">+/-</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for player in all_players %}
+                                        <tr class="player-row" data-player-id="{{ player.id }}">
+                                            <td class="text-center">
+                                                <div class="form-check">
+                                                    <input class="form-check-input player-checkbox" type="checkbox" 
+                                                           value="{{ player.id }}" id="player-{{ player.id }}"
+                                                           data-gender="{{ player.gender_matching_preference }}"
+                                                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
+                                                </div>
+                                            </td>
+                                            <td>{{ player.jersey_number }}</td>
+                                            <td>{{ player.name }}</td>
+                                            <td>{{ player.gender_matching_preference }}</td>
+                                            <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('points_played', 0) }}</td>
+                                            <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('plus_minus', 0) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         <!-- Submit Button -->
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary btn-lg") }}
@@ -231,44 +257,87 @@
             </div>
         </div>
     </div>
+
+    <!-- Stats Summary Card -->
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Game Stats So Far</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" id="toggle-stats">Show/Hide Details</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card mb-3">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Team Completion Rate</h6>
+                                    <p class="display-4">{{ completion_rate }}%</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6>Player Statistics</h6>
+                            <div class="table-responsive">
+                                <table id="player-stats-table" class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Player</th>
+                                            <th class="text-center">Points</th>
+                                            <th class="text-center">Comp %</th>
+                                            <th class="text-center">Goals</th>
+                                            <th class="text-center">Assists</th>
+                                            <th class="text-center">Blocks</th>
+                                            <th class="text-center">Drops</th>
+                                            <th class="text-center">+/-</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stat in player_stats %}
+                                        <tr>
+                                            <td>{{ stat.player_name }} (#{{ stat.jersey_number }})</td>
+                                            <td class="text-center">{{ stat.points_played }}</td>
+                                            <td class="text-center" data-order="{{ stat.completion_rate }}">
+                                                {{ stat.completion_rate }}%
+                                                <small class="text-muted">({{ stat.completions }}/{{ stat.throws }})</small>
+                                            </td>
+                                            <td class="text-center">{{ stat.goals }}</td>
+                                            <td class="text-center">{{ stat.assists }}</td>
+                                            <td class="text-center">{{ stat.blocks }}</td>
+                                            <td class="text-center">{{ stat.drops }}</td>
+                                            <td class="text-center">{{ stat.plus_minus }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
-
 {% block styles %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $('#players-select').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Select 7 players',
-            maximumSelectionLength: 7
-        });
-    });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<!-- Add DataTables JS -->
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Existing Select2 initialization
-        $('#players-select').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Select 7 players',
-            maximumSelectionLength: 7
-        });
-
-        // Initialize DataTable
-        $('#player-stats-table').DataTable({
+        // Initialize DataTable for stats
+        const statsTable = $('#player-stats-table').DataTable({
             "order": [[1, "desc"]], // Sort by points played by default
-            "pageLength": 25,  // Show 25 entries by default
+            "pageLength": 25,
+            "responsive": true,
             "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
                   '<"row"<"col-sm-12"tr>>' +
                   '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
@@ -286,6 +355,139 @@
                 }
             ]
         });
+        
+        // Initialize DataTable for player selection with minimal features
+        const playerTable = $('#player-selection-table').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": false, // We'll handle searching manually
+            "order": [[1, "asc"]], // Sort by jersey number
+            "columnDefs": [
+                { "orderable": false, "targets": 0 } // Disable sorting on checkbox column
+            ]
+        });
+        
+        // Toggle stats details
+        $('#toggle-stats').on('click', function() {
+            const statsBody = $(this).closest('.card').find('.card-body');
+            statsBody.toggle();
+            $(this).text(statsBody.is(':visible') ? 'Hide Details' : 'Show Details');
+        });
+        
+        // Player filtering
+        $('#player-filter').on('keyup', function() {
+            const searchText = $(this).val().toLowerCase();
+            
+            $('.player-row').each(function() {
+                const name = $(this).find('td:eq(2)').text().toLowerCase();
+                const jersey = $(this).find('td:eq(1)').text().toLowerCase();
+                
+                if (name.includes(searchText) || jersey.includes(searchText)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+        
+        // Gender ratio tracking
+        function updateGenderCounts() {
+            let mmpCount = $('.player-checkbox:checked[data-gender="MMP"]').length;
+            let fmpCount = $('.player-checkbox:checked[data-gender="FMP"]').length;
+            let totalSelected = mmpCount + fmpCount;
+            
+            $('#mmp-count').text(mmpCount);
+            $('#fmp-count').text(fmpCount);
+            
+            // Get required ratio
+            const ratio = $('#gender_ratio').val();
+            const [requiredMMP, requiredFMP] = ratio.split('-').map(Number);
+            
+            // Update the required ratio text
+            $('#required-ratio').text(ratio.replace('-', ' MMP - ') + ' FMP');
+            
+            // Validate against ratio
+            const ratioStatus = $('#ratio-status');
+            
+            if (totalSelected > 7) {
+                ratioStatus.removeClass('bg-success bg-warning').addClass('bg-danger')
+                    .html(`${mmpCount} MMP + ${fmpCount} FMP = ${totalSelected}/7 (too many!)`);
+            } else if (totalSelected < 7) {
+                ratioStatus.removeClass('bg-success bg-danger').addClass('bg-warning')
+                    .html(`${mmpCount} MMP + ${fmpCount} FMP = ${totalSelected}/7 (need more)`);
+            } else if (mmpCount !== requiredMMP || fmpCount !== requiredFMP) {
+                ratioStatus.removeClass('bg-success bg-warning').addClass('bg-danger')
+                    .html(`${mmpCount} MMP + ${fmpCount} FMP = 7/7 (wrong ratio!)`);
+            } else {
+                ratioStatus.removeClass('bg-danger bg-warning').addClass('bg-success')
+                    .html(`${mmpCount} MMP + ${fmpCount} FMP = 7/7 (perfect!)`);
+            }
+            
+            // Update the hidden input with selected player IDs
+            const selectedPlayerIds = $('.player-checkbox:checked').map(function() {
+                return $(this).val();
+            }).get();
+            
+            $('#selected-players-input').val(selectedPlayerIds.join(','));
+        }
+        
+        // Update when checkboxes change
+        $(document).on('change', '.player-checkbox', function() {
+            const totalChecked = $('.player-checkbox:checked').length;
+            
+            // Toggle row highlighting
+            $(this).closest('tr').toggleClass('selected-player', $(this).is(':checked'));
+            
+            // Limit to 7 players
+            if (totalChecked > 7) {
+                $(this).prop('checked', false);
+                $(this).closest('tr').removeClass('selected-player');
+                alert('You can only select 7 players for a line!');
+            }
+            
+            updateGenderCounts();
+        });
+        
+        // Update when gender ratio changes
+        $('#gender_ratio').on('change', function() {
+            updateGenderCounts();
+        });
+        
+        // Form submission validation
+        $('#point-form').on('submit', function(e) {
+            const totalChecked = $('.player-checkbox:checked').length;
+            
+            if (totalChecked !== 7) {
+                e.preventDefault();
+                alert('You must select exactly 7 players for a line!');
+                return false;
+            }
+            
+            // Get gender counts
+            const mmpCount = $('.player-checkbox:checked[data-gender="MMP"]').length;
+            const fmpCount = $('.player-checkbox:checked[data-gender="FMP"]').length;
+            
+            // Get required ratio
+            const ratio = $('#gender_ratio').val();
+            const [requiredMMP, requiredFMP] = ratio.split('-').map(Number);
+            
+            if (mmpCount !== requiredMMP || fmpCount !== requiredFMP) {
+                e.preventDefault();
+                alert(`Selected players don't match the required gender ratio of ${requiredMMP} MMP and ${requiredFMP} FMP.`);
+                return false;
+            }
+            
+            // If we get here, form is valid
+            return true;
+        });
+        
+        // Initialize row highlighting for pre-selected players
+        $('.player-checkbox:checked').each(function() {
+            $(this).closest('tr').addClass('selected-player');
+        });
+        
+        // Initial update of gender counts
+        updateGenderCounts();
     });
 </script>
 {% endblock %}

@@ -241,6 +241,17 @@ def add_point(game_id):
     game = Game.query.get_or_404(game_id)
     form = PointForm()
     
+    # Get all active players
+    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    
+    # Get player stats
+    player_stats = get_player_stats(game_id)
+    
+    # Create a dictionary for quick player stats lookup
+    player_stats_dict = {}
+    for stat in player_stats:
+        player_stats_dict[stat['player_id']] = stat
+    
     # Get the last point for this game
     last_point = Point.query.filter_by(game_id=game_id)\
         .order_by(Point.point_number.desc())\
@@ -263,6 +274,31 @@ def add_point(game_id):
         line_type, starting_position = determine_line_and_position(last_point)
         form.our_line_type.data = line_type
         form.starting_position.data = starting_position
+
+    if form.validate_on_submit():
+        # Validate player count and gender ratio
+        selected_players = form.players.data
+        if len(selected_players) != 7:
+            flash('You must select exactly 7 players for a line.', 'danger')
+            return render_template('point/point_form.html', form=form, game=game, 
+                                  title='Add Point', completion_rate=calculate_completion_rate(game_id),
+                                  player_stats=get_player_stats(game_id), all_players=all_players,
+                                  player_stats_dict=player_stats_dict)
+        
+        # Get gender counts
+        mmp_count = Player.query.filter(Player.id.in_(selected_players), 
+                                       Player.gender_matching_preference == 'MMP').count()
+        fmp_count = Player.query.filter(Player.id.in_(selected_players), 
+                                       Player.gender_matching_preference == 'FMP').count()
+        
+        # Validate against selected ratio
+        required_mmp, required_fmp = map(int, form.gender_ratio.data.split('-'))
+        if mmp_count != required_mmp or fmp_count != required_fmp:
+            flash(f'Selected players do not match the gender ratio. Need {required_mmp} MMP and {required_fmp} FMP.', 'danger')
+            return render_template('point/point_form.html', form=form, game=game, 
+                                  title='Add Point', completion_rate=calculate_completion_rate(game_id),
+                                  player_stats=get_player_stats(game_id), all_players=all_players,
+                                  player_stats_dict=player_stats_dict)    
     
     if form.validate_on_submit():
         try:
@@ -315,7 +351,9 @@ def add_point(game_id):
                          game=game,
                          title='Add Point',
                          completion_rate=calculate_completion_rate(game_id),
-                         player_stats=get_player_stats(game_id))
+                         player_stats=player_stats,
+                         all_players=all_players,
+                         player_stats_dict=player_stats_dict)
 
 
 
