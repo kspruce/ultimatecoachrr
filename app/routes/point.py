@@ -5,7 +5,7 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Pull
-from app.forms.point import PointForm, PullForm
+from app.forms.point import PointForm
 from app.models.event import Event
 
 bp = Blueprint('point', __name__, url_prefix='/points')

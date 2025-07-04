@@ -438,27 +438,39 @@
         </div>
     </div>
 </div>
-<!-- Debug Form -->
-<div class="card mt-4">
+<!-- Debug information -->
+<div class="card mb-3">
     <div class="card-header bg-secondary text-white">
-        <h5>Debug Form</h5>
+        <h5>Debug Information</h5>
     </div>
     <div class="card-body">
-        <form method="post" action="{{ url_for('point.add_point', game_id=game.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="point_number" value="{{ form.point_number.data }}">
-            <input type="hidden" name="our_line_type" value="{{ form.our_line_type.data }}">
-            <input type="hidden" name="our_score_before" value="{{ form.our_score_before.data }}">
-            <input type="hidden" name="their_score_before" value="{{ form.their_score_before.data }}">
-            <input type="hidden" name="starting_position" value="{{ form.starting_position.data }}">
-            <input type="hidden" name="point_outcome" value="{{ form.point_outcome.data }}">
-            <input type="hidden" name="gender_ratio" value="{{ form.gender_ratio.data }}">
-            <input type="hidden" name="force_direction" value="{{ form.force_direction.data }}">
-            <input type="hidden" name="players" value="1,2,3,4,5,6,7">
-            <button type="submit" class="btn btn-warning">Test Form Submission</button>
-        </form>
+        <p><strong>Form Data:</strong></p>
+        <p>Selected Players (hidden input): <code id="debug-players-value"></code></p>
+        <p>Selected Players Count: <span id="debug-players-count">0</span></p>
+        <p>Form Action: <code>{{ url_for('point.add_point', game_id=game.id) }}</code></p>
+        
+        <script>
+            function updateDebugInfo() {
+                const selectedValue = $('#selected-players-input').val();
+                $('#debug-players-value').text(selectedValue);
+                
+                const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
+                $('#debug-players-count').text(selectedCount);
+            }
+            
+            // Update debug info when checkboxes change
+            $(document).on('change', '.player-checkbox', function() {
+                setTimeout(updateDebugInfo, 100);
+            });
+            
+            // Initial update
+            $(document).ready(function() {
+                setTimeout(updateDebugInfo, 500);
+            });
+        </script>
     </div>
 </div>
+
 {% endblock %}
 {% block styles %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -526,7 +538,7 @@
         $('#player-filter').on('keyup', function() {
             const searchText = $(this).val().toLowerCase();
             
-            // Filter MMP table
+            // Filter both tables
             $('.player-row').each(function() {
                 const name = $(this).find('td:eq(2)').text().toLowerCase();
                 const jersey = $(this).find('td:eq(1)').text().toLowerCase();
@@ -539,7 +551,7 @@
             });
         });
         
-        // Gender ratio tracking
+        // Gender ratio tracking and player selection
         function updateGenderCounts() {
             let mmpCount = $('.mmp-checkbox:checked').length;
             let fmpCount = $('.fmp-checkbox:checked').length;
@@ -582,8 +594,27 @@
                 return $(this).val();
             }).get();
             
+            // Update the hidden input
             $('#selected-players-input').val(selectedPlayerIds.join(','));
+            
+            // Update the preview
+            $('#selected-players-preview').text(selectedPlayerIds.join(',') || 'None');
+            
             console.log("Selected players:", selectedPlayerIds.join(','));
+            
+            // Update debug information
+            updateDebugInfo();
+        }
+        
+        // Debug information update
+        function updateDebugInfo() {
+            const selectedValue = $('#selected-players-input').val();
+            if ($('#debug-players-value').length) {
+                $('#debug-players-value').text(selectedValue || 'None');
+                
+                const selectedCount = selectedValue ? selectedValue.split(',').length : 0;
+                $('#debug-players-count').text(selectedCount);
+            }
         }
         
         // Update when checkboxes change
@@ -610,7 +641,18 @@
         
         // Form submission validation
         $('#point-form').on('submit', function(e) {
+            const selectedPlayers = $('#selected-players-input').val();
+            console.log("Form submitted");
+            console.log("Selected players in hidden input:", selectedPlayers);
+            
             const totalChecked = $('.player-checkbox:checked').length;
+            
+            // If no players are selected, prevent submission
+            if (!selectedPlayers || totalChecked === 0) {
+                e.preventDefault();
+                alert("No players selected. Please select 7 players before submitting.");
+                return false;
+            }
             
             if (totalChecked !== 7) {
                 e.preventDefault();
@@ -632,18 +674,33 @@
                 return false;
             }
             
+            // Log all form data
+            const formData = $(this).serializeArray();
+            console.log("All form data:", formData);
+            
             // If we get here, form is valid
             return true;
         });
         
-        // Initialize row highlighting for pre-selected players
-        $('.player-checkbox:checked').each(function() {
-            $(this).closest('tr').addClass('selected-player');
-        });
+        // Initialize player selection if form.players.data is set
+        if ({{ form.players.data|default([])|tojson|safe }}.length > 0) {
+            const initialPlayers = {{ form.players.data|default([])|tojson|safe }};
+            console.log("Initial players:", initialPlayers);
+            
+            // Check the corresponding checkboxes
+            initialPlayers.forEach(function(playerId) {
+                $('#player-' + playerId).prop('checked', true);
+            });
+            
+            // Update counts and highlighting
+            $('.player-checkbox:checked').each(function() {
+                $(this).closest('tr').addClass('selected-player');
+            });
+        }
         
         // Initial update of gender counts
         updateGenderCounts();
     });
 </script>
-
 {% endblock %}
+
