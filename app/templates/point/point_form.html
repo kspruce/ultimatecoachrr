@@ -275,7 +275,7 @@
                                                     </thead>
                                                     <tbody>
                                                         {% for player in all_players %}
-                                                            {% if player.gender_match == "MMP" %}
+                                                            {% if player.gender_match == "Male" %}
                                                             <tr class="player-row" data-player-id="{{ player.id }}">
                                                                 <td class="text-center">
                                                                     <div class="form-check">
@@ -322,7 +322,7 @@
                                                     </thead>
                                                     <tbody>
                                                         {% for player in all_players %}
-                                                            {% if player.gender_match == "FMP" %}
+                                                            {% if player.gender_match == "Female" %}
                                                             <tr class="player-row" data-player-id="{{ player.id }}">
                                                                 <td class="text-center">
                                                                     <div class="form-check">
