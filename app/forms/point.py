@@ -29,8 +29,13 @@ class PointForm(FlaskForm):
     ], validators=[DataRequired()])
     duration = IntegerField('Duration (seconds)', validators=[Optional(), NumberRange(min=0)])
     timestamp_in_video = IntegerField('Timestamp in Video (seconds)', validators=[Optional(), NumberRange(min=0)])
+    
+    # Add the hidden field for players
+    players_hidden = HiddenField('Players Hidden')
+    
     # Use FlexibleSelectMultipleField instead of SelectMultipleField
     players = FlexibleSelectMultipleField('Players on Line', coerce=int, validators=[Optional()])
+    
     gender_ratio = SelectField('Gender Ratio', choices=[
         ('4-3', '4 MMP - 3 FMP'),
         ('3-4', '3 MMP - 4 FMP')
