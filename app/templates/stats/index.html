@@ -341,7 +341,7 @@
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Optimal O-Line
                         <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested O-line based on throw completion efficiency"></i>
+                           title="Suggested O-line based on O-point efficiency"></i>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -433,7 +433,7 @@
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">Optimal D-Line
                         <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested D-line based on throw completion efficiency"></i>
+                           title="Suggested D-line based on D point efficiency"></i>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -546,6 +546,7 @@
                             <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
                             <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
                             <th data-toggle="tooltip" title="Turnovers (Throwaways + Drops)">Turns</th>
@@ -568,6 +569,7 @@
                             <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
                             <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
                             <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
+                            <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
                             <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
                             <td class="offensive-stat">
                                 {{ player_stats[player.id].completions }}
