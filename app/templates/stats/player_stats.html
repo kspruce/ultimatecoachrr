@@ -210,6 +210,10 @@
                                     <th>Hockey Assists</th>
                                     <td>{{ stats.hockey_assists }}</td>
                                 </tr>
+                                <tr>
+                                    <th>Break Throws</th>
+                                    <td>{{ stats.break_throws }}</td>
+                                </tr>
                             </table>
                         </div>
                     </div>
@@ -239,7 +243,7 @@
     </div>
     <!-- Detailed Stats -->
     <div class="row mb-4">
-        <div class="col-md-6">
+         <div class="col-md-6">
             <div class="card stat-card h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">Offensive Stats</h5>
@@ -277,6 +281,10 @@
                                     <td>{{ stats.hockey_assists }}</td>
                                 </tr>
                                 <tr>
+                                    <th>Break Throws</th>
+                                    <td>{{ stats.break_throws }}</td>
+                                </tr>
+                                <tr>
                                     <th>Total Distance</th>
                                     <td>{{ total_throw_distance|round(1) }} m</td>
                                 </tr>
@@ -291,10 +299,6 @@
                                 <tr>
                                     <th>O-Line +/-</th>
                                     <td>{{ stats.o_line_plus_minus }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Callahans</th>
-                                    <td>{{ stats.callahans }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -315,6 +319,14 @@
                                 <tr>
                                     <th>Blocks</th>
                                     <td>{{ stats.blocks }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Shutdowns</th>
+                                    <td>{{ stats.shutdowns }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Forced Turnovers</th>
+                                    <td>{{ stats.blocks + stats.stalls }}</td>
                                 </tr>
                                 <tr>
                                     <th>D-Line Points</th>
@@ -347,6 +359,7 @@
             </div>
         </div>
     </div>
+
  
     <!-- Radar Charts -->
     <div class="row mb-4">
