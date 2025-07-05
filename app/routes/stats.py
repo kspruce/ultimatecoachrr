@@ -744,6 +744,7 @@ def index():
 
         # Calculate efficiency for each line
         def calculate_line_efficiency(players, is_offensive=True):
+            """Calculate line efficiency with gender separation"""
             player_efficiency = {}
             for player in players:
                 # Get points where player was in lineup
@@ -768,15 +769,22 @@ def index():
                           f"{efficiency:.2f} ({points_scored}/{points_played} points scored)")
         
             return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
-
-
+        
+        # In the index route, replace the existing line selection code with:
         # Calculate efficiencies and get top players
         o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
         d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
+        
+        # Separate players by gender
+        o_line_women = [player for player, _ in o_line_efficiency if player.gender == 'female'][:4]
+        o_line_men = [player for player, _ in o_line_efficiency if player.gender == 'male'][:4]
+        d_line_women = [player for player, _ in d_line_efficiency if player.gender == 'female'][:4]
+        d_line_men = [player for player, _ in o_line_efficiency if player.gender == 'male'][:4]
+        
+        # Create combined lists for template
+        o_line_players = o_line_women + o_line_men
+        d_line_players = d_line_women + d_line_men
 
-        # Take top 7 players for each line
-        o_line_players = [player for player, _ in o_line_efficiency][:7]
-        d_line_players = [player for player, _ in d_line_efficiency][:7]
 
         print(f"Selected {len(o_line_players)} O-line players")
         print(f"Selected {len(d_line_players)} D-line players")
