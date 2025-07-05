@@ -719,5 +719,56 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 });
+// Add filtering functionality for the player stats table
+document.querySelectorAll('[data-view]').forEach(button => {
+    button.addEventListener('click', function() {
+        // Update active button
+        document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        
+        const view = this.dataset.view;
+        const table = $('#player-stats-table').DataTable();
+        
+        // Clear any existing search
+        table.search('').columns().search('');
+        
+        if (view === 'offense') {
+            // Custom filtering function for offensive stats
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    // Check goals, assists, hockey assists, or completions
+                    const goals = parseInt(data[3]) || 0;
+                    const assists = parseInt(data[4]) || 0;
+                    const hockey = parseInt(data[5]) || 0;
+                    const completions = parseInt(data[7].split('(')[0].trim()) || 0;
+                    
+                    return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
+                }
+            );
+        } else if (view === 'defense') {
+            // Custom filtering function for defensive stats
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    // Check blocks
+                    const blocks = parseInt(data[6]) || 0;
+                    return blocks > 0;
+                }
+            );
+        } else {
+            // Remove any custom filtering for 'all' view
+            $.fn.dataTable.ext.search.pop();
+        }
+        
+        // Redraw the table with the new filter
+        table.draw();
+        
+        // Clear the custom filter after drawing
+        if (view !== 'all') {
+            $.fn.dataTable.ext.search.pop();
+        }
+    });
+});
+
+
 </script>
 {% endblock %}
