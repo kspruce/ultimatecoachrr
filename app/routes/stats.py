@@ -1570,38 +1570,26 @@ def debug_players():
         } for p in players]
     })
 
-@bp.route('/debug/line_efficiency')
+@bp.route('/debug/break_throws')
 @login_required
-def debug_line_efficiency():
-    players = Player.query.filter_by(active=True).all()
-    o_line_candidates = []
-    d_line_candidates = []
+def debug_break_throws():
+    # Get all throws with break_throw=True
+    break_throws = Throw.query.filter_by(break_throw=True).all()
     
-    for player in players:
-        lineup_query = LineUp.query.join(Point).filter(LineUp.player_id == player.id)
-        o_line_points = lineup_query.filter(Point.our_line_type == 'O-line').count()
-        d_line_points = lineup_query.filter(Point.our_line_type == 'D-line').count()
-        
-        if o_line_points > 0:
-            o_line_candidates.append(player)
-        if d_line_points > 0:
-            d_line_candidates.append(player)
-    
-    o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
-    d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
+    # Get total throws for comparison
+    total_throws = Throw.query.count()
     
     return jsonify({
-        'o_line_efficiency': [{
-            'player_id': player.id,
-            'player_name': player.name,
-            'gender': getattr(player, 'gender', None),
-            'efficiency': efficiency
-        } for player, efficiency in o_line_efficiency],
-        'd_line_efficiency': [{
-            'player_id': player.id,
-            'player_name': player.name,
-            'gender': getattr(player, 'gender', None),
-            'efficiency': efficiency
-        } for player, efficiency in d_line_efficiency]
+        'total_throws': total_throws,
+        'break_throws': len(break_throws),
+        'percentage': (len(break_throws) / total_throws * 100) if total_throws > 0 else 0,
+        'sample_break_throws': [{
+            'id': t.id,
+            'thrower_id': t.thrower_id,
+            'thrower_name': t.thrower.name if t.thrower else 'Unknown',
+            'point_id': t.point_id,
+            'throw_type': t.throw_type,
+            'is_completion': t.is_completion
+        } for t in break_throws[:10]]  # Show first 10 break throws
     })
 

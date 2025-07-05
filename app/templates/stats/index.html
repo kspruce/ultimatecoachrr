@@ -663,6 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const goals = parseInt(data[3]) || 0;
                         const assists = parseInt(data[4]) || 0;
                         const hockey = parseInt(data[5]) || 0;
+                        const breaks = parseInt(data[6]) || 0;
                         const completions = parseInt(data[7].split('(')[0].trim()) || 0;
                         
                         return goals > 0 || assists > 0 || hockey > 0 || completions > 0;
