@@ -2,6 +2,8 @@
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.1.0/css/fixedColumns.dataTables.min.css">
+<script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 <style>
     .stat-card {
         transition: all 0.3s ease;
@@ -108,6 +110,76 @@
     .chart-container {
         position: relative;
         min-height: 300px;
+    }
+    
+    /* Fixed header and first column */
+    .stats-table-container {
+        position: relative;
+        overflow: auto;
+        max-height: 600px;
+        width: 100%;
+    }
+    
+    .stats-table-container table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .stats-table-container th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        z-index: 10;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .stats-table-container td:first-child,
+    .stats-table-container th:first-child {
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa;
+        z-index: 5;
+        border-right: 2px solid #dee2e6;
+    }
+    
+    .stats-table-container th:first-child {
+        z-index: 15; /* Higher than other headers to appear above them */
+    }
+    
+    /* Highlight rows on hover */
+    .stats-table-container tr:hover {
+        background-color: rgba(0,123,255,0.1) !important;
+    }
+    
+    /* Filter buttons styling */
+    .stats-filter-btn.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    /* Stats category indicators */
+    .stat-cell {
+        position: relative;
+    }
+    
+    .offensive-stat {
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+    
+    .defensive-stat {
+        background-color: rgba(231, 76, 60, 0.1);
+    }
+    
+    /* Tooltip improvements */
+    .stats-tooltip {
+        position: absolute;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 100;
+        display: none;
     }
 </style>
 {% endblock %}
@@ -333,76 +405,70 @@
     </div>
 
     <!-- Player Statistics Table -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Player Statistics
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Comprehensive player statistics from recent games"></i>
-                    </h5>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary active" data-view="all">All Stats</button>
-                        <button class="btn btn-outline-primary" data-view="offense">Offensive Stats</button>
-                        <button class="btn btn-outline-primary" data-view="defense">Defensive Stats</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if players and player_stats %}
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="player-stats-table">
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th data-toggle="tooltip" title="Games Played">Games</th>
-                                    <th data-toggle="tooltip" title="Points Played">Points</th>
-                                    <th data-toggle="tooltip" title="Goals Scored">Goals</th>
-                                    <th data-toggle="tooltip" title="Assists Thrown">Assists</th>
-                                    <th data-toggle="tooltip" title="Hockey Assists">Hockey</th>
-                                    <th data-toggle="tooltip" title="Break Throws">Breaks</th>
-                                    <th data-toggle="tooltip" title="Blocks Made">Blocks</th>
-                                    <th data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
-                                    <th data-toggle="tooltip" title="Turnovers (Throwaways + Drops)">Turns</th>
-                                    <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
-                                    <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for player in players %}
-                                {% if player.id in player_stats %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                            <small class="text-muted">#{{ player.jersey_number }}</small>
-                                        </a>
-                                    </td>
-                                    <td>{{ player_stats[player.id].games_played }}</td>
-                                    <td>{{ player_stats[player.id].points_played }}</td>
-                                    <td>{{ player_stats[player.id].goals }}</td>
-                                    <td>{{ player_stats[player.id].assists }}</td>
-                                    <td>{{ player_stats[player.id].hockey_assists }}</td>
-                                    <td>{{ player_stats[player.id].break_throws }}</td>
-                                    <td>{{ player_stats[player.id].blocks }}</td>
-                                    <td>
-                                        {{ player_stats[player.id].completions }}
-                                        <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
-                                    </td>
-                                    <td>{{ player_stats[player.id].turnovers }}</td>
-                                    <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                           player_stats[player.id].blocks - player_stats[player.id].turnovers)|round(1) }}</td>
-                                    <td>{{ player_stats[player.id].per|round(1) }}</td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">No player statistics available yet.</div>
-                    {% endif %}
-                </div>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Player Statistics
+                <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                   title="Comprehensive player statistics from recent games"></i>
+            </h5>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary stats-filter-btn active" data-view="all">All Stats</button>
+                <button class="btn btn-outline-primary stats-filter-btn" data-view="offense">Offensive Stats</button>
+                <button class="btn btn-outline-primary stats-filter-btn" data-view="defense">Defensive Stats</button>
             </div>
+        </div>
+        <div class="card-body">
+            {% if players and player_stats %}
+            <div class="stats-table-container">
+                <table class="table table-striped" id="player-stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th data-toggle="tooltip" title="Games Played">Games</th>
+                            <th data-toggle="tooltip" title="Points Played">Points</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
+                            <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
+                            <th data-toggle="tooltip" title="Turnovers (Throwaways + Drops)">Turns</th>
+                            <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
+                            <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for player in players %}
+                        {% if player.id in player_stats %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                    {{ player.name }}
+                                    <small class="text-muted">#{{ player.jersey_number }}</small>
+                                </a>
+                            </td>
+                            <td>{{ player_stats[player.id].games_played }}</td>
+                            <td>{{ player_stats[player.id].points_played }}</td>
+                            <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
+                            <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
+                            <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
+                            <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
+                            <td class="offensive-stat">
+                                {{ player_stats[player.id].completions }}
+                                <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
+                            </td>
+                            <td>{{ player_stats[player.id].turnovers }}</td>
+                            <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
+                                   player_stats[player.id].blocks - player_stats[player.id].turnovers)|round(1) }}</td>
+                            <td>{{ player_stats[player.id].per|round(1) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No player statistics available yet.</div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -422,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
 
-    // Initialize DataTable
+    // Initialize DataTable with improved configuration
     const playerStatsTable = $('#player-stats-table').DataTable({
         pageLength: 25,
         order: [[10, "desc"]], // Sort by PER by default
@@ -433,17 +499,96 @@ document.addEventListener('DOMContentLoaded', function() {
             search: "Search players:",
             lengthMenu: "Show _MENU_ players"
         },
+        scrollX: true,
+        scrollY: "500px",
+        scrollCollapse: true,
+        paging: false,
+        fixedColumns: {
+            leftColumns: 1
+        },
         columnDefs: [
             { targets: [7], // Completion percentage column
                 render: function(data, type, row) {
                     if (type === 'sort') {
-                        return parseFloat(data.match(/\((.*?)%\)/)[1]);
+                        const match = data.match(/\((.*?)%\)/);
+                        return match ? parseFloat(match[1]) : 0;
                     }
                     return data;
                 }
             }
         ]
     });
+    
+    // Add filtering functionality for the player stats table
+    document.querySelectorAll('.stats-filter-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            document.querySelectorAll('.stats-filter-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const view = this.dataset.view;
+            
+            // Clear any existing search and filters
+            playerStatsTable.search('').columns().search('');
+            
+            // Remove any existing custom filters
+            while ($.fn.dataTable.ext.search.length > 0) {
+                $.fn.dataTable.ext.search.pop();
+            }
+            
+            if (view === 'offense') {
+                // Custom filtering function for offensive stats
+                $.fn.dataTable.ext.search.push(
+                    function(settings, data, dataIndex) {
+                        // Check goals, assists, hockey assists, or completions
+                        const goals = parseInt(data[3]) || 0;
+                        const assists = parseInt(data[4]) || 0;
+                        const hockey = parseInt(data[5]) || 0;
+                        const completions = parseInt(data[7].split('(')[0].trim()) || 0;
+                        
+                        return goals > 0 || assists > 0 || hockey > 0 || completions > 0;
+                    }
+                );
+                
+                // Highlight offensive columns
+                $('.offensive-stat').addClass('bg-light');
+                $('.defensive-stat').removeClass('bg-light');
+                
+            } else if (view === 'defense') {
+                // Custom filtering function for defensive stats
+                $.fn.dataTable.ext.search.push(
+                    function(settings, data, dataIndex) {
+                        // Check blocks
+                        const blocks = parseInt(data[6]) || 0;
+                        return blocks > 0;
+                    }
+                );
+                
+                // Highlight defensive columns
+                $('.defensive-stat').addClass('bg-light');
+                $('.offensive-stat').removeClass('bg-light');
+            } else {
+                // Remove highlighting for 'all' view
+                $('.offensive-stat, .defensive-stat').removeClass('bg-light');
+            }
+            
+            // Redraw the table with the new filter
+            playerStatsTable.draw();
+        });
+    });
+    
+    // Add responsive behavior
+    $(window).on('resize', function() {
+        if ($(window).width() < 768) {
+            $('.stats-table-container').css('max-height', '400px');
+        } else {
+            $('.stats-table-container').css('max-height', '600px');
+        }
+    });
+    
+    // Initialize responsive behavior
+    $(window).trigger('resize');
+
 
     // Initialize Heatmap
     if (document.getElementById('field-heatmap')) {
