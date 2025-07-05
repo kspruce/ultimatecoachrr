@@ -156,91 +156,74 @@
                 <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
             </div>
         </div>
+    </div>
         
-        <div class="col-md-8">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Summary Statistics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Games Played</th>
-                                    <td>{{ stats.games_played }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Points Played</th>
-                                    <td>{{ stats.points_played }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Goals</th>
-                                    <td>{{ stats.goals }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Assists</th>
-                                    <td>{{ stats.assists }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Blocks</th>
-                                    <td>{{ stats.blocks }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Completion Rate</th>
-                                    <td>{{ stats.completion_rate|round(1) }}%</td>
-                                </tr>
-                                <tr>
-                                    <th>Catch Rate</th>
-                                    <td>{{ stats.catch_rate|round(1) }}%</td>
-                                </tr>
-                                <tr>
-                                    <th>Throwaways</th>
-                                    <td>{{ stats.throwaways }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Drops</th>
-                                    <td>{{ stats.drops }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Hockey Assists</th>
-                                    <td>{{ stats.hockey_assists }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Break Throws</th>
-                                    <td>{{ stats.break_throws }}</td>
-                                </tr>
-                            </table>
-                        </div>
+    <div class="col-md-8">
+        <div class="card stat-card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Summary Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Games Played</th>
+                                <td>{{ stats.games_played }}</td>
+                            </tr>
+                            <tr>
+                                <th>Points Played</th>
+                                <td>{{ stats.points_played }}</td>
+                            </tr>
+                            <tr>
+                                <th>Goals</th>
+                                <td>{{ stats.goals }}</td>
+                            </tr>
+                            <tr>
+                                <th>Assists</th>
+                                <td>{{ stats.assists }}</td>
+                            </tr>
+                            <tr>
+                                <th>Blocks</th>
+                                <td>{{ stats.blocks }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Completion Rate</th>
+                                <td>{{ stats.completion_rate|round(1) }}%</td>
+                            </tr>
+                            <tr>
+                                <th>Catch Rate</th>
+                                <td>{{ stats.catch_rate|round(1) }}%</td>
+                            </tr>
+                            <tr>
+                                <th>Throwaways</th>
+                                <td>{{ stats.throwaways }}</td>
+                            </tr>
+                            <tr>
+                                <th>Drops</th>
+                                <td>{{ stats.drops }}</td>
+                            </tr>
+                            <tr>
+                                <th>Hockey Assists</th>
+                                <td>{{ stats.hockey_assists }}</td>
+                            </tr>
+                            <tr>
+                                <th>Break Throws</th>
+                                <td>{{ stats.break_throws }}</td>
+                            </tr>
+                        </table>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Add hockey assist visualization -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Scoring Sequences</h5>
-                </div>
-                <div class="card-body">
-                    <div id="scoring-sequences"></div>
-                    <div class="sequence-legend mt-3">
-                        <span class="badge bg-primary">Throw</span>
-                        <span class="badge bg-success">Assist</span>
-                        <span class="badge bg-warning">Hockey Assist</span>
-                        <span class="badge bg-danger">Goal</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
     <!-- Detailed Stats -->
     <div class="row mb-4">
          <div class="col-md-6">
@@ -410,6 +393,26 @@
                                 <li>Plus Minus: 1.0 per point</li>
                             </ul>
                         </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add hockey assist visualization -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Scoring Sequences</h5>
+                </div>
+                <div class="card-body">
+                    <div id="scoring-sequences"></div>
+                    <div class="sequence-legend mt-3">
+                        <span class="badge bg-primary">Throw</span>
+                        <span class="badge bg-success">Assist</span>
+                        <span class="badge bg-warning">Hockey Assist</span>
+                        <span class="badge bg-danger">Goal</span>
                     </div>
                 </div>
             </div>
