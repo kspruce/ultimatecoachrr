@@ -775,19 +775,37 @@ def index():
         o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
         d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
         
-        # Separate players by gender
-        o_line_women = [player for player, _ in o_line_efficiency if player.gender == 'female'][:4]
-        o_line_men = [player for player, _ in o_line_efficiency if player.gender == 'male'][:4]
-        d_line_women = [player for player, _ in d_line_efficiency if player.gender == 'female'][:4]
-        d_line_men = [player for player, _ in o_line_efficiency if player.gender == 'male'][:4]
+        # Separate players by gender with fallback
+        o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
+        o_line_men = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
+        d_line_women = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
+        d_line_men = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
         
+        # If we don't have enough players with gender data, fall back to the original method
+        if not o_line_women and not o_line_men:
+            print("Warning: No players with gender data found for O-line, using top players regardless of gender")
+            o_line_players = [player for player, _ in o_line_efficiency][:7]
+        else:
+            o_line_players = o_line_women + o_line_men
+        
+        if not d_line_women and not d_line_men:
+            print("Warning: No players with gender data found for D-line, using top players regardless of gender")
+            d_line_players = [player for player, _ in d_line_efficiency][:7]
+        else:
+            d_line_players = d_line_women + d_line_men
+        
+                
         # Create combined lists for template
         o_line_players = o_line_women + o_line_men
         d_line_players = d_line_women + d_line_men
 
 
-        print(f"Selected {len(o_line_players)} O-line players")
-        print(f"Selected {len(d_line_players)} D-line players")
+        # After calculating o_line_women, o_line_men, d_line_women, d_line_men
+        print(f"O-line women: {[p.name for p in o_line_women]}")
+        print(f"O-line men: {[p.name for p in o_line_men]}")
+        print(f"D-line women: {[p.name for p in d_line_women]}")
+        print(f"D-line men: {[p.name for p in d_line_men]}")
+        
 
         # Generate heatmap data
         throws_query = Throw.query
@@ -875,6 +893,10 @@ def index():
             player_stats=player_stats,
             o_line_players=o_line_players,
             d_line_players=d_line_players,
+            o_line_women=o_line_women,
+            o_line_men=o_line_men,
+            d_line_women=d_line_women,
+            d_line_men=d_line_men,
             o_line_efficiency=dict(o_line_efficiency),
             d_line_efficiency=dict(d_line_efficiency),
             heatmap_data=json.dumps(heatmap_data),
@@ -1535,4 +1557,51 @@ def calculate_hucks(player, games=None):
     
     return hucks
 
+@bp.route('/debug/players')
+@login_required
+def debug_players():
+    players = Player.query.filter_by(active=True).all()
+    return jsonify({
+        'players': [{
+            'id': p.id,
+            'name': p.name,
+            'gender': getattr(p, 'gender', None),
+            'position': getattr(p, 'position', None)
+        } for p in players]
+    })
+
+@bp.route('/debug/line_efficiency')
+@login_required
+def debug_line_efficiency():
+    players = Player.query.filter_by(active=True).all()
+    o_line_candidates = []
+    d_line_candidates = []
+    
+    for player in players:
+        lineup_query = LineUp.query.join(Point).filter(LineUp.player_id == player.id)
+        o_line_points = lineup_query.filter(Point.our_line_type == 'O-line').count()
+        d_line_points = lineup_query.filter(Point.our_line_type == 'D-line').count()
+        
+        if o_line_points > 0:
+            o_line_candidates.append(player)
+        if d_line_points > 0:
+            d_line_candidates.append(player)
+    
+    o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
+    d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
+    
+    return jsonify({
+        'o_line_efficiency': [{
+            'player_id': player.id,
+            'player_name': player.name,
+            'gender': getattr(player, 'gender', None),
+            'efficiency': efficiency
+        } for player, efficiency in o_line_efficiency],
+        'd_line_efficiency': [{
+            'player_id': player.id,
+            'player_name': player.name,
+            'gender': getattr(player, 'gender', None),
+            'efficiency': efficiency
+        } for player, efficiency in d_line_efficiency]
+    })
 
