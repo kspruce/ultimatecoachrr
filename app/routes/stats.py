@@ -16,6 +16,40 @@ from app.utils.utils import admin_required
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
 # --- Core Statistical Calculation Functions ---
+def calculate_hockey_assists(player, games=None):
+    """Calculate hockey assists (second-to-last pass before a goal)"""
+    # Start with base query for all throws in points
+    query = Throw.query.filter_by(thrower_id=player.id)
+    
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        query = query.filter(Throw.point_id.in_(point_ids))
+    
+    hockey_assists = 0
+    
+    # Get all throws by this player
+    player_throws = query.all()
+    
+    for throw in player_throws:
+        # For each throw, check if the receiver made an assist
+        if throw.receiver_id:
+            # Find if the receiver made an assist in the same point after this throw
+            assist = Throw.query.filter(
+                Throw.thrower_id == throw.receiver_id,
+                Throw.point_id == throw.point_id,
+                Throw.throw_type == 'assist',
+                Throw.created_at > throw.created_at
+            ).order_by(Throw.created_at).first()
+            
+            if assist:
+                hockey_assists += 1
+    
+    return hockey_assists
+
+
 def get_player_throw_stats(player, games=None):
     """Get comprehensive throwing statistics for a player"""
     query = Throw.query.filter(
@@ -416,6 +450,13 @@ def get_player_base_stats(player, games=None):
         
         stats['clips'] = clips_query.count()
         # You could add more clip-related statistics here if needed
+        
+        # Count break throws
+        stats['break_throws'] = sum(1 for t in unique_throws.values() if t.break_throw)
+        
+        # Calculate hockey assists properly
+        stats['hockey_assists'] = calculate_hockey_assists(player, games)
+        
 
     except Exception as e:
         print(f"Error getting stats for {player.name}: {str(e)}")
