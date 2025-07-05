@@ -11,6 +11,32 @@ import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
 
+def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
+    """
+    Determine if a throw is a break throw based on field position.
+    
+    A simple heuristic:
+    1. If force_direction is known, use that
+    2. Otherwise, detect if throw crosses the middle of the field (y=18.5)
+    """
+    if force_direction:
+        # If we know the force direction, use that logic
+        if force_direction == 'forehand':
+            # Forehand force means defense is forcing to the right from thrower's perspective
+            # Break throw would go to the left (negative dx)
+            return (x_end - x_start) < 0
+        elif force_direction == 'backhand':
+            # Backhand force means defense is forcing to the left
+            # Break throw would go to the right (positive dx)
+            return (x_end - x_start) > 0
+    else:
+        # If force direction is unknown, use field position heuristic
+        # Check if throw crosses the middle of the field (assuming middle is at y=18.5m)
+        if (y_start < 18.5 and y_end > 18.5) or (y_start > 18.5 and y_end < 18.5):
+            return True
+    
+    return False
+
 @bp.route('/record/<int:point_id>', methods=['GET', 'POST'])
 @login_required
 def record_events(point_id):
@@ -63,12 +89,18 @@ def record_events(point_id):
                         receiver_id=event.player_id,
                         throwing_event_id=assist_event.id,
                         receiving_event_id=event.id,
-                        x_start=assist_event.field_position_x,  # Updated field name
-                        y_start=assist_event.field_position_y,  # Updated field name
-                        x_end=event.field_position_x,          # Updated field name
-                        y_end=event.field_position_y,          # Updated field name
+                        x_start=assist_event.field_position_x,
+                        y_start=assist_event.field_position_y,
+                        x_end=event.field_position_x,
+                        y_end=event.field_position_y,
                         throw_type='assist',
-                        is_completion=True
+                        is_completion=True,
+                        break_throw=is_break_throw(
+                            assist_event.field_position_x, 
+                            assist_event.field_position_y,
+                            event.field_position_x,
+                            event.field_position_y
+                        )
                     )
                     db.session.add(assist_throw)
 
@@ -84,12 +116,18 @@ def record_events(point_id):
                             receiver_id=assist_event.player_id,
                             throwing_event_id=hockey_assist_event.id,
                             receiving_event_id=assist_event.id,
-                            x_start=hockey_assist_event.field_position_x,  # Updated field name
-                            y_start=hockey_assist_event.field_position_y,  # Updated field name
-                            x_end=assist_event.field_position_x,          # Updated field name
-                            y_end=assist_event.field_position_y,          # Updated field name
+                            x_start=hockey_assist_event.field_position_x,
+                            y_start=hockey_assist_event.field_position_y,
+                            x_end=assist_event.field_position_x,
+                            y_end=assist_event.field_position_y,
                             throw_type='hockey_assist',
-                            is_completion=True
+                            is_completion=True,
+                            break_throw=is_break_throw(
+                                hockey_assist_event.field_position_x,
+                                hockey_assist_event.field_position_y,
+                                assist_event.field_position_x,
+                                assist_event.field_position_y
+                            )
                         )
                         db.session.add(hockey_throw)
 
@@ -101,12 +139,18 @@ def record_events(point_id):
                     receiver_id=event.player_id,
                     throwing_event_id=previous_event.id,
                     receiving_event_id=event.id,
-                    x_start=previous_event.field_position_x,  # Updated field name
-                    y_start=previous_event.field_position_y,  # Updated field name
-                    x_end=event.field_position_x,            # Updated field name
-                    y_end=event.field_position_y,            # Updated field name
+                    x_start=previous_event.field_position_x,
+                    y_start=previous_event.field_position_y,
+                    x_end=event.field_position_x,
+                    y_end=event.field_position_y,
                     throw_type='regular',
-                    is_completion=True
+                    is_completion=True,
+                    break_throw=is_break_throw(
+                        previous_event.field_position_x,
+                        previous_event.field_position_y,
+                        event.field_position_x,
+                        event.field_position_y
+                    )
                 )
                 db.session.add(regular_throw)
 
@@ -115,15 +159,21 @@ def record_events(point_id):
                 throwaway = Throw(
                     point_id=point_id,
                     thrower_id=event.player_id,
-                    receiver_id=None,  # Changed to None for throwaways
+                    receiver_id=None,
                     throwing_event_id=previous_event.id,
                     receiving_event_id=event.id,
-                    x_start=previous_event.field_position_x,  # Updated field name
-                    y_start=previous_event.field_position_y,  # Updated field name
-                    x_end=event.field_position_x,            # Updated field name
-                    y_end=event.field_position_y,            # Updated field name
+                    x_start=previous_event.field_position_x,
+                    y_start=previous_event.field_position_y,
+                    x_end=event.field_position_x,
+                    y_end=event.field_position_y,
                     throw_type='throwaway',
-                    is_completion=False
+                    is_completion=False,
+                    break_throw=is_break_throw(
+                        previous_event.field_position_x,
+                        previous_event.field_position_y,
+                        event.field_position_x,
+                        event.field_position_y
+                    )
                 )
                 db.session.add(throwaway)
 
@@ -304,7 +354,13 @@ def create_throw_from_events(previous_event, current_event):
         x_start=previous_event.field_position_x,
         y_start=previous_event.field_position_y,
         x_end=current_event.field_position_x,
-        y_end=current_event.field_position_y
+        y_end=current_event.field_position_y,
+        break_throw=is_break_throw(
+            previous_event.field_position_x,
+            previous_event.field_position_y,
+            current_event.field_position_x,
+            current_event.field_position_y
+        )
     )
     
     # Calculate distance
@@ -322,3 +378,53 @@ def create_throw_from_events(previous_event, current_event):
         throw.throw_type = 'regular'
     
     return throw
+
+@bp.route('/admin/mark_break_throws')
+@login_required
+def mark_break_throws():
+    """Retroactively mark break throws in the database"""
+    # Get all throws that don't have break_throw set
+    throws = Throw.query.filter(Throw.break_throw.is_(None)).all()
+    
+    count = 0
+    for throw in throws:
+        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+            throw.break_throw = is_break_throw(throw.x_start, throw.y_start, throw.x_end, throw.y_end)
+            if throw.break_throw:
+                count += 1
+    
+    db.session.commit()
+    return jsonify({
+        'message': f'Marked {count} throws as break throws',
+        'total_processed': len(throws)
+    })
+
+@bp.route('/debug/break_throws')
+@login_required
+def debug_break_throws():
+    """Debug route to check break throws"""
+    # Get all throws
+    all_throws = Throw.query.all()
+    
+    # Count break throws
+    break_throws = [t for t in all_throws if t.break_throw]
+    
+    # Get sample break throws
+    sample_break_throws = break_throws[:10]
+    
+    return jsonify({
+        'total_throws': len(all_throws),
+        'break_throws': len(break_throws),
+        'percentage': (len(break_throws) / len(all_throws) * 100) if all_throws else 0,
+        'sample_break_throws': [{
+            'id': t.id,
+            'thrower_id': t.thrower_id,
+            'thrower_name': t.thrower.name if t.thrower else 'Unknown',
+            'throw_type': t.throw_type,
+            'x_start': t.x_start,
+            'y_start': t.y_start,
+            'x_end': t.x_end,
+            'y_end': t.y_end,
+            'is_completion': t.is_completion
+        } for t in sample_break_throws]
+    })
