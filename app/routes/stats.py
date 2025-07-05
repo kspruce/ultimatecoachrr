@@ -222,6 +222,10 @@ def calculate_per(player, games=None, team_avgs=None):
     
     if stats['points_played'] == 0:
         return 0
+    
+    # If team_avgs is not provided, calculate it
+    if team_avgs is None:
+        team_avgs = calculate_team_averages(games)
         
     # Define weights
     WEIGHTS = {
@@ -245,15 +249,20 @@ def calculate_per(player, games=None, team_avgs=None):
             (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
         )) +
         (WEIGHTS['plus_minus'] * (
-            stats['o_line_plus_minus_per_point'] - team_avgs['avg_o_line_plus_minus_per_point'] +
-            stats['d_line_plus_minus_per_point'] - team_avgs['avg_d_line_plus_minus_per_point']
+            stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0) +
+            stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0)
         ))
     )
 
     # Normalize to league average
-    per = normalize_per(uper * (15 / team_avgs['avg_uper']) if team_avgs['avg_uper'] > 0 else 0)
+    avg_uper = team_avgs.get('avg_uper', 1)
+    if avg_uper <= 0:
+        avg_uper = 1  # Prevent division by zero
+    
+    per = normalize_per(uper * (15 / avg_uper))
     
     return per
+
 
 def get_player_base_stats(player, games=None):
     """Get comprehensive player statistics"""
@@ -593,6 +602,7 @@ def calculate_team_averages(games=None):
         'avg_uper': totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
     }
 
+
 def calculate_game_stats(game):
     """
     Calculate comprehensive game statistics
@@ -704,8 +714,8 @@ def index():
             team_summary = default_context['team_summary']
             team_stats = []
 
-        # Calculate team averages
-        team_avgs = calculate_team_averages()
+        # Calculate team averages once for all players
+        team_avgs = calculate_team_averages(recent_games)
         
         # Calculate player stats
         player_stats = {}
@@ -713,6 +723,7 @@ def index():
             try:
                 stats = get_player_base_stats(player)
                 if stats['points_played'] > 0:
+                    # Pass the team_avgs to calculate_per
                     stats['per'] = calculate_per(player, team_avgs=team_avgs)
                     player_stats[player.id] = stats
             except Exception as e:
@@ -770,7 +781,6 @@ def index():
         
             return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
         
-        # In the index route, replace the existing line selection code with:
         # Calculate efficiencies and get top players
         o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
         d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
@@ -912,6 +922,7 @@ def index():
 
 
 
+
 # Add these helper functions:
 
 def calculate_player_recent_performance(player, recent_games):
@@ -1034,11 +1045,14 @@ def player_stats(player_id):
 
     # Calculate regular stats
     stats = get_player_base_stats(player, games)
+    
+    # Calculate team averages specifically for these games
+    team_avgs = calculate_team_averages(games)
+    
     if stats['points_played'] > 0:
-        team_avgs = calculate_team_averages(games)
         stats['per'] = calculate_per(player, games, team_avgs)
     
-    #add hucks to player stats
+    # Add hucks to player stats
     stats['hucks'] = calculate_hucks(player, games)
     
     # Add shutdowns calculation (if not already included)
@@ -1062,9 +1076,11 @@ def player_stats(player_id):
         if any(player.id in [lineup.player_id for lineup in point.lineups] 
               for point in game.points):
             game_stats = get_player_base_stats(player, game)
+            # Calculate game-specific team averages
+            game_team_avgs = calculate_team_averages([game])
             game_stats['per'] = calculate_per(
                 player, game, 
-                calculate_team_averages([game])
+                game_team_avgs
             )
             player_games.append({
                 'game': game,
@@ -1104,6 +1120,7 @@ def player_stats(player_id):
         total_throw_distance=total_distance,
         avg_throw_distance=avg_distance
     )
+
 
 
 
@@ -1429,25 +1446,45 @@ def calculate_team_summary(games):
     return summary
 
 def calculate_unadjusted_per(stats):
-    """Calculate unadjusted PER from stats dictionary"""
+    """
+    Calculate raw unadjusted PER without normalization
+    """
     if stats['points_played'] == 0:
         return 0
+        
+    # Define weights
+    WEIGHTS = {
+        'scoring': 0.5,
+        'assist': 0.5,
+        'turnover': -0.75,
+        'defense': 0.75,
+        'throw': 0.05,
+        'plus_minus': 0.1
+    }
 
-    return (1 / stats['points_played']) * (
-        (0.5 * (stats['goals'] ** 0.75)) +
-        (0.5 * (stats['assists'] ** 0.75)) +
-        (0.5 * 0.5 * (stats['hockey_assists'] ** 0.75)) -
-        (0.75 * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
-        (0.75 * (stats['blocks'] ** 0.75)) +
-        (0.05 * (
+    # Calculate raw PER
+    uper = (1 / stats['points_played']) * (
+        (WEIGHTS['scoring'] * (stats['goals'] ** 0.75)) +
+        (WEIGHTS['assist'] * (stats['assists'] ** 0.75)) +
+        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)) +
+        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
+        (WEIGHTS['defense'] * (stats['blocks'] ** 0.75)) +
+        (WEIGHTS['throw'] * (
             (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
             (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
+        )) +
+        (WEIGHTS['plus_minus'] * (
+            stats.get('o_line_plus_minus_per_point', 0) + 
+            stats.get('d_line_plus_minus_per_point', 0)
         ))
     )
+    
+    return uper
+
 
 def normalize_per(value):
     """Normalize PER to a 0-30 scale"""
-    return min(max(value, 0), 300)
+    return min(max(value, 0), 30)
 
 def count_possessions(events):
     """Count number of possessions in a sequence of events"""
@@ -1556,6 +1593,7 @@ def calculate_hucks(player, games=None):
             hucks += 1
     
     return hucks
+
 
 @bp.route('/debug/players')
 @login_required
