@@ -137,86 +137,90 @@
     </div>
 
     <!-- PER and Summary Stats -->
-    <!-- Update PER display section -->
-    <div class="card stat-card h-100">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                Player Efficiency Rating (PER)
-                <i class="bi bi-info-circle" 
-                   data-bs-toggle="tooltip" 
-                   title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
-                </i>
-            </h5>
-        </div>
-        <div class="card-body text-center">
-            <div class="per-gauge" id="perGauge"></div>
-            <h2 class="mt-3">{{ stats.per|round(2) }}</h2>
-            <div class="small text-muted">
-                <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
-                <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
-            </div>
-        </div>
-    </div>
-        
-    <div class="col-md-8">
-        <div class="card stat-card h-100">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Summary Statistics</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-sm">
-                            <tr>
-                                <th>Games Played</th>
-                                <td>{{ stats.games_played }}</td>
-                            </tr>
-                            <tr>
-                                <th>Points Played</th>
-                                <td>{{ stats.points_played }}</td>
-                            </tr>
-                            <tr>
-                                <th>Goals</th>
-                                <td>{{ stats.goals }}</td>
-                            </tr>
-                            <tr>
-                                <th>Assists</th>
-                                <td>{{ stats.assists }}</td>
-                            </tr>
-                            <tr>
-                                <th>Blocks</th>
-                                <td>{{ stats.blocks }}</td>
-                            </tr>
-                        </table>
+    <div class="row mb-4">
+        <!-- PER Gauge -->
+        <div class="col-md-4">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        Player Efficiency Rating (PER)
+                        <i class="bi bi-info-circle" 
+                           data-bs-toggle="tooltip" 
+                           title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
+                        </i>
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="per-gauge" id="perGauge"></div>
+                    <h2 class="mt-3">{{ stats.per|round(2) }}</h2>
+                    <div class="small text-muted">
+                        <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
+                        <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
                     </div>
-                    <div class="col-md-6">
-                        <table class="table table-sm">
-                            <tr>
-                                <th>Completion Rate</th>
-                                <td>{{ stats.completion_rate|round(1) }}%</td>
-                            </tr>
-                            <tr>
-                                <th>Catch Rate</th>
-                                <td>{{ stats.catch_rate|round(1) }}%</td>
-                            </tr>
-                            <tr>
-                                <th>Throwaways</th>
-                                <td>{{ stats.throwaways }}</td>
-                            </tr>
-                            <tr>
-                                <th>Drops</th>
-                                <td>{{ stats.drops }}</td>
-                            </tr>
-                            <tr>
-                                <th>Hockey Assists</th>
-                                <td>{{ stats.hockey_assists }}</td>
-                            </tr>
-                            <tr>
-                                <th>Break Throws</th>
-                                <td>{{ stats.break_throws }}</td>
-                            </tr>
-                        </table>
-
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Statistics -->
+        <div class="col-md-8">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Summary Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Games Played</th>
+                                    <td>{{ stats.games_played }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Points Played</th>
+                                    <td>{{ stats.points_played }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Goals</th>
+                                    <td>{{ stats.goals }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Assists</th>
+                                    <td>{{ stats.assists }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Blocks</th>
+                                    <td>{{ stats.blocks }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Completion Rate</th>
+                                    <td>{{ stats.completion_rate|round(1) }}%</td>
+                                </tr>
+                                <tr>
+                                    <th>Catch Rate</th>
+                                    <td>{{ stats.catch_rate|round(1) }}%</td>
+                                </tr>
+                                <tr>
+                                    <th>Throwaways</th>
+                                    <td>{{ stats.throwaways }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Drops</th>
+                                    <td>{{ stats.drops }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Hockey Assists</th>
+                                    <td>{{ stats.hockey_assists }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Break Throws</th>
+                                    <td>{{ stats.break_throws }}</td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
