@@ -1025,23 +1025,73 @@ def calculate_player_recent_performance(player, recent_games):
     return performance
 
 def calculate_performance_trends(games):
-    """Calculate team performance trends"""
+    """Calculate team performance trends over time"""
+    if not games:
+        return {
+            'dates': [],
+            'o_line_efficiency': [],
+            'd_line_efficiency': [],
+            'break_percentage': []
+        }
+    
+    # Sort games by date
+    sorted_games = sorted(games, key=lambda g: g.date if g.date else datetime.min)
+    
+    # Calculate metrics for each game
+    dates = []
+    o_line_efficiency = []
+    d_line_efficiency = []
+    break_percentage = []
+    
+    for game in sorted_games:
+        if game.date:
+            dates.append(game.date.strftime('%Y-%m-%d'))
+        else:
+            dates.append('Unknown')
+        
+        # Calculate O-line efficiency - handle both query objects and lists
+        try:
+            # If game.o_line_points is a query object
+            o_points = game.o_line_points.all()
+        except AttributeError:
+            # If game.o_line_points is already a list
+            o_points = game.o_line_points
+        
+        o_points_count = len(o_points)
+        o_conversions = sum(1 for p in o_points if p.we_scored)
+        o_line_efficiency.append((o_conversions / o_points_count * 100) if o_points_count > 0 else 0)
+        
+        # Calculate D-line efficiency - handle both query objects and lists
+        try:
+            # If game.d_line_points is a query object
+            d_points = game.d_line_points.all()
+        except AttributeError:
+            # If game.d_line_points is already a list
+            d_points = game.d_line_points
+        
+        d_points_count = len(d_points)
+        d_conversions = sum(1 for p in d_points if p.we_scored)
+        d_line_efficiency.append((d_conversions / d_points_count * 100) if d_points_count > 0 else 0)
+        
+        # Calculate break percentage - handle both query objects and lists
+        try:
+            # If game.points is a query object
+            all_points = game.points.all()
+        except AttributeError:
+            # If game.points is already a list
+            all_points = game.points
+        
+        total_points = len(all_points)
+        breaks = sum(1 for p in all_points if p.is_break)
+        break_percentage.append((breaks / total_points * 100) if total_points > 0 else 0)
+    
     return {
-        'dates': [game.date.strftime('%Y-%m-%d') for game in games],
-        'o_line_efficiency': [
-            calculate_game_stats(game)['o_line_conversion_rate'] 
-            for game in games
-        ],
-        'd_line_efficiency': [
-            calculate_game_stats(game)['d_line_conversion_rate'] 
-            for game in games
-        ],
-        'break_percentage': [
-            (calculate_game_stats(game)['breaks'] / 
-             len(game.points) * 100) if len(game.points) > 0 else 0
-            for game in games
-        ]
+        'dates': json.dumps(dates),
+        'o_line_efficiency': json.dumps(o_line_efficiency),
+        'd_line_efficiency': json.dumps(d_line_efficiency),
+        'break_percentage': json.dumps(break_percentage)
     }
+
 
 
 @bp.route('/player/<int:player_id>')
@@ -1992,8 +2042,17 @@ def calculate_additional_team_metrics(games):
             'break_percentage': 0
         }
     
-    # Count total points - use .all() to convert query to list
-    total_points = sum(len(g.points.all()) for g in games)
+    # Count total points - handle both query objects and lists
+    total_points = 0
+    for game in games:
+        try:
+            # If game.points is a query object
+            points = game.points.all()
+        except AttributeError:
+            # If game.points is already a list
+            points = game.points
+        total_points += len(points)
+    
     if total_points == 0:
         return {
             'completion_rate': 0,
@@ -2010,7 +2069,13 @@ def calculate_additional_team_metrics(games):
     # Get point IDs for filtering
     point_ids = []
     for game in games:
-        point_ids.extend([p.id for p in game.points.all()])
+        try:
+            # If game.points is a query object
+            points = game.points.all()
+        except AttributeError:
+            # If game.points is already a list
+            points = game.points
+        point_ids.extend([p.id for p in points])
     
     # Count all throws
     throws_query = Throw.query
@@ -2042,14 +2107,25 @@ def calculate_additional_team_metrics(games):
     # Calculate break percentage
     breaks = 0
     for game in games:
-        breaks += sum(1 for p in game.points.all() if p.is_break)
+        try:
+            # If game.points is a query object
+            points = game.points.all()
+        except AttributeError:
+            # If game.points is already a list
+            points = game.points
+        breaks += sum(1 for p in points if p.is_break)
     break_percentage = (breaks / total_points) * 100
     
     # Calculate defensive efficiency
     d_points_count = 0
     d_conversions = 0
     for game in games:
-        d_points = game.d_line_points.all()
+        try:
+            # If game.d_line_points is a query object
+            d_points = game.d_line_points.all()
+        except AttributeError:
+            # If game.d_line_points is already a list
+            d_points = game.d_line_points
         d_points_count += len(d_points)
         d_conversions += sum(1 for p in d_points if p.we_scored)
     defensive_efficiency = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
@@ -2065,6 +2141,7 @@ def calculate_additional_team_metrics(games):
         'defensive_efficiency': defensive_efficiency,
         'break_percentage': break_percentage
     }
+
 
 
 def get_previous_period_games(season, tournament_id):
@@ -2125,52 +2202,3 @@ def calculate_line_efficiency(players, games, is_offensive=True):
 
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
 
-def calculate_performance_trends(games):
-    """Calculate team performance trends over time"""
-    if not games:
-        return {
-            'dates': [],
-            'o_line_efficiency': [],
-            'd_line_efficiency': [],
-            'break_percentage': []
-        }
-    
-    # Sort games by date
-    sorted_games = sorted(games, key=lambda g: g.date if g.date else datetime.min)
-    
-    # Calculate metrics for each game
-    dates = []
-    o_line_efficiency = []
-    d_line_efficiency = []
-    break_percentage = []
-    
-    for game in sorted_games:
-        if game.date:
-            dates.append(game.date.strftime('%Y-%m-%d'))
-        else:
-            dates.append('Unknown')
-        
-        # Calculate O-line efficiency - use .all() to convert query to list
-        o_points = game.o_line_points.all()
-        o_points_count = len(o_points)
-        o_conversions = sum(1 for p in o_points if p.we_scored)
-        o_line_efficiency.append((o_conversions / o_points_count * 100) if o_points_count > 0 else 0)
-        
-        # Calculate D-line efficiency - use .all() to convert query to list
-        d_points = game.d_line_points.all()
-        d_points_count = len(d_points)
-        d_conversions = sum(1 for p in d_points if p.we_scored)
-        d_line_efficiency.append((d_conversions / d_points_count * 100) if d_points_count > 0 else 0)
-        
-        # Calculate break percentage - use .all() to convert query to list
-        all_points = game.points.all()
-        total_points = len(all_points)
-        breaks = sum(1 for p in all_points if p.is_break)
-        break_percentage.append((breaks / total_points * 100) if total_points > 0 else 0)
-    
-    return {
-        'dates': json.dumps(dates),
-        'o_line_efficiency': json.dumps(o_line_efficiency),
-        'd_line_efficiency': json.dumps(d_line_efficiency),
-        'break_percentage': json.dumps(break_percentage)
-    }
