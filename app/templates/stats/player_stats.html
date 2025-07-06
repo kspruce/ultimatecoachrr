@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
 <!-- 07-2025 -- Add Chart.js and Radar plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
 
 <style>
     .stat-card {
@@ -518,7 +518,7 @@ function initializeRadarCharts() {
             console.log('Chart.js loaded successfully');
             // Load Radar plugin after Chart.js is loaded
             const radarPlugin = document.createElement('script');
-            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar';          
+            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js';          
             radarPlugin.onload = function() {
                 console.log('Radar plugin loaded successfully');
                 // Wait a moment for everything to initialize
@@ -960,7 +960,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.log('Loading Radar plugin...');
                 const radarPlugin = document.createElement('script');
-                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar';
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js';
                 radarPlugin.crossOrigin = 'anonymous';
                 
                 radarPlugin.onload = function() {
@@ -984,7 +984,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Chart.js loaded successfully');
                 
                 const radarPlugin = document.createElement('script');
-                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar';
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js';
                 radarPlugin.crossOrigin = 'anonymous';
                 
                 radarPlugin.onload = function() {
