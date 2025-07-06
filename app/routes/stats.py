@@ -88,6 +88,47 @@ def get_player_throw_stats(player, games=None):
     if stats['throws_made'] > 0:
         stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws_made']
     
+    # Add throw direction categorization
+    throw_directions = {
+        'N': 0, 'NE': 0, 'E': 0, 'SE': 0, 
+        'S': 0, 'SW': 0, 'W': 0, 'NW': 0
+    }
+    
+    for throw in throws:
+        if throw.thrower_id == player.id and throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+            # Calculate angle
+            dx = throw.x_end - throw.x_start
+            dy = throw.y_end - throw.y_start
+            angle = math.atan2(dy, dx)
+            
+            # Convert to degrees and normalize to 0-360
+            degrees = (angle * 180 / math.pi) + 90  # +90 to align North with upfield
+            if degrees < 0:
+                degrees += 360
+                
+            # Map angle to direction
+            direction = None
+            if degrees >= 337.5 or degrees < 22.5:
+                direction = 'N'
+            elif degrees >= 22.5 and degrees < 67.5:
+                direction = 'NE'
+            elif degrees >= 67.5 and degrees < 112.5:
+                direction = 'E'
+            elif degrees >= 112.5 and degrees < 157.5:
+                direction = 'SE'
+            elif degrees >= 157.5 and degrees < 202.5:
+                direction = 'S'
+            elif degrees >= 202.5 and degrees < 247.5:
+                direction = 'SW'
+            elif degrees >= 247.5 and degrees < 292.5:
+                direction = 'W'
+            else:
+                direction = 'NW'
+                
+            throw_directions[direction] += 1
+    
+    stats['throw_directions'] = throw_directions    
+    
     return stats
 
 def calculate_team_radar_stats(games, team_name):
@@ -1002,7 +1043,8 @@ def player_stats(player_id):
                 'end_x': throw.x_end,
                 'end_y': throw.y_end,
                 'type': throw.throw_type,
-                'distance': throw.calculate_distance()
+                'distance': throw.calculate_distance(),
+                'is_completion': throw.is_completion
             }
             throw_vectors.append(vector)
 
@@ -1019,7 +1061,8 @@ def player_stats(player_id):
                     'end_x': center_x + (dx * scale),
                     'end_y': center_y + (dy * scale),
                     'type': throw.throw_type,
-                    'distance': distance
+                    'distance': distance,
+                    'is_completion': throw.is_completion
                 }
                 normalized_vectors.append(normalized_vector)
 
@@ -1103,6 +1146,54 @@ def player_stats(player_id):
     total_distance = sum(vector['distance'] for vector in throw_vectors)
     avg_distance = total_distance / len(throw_vectors) if throw_vectors else 0
 
+    # Get throw directions from player stats
+    throw_directions = stats.get('throw_directions', {
+        'N': 0, 'NE': 0, 'E': 0, 'SE': 0, 
+        'S': 0, 'SW': 0, 'W': 0, 'NW': 0
+    })
+
+    # Calculate completion rates by direction
+    completion_by_direction = {
+        'N': 0, 'NE': 0, 'E': 0, 'SE': 0, 
+        'S': 0, 'SW': 0, 'W': 0, 'NW': 0
+    }
+    
+    # Process throw vectors to get directional completion data
+    for throw in throws:
+        if (throw.x_start is not None and throw.y_start is not None and 
+            throw.x_end is not None and throw.y_end is not None and 
+            throw.is_completion):
+            
+            # Calculate angle
+            dx = throw.x_end - throw.x_start
+            dy = throw.y_end - throw.y_start
+            angle = math.atan2(dy, dx)
+            
+            # Convert to degrees and normalize to 0-360
+            degrees = (angle * 180 / math.pi) + 90  # +90 to align North with upfield
+            if degrees < 0:
+                degrees += 360
+                
+            # Map angle to direction
+            direction = None
+            if degrees >= 337.5 or degrees < 22.5:
+                direction = 'N'
+            elif degrees >= 22.5 and degrees < 67.5:
+                direction = 'NE'
+            elif degrees >= 67.5 and degrees < 112.5:
+                direction = 'E'
+            elif degrees >= 112.5 and degrees < 157.5:
+                direction = 'SE'
+            elif degrees >= 157.5 and degrees < 202.5:
+                direction = 'S'
+            elif degrees >= 202.5 and degrees < 247.5:
+                direction = 'SW'
+            elif degrees >= 247.5 and degrees < 292.5:
+                direction = 'W'
+            else:
+                direction = 'NW'
+                
+            completion_by_direction[direction] += 1
 
     return render_template(
         'stats/player_stats.html',
@@ -1118,8 +1209,11 @@ def player_stats(player_id):
         throwaway_locations=throwaway_locations,
         throw_stats=throw_stats,
         total_throw_distance=total_distance,
-        avg_throw_distance=avg_distance
+        avg_throw_distance=avg_distance,
+        throw_directions=throw_directions,
+        completion_by_direction=completion_by_direction
     )
+
 
 
 
