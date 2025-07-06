@@ -559,6 +559,17 @@ function createRadarCharts() {
         return;
     }
     
+    // Destroy existing charts if they exist
+    const existingOffensiveChart = Chart.getChart(offensiveCanvas);
+    if (existingOffensiveChart) {
+        existingOffensiveChart.destroy();
+    }
+    
+    const existingDefensiveChart = Chart.getChart(defensiveCanvas);
+    if (existingDefensiveChart) {
+        existingDefensiveChart.destroy();
+    }
+    
     // Get player stats from the template
     const stats = {
         // Offensive stats
@@ -943,9 +954,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check if throw vectors are available and valid
     if (vizData && vizData.throwVectors) {
-        console.log(`Found ${vizData.throwVectors.length} throw vectors`);
+        console.log(`Found ${vizData.throwVectors.length} throw vectors`);       
         
-        createThrowDirectionRadar();
     }
     
     function loadChartJsWithDependencies(callback) {
@@ -1074,6 +1084,12 @@ function createThrowDirectionRadar() {
             return;
         }
         
+        // Destroy existing chart if it exists
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+        
         // Create the radar chart
         const ctx = canvas.getContext('2d');
         const throwDirectionRadar = new Chart(ctx, {
@@ -1164,7 +1180,10 @@ function createThrowDirectionRadar() {
 // Ensure radar charts are initialized
 setTimeout(function() {
     console.log('Delayed initialization of radar charts');
-    initializeRadarCharts();
+    // Only initialize if charts don't exist yet
+    if (!Chart.getChart('offensiveRadar') && !Chart.getChart('defensiveRadar')) {
+        initializeRadarCharts();
+    }
 }, 1000);
 
 </script>
