@@ -127,9 +127,8 @@ def get_player_throw_stats(player, games=None):
                 degrees += 360
                 
             # Map angle to 16-point direction (each direction covers 22.5 degrees)
-            # East (0°) is directly forward
             if degrees >= 348.75 or degrees < 11.25:
-                direction = 'E'  # Forward (0°)
+                direction = 'E'  # Right/East (0°) = Forward
             elif degrees >= 11.25 and degrees < 33.75:
                 direction = 'ENE'
             elif degrees >= 33.75 and degrees < 56.25:
@@ -137,7 +136,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 56.25 and degrees < 78.75:
                 direction = 'NNE'
             elif degrees >= 78.75 and degrees < 101.25:
-                direction = 'N'  # Right (90°)
+                direction = 'N'  # Up/North (90°) = Right
             elif degrees >= 101.25 and degrees < 123.75:
                 direction = 'NNW'
             elif degrees >= 123.75 and degrees < 146.25:
@@ -145,7 +144,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 146.25 and degrees < 168.75:
                 direction = 'WNW'
             elif degrees >= 168.75 and degrees < 191.25:
-                direction = 'W'  # Back (180°)
+                direction = 'W'  # Left/West (180°) = Back
             elif degrees >= 191.25 and degrees < 213.75:
                 direction = 'WSW'
             elif degrees >= 213.75 and degrees < 236.25:
@@ -153,7 +152,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 236.25 and degrees < 258.75:
                 direction = 'SSW'
             elif degrees >= 258.75 and degrees < 281.25:
-                direction = 'S'  # Left (270°)
+                direction = 'S'  # Down/South (270°) = Left
             elif degrees >= 281.25 and degrees < 303.75:
                 direction = 'SSE'
             elif degrees >= 303.75 and degrees < 326.25:
@@ -166,6 +165,7 @@ def get_player_throw_stats(player, games=None):
             # If it's a completion, also increment completion count
             if throw.is_completion:
                 completion_by_direction[direction] += 1
+
 
     
     stats['throw_directions'] = throw_directions    

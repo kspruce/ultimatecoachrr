@@ -1070,23 +1070,24 @@ function createThrowDirectionRadar() {
         
         // Create a mapping from compass directions to field directions
         const directionMapping = {
-            'E': 'Forward',     // East is forward (0°)
+            'E': 'Forward',     // East/Right (0°) is forward
             'ENE': 'Forward-Right 1',
             'NE': 'Forward-Right 2',
             'NNE': 'Forward-Right 3',
-            'N': 'Right',       // North is right (90°)
+            'N': 'Right',       // North/Up (90°) is right
             'NNW': 'Back-Right 1',
             'NW': 'Back-Right 2',
             'WNW': 'Back-Right 3',
-            'W': 'Back',        // West is back (180°)
+            'W': 'Back',        // West/Left (180°) is back
             'WSW': 'Back-Left 1',
             'SW': 'Back-Left 2',
             'SSW': 'Back-Left 3',
-            'S': 'Left',        // South is left (270°)
+            'S': 'Left',        // South/Down (270°) is left
             'SSE': 'Forward-Left 1',
             'SE': 'Forward-Left 2',
             'ESE': 'Forward-Left 3'
         };
+
         
         // Ensure all directions exist in our data objects
         allDirections.forEach(dir => {
