@@ -515,20 +515,6 @@ const vizData = {
         console.log("Initializing vizData with", this.throwVectors.length, "throw vectors");
         if (this.throwVectors.length > 0) {
             console.log("Sample throw vector:", this.throwVectors[0]);
-            
-            // Convert any Python booleans to JavaScript booleans
-            this.throwVectors = this.throwVectors.map(vector => {
-                if (vector && typeof vector === 'object') {
-                    // Convert Python True/False to JavaScript true/false
-                    if (vector.is_completion === true || vector.is_completion === false) {
-                        // Already JavaScript boolean, no change needed
-                    } else if (vector.is_completion === "True") {
-                        vector.is_completion = true;
-                    } else if (vector.is_completion === "False") {
-                        vector.is_completion = false;
-                    }
-                }
-                return vector;
             });
         }
         return this;
@@ -1430,7 +1416,7 @@ function processThrowDirections(throwVectors) {
             let isCompletion = false;
             if ('is_completion' in vector) {
                 // Handle both JavaScript booleans and Python string booleans
-                if (vector.is_completion === true || vector.is_completion === "True") {
+                if (vector.is_completion === true || vector.is_completion === "true") {
                     isCompletion = true;
                 } else {
                     isCompletion = false;
