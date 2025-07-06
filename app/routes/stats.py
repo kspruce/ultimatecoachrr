@@ -1,4 +1,3 @@
-###stats 2###
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -219,11 +218,68 @@ def calculate_per(player, games=None, team_avgs=None):
     """
     Standardized PER calculation incorporating all factors
     """
-    from app.utils.per_calculator import per_calculator
+    stats = get_player_base_stats(player, games)
     
-    # Use the PER calculator service to get the normalized PER
-    return per_calculator.get_player_per(player.id, games)
+    if stats['points_played'] == 0:
+        return 0
+    
+    # If team_avgs is not provided, calculate it
+    if team_avgs is None:
+        team_avgs = calculate_team_averages(games)
+        
+    # Define weights
+    WEIGHTS = {
+        'scoring': 0.5,
+        'assist': 0.5,
+        'turnover': -0.75,
+        'defense': 0.75,
+        'throw': 0.05,
+        'plus_minus': 0.1
+    }
 
+    # Calculate raw PER
+    uper = (1 / stats['points_played']) * (
+        (WEIGHTS['scoring'] * (stats['goals'] ** 0.75)) +
+        (WEIGHTS['assist'] * (stats['assists'] ** 0.75)) +
+        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)) +
+        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
+        (WEIGHTS['defense'] * (stats['blocks'] ** 0.75)) +
+        (WEIGHTS['throw'] * (
+            (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
+            (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
+        )) +
+        (WEIGHTS['plus_minus'] * (
+            stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0) +
+            stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0)
+        ))
+    )
+
+    # Normalize to league average
+    avg_uper = team_avgs.get('avg_uper', 1)
+    if avg_uper <= 0:
+        avg_uper = 1  # Prevent division by zero
+    
+    scaled_per = uper * (15 / avg_uper)
+    
+    # Find the maximum PER value across all players
+    all_players = Player.query.filter_by(active=True).all()
+    max_per = 0
+    
+    for p in all_players:
+        if p.id != player.id:  # Skip the current player to avoid redundant calculation
+            p_stats = get_player_base_stats(p, games)
+            if p_stats['points_played'] > 0:
+                p_uper = calculate_unadjusted_per(p_stats)
+                p_scaled = p_uper * (15 / avg_uper)
+                max_per = max(max_per, p_scaled)
+    
+    # Also consider the current player's PER
+    max_per = max(max_per, scaled_per)
+    
+    # Normalize to 0-100 scale
+    per = (scaled_per / max_per) * 100 if max_per > 0 else 0
+    
+    return per
 
 
 def get_player_base_stats(player, games=None):
@@ -659,10 +715,7 @@ def index():
         if not players:
             flash("No active players found", "warning")
             return render_template('stats/index.html', **default_context)
-        
-        # Import the PER calculator
-        from app.utils.per_calculator import per_calculator
-        
+
         # Calculate team summary and stats
         recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
         if recent_games:
@@ -688,8 +741,8 @@ def index():
             try:
                 stats = get_player_base_stats(player)
                 if stats['points_played'] > 0:
-                    # Use the PER calculator service
-                    stats['per'] = per_calculator.get_player_per(player.id, recent_games)
+                    # Pass the team_avgs to calculate_per
+                    stats['per'] = calculate_per(player, team_avgs=team_avgs)
                     player_stats[player.id] = stats
             except Exception as e:
                 print(f"Error calculating stats for player {player.id}: {str(e)}")
@@ -1008,9 +1061,6 @@ def player_stats(player_id):
     print(f"Generated {len(throwaway_locations)} throwaway locations")
     print("Sample throwaway:", throwaway_locations[0] if throwaway_locations else "No throwaways")
 
-    # Import the PER calculator
-    from app.utils.per_calculator import per_calculator
-
     # Calculate regular stats
     stats = get_player_base_stats(player, games)
     
@@ -1018,8 +1068,7 @@ def player_stats(player_id):
     team_avgs = calculate_team_averages(games)
     
     if stats['points_played'] > 0:
-        # Use the PER calculator service
-        stats['per'] = per_calculator.get_player_per(player_id, games)
+        stats['per'] = calculate_per(player, games, team_avgs)
     
     # Add hucks to player stats
     stats['hucks'] = calculate_hucks(player, games)
@@ -1047,11 +1096,10 @@ def player_stats(player_id):
             game_stats = get_player_base_stats(player, game)
             # Calculate game-specific team averages
             game_team_avgs = calculate_team_averages([game])
-            game_stats['per'] = per_calculator.get_player_per(player_id, [game])
-            player_games.append({
-                'game': game,
-                'stats': game_stats
-            })
+            game_stats['per'] = calculate_per(
+                player, game, 
+                game_team_avgs
+            )
             player_games.append({
                 'game': game,
                 'stats': game_stats
@@ -1101,9 +1149,6 @@ def game_stats(game_id):
     Comprehensive game statistics and visualizations
     """
     game = Game.query.get_or_404(game_id)
-
-    # Import the PER calculator
-    from app.utils.per_calculator import per_calculator
     
     # Calculate team statistics
     team_stats = calculate_game_stats(game)
@@ -1120,7 +1165,7 @@ def game_stats(game_id):
     
     for player in players_in_game:
         stats = get_player_base_stats(player, game)
-        stats['per'] = per_calculator.get_player_per(player.id, [game])
+        stats['per'] = calculate_per(player, game, team_avgs)
         player_stats.append({
             'player': player,
             'stats': stats
@@ -1609,14 +1654,11 @@ def debug_break_throws():
 @login_required
 def debug_per_calculation(player_id):
     """Debug page showing step-by-step PER calculation for a player"""
-    from app.utils.per_calculator import per_calculator
-    
     player = Player.query.get_or_404(player_id)
     
     # Get filter parameters
     tournament_id = request.args.get('tournament_id', type=int)
     game_id = request.args.get('game_id', type=int)
-    force_recalculate = request.args.get('force_recalculate', '0') == '1'
 
     # Determine which games to analyze
     if game_id:
@@ -1633,15 +1675,16 @@ def debug_per_calculation(player_id):
     # Calculate team averages
     team_avgs = calculate_team_averages(games)
     
-    # Force recalculation to get fresh data for debugging
-    all_pers = per_calculator.calculate_all_pers(games, force_recalculate=force_recalculate)
-    
-    # Get the raw and normalized PER values
+    # Calculate raw PER values for all players to find max
+    all_players = Player.query.filter_by(active=True).all()
     raw_per_values = {}
-    for p in Player.query.filter_by(active=True).all():
+    
+    for p in all_players:
         p_stats = get_player_base_stats(p, games)
         if p_stats['points_played'] > 0:
+            # Calculate raw PER without final normalization
             raw_per = calculate_unadjusted_per(p_stats)
+            # Scale to league average of 15
             avg_uper = team_avgs.get('avg_uper', 1)
             if avg_uper <= 0:
                 avg_uper = 1
@@ -1700,9 +1743,6 @@ def debug_per_calculation(player_id):
         # Normalize to 0-100 scale
         final_per = (scaled_per / max_per) * 100 if max_per > 0 else 0
         
-        # Get the cached PER value
-        cached_per = per_calculator.get_player_per(player.id, games)
-        
         # Store all calculation steps
         debug_info = {
             'raw_stats': {
@@ -1755,32 +1795,14 @@ def debug_per_calculation(player_id):
                 'avg_uper': avg_uper,
                 'scaled_per': scaled_per,
                 'max_per': max_per,
-                'final_per': final_per,
-                'cached_per': cached_per,
-                'difference': abs(final_per - cached_per)
+                'final_per': final_per
             },
             'top_players': {
-                'player_id': [],
-                'player_name': [],
-                'raw_per': [],
-                'normalized_per': []
-            },
-            'cache_info': per_calculator.get_debug_info()
+                'player_id': [p.id for p in all_players if p.id in raw_per_values][:10],
+                'player_name': [p.name for p in all_players if p.id in raw_per_values][:10],
+                'raw_per': [raw_per_values[p.id] for p in all_players if p.id in raw_per_values][:10]
+            }
         }
-        
-        # Get top players by PER
-        top_players = sorted(
-            [(p.id, p.name, raw_per_values.get(p.id, 0), all_pers.get(p.id, 0)) 
-             for p in Player.query.filter_by(active=True).all() 
-             if p.id in raw_per_values],
-            key=lambda x: x[2],
-            reverse=True
-        )[:10]
-        
-        debug_info['top_players']['player_id'] = [p[0] for p in top_players]
-        debug_info['top_players']['player_name'] = [p[1] for p in top_players]
-        debug_info['top_players']['raw_per'] = [p[2] for p in top_players]
-        debug_info['top_players']['normalized_per'] = [p[3] for p in top_players]
     
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
@@ -1793,26 +1815,5 @@ def debug_per_calculation(player_id):
         tournaments=tournaments,
         selected_tournament=tournament_id,
         selected_game=game_id,
-        games=games,
-        force_recalculate=force_recalculate
-    )
-
-@bp.route('/debug/per/cache')
-@login_required
-@admin_required
-def debug_per_cache():
-    """Debug page for PER cache management"""
-    from app.utils.per_calculator import per_calculator
-    
-    action = request.args.get('action')
-    
-    if action == 'clear':
-        per_calculator.clear_cache()
-        flash("PER cache has been cleared", "success")
-    
-    cache_info = per_calculator.get_debug_info()
-    
-    return render_template(
-        'stats/debug_per_cache.html',
-        cache_info=cache_info
+        games=games
     )
