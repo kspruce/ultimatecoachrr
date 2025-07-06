@@ -215,11 +215,11 @@ def default_team_stats():
     }
 
 
-ddef calculate_per(player, games=None, team_avgs=None):
+def calculate_per(player, games=None, team_avgs=None):
     """
     Standardized PER calculation incorporating all factors
     """
-    from app.services.per_calculator import per_calculator
+    from app.utils.per_calculator import per_calculator
     
     # Use the PER calculator service to get the normalized PER
     return per_calculator.get_player_per(player.id, games)
@@ -661,7 +661,7 @@ def index():
             return render_template('stats/index.html', **default_context)
         
         # Import the PER calculator
-        from app.services.per_calculator import per_calculator
+        from app.utils.per_calculator import per_calculator
         
         # Calculate team summary and stats
         recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
@@ -1009,7 +1009,7 @@ def player_stats(player_id):
     print("Sample throwaway:", throwaway_locations[0] if throwaway_locations else "No throwaways")
 
     # Import the PER calculator
-    from app.services.per_calculator import per_calculator
+    from app.utils.per_calculator import per_calculator
 
     # Calculate regular stats
     stats = get_player_base_stats(player, games)
@@ -1103,7 +1103,7 @@ def game_stats(game_id):
     game = Game.query.get_or_404(game_id)
 
     # Import the PER calculator
-    from app.services.per_calculator import per_calculator
+    from app.utils.per_calculator import per_calculator
     
     # Calculate team statistics
     team_stats = calculate_game_stats(game)
@@ -1609,7 +1609,7 @@ def debug_break_throws():
 @login_required
 def debug_per_calculation(player_id):
     """Debug page showing step-by-step PER calculation for a player"""
-    from app.services.per_calculator import per_calculator
+    from app.utils.per_calculator import per_calculator
     
     player = Player.query.get_or_404(player_id)
     
@@ -1802,7 +1802,7 @@ def debug_per_calculation(player_id):
 @admin_required
 def debug_per_cache():
     """Debug page for PER cache management"""
-    from app.services.per_calculator import per_calculator
+    from app.utils.per_calculator import per_calculator
     
     action = request.args.get('action')
     

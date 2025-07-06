@@ -46,7 +46,7 @@ def create_app(config_class=Config):
         
         # Initialize PER calculator
         try:
-            from app.services.per_calculator import per_calculator
+            from app.utils.per_calculator import per_calculator
             app.logger.info("PER calculator initialized")
             
             # Pre-calculate PER values for all games to warm up the cache
@@ -178,7 +178,7 @@ def create_app(config_class=Config):
     def clear_per_cache():
         """Clear the PER calculation cache."""
         try:
-            from app.services.per_calculator import per_calculator
+            from app.utils.per_calculator import per_calculator
             per_calculator.clear_cache()
             print("PER cache cleared successfully")
         except ImportError:
@@ -190,7 +190,7 @@ def create_app(config_class=Config):
     def warm_per_cache():
         """Pre-calculate PER values to warm up the cache."""
         try:
-            from app.services.per_calculator import per_calculator
+            from app.utils.per_calculator import per_calculator
             per_calculator.calculate_all_pers(force_recalculate=True)
             print("PER cache warmed up successfully")
         except ImportError:
