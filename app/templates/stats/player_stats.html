@@ -1073,9 +1073,17 @@ function createThrowDirectionRadar() {
         const throwDirections = {{ throw_directions|tojson }};
         const completionByDirection = {{ completion_by_direction|tojson }};
         
+        // Debug logs
+        console.log('throwDirections data:', throwDirections);
+        console.log('completionByDirection data:', completionByDirection);
+        
         // Calculate total throws for percentage calculation
         const totalThrows = Object.values(throwDirections).reduce((sum, count) => sum + count, 0);
         console.log(`Total throws: ${totalThrows}`);
+        
+        // If no throw directions data, calculate from throw vectors
+        if (totalThrows === 0 && vizData && vizData.throwVectors && vizData.throwVectors.length > 0) {
+            console.log('No throw directions data, calculating from throw vectors');
         
         // Check if canvas element exists
         const canvas = document.getElementById('throwDirectionRadar');
