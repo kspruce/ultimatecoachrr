@@ -1070,22 +1070,22 @@ function createThrowDirectionRadar() {
         
         // Create a mapping from compass directions to field directions
         const directionMapping = {
-            'N': 'Forward',    // North is forward
-            'NNE': 'Forward-Slight Right',
-            'NE': 'Forward-Right',
-            'ENE': 'Forward-Right',
-            'E': 'Right',      // East is right
-            'ESE': 'Back-Right',
-            'SE': 'Back-Right',
-            'SSE': 'Back-Slight Right',
-            'S': 'Back',       // South is back
-            'SSW': 'Back-Slight Left',
-            'SW': 'Back-Left',
-            'WSW': 'Back-Left',
-            'W': 'Left',       // West is left
-            'WNW': 'Forward-Left',
-            'NW': 'Forward-Left',
-            'NNW': 'Forward-Slight Left'
+            'N': 'Left',    // North is right
+            'NNE': 'Forward-Very Left',
+            'NE': 'Forward-Left',
+            'ENE': 'Forward-Slight Left',
+            'E': 'Forward',      // East is forward
+            'ESE': 'Forward-Slight Right',
+            'SE': 'Forward-Right',
+            'SSE': 'Forward-Very Right',
+            'S': 'Right',       // South is left
+            'SSW': 'Back-Slight Right',
+            'SW': 'Back-Right',
+            'WSW': 'Back-Very Right',
+            'W': 'Back',       // West is back
+            'WNW': 'Back-Slight Left',
+            'NW': 'Back-Left',
+            'NNW': 'Back-Very Left'
         };
 
 
