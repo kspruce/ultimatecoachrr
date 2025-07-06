@@ -100,10 +100,10 @@ def get_player_throw_stats(player, games=None):
     
     # Add throw direction categorization with 16 directions
     throw_directions = {
-        'N': 0, 'NNE': 0, 'NE': 0, 'ENE': 0, 
-        'E': 0, 'ESE': 0, 'SE': 0, 'SSE': 0, 
-        'S': 0, 'SSW': 0, 'SW': 0, 'WSW': 0, 
-        'W': 0, 'WNW': 0, 'NW': 0, 'NNW': 0
+        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
+        'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0, 
+        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 
+        'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
     }
     
     for throw in throws:
@@ -114,52 +114,54 @@ def get_player_throw_stats(player, games=None):
             angle = math.atan2(dy, dx)
             
             # Convert to degrees and normalize to 0-360
-            degrees = (angle * 180 / math.pi) + 90  # +90 to align North with upfield
+            # No need to add 90 degrees since we're already aligning East as forward
+            degrees = (angle * 180 / math.pi)
             if degrees < 0:
                 degrees += 360
                 
             # Map angle to 16-point direction (each direction covers 22.5 degrees)
             if degrees >= 348.75 or degrees < 11.25:
-                direction = 'N'
+                direction = 'E'  # East is forward
             elif degrees >= 11.25 and degrees < 33.75:
-                direction = 'NNE'
+                direction = 'ENE'
             elif degrees >= 33.75 and degrees < 56.25:
                 direction = 'NE'
             elif degrees >= 56.25 and degrees < 78.75:
-                direction = 'ENE'
+                direction = 'NNE'
             elif degrees >= 78.75 and degrees < 101.25:
-                direction = 'E'
+                direction = 'N'  # North is right
             elif degrees >= 101.25 and degrees < 123.75:
-                direction = 'ESE'
+                direction = 'NNW'
             elif degrees >= 123.75 and degrees < 146.25:
-                direction = 'SE'
+                direction = 'NW'
             elif degrees >= 146.25 and degrees < 168.75:
-                direction = 'SSE'
+                direction = 'WNW'
             elif degrees >= 168.75 and degrees < 191.25:
-                direction = 'S'
+                direction = 'W'  # West is back
             elif degrees >= 191.25 and degrees < 213.75:
-                direction = 'SSW'
+                direction = 'WSW'
             elif degrees >= 213.75 and degrees < 236.25:
                 direction = 'SW'
             elif degrees >= 236.25 and degrees < 258.75:
-                direction = 'WSW'
+                direction = 'SSW'
             elif degrees >= 258.75 and degrees < 281.25:
-                direction = 'W'
+                direction = 'S'  # South is left
             elif degrees >= 281.25 and degrees < 303.75:
-                direction = 'WNW'
+                direction = 'SSE'
             elif degrees >= 303.75 and degrees < 326.25:
-                direction = 'NW'
+                direction = 'SE'
             else:
-                direction = 'NNW'
+                direction = 'ESE'
                 
             throw_directions[direction] += 1
 
+
     # Calculate completion rates by direction
     completion_by_direction = {
-        'N': 0, 'NNE': 0, 'NE': 0, 'ENE': 0, 
-        'E': 0, 'ESE': 0, 'SE': 0, 'SSE': 0, 
-        'S': 0, 'SSW': 0, 'SW': 0, 'WSW': 0, 
-        'W': 0, 'WNW': 0, 'NW': 0, 'NNW': 0
+        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
+        'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0, 
+        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 
+        'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
     }
     
     # Process throw vectors to get directional completion data
@@ -174,45 +176,46 @@ def get_player_throw_stats(player, games=None):
             angle = math.atan2(dy, dx)
             
             # Convert to degrees and normalize to 0-360
-            degrees = (angle * 180 / math.pi) + 90  # +90 to align North with upfield
+            degrees = (angle * 180 / math.pi)
             if degrees < 0:
                 degrees += 360
                 
             # Map angle to 16-point direction (each direction covers 22.5 degrees)
             if degrees >= 348.75 or degrees < 11.25:
-                direction = 'N'
+                direction = 'E'  # East is forward
             elif degrees >= 11.25 and degrees < 33.75:
-                direction = 'NNE'
+                direction = 'ENE'
             elif degrees >= 33.75 and degrees < 56.25:
                 direction = 'NE'
             elif degrees >= 56.25 and degrees < 78.75:
-                direction = 'ENE'
+                direction = 'NNE'
             elif degrees >= 78.75 and degrees < 101.25:
-                direction = 'E'
+                direction = 'N'  # North is right
             elif degrees >= 101.25 and degrees < 123.75:
-                direction = 'ESE'
+                direction = 'NNW'
             elif degrees >= 123.75 and degrees < 146.25:
-                direction = 'SE'
+                direction = 'NW'
             elif degrees >= 146.25 and degrees < 168.75:
-                direction = 'SSE'
+                direction = 'WNW'
             elif degrees >= 168.75 and degrees < 191.25:
-                direction = 'S'
+                direction = 'W'  # West is back
             elif degrees >= 191.25 and degrees < 213.75:
-                direction = 'SSW'
+                direction = 'WSW'
             elif degrees >= 213.75 and degrees < 236.25:
                 direction = 'SW'
             elif degrees >= 236.25 and degrees < 258.75:
-                direction = 'WSW'
+                direction = 'SSW'
             elif degrees >= 258.75 and degrees < 281.25:
-                direction = 'W'
+                direction = 'S'  # South is left
             elif degrees >= 281.25 and degrees < 303.75:
-                direction = 'WNW'
+                direction = 'SSE'
             elif degrees >= 303.75 and degrees < 326.25:
-                direction = 'NW'
+                direction = 'SE'
             else:
-                direction = 'NNW'
+                direction = 'ESE'
                 
             completion_by_direction[direction] += 1
+
 
     
     stats['throw_directions'] = throw_directions    

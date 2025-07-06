@@ -411,13 +411,13 @@
                             <div class="direction-legend mt-2">
                                 <h6>Throw Direction Distribution</h6>
                                 <small class="text-muted">
-                                    <p>This chart shows the distribution of throw directions, with north aligned toward the opposing endzone.</p>
+                                    <p>This chart shows the distribution of throw directions relative to the field orientation.</p>
                                     <ul class="mb-0 ps-3">
-                                        <li>N/S: Directly upfield/downfield</li>
-                                        <li>NNE/NNW/SSE/SSW: Slightly angled</li>
-                                        <li>NE/NW/SE/SW: Diagonal</li>
-                                        <li>ENE/ESE/WNW/WSW: Mostly across field</li>
-                                        <li>E/W: Directly across field</li>
+                                        <li>Forward: Directly upfield (E)</li>
+                                        <li>Right: Across field to the right (N)</li>
+                                        <li>Back: Directly downfield (W)</li>
+                                        <li>Left: Across field to the left (S)</li>
+                                        <li>Combinations (e.g., Forward-Right): Diagonal throws</li>
                                     </ul>
                                 </small>
                             </div>
@@ -1055,13 +1055,34 @@ function createThrowDirectionRadar() {
         console.log('throwDirections data:', throwDirections);
         console.log('completionByDirection data:', completionByDirection);
         
-        // Define all 16 directions
+        // Define all 16 directions in the correct order for the chart
+        // We'll rotate the chart so that East (forward) is at the top (North position)
         const allDirections = [
-            'N', 'NNE', 'NE', 'ENE', 
-            'E', 'ESE', 'SE', 'SSE', 
-            'S', 'SSW', 'SW', 'WSW', 
-            'W', 'WNW', 'NW', 'NNW'
+            'E', 'ENE', 'NE', 'NNE',  // These will be at the top (North position)
+            'N', 'NNW', 'NW', 'WNW',  // These will be at the right (East position)
+            'W', 'WSW', 'SW', 'SSW',  // These will be at the bottom (South position)
+            'S', 'SSE', 'SE', 'ESE'   // These will be at the left (West position)
         ];
+        
+        // Create a mapping from field directions to display directions
+        const directionMapping = {
+            'E': 'Forward',    // East is forward
+            'ENE': 'Forward-Right',
+            'NE': 'Right-Forward',
+            'NNE': 'Right-Slight',
+            'N': 'Right',      // North is right
+            'NNW': 'Right-Back',
+            'NW': 'Back-Right',
+            'WNW': 'Back-Slight',
+            'W': 'Back',       // West is back
+            'WSW': 'Back-Left',
+            'SW': 'Left-Back',
+            'SSW': 'Left-Slight',
+            'S': 'Left',       // South is left
+            'SSE': 'Left-Forward',
+            'SE': 'Forward-Left',
+            'ESE': 'Forward-Slight'
+        };
         
         // Ensure all directions exist in our data objects
         allDirections.forEach(dir => {
@@ -1125,7 +1146,8 @@ function createThrowDirectionRadar() {
                         let angle = Math.atan2(dy, dx);
                         
                         // Convert to degrees and normalize to 0-360
-                        let degrees = (angle * 180 / Math.PI) + 90; // +90 to align North with upfield
+                        // No need to add 90 degrees since we're already aligning East as forward
+                        let degrees = (angle * 180 / Math.PI);
                         if (degrees < 0) degrees += 360;
                         
                         // Map angle to 16-point direction
@@ -1199,51 +1221,54 @@ function createThrowDirectionRadar() {
             }
         }
         
+        // Create display labels that map compass directions to field directions
+        const displayLabels = allDirections.map(dir => directionMapping[dir] || dir);
+        
         // Create the polar bar chart
         const ctx = canvas.getContext('2d');
         const throwDirectionChart = new Chart(ctx, {
             type: 'polarArea', // Change to polarArea for bar-like segments
             data: {
-                labels: allDirections,
+                labels: displayLabels,
                 datasets: [
                     {
                         label: 'Throw Distribution (%)',
                         data: allDirections.map(dir => throwPercentages[dir]),
                         backgroundColor: [
-                            'rgba(54, 162, 235, 0.6)',  // N
-                            'rgba(54, 162, 235, 0.4)',  // NNE
+                            'rgba(54, 162, 235, 0.6)',  // E (Forward)
+                            'rgba(54, 162, 235, 0.4)',  // ENE
                             'rgba(75, 192, 192, 0.6)',  // NE
-                            'rgba(75, 192, 192, 0.4)',  // ENE
-                            'rgba(255, 206, 86, 0.6)',  // E
-                            'rgba(255, 206, 86, 0.4)',  // ESE
-                            'rgba(255, 159, 64, 0.6)',  // SE
-                            'rgba(255, 159, 64, 0.4)',  // SSE
-                            'rgba(255, 99, 132, 0.6)',  // S
-                            'rgba(255, 99, 132, 0.4)',  // SSW
+                            'rgba(75, 192, 192, 0.4)',  // NNE
+                            'rgba(255, 206, 86, 0.6)',  // N (Right)
+                            'rgba(255, 206, 86, 0.4)',  // NNW
+                            'rgba(255, 159, 64, 0.6)',  // NW
+                            'rgba(255, 159, 64, 0.4)',  // WNW
+                            'rgba(255, 99, 132, 0.6)',  // W (Back)
+                            'rgba(255, 99, 132, 0.4)',  // WSW
                             'rgba(153, 102, 255, 0.6)', // SW
-                            'rgba(153, 102, 255, 0.4)', // WSW
-                            'rgba(201, 203, 207, 0.6)', // W
-                            'rgba(201, 203, 207, 0.4)', // WNW
-                            'rgba(54, 162, 235, 0.6)',  // NW
-                            'rgba(54, 162, 235, 0.4)'   // NNW
+                            'rgba(153, 102, 255, 0.4)', // SSW
+                            'rgba(201, 203, 207, 0.6)', // S (Left)
+                            'rgba(201, 203, 207, 0.4)', // SSE
+                            'rgba(54, 162, 235, 0.6)',  // SE
+                            'rgba(54, 162, 235, 0.4)'   // ESE
                         ],
                         borderColor: [
-                            'rgba(54, 162, 235, 1)',    // N
-                            'rgba(54, 162, 235, 0.8)',  // NNE
+                            'rgba(54, 162, 235, 1)',    // E (Forward)
+                            'rgba(54, 162, 235, 0.8)',  // ENE
                             'rgba(75, 192, 192, 1)',    // NE
-                            'rgba(75, 192, 192, 0.8)',  // ENE
-                            'rgba(255, 206, 86, 1)',    // E
-                            'rgba(255, 206, 86, 0.8)',  // ESE
-                            'rgba(255, 159, 64, 1)',    // SE
-                            'rgba(255, 159, 64, 0.8)',  // SSE
-                            'rgba(255, 99, 132, 1)',    // S
-                            'rgba(255, 99, 132, 0.8)',  // SSW
+                            'rgba(75, 192, 192, 0.8)',  // NNE
+                            'rgba(255, 206, 86, 1)',    // N (Right)
+                            'rgba(255, 206, 86, 0.8)',  // NNW
+                            'rgba(255, 159, 64, 1)',    // NW
+                            'rgba(255, 159, 64, 0.8)',  // WNW
+                            'rgba(255, 99, 132, 1)',    // W (Back)
+                            'rgba(255, 99, 132, 0.8)',  // WSW
                             'rgba(153, 102, 255, 1)',   // SW
-                            'rgba(153, 102, 255, 0.8)', // WSW
-                            'rgba(201, 203, 207, 1)',   // W
-                            'rgba(201, 203, 207, 0.8)', // WNW
-                            'rgba(54, 162, 235, 1)',    // NW
-                            'rgba(54, 162, 235, 0.8)'   // NNW
+                            'rgba(153, 102, 255, 0.8)', // SSW
+                            'rgba(201, 203, 207, 1)',   // S (Left)
+                            'rgba(201, 203, 207, 0.8)', // SSE
+                            'rgba(54, 162, 235, 1)',    // SE
+                            'rgba(54, 162, 235, 0.8)'   // ESE
                         ],
                         borderWidth: 1
                     }
@@ -1257,14 +1282,15 @@ function createThrowDirectionRadar() {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const direction = context.label;
+                                const displayDirection = context.label;
+                                const actualDirection = allDirections[context.dataIndex];
                                 const percentage = context.raw.toFixed(1);
-                                const count = throwDirections[direction] || 0;
-                                const completions = completionByDirection[direction] || 0;
-                                const completionRate = completionPercentages[direction].toFixed(1);
+                                const count = throwDirections[actualDirection] || 0;
+                                const completions = completionByDirection[actualDirection] || 0;
+                                const completionRate = completionPercentages[actualDirection].toFixed(1);
                                 
                                 return [
-                                    `Direction: ${direction}`,
+                                    `Direction: ${displayDirection} (${actualDirection})`,
                                     `${percentage}% of all throws (${count} throws)`,
                                     `Completion rate: ${completionRate}% (${completions}/${count})`
                                 ];
@@ -1281,12 +1307,8 @@ function createThrowDirectionRadar() {
                         },
                         pointLabels: {
                             font: {
-                                size: 12,
+                                size: 10,
                                 weight: 'bold'
-                            },
-                            callback: function(label) {
-                                // Make labels shorter for better fit
-                                return label;
                             }
                         }
                     }
@@ -1299,6 +1321,7 @@ function createThrowDirectionRadar() {
         console.error('Error creating throw direction chart:', error);
     }
 }
+
 
 
 
