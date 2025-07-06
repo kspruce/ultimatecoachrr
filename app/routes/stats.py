@@ -1218,9 +1218,7 @@ def player_stats(player_id):
             angle = math.atan2(dy, dx)
             
             # Convert to degrees and normalize to 0-360
-            degrees = (angle * 180 / math.pi) + 90  # +90 to align North with upfield
-            if degrees < 0:
-                degrees += 360
+            degrees = (90 - math.degrees(angle)) % 360  # Correct angle calculation
                 
             # Map angle to direction
             direction = None

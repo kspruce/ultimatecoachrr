@@ -1070,23 +1070,24 @@ function createThrowDirectionRadar() {
         
         // Create a mapping from compass directions to field directions
         const directionMapping = {
-            'E': 'Forward',     // East/Right (0°) is forward
-            'ENE': 'Forward-Right 1',
-            'NE': 'Forward-Right 2',
-            'NNE': 'Forward-Right 3',
-            'N': 'Right',       // North/Up (90°) is right
-            'NNW': 'Back-Right 1',
-            'NW': 'Back-Right 2',
-            'WNW': 'Back-Right 3',
-            'W': 'Back',        // West/Left (180°) is back
-            'WSW': 'Back-Left 1',
-            'SW': 'Back-Left 2',
-            'SSW': 'Back-Left 3',
-            'S': 'Left',        // South/Down (270°) is left
-            'SSE': 'Forward-Left 1',
-            'SE': 'Forward-Left 2',
-            'ESE': 'Forward-Left 3'
+            'N': 'Forward',    // North is forward
+            'NNE': 'Forward-Slight Right',
+            'NE': 'Forward-Right',
+            'ENE': 'Forward-Right',
+            'E': 'Right',      // East is right
+            'ESE': 'Back-Right',
+            'SE': 'Back-Right',
+            'SSE': 'Back-Slight Right',
+            'S': 'Back',       // South is back
+            'SSW': 'Back-Slight Left',
+            'SW': 'Back-Left',
+            'WSW': 'Back-Left',
+            'W': 'Left',       // West is left
+            'WNW': 'Forward-Left',
+            'NW': 'Forward-Left',
+            'NNW': 'Forward-Slight Left'
         };
+
 
         
         // Ensure all directions exist in our data objects
@@ -1327,7 +1328,7 @@ function createThrowDirectionRadar() {
                         }
                     }
                 },
-                startAngle: -90 * Math.PI / 180 // Start at -90 degrees to put Forward at the top
+                startAngle: -90 // Start at -90 degrees to put North at the top
             }
         });
         
