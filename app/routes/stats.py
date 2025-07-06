@@ -1216,9 +1216,9 @@ def player_stats(player_id):
             dx = throw.x_end - throw.x_start
             dy = throw.y_end - throw.y_start
             angle = math.atan2(dy, dx)
-            
-            # Convert to degrees and normalize to 0-360
-            degrees = (90 - math.degrees(angle)) % 360  # Correct angle calculation
+
+            # Convert to degrees, adjust for clockwise from North, normalize
+            degrees = (90 - math.degrees(angle)) % 360
                 
             # Map angle to direction
             direction = None
