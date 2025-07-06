@@ -1992,6 +1992,7 @@ def calculate_additional_team_metrics(games):
             'break_percentage': 0
         }
     
+    # Count total points - use .all() to convert query to list
     total_points = sum(len(g.points.all()) for g in games)
     if total_points == 0:
         return {
@@ -2006,9 +2007,13 @@ def calculate_additional_team_metrics(games):
             'break_percentage': 0
         }
     
+    # Get point IDs for filtering
+    point_ids = []
+    for game in games:
+        point_ids.extend([p.id for p in game.points.all()])
+    
     # Count all throws
     throws_query = Throw.query
-    point_ids = [p.id for g in games for p in g.points]
     throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
     throws = throws_query.all()
     
@@ -2035,13 +2040,19 @@ def calculate_additional_team_metrics(games):
     hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > 20)
     
     # Calculate break percentage
-    breaks = sum(1 for g in games for p in g.points if p.is_break)
+    breaks = 0
+    for game in games:
+        breaks += sum(1 for p in game.points.all() if p.is_break)
     break_percentage = (breaks / total_points) * 100
     
     # Calculate defensive efficiency
-    d_points = sum(len(g.d_line_points) for g in games)
-    d_conversions = sum(sum(1 for p in g.d_line_points if p.we_scored) for g in games)
-    defensive_efficiency = (d_conversions / d_points) * 100 if d_points > 0 else 0
+    d_points_count = 0
+    d_conversions = 0
+    for game in games:
+        d_points = game.d_line_points.all()
+        d_points_count += len(d_points)
+        d_conversions += sum(1 for p in d_points if p.we_scored)
+    defensive_efficiency = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
     
     return {
         'completion_rate': (completions / len(throws)) * 100 if throws else 0,
@@ -2054,6 +2065,7 @@ def calculate_additional_team_metrics(games):
         'defensive_efficiency': defensive_efficiency,
         'break_percentage': break_percentage
     }
+
 
 def get_previous_period_games(season, tournament_id):
     """Get games from previous period for comparison"""
@@ -2138,19 +2150,22 @@ def calculate_performance_trends(games):
         else:
             dates.append('Unknown')
         
-        # Calculate O-line efficiency
-        o_points = len(game.o_line_points)
-        o_conversions = sum(1 for p in game.o_line_points if p.we_scored)
-        o_line_efficiency.append((o_conversions / o_points * 100) if o_points > 0 else 0)
+        # Calculate O-line efficiency - use .all() to convert query to list
+        o_points = game.o_line_points.all()
+        o_points_count = len(o_points)
+        o_conversions = sum(1 for p in o_points if p.we_scored)
+        o_line_efficiency.append((o_conversions / o_points_count * 100) if o_points_count > 0 else 0)
         
-        # Calculate D-line efficiency
-        d_points = len(game.d_line_points)
-        d_conversions = sum(1 for p in game.d_line_points if p.we_scored)
-        d_line_efficiency.append((d_conversions / d_points * 100) if d_points > 0 else 0)
+        # Calculate D-line efficiency - use .all() to convert query to list
+        d_points = game.d_line_points.all()
+        d_points_count = len(d_points)
+        d_conversions = sum(1 for p in d_points if p.we_scored)
+        d_line_efficiency.append((d_conversions / d_points_count * 100) if d_points_count > 0 else 0)
         
-        # Calculate break percentage
-        total_points = len(game.points)
-        breaks = sum(1 for p in game.points if p.is_break)
+        # Calculate break percentage - use .all() to convert query to list
+        all_points = game.points.all()
+        total_points = len(all_points)
+        breaks = sum(1 for p in all_points if p.is_break)
         break_percentage.append((breaks / total_points * 100) if total_points > 0 else 0)
     
     return {
