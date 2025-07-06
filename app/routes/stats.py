@@ -1631,3 +1631,171 @@ def debug_break_throws():
         } for t in break_throws[:10]]  # Show first 10 break throws
     })
 
+
+@bp.route('/debug/per/<int:player_id>')
+@login_required
+def debug_per_calculation(player_id):
+    """Debug page showing step-by-step PER calculation for a player"""
+    player = Player.query.get_or_404(player_id)
+    
+    # Get filter parameters
+    tournament_id = request.args.get('tournament_id', type=int)
+    game_id = request.args.get('game_id', type=int)
+
+    # Determine which games to analyze
+    if game_id:
+        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+    elif tournament_id:
+        tournament = Tournament.query.get(tournament_id)
+        games = tournament.games.all() if tournament else []
+    else:
+        games = Game.query.all()
+    
+    # Get player stats
+    stats = get_player_base_stats(player, games)
+    
+    # Calculate team averages
+    team_avgs = calculate_team_averages(games)
+    
+    # Calculate raw PER values for all players to find max
+    all_players = Player.query.filter_by(active=True).all()
+    raw_per_values = {}
+    
+    for p in all_players:
+        p_stats = get_player_base_stats(p, games)
+        if p_stats['points_played'] > 0:
+            # Calculate raw PER without final normalization
+            raw_per = calculate_unadjusted_per(p_stats)
+            # Scale to league average of 15
+            avg_uper = team_avgs.get('avg_uper', 1)
+            if avg_uper <= 0:
+                avg_uper = 1
+            scaled_per = raw_per * (15 / avg_uper)
+            raw_per_values[p.id] = scaled_per
+    
+    # Find max PER value
+    max_per = max(raw_per_values.values()) if raw_per_values else 30
+    
+    # Calculate step-by-step PER components
+    debug_info = {}
+    
+    if stats['points_played'] > 0:
+        # Define weights
+        WEIGHTS = {
+            'scoring': 0.5,
+            'assist': 0.5,
+            'turnover': -0.75,
+            'defense': 0.75,
+            'throw': 0.05,
+            'plus_minus': 0.1
+        }
+        
+        # Box score component calculations
+        goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
+        assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
+        hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
+        turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
+        blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
+        stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
+        callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
+        
+        box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
+        
+        # Passing component calculations
+        completion_factor = (stats['completion_rate']/100) ** 3.0
+        catch_factor = (stats['catch_rate']/100) ** 3.0
+        completions_component = (stats['completions'] ** 0.75) * completion_factor
+        catches_component = (stats['catches'] ** 0.75) * catch_factor
+        passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
+        
+        # Plus-minus component calculations
+        o_line_pm = stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0)
+        d_line_pm = stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0)
+        plus_minus_component = WEIGHTS['plus_minus'] * (o_line_pm + d_line_pm)
+        
+        # Raw unadjusted PER
+        raw_uper = (1 / stats['points_played']) * (box_component + passing_component + plus_minus_component)
+        
+        # Scale to league average of 15
+        avg_uper = team_avgs.get('avg_uper', 1)
+        if avg_uper <= 0:
+            avg_uper = 1
+        scaled_per = raw_uper * (15 / avg_uper)
+        
+        # Normalize to 0-100 scale
+        final_per = (scaled_per / max_per) * 100 if max_per > 0 else 0
+        
+        # Store all calculation steps
+        debug_info = {
+            'raw_stats': {
+                'points_played': stats['points_played'],
+                'goals': stats['goals'],
+                'assists': stats['assists'],
+                'hockey_assists': stats['hockey_assists'],
+                'blocks': stats['blocks'],
+                'throwaways': stats['throwaways'],
+                'drops': stats['drops'],
+                'stalls': stats.get('stalls', 0),
+                'callahans': stats.get('callahans', 0),
+                'completions': stats['completions'],
+                'completion_rate': stats['completion_rate'],
+                'catches': stats['catches'],
+                'catch_rate': stats['catch_rate'],
+                'o_line_plus_minus_per_point': stats.get('o_line_plus_minus_per_point', 0),
+                'd_line_plus_minus_per_point': stats.get('d_line_plus_minus_per_point', 0)
+            },
+            'team_avgs': {
+                'avg_uper': team_avgs.get('avg_uper', 0),
+                'avg_o_line_plus_minus_per_point': team_avgs.get('avg_o_line_plus_minus_per_point', 0),
+                'avg_d_line_plus_minus_per_point': team_avgs.get('avg_d_line_plus_minus_per_point', 0)
+            },
+            'weights': WEIGHTS,
+            'box_component': {
+                'goals': goals_component,
+                'assists': assists_component,
+                'hockey_assists': hockey_assists_component,
+                'turnovers': turnovers_component,
+                'blocks': blocks_component,
+                'stalls': stalls_component,
+                'callahans': callahans_component,
+                'total': box_component
+            },
+            'passing_component': {
+                'completion_factor': completion_factor,
+                'catch_factor': catch_factor,
+                'completions': completions_component,
+                'catches': catches_component,
+                'total': passing_component
+            },
+            'plus_minus_component': {
+                'o_line': o_line_pm,
+                'd_line': d_line_pm,
+                'total': plus_minus_component
+            },
+            'calculation': {
+                'raw_uper': raw_uper,
+                'avg_uper': avg_uper,
+                'scaled_per': scaled_per,
+                'max_per': max_per,
+                'final_per': final_per
+            },
+            'top_players': {
+                'player_id': [p.id for p in all_players if p.id in raw_per_values][:10],
+                'player_name': [p.name for p in all_players if p.id in raw_per_values][:10],
+                'raw_per': [raw_per_values[p.id] for p in all_players if p.id in raw_per_values][:10]
+            }
+        }
+    
+    # Get tournaments for filter
+    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    
+    return render_template(
+        'stats/debug_per.html',
+        player=player,
+        stats=stats,
+        debug_info=debug_info,
+        tournaments=tournaments,
+        selected_tournament=tournament_id,
+        selected_game=game_id,
+        games=games
+    )
