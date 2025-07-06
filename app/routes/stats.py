@@ -1484,7 +1484,7 @@ def calculate_unadjusted_per(stats):
 
 def normalize_per(value):
     """Normalize PER to a 0-30 scale"""
-    return min(max(value, 0), 50)
+    return min(max(value, 0), 100)
 
 def count_possessions(events):
     """Count number of possessions in a sequence of events"""
