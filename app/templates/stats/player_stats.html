@@ -10,19 +10,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar@0.1.0/build/Chart.RadarChart.min.js"></script>
 
 <style>
-    .field-container {
-        position: relative;
-        width: 100%;
-        height: 400px;
-        min-height: 400px;
-        border: 2px solid #4CAF50;
-        background-color: #E8F5E9;
-        margin-bottom: 20px;
-    }
-    .field-line {
-        position: absolute;
-        background-color: white;
-    }
     .stat-card {
         transition: transform 0.3s;
     }
@@ -34,22 +21,8 @@
         height: 200px;
         margin: 0 auto;
     }
-    .throw-vector {
-        stroke: blue;
-        stroke-width: 2;
-        opacity: 0.7;
-        pointer-events: none;
-    }
-    .throwaway-location {
-        fill: red;
-        opacity: 0.7;
-    }
-    .throwaway-vector {
-        stroke: red;
-        stroke-width: 2;
-        stroke-dasharray: 5,5;
-        opacity: 0.7;
-    }
+
+
     .nav-tabs .nav-link {
         color: #495057;
     }
@@ -433,55 +406,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Throw Vectors Field -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Throw Vectors</h5>
-                </div>
-                <div class="card-body">
-                    <div class="field-container" id="throwVectorsField" style="height: 400px; min-height: 400px;">
-                        <!-- Field will be drawn here -->
-                    </div>
-                    <p class="text-center text-muted">Blue lines represent completed throws, orange lines show assists</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Centralized Vectors View (Hidden by default) -->
-    <div class="row mb-4" style="display: none;">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Centralized Throw Vectors</h5>
-                </div>
-                <div class="card-body">
-                    <div class="field-container" id="centralizedVectorsField" style="height: 400px; min-height: 400px;">
-                        <!-- Field will be drawn here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Throwaway Locations -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Throwaway Locations</h5>
-                </div>
-                <div class="card-body">
-                    <div class="field-container" id="throwawayLocationsField" style="height: 400px; min-height: 400px;">
-                        <!-- Field will be drawn here -->
-                    </div>
-                    <p class="text-center text-muted">Red dots represent throwaway locations, dashed lines show attempted throws</p>
                 </div>
             </div>
         </div>
@@ -994,211 +918,6 @@ function createPERGauge() {
         .style('font-size', '14px')
         .text('PER');
 }
-function drawField(containerId) {
-    const container = d3.select(`#${containerId}`);
-    if (!container.node()) {
-        console.error(`Container #${containerId} not found in the DOM`);
-        return null;
-    }
-    
-    const containerWidth = container.node().getBoundingClientRect().width;
-    const containerHeight = 400;
-    
-    const svg = container.append('svg')
-        .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
-        .attr('preserveAspectRatio', 'xMidYMid meet')
-        .attr('width', '100%')
-        .attr('height', '100%')
-        .attr('data-width', containerWidth)
-        .attr('data-height', containerHeight);
-    
-    // Field background
-    svg.append('rect')
-        .attr('width', containerWidth)
-        .attr('height', containerHeight)
-        .attr('fill', '#E8F5E9')
-        .attr('stroke', '#4CAF50')
-        .attr('stroke-width', 2);
-    
-    // Center line
-    svg.append('line')
-        .attr('x1', containerWidth / 2)
-        .attr('y1', 0)
-        .attr('x2', containerWidth / 2)
-        .attr('y2', containerHeight)
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-    
-    // End zones
-    svg.append('rect')
-        .attr('x', 0)
-        .attr('y', 0)
-        .attr('width', containerWidth * 0.2)
-        .attr('height', containerHeight)
-        .attr('fill', 'none')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-    
-    svg.append('rect')
-        .attr('x', containerWidth * 0.8)
-        .attr('y', 0)
-        .attr('width', containerWidth * 0.2)
-        .attr('height', containerHeight)
-        .attr('fill', 'none')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-    
-    return svg;
-}
-
-function drawThrowVectors(containerId, centralizeVectors = false, minDistanceThreshold = 2) {
-    console.log('Drawing vectors for', containerId, 'centralized:', centralizeVectors);
-    console.log('Initial vector count:', vizData.throwVectors.length);
-
-    const svg = d3.select(`#${containerId} svg`);
-    if (!svg.node()) {
-        console.error('No SVG found in container:', containerId);
-        return;
-    }
-
-    const width = parseFloat(svg.attr('data-width'));
-    const height = parseFloat(svg.attr('data-height'));
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // Clear existing vectors
-    svg.selectAll('.vector-group').remove();
-    
-    const vectorGroup = svg.append('g').attr('class', 'vector-group');
-
-    // Add arrowhead definition
-    svg.selectAll('defs').remove(); // Remove existing defs
-    const defs = svg.append('defs');
-    
-    defs.append('marker')
-        .attr('id', `arrowhead-${containerId}`)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 8)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'blue');
-
-    defs.append('marker')
-        .attr('id', `arrowhead-assist-${containerId}`)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 8)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', '#ff9900');
-
-    // Filter vectors based on total distance
-    const filteredVectors = vizData.throwVectors.filter(vector => {
-        const xDiff = Math.abs(vector.end_x - vector.start_x);
-        const yDiff = Math.abs(vector.end_y - vector.start_y);
-        const distance = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
-        
-        console.log(`Vector distance: ${distance}, Threshold: ${minDistanceThreshold}`);
-        return distance > minDistanceThreshold;
-    });
-
-    console.log('Filtered vector count:', filteredVectors.length);
-
-    // Draw only the filtered vectors
-    filteredVectors.forEach((vector, i) => {
-        let startX, startY, endX, endY;
-
-        if (centralizeVectors) {
-            startX = centerX;
-            startY = centerY;
-            const dx = vector.end_x - vector.start_x;
-            const dy = vector.end_y - vector.start_y;
-            const fixedScale = 3;
-            endX = centerX + (dx * fixedScale);
-            endY = centerY + (dy * fixedScale);
-        } else {
-            startX = vector.start_x / 100 * width;
-            startY = vector.start_y / 37 * height;
-            endX = vector.end_x / 100 * width;
-            endY = vector.end_y / 37 * height;
-        }
-
-        console.log(`Drawing vector ${i}:`, {startX, startY, endX, endY});
-
-        const isAssist = vector.type === 'assist';
-        const color = isAssist ? '#ff9900' : 'blue';
-        const arrowheadId = isAssist ? `arrowhead-assist-${containerId}` : `arrowhead-${containerId}`;
-
-        vectorGroup.append('line')
-            .attr('x1', startX)
-            .attr('y1', startY)
-            .attr('x2', endX)
-            .attr('y2', endY)
-            .attr('class', 'throw-vector')
-            .attr('stroke', color)
-            .attr('stroke-width', 2)
-            .attr('marker-end', `url(#${arrowheadId})`);
-
-        vectorGroup.append('circle')
-            .attr('cx', startX)
-            .attr('cy', startY)
-            .attr('r', 3)
-            .attr('fill', color);
-    });
-}
-
-function drawThrowawayLocations(containerId) {
-    if (!vizData.throwawayLocations || vizData.throwawayLocations.length === 0) {
-        console.log('No throwaway locations to draw');
-        return;
-    }
-
-    const svg = d3.select(`#${containerId} svg`);
-    if (!svg.node()) {
-        console.error('No SVG found in container:', containerId);
-        return;
-    }
-
-    const width = parseFloat(svg.attr('data-width'));
-    const height = parseFloat(svg.attr('data-height'));
-
-    // Create a group for throwaway locations
-    const throwawayGroup = svg.append('g').attr('class', 'throwaway-group');
-
-    vizData.throwawayLocations.forEach(location => {
-        const x = location.x / 100 * width;
-        const y = location.y / 37 * height;
-
-        throwawayGroup.append('circle')
-            .attr('cx', x)
-            .attr('cy', y)
-            .attr('r', 5)
-            .attr('fill', 'red')
-            .attr('opacity', 0.7);
-
-        if (location.prev_x !== undefined && location.prev_y !== undefined) {
-            const prevX = location.prev_x / 100 * width;
-            const prevY = location.prev_y / 37 * height;
-
-            throwawayGroup.append('line')
-                .attr('x1', prevX)
-                .attr('y1', prevY)
-                .attr('x2', x)
-                .attr('y2', y)
-                .attr('stroke', 'red')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', '5,5')
-                .attr('opacity', 0.7);
-        }
-    });
-}
 
 
 // Initialization and event handling
@@ -1217,50 +936,10 @@ function initializeVisualizations() {
     // Initialize PER gauge
     createPERGauge();
     
-    // Initialize main field views
-    const throwVectorsField = drawField('throwVectorsField');
-    if (throwVectorsField) {
-        drawThrowVectors('throwVectorsField', false);
-    }
-    
-    const throwawayField = drawField('throwawayLocationsField');
-    if (throwawayField) {
-        drawThrowawayLocations('throwawayLocationsField');
-    }
 }
 
 
-function handleTabChange(tabId) {
-    console.log('Handling tab change:', tabId);
-    
-    switch(tabId) {
-        case 'centralized-tab':
-            const centralizedField = document.getElementById('centralizedVectorsField');
-            centralizedField.innerHTML = '';
-            drawField('centralizedVectorsField');
-            drawThrowVectors('centralizedVectorsField', true);
-            break;
-            
-    }
-}
 
-function setupTabHandlers() {
-    const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
-    console.log('Setting up tab handlers for', tabElements.length, 'tabs');
-    
-    tabElements.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(event) {
-            console.log('Tab shown:', event.target.id);
-            handleTabChange(event.target.id);
-        });
-        
-        // Also add click handler as backup
-        tab.addEventListener('click', function() {
-            console.log('Tab clicked:', this.id);
-            setTimeout(() => handleTabChange(this.id), 100);
-        });
-    });
-}
 
 // Main initialization
 document.addEventListener('DOMContentLoaded', function() {
@@ -1353,7 +1032,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initialize basic visualizations
         initializeVisualizations();
-        setupTabHandlers();
         
         // Load Chart.js and dependencies, then initialize radar charts
         loadChartJsWithDependencies(function() {
@@ -1393,29 +1071,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-
-// Window resize handler
-window.addEventListener('resize', debounce(function() {
-    const activeTab = document.querySelector('.tab-pane.active');
-    if (!activeTab) return;
-    
-    switch(activeTab.id) {
-        case 'field-content':
-            document.getElementById('throwVectorsField').innerHTML = '';
-            drawField('throwVectorsField');
-            drawThrowVectors('throwVectorsField', false, 1);
-            break;
-        case 'centralized-content':
-            document.getElementById('centralizedVectorsField').innerHTML = '';
-            drawField('centralizedVectorsField');
-            drawThrowVectors('centralizedVectorsField', true, 1);
-            break;
-    }
-    
-    document.getElementById('throwawayLocationsField').innerHTML = '';
-    drawField('throwawayLocationsField');
-    drawThrowawayLocations('throwawayLocationsField');
-}, 250));
 
 // Process throw vectors to get directional data
 function processThrowDirections(throwVectors) {
