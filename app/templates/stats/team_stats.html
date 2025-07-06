@@ -526,32 +526,14 @@
         }
     });
 
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
-    
-    // Team Offensive Radar Chart
-    // Define scaling factors for different stat types
-    const maxPerPointValues = {
-        // Offensive stats (per O-line point)
-        'assists_per_point': 0.5,        // 1 assist every 2 points is excellent
-        'goals_per_point': 0.5,          // 1 goal every 2 points is excellent
-        'hucks_per_point': 0.5,          // 1 huck every 2 points is excellent
-        'throws_per_point': 10.0,        // 10 throws per point is a high volume
-        
-        // Defensive stats (per D-line point)
-        'blocks_per_point': 0.5,         // 1 block every 2 points is excellent
-        'turnovers_forced_per_point': 0.8, // Forcing ~1 turnover per point is excellent
-    };
-    
-    // Normalize values for radar chart (0-100 scale) using our scaling factors
-    const normalizeValue = (value, statType) => {
-        const maxValue = maxPerPointValues[statType] || 1.0;
-        return Math.min(100, (value / maxValue) * 100);
-    };
     
     // Team Offensive Radar Chart
     const offensiveCtx = document.getElementById('teamOffensiveRadar');
@@ -573,10 +555,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         data: [
                             {{ team_summary.completion_rate|default(0)|round(1) }},
                             {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
-                            normalizeValue({{ team_summary.goals_per_point|default(0) }}, 'goals_per_point'),
-                            normalizeValue({{ team_summary.assists_per_point|default(0) }}, 'assists_per_point'),
-                            normalizeValue({{ team_summary.throws_per_point|default(0) }}, 'throws_per_point'),
-                            normalizeValue({{ team_summary.hucks_per_point|default(0) }}, 'hucks_per_point')
+                            {{ team_summary.goals_per_point|default(0)|round(2) }},
+                            {{ team_summary.assists_per_point|default(0)|round(2) }},
+                            {{ team_summary.throws_per_point|default(0)|round(1) }},
+                            {{ team_summary.hucks_per_point|default(0)|round(2) }}
                         ],
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -589,10 +571,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         data: [
                             {{ team_summary.prev_completion_rate|default(0)|round(1) }},
                             {{ team_summary.prev_o_line_conversion_rate|default(0)|round(1) }},
-                            normalizeValue({{ team_summary.prev_goals_per_point|default(0) }}, 'goals_per_point'),
-                            normalizeValue({{ team_summary.prev_assists_per_point|default(0) }}, 'assists_per_point'),
-                            normalizeValue({{ team_summary.prev_throws_per_point|default(0) }}, 'throws_per_point'),
-                            normalizeValue({{ team_summary.prev_hucks_per_point|default(0) }}, 'hucks_per_point')
+                            {{ team_summary.prev_goals_per_point|default(0)|round(2) }},
+                            {{ team_summary.prev_assists_per_point|default(0)|round(2) }},
+                            {{ team_summary.prev_throws_per_point|default(0)|round(1) }},
+                            {{ team_summary.prev_hucks_per_point|default(0)|round(2) }}
                         ],
                         backgroundColor: 'rgba(153, 102, 255, 0.2)',
                         borderColor: 'rgba(153, 102, 255, 1)',
@@ -619,53 +601,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     legend: {
                         display: true,
                         position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const datasetLabel = context.dataset.label || '';
-                                const index = context.dataIndex;
-                                const label = context.chart.data.labels[index];
-                                
-                                // Get the original value based on the label
-                                let originalValue;
-                                if (datasetLabel === 'Team Stats') {
-                                    if (label === 'Completion Rate') 
-                                        originalValue = {{ team_summary.completion_rate|default(0)|round(1) }} + '%';
-                                    else if (label === 'O-Line Conversion') 
-                                        originalValue = {{ team_summary.o_line_conversion_rate|default(0)|round(1) }} + '%';
-                                    else if (label === 'Goals Per Point') 
-                                        originalValue = {{ team_summary.goals_per_point|default(0)|round(2) }};
-                                    else if (label === 'Assists Per Point') 
-                                        originalValue = {{ team_summary.assists_per_point|default(0)|round(2) }};
-                                    else if (label === 'Throws Per Point') 
-                                        originalValue = {{ team_summary.throws_per_point|default(0)|round(1) }};
-                                    else if (label === 'Hucks Per Point') 
-                                        originalValue = {{ team_summary.hucks_per_point|default(0)|round(2) }};
-                                } else {
-                                    if (label === 'Completion Rate') 
-                                        originalValue = {{ team_summary.prev_completion_rate|default(0)|round(1) }} + '%';
-                                    else if (label === 'O-Line Conversion') 
-                                        originalValue = {{ team_summary.prev_o_line_conversion_rate|default(0)|round(1) }} + '%';
-                                    else if (label === 'Goals Per Point') 
-                                        originalValue = {{ team_summary.prev_goals_per_point|default(0)|round(2) }};
-                                    else if (label === 'Assists Per Point') 
-                                        originalValue = {{ team_summary.prev_assists_per_point|default(0)|round(2) }};
-                                    else if (label === 'Throws Per Point') 
-                                        originalValue = {{ team_summary.prev_throws_per_point|default(0)|round(1) }};
-                                    else if (label === 'Hucks Per Point') 
-                                        originalValue = {{ team_summary.prev_hucks_per_point|default(0)|round(2) }};
-                                }
-                                
-                                return datasetLabel + ': ' + originalValue;
-                            }
-                        }
                     }
                 }
             }
         });
     }
-
     
     // Team Defensive Radar Chart
     const defensiveCtx = document.getElementById('teamDefensiveRadar');
@@ -685,9 +625,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         label: 'Team Stats',
                         data: [
                             {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
-                            normalizeValue({{ team_summary.blocks_per_point|default(0) }}, 'blocks_per_point'),
+                            {{ team_summary.blocks_per_point|default(0)|round(2) }},
                             {{ team_summary.break_percentage|default(0)|round(1) }},
-                            normalizeValue({{ team_summary.turnovers_forced_per_point|default(0) }}, 'turnovers_forced_per_point'),
+                            {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }},
                             {{ team_summary.defensive_efficiency|default(0)|round(1) }}
                         ],
                         backgroundColor: 'rgba(255, 99, 132, 0.2)',
@@ -700,9 +640,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         label: 'Previous Period',
                         data: [
                             {{ team_summary.prev_d_line_conversion_rate|default(0)|round(1) }},
-                            normalizeValue({{ team_summary.prev_blocks_per_point|default(0) }}, 'blocks_per_point'),
+                            {{ team_summary.prev_blocks_per_point|default(0)|round(2) }},
                             {{ team_summary.prev_break_percentage|default(0)|round(1) }},
-                            normalizeValue({{ team_summary.prev_turnovers_forced_per_point|default(0) }}, 'turnovers_forced_per_point'),
+                            {{ team_summary.prev_turnovers_forced_per_point|default(0)|round(2) }},
                             {{ team_summary.prev_defensive_efficiency|default(0)|round(1) }}
                         ],
                         backgroundColor: 'rgba(153, 102, 255, 0.2)',
@@ -730,49 +670,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     legend: {
                         display: true,
                         position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const datasetLabel = context.dataset.label || '';
-                                const index = context.dataIndex;
-                                const label = context.chart.data.labels[index];
-                                
-                                // Get the original value based on the label
-                                let originalValue;
-                                if (datasetLabel === 'Team Stats') {
-                                    if (label === 'D-Line Conversion') 
-                                        originalValue = {{ team_summary.d_line_conversion_rate|default(0)|round(1) }} + '%';
-                                    else if (label === 'Blocks Per Point') 
-                                        originalValue = {{ team_summary.blocks_per_point|default(0)|round(2) }};
-                                    else if (label === 'Break Percentage') 
-                                        originalValue = {{ team_summary.break_percentage|default(0)|round(1) }} + '%';
-                                    else if (label === 'Turnovers Forced') 
-                                        originalValue = {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }};
-                                    else if (label === 'Defensive Efficiency') 
-                                        originalValue = {{ team_summary.defensive_efficiency|default(0)|round(1) }} + '%';
-                                } else {
-                                    if (label === 'D-Line Conversion') 
-                                        originalValue = {{ team_summary.prev_d_line_conversion_rate|default(0)|round(1) }} + '%';
-                                    else if (label === 'Blocks Per Point') 
-                                        originalValue = {{ team_summary.prev_blocks_per_point|default(0)|round(2) }};
-                                    else if (label === 'Break Percentage') 
-                                        originalValue = {{ team_summary.prev_break_percentage|default(0)|round(1) }} + '%';
-                                    else if (label === 'Turnovers Forced') 
-                                        originalValue = {{ team_summary.prev_turnovers_forced_per_point|default(0)|round(2) }};
-                                    else if (label === 'Defensive Efficiency') 
-                                        originalValue = {{ team_summary.prev_defensive_efficiency|default(0)|round(1) }} + '%';
-                                }
-                                
-                                return datasetLabel + ': ' + originalValue;
-                            }
-                        }
                     }
                 }
             }
         });
     }
-
     
     // Performance Trends Chart
     const trendsCtx = document.getElementById('performanceTrendsChart');
