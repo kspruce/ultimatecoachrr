@@ -1066,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Create the throw direction radar chart
 function createThrowDirectionRadar() {
-    console.log('Creating throw direction radar chart');
+    console.log('Creating throw direction chart');
     
     try {
         // Get direction data from the template variables
@@ -1080,7 +1080,7 @@ function createThrowDirectionRadar() {
         // Check if canvas element exists
         const canvas = document.getElementById('throwDirectionRadar');
         if (!canvas) {
-            console.error('Canvas element for throw direction radar not found');
+            console.error('Canvas element for throw direction chart not found');
             return;
         }
         
@@ -1090,80 +1090,105 @@ function createThrowDirectionRadar() {
             existingChart.destroy();
         }
         
-        // Create the radar chart
+        // Convert counts to percentages
+        const throwPercentages = {
+            'N': (throwDirections['N'] || 0) / totalThrows * 100,
+            'NE': (throwDirections['NE'] || 0) / totalThrows * 100,
+            'E': (throwDirections['E'] || 0) / totalThrows * 100,
+            'SE': (throwDirections['SE'] || 0) / totalThrows * 100,
+            'S': (throwDirections['S'] || 0) / totalThrows * 100,
+            'SW': (throwDirections['SW'] || 0) / totalThrows * 100,
+            'W': (throwDirections['W'] || 0) / totalThrows * 100,
+            'NW': (throwDirections['NW'] || 0) / totalThrows * 100
+        };
+        
+        // Calculate completion percentages by direction
+        const completionPercentages = {};
+        for (const direction in throwDirections) {
+            if (throwDirections[direction] > 0) {
+                completionPercentages[direction] = (completionByDirection[direction] || 0) / throwDirections[direction] * 100;
+            } else {
+                completionPercentages[direction] = 0;
+            }
+        }
+        
+        // Create the polar bar chart
         const ctx = canvas.getContext('2d');
-        const throwDirectionRadar = new Chart(ctx, {
-            type: 'radar',
+        const throwDirectionChart = new Chart(ctx, {
+            type: 'polarArea', // Change to polarArea for bar-like segments
             data: {
                 labels: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
                 datasets: [
                     {
-                        label: 'All Throws',
+                        label: 'Throw Distribution (%)',
                         data: [
-                            throwDirections['N'] || 0,
-                            throwDirections['NE'] || 0,
-                            throwDirections['E'] || 0,
-                            throwDirections['SE'] || 0,
-                            throwDirections['S'] || 0,
-                            throwDirections['SW'] || 0,
-                            throwDirections['W'] || 0,
-                            throwDirections['NW'] || 0
+                            throwPercentages['N'],
+                            throwPercentages['NE'],
+                            throwPercentages['E'],
+                            throwPercentages['SE'],
+                            throwPercentages['S'],
+                            throwPercentages['SW'],
+                            throwPercentages['W'],
+                            throwPercentages['NW']
                         ],
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-                        pointRadius: 4
-                    },
-                    {
-                        label: 'Completions',
-                        data: [
-                            completionByDirection['N'] || 0,
-                            completionByDirection['NE'] || 0,
-                            completionByDirection['E'] || 0,
-                            completionByDirection['SE'] || 0,
-                            completionByDirection['S'] || 0,
-                            completionByDirection['SW'] || 0,
-                            completionByDirection['W'] || 0,
-                            completionByDirection['NW'] || 0
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(201, 203, 207, 0.6)',
+                            'rgba(54, 162, 235, 0.6)'
                         ],
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                        pointRadius: 4
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(201, 203, 207, 1)',
+                            'rgba(54, 162, 235, 1)'
+                        ],
+                        borderWidth: 1
                     }
                 ]
             },
             options: {
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true
-                        },
-                        suggestedMin: 0,
-                        ticks: {
-                            stepSize: Math.max(1, Math.ceil(Math.max(...Object.values(throwDirections)) / 5))
-                        }
-                    }
-                },
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'bottom'
+                        display: false // Hide legend for cleaner look
                     },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const label = context.dataset.label || '';
-                                const value = context.raw || 0;
+                                const direction = context.label;
+                                const percentage = context.raw.toFixed(1);
+                                const count = throwDirections[direction] || 0;
+                                const completions = completionByDirection[direction] || 0;
+                                const completionRate = completionPercentages[direction].toFixed(1);
                                 
-                                if (totalThrows > 0) {
-                                    const percentage = ((value / totalThrows) * 100).toFixed(1);
-                                    return `${label}: ${value} throws (${percentage}%)`;
-                                } else {
-                                    return `${label}: ${value} throws`;
-                                }
+                                return [
+                                    `Direction: ${direction}`,
+                                    `${percentage}% of all throws (${count} throws)`,
+                                    `Completion rate: ${completionRate}% (${completions}/${count})`
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: Math.ceil(Math.max(...Object.values(throwPercentages)) / 5) * 5, // Round up to nearest 5%
+                        ticks: {
+                            stepSize: 5
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 14,
+                                weight: 'bold'
                             }
                         }
                     }
@@ -1171,11 +1196,12 @@ function createThrowDirectionRadar() {
             }
         });
         
-        console.log('Throw direction radar chart created successfully');
+        console.log('Throw direction chart created successfully');
     } catch (error) {
-        console.error('Error creating throw direction radar chart:', error);
+        console.error('Error creating throw direction chart:', error);
     }
 }
+
 
 // Ensure radar charts are initialized
 setTimeout(function() {
