@@ -259,7 +259,25 @@ def calculate_per(player, games=None, team_avgs=None):
     if avg_uper <= 0:
         avg_uper = 1  # Prevent division by zero
     
-    per = normalize_per(uper * (15 / avg_uper))
+    scaled_per = uper * (15 / avg_uper)
+    
+    # Find the maximum PER value across all players
+    all_players = Player.query.filter_by(active=True).all()
+    max_per = 0
+    
+    for p in all_players:
+        if p.id != player.id:  # Skip the current player to avoid redundant calculation
+            p_stats = get_player_base_stats(p, games)
+            if p_stats['points_played'] > 0:
+                p_uper = calculate_unadjusted_per(p_stats)
+                p_scaled = p_uper * (15 / avg_uper)
+                max_per = max(max_per, p_scaled)
+    
+    # Also consider the current player's PER
+    max_per = max(max_per, scaled_per)
+    
+    # Normalize to 0-100 scale
+    per = (scaled_per / max_per) * 100 if max_per > 0 else 0
     
     return per
 
