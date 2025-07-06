@@ -964,7 +964,10 @@ function createPERGauge() {
 }
 function drawField(containerId) {
     const container = d3.select(`#${containerId}`);
-    container.html('');
+    if (!container.node()) {
+        console.error(`Container #${containerId} not found in the DOM`);
+        return null;
+    }
     
     const containerWidth = container.node().getBoundingClientRect().width;
     const containerHeight = 400;
@@ -1170,16 +1173,30 @@ function drawThrowawayLocations(containerId) {
 function initializeVisualizations() {
     console.log('Initializing visualizations');
     
+    // Check if containers exist before initializing
+    const requiredContainers = ['throwVectorsField', 'throwawayLocationsField', 'perGauge'];
+    for (const containerId of requiredContainers) {
+        if (!document.getElementById(containerId)) {
+            console.error(`Required container #${containerId} not found, cannot initialize visualizations`);
+            return;
+        }
+    }
+    
     // Initialize PER gauge
     createPERGauge();
     
     // Initialize main field views
-    drawField('throwVectorsField');
-    drawThrowVectors('throwVectorsField', false);
+    const throwVectorsField = drawField('throwVectorsField');
+    if (throwVectorsField) {
+        drawThrowVectors('throwVectorsField', false);
+    }
     
-    drawField('throwawayLocationsField');
-    drawThrowawayLocations('throwawayLocationsField');
+    const throwawayField = drawField('throwawayLocationsField');
+    if (throwawayField) {
+        drawThrowawayLocations('throwawayLocationsField');
+    }
 }
+
 
 function handleTabChange(tabId) {
     console.log('Handling tab change:', tabId);
@@ -1239,11 +1256,66 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('No throw vectors found in vizData');
     }
     
-    // First, check if Chart.js is already loaded
-    const chartLoaded = typeof Chart !== 'undefined';
-    console.log('Chart.js loaded on page load:', chartLoaded);
+    function loadChartJsWithDependencies(callback) {
+        // Check if Chart.js is already loaded
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js already loaded');
+            
+            // Check if Radar plugin is loaded
+            if (Chart.controllers.radar) {
+                console.log('Radar plugin already loaded');
+                callback();
+            } else {
+                console.log('Loading Radar plugin...');
+                const radarPlugin = document.createElement('script');
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js';
+                radarPlugin.crossOrigin = 'anonymous';
+                
+                radarPlugin.onload = function() {
+                    console.log('Radar plugin loaded successfully');
+                    setTimeout(callback, 100);
+                };
+                
+                radarPlugin.onerror = function(e) {
+                    console.error('Failed to load Radar plugin:', e);
+                };
+                
+                document.head.appendChild(radarPlugin);
+            }
+        } else {
+            console.log('Loading Chart.js...');
+            const chartScript = document.createElement('script');
+            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+            chartScript.crossOrigin = 'anonymous';
+            
+            chartScript.onload = function() {
+                console.log('Chart.js loaded successfully');
+                
+                const radarPlugin = document.createElement('script');
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js';
+                radarPlugin.crossOrigin = 'anonymous';
+                
+                radarPlugin.onload = function() {
+                    console.log('Radar plugin loaded successfully');
+                    setTimeout(callback, 100);
+                };
+                
+                radarPlugin.onerror = function(e) {
+                    console.error('Failed to load Radar plugin:', e);
+                };
+                
+                document.head.appendChild(radarPlugin);
+            };
+            
+            chartScript.onerror = function(e) {
+                console.error('Failed to load Chart.js:', e);
+            };
+            
+            document.head.appendChild(chartScript);
+        }
+    }
     
-    // Function to initialize everything once dependencies are loaded
+    // Then use this function in your initialization
     function initializeAll() {
         console.log('Starting initialization sequence');
         
@@ -1251,11 +1323,9 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeVisualizations();
         setupTabHandlers();
         
-        // Add a slight delay before initializing radar charts
-        setTimeout(function() {
-            console.log('Initializing radar charts...');
-            
-            // Initialize standard radar charts
+        // Load Chart.js and dependencies, then initialize radar charts
+        loadChartJsWithDependencies(function() {
+            console.log('Chart.js and dependencies loaded, initializing radar charts');
             initializeRadarCharts();
             
             // Create throw direction radar chart with error handling
@@ -1269,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error creating throw direction radar chart:', error);
             }
-        }, 500); // Increased delay for better reliability
+        });
     }
     
     // Load dependencies if needed
