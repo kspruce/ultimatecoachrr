@@ -1284,25 +1284,34 @@ function createThrowDirectionRadar() {
                 plugins: {
                     legend: {
                         display: false // Hide legend for cleaner look
-                    },                    
+                    },        
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const displayDirection = context.label; // Use the display label
-                                const actualDirection = allDirections[context.dataIndex]; // Get the actual direction from allDirections
-                                const percentage = context.dataset.data[context.dataIndex].toFixed(1); // Access data correctly
+                                const chart = context.chart;
+                                const dataset = context.dataset;
+                                const dataIndex = context.dataIndex;
+                    
+                                // Get the actual direction (N, NNE, etc.)
+                                const actualDirection = chart.data.labels[dataIndex];  // Corrected
+                    
+                                // Get the percentage for the current segment
+                                const percentage = dataset.data[dataIndex].toFixed(1);
+                    
+                                // Get the throw counts and completion rate for the actual direction
                                 const count = throwDirections[actualDirection] || 0;
                                 const completions = completionByDirection[actualDirection] || 0;
                                 const completionRate = (count > 0) ? ((completions / count) * 100).toFixed(1) : 0;
                     
                                 return [
-                                    `Direction: ${displayDirection}`,
+                                    `Direction: ${actualDirection}`, // Show actual direction
                                     `${percentage}% of all throws (${count} throws)`,
                                     `Completion rate: ${completionRate}% (${completions}/${count})`
                                 ];
                             }
                         }
                     }
+
                 },
                 scales: {
                     r: {
@@ -1328,7 +1337,7 @@ function createThrowDirectionRadar() {
                         }
                     }
                 },
-                startAngle: -45 // Start at -90 degrees to put North at the top
+                startAngle: 0
             } 
         });
         
