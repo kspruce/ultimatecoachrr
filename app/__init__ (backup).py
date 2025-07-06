@@ -1,4 +1,3 @@
-###init 2###
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -43,26 +42,6 @@ def create_app(config_class=Config):
             return {
                 's3_bucket_url': f"https://{app.config['AWS_BUCKET_NAME']}.s3.amazonaws.com" if app.config['AWS_BUCKET_NAME'] else None
             }
-        
-        # Initialize PER calculator
-        try:
-            from app.services.per_calculator import per_calculator
-            app.logger.info("PER calculator initialized")
-            
-            # Pre-calculate PER values for all games to warm up the cache
-            @app.before_first_request
-            def initialize_per_cache():
-                if not app.debug:  # Skip in debug mode to avoid slowing down development
-                    try:
-                        app.logger.info("Pre-calculating PER values to warm up cache...")
-                        per_calculator.calculate_all_pers(force_recalculate=True)
-                        app.logger.info("PER cache initialized successfully")
-                    except Exception as e:
-                        app.logger.error(f"Error initializing PER cache: {str(e)}")
-        except ImportError:
-            app.logger.warning("PER calculator module not found")
-        except Exception as e:
-            app.logger.error(f"Error initializing PER calculator: {str(e)}")
     
     # Configure static file serving
     app.static_folder = 'static'
@@ -154,7 +133,7 @@ def create_app(config_class=Config):
        SessionPlan, SessionComponent, SavedDrill, Attendance
    )
     
-    # Create upload directory in /tmp
+        # Create upload directory in /tmp
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         # Create subdirectories
@@ -163,8 +142,7 @@ def create_app(config_class=Config):
     except Exception as e:
         app.logger.warning(f"Could not create upload directories: {e}")
             
-    # Test write permissions
-    try:
+        # Test write permissions
         test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
         with open(test_file, 'w') as f:
             f.write('test')
@@ -172,31 +150,6 @@ def create_app(config_class=Config):
     except Exception as e:
         app.logger.error(f"Storage initialization error: {str(e)}")
         raise
-    
-    # Register CLI commands
-    @app.cli.command("clear-per-cache")
-    def clear_per_cache():
-        """Clear the PER calculation cache."""
-        try:
-            from app.services.per_calculator import per_calculator
-            per_calculator.clear_cache()
-            print("PER cache cleared successfully")
-        except ImportError:
-            print("PER calculator module not found")
-        except Exception as e:
-            print(f"Error clearing PER cache: {str(e)}")
-
-    @app.cli.command("warm-per-cache")
-    def warm_per_cache():
-        """Pre-calculate PER values to warm up the cache."""
-        try:
-            from app.services.per_calculator import per_calculator
-            per_calculator.calculate_all_pers(force_recalculate=True)
-            print("PER cache warmed up successfully")
-        except ImportError:
-            print("PER calculator module not found")
-        except Exception as e:
-            print(f"Error warming PER cache: {str(e)}")
     
     # Create database tables
     with app.app_context():
