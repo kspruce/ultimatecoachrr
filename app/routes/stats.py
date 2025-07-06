@@ -16,6 +16,16 @@ from app.utils.utils import admin_required
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
 # --- Core Statistical Calculation Functions ---
+def convert_booleans_for_js(obj):
+    """Convert Python booleans to JavaScript-compatible strings"""
+    if isinstance(obj, bool):
+        return "true" if obj else "false"
+    elif isinstance(obj, dict):
+        return {k: convert_booleans_for_js(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_booleans_for_js(i) for i in obj]
+    return obj
+
 def calculate_hockey_assists(player, games=None):
     """Calculate hockey assists (second-to-last pass before a goal)"""
     # Start with base query for all throws in points
@@ -1044,7 +1054,7 @@ def player_stats(player_id):
                 'end_y': throw.y_end,
                 'type': throw.throw_type,
                 'distance': throw.calculate_distance(),
-                'is_completion': throw.is_completion
+                'is_completion': "true" if throw.is_completion else "false"  # Convert to string
             }
             throw_vectors.append(vector)
 
