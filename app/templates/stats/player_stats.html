@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
 <!-- 07-2025 -- Add Chart.js and Radar plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar@5.0.0/dist/chartjs-chart-radar.min.js"></script>
 
 <style>
     .field-container {
@@ -438,6 +438,38 @@
         </div>
     </div>
 
+    <!-- Throw Vectors Field -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Throw Vectors</h5>
+                </div>
+                <div class="card-body">
+                    <div class="field-container" id="throwVectorsField" style="height: 400px; min-height: 400px;">
+                        <!-- Field will be drawn here -->
+                    </div>
+                    <p class="text-center text-muted">Blue lines represent completed throws, orange lines show assists</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Centralized Vectors View (Hidden by default) -->
+    <div class="row mb-4" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Centralized Throw Vectors</h5>
+                </div>
+                <div class="card-body">
+                    <div class="field-container" id="centralizedVectorsField" style="height: 400px; min-height: 400px;">
+                        <!-- Field will be drawn here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Throwaway Locations -->
     <div class="row mb-4">
         <div class="col-12">
@@ -561,7 +593,7 @@ function initializeRadarCharts() {
             console.log('Chart.js loaded successfully');
             // Load Radar plugin after Chart.js is loaded
             const radarPlugin = document.createElement('script');
-            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@3.1.0/build/chartjs-chart-radar.min.js';
+            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@5.0.0/dist/chartjs-chart-radar.min.js';
             
             radarPlugin.onload = function() {
                 console.log('Radar plugin loaded successfully');
@@ -1485,14 +1517,8 @@ function processThrowDirections(throwVectors) {
             // First check if is_completion is explicitly defined
             let isCompletion = false;
             if ('is_completion' in vector) {
-                // Handle both JavaScript booleans and Python string booleans
-                if (vector.is_completion === true || vector.is_completion === "true") {
-                    isCompletion = true;
-                } else {
-                    isCompletion = false;
-                }
+                isCompletion = pythonBoolToJS(vector.is_completion);
             } else if ('type' in vector) {
-                // If is_completion is not defined, infer from type
                 isCompletion = vector.type !== 'throwaway';
             }
             
