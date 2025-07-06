@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
 <!-- 07-2025 -- Add Chart.js and Radar plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar@0.1.0/build/Chart.RadarChart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radar"></script>
 
 <style>
     .stat-card {
@@ -517,8 +517,7 @@ function initializeRadarCharts() {
             console.log('Chart.js loaded successfully');
             // Load Radar plugin after Chart.js is loaded
             const radarPlugin = document.createElement('script');
-            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@0.1.0/build/Chart.RadarChart.min.js';
-            
+            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar';          
             radarPlugin.onload = function() {
                 console.log('Radar plugin loaded successfully');
                 // Wait a moment for everything to initialize
@@ -924,20 +923,15 @@ function createPERGauge() {
 function initializeVisualizations() {
     console.log('Initializing visualizations');
     
-    // Check if containers exist before initializing
-    const requiredContainers = ['throwVectorsField', 'throwawayLocationsField', 'perGauge'];
-    for (const containerId of requiredContainers) {
-        if (!document.getElementById(containerId)) {
-            console.error(`Required container #${containerId} not found, cannot initialize visualizations`);
-            return;
-        }
+    // Check if PER gauge container exists
+    if (!document.getElementById('perGauge')) {
+        console.error(`Required container #perGauge not found, cannot initialize visualizations`);
+        return;
     }
     
     // Initialize PER gauge
     createPERGauge();
-    
 }
-
 
 
 
@@ -979,7 +973,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.log('Loading Radar plugin...');
                 const radarPlugin = document.createElement('script');
-                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@0.1.0/build/Chart.RadarChart.min.js';
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar';
                 radarPlugin.crossOrigin = 'anonymous';
                 
                 radarPlugin.onload = function() {
@@ -1003,7 +997,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Chart.js loaded successfully');
                 
                 const radarPlugin = document.createElement('script');
-                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar@0.1.0/build/Chart.RadarChart.min.js';
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chartjs-chart-radar';
                 radarPlugin.crossOrigin = 'anonymous';
                 
                 radarPlugin.onload = function() {
