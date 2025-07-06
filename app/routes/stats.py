@@ -12,6 +12,7 @@ from app.models.clip import Clip
 import json
 import math
 from app.utils.utils import admin_required
+from datetime import datetime
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
@@ -1332,10 +1333,26 @@ def team_stats():
         tournament_ids = [t.id for t in Tournament.query.filter_by(season=season).all()]
         games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
     
-    games = games_query.all()
+    games = games_query.order_by(Game.date).all()
     
     # Calculate team summary stats
     team_summary = calculate_team_summary(games)
+    
+    # Add additional metrics for radar charts
+    team_summary.update(calculate_additional_team_metrics(games))
+    
+    # Calculate previous period stats for comparison
+    # (e.g., previous season or previous tournament)
+    prev_games = get_previous_period_games(season, tournament_id)
+    prev_summary = calculate_team_summary(prev_games)
+    prev_metrics = calculate_additional_team_metrics(prev_games)
+    
+    # Add previous metrics with 'prev_' prefix
+    for key, value in prev_metrics.items():
+        team_summary[f'prev_{key}'] = value
+    for key, value in prev_summary.items():
+        if key not in team_summary:
+            team_summary[f'prev_{key}'] = value
     
     # Calculate player statistics
     players = Player.query.filter_by(active=True).all()
@@ -1354,18 +1371,29 @@ def team_stats():
     # Sort by PER
     player_stats.sort(key=lambda x: x['stats']['per'], reverse=True)
     
-    # Get optimal lines
-    o_line_players = sorted(
-        [p for p in players if p.line_preference in ['O-line', 'both']],
-        key=lambda p: next((s['stats']['per'] for s in player_stats if s['player'].id == p.id), 0),
-        reverse=True
-    )[:7]
+    # Calculate line efficiency with gender separation
+    o_line_efficiency = calculate_line_efficiency(players, games, is_offensive=True)
+    d_line_efficiency = calculate_line_efficiency(players, games, is_offensive=False)
     
-    d_line_players = sorted(
-        [p for p in players if p.line_preference in ['D-line', 'both']],
-        key=lambda p: next((s['stats']['per'] for s in player_stats if s['player'].id == p.id), 0),
-        reverse=True
-    )[:7]
+    # Separate players by gender
+    o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
+    o_line_men = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
+    d_line_women = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
+    d_line_men = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
+    
+    # If we don't have enough players with gender data, fall back to the original method
+    if not o_line_women and not o_line_men:
+        o_line_players = [player for player, _ in o_line_efficiency][:7]
+    else:
+        o_line_players = o_line_women + o_line_men
+    
+    if not d_line_women and not d_line_men:
+        d_line_players = [player for player, _ in d_line_efficiency][:7]
+    else:
+        d_line_players = d_line_women + d_line_men
+    
+    # Calculate performance trends
+    performance_trends = calculate_performance_trends(games)
     
     # Get filter options
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
@@ -1381,8 +1409,16 @@ def team_stats():
         selected_tournament=tournament_id,
         selected_season=season,
         o_line_players=o_line_players,
-        d_line_players=d_line_players
+        d_line_players=d_line_players,
+        o_line_women=o_line_women,
+        o_line_men=o_line_men,
+        d_line_women=d_line_women,
+        d_line_men=d_line_men,
+        o_line_efficiency=dict(o_line_efficiency),
+        d_line_efficiency=dict(d_line_efficiency),
+        performance_trends=performance_trends
     )
+
 
 # --- Helper functions for visualization data ---
 
@@ -1940,3 +1976,186 @@ def debug_per_calculation(player_id):
         selected_game=game_id,
         games=games
     )
+
+def calculate_additional_team_metrics(games):
+    """Calculate additional team metrics for radar charts"""
+    if not games:
+        return {
+            'completion_rate': 0,
+            'goals_per_point': 0,
+            'assists_per_point': 0,
+            'throws_per_point': 0,
+            'hucks_per_point': 0,
+            'blocks_per_point': 0,
+            'turnovers_forced_per_point': 0,
+            'defensive_efficiency': 0,
+            'break_percentage': 0
+        }
+    
+    total_points = sum(len(g.points.all()) for g in games)
+    if total_points == 0:
+        return {
+            'completion_rate': 0,
+            'goals_per_point': 0,
+            'assists_per_point': 0,
+            'throws_per_point': 0,
+            'hucks_per_point': 0,
+            'blocks_per_point': 0,
+            'turnovers_forced_per_point': 0,
+            'defensive_efficiency': 0,
+            'break_percentage': 0
+        }
+    
+    # Count all throws
+    throws_query = Throw.query
+    point_ids = [p.id for g in games for p in g.points]
+    throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+    throws = throws_query.all()
+    
+    # Count completions
+    completions = sum(1 for t in throws if t.is_completion)
+    
+    # Count goals and assists
+    goals = sum(1 for t in throws if t.throw_type == 'assist')
+    
+    # Count blocks
+    blocks_query = Event.query.filter_by(event_type='block')
+    blocks_query = blocks_query.filter(Event.point_id.in_(point_ids))
+    blocks = blocks_query.count()
+    
+    # Count turnovers forced
+    turnovers_forced_query = Event.query.filter(
+        Event.event_type.in_(['throwaway', 'drop', 'stall']),
+        Event.is_offensive == False
+    )
+    turnovers_forced_query = turnovers_forced_query.filter(Event.point_id.in_(point_ids))
+    turnovers_forced = turnovers_forced_query.count()
+    
+    # Count hucks
+    hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > 20)
+    
+    # Calculate break percentage
+    breaks = sum(1 for g in games for p in g.points if p.is_break)
+    break_percentage = (breaks / total_points) * 100
+    
+    # Calculate defensive efficiency
+    d_points = sum(len(g.d_line_points) for g in games)
+    d_conversions = sum(sum(1 for p in g.d_line_points if p.we_scored) for g in games)
+    defensive_efficiency = (d_conversions / d_points) * 100 if d_points > 0 else 0
+    
+    return {
+        'completion_rate': (completions / len(throws)) * 100 if throws else 0,
+        'goals_per_point': goals / total_points,
+        'assists_per_point': goals / total_points,  # Same as goals
+        'throws_per_point': len(throws) / total_points,
+        'hucks_per_point': hucks / total_points,
+        'blocks_per_point': blocks / total_points,
+        'turnovers_forced_per_point': turnovers_forced / total_points,
+        'defensive_efficiency': defensive_efficiency,
+        'break_percentage': break_percentage
+    }
+
+def get_previous_period_games(season, tournament_id):
+    """Get games from previous period for comparison"""
+    if tournament_id:
+        # Get current tournament
+        current_tournament = Tournament.query.get(tournament_id)
+        if current_tournament:
+            # Find previous tournament in same season
+            prev_tournament = Tournament.query.filter(
+                Tournament.season == current_tournament.season,
+                Tournament.start_date < current_tournament.start_date
+            ).order_by(Tournament.start_date.desc()).first()
+            
+            if prev_tournament:
+                return Game.query.filter_by(tournament_id=prev_tournament.id).all()
+    elif season:
+        # Get previous season
+        seasons = db.session.query(Tournament.season).distinct().order_by(Tournament.season).all()
+        seasons = [s[0] for s in seasons if s[0]]
+        
+        if season in seasons:
+            idx = seasons.index(season)
+            if idx > 0:
+                prev_season = seasons[idx - 1]
+                tournament_ids = [t.id for t in Tournament.query.filter_by(season=prev_season).all()]
+                return Game.query.filter(Game.tournament_id.in_(tournament_ids)).all()
+    
+    # Default: return empty list if no previous period found
+    return []
+
+def calculate_line_efficiency(players, games, is_offensive=True):
+    """Calculate line efficiency with gender separation"""
+    player_efficiency = {}
+    
+    for player in players:
+        # Get points where player was in lineup
+        lineup_query = LineUp.query.join(Point).filter(
+            LineUp.player_id == player.id,
+            Point.our_line_type == ('O-line' if is_offensive else 'D-line')
+        )
+        
+        if games:
+            game_ids = [g.id for g in games]
+            lineup_query = lineup_query.filter(Point.game_id.in_(game_ids))
+        
+        points = lineup_query.all()
+        points_played = len(points)
+        
+        if points_played > 0:
+            # Count points where we scored using the Point.we_scored property
+            points_scored = sum(1 for lineup in points if lineup.point.we_scored)
+            
+            # Calculate efficiency as scoring percentage
+            efficiency = points_scored / points_played
+
+            player_efficiency[player] = efficiency
+
+    return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
+
+def calculate_performance_trends(games):
+    """Calculate team performance trends over time"""
+    if not games:
+        return {
+            'dates': [],
+            'o_line_efficiency': [],
+            'd_line_efficiency': [],
+            'break_percentage': []
+        }
+    
+    # Sort games by date
+    sorted_games = sorted(games, key=lambda g: g.date if g.date else datetime.min)
+    
+    # Calculate metrics for each game
+    dates = []
+    o_line_efficiency = []
+    d_line_efficiency = []
+    break_percentage = []
+    
+    for game in sorted_games:
+        if game.date:
+            dates.append(game.date.strftime('%Y-%m-%d'))
+        else:
+            dates.append('Unknown')
+        
+        # Calculate O-line efficiency
+        o_points = len(game.o_line_points)
+        o_conversions = sum(1 for p in game.o_line_points if p.we_scored)
+        o_line_efficiency.append((o_conversions / o_points * 100) if o_points > 0 else 0)
+        
+        # Calculate D-line efficiency
+        d_points = len(game.d_line_points)
+        d_conversions = sum(1 for p in game.d_line_points if p.we_scored)
+        d_line_efficiency.append((d_conversions / d_points * 100) if d_points > 0 else 0)
+        
+        # Calculate break percentage
+        total_points = len(game.points)
+        breaks = sum(1 for p in game.points if p.is_break)
+        break_percentage.append((breaks / total_points * 100) if total_points > 0 else 0)
+    
+    return {
+        'dates': json.dumps(dates),
+        'o_line_efficiency': json.dumps(o_line_efficiency),
+        'd_line_efficiency': json.dumps(d_line_efficiency),
+        'break_percentage': json.dumps(break_percentage)
+    }
