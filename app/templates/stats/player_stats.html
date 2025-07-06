@@ -1284,17 +1284,17 @@ function createThrowDirectionRadar() {
                 plugins: {
                     legend: {
                         display: false // Hide legend for cleaner look
-                    },
+                    },                    
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const displayDirection = context.label;
-                                const actualDirection = allDirections[context.dataIndex];
-                                const percentage = context.raw.toFixed(1);
+                                const displayDirection = context.label; // Use the display label
+                                const actualDirection = allDirections[context.dataIndex]; // Get the actual direction from allDirections
+                                const percentage = context.dataset.data[context.dataIndex].toFixed(1); // Access data correctly
                                 const count = throwDirections[actualDirection] || 0;
                                 const completions = completionByDirection[actualDirection] || 0;
-                                const completionRate = completionPercentages[actualDirection].toFixed(1);
-                                
+                                const completionRate = (count > 0) ? ((completions / count) * 100).toFixed(1) : 0;
+                    
                                 return [
                                     `Direction: ${displayDirection}`,
                                     `${percentage}% of all throws (${count} throws)`,
