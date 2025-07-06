@@ -413,11 +413,11 @@
                                 <small class="text-muted">
                                     <p>This chart shows the distribution of throw directions relative to the field orientation.</p>
                                     <ul class="mb-0 ps-3">
-                                        <li>Forward: Directly upfield (E)</li>
-                                        <li>Right: Across field to the right (N)</li>
-                                        <li>Back: Directly downfield (W)</li>
-                                        <li>Left: Across field to the left (S)</li>
-                                        <li>Combinations (e.g., Forward-Right): Diagonal throws</li>
+                                        <li><strong>FORWARD</strong>: Directly upfield (East)</li>
+                                        <li><strong>RIGHT</strong>: Across field to the right (North)</li>
+                                        <li><strong>BACK</strong>: Directly downfield (West)</li>
+                                        <li><strong>LEFT</strong>: Across field to the left (South)</li>
+                                        <li>The chart is divided into 16 directions for detailed analysis</li>
                                     </ul>
                                 </small>
                             </div>
@@ -1056,32 +1056,36 @@ function createThrowDirectionRadar() {
         console.log('completionByDirection data:', completionByDirection);
         
         // Define all 16 directions in the correct order for the chart
-        // We'll rotate the chart so that East (forward) is at the top (North position)
+        // We'll align the chart so that East (forward) is exactly at the top
         const allDirections = [
-            'E', 'ENE', 'NE', 'NNE',  // These will be at the top (North position)
-            'N', 'NNW', 'NW', 'WNW',  // These will be at the right (East position)
-            'W', 'WSW', 'SW', 'SSW',  // These will be at the bottom (South position)
-            'S', 'SSE', 'SE', 'ESE'   // These will be at the left (West position)
+            'E',                // Forward (0°)
+            'ENE', 'NE', 'NNE', // Forward-Right quadrant
+            'N',                // Right (90°)
+            'NNW', 'NW', 'WNW', // Back-Right quadrant
+            'W',                // Back (180°)
+            'WSW', 'SW', 'SSW', // Back-Left quadrant
+            'S',                // Left (270°)
+            'SSE', 'SE', 'ESE'  // Forward-Left quadrant
         ];
         
-        // Create a mapping from field directions to display directions
+        // Create a mapping from compass directions to field directions
         const directionMapping = {
-            'E': 'Forward',    // East is forward
-            'ENE': 'Forward-Right',
-            'NE': 'Right-Forward',
-            'NNE': 'Right-Slight',
-            'N': 'Right',      // North is right
-            'NNW': 'Right-Back',
-            'NW': 'Back-Right',
-            'WNW': 'Back-Slight',
-            'W': 'Back',       // West is back
-            'WSW': 'Back-Left',
-            'SW': 'Left-Back',
-            'SSW': 'Left-Slight',
-            'S': 'Left',       // South is left
-            'SSE': 'Left-Forward',
-            'SE': 'Forward-Left',
-            'ESE': 'Forward-Slight'
+            'E': 'Forward',     // East is forward (0°)
+            'ENE': 'Forward-Right 1',
+            'NE': 'Forward-Right 2',
+            'NNE': 'Forward-Right 3',
+            'N': 'Right',       // North is right (90°)
+            'NNW': 'Back-Right 1',
+            'NW': 'Back-Right 2',
+            'WNW': 'Back-Right 3',
+            'W': 'Back',        // West is back (180°)
+            'WSW': 'Back-Left 1',
+            'SW': 'Back-Left 2',
+            'SSW': 'Back-Left 3',
+            'S': 'Left',        // South is left (270°)
+            'SSE': 'Forward-Left 1',
+            'SE': 'Forward-Left 2',
+            'ESE': 'Forward-Left 3'
         };
         
         // Ensure all directions exist in our data objects
@@ -1235,40 +1239,40 @@ function createThrowDirectionRadar() {
                         label: 'Throw Distribution (%)',
                         data: allDirections.map(dir => throwPercentages[dir]),
                         backgroundColor: [
-                            'rgba(54, 162, 235, 0.6)',  // E (Forward)
-                            'rgba(54, 162, 235, 0.4)',  // ENE
-                            'rgba(75, 192, 192, 0.6)',  // NE
-                            'rgba(75, 192, 192, 0.4)',  // NNE
-                            'rgba(255, 206, 86, 0.6)',  // N (Right)
-                            'rgba(255, 206, 86, 0.4)',  // NNW
-                            'rgba(255, 159, 64, 0.6)',  // NW
-                            'rgba(255, 159, 64, 0.4)',  // WNW
-                            'rgba(255, 99, 132, 0.6)',  // W (Back)
-                            'rgba(255, 99, 132, 0.4)',  // WSW
-                            'rgba(153, 102, 255, 0.6)', // SW
-                            'rgba(153, 102, 255, 0.4)', // SSW
-                            'rgba(201, 203, 207, 0.6)', // S (Left)
-                            'rgba(201, 203, 207, 0.4)', // SSE
-                            'rgba(54, 162, 235, 0.6)',  // SE
-                            'rgba(54, 162, 235, 0.4)'   // ESE
+                            'rgba(54, 162, 235, 0.8)',  // E (Forward)
+                            'rgba(54, 162, 235, 0.6)',  // ENE
+                            'rgba(54, 162, 235, 0.4)',  // NE
+                            'rgba(54, 162, 235, 0.2)',  // NNE
+                            'rgba(255, 206, 86, 0.8)',  // N (Right)
+                            'rgba(255, 206, 86, 0.6)',  // NNW
+                            'rgba(255, 206, 86, 0.4)',  // NW
+                            'rgba(255, 206, 86, 0.2)',  // WNW
+                            'rgba(255, 99, 132, 0.8)',  // W (Back)
+                            'rgba(255, 99, 132, 0.6)',  // WSW
+                            'rgba(255, 99, 132, 0.4)',  // SW
+                            'rgba(255, 99, 132, 0.2)',  // SSW
+                            'rgba(75, 192, 192, 0.8)',  // S (Left)
+                            'rgba(75, 192, 192, 0.6)',  // SSE
+                            'rgba(75, 192, 192, 0.4)',  // SE
+                            'rgba(75, 192, 192, 0.2)'   // ESE
                         ],
                         borderColor: [
                             'rgba(54, 162, 235, 1)',    // E (Forward)
-                            'rgba(54, 162, 235, 0.8)',  // ENE
-                            'rgba(75, 192, 192, 1)',    // NE
-                            'rgba(75, 192, 192, 0.8)',  // NNE
+                            'rgba(54, 162, 235, 0.9)',  // ENE
+                            'rgba(54, 162, 235, 0.8)',  // NE
+                            'rgba(54, 162, 235, 0.7)',  // NNE
                             'rgba(255, 206, 86, 1)',    // N (Right)
-                            'rgba(255, 206, 86, 0.8)',  // NNW
-                            'rgba(255, 159, 64, 1)',    // NW
-                            'rgba(255, 159, 64, 0.8)',  // WNW
+                            'rgba(255, 206, 86, 0.9)',  // NNW
+                            'rgba(255, 206, 86, 0.8)',  // NW
+                            'rgba(255, 206, 86, 0.7)',  // WNW
                             'rgba(255, 99, 132, 1)',    // W (Back)
-                            'rgba(255, 99, 132, 0.8)',  // WSW
-                            'rgba(153, 102, 255, 1)',   // SW
-                            'rgba(153, 102, 255, 0.8)', // SSW
-                            'rgba(201, 203, 207, 1)',   // S (Left)
-                            'rgba(201, 203, 207, 0.8)', // SSE
-                            'rgba(54, 162, 235, 1)',    // SE
-                            'rgba(54, 162, 235, 0.8)'   // ESE
+                            'rgba(255, 99, 132, 0.9)',  // WSW
+                            'rgba(255, 99, 132, 0.8)',  // SW
+                            'rgba(255, 99, 132, 0.7)',  // SSW
+                            'rgba(75, 192, 192, 1)',    // S (Left)
+                            'rgba(75, 192, 192, 0.9)',  // SSE
+                            'rgba(75, 192, 192, 0.8)',  // SE
+                            'rgba(75, 192, 192, 0.7)'   // ESE
                         ],
                         borderWidth: 1
                     }
@@ -1290,7 +1294,7 @@ function createThrowDirectionRadar() {
                                 const completionRate = completionPercentages[actualDirection].toFixed(1);
                                 
                                 return [
-                                    `Direction: ${displayDirection} (${actualDirection})`,
+                                    `Direction: ${displayDirection}`,
                                     `${percentage}% of all throws (${count} throws)`,
                                     `Completion rate: ${completionRate}% (${completions}/${count})`
                                 ];
@@ -1309,10 +1313,20 @@ function createThrowDirectionRadar() {
                             font: {
                                 size: 10,
                                 weight: 'bold'
+                            },
+                            callback: function(label) {
+                                // Simplify labels for better display
+                                if (label === 'Forward' || label === 'Back' || 
+                                    label === 'Left' || label === 'Right') {
+                                    return label.toUpperCase();
+                                }
+                                // For other labels, just show the first letter of each part
+                                return label.split(' ')[0];
                             }
                         }
                     }
-                }
+                },
+                startAngle: -90 * Math.PI / 180 // Start at -90 degrees to put Forward at the top
             }
         });
         
@@ -1321,6 +1335,7 @@ function createThrowDirectionRadar() {
         console.error('Error creating throw direction chart:', error);
     }
 }
+
 
 
 

@@ -98,6 +98,7 @@ def get_player_throw_stats(player, games=None):
     if stats['throws_made'] > 0:
         stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws_made']
     
+
     # Add throw direction categorization with 16 directions
     throw_directions = {
         'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
@@ -114,14 +115,14 @@ def get_player_throw_stats(player, games=None):
             angle = math.atan2(dy, dx)
             
             # Convert to degrees and normalize to 0-360
-            # No need to add 90 degrees since we're already aligning East as forward
             degrees = (angle * 180 / math.pi)
             if degrees < 0:
                 degrees += 360
                 
             # Map angle to 16-point direction (each direction covers 22.5 degrees)
+            # East (0°) is directly forward
             if degrees >= 348.75 or degrees < 11.25:
-                direction = 'E'  # East is forward
+                direction = 'E'  # Forward (0°)
             elif degrees >= 11.25 and degrees < 33.75:
                 direction = 'ENE'
             elif degrees >= 33.75 and degrees < 56.25:
@@ -129,7 +130,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 56.25 and degrees < 78.75:
                 direction = 'NNE'
             elif degrees >= 78.75 and degrees < 101.25:
-                direction = 'N'  # North is right
+                direction = 'N'  # Right (90°)
             elif degrees >= 101.25 and degrees < 123.75:
                 direction = 'NNW'
             elif degrees >= 123.75 and degrees < 146.25:
@@ -137,7 +138,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 146.25 and degrees < 168.75:
                 direction = 'WNW'
             elif degrees >= 168.75 and degrees < 191.25:
-                direction = 'W'  # West is back
+                direction = 'W'  # Back (180°)
             elif degrees >= 191.25 and degrees < 213.75:
                 direction = 'WSW'
             elif degrees >= 213.75 and degrees < 236.25:
@@ -145,7 +146,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 236.25 and degrees < 258.75:
                 direction = 'SSW'
             elif degrees >= 258.75 and degrees < 281.25:
-                direction = 'S'  # South is left
+                direction = 'S'  # Left (270°)
             elif degrees >= 281.25 and degrees < 303.75:
                 direction = 'SSE'
             elif degrees >= 303.75 and degrees < 326.25:
@@ -154,6 +155,7 @@ def get_player_throw_stats(player, games=None):
                 direction = 'ESE'
                 
             throw_directions[direction] += 1
+
 
 
     # Calculate completion rates by direction
@@ -182,7 +184,7 @@ def get_player_throw_stats(player, games=None):
                 
             # Map angle to 16-point direction (each direction covers 22.5 degrees)
             if degrees >= 348.75 or degrees < 11.25:
-                direction = 'E'  # East is forward
+                direction = 'E'  # Forward (0°)
             elif degrees >= 11.25 and degrees < 33.75:
                 direction = 'ENE'
             elif degrees >= 33.75 and degrees < 56.25:
@@ -190,7 +192,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 56.25 and degrees < 78.75:
                 direction = 'NNE'
             elif degrees >= 78.75 and degrees < 101.25:
-                direction = 'N'  # North is right
+                direction = 'N'  # Right (90°)
             elif degrees >= 101.25 and degrees < 123.75:
                 direction = 'NNW'
             elif degrees >= 123.75 and degrees < 146.25:
@@ -198,7 +200,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 146.25 and degrees < 168.75:
                 direction = 'WNW'
             elif degrees >= 168.75 and degrees < 191.25:
-                direction = 'W'  # West is back
+                direction = 'W'  # Back (180°)
             elif degrees >= 191.25 and degrees < 213.75:
                 direction = 'WSW'
             elif degrees >= 213.75 and degrees < 236.25:
@@ -206,7 +208,7 @@ def get_player_throw_stats(player, games=None):
             elif degrees >= 236.25 and degrees < 258.75:
                 direction = 'SSW'
             elif degrees >= 258.75 and degrees < 281.25:
-                direction = 'S'  # South is left
+                direction = 'S'  # Left (270°)
             elif degrees >= 281.25 and degrees < 303.75:
                 direction = 'SSE'
             elif degrees >= 303.75 and degrees < 326.25:
