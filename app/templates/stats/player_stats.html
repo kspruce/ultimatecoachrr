@@ -411,6 +411,7 @@
         </div>
     </div>
 
+
 <!-- Game History -->
 <div class="row mb-4">
     <div class="col-12">
@@ -944,22 +945,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (vizData && vizData.throwVectors) {
         console.log(`Found ${vizData.throwVectors.length} throw vectors`);
         
-        // Check a sample vector to ensure it has the required properties
-        if (vizData.throwVectors.length > 0) {
-            const sampleVector = vizData.throwVectors[0];
-            console.log('Sample throw vector:', sampleVector);
-            
-            // Check for required properties
-            const requiredProps = ['start_x', 'start_y', 'end_x', 'end_y', 'type'];
-            const missingProps = requiredProps.filter(prop => sampleVector[prop] === undefined);
-            
-            if (missingProps.length > 0) {
-                console.warn(`Warning: Sample vector is missing properties: ${missingProps.join(', ')}`);
-            }
-        }
-    } else {
-        console.error('No throw vectors found in vizData');
-    }
+        createThrowDirectionRadar();
     
     function loadChartJsWithDependencies(callback) {
         // Check if Chart.js is already loaded
@@ -1024,27 +1010,25 @@ document.addEventListener('DOMContentLoaded', function() {
     function initializeAll() {
         console.log('Starting initialization sequence');
         
-        // Initialize basic visualizations
+        // Initialize basic visualizations (PER gauge)
         initializeVisualizations();
         
         // Load Chart.js and dependencies, then initialize radar charts
         loadChartJsWithDependencies(function() {
             console.log('Chart.js and dependencies loaded, initializing radar charts');
+            
+            // Initialize offensive and defensive radar charts
             initializeRadarCharts();
             
-            // Create throw direction radar chart with error handling
+            // Initialize throw direction radar chart
             try {
-                console.log('Creating throw direction radar chart...');
-                if (vizData && vizData.throwVectors && vizData.throwVectors.length > 0) {
-                    createThrowDirectionRadar(vizData.throwVectors);
-                } else {
-                    console.error('Cannot create throw direction radar: No throw vectors available');
-                }
+                createThrowDirectionRadar();
             } catch (error) {
                 console.error('Error creating throw direction radar chart:', error);
             }
         });
     }
+
     
     // Load dependencies if needed
     if (typeof d3 === 'undefined') {
@@ -1066,157 +1050,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// Process throw vectors to get directional data
-function processThrowDirections(throwVectors) {
-    console.log("Processing", throwVectors.length, "throw vectors for direction data");
-    
-    // Initialize direction counts
-    const directions = {
-        'N': 0,    // Directly upfield
-        'NE': 0,   // Diagonal upfield right
-        'E': 0,    // Directly right
-        'SE': 0,   // Diagonal downfield right
-        'S': 0,    // Directly downfield
-        'SW': 0,   // Diagonal downfield left
-        'W': 0,    // Directly left
-        'NW': 0    // Diagonal upfield left
-    };
-    
-    // Initialize completion counts
-    const completions = {
-        'N': 0,    // Directly upfield
-        'NE': 0,   // Diagonal upfield right
-        'E': 0,    // Directly right
-        'SE': 0,   // Diagonal downfield right
-        'S': 0,    // Directly downfield
-        'SW': 0,   // Diagonal downfield left
-        'W': 0,    // Directly left
-        'NW': 0    // Diagonal upfield left
-    };
-    
-    // Count throws by direction with enhanced error handling
-    throwVectors.forEach((vector, index) => {
-        try {
-            // Skip invalid vectors
-            if (!vector || typeof vector !== 'object') {
-                console.warn(`Vector ${index} is not a valid object, skipping`);
-                return;
-            }
-            
-            // Check for required properties
-            if (vector.start_x === undefined || vector.start_y === undefined || 
-                vector.end_x === undefined || vector.end_y === undefined) {
-                console.warn(`Vector ${index} is missing coordinates, skipping`);
-                return;
-            }
-            
-            // Convert to numbers if they're strings
-            const startX = Number(vector.start_x);
-            const startY = Number(vector.start_y);
-            const endX = Number(vector.end_x);
-            const endY = Number(vector.end_y);
-            
-            // Check for NaN values
-            if (isNaN(startX) || isNaN(startY) || isNaN(endX) || isNaN(endY)) {
-                console.warn(`Vector ${index} has NaN coordinates, skipping`);
-                return;
-            }
-            
-            // Check for zero-length vectors
-            const dx = endX - startX;
-            const dy = endY - startY;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            
-            if (distance < 0.001) {  // Very small threshold to avoid division by zero
-                console.warn(`Vector ${index} has near-zero length, skipping`);
-                return;
-            }
-            
-            // Calculate angle in radians
-            let angle = Math.atan2(dy, dx);
-            
-            // Convert to degrees and normalize to 0-360
-            let degrees = (angle * 180 / Math.PI) + 90; // +90 to align North with upfield
-            if (degrees < 0) degrees += 360;
-            
-            // Map angle to direction
-            let direction;
-            if (degrees >= 337.5 || degrees < 22.5) {
-                direction = 'N';
-            } else if (degrees >= 22.5 && degrees < 67.5) {
-                direction = 'NE';
-            } else if (degrees >= 67.5 && degrees < 112.5) {
-                direction = 'E';
-            } else if (degrees >= 112.5 && degrees < 157.5) {
-                direction = 'SE';
-            } else if (degrees >= 157.5 && degrees < 202.5) {
-                direction = 'S';
-            } else if (degrees >= 202.5 && degrees < 247.5) {
-                direction = 'SW';
-            } else if (degrees >= 247.5 && degrees < 292.5) {
-                direction = 'W';
-            } else {
-                direction = 'NW';
-            }
-            
-            // Increment count for this direction
-            directions[direction]++;
-            
-            // Determine if it's a completion
-            // First check if is_completion is explicitly defined
-            let isCompletion = false;
-            if ('is_completion' in vector) {
-                isCompletion = pythonBoolToJS(vector.is_completion);
-            } else if ('type' in vector) {
-                isCompletion = vector.type !== 'throwaway';
-            }
-            
-            // If it's a completion, increment completion count
-            if (isCompletion) {
-                completions[direction]++;
-            }
-            
-            // Debug log every 20th vector or if there's something unusual
-            if (index % 20 === 0 || !isCompletion) {
-                console.log(`Vector ${index}: Direction=${direction}, isCompletion=${isCompletion}, type=${vector.type || 'unknown'}, distance=${distance.toFixed(2)}`);
-            }
-        } catch (error) {
-            console.error(`Error processing vector ${index}:`, error);
-        }
-    });
 
-    
-    console.log("Direction counts:", directions);
-    console.log("Completion counts:", completions);
-    
-    return { directions, completions };
-}
 
 
 // Create the throw direction radar chart
-function createThrowDirectionRadar(throwVectors) {
+function createThrowDirectionRadar() {
     console.log('Creating throw direction radar chart');
     
     try {
-        // Process throw vectors to get directional data or use fallback
-        let directionData;
+        // Get direction data from the template variables
+        const throwDirections = {{ throw_directions|tojson }};
+        const completionByDirection = {{ completion_by_direction|tojson }};
         
-        if (throwVectors && throwVectors.length > 0) {
-            // Try to process the actual throw vectors
-            directionData = processThrowDirections(throwVectors);
-            
-            // Check if we got valid data
-            const hasData = Object.values(directionData.directions).some(count => count > 0);
-            if (!hasData) {
-                console.warn('No direction data extracted from throw vectors, using fallback');
-                directionData = generateFallbackDirectionData();
-            }
-        } else {
-            console.warn('No throw vectors provided, using fallback data');
-            directionData = generateFallbackDirectionData();
-        }
-        
-        const { directions, completions } = directionData;
+        // Calculate total throws for percentage calculation
+        const totalThrows = Object.values(throwDirections).reduce((sum, count) => sum + count, 0);
+        console.log(`Total throws: ${totalThrows}`);
         
         // Check if canvas element exists
         const canvas = document.getElementById('throwDirectionRadar');
@@ -1224,10 +1072,6 @@ function createThrowDirectionRadar(throwVectors) {
             console.error('Canvas element for throw direction radar not found');
             return;
         }
-        
-        // Calculate total throws for percentage calculation
-        const totalThrows = Object.values(directions).reduce((sum, count) => sum + count, 0);
-        console.log(`Total throws: ${totalThrows}`);
         
         // Create the radar chart
         const ctx = canvas.getContext('2d');
@@ -1239,14 +1083,14 @@ function createThrowDirectionRadar(throwVectors) {
                     {
                         label: 'All Throws',
                         data: [
-                            directions['N'],
-                            directions['NE'],
-                            directions['E'],
-                            directions['SE'],
-                            directions['S'],
-                            directions['SW'],
-                            directions['W'],
-                            directions['NW']
+                            throwDirections['N'] || 0,
+                            throwDirections['NE'] || 0,
+                            throwDirections['E'] || 0,
+                            throwDirections['SE'] || 0,
+                            throwDirections['S'] || 0,
+                            throwDirections['SW'] || 0,
+                            throwDirections['W'] || 0,
+                            throwDirections['NW'] || 0
                         ],
                         backgroundColor: 'rgba(54, 162, 235, 0.2)',
                         borderColor: 'rgba(54, 162, 235, 1)',
@@ -1257,14 +1101,14 @@ function createThrowDirectionRadar(throwVectors) {
                     {
                         label: 'Completions',
                         data: [
-                            completions['N'],
-                            completions['NE'],
-                            completions['E'],
-                            completions['SE'],
-                            completions['S'],
-                            completions['SW'],
-                            completions['W'],
-                            completions['NW']
+                            completionByDirection['N'] || 0,
+                            completionByDirection['NE'] || 0,
+                            completionByDirection['E'] || 0,
+                            completionByDirection['SE'] || 0,
+                            completionByDirection['S'] || 0,
+                            completionByDirection['SW'] || 0,
+                            completionByDirection['W'] || 0,
+                            completionByDirection['NW'] || 0
                         ],
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -1282,7 +1126,7 @@ function createThrowDirectionRadar(throwVectors) {
                         },
                         suggestedMin: 0,
                         ticks: {
-                            stepSize: Math.max(1, Math.ceil(Math.max(...Object.values(directions)) / 5))
+                            stepSize: Math.max(1, Math.ceil(Math.max(...Object.values(throwDirections)) / 5))
                         }
                     }
                 },
@@ -1316,103 +1160,11 @@ function createThrowDirectionRadar(throwVectors) {
     }
 }
 
-
-
-
-// Add CSS for vectors
-const style = document.createElement('style');
-style.textContent = `
-    .throw-vector {
-        pointer-events: none;
-    }
-    .vector-point {
-        pointer-events: none;
-    }
-    .direction-label {
-        font-size: 12px;
-        font-weight: bold;
-    }
-    .throwaway-location {
-        fill: red;
-        opacity: 0.7;
-    }
-    .throwaway-vector {
-        stroke: red;
-        stroke-width: 2;
-        stroke-dasharray: 5,5;
-        opacity: 0.7;
-    }
-`;
-document.head.appendChild(style);
-
 // Ensure radar charts are initialized
 setTimeout(function() {
     console.log('Delayed initialization of radar charts');
     initializeRadarCharts();
 }, 1000);
-
-// Fallback function to generate synthetic throw direction data if needed
-function generateFallbackDirectionData() {
-    console.log('Generating fallback direction data');
-    
-    // Create a fallback data structure
-    const fallbackData = {
-        directions: {
-            'N': 0, 'NE': 0, 'E': 0, 'SE': 0, 
-            'S': 0, 'SW': 0, 'W': 0, 'NW': 0
-        },
-        completions: {
-            'N': 0, 'NE': 0, 'E': 0, 'SE': 0, 
-            'S': 0, 'SW': 0, 'W': 0, 'NW': 0
-        }
-    };
-    
-    // Check if we can extract direction data from throw vectors
-    if (vizData && vizData.throwVectors && vizData.throwVectors.length > 0) {
-        // Try to process the vectors we have
-        try {
-            // Filter out vectors with missing coordinates
-            const validVectors = vizData.throwVectors.filter(v => 
-                v.start_x !== undefined && v.start_y !== undefined && 
-                v.end_x !== undefined && v.end_y !== undefined
-            );
-            
-            console.log(`Found ${validVectors.length} valid vectors out of ${vizData.throwVectors.length}`);
-            
-            if (validVectors.length > 0) {
-                // Process the valid vectors
-                return processThrowDirections(validVectors);
-            }
-        } catch (error) {
-            console.error('Error processing throw vectors for fallback data:', error);
-        }
-    }
-    
-    // If we couldn't extract data or there was an error, create some sample data
-    console.log('Creating sample direction data');
-    
-    // Sample data with a bias toward forward throws (N, NE, NW)
-    fallbackData.directions['N'] = 15;
-    fallbackData.directions['NE'] = 10;
-    fallbackData.directions['E'] = 5;
-    fallbackData.directions['SE'] = 3;
-    fallbackData.directions['S'] = 2;
-    fallbackData.directions['SW'] = 3;
-    fallbackData.directions['W'] = 5;
-    fallbackData.directions['NW'] = 10;
-    
-    // Completions are slightly lower than total throws
-    fallbackData.completions['N'] = 12;
-    fallbackData.completions['NE'] = 8;
-    fallbackData.completions['E'] = 4;
-    fallbackData.completions['SE'] = 2;
-    fallbackData.completions['S'] = 1;
-    fallbackData.completions['SW'] = 2;
-    fallbackData.completions['W'] = 4;
-    fallbackData.completions['NW'] = 8;
-    
-    return fallbackData;
-}
 
 </script>
 {% endblock %}
