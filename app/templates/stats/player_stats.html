@@ -1084,6 +1084,7 @@ function createThrowDirectionRadar() {
         // If no throw directions data, calculate from throw vectors
         if (totalThrows === 0 && vizData && vizData.throwVectors && vizData.throwVectors.length > 0) {
             console.log('No throw directions data, calculating from throw vectors');
+        }
         
         // Check if canvas element exists
         const canvas = document.getElementById('throwDirectionRadar');
