@@ -509,11 +509,22 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
     // Initialize DataTable with destroy option
+    if ($.fn.DataTable.isDataTable('#player-stats-table')) {
+        $('#player-stats-table').DataTable().destroy();
+    }
+    
     $('#player-stats-table').DataTable({
-        destroy: true,
+        retrieve: true,
         "pageLength": 10,
-        "order": [[9, "desc"]], // Sort by PER by default (adjusted column index)
+        "order": [[9, "desc"]],
         "responsive": true,
         "language": {
             "search": "Search players:",
@@ -521,14 +532,6 @@
         }
     });
 
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
     
     // Team Offensive Radar Chart
     const offensiveCtx = document.getElementById('teamOffensiveRadar');
@@ -738,3 +741,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
