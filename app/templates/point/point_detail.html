@@ -106,6 +106,7 @@
 {% endblock %}
 
 {% block content %}
+<!-- Your HTML content remains the same -->
 <div class="container">
     <!-- Header section -->
     <div class="row mb-4">
@@ -236,6 +237,7 @@
         </div>
     </div>
 
+    <!-- Rest of your HTML content remains the same -->
     <!-- Clips section -->
     <div class="row">
         <div class="col-12">
@@ -467,8 +469,8 @@
                 
                 field.appendChild(marker);
                 
-                // Add tooltip with event info
-                marker.title = `${event.event_type} by ${event.player.name || 'Unknown'}`;
+                // Add tooltip with event info - FIX: Use event_type only, don't try to access player.name
+                marker.title = `${event.event_type}`;
                 
                 // Only draw lines if we have a previous event with position
                 if (index > 0) {
