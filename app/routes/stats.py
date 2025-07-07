@@ -340,14 +340,14 @@ def calculate_per(player, games=None, team_avgs=None):
 
     # Calculate raw PER
     uper = (1 / stats['points_played']) * (
-        (WEIGHTS['scoring'] * (stats['goals'] ** 0.75)) +
-        (WEIGHTS['assist'] * (stats['assists'] ** 0.75)) +
-        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)) +
-        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
-        (WEIGHTS['defense'] * (stats['blocks'] ** 0.75)) +
+        (WEIGHTS['scoring'] * (stats['goals'] * 0.75)) +
+        (WEIGHTS['assist'] * (stats['assists'] * 0.75)) +
+        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] * 0.75)) +
+        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) * 0.75)) +
+        (WEIGHTS['defense'] * (stats['blocks'] * 0.75)) +
         (WEIGHTS['throw'] * (
-            (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
-            (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
+            (stats['completions'] * 0.75) * ((stats['completion_rate']/100) * 3.0) +
+            (stats['catches'] * 0.75) * ((stats['catch_rate']/100) * 3.0)
         )) +
         plus_minus_component
     )
@@ -1706,14 +1706,14 @@ def calculate_unadjusted_per(stats):
 
     # Calculate raw PER
     uper = (1 / stats['points_played']) * (
-        (WEIGHTS['scoring'] * (stats['goals'] ** 0.75)) +
-        (WEIGHTS['assist'] * (stats['assists'] ** 0.75)) +
-        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)) +
-        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)) +
-        (WEIGHTS['defense'] * (stats['blocks'] ** 0.75)) +
+        (WEIGHTS['scoring'] * (stats['goals'] * 0.75)) +
+        (WEIGHTS['assist'] * (stats['assists'] * 0.75)) +
+        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] * 0.75)) +
+        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) * 0.75)) +
+        (WEIGHTS['defense'] * (stats['blocks'] * 0.75)) +
         (WEIGHTS['throw'] * (
-            (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
-            (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
+            (stats['completions'] * 0.75) * ((stats['completion_rate']/100) * 3.0) +
+            (stats['catches'] * 0.75) * ((stats['catch_rate']/100) * 3.0)
         )) +
         (WEIGHTS['plus_minus'] * (
             stats.get('o_line_plus_minus_per_point', 0) + 
