@@ -527,9 +527,13 @@ def point_detail(point_id):
     point = Point.query.get_or_404(point_id)
     game = Game.query.get(point.game_id)
     
-    # Query events directly instead of using the relationship
+    # Get events
     from app.models.event import Event
     events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
+    
+    # Explicitly load lineups
+    from app.models.point import LineUp
+    lineups = LineUp.query.filter_by(point_id=point_id).all()
     
     # Create a serializable version of events for JavaScript
     events_data = []
@@ -538,31 +542,55 @@ def point_detail(point_id):
             'id': event.id,
             'event_type': event.event_type,
             'timestamp': event.timestamp,
-            'field_position_x': getattr(event, 'field_position_x', None),
-            'field_position_y': getattr(event, 'field_position_y', None),
-            'player_id': event.player_id if hasattr(event, 'player_id') else None,
-            'player_name': event.player.name if hasattr(event, 'player') and event.player else None,
+            'field_position_x': event.field_position_x,
+            'field_position_y': event.field_position_y,
+            'player_id': event.player_id,
+            'player_name': event.player.name if event.player else None,
+            'receiver_id': event.receiver_id,
+            'receiver_name': event.receiver.name if event.receiver else None,
+            'is_offensive': event.is_offensive
         }
-        
-        # Add throw-specific attributes if they exist
-        if hasattr(event, 'throw_type'):
-            event_dict['throw_type'] = event.throw_type
-        if hasattr(event, 'throw_distance'):
-            event_dict['throw_distance'] = event.throw_distance
-        if hasattr(event, 'is_break_throw'):
-            event_dict['is_break_throw'] = event.is_break_throw
-        if hasattr(event, 'receiver_id'):
-            event_dict['receiver_id'] = event.receiver_id
-            if hasattr(event, 'receiver') and event.receiver:
-                event_dict['receiver_name'] = event.receiver.name
-    
         events_data.append(event_dict)
     
     return render_template('point/point_detail.html', 
                           point=point, 
                           game=game, 
                           events=events,
-                          events_data=events_data)
+                          events_data=events_data,
+                          lineups=lineups)
 
 
+
+@bp.route('/fix_lineups/<int:point_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def fix_lineups(point_id):
+    point = Point.query.get_or_404(point_id)
+    
+    if request.method == 'POST':
+        # Get selected players
+        player_ids = request.form.getlist('players')
+        
+        if len(player_ids) != 7:
+            flash(f'You must select exactly 7 players. You selected {len(player_ids)}.', 'danger')
+            return redirect(url_for('point.fix_lineups', point_id=point_id))
+        
+        # Delete existing lineups
+        LineUp.query.filter_by(point_id=point_id).delete()
+        
+        # Add new lineups
+        for player_id in player_ids:
+            lineup = LineUp(point_id=point_id, player_id=player_id)
+            db.session.add(lineup)
+        
+        db.session.commit()
+        flash('Lineups have been updated!', 'success')
+        return redirect(url_for('point.point_detail', point_id=point_id))
+    
+    # Get all active players
+    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    
+    return render_template('point/fix_lineups.html', 
+                          point=point, 
+                          all_players=all_players)
 
