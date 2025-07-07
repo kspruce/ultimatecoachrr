@@ -71,36 +71,18 @@
     /* Disc for animation - ENHANCED */
     .disc {
         position: absolute;
-        width: 30px !important; /* Larger disc */
-        height: 30px !important;
+        width: 24px !important; /* Slightly smaller disc */
+        height: 24px !important;
         border-radius: 50%;
-        background-color: yellow !important;
-        border: 4px solid black !important;
+        background-color: white !important; /* Changed from yellow to white */
+        border: 2px solid black !important; /* Thinner border */
         transform: translate(-50%, -50%);
         z-index: 1000 !important; /* Ensure it's on top */
-        box-shadow: 0 0 15px 5px rgba(255,255,0,0.8) !important; /* Stronger glow */
-        transition: all 1s ease-in-out;
         pointer-events: none; /* Prevent it from blocking clicks */
+        transition: all 0.8s ease-in-out;
     }
     
-    /* Animation trail effect */
-    .disc::after {
-        content: '';
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background-color: rgba(255, 255, 0, 0.3);
-        animation: pulse 1s infinite;
-        z-index: -1;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.7; }
-        50% { transform: scale(1.5); opacity: 0.3; }
-        100% { transform: scale(2); opacity: 0; }
-    }
-    
+   
     /* Active marker highlighting */
     .field-marker.active {
         transform: translate(-50%, -50%) scale(1.5) !important;
@@ -450,6 +432,74 @@
         const fieldHeight = field.offsetHeight;
         console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
         
+        // Add this function to your JavaScript, right after the addFieldMarkings function:
+
+        function addCoordinateGrid() {
+            // Add coordinate markers at 10% intervals
+            for (let x = 0; x <= 100; x += 10) {
+                const xPos = (x / 100) * fieldWidth;
+                
+                // Add vertical line
+                const vLine = document.createElement('div');
+                vLine.style.position = 'absolute';
+                vLine.style.left = xPos + 'px';
+                vLine.style.top = '0';
+                vLine.style.width = '1px';
+                vLine.style.height = '100%';
+                vLine.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                vLine.style.zIndex = '2';
+                field.appendChild(vLine);
+                
+                // Add x-coordinate label
+                const xLabel = document.createElement('div');
+                xLabel.style.position = 'absolute';
+                xLabel.style.left = xPos + 'px';
+                xLabel.style.bottom = '0';
+                xLabel.style.transform = 'translateX(-50%)';
+                xLabel.style.color = 'white';
+                xLabel.style.fontSize = '10px';
+                xLabel.style.zIndex = '3';
+                xLabel.textContent = x;
+                field.appendChild(xLabel);
+            }
+            
+            // Add horizontal lines at 10% intervals
+            for (let y = 0; y <= 40; y += 10) {
+                const yPos = (y / 40) * fieldHeight;
+                
+                // Add horizontal line
+                const hLine = document.createElement('div');
+                hLine.style.position = 'absolute';
+                hLine.style.left = '0';
+                hLine.style.top = yPos + 'px';
+                hLine.style.width = '100%';
+                hLine.style.height = '1px';
+                hLine.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                hLine.style.zIndex = '2';
+                field.appendChild(hLine);
+                
+                // Add y-coordinate label
+                const yLabel = document.createElement('div');
+                yLabel.style.position = 'absolute';
+                yLabel.style.left = '0';
+                yLabel.style.top = yPos + 'px';
+                yLabel.style.transform = 'translateY(-50%)';
+                yLabel.style.color = 'white';
+                yLabel.style.fontSize = '10px';
+                yLabel.style.zIndex = '3';
+                yLabel.textContent = y;
+                field.appendChild(yLabel);
+            }
+            
+            console.log('Coordinate grid added');
+        }
+        
+        // Call this function after addFieldMarkings():
+        addFieldMarkings();
+        // Uncomment the next line to add coordinate grid for debugging
+        // addCoordinateGrid();
+
+        
         // Update debug info
         document.getElementById('field-dimensions').textContent = `${fieldWidth}px × ${fieldHeight}px`;
         
@@ -586,28 +636,41 @@
             disc = document.createElement('div');
             disc.className = 'disc';
             disc.style.position = 'absolute';
-            disc.style.width = '30px';
-            disc.style.height = '30px';
+            disc.style.width = '24px';
+            disc.style.height = '24px';
             disc.style.borderRadius = '50%';
-            disc.style.backgroundColor = 'yellow';
-            disc.style.border = '4px solid black';
+            disc.style.backgroundColor = 'white';
+            disc.style.border = '2px solid black';
             disc.style.transform = 'translate(-50%, -50%)';
             disc.style.zIndex = '1000';
-            disc.style.boxShadow = '0 0 15px 5px rgba(255,255,0,0.8)';
-            disc.style.transition = 'all 1s ease-in-out';
+            disc.style.transition = 'all 0.8s ease-in-out';
             
             // Add the disc to the field
             field.appendChild(disc);
             console.log('Disc element created and added to field');
             
-            // Start at the first position
+            // For the first position:
             const firstEvent = eventsWithPosition[0];
+            // Scale field positions to fit the container more accurately
             const firstX = (firstEvent.field_position_x / 100) * fieldWidth;
             const firstY = (firstEvent.field_position_y / 40) * fieldHeight;
             
             // Position disc at first position with inline styles
             disc.style.left = firstX + 'px';
             disc.style.top = firstY + 'px';
+            console.log(`Positioned disc at (${firstX}, ${firstY})`);
+            
+            // And for subsequent positions:
+            const nextEvent = eventsWithPosition[currentIndex];
+            // Scale field positions to fit the container more accurately
+            const nextX = (nextEvent.field_position_x / 100) * fieldWidth;
+            const nextY = (nextEvent.field_position_y / 40) * fieldHeight;
+            
+            console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
+            
+            // Move disc to next position with inline styles
+            disc.style.left = nextX + 'px';
+            disc.style.top = nextY + 'px';
             console.log(`Positioned disc at (${firstX}, ${firstY})`);
             
             // Highlight the first marker
