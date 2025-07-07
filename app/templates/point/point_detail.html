@@ -63,6 +63,9 @@
         left: 50%;
         transform: translateX(-50%);
     }
+    .active-event {
+        background-color: rgba(255, 255, 0, 0.3);
+    }
 </style>
 {% endblock %}
 
@@ -177,6 +180,7 @@
                         <div>
                             <button id="animate-button" class="btn btn-primary">Animate Throws</button>
                             <button id="reset-button" class="btn btn-outline-secondary">Reset</button>
+                            <span id="animation-status" class="ms-3 text-muted"></span>
                         </div>
                         <div class="text-muted small">
                             <span class="d-inline-block me-2"><i class="fas fa-circle text-success"></i> Goal</span>
@@ -215,10 +219,10 @@
                 <div class="card-body">
                     {% if events %}
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table class="table table-striped" id="events-table">
                             <thead>
                                 <tr>
-                                    <th>Time</th>
+                                    <th>Sequence</th>
                                     <th>Event</th>
                                     <th>Player</th>
                                     <th>Details</th>
@@ -226,14 +230,8 @@
                             </thead>
                             <tbody>
                                 {% for event in events %}
-                                <tr>
-                                    <td>
-                                        {% if event.timestamp %}
-                                        {{ event.timestamp // 60 }}:{{ '%02d' % (event.timestamp % 60) }}
-                                        {% else %}
-                                        -
-                                        {% endif %}
-                                    </td>
+                                <tr data-event-id="{{ event.id }}" class="event-row">
+                                    <td>{{ loop.index }}</td>
                                     <td>
                                         <span class="badge event-badge 
                                             {% if event.event_type == 'goal' %}bg-success
@@ -309,16 +307,30 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Field visualization data
         const events = {{ events_data|tojson }};
-        const eventsWithPosition = events.filter(e => 
+        
+        // Sort events by sequence (we'll use the order they appear in the table)
+        // This is important since timestamps are missing
+        const eventSequence = [];
+        document.querySelectorAll('#events-table .event-row').forEach(row => {
+            const eventId = parseInt(row.dataset.eventId);
+            const event = events.find(e => e.id === eventId);
+            if (event) {
+                eventSequence.push(event);
+            }
+        });
+        
+        // Filter for events with position data
+        const eventsWithPosition = eventSequence.filter(e => 
             e.field_position_x !== null && 
             e.field_position_y !== null
         );
         
-        console.log('All events:', events);
+        console.log('Events in sequence:', eventSequence);
         console.log('Events with position:', eventsWithPosition);
         
         // Field visualization
         const field = document.getElementById('field');
+        const animationStatus = document.getElementById('animation-status');
         
         if (!field) {
             console.error('Field element not found');
@@ -435,6 +447,16 @@
             lines.forEach(line => {
                 line.style.opacity = '1';
             });
+            
+            // Reset event table highlighting
+            document.querySelectorAll('.event-row').forEach(row => {
+                row.classList.remove('active-event');
+            });
+            
+            // Reset animation status
+            if (animationStatus) {
+                animationStatus.textContent = '';
+            }
         }
         
         function animateThrows() {
@@ -459,10 +481,20 @@
             disc.style.left = firstX + 'px';
             disc.style.top = firstY + 'px';
             
-            // Highlight the first marker
+            // Highlight the first marker and table row
             const firstMarker = field.querySelector(`.field-marker[data-event-id="${firstEvent.id}"]`);
             if (firstMarker) {
                 firstMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
+            }
+            
+            const firstRow = document.querySelector(`.event-row[data-event-id="${firstEvent.id}"]`);
+            if (firstRow) {
+                firstRow.classList.add('active-event');
+            }
+            
+            // Update animation status
+            if (animationStatus) {
+                animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
             }
             
             // Animate through each position
@@ -471,6 +503,9 @@
             function moveToNextPosition() {
                 if (currentIndex >= eventsWithPosition.length) {
                     console.log('Animation complete');
+                    if (animationStatus) {
+                        animationStatus.textContent = 'Animation complete';
+                    }
                     return;
                 }
                 
@@ -478,24 +513,47 @@
                 const nextX = (nextEvent.field_position_x / 100) * fieldWidth;
                 const nextY = (nextEvent.field_position_y / 40) * fieldHeight;
                 
-                console.log(`Moving disc to position ${currentIndex}: (${nextX}, ${nextY})`);
+                console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
                 
                 // Move disc to next position
                 disc.style.left = nextX + 'px';
                 disc.style.top = nextY + 'px';
                 
-                // Highlight current marker
+                // Highlight current marker and table row
                 const currentMarker = field.querySelector(`.field-marker[data-event-id="${nextEvent.id}"]`);
                 if (currentMarker) {
                     currentMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
                 }
                 
+                // Remove highlight from previous row
+                if (currentIndex > 0) {
+                    const prevEvent = eventsWithPosition[currentIndex - 1];
+                    const prevRow = document.querySelector(`.event-row[data-event-id="${prevEvent.id}"]`);
+                    if (prevRow) {
+                        prevRow.classList.remove('active-event');
+                    }
+                }
+                
+                // Highlight current row
+                const currentRow = document.querySelector(`.event-row[data-event-id="${nextEvent.id}"]`);
+                if (currentRow) {
+                    currentRow.classList.add('active-event');
+                    // Scroll to the row if needed
+                    currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                // Update animation status
+                if (animationStatus) {
+                    animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
+                }
+                
                 currentIndex++;
-                animationTimeout = setTimeout(moveToNextPosition, 1000);
+                // Use a consistent 2-second interval between events
+                animationTimeout = setTimeout(moveToNextPosition, 2000);
             }
             
             // Start the animation
-            animationTimeout = setTimeout(moveToNextPosition, 1000);
+            animationTimeout = setTimeout(moveToNextPosition, 2000);
         }
         
         // Add event listeners
