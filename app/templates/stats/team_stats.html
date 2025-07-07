@@ -517,6 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
         
     // Wait for the DOM to be fully ready before initializing DataTables
+    // Wait for the DOM to be fully ready before initializing DataTables
     setTimeout(function() {
         // Check if the table exists before initializing
         const tableElement = document.getElementById('player-stats-table');
@@ -530,36 +531,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Safely destroy if exists - with additional checks
-                if ($.fn.DataTable.isDataTable('#player-stats-table')) {
+                // Use a different approach to handle existing DataTable
+                try {
+                    // Instead of destroying, use retrieve option which is safer
+                    $('#player-stats-table').DataTable({
+                        retrieve: true, // This will get the existing instance if it exists
+                        "pageLength": 10,
+                        "order": [[9, "desc"]], // Sort by PER by default
+                        "responsive": true,
+                        "language": {
+                            "search": "Search players:",
+                            "lengthMenu": "Show _MENU_ players"
+                        }
+                    });
+                    console.log("DataTable initialized successfully");
+                } catch (e) {
+                    console.error("Error initializing DataTable:", e);
+                    // Try a simpler initialization as fallback
                     try {
-                        $('#player-stats-table').DataTable().destroy();
-                    } catch (destroyError) {
-                        console.warn("Error destroying existing DataTable:", destroyError);
-                        // Continue anyway
+                        $('#player-stats-table').DataTable({
+                            "paging": true,
+                            "searching": true,
+                            "ordering": false, // Disable sorting to avoid issues
+                            "info": true
+                        });
+                        console.log("Simple DataTable initialized as fallback");
+                    } catch (fallbackError) {
+                        console.error("Fallback initialization also failed:", fallbackError);
+                        console.log("Using standard HTML table as fallback");
                     }
                 }
-                
-                // Initialize with a try-catch to handle errors
-                $('#player-stats-table').DataTable({
-                    "pageLength": 10,
-                    "order": [[9, "desc"]], // Sort by PER by default
-                    "responsive": true,
-                    "language": {
-                        "search": "Search players:",
-                        "lengthMenu": "Show _MENU_ players"
-                    }
-                });
-                console.log("DataTable initialized successfully");
             } catch (e) {
-                console.error("Error initializing DataTable:", e);
-                // Fallback to standard HTML table
-                console.log("Using standard HTML table as fallback");
+                console.error("Error in DataTable setup:", e);
             }
         } else {
             console.warn("player-stats-table element not found");
         }
-    }, 300); // Increased delay to ensure DOM is ready
+    }, 500); // Increased delay to ensure DOM is fully ready
+
 
     
     // Initialize Chart.js visualizations
