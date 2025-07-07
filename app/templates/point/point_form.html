@@ -351,6 +351,29 @@
                             </div>
                             
                         <!-- Submit Button -->
+                        <!-- Debug Info -->
+                        <div class="alert alert-info mb-3">
+                            <strong>Debug Info:</strong>
+                            <div>Selected Players: <span id="selected-players-preview">None</span></div>
+                            <div>Hidden Input Value: <span id="debug-hidden-input">None</span></div>
+                        </div>
+                        
+                        <script>
+                            // Update this display whenever the hidden input changes
+                            function updateDebugDisplay() {
+                                $('#debug-hidden-input').text($('#players-hidden-input').val() || 'None');
+                            }
+                            
+                            // Call this initially
+                            document.addEventListener('DOMContentLoaded', function() {
+                                updateDebugDisplay();
+                            });
+                            
+                            // Update whenever the hidden input might change
+                            $('#players-hidden-input').on('change input', updateDebugDisplay);
+                        </script>
+                        
+                        <!-- Submit Button -->
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary btn-lg") }}
                         </div>
@@ -567,11 +590,15 @@
         
         // Update when checkboxes change
         $(document).on('change', '.player-checkbox', function() {
-            console.log("Player checkbox changed");
+            const playerId = $(this).val();
+            const isChecked = $(this).is(':checked');
+            console.log(`Player ${playerId} checkbox ${isChecked ? 'checked' : 'unchecked'}`);
+            
             const totalChecked = $('.player-checkbox:checked').length;
+            console.log(`Total checked: ${totalChecked}`);
             
             // Toggle row highlighting
-            $(this).closest('tr').toggleClass('selected-player', $(this).is(':checked'));
+            $(this).closest('tr').toggleClass('selected-player', isChecked);
             
             // Limit to 7 players
             if (totalChecked > 7) {
@@ -589,7 +616,9 @@
             console.log("Player selection changed. New value:", $('#players-hidden-input').val());
             
             updateGenderCounts();
+            updateDebugDisplay(); // Update the debug display
         });
+
         
         // Update when gender ratio changes
         $('#gender_ratio').on('change', function() {
@@ -612,7 +641,10 @@
             console.log("Form submitted, players_hidden value:", selectedPlayers);
             
             // Log all form data for debugging
-            console.log("Form data:", $(this).serialize());
+            const formData = new FormData(this);
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
             
             const totalChecked = $('.player-checkbox:checked').length;
             
@@ -650,6 +682,7 @@
             console.log("Form validation passed, submitting with players:", selectedPlayers);
             return true;
         });
+
         
         // Initialize player selection if form.players.data is set
         if ({{ form.players.data|default([])|tojson|safe }}.length > 0) {
@@ -659,23 +692,18 @@
             // Check the corresponding checkboxes
             initialPlayers.forEach(function(playerId) {
                 $('#player-' + playerId).prop('checked', true);
+                $('#player-' + playerId).closest('tr').addClass('selected-player');
             });
             
-            // Update counts and highlighting
-            $('.player-checkbox:checked').each(function() {
-                $(this).closest('tr').addClass('selected-player');
-            });
+            // IMPORTANT: Set the hidden input value immediately
+            $('#players-hidden-input').val(initialPlayers.join(','));
+            console.log("Hidden input initialized with:", initialPlayers.join(','));
+        } else {
+            console.log("No initial players found");
+            $('#players-hidden-input').val('');
         }
         
-        // CRITICAL FIX: Make sure the hidden input is properly initialized
-        const initialSelectedPlayerIds = $('.player-checkbox:checked').map(function() {
-            return $(this).val();
-        }).get();
-        
-        $('#players-hidden-input').val(initialSelectedPlayerIds.join(','));
-        console.log("Initial players_hidden value:", $('#players-hidden-input').val());
-        
-        // Initial update of gender counts
+        // Update counts and highlighting
         updateGenderCounts();
         
         // Add a click handler to the submit button for additional debugging

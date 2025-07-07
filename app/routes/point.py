@@ -411,15 +411,18 @@ def edit_point(point_id):
         if 'player_id' in stat:
             player_stats_dict[stat['player_id']] = stat
     
-    # Pre-select players
+    # Pre-select players on GET request
     if request.method == 'GET':
-        form.players.data = [lineup.player_id for lineup in point.lineups]
+        # Get the current lineup player IDs
+        current_lineup_player_ids = [lineup.player_id for lineup in point.lineups]
+        form.players.data = current_lineup_player_ids
+        print(f"DEBUG: Pre-selected players: {current_lineup_player_ids}")
     
-    # Process the player selection before form validation
+    # Process the player selection before form validation on POST
     if request.method == 'POST':
         # Get the selected players from the form data
-        selected_players_str = request.form.get('players_hidden', '')
-        print(f"DEBUG: Raw players_hidden field value: '{selected_players_str}'")
+        selected_players_str = request.form.get('players', '')
+        print(f"DEBUG: Raw players field value: '{selected_players_str}'")
         
         if selected_players_str:
             try:
@@ -427,14 +430,15 @@ def edit_point(point_id):
                 selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
                 print(f"DEBUG: Selected players: {selected_players}")
                 
-                # Set the players field in the form data
+                # Set the data directly
                 form.players.data = selected_players
             except ValueError as e:
                 print(f"DEBUG: Error converting player IDs: {e}")
                 form.players.data = []
         else:
             print("DEBUG: No players selected in form data")
-            form.players.data = []
+            # IMPORTANT: Instead of setting to empty list, keep the existing lineup
+            form.players.data = [lineup.player_id for lineup in point.lineups]
     
     if form.validate_on_submit():
         point.point_number = form.point_number.data
@@ -454,14 +458,26 @@ def edit_point(point_id):
             point.our_score_after = form.our_score_before.data
             point.their_score_after = form.their_score_before.data + 1
         
-        # Update lineup
-        # First, remove all existing lineups
-        LineUp.query.filter_by(point_id=point.id).delete()
-        
-        # Then add the new ones
-        for player_id in form.players.data:
-            lineup = LineUp(point_id=point.id, player_id=player_id)
-            db.session.add(lineup)
+        # IMPORTANT: Only update lineup if players were explicitly selected
+        if form.players.data:
+            # First, get the current lineup player IDs
+            current_lineup_player_ids = [lineup.player_id for lineup in point.lineups]
+            
+            # Only update if the selection has changed
+            if set(current_lineup_player_ids) != set(form.players.data):
+                print(f"DEBUG: Updating lineup from {current_lineup_player_ids} to {form.players.data}")
+                
+                # Remove all existing lineups
+                LineUp.query.filter_by(point_id=point.id).delete()
+                
+                # Then add the new ones
+                for player_id in form.players.data:
+                    lineup = LineUp(point_id=point.id, player_id=player_id)
+                    db.session.add(lineup)
+            else:
+                print("DEBUG: Lineup unchanged, not updating")
+        else:
+            print("DEBUG: No players selected, keeping existing lineup")
         
         db.session.commit()
         
@@ -476,6 +492,7 @@ def edit_point(point_id):
                           player_stats=player_stats,
                           all_players=all_players,
                           player_stats_dict=player_stats_dict)
+
 
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
