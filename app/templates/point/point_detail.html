@@ -96,22 +96,6 @@
         box-shadow: 0 0 5px rgba(0,0,0,0.5);
     }
     
-    /* Player name labels */
-    .player-label {
-        position: absolute;
-        background-color: rgba(0, 0, 0, 0.6);
-        color: white;
-        font-size: 10px;
-        padding: 2px 4px;
-        border-radius: 3px;
-        transform: translate(-50%, -100%);
-        margin-top: -5px;
-        z-index: 15;
-        pointer-events: none;
-        white-space: nowrap;
-        opacity: 0.8;
-    }
-    
     /* Connection lines */
     .field-line {
         position: absolute;
@@ -576,16 +560,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add tooltip with event info
             marker.title = `${event.event_type}`;
             
-            // Add player name label if available
-            if (event.player_name) {
-                const playerLabel = document.createElement('div');
-                playerLabel.className = 'player-label';
-                playerLabel.textContent = event.player_name;
-                playerLabel.style.left = x + 'px';
-                playerLabel.style.top = y + 'px';
-                field.appendChild(playerLabel);
-            }
-            
             // Only draw lines if we have a previous event with position
             if (index > 0) {
                 const prevEvent = eventsWithPosition[index - 1];
@@ -761,10 +735,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('First table row highlighted');
         }
         
-        // Update animation status with player name
+        // Update animation status
         if (animationStatus) {
-            const playerInfo = firstEvent.player_name ? ` (${firstEvent.player_name})` : '';
-            animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}${playerInfo}`;
+            animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
         }
         
         // Animate through each position
@@ -845,10 +818,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             
-            // Update animation status with player name
+            // Update animation status
             if (animationStatus) {
-                const playerInfo = nextEvent.player_name ? ` (${nextEvent.player_name})` : '';
-                animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}${playerInfo}`;
+                animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
             }
             
             currentIndex++;
