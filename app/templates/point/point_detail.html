@@ -275,10 +275,6 @@
                             <button id="reset-button" class="btn btn-outline-secondary">Reset</button>
                             <span id="animation-status" class="ms-3 text-muted"></span>
                         </div>
-                        <div class="form-check form-switch ms-3">
-                            <input class="form-check-input" type="checkbox" id="show-names-toggle" checked>
-                            <label class="form-check-label" for="show-names-toggle">Show Player Names</label>
-                        </div>
                         <div class="text-muted small">
                             <span class="d-inline-block me-2"><i class="fas fa-circle text-success"></i> Goal</span>
                             <span class="d-inline-block me-2"><i class="fas fa-circle text-danger"></i> Turnover</span>
@@ -413,7 +409,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get the field container
     const field = document.getElementById('field');
     const animationStatus = document.getElementById('animation-status');
-    const showNamesToggle = document.getElementById('show-names-toggle');
     
     if (!field) {
         console.error('Field element not found');
@@ -621,16 +616,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Toggle player name visibility
-    if (showNamesToggle) {
-        showNamesToggle.addEventListener('change', function() {
-            const playerLabels = field.querySelectorAll('.player-label');
-            playerLabels.forEach(label => {
-                label.style.display = this.checked ? 'block' : 'none';
-            });
-        });
-    }
-    
     // Function to update disc color based on event type
     function updateDiscColor(discElement, eventType) {
         // Reset to default
@@ -738,6 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add the disc to the field
         field.appendChild(disc);
         console.log('Disc element created and added to field');
+        
         // For the first position:
         const firstEvent = eventsWithPosition[0];
         // Scale field positions to fit the container more accurately
@@ -784,10 +770,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Animate through each position
         let currentIndex = 1;
         
-        // Set all lines to low opacity initially
+        // Set all lines to full opacity initially
         const allLines = field.querySelectorAll('.field-line');
         allLines.forEach(line => {
-            line.style.opacity = '0.2';
+            line.style.opacity = '1';
         });
         
         function moveToNextPosition() {
@@ -825,11 +811,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log(`Marker ${currentIndex} highlighted`);
             }
             
-            // Highlight the current line by making it fully opaque
-            const currentLine = field.querySelector(`.field-line[data-line-index="${currentIndex}"]`);
-            if (currentLine) {
-                currentLine.style.opacity = '1';
-            }
+            // Apply fading to all lines based on their distance from current event
+            allLines.forEach(line => {
+                const lineIndex = parseInt(line.dataset.lineIndex);
+                if (lineIndex <= currentIndex) {
+                    // Lines that have been "passed" stay at full opacity
+                    line.style.opacity = '1';
+                } else {
+                    // Calculate fading for future lines
+                    // Each step reduces opacity by 10%, with a minimum of 30%
+                    const distance = lineIndex - currentIndex;
+                    const opacity = Math.max(0.3, 1 - (distance * 0.1));
+                    line.style.opacity = opacity.toString();
+                }
+            });
             
             // Remove highlight from previous rows
             document.querySelectorAll('.event-row').forEach(row => {
@@ -879,15 +874,6 @@ document.addEventListener('DOMContentLoaded', function() {
             resetAnimation();
         });
     }
-    
-    // Add debugging for endzone elements
-    console.log('Checking field elements:');
-    const endzones = field.querySelectorAll('div[style*="endzone"]');
-    console.log('Endzones found:', endzones.length);
-    endzones.forEach((zone, i) => {
-        console.log(`Endzone ${i}:`, zone);
-        console.log('Style:', zone.style);
-    });
     
     console.log('Field visualization initialization complete');
 });
