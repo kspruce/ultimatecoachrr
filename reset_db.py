@@ -32,8 +32,23 @@ def reset_database():
             bonus.set_password('bonusboys')
             db.session.add(bonus)
             
+            # Create bonus user
+            etaylor = User(username='etaylor', email='et@example.com', is_admin=True)
+            etaylor.set_password('Taylor35')
+            db.session.add(etaylor)
+            
+            # Create bonus user
+            cspearing = User(username='cspearing', email='cs@example.com', is_admin=True)
+            cspearing.set_password('Spearing1')
+            db.session.add(cspearing)
+            
+            # Create bonus user
+            bleung = User(username='bleung', email='bl@example.com', is_admin=True)
+            bleung.set_password('Leung18')
+            db.session.add(bleung)
+            
             db.session.commit()
-            print_status("Created admin and bonus users")
+            print_status("Created admin, captains and bonus users")
 
             # Add test players
             test_players = [
@@ -116,6 +131,84 @@ def reset_database():
 
             db.session.commit()
             print_status("Created default clip tags")
+            
+            # Create Moooxed tournament
+            tournament = Tournament(
+                name="Moooxed",
+                start_date=datetime(2025, 6, 7),
+                end_date=datetime(2025, 6, 8),
+                location="London"
+            )
+            db.session.add(tournament)
+            db.session.commit()
+            print_status("Created Moooxed tournament")
+            
+            # Create games for the tournament
+            games = [
+                # Day 1 - June 7, 2025
+                {
+                    "date": datetime(2025, 6, 7),
+                    "opponent": "Brixton",
+                    "our_score": 15,
+                    "their_score": 7,
+                    "tournament_id": tournament.id,
+                    "video_link": None,
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 7),
+                    "opponent": "Cambridge Mixed Ultimate A",
+                    "our_score": 15,
+                    "their_score": 4,
+                    "tournament_id": tournament.id,
+                    "video_link": None,
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 7),
+                    "opponent": "Curve Vector",
+                    "our_score": 12,
+                    "their_score": 8,
+                    "tournament_id": tournament.id,
+                    "video_link": None,
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - June 8, 2025
+                {
+                    "date": datetime(2025, 6, 8),
+                    "opponent": "Reading2",
+                    "our_score": 14,
+                    "their_score": 4,
+                    "tournament_id": tournament.id,
+                    "video_link": None,
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 8),
+                    "opponent": "Bristol",
+                    "our_score": 13,
+                    "their_score": 8,
+                    "tournament_id": tournament.id,
+                    "video_link": None,
+                    "notes": "Fifth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 8),
+                    "opponent": "Curve Vector",
+                    "our_score": 13,
+                    "their_score": 9,
+                    "tournament_id": tournament.id,
+                    "video_link": None,
+                    "notes": "Final game of the tournament"
+                }
+            ]
+            
+            for game_data in games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(games)} games to the Moooxed tournament")
 
             print_status("\nDatabase reset completed successfully!")
 

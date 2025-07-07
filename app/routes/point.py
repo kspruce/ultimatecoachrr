@@ -7,6 +7,7 @@ from app.models.player import Player
 from app.models.event import Pull
 from app.forms.point import PointForm
 from app.models.event import Event
+from app.models.throw import Throw
 from app.models.stats import PlayerPointStats
 from app.utils.utils import admin_required
 
@@ -478,28 +479,44 @@ def edit_point(point_id):
 
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_point(point_id):
     point = Point.query.get_or_404(point_id)
     game_id = point.game_id
     point_number = point.point_number
     
-    # Delete all related records (lineups, events, pulls)
-    LineUp.query.filter_by(point_id=point.id).delete()
+    try:
+        # First, get all event IDs for this point
+        event_ids = [event.id for event in Event.query.filter_by(point_id=point.id).all()]
+        
+        # Delete throws that reference these events
+        if event_ids:
+            from app.models.throw import Throw  # Import at the top of the file
+            Throw.query.filter(Throw.throwing_event_id.in_(event_ids)).delete(synchronize_session=False)
+            
+        # Delete player_point_stats records
+        PlayerPointStats.query.filter_by(point_id=point.id).delete()
+        
+        # Delete lineups
+        LineUp.query.filter_by(point_id=point.id).delete()
+        
+        # Now it's safe to delete events
+        Event.query.filter_by(point_id=point.id).delete()
+        
+        # Delete pulls
+        Pull.query.filter_by(point_id=point.id).delete()
+        
+        # Delete the point
+        db.session.delete(point)
+        db.session.commit()
+        
+        flash(f'Point {point_number} has been deleted!', 'success')
+        return redirect(url_for('point.game_points', game_id=game_id))
     
-    # Delete related player_point_stats records
-    PlayerPointStats.query.filter_by(point_id=point.id).delete()
-    
-    # Delete events and pulls if they're not already handled by cascade
-    Event.query.filter_by(point_id=point.id).delete()
-    Pull.query.filter_by(point_id=point.id).delete()
-    
-    # Delete the point
-    db.session.delete(point)
-    db.session.commit()
-    
-    flash(f'Point {point_number} has been deleted!', 'success')
-    return redirect(url_for('point.game_points', game_id=game_id))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting point: {str(e)}', 'danger')
+        return redirect(url_for('point.game_points', game_id=game_id))
+
 
 
 
