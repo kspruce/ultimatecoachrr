@@ -7,7 +7,7 @@ from app.models.player import Player
 from app.models.event import Pull
 from app.forms.point import PointForm
 from app.models.event import Event
-from app.models.throw import Throw
+from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
 from app.utils.utils import admin_required
 
