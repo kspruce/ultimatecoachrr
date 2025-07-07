@@ -10,7 +10,8 @@ from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
-
+from app.models.session import SessionPlan
+from datetime import datetime
 bp = Blueprint('team', __name__, url_prefix='/team')
 
 @bp.route('/')
@@ -220,7 +221,10 @@ def delete_player(player_id):
 @login_required
 def player_detail(player_id):
     player = Player.query.get_or_404(player_id)
-    return render_template('team/player_detail.html', player=player)
+    # Pass current date for filtering upcoming sessions
+    now = datetime.now().date()
+    return render_template('team/player_detail.html', player=player, now=now)
+
 
 @bp.route('/debug')
 @login_required
