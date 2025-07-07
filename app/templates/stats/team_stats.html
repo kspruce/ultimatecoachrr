@@ -509,16 +509,11 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Check if DataTable is already initialized
-    if ($.fn.DataTable.isDataTable('#player-stats-table')) {
-        // If already initialized, just get the API instance
-        $('#player-stats-table').DataTable().destroy();
-    }
-    
-    // Initialize DataTable with options
+    // Initialize DataTable with destroy option
     $('#player-stats-table').DataTable({
+        destroy: true,
         "pageLength": 10,
-        "order": [[11, "desc"]], // Sort by PER by default
+        "order": [[9, "desc"]], // Sort by PER by default (adjusted column index)
         "responsive": true,
         "language": {
             "search": "Search players:",
