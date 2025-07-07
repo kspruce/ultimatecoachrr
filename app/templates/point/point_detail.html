@@ -1,5 +1,45 @@
 {% extends "base.html" %}
 
+{% block head %}
+{{ super() }}
+<style>
+    .field-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        background-color: #8BC34A;
+        border: 2px solid white;
+        margin: 20px 0;
+        overflow: hidden;
+    }
+    .field-marker {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: red;
+        transform: translate(-50%, -50%);
+    }
+    .field-line {
+        position: absolute;
+        height: 2px;
+        background-color: rgba(255, 255, 255, 0.7);
+        transform-origin: left center;
+    }
+    .event-badge {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.5rem;
+    }
+    .timeline-container {
+        margin-top: 20px;
+        position: relative;
+    }
+    .timeline-controls {
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -25,6 +65,11 @@
                     <h5>Point Summary</h5>
                 </div>
                 <div class="card-body">
+                    <p><strong>Started on:</strong> 
+                        <span class="badge {% if point.starting_position == 'offense' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            {{ point.starting_position|capitalize }}
+                        </span>
+                    </p>
                     <p><strong>Score Before:</strong> {{ point.our_score_before }}-{{ point.their_score_before }}</p>
                     <p><strong>Score After:</strong> {{ point.our_score_after }}-{{ point.their_score_after }}</p>
                     <p><strong>Outcome:</strong> 
@@ -45,22 +90,6 @@
                     {% if point.timestamp_in_video %}
                     <p><strong>Video Timestamp:</strong> {{ point.timestamp_in_video // 60 }}:{{ '%02d' % (point.timestamp_in_video % 60) }}</p>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5>Clips</h5>
-                        <a href="{{ url_for('clip.point_clips', point_id=point.id) }}" class="btn btn-sm btn-primary">View All Clips</a>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-center">
-                            <a href="{{ url_for('clip.add_clip', game_id=point.game_id, point_id=point.id) }}" class="btn btn-outline-primary">Add Clip for This Point</a>
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -89,9 +118,47 @@
         </div>
     </div>
     
-    
-    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Point Visualization</h5>
+                </div>
+                <div class="card-body">
+                    <div class="field-container" id="field">
+                        <!-- Field visualization will be rendered here -->
+                    </div>
+                    <div class="timeline-container">
+                        <div class="timeline-controls">
+                            <button id="play-button" class="btn btn-primary btn-sm">Play</button>
+                            <button id="pause-button" class="btn btn-secondary btn-sm">Pause</button>
+                            <button id="reset-button" class="btn btn-outline-secondary btn-sm">Reset</button>
+                            <span id="time-display" class="ms-3">0:00</span>
+                        </div>
+                        <input type="range" class="form-range" id="timeline-slider" min="0" max="100" value="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Clips</h5>
+                    <a href="{{ url_for('clip.point_clips', point_id=point.id) }}" class="btn btn-sm btn-primary">View All Clips</a>
+                </div>
+                <div class="card-body">
+                    <p class="text-center">
+                        <a href="{{ url_for('clip.add_clip', game_id=point.game_id, point_id=point.id) }}" class="btn btn-outline-primary">Add Clip for This Point</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
@@ -119,8 +186,26 @@
                                         -
                                         {% endif %}
                                     </td>
-                                    <td>{{ event.event_type|capitalize }}</td>
-                                    <td>{{ event.player.name }}</td>
+                                    <td>
+                                        <span class="badge event-badge 
+                                            {% if event.event_type == 'goal' %}bg-success
+                                            {% elif event.event_type == 'assist' %}bg-info
+                                            {% elif event.event_type == 'block' %}bg-warning
+                                            {% elif event.event_type == 'throwaway' or event.event_type == 'drop' %}bg-danger
+                                            {% elif event.event_type == 'catch' %}bg-primary
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ event.event_type|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if event.player %}
+                                            <a href="{{ url_for('team.player_detail', player_id=event.player.id) }}">
+                                                {{ event.player.name }}
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if event.event_type in ['throw', 'assist'] %}
                                             {{ event.throw_type|capitalize if event.throw_type else 'Throw' }} 
@@ -141,6 +226,10 @@
                                             Turnover
                                         {% elif event.event_type == 'drop' %}
                                             Dropped pass
+                                        {% elif event.event_type == 'catch' %}
+                                            {% if event.field_position_x is not none and event.field_position_y is not none %}
+                                                At position ({{ event.field_position_x|round(1) }}, {{ event.field_position_y|round(1) }})
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -159,4 +248,160 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Field visualization data
+        const events = {{ events|tojson }};
+        const field = document.getElementById('field');
+        const fieldWidth = field.offsetWidth;
+        const fieldHeight = field.offsetHeight;
+        
+        // Plot all disc positions
+        events.forEach(function(event, index) {
+            if (event.field_position_x !== null && event.field_position_y !== null) {
+                const marker = document.createElement('div');
+                marker.className = 'field-marker';
+                
+                // Scale field positions to fit the container
+                const x = (event.field_position_x / 100) * fieldWidth;
+                const y = (event.field_position_y / 40) * fieldHeight;
+                
+                marker.style.left = x + 'px';
+                marker.style.top = y + 'px';
+                
+                // Color based on event type
+                if (event.event_type === 'goal') {
+                    marker.style.backgroundColor = 'green';
+                } else if (event.event_type === 'throwaway') {
+                    marker.style.backgroundColor = 'red';
+                } else if (event.event_type === 'block') {
+                    marker.style.backgroundColor = 'orange';
+                } else {
+                    marker.style.backgroundColor = 'blue';
+                }
+                
+                field.appendChild(marker);
+                
+                // Draw lines between consecutive events
+                if (index > 0) {
+                    const prevEvent = events[index - 1];
+                    if (prevEvent.field_position_x !== null && prevEvent.field_position_y !== null) {
+                        const prevX = (prevEvent.field_position_x / 100) * fieldWidth;
+                        const prevY = (prevEvent.field_position_y / 40) * fieldHeight;
+                        
+                        const line = document.createElement('div');
+                        line.className = 'field-line';
+                        
+                        // Calculate line length and angle
+                        const dx = x - prevX;
+                        const dy = y - prevY;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        
+                        line.style.width = length + 'px';
+                        line.style.left = prevX + 'px';
+                        line.style.top = prevY + 'px';
+                        line.style.transform = `rotate(${angle}deg)`;
+                        
+                        field.appendChild(line);
+                    }
+                }
+            }
+        });
+        
+        // Animation functionality
+        const playButton = document.getElementById('play-button');
+        const pauseButton = document.getElementById('pause-button');
+        const resetButton = document.getElementById('reset-button');
+        const timelineSlider = document.getElementById('timeline-slider');
+        const timeDisplay = document.getElementById('time-display');
+        
+        let animationFrame;
+        let startTime;
+        let isPlaying = false;
+        
+        // Set max value based on point duration
+        const maxTime = {{ point.duration or 120 }};
+        timelineSlider.max = maxTime;
+        
+        function updateVisualization(currentTime) {
+            // Hide all markers and lines
+            const markers = field.querySelectorAll('.field-marker');
+            const lines = field.querySelectorAll('.field-line');
+            
+            markers.forEach(marker => marker.style.opacity = '0.3');
+            lines.forEach(line => line.style.opacity = '0.3');
+            
+            // Show only events that happened before currentTime
+            let visibleEvents = 0;
+            events.forEach((event, index) => {
+                if (event.timestamp && event.timestamp <= currentTime) {
+                    visibleEvents++;
+                    if (index < markers.length) {
+                        markers[index].style.opacity = '1';
+                    }
+                    if (index > 0 && index - 1 < lines.length) {
+                        lines[index - 1].style.opacity = '1';
+                    }
+                }
+            });
+            
+            // Update time display
+            const minutes = Math.floor(currentTime / 60);
+            const seconds = Math.floor(currentTime % 60);
+            timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const currentTime = parseInt(timelineSlider.value) + elapsed / 1000;
+            
+            if (currentTime <= maxTime) {
+                timelineSlider.value = currentTime;
+                updateVisualization(currentTime);
+                animationFrame = requestAnimationFrame(animate);
+            } else {
+                isPlaying = false;
+            }
+        }
+        
+        playButton.addEventListener('click', function() {
+            if (!isPlaying) {
+                isPlaying = true;
+                startTime = null;
+                animationFrame = requestAnimationFrame(animate);
+            }
+        });
+        
+        pauseButton.addEventListener('click', function() {
+            if (isPlaying) {
+                isPlaying = false;
+                cancelAnimationFrame(animationFrame);
+            }
+        });
+        
+        resetButton.addEventListener('click', function() {
+            isPlaying = false;
+            cancelAnimationFrame(animationFrame);
+            timelineSlider.value = 0;
+            updateVisualization(0);
+        });
+        
+        timelineSlider.addEventListener('input', function() {
+            if (isPlaying) {
+                isPlaying = false;
+                cancelAnimationFrame(animationFrame);
+            }
+            updateVisualization(parseInt(this.value));
+        });
+        
+        // Initialize visualization
+        updateVisualization(0);
+    });
+</script>
+{% endblock %}
 {% endblock %}
