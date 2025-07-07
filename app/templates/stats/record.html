@@ -35,11 +35,18 @@
     .field-container {
         position: relative;
         width: 100%;
+        height: 0;
+        padding-bottom: 37%; /* This creates the 100:37 aspect ratio */
         background-color: #4CAF50;
         border: 2px solid #333;
         overflow: hidden;
-        padding-bottom: 37%; /* This creates the 100:37 aspect ratio */
     }
+    
+    /* All children of field-container should be absolutely positioned */
+    .field-container > * {
+        position: absolute;
+    }
+
     
     /* Field element */
     .field {
@@ -76,6 +83,7 @@
         border: 2px solid white;
         z-index: 10;
     }
+
 
     /* Field markings */
     .endzone {
@@ -257,6 +265,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const playerSelect = document.getElementById('player-select');
     const actionSelect = document.getElementById('action-select');
     const undoButton = document.getElementById('undo-button');
+
+    // Add this after your DOMContentLoaded event
+    function checkFieldDimensions() {
+        const field = document.getElementById('field');
+        const width = field.offsetWidth;
+        const height = field.offsetHeight;
+        console.log(`Field dimensions: ${width}px × ${height}px, ratio: ${(height/width*100).toFixed(2)}%`);
+        
+        // The ratio should be close to 37%
+        if (Math.abs((height/width*100) - 37) > 1) {
+            console.warn('Field aspect ratio is not correct!');
+        }
+    }
+    
+    // Call this function after the page loads
+    window.addEventListener('load', checkFieldDimensions);
+    window.addEventListener('resize', checkFieldDimensions);
+
 
     // Define event types
     const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop'];
@@ -491,6 +517,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+
 </script>
 {% endblock %}
 
