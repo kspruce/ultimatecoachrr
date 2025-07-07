@@ -1,29 +1,5 @@
 {% extends "base.html" %}
 
-{% block styles %}
-<style>
-    .feedback-timeline {
-        position: relative;
-    }
-    
-    .feedback-item {
-        padding: 8px 0;
-    }
-    
-    /* Goal cards equal height */
-    .card.h-100 {
-        height: 100%;
-    }
-    
-    /* Private badge styling */
-    .badge.bg-info {
-        font-size: 0.7rem;
-        vertical-align: middle;
-    }
-</style>
-{% endblock %}
-
-
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -91,10 +67,7 @@
                     <h5>Statistics Overview</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Calculate actual games played and points played -->
-                    {% set games_played = player.lineups.with_entities(LineUp.point_id).distinct().count() %}
-                    {% set points_played = player.lineups.count() %}
-                    
+                    <!-- Use the values passed from the route -->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-3 bg-light">
@@ -154,10 +127,10 @@
                             <h5>Recent Games</h5>
                         </div>
                         <div class="card-body">
-                            {% if player.lineups %}
+                            {% if player.lineups.count() > 0 %}
                                 {% set unique_games = {} %}
                                 <ul class="list-group">
-                                {% for lineup in player.lineups.order_by(LineUp.id.desc()).limit(10).all() %}
+                                {% for lineup in player.lineups.order_by('id desc').limit(10).all() %}
                                     {% if lineup.point.game.id not in unique_games %}
                                         {% set _ = unique_games.update({lineup.point.game.id: 1}) %}
                                         <li class="list-group-item">
@@ -182,17 +155,19 @@
                         </div>
                         <div class="card-body">
                             <h6>Upcoming RSVPs</h6>
-                            {% if player.session_rsvps.join(SessionPlan).filter(SessionPlan.date >= now).count() > 0 %}
+                            {% if player.session_rsvps.count() > 0 %}
                                 <ul class="list-group mb-3">
-                                {% for rsvp in player.session_rsvps.join(SessionPlan).filter(SessionPlan.date >= now).order_by(SessionPlan.date).limit(5).all() %}
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <a href="{{ url_for('session.detail', session_id=rsvp.session.id) }}">
-                                            {{ rsvp.session.title }} ({{ rsvp.session.date.strftime('%Y-%m-%d') }})
-                                        </a>
-                                        <span class="badge {% if rsvp.status == 'attending' %}bg-success{% elif rsvp.status == 'not_attending' %}bg-danger{% else %}bg-warning{% endif %}">
-                                            {{ rsvp.status|replace('_', ' ')|capitalize }}
-                                        </span>
-                                    </li>
+                                {% for rsvp in player.session_rsvps.all() %}
+                                    {% if rsvp.session.date >= now %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <a href="{{ url_for('session.detail', session_id=rsvp.session_id) }}">
+                                                {{ rsvp.session.title }} ({{ rsvp.session.date.strftime('%Y-%m-%d') }})
+                                            </a>
+                                            <span class="badge {% if rsvp.status == 'attending' %}bg-success{% elif rsvp.status == 'not_attending' %}bg-danger{% else %}bg-warning{% endif %}">
+                                                {{ rsvp.status|replace('_', ' ')|capitalize }}
+                                            </span>
+                                        </li>
+                                    {% endif %}
                                 {% endfor %}
                                 </ul>
                             {% else %}
@@ -202,9 +177,9 @@
                             <h6>Recent Attendance</h6>
                             {% if player.attendances.count() > 0 %}
                                 <ul class="list-group">
-                                {% for attendance in player.attendances.join(SessionPlan).order_by(SessionPlan.date.desc()).limit(5).all() %}
+                                {% for attendance in player.attendances.all() %}
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        <a href="{{ url_for('session.detail', session_id=attendance.session.id) }}">
+                                        <a href="{{ url_for('session.detail', session_id=attendance.session_id) }}">
                                             {{ attendance.session.title }} ({{ attendance.session.date.strftime('%Y-%m-%d') }})
                                         </a>
                                         <span class="badge {% if attendance.status == 'present' %}bg-success{% elif attendance.status == 'absent' %}bg-danger{% elif attendance.status == 'late' %}bg-warning{% else %}bg-secondary{% endif %}">
@@ -225,169 +200,170 @@
             </div>
         </div>
     </div>
-</div>
-<!-- Goal Setting Section - Only visible to the player, coaches, and admins -->
-{% if current_user.is_admin or current_user.id == player.user_id or current_user.role == 'coach' %}
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5>
-                    <i class="bi bi-bullseye"></i> Player Development & Goals
-                    <span class="badge bg-info text-white ms-2">Private</span>
-                </h5>
-                {% if current_user.is_admin or current_user.id == player.user_id %}
-                <button class="btn btn-sm btn-outline-primary" id="editGoalsBtn">
-                    <i class="bi bi-pencil"></i> Edit Goals
-                </button>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                <div id="goalsViewSection">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card mb-3 h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Short-term Goals (1-3 months)</h6>
-                                </div>
-                                <div class="card-body">
-                                    {% if player.short_term_goals %}
-                                        {{ player.short_term_goals|nl2br }}
-                                    {% else %}
-                                        <p class="text-muted">No short-term goals set yet.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card mb-3 h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Mid-term Goals (3-6 months)</h6>
-                                </div>
-                                <div class="card-body">
-                                    {% if player.mid_term_goals %}
-                                        {{ player.mid_term_goals|nl2br }}
-                                    {% else %}
-                                        <p class="text-muted">No mid-term goals set yet.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card mb-3 h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Long-term Goals (6+ months)</h6>
-                                </div>
-                                <div class="card-body">
-                                    {% if player.long_term_goals %}
-                                        {{ player.long_term_goals|nl2br }}
-                                    {% else %}
-                                        <p class="text-muted">No long-term goals set yet.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <div class="card mb-3 h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Skills to Develop</h6>
-                                </div>
-                                <div class="card-body">
-                                    {% if player.skills_to_develop %}
-                                        <ul class="list-group list-group-flush">
-                                            {% for skill in player.skills_to_develop.split('\n') if skill.strip() %}
-                                                <li class="list-group-item">{{ skill }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    {% else %}
-                                        <p class="text-muted">No specific skills identified yet.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card mb-3 h-100">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">Coach's Notes & Feedback</h6>
-                                </div>
-                                <div class="card-body">
-                                    {% if player.coach_feedback %}
-                                        <div class="feedback-timeline">
-                                            {% for feedback in player.coach_feedback.split('---') if feedback.strip() %}
-                                                <div class="feedback-item">
-                                                    {{ feedback|nl2br }}
-                                                </div>
-                                                {% if not loop.last %}
-                                                    <hr>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        <p class="text-muted">No coach feedback recorded yet.</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    
+    <!-- Goal Setting Section - Only visible to the player, coaches, and admins -->
+    {% if current_user.is_admin or current_user.id == player.user_id or current_user.role == 'coach' %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>
+                        <i class="bi bi-bullseye"></i> Player Development & Goals
+                        <span class="badge bg-info text-white ms-2">Private</span>
+                    </h5>
+                    {% if current_user.is_admin or current_user.id == player.user_id %}
+                    <button class="btn btn-sm btn-outline-primary" id="editGoalsBtn">
+                        <i class="bi bi-pencil"></i> Edit Goals
+                    </button>
+                    {% endif %}
                 </div>
-
-                <!-- Edit Goals Form (Hidden by default) -->
-                <div id="goalsEditSection" style="display: none;">
-                    <form id="goalsForm" method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
+                <div class="card-body">
+                    <div id="goalsViewSection">
                         <div class="row">
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="shortTermGoals" class="form-label">Short-term Goals (1-3 months)</label>
-                                    <textarea class="form-control" id="shortTermGoals" name="short_term_goals" rows="5">{{ player.short_term_goals or '' }}</textarea>
+                                <div class="card mb-3 h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Short-term Goals (1-3 months)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if player.short_term_goals %}
+                                            {{ player.short_term_goals|nl2br|safe }}
+                                        {% else %}
+                                            <p class="text-muted">No short-term goals set yet.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="midTermGoals" class="form-label">Mid-term Goals (3-6 months)</label>
-                                    <textarea class="form-control" id="midTermGoals" name="mid_term_goals" rows="5">{{ player.mid_term_goals or '' }}</textarea>
+                                <div class="card mb-3 h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Mid-term Goals (3-6 months)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if player.mid_term_goals %}
+                                            {{ player.mid_term_goals|nl2br|safe }}
+                                        {% else %}
+                                            <p class="text-muted">No mid-term goals set yet.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="longTermGoals" class="form-label">Long-term Goals (6+ months)</label>
-                                    <textarea class="form-control" id="longTermGoals" name="long_term_goals" rows="5">{{ player.long_term_goals or '' }}</textarea>
+                                <div class="card mb-3 h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Long-term Goals (6+ months)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if player.long_term_goals %}
+                                            {{ player.long_term_goals|nl2br|safe }}
+                                        {% else %}
+                                            <p class="text-muted">No long-term goals set yet.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row">
+                        <div class="row mt-3">
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="skillsToDevelop" class="form-label">Skills to Develop (one per line)</label>
-                                    <textarea class="form-control" id="skillsToDevelop" name="skills_to_develop" rows="5">{{ player.skills_to_develop or '' }}</textarea>
-                                    <small class="form-text text-muted">Enter each skill on a new line</small>
+                                <div class="card mb-3 h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Skills to Develop</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if player.skills_to_develop %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for skill in player.skills_to_develop.split('\n') if skill.strip() %}
+                                                    <li class="list-group-item">{{ skill }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p class="text-muted">No specific skills identified yet.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="coachFeedback" class="form-label">Coach's Notes & Feedback</label>
-                                    <textarea class="form-control" id="coachFeedback" name="coach_feedback" rows="5">{{ player.coach_feedback or '' }}</textarea>
-                                    <small class="form-text text-muted">Use "---" to separate different feedback entries</small>
+                                <div class="card mb-3 h-100">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Coach's Notes & Feedback</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if player.coach_feedback %}
+                                            <div class="feedback-timeline">
+                                                {% for feedback in player.coach_feedback.split('---') if feedback.strip() %}
+                                                    <div class="feedback-item">
+                                                        {{ feedback|nl2br|safe }}
+                                                    </div>
+                                                    {% if not loop.last %}
+                                                        <hr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <p class="text-muted">No coach feedback recorded yet.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="d-flex justify-content-end mt-3">
-                            <button type="button" class="btn btn-secondary me-2" id="cancelGoalsBtn">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Goals</button>
-                        </div>
-                    </form>
+                    <!-- Edit Goals Form (Hidden by default) -->
+                    <div id="goalsEditSection" style="display: none;">
+                        <form id="goalsForm" method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="shortTermGoals" class="form-label">Short-term Goals (1-3 months)</label>
+                                        <textarea class="form-control" id="shortTermGoals" name="short_term_goals" rows="5">{{ player.short_term_goals or '' }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="midTermGoals" class="form-label">Mid-term Goals (3-6 months)</label>
+                                        <textarea class="form-control" id="midTermGoals" name="mid_term_goals" rows="5">{{ player.mid_term_goals or '' }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="longTermGoals" class="form-label">Long-term Goals (6+ months)</label>
+                                        <textarea class="form-control" id="longTermGoals" name="long_term_goals" rows="5">{{ player.long_term_goals or '' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="skillsToDevelop" class="form-label">Skills to Develop (one per line)</label>
+                                        <textarea class="form-control" id="skillsToDevelop" name="skills_to_develop" rows="5">{{ player.skills_to_develop or '' }}</textarea>
+                                        <small class="form-text text-muted">Enter each skill on a new line</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="coachFeedback" class="form-label">Coach's Notes & Feedback</label>
+                                        <textarea class="form-control" id="coachFeedback" name="coach_feedback" rows="5">{{ player.coach_feedback or '' }}</textarea>
+                                        <small class="form-text text-muted">Use "---" to separate different feedback entries</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-secondary me-2" id="cancelGoalsBtn">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Goals</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -416,3 +392,25 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}
 
+{% block styles %}
+<style>
+    .feedback-timeline {
+        position: relative;
+    }
+    
+    .feedback-item {
+        padding: 8px 0;
+    }
+    
+    /* Goal cards equal height */
+    .card.h-100 {
+        height: 100%;
+    }
+    
+    /* Private badge styling */
+    .badge.bg-info {
+        font-size: 0.7rem;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Markup, Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
@@ -12,6 +12,7 @@ from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
 from app.models.session import SessionPlan
 from datetime import datetime
+
 bp = Blueprint('team', __name__, url_prefix='/team')
 
 @bp.route('/')
@@ -221,9 +222,32 @@ def delete_player(player_id):
 @login_required
 def player_detail(player_id):
     player = Player.query.get_or_404(player_id)
+    
+    # Calculate games played directly in the route
+    from sqlalchemy import func
+    
+    # Get distinct game IDs from the player's lineups
+    subquery = db.session.query(
+        LineUp.point_id
+    ).join(
+        LineUp.point
+    ).filter(
+        LineUp.player_id == player_id
+    ).distinct().subquery()
+    
+    games_played = db.session.query(func.count()).select_from(subquery).scalar() or 0
+    points_played = player.lineups.count()
+    
     # Pass current date for filtering upcoming sessions
     now = datetime.now().date()
-    return render_template('team/player_detail.html', player=player, now=now)
+    
+    return render_template(
+        'team/player_detail.html', 
+        player=player, 
+        now=now,
+        games_played=games_played,
+        points_played=points_played
+    )
 
 
 @bp.route('/debug')
@@ -261,3 +285,4 @@ def update_player_goals(player_id):
         flash(f'Error updating goals: {str(e)}', 'danger')
     
     return redirect(url_for('team.player_detail', player_id=player_id))
+
