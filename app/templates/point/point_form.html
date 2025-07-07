@@ -350,14 +350,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Debug form data -->
-                            <div class="alert alert-info">
-                                <p><strong>Form Data Preview:</strong></p>
-                                <p>Selected Players: <span id="selected-players-preview">None</span></p>
-                                <p>Gender Ratio: {{ form.gender_ratio.data }}</p>
-                            </div>
-                        </div>
-
                         <!-- Submit Button -->
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary btn-lg") }}
@@ -426,45 +418,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Debug information -->
-    <div class="card mb-3">
-        <div class="card-header bg-secondary text-white">
-            <h5>Debug Information</h5>
-        </div>
-        <div class="card-body">
-            <p><strong>Form Data:</strong></p>
-            <p>Selected Players (hidden input): <code id="debug-players-value"></code></p>
-            <p>Selected Players Count: <span id="debug-players-count">0</span></p>
-            <p>Form Action: <code>{{ url_for('point.add_point', game_id=game.id) }}</code></p>
-        </div>
-    </div>
-
-    <!-- Test Form -->
-    <div class="card mt-3">
-        <div class="card-header bg-info">Debug Form</div>
-        <div class="card-body">
-            <form method="post" action="{{ url_for('point.add_point', game_id=game.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="point_number" value="{{ form.point_number.data }}">
-                <input type="hidden" name="our_line_type" value="{{ form.our_line_type.data }}">
-                <input type="hidden" name="our_score_before" value="{{ form.our_score_before.data }}">
-                <input type="hidden" name="their_score_before" value="{{ form.their_score_before.data }}">
-                <input type="hidden" name="starting_position" value="{{ form.starting_position.data }}">
-                <input type="hidden" name="point_outcome" value="{{ form.point_outcome.data }}">
-                <input type="hidden" name="gender_ratio" value="{{ form.gender_ratio.data }}">
-                <input type="hidden" name="force_direction" value="{{ form.force_direction.data }}">
-                
-                <!-- Use the name 'players' to match what the backend expects -->
-                <div class="mb-3">
-                    <label>Test Players (comma-separated):</label>
-                    <input type="text" name="players" class="form-control" value="1,2,3,4,5,6,7">
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Test Submit</button>
-            </form>
         </div>
     </div>
 </div>
