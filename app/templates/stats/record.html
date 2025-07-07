@@ -33,15 +33,23 @@
 
     /* Field container */
     .field-container {
-        flex: 0 0 auto; /* Change from flex: 1 to prevent stretching */
         position: relative;
         width: 100%;
-        max-width: 1000px; /* Add a max-width for very large screens */
-        margin: 0 auto; /* Center the field */
         background-color: #4CAF50;
         border: 2px solid #333;
         overflow: hidden;
+        padding-bottom: 37%; /* This creates the 100:37 aspect ratio */
     }
+    
+    /* Field element */
+    .field {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
     
     .field-container::before {
         content: "";
@@ -77,17 +85,17 @@
         background-color: #388E3C;
         border-right: 2px solid white;
     }
-
+    
     .endzone-left {
         left: 0;
     }
-
+    
     .endzone-right {
         right: 0;
         border-right: none;
         border-left: 2px solid white;
     }
-
+    
     .center-line {
         position: absolute;
         left: 50%;
@@ -95,6 +103,7 @@
         width: 2px;
         background-color: white;
     }
+
 
     /* Brick marks */
     .brick-mark {
