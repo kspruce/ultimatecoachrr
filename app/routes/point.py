@@ -7,6 +7,8 @@ from app.models.player import Player
 from app.models.event import Pull
 from app.forms.point import PointForm
 from app.models.event import Event
+from app.models.stats import PlayerPointStats
+from app.utils.utils import admin_required
 
 bp = Blueprint('point', __name__, url_prefix='/points')
 
@@ -216,6 +218,7 @@ def determine_line_and_position(previous_point):
 
 @bp.route('/add/<int:game_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_point(game_id):
     game = Game.query.get_or_404(game_id)
     form = PointForm()
@@ -389,6 +392,7 @@ def add_point(game_id):
 
 @bp.route('/edit/<int:point_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_point(point_id):
     point = Point.query.get_or_404(point_id)
     game = Game.query.get(point.game_id)
@@ -474,6 +478,7 @@ def edit_point(point_id):
 
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
+@admin_required
 def delete_point(point_id):
     point = Point.query.get_or_404(point_id)
     game_id = point.game_id
@@ -482,12 +487,21 @@ def delete_point(point_id):
     # Delete all related records (lineups, events, pulls)
     LineUp.query.filter_by(point_id=point.id).delete()
     
+    # Delete related player_point_stats records
+    PlayerPointStats.query.filter_by(point_id=point.id).delete()
+    
+    # Delete events and pulls if they're not already handled by cascade
+    Event.query.filter_by(point_id=point.id).delete()
+    Pull.query.filter_by(point_id=point.id).delete()
+    
     # Delete the point
     db.session.delete(point)
     db.session.commit()
     
     flash(f'Point {point_number} has been deleted!', 'success')
     return redirect(url_for('point.game_points', game_id=game_id))
+
+
 
 
 
