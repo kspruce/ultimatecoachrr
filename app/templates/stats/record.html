@@ -40,62 +40,21 @@
         background-color: #4CAF50;
         border: 2px solid #333;
         overflow: hidden;
+        margin-bottom: 20px; /* Add some space below the field */
     }
     
-    /* All children of field-container should be absolutely positioned */
-    .field-container > * {
-        position: absolute;
-    }
-
-    
-    /* Field element */
-    .field {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-    }
-
-    
-    .field-container::before {
-        content: "";
-        display: block;
-        padding-top: 37%; /* 37:100 aspect ratio */
-    }
-    
-    .field {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #4CAF50;
-    }
-    
-    .event-marker {
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        border: 2px solid white;
-        z-index: 10;
-    }
-
-
     /* Field markings */
     .endzone {
         position: absolute;
+        top: 0;
         height: 100%;
         width: 18%;
         background-color: #388E3C;
-        border-right: 2px solid white;
     }
     
     .endzone-left {
         left: 0;
+        border-right: 2px solid white;
     }
     
     .endzone-right {
@@ -107,10 +66,24 @@
     .center-line {
         position: absolute;
         left: 50%;
+        top: 0;
         height: 100%;
         width: 2px;
         background-color: white;
+        transform: translateX(-50%); /* Center the line */
     }
+    
+    .event-marker {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        border: 2px solid white;
+        z-index: 10;
+}
+
 
 
     /* Brick marks */
