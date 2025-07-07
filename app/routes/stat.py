@@ -372,6 +372,18 @@ def finish_point(point_id):
                 )
                 db.session.add(stats)
 
+        throws_without_distance = Throw.query.filter_by(point_id=point_id).filter(
+            (Throw.distance.is_(None)) | (Throw.distance == 0)
+        ).all()
+        
+        for throw in throws_without_distance:
+            if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+                throw.distance = math.sqrt(
+                    (throw.x_end - throw.x_start) ** 2 +
+                    (throw.y_end - throw.y_start) ** 2
+                )
+                print(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
+
         db.session.commit()
         return jsonify({
             'message': 'Point finished', 
@@ -381,7 +393,7 @@ def finish_point(point_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+    
 
 
 
@@ -506,3 +518,36 @@ def debug_break_throws():
             'is_completion': t.is_completion
         } for t in sample_break_throws]
     })
+
+@bp.route('/admin/recalculate_throw_distances')
+@login_required
+def recalculate_throw_distances():
+    """Recalculate distances for all throws in the database"""
+    try:
+        from app.models.throws import Throw
+        import math
+        
+        # Get all throws
+        throws = Throw.query.all()
+        updated_count = 0
+        
+        for throw in throws:
+            if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+                old_distance = throw.distance
+                throw.distance = math.sqrt(
+                    (throw.x_end - throw.x_start) ** 2 +
+                    (throw.y_end - throw.y_start) ** 2
+                )
+                
+                if old_distance != throw.distance:
+                    updated_count += 1
+        
+        db.session.commit()
+        return jsonify({
+            'message': f'Recalculated distances for {updated_count} throws',
+            'total_throws': len(throws)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
