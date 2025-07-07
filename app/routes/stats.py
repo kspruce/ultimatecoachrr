@@ -300,7 +300,7 @@ def default_team_stats():
 
 def calculate_per(player, games=None, team_avgs=None):
     """
-    Standardized PER calculation without expensive max normalization
+    Standardized PER calculation with line-type weighting for plus-minus
     """
     stats = get_player_base_stats(player, games)
     
@@ -321,6 +321,23 @@ def calculate_per(player, games=None, team_avgs=None):
         'plus_minus': 0.1
     }
 
+    # Get number of points played in each line
+    o_line_points = stats.get('o_line_points_played', 0)
+    d_line_points = stats.get('d_line_points_played', 0)
+    total_points = o_line_points + d_line_points
+    
+    # Calculate weighted plus-minus component
+    if total_points > 0:
+        o_line_weight = o_line_points / total_points if o_line_points > 0 else 0
+        d_line_weight = d_line_points / total_points if d_line_points > 0 else 0
+        
+        o_line_component = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
+        d_line_component = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
+        
+        plus_minus_component = WEIGHTS['plus_minus'] * (o_line_component + d_line_component)
+    else:
+        plus_minus_component = 0
+
     # Calculate raw PER
     uper = (1 / stats['points_played']) * (
         (WEIGHTS['scoring'] * (stats['goals'] ** 0.75)) +
@@ -332,10 +349,7 @@ def calculate_per(player, games=None, team_avgs=None):
             (stats['completions'] ** 0.75) * ((stats['completion_rate']/100) ** 3.0) +
             (stats['catches'] ** 0.75) * ((stats['catch_rate']/100) ** 3.0)
         )) +
-        (WEIGHTS['plus_minus'] * (
-            stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0) +
-            stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0)
-        ))
+        plus_minus_component
     )
 
     # Normalize to league average
@@ -345,6 +359,7 @@ def calculate_per(player, games=None, team_avgs=None):
     
     # Return the scaled PER directly
     return uper * (15 / avg_uper)
+
 
 
 
@@ -1935,10 +1950,24 @@ def debug_per_calculation(player_id):
         catches_component = (stats['catches'] ** 0.75) * catch_factor
         passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
         
-        # Plus-minus component calculations
-        o_line_pm = stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0)
-        d_line_pm = stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0)
-        plus_minus_component = WEIGHTS['plus_minus'] * (o_line_pm + d_line_pm)
+        # Get number of points played in each line
+        o_line_points = stats.get('o_line_points_played', 0)
+        d_line_points = stats.get('d_line_points_played', 0)
+        total_points = o_line_points + d_line_points
+        
+        # Calculate weighted plus-minus component
+        if total_points > 0:
+            o_line_weight = o_line_points / total_points if o_line_points > 0 else 0
+            d_line_weight = d_line_points / total_points if d_line_points > 0 else 0
+            
+            o_line_pm = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
+            d_line_pm = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
+            
+            plus_minus_component = WEIGHTS['plus_minus'] * (o_line_pm + d_line_pm)
+        else:
+            o_line_pm = 0
+            d_line_pm = 0
+            plus_minus_component = 0
         
         # Raw unadjusted PER
         raw_uper = (1 / stats['points_played']) * (box_component + passing_component + plus_minus_component)
@@ -1995,8 +2024,12 @@ def debug_per_calculation(player_id):
                 'total': passing_component
             },
             'plus_minus_component': {
-                'o_line': o_line_pm,
-                'd_line': d_line_pm,
+                'o_line_points': o_line_points,
+                'd_line_points': d_line_points,
+                'o_line_weight': o_line_weight if total_points > 0 else 0,
+                'd_line_weight': d_line_weight if total_points > 0 else 0,
+                'o_line_pm': o_line_pm,
+                'd_line_pm': d_line_pm,
                 'total': plus_minus_component
             },
             'calculation': {
