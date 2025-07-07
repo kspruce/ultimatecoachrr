@@ -208,10 +208,6 @@
                     <h5>Point Visualization</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Debug info -->
-                    <div class="alert alert-info mb-3">
-                        Field container dimensions: <span id="field-dimensions">Loading...</span>
-                    </div>
                     
                     <!-- Field container with inline styles for extra certainty -->
                     <div id="field" class="field-container" style="height: 300px; width: 100%; background-color: #8BC34A; border: 3px solid #3E7D29;">
@@ -401,15 +397,33 @@
             // Add endzones
             const leftEndzone = document.createElement('div');
             leftEndzone.className = 'field-endzone left';
+            leftEndzone.style.position = 'absolute';
+            leftEndzone.style.height = '100%';
+            leftEndzone.style.width = '18%';
+            leftEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            leftEndzone.style.border = '1px dashed white';
+            leftEndzone.style.left = '0';
             field.appendChild(leftEndzone);
             
             const rightEndzone = document.createElement('div');
             rightEndzone.className = 'field-endzone right';
+            rightEndzone.style.position = 'absolute';
+            rightEndzone.style.height = '100%';
+            rightEndzone.style.width = '18%';
+            rightEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            rightEndzone.style.border = '1px dashed white';
+            rightEndzone.style.right = '0';
             field.appendChild(rightEndzone);
             
             // Add midline
             const midline = document.createElement('div');
             midline.className = 'field-midline';
+            midline.style.position = 'absolute';
+            midline.style.height = '100%';
+            midline.style.width = '2px';
+            midline.style.backgroundColor = 'white';
+            midline.style.left = '50%';
+            midline.style.transform = 'translateX(-50%)';
             field.appendChild(midline);
             
             // Add yard lines (every 10 yards)
@@ -417,6 +431,10 @@
                 if (i === 5) continue; // Skip midline
                 const yardLine = document.createElement('div');
                 yardLine.className = 'yard-line';
+                yardLine.style.position = 'absolute';
+                yardLine.style.height = '100%';
+                yardLine.style.width = '1px';
+                yardLine.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
                 yardLine.style.left = `${i * 10}%`;
                 field.appendChild(yardLine);
             }
@@ -427,13 +445,6 @@
         // Add field markings immediately
         addFieldMarkings();
         
-        // Get field dimensions
-        const fieldWidth = field.offsetWidth;
-        const fieldHeight = field.offsetHeight;
-        console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
-        
-        // Add this function to your JavaScript, right after the addFieldMarkings function:
-
         function addCoordinateGrid() {
             // Add coordinate markers at 10% intervals
             for (let x = 0; x <= 100; x += 10) {
@@ -494,14 +505,13 @@
             console.log('Coordinate grid added');
         }
         
-        // Call this function after addFieldMarkings():
-        addFieldMarkings();
         // Uncomment the next line to add coordinate grid for debugging
         // addCoordinateGrid();
-
         
-        // Update debug info
-        document.getElementById('field-dimensions').textContent = `${fieldWidth}px × ${fieldHeight}px`;
+        // Get field dimensions
+        const fieldWidth = field.offsetWidth;
+        const fieldHeight = field.offsetHeight;
+        console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
         
         // Check if we have events with position data
         if (eventsWithPosition.length === 0) {
@@ -660,19 +670,6 @@
             disc.style.top = firstY + 'px';
             console.log(`Positioned disc at (${firstX}, ${firstY})`);
             
-            // And for subsequent positions:
-            const nextEvent = eventsWithPosition[currentIndex];
-            // Scale field positions to fit the container more accurately
-            const nextX = (nextEvent.field_position_x / 100) * fieldWidth;
-            const nextY = (nextEvent.field_position_y / 40) * fieldHeight;
-            
-            console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
-            
-            // Move disc to next position with inline styles
-            disc.style.left = nextX + 'px';
-            disc.style.top = nextY + 'px';
-            console.log(`Positioned disc at (${firstX}, ${firstY})`);
-            
             // Highlight the first marker
             const firstMarker = field.querySelector(`.field-marker[data-event-index="0"]`);
             if (firstMarker) {
@@ -785,5 +782,6 @@
         console.log('Field visualization initialization complete');
     });
 </script>
+
 {% endblock %}
 
