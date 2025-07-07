@@ -14,12 +14,13 @@
 
     /* Full-height container */
     .record-container {
-        height: calc(100vh - 56px); /* Subtract navbar height */
+        height: auto;
+        min-height: calc(100vh - 56px); /* Subtract navbar height */
         display: flex;
         flex-direction: column;
         padding: 0;
         position: relative;
-        overflow: hidden;
+        overflow-y: auto; /* Allow vertical scrolling */
     }
 
     /* Header styles */
@@ -32,12 +33,20 @@
 
     /* Field container */
     .field-container {
-        flex: 1;
+        flex: 0 0 auto; /* Change from flex: 1 to prevent stretching */
         position: relative;
         width: 100%;
+        max-width: 1000px; /* Add a max-width for very large screens */
+        margin: 0 auto; /* Center the field */
         background-color: #4CAF50;
         border: 2px solid #333;
         overflow: hidden;
+    }
+    
+    .field-container::before {
+        content: "";
+        display: block;
+        padding-top: 37%; /* 37:100 aspect ratio */
     }
     
     .field {
@@ -444,16 +453,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.closeActionSelect = function() {
         actionSelect.style.display = 'none';
     };
-
-    // Field sizing
-    function updateFieldHeight() {
-        const fieldWidth = field.offsetWidth;
-        field.style.height = (fieldWidth * 37/100) + 'px';
-    }
-
-    // Initialize
-    updateFieldHeight();
-    window.addEventListener('resize', updateFieldHeight);
 
     // Undo button handler
     undoButton.addEventListener('click', function() {
