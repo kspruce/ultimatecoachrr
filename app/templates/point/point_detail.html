@@ -8,14 +8,13 @@
         position: relative;
         width: 100%;
         height: 300px !important;
-        background-color: #8BC34A !important;
-        border: 3px solid #3E7D29 !important;
+        background-color: #8BC34A !important; /* Bright green field */
+        border: 3px solid #3E7D29 !important; /* Darker green border */
         margin: 20px 0;
         overflow: hidden !important; /* Force hidden overflow */
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Add shadow for depth */
         z-index: 1; /* Lower z-index for the container */
     }
-
     
     /* Field markings */
     .field-endzone {
@@ -24,6 +23,7 @@
         width: 18%;
         background-color: rgba(255, 255, 255, 0.2);
         border: 1px dashed white;
+        pointer-events: none;
     }
     .field-endzone.left {
         left: 0;
@@ -38,6 +38,7 @@
         background-color: white;
         left: 50%;
         transform: translateX(-50%);
+        pointer-events: none;
     }
     
     /* Field yard lines */
@@ -46,6 +47,7 @@
         height: 100%;
         width: 1px;
         background-color: rgba(255, 255, 255, 0.5);
+        pointer-events: none;
     }
     
     /* Event markers */
@@ -59,34 +61,46 @@
         transform: translate(-50%, -50%);
         z-index: 10;
         box-shadow: 0 0 5px rgba(0,0,0,0.5);
-        pointer-events: none; /* Prevent interaction */
     }
     
+    /* Player label */
+    .player-label {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        text-shadow: 0 0 2px black;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    
+    /* Connection lines */
     .field-line {
         position: absolute;
         height: 3px;
         background-color: rgba(255, 255, 255, 0.7);
         transform-origin: left center;
         z-index: 5;
-        pointer-events: none; /* Prevent interaction */
+        pointer-events: none;
     }
-
     
-    /* Disc for animation - ENHANCED */
+    /* Disc for animation */
     .disc {
         position: absolute;
-        width: 24px !important; /* Slightly smaller disc */
+        width: 24px !important;
         height: 24px !important;
         border-radius: 50%;
-        background-color: white !important; /* Changed from yellow to white */
-        border: 2px solid black !important; /* Thinner border */
+        background-color: white !important;
+        border: 2px solid black !important;
         transform: translate(-50%, -50%);
-        z-index: 1000 !important; /* Ensure it's on top */
-        pointer-events: none; /* Prevent it from blocking clicks */
+        z-index: 1000 !important;
+        pointer-events: none;
         transition: all 0.8s ease-in-out;
     }
     
-   
     /* Active marker highlighting */
     .field-marker.active {
         transform: translate(-50%, -50%) scale(1.5) !important;
@@ -103,6 +117,7 @@
         background-color: rgba(255, 255, 0, 0.3);
     }
 </style>
+
 {% endblock %}
 
 {% block content %}
@@ -355,35 +370,31 @@
         // Field visualization data
         const events = {{ events_data|tojson }};
         
-        // Sort events into logical sequence for ultimate frisbee
-        function sortEventsInLogicalOrder(events) {
-            // Create a copy to avoid modifying the original
-            const sortedEvents = [...events];
-            
-            // First, separate events by type
-            const goalEvents = sortedEvents.filter(e => e.event_type === 'goal');
-            const assistEvents = sortedEvents.filter(e => e.event_type === 'assist');
-            const hockeyAssistEvents = sortedEvents.filter(e => e.event_type === 'hockey_assist');
-            const otherEvents = sortedEvents.filter(e => 
-                e.event_type !== 'goal' && 
-                e.event_type !== 'assist' && 
-                e.event_type !== 'hockey_assist'
-            );
-            
-            // For other events, sort by field position (from our endzone to theirs)
-            otherEvents.sort((a, b) => a.field_position_x - b.field_position_x);
-            
-            // Combine in logical order: other events, then hockey assist, then assist, then goal
-            return [...otherEvents, ...hockeyAssistEvents, ...assistEvents, ...goalEvents];
+        // Function to get player initials
+        function getPlayerInitials(name) {
+            if (!name) return '';
+            return name.split(' ').map(part => part[0]).join('');
         }
         
-        // Filter for events with position data and sort them
-        const eventsWithPosition = sortEventsInLogicalOrder(
-            events.filter(e => e.field_position_x !== null && e.field_position_y !== null)
+        // Filter for only catches and goals with position data
+        const catchesAndGoals = events.filter(e => 
+            (e.event_type === 'catch' || e.event_type === 'goal') && 
+            e.field_position_x !== null && 
+            e.field_position_y !== null
         );
         
+        // Sort them by sequence (we'll use the order they appear in the table)
+        const eventsWithPosition = catchesAndGoals.sort((a, b) => {
+            // If we have sequence numbers, use those
+            if (a.sequence && b.sequence) {
+                return a.sequence - b.sequence;
+            }
+            // Otherwise sort by ID as a fallback
+            return a.id - b.id;
+        });
+        
         console.log('Original events:', events);
-        console.log('Sorted events with position:', eventsWithPosition);
+        console.log('Filtered catches and goals with position:', eventsWithPosition);
         
         // Get the field container
         const field = document.getElementById('field');
@@ -405,39 +416,15 @@
             // Add endzones
             const leftEndzone = document.createElement('div');
             leftEndzone.className = 'field-endzone left';
-            leftEndzone.style.position = 'absolute';
-            leftEndzone.style.height = '100%';
-            leftEndzone.style.width = '18%';
-            leftEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            leftEndzone.style.border = '1px dashed white';
-            leftEndzone.style.left = '0';
-            leftEndzone.style.top = '0';
-            leftEndzone.style.pointerEvents = 'none'; // Prevent interaction
             field.appendChild(leftEndzone);
             
             const rightEndzone = document.createElement('div');
             rightEndzone.className = 'field-endzone right';
-            rightEndzone.style.position = 'absolute';
-            rightEndzone.style.height = '100%';
-            rightEndzone.style.width = '18%';
-            rightEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            rightEndzone.style.border = '1px dashed white';
-            rightEndzone.style.right = '0';
-            rightEndzone.style.top = '0';
-            rightEndzone.style.pointerEvents = 'none'; // Prevent interaction
             field.appendChild(rightEndzone);
             
             // Add midline
             const midline = document.createElement('div');
             midline.className = 'field-midline';
-            midline.style.position = 'absolute';
-            midline.style.height = '100%';
-            midline.style.width = '2px';
-            midline.style.backgroundColor = 'white';
-            midline.style.left = '50%';
-            midline.style.top = '0';
-            midline.style.transform = 'translateX(-50%)';
-            midline.style.pointerEvents = 'none'; // Prevent interaction
             field.appendChild(midline);
             
             // Add yard lines (every 10 yards)
@@ -445,90 +432,29 @@
                 if (i === 5) continue; // Skip midline
                 const yardLine = document.createElement('div');
                 yardLine.className = 'yard-line';
-                yardLine.style.position = 'absolute';
-                yardLine.style.height = '100%';
-                yardLine.style.width = '1px';
-                yardLine.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
                 yardLine.style.left = `${i * 10}%`;
-                yardLine.style.top = '0';
-                yardLine.style.pointerEvents = 'none'; // Prevent interaction
                 field.appendChild(yardLine);
             }
             
             console.log('Field markings added');
         }
-
         
         // Add field markings immediately
         addFieldMarkings();
-        
-        function addCoordinateGrid() {
-            // Add coordinate markers at 10% intervals
-            for (let x = 0; x <= 100; x += 10) {
-                const xPos = (x / 100) * fieldWidth;
-                
-                // Add vertical line
-                const vLine = document.createElement('div');
-                vLine.style.position = 'absolute';
-                vLine.style.left = xPos + 'px';
-                vLine.style.top = '0';
-                vLine.style.width = '1px';
-                vLine.style.height = '100%';
-                vLine.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                vLine.style.zIndex = '2';
-                field.appendChild(vLine);
-                
-                // Add x-coordinate label
-                const xLabel = document.createElement('div');
-                xLabel.style.position = 'absolute';
-                xLabel.style.left = xPos + 'px';
-                xLabel.style.bottom = '0';
-                xLabel.style.transform = 'translateX(-50%)';
-                xLabel.style.color = 'white';
-                xLabel.style.fontSize = '10px';
-                xLabel.style.zIndex = '3';
-                xLabel.textContent = x;
-                field.appendChild(xLabel);
-            }
-            
-            // Add horizontal lines at 10% intervals
-            for (let y = 0; y <= 40; y += 10) {
-                const yPos = (y / 40) * fieldHeight;
-                
-                // Add horizontal line
-                const hLine = document.createElement('div');
-                hLine.style.position = 'absolute';
-                hLine.style.left = '0';
-                hLine.style.top = yPos + 'px';
-                hLine.style.width = '100%';
-                hLine.style.height = '1px';
-                hLine.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                hLine.style.zIndex = '2';
-                field.appendChild(hLine);
-                
-                // Add y-coordinate label
-                const yLabel = document.createElement('div');
-                yLabel.style.position = 'absolute';
-                yLabel.style.left = '0';
-                yLabel.style.top = yPos + 'px';
-                yLabel.style.transform = 'translateY(-50%)';
-                yLabel.style.color = 'white';
-                yLabel.style.fontSize = '10px';
-                yLabel.style.zIndex = '3';
-                yLabel.textContent = y;
-                field.appendChild(yLabel);
-            }
-            
-            console.log('Coordinate grid added');
-        }
-        
-        // Uncomment the next line to add coordinate grid for debugging
-        // addCoordinateGrid();
         
         // Get field dimensions
         const fieldWidth = field.offsetWidth;
         const fieldHeight = field.offsetHeight;
         console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
+        
+        // Helper functions to scale coordinates
+        function scaleX(x) {
+            return (x / 100) * fieldWidth;
+        }
+        
+        function scaleY(y) {
+            return (y / 35) * fieldHeight; // Using 35 as the max Y value
+        }
         
         // Check if we have events with position data
         if (eventsWithPosition.length === 0) {
@@ -549,8 +475,8 @@
                 marker.dataset.eventIndex = index;
                 
                 // Scale field positions to fit the container
-                const x = (event.field_position_x / 100) * fieldWidth;
-                const y = (event.field_position_y / 40) * fieldHeight;
+                const x = scaleX(event.field_position_x);
+                const y = scaleY(event.field_position_y);
                 
                 console.log(`Adding marker for event ${index} (${event.event_type}) at position (${x}, ${y})`);
                 
@@ -572,6 +498,18 @@
                     marker.style.backgroundColor = 'blue';
                 }
                 
+                // Add player jersey number or initials
+                const playerLabel = document.createElement('div');
+                playerLabel.className = 'player-label';
+                
+                // Use jersey number if available, otherwise use initials
+                if (event.player_jersey) {
+                    playerLabel.textContent = '#' + event.player_jersey;
+                } else {
+                    playerLabel.textContent = getPlayerInitials(event.player_name);
+                }
+                
+                marker.appendChild(playerLabel);
                 field.appendChild(marker);
                 
                 // Add tooltip with event info
@@ -580,8 +518,8 @@
                 // Only draw lines if we have a previous event with position
                 if (index > 0) {
                     const prevEvent = eventsWithPosition[index - 1];
-                    const prevX = (prevEvent.field_position_x / 100) * fieldWidth;
-                    const prevY = (prevEvent.field_position_y / 40) * fieldHeight;
+                    const prevX = scaleX(prevEvent.field_position_x);
+                    const prevY = scaleY(prevEvent.field_position_y);
                     
                     const line = document.createElement('div');
                     line.className = 'field-line';
@@ -662,15 +600,6 @@
             // Create a disc element with inline styles for extra certainty
             disc = document.createElement('div');
             disc.className = 'disc';
-            disc.style.position = 'absolute';
-            disc.style.width = '24px';
-            disc.style.height = '24px';
-            disc.style.borderRadius = '50%';
-            disc.style.backgroundColor = 'white';
-            disc.style.border = '2px solid black';
-            disc.style.transform = 'translate(-50%, -50%)';
-            disc.style.zIndex = '1000';
-            disc.style.transition = 'all 0.8s ease-in-out';
             
             // Add the disc to the field
             field.appendChild(disc);
@@ -679,8 +608,8 @@
             // For the first position:
             const firstEvent = eventsWithPosition[0];
             // Scale field positions to fit the container more accurately
-            const firstX = (firstEvent.field_position_x / 100) * fieldWidth;
-            const firstY = (firstEvent.field_position_y / 40) * fieldHeight;
+            const firstX = scaleX(firstEvent.field_position_x);
+            const firstY = scaleY(firstEvent.field_position_y);
             
             // Position disc at first position with inline styles
             disc.style.left = firstX + 'px';
@@ -710,7 +639,10 @@
             
             // Update animation status
             if (animationStatus) {
-                animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
+                const playerInfo = firstEvent.player_jersey ? 
+                    `#${firstEvent.player_jersey}` : 
+                    getPlayerInitials(firstEvent.player_name);
+                animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type} by ${playerInfo}`;
             }
             
             // Animate through each position
@@ -726,8 +658,8 @@
                 }
                 
                 const nextEvent = eventsWithPosition[currentIndex];
-                const nextX = (nextEvent.field_position_x / 100) * fieldWidth;
-                const nextY = (nextEvent.field_position_y / 40) * fieldHeight;
+                const nextX = scaleX(nextEvent.field_position_x);
+                const nextY = scaleY(nextEvent.field_position_y);
                 
                 console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
                 
@@ -769,7 +701,10 @@
                 
                 // Update animation status
                 if (animationStatus) {
-                    animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
+                    const playerInfo = nextEvent.player_jersey ? 
+                        `#${nextEvent.player_jersey}` : 
+                        getPlayerInitials(nextEvent.player_name);
+                    animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type} by ${playerInfo}`;
                 }
                 
                 currentIndex++;
