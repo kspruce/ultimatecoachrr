@@ -1960,13 +1960,16 @@ def debug_per_calculation(player_id):
             o_line_weight = o_line_points / total_points if o_line_points > 0 else 0
             d_line_weight = d_line_points / total_points if d_line_points > 0 else 0
             
-            o_line_pm = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
-            d_line_pm = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
+            # Use the variable names expected by the template
+            o_line = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
+            d_line = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
             
-            plus_minus_component = WEIGHTS['plus_minus'] * (o_line_pm + d_line_pm)
+            plus_minus_component = WEIGHTS['plus_minus'] * (o_line + d_line)
         else:
-            o_line_pm = 0
-            d_line_pm = 0
+            o_line_weight = 0
+            d_line_weight = 0
+            o_line = 0
+            d_line = 0
             plus_minus_component = 0
         
         # Raw unadjusted PER
@@ -1997,6 +2000,8 @@ def debug_per_calculation(player_id):
                 'completion_rate': stats['completion_rate'],
                 'catches': stats['catches'],
                 'catch_rate': stats['catch_rate'],
+                'o_line_points_played': o_line_points,
+                'd_line_points_played': d_line_points,
                 'o_line_plus_minus_per_point': stats.get('o_line_plus_minus_per_point', 0),
                 'd_line_plus_minus_per_point': stats.get('d_line_plus_minus_per_point', 0)
             },
@@ -2026,10 +2031,10 @@ def debug_per_calculation(player_id):
             'plus_minus_component': {
                 'o_line_points': o_line_points,
                 'd_line_points': d_line_points,
-                'o_line_weight': o_line_weight if total_points > 0 else 0,
-                'd_line_weight': d_line_weight if total_points > 0 else 0,
-                'o_line_pm': o_line_pm,
-                'd_line_pm': d_line_pm,
+                'o_line_weight': o_line_weight,
+                'd_line_weight': d_line_weight,
+                'o_line': o_line,  # Match the template variable name
+                'd_line': d_line,  # Match the template variable name
                 'total': plus_minus_component
             },
             'calculation': {
@@ -2059,6 +2064,7 @@ def debug_per_calculation(player_id):
         selected_game=game_id,
         games=games
     )
+
 
 def calculate_additional_team_metrics(games):
     """Calculate additional team metrics for radar charts"""
