@@ -531,5 +531,29 @@ def point_detail(point_id):
     from app.models.event import Event
     events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
     
-    return render_template('point/point_detail.html', point=point, game=game, events=events)
+    # Create a serializable version of events for JavaScript
+    events_data = []
+    for event in events:
+        event_dict = {
+            'id': event.id,
+            'event_type': event.event_type,
+            'timestamp': event.timestamp,
+            'field_position_x': event.field_position_x,
+            'field_position_y': event.field_position_y,
+            'player_id': event.player_id,
+            'player_name': event.player.name if event.player else None,
+            'throw_type': getattr(event, 'throw_type', None),
+            'throw_distance': getattr(event, 'throw_distance', None),
+            'is_break_throw': getattr(event, 'is_break_throw', False),
+            'receiver_id': getattr(event, 'receiver_id', None),
+            'receiver_name': event.receiver.name if hasattr(event, 'receiver') and event.receiver else None
+        }
+        events_data.append(event_dict)
+    
+    return render_template('point/point_detail.html', 
+                          point=point, 
+                          game=game, 
+                          events=events,
+                          events_data=events_data)
+
 
