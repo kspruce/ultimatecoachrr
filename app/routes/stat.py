@@ -236,6 +236,20 @@ def undo_event(point_id):
         last_event = Event.query.filter_by(point_id=point_id).order_by(Event.id.desc()).first()
 
         if last_event:
+            # First, delete any throws associated with this event
+            from app.models.throws import Throw
+            
+            # Delete throws where this event is the receiving event
+            throws_received = Throw.query.filter_by(receiving_event_id=last_event.id).all()
+            for throw in throws_received:
+                db.session.delete(throw)
+                
+            # Delete throws where this event is the throwing event
+            throws_thrown = Throw.query.filter_by(throwing_event_id=last_event.id).all()
+            for throw in throws_thrown:
+                db.session.delete(throw)
+            
+            # Now delete the event itself
             db.session.delete(last_event)
 
             # Update point if necessary
@@ -245,8 +259,30 @@ def undo_event(point_id):
             elif last_event.event_type == 'scored_on':
                 point.point_outcome = None
                 point.their_score_after = point.their_score_before
-            elif last_event.event_type in ['throwaway', 'drop', 'block', 'handblock', 'stallout']:
+            elif last_event.event_type in ['throwaway', 'drop', 'block', 'handblock', 'stallout', 'forced_turnover', 'unforced_turnover']:
                 point.is_offensive = not point.is_offensive  # Toggle possession back
+
+            # Update player stats if necessary
+            from app.models.stats import PlayerPointStats
+            stats = PlayerPointStats.query.filter_by(
+                player_id=last_event.player_id,
+                point_id=point_id
+            ).first()
+            
+            if stats:
+                # Reverse the stat changes based on event type
+                if point.our_line_type == 'O-line':
+                    if last_event.event_type in ['goal', 'assist']:
+                        stats.o_line_plus_minus -= 1
+                    elif last_event.event_type in ['throwaway', 'drop']:
+                        stats.o_line_plus_minus += 1
+                else:  # D-line
+                    if last_event.event_type in ['block', 'forced_turnover']:
+                        stats.d_line_plus_minus -= 1
+                    elif last_event.event_type == 'scored_on':
+                        stats.d_line_plus_minus += 1
+                
+                db.session.add(stats)
 
             db.session.add(point)
             db.session.commit()
@@ -257,6 +293,7 @@ def undo_event(point_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
 
 
 @bp.route('/finish_point/<int:point_id>', methods=['POST'])
