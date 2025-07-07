@@ -68,18 +68,44 @@
         z-index: 5;
     }
     
-    /* Disc for animation */
+    /* Disc for animation - ENHANCED */
     .disc {
         position: absolute;
-        width: 24px;
-        height: 24px;
+        width: 30px !important; /* Larger disc */
+        height: 30px !important;
         border-radius: 50%;
-        background-color: yellow;
-        border: 3px solid black;
+        background-color: yellow !important;
+        border: 4px solid black !important;
         transform: translate(-50%, -50%);
-        z-index: 100;
-        transition: all 0.8s ease-in-out;
-        box-shadow: 0 0 10px rgba(255,255,0,0.8);
+        z-index: 1000 !important; /* Ensure it's on top */
+        box-shadow: 0 0 15px 5px rgba(255,255,0,0.8) !important; /* Stronger glow */
+        transition: all 1s ease-in-out;
+        pointer-events: none; /* Prevent it from blocking clicks */
+    }
+    
+    /* Animation trail effect */
+    .disc::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 0, 0.3);
+        animation: pulse 1s infinite;
+        z-index: -1;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.5); opacity: 0.3; }
+        100% { transform: scale(2); opacity: 0; }
+    }
+    
+    /* Active marker highlighting */
+    .field-marker.active {
+        transform: translate(-50%, -50%) scale(1.5) !important;
+        box-shadow: 0 0 10px 5px rgba(255, 255, 0, 0.8) !important;
+        z-index: 20 !important;
     }
     
     /* Table styling */
@@ -443,6 +469,7 @@
                 const marker = document.createElement('div');
                 marker.className = 'field-marker';
                 marker.dataset.eventId = event.id;
+                marker.dataset.eventIndex = index;
                 
                 // Scale field positions to fit the container
                 const x = (event.field_position_x / 100) * fieldWidth;
@@ -481,6 +508,7 @@
                     
                     const line = document.createElement('div');
                     line.className = 'field-line';
+                    line.dataset.lineIndex = index;
                     
                     // Calculate line length and angle
                     const dx = x - prevX;
@@ -528,7 +556,7 @@
             
             markers.forEach(marker => {
                 marker.style.opacity = '1';
-                marker.style.transform = 'translate(-50%, -50%) scale(1)';
+                marker.classList.remove('active');
             });
             
             lines.forEach(line => {
@@ -554,24 +582,39 @@
                 return;
             }
             
-            // Create a disc element
+            // Create a disc element with inline styles for extra certainty
             disc = document.createElement('div');
             disc.className = 'disc';
+            disc.style.position = 'absolute';
+            disc.style.width = '30px';
+            disc.style.height = '30px';
+            disc.style.borderRadius = '50%';
+            disc.style.backgroundColor = 'yellow';
+            disc.style.border = '4px solid black';
+            disc.style.transform = 'translate(-50%, -50%)';
+            disc.style.zIndex = '1000';
+            disc.style.boxShadow = '0 0 15px 5px rgba(255,255,0,0.8)';
+            disc.style.transition = 'all 1s ease-in-out';
+            
+            // Add the disc to the field
             field.appendChild(disc);
+            console.log('Disc element created and added to field');
             
             // Start at the first position
             const firstEvent = eventsWithPosition[0];
             const firstX = (firstEvent.field_position_x / 100) * fieldWidth;
             const firstY = (firstEvent.field_position_y / 40) * fieldHeight;
             
-            // Position disc at first position
+            // Position disc at first position with inline styles
             disc.style.left = firstX + 'px';
             disc.style.top = firstY + 'px';
+            console.log(`Positioned disc at (${firstX}, ${firstY})`);
             
             // Highlight the first marker
-            const firstMarker = field.querySelector(`.field-marker[data-event-id="${firstEvent.id}"]`);
+            const firstMarker = field.querySelector(`.field-marker[data-event-index="0"]`);
             if (firstMarker) {
-                firstMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                firstMarker.classList.add('active');
+                console.log('First marker highlighted');
             }
             
             // Find and highlight the corresponding table row
@@ -585,6 +628,7 @@
             
             if (firstRow) {
                 firstRow.classList.add('active-event');
+                console.log('First table row highlighted');
             }
             
             // Update animation status
@@ -610,17 +654,24 @@
                 
                 console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
                 
-                // Move disc to next position
+                // Remove active class from previous marker
+                const prevMarker = field.querySelector(`.field-marker.active`);
+                if (prevMarker) {
+                    prevMarker.classList.remove('active');
+                }
+                
+                // Move disc to next position with inline styles
                 disc.style.left = nextX + 'px';
                 disc.style.top = nextY + 'px';
                 
                 // Highlight current marker
-                const currentMarker = field.querySelector(`.field-marker[data-event-id="${nextEvent.id}"]`);
+                const currentMarker = field.querySelector(`.field-marker[data-event-index="${currentIndex}"]`);
                 if (currentMarker) {
-                    currentMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                    currentMarker.classList.add('active');
+                    console.log(`Marker ${currentIndex} highlighted`);
                 }
                 
-                // Remove highlight from previous row
+                // Remove highlight from previous rows
                 document.querySelectorAll('.event-row').forEach(row => {
                     row.classList.remove('active-event');
                 });
@@ -671,4 +722,5 @@
         console.log('Field visualization initialization complete');
     });
 </script>
+{% endblock %}
 {% endblock %}
