@@ -490,7 +490,6 @@ def delete_point(point_id):
         
         # Delete throws that reference these events
         if event_ids:
-            from app.models.throw import Throw  # Import at the top of the file
             Throw.query.filter(Throw.throwing_event_id.in_(event_ids)).delete(synchronize_session=False)
             
         # Delete player_point_stats records
