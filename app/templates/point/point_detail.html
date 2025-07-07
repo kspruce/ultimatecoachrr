@@ -96,6 +96,22 @@
         box-shadow: 0 0 5px rgba(0,0,0,0.5);
     }
     
+    /* Player name labels */
+    .player-label {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white;
+        font-size: 10px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        transform: translate(-50%, -100%);
+        margin-top: -5px;
+        z-index: 15;
+        pointer-events: none;
+        white-space: nowrap;
+        opacity: 0.8;
+    }
+    
     /* Connection lines */
     .field-line {
         position: absolute;
@@ -104,6 +120,7 @@
         transform-origin: left center;
         z-index: 5;
         pointer-events: none;
+        transition: opacity 0.5s ease;
     }
     
     /* Disc for animation */
@@ -258,6 +275,10 @@
                             <button id="reset-button" class="btn btn-outline-secondary">Reset</button>
                             <span id="animation-status" class="ms-3 text-muted"></span>
                         </div>
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" id="show-names-toggle" checked>
+                            <label class="form-check-label" for="show-names-toggle">Show Player Names</label>
+                        </div>
                         <div class="text-muted small">
                             <span class="d-inline-block me-2"><i class="fas fa-circle text-success"></i> Goal</span>
                             <span class="d-inline-block me-2"><i class="fas fa-circle text-danger"></i> Turnover</span>
@@ -392,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get the field container
     const field = document.getElementById('field');
     const animationStatus = document.getElementById('animation-status');
+    const showNamesToggle = document.getElementById('show-names-toggle');
     
     if (!field) {
         console.error('Field element not found');
@@ -559,6 +581,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add tooltip with event info
             marker.title = `${event.event_type}`;
             
+            // Add player name label if available
+            if (event.player_name) {
+                const playerLabel = document.createElement('div');
+                playerLabel.className = 'player-label';
+                playerLabel.textContent = event.player_name;
+                playerLabel.style.left = x + 'px';
+                playerLabel.style.top = y + 'px';
+                field.appendChild(playerLabel);
+            }
+            
             // Only draw lines if we have a previous event with position
             if (index > 0) {
                 const prevEvent = eventsWithPosition[index - 1];
@@ -588,6 +620,16 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error plotting event:', err, event);
         }
     });
+    
+    // Toggle player name visibility
+    if (showNamesToggle) {
+        showNamesToggle.addEventListener('change', function() {
+            const playerLabels = field.querySelectorAll('.player-label');
+            playerLabels.forEach(label => {
+                label.style.display = this.checked ? 'block' : 'none';
+            });
+        });
+    }
     
     // Function to update disc color based on event type
     function updateDiscColor(discElement, eventType) {
@@ -696,7 +738,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add the disc to the field
         field.appendChild(disc);
         console.log('Disc element created and added to field');
-        
         // For the first position:
         const firstEvent = eventsWithPosition[0];
         // Scale field positions to fit the container more accurately
@@ -730,16 +771,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (firstRow) {
             firstRow.classList.add('active-event');
+            firstRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             console.log('First table row highlighted');
         }
         
-        // Update animation status
+        // Update animation status with player name
         if (animationStatus) {
-            animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
+            const playerInfo = firstEvent.player_name ? ` (${firstEvent.player_name})` : '';
+            animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}${playerInfo}`;
         }
         
         // Animate through each position
         let currentIndex = 1;
+        
+        // Set all lines to low opacity initially
+        const allLines = field.querySelectorAll('.field-line');
+        allLines.forEach(line => {
+            line.style.opacity = '0.2';
+        });
         
         function moveToNextPosition() {
             if (currentIndex >= eventsWithPosition.length) {
@@ -776,6 +825,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log(`Marker ${currentIndex} highlighted`);
             }
             
+            // Highlight the current line by making it fully opaque
+            const currentLine = field.querySelector(`.field-line[data-line-index="${currentIndex}"]`);
+            if (currentLine) {
+                currentLine.style.opacity = '1';
+            }
+            
             // Remove highlight from previous rows
             document.querySelectorAll('.event-row').forEach(row => {
                 row.classList.remove('active-event');
@@ -795,9 +850,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             
-            // Update animation status
+            // Update animation status with player name
             if (animationStatus) {
-                animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
+                const playerInfo = nextEvent.player_name ? ` (${nextEvent.player_name})` : '';
+                animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}${playerInfo}`;
             }
             
             currentIndex++;
@@ -837,4 +893,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
