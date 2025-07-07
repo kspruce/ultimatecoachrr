@@ -63,20 +63,6 @@
         box-shadow: 0 0 5px rgba(0,0,0,0.5);
     }
     
-    /* Player label */
-    .player-label {
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        color: white;
-        font-size: 10px;
-        font-weight: bold;
-        text-shadow: 0 0 2px black;
-        white-space: nowrap;
-        pointer-events: none;
-    }
-    
     /* Connection lines */
     .field-line {
         position: absolute;
@@ -117,7 +103,6 @@
         background-color: rgba(255, 255, 0, 0.3);
     }
 </style>
-
 {% endblock %}
 
 {% block content %}
@@ -251,7 +236,6 @@
         </div>
     </div>
 
-
     <!-- Clips section -->
     <div class="row">
         <div class="col-12">
@@ -370,32 +354,6 @@
         // Field visualization data
         const events = {{ events_data|tojson }};
         
-        // Function to get player initials
-        function getPlayerInitials(name) {
-            if (!name) return '';
-            return name.split(' ').map(part => part[0]).join('');
-        }
-        
-        // Filter for only catches and goals with position data
-        const catchesAndGoals = events.filter(e => 
-            (e.event_type === 'catch' || e.event_type === 'goal') && 
-            e.field_position_x !== null && 
-            e.field_position_y !== null
-        );
-        
-        // Sort them by sequence (we'll use the order they appear in the table)
-        const eventsWithPosition = catchesAndGoals.sort((a, b) => {
-            // If we have sequence numbers, use those
-            if (a.sequence && b.sequence) {
-                return a.sequence - b.sequence;
-            }
-            // Otherwise sort by ID as a fallback
-            return a.id - b.id;
-        });
-        
-        console.log('Original events:', events);
-        console.log('Filtered catches and goals with position:', eventsWithPosition);
-        
         // Get the field container
         const field = document.getElementById('field');
         const animationStatus = document.getElementById('animation-status');
@@ -456,6 +414,15 @@
             return (y / 35) * fieldHeight; // Using 35 as the max Y value
         }
         
+        // Filter for events with position data
+        const eventsWithPosition = events.filter(e => 
+            e.field_position_x !== null && 
+            e.field_position_y !== null
+        );
+        
+        console.log('Original events:', events);
+        console.log('Events with position:', eventsWithPosition);
+        
         // Check if we have events with position data
         if (eventsWithPosition.length === 0) {
             // No position data available
@@ -498,22 +465,10 @@
                     marker.style.backgroundColor = 'blue';
                 }
                 
-                // Add player jersey number or initials
-                const playerLabel = document.createElement('div');
-                playerLabel.className = 'player-label';
-                
-                // Use jersey number if available, otherwise use initials
-                if (event.player_jersey) {
-                    playerLabel.textContent = '#' + event.player_jersey;
-                } else {
-                    playerLabel.textContent = getPlayerInitials(event.player_name);
-                }
-                
-                marker.appendChild(playerLabel);
                 field.appendChild(marker);
                 
                 // Add tooltip with event info
-                marker.title = `${event.event_type} by ${event.player_name || 'Unknown'}`;
+                marker.title = `${event.event_type} by ${event.player.name || 'Unknown'}`;
                 
                 // Only draw lines if we have a previous event with position
                 if (index > 0) {
@@ -600,6 +555,15 @@
             // Create a disc element with inline styles for extra certainty
             disc = document.createElement('div');
             disc.className = 'disc';
+            disc.style.position = 'absolute';
+            disc.style.width = '24px';
+            disc.style.height = '24px';
+            disc.style.borderRadius = '50%';
+            disc.style.backgroundColor = 'white';
+            disc.style.border = '2px solid black';
+            disc.style.transform = 'translate(-50%, -50%)';
+            disc.style.zIndex = '1000';
+            disc.style.transition = 'all 0.8s ease-in-out';
             
             // Add the disc to the field
             field.appendChild(disc);
@@ -639,10 +603,7 @@
             
             // Update animation status
             if (animationStatus) {
-                const playerInfo = firstEvent.player_jersey ? 
-                    `#${firstEvent.player_jersey}` : 
-                    getPlayerInitials(firstEvent.player_name);
-                animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type} by ${playerInfo}`;
+                animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
             }
             
             // Animate through each position
@@ -701,10 +662,7 @@
                 
                 // Update animation status
                 if (animationStatus) {
-                    const playerInfo = nextEvent.player_jersey ? 
-                        `#${nextEvent.player_jersey}` : 
-                        getPlayerInitials(nextEvent.player_name);
-                    animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type} by ${playerInfo}`;
+                    animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
                 }
                 
                 currentIndex++;
@@ -734,6 +692,4 @@
         console.log('Field visualization initialization complete');
     });
 </script>
-
 {% endblock %}
-
