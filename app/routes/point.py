@@ -526,5 +526,10 @@ def delete_point(point_id):
 def point_detail(point_id):
     point = Point.query.get_or_404(point_id)
     game = Game.query.get(point.game_id)
-    events = point.events.order_by('timestamp').all()
+    
+    # Option 2: Use a direct query instead of the relationship property
+    from app.models.event import Event
+    events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
+    
     return render_template('point/point_detail.html', point=point, game=game, events=events)
+
