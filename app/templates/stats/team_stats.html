@@ -515,15 +515,29 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-    
+        
     // Wait for the DOM to be fully ready before initializing DataTables
     setTimeout(function() {
         // Check if the table exists before initializing
-        if (document.getElementById('player-stats-table')) {
+        const tableElement = document.getElementById('player-stats-table');
+        if (tableElement) {
             try {
-                // Safely destroy if exists
+                // Check if there are rows in the table
+                const hasRows = tableElement.querySelector('tbody tr') !== null;
+                
+                if (!hasRows) {
+                    console.log("Table has no rows, skipping DataTable initialization");
+                    return;
+                }
+                
+                // Safely destroy if exists - with additional checks
                 if ($.fn.DataTable.isDataTable('#player-stats-table')) {
-                    $('#player-stats-table').DataTable().destroy();
+                    try {
+                        $('#player-stats-table').DataTable().destroy();
+                    } catch (destroyError) {
+                        console.warn("Error destroying existing DataTable:", destroyError);
+                        // Continue anyway
+                    }
                 }
                 
                 // Initialize with a try-catch to handle errors
@@ -539,11 +553,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log("DataTable initialized successfully");
             } catch (e) {
                 console.error("Error initializing DataTable:", e);
+                // Fallback to standard HTML table
+                console.log("Using standard HTML table as fallback");
             }
         } else {
             console.warn("player-stats-table element not found");
         }
-    }, 100); // Small delay to ensure DOM is ready
+    }, 300); // Increased delay to ensure DOM is ready
+
     
     // Initialize Chart.js visualizations
     try {
