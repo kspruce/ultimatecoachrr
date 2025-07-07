@@ -198,7 +198,22 @@
         text-transform: uppercase;
         font-size: 0.8rem;
         color: #6c757d;
-    }    
+    }  
+    
+    .d3-tooltip {
+        position: absolute;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        max-width: 200px;
+        text-align: left;
+    }
+  
     
 </style>
 {% endblock %}
@@ -861,26 +876,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 .on('start', dragstarted)
                 .on('drag', dragged)
                 .on('end', dragended));
-    
-        // Add tooltips for nodes
-        node.append("title")
-            .text(d => `${d.name} (#${d.jersey_number})\nPosition: ${d.position}`);
-    
-        // Add labels
+        
+        // Create custom tooltips instead of using the default title attribute
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "d3-tooltip")
+            .style("position", "absolute")
+            .style("background", "rgba(0,0,0,0.7)")
+            .style("color", "white")
+            .style("padding", "8px")
+            .style("border-radius", "4px")
+            .style("font-size", "12px")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .style("z-index", 1000);
+        
+        // Add tooltip behavior
+        node.on("mouseover", function(event, d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+        
+        // Add tooltips for links to show connection strength
+        link.on("mouseover", function(event, d) {
+                const source = connections.nodes.find(n => n.id === d.source.id);
+                const target = connections.nodes.find(n => n.id === d.target.id);
+                
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+        
+        // Add labels - use jersey numbers instead of initials
         const label = g.append('g')
             .selectAll('text')
             .data(connections.nodes)
             .enter().append('text')
-            .text(d => {
-                if (d.name) {
-                    return d.name.split(' ').map(n => n[0]).join('');
-                }
-                return d.jersey_number;
-            })
+            .text(d => d.jersey_number || '?')  // Use jersey number as the label
             .attr('font-size', 10)
-            .attr('dx', -8)
-            .attr('dy', 4)
+            .attr('text-anchor', 'middle')  // Center the text
+            .attr('dy', 4)  // Slight vertical adjustment
             .attr('fill', 'white');
+
     
         // Update positions on tick
         simulation.on('tick', () => {
@@ -889,15 +942,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr('y1', d => d.source.y)
                 .attr('x2', d => d.target.x)
                 .attr('y2', d => d.target.y);
-    
+        
             node
                 .attr('cx', d => d.x)
                 .attr('cy', d => d.y);
-    
+        
             label
-                .attr('x', d => d.x)
-                .attr('y', d => d.y);
+                .attr('x', d => d.x)  // Center the text horizontally
+                .attr('y', d => d.y); // Center the text vertically
         });
+
     
         // Add reset zoom button
         svg.append("rect")
