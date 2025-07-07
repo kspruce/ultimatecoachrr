@@ -6,7 +6,7 @@
     .field-container {
         position: relative;
         width: 100%;
-        height: 300px;
+        height: 300px; /* Fixed height */
         background-color: #8BC34A;
         border: 2px solid white;
         margin: 20px 0;
@@ -81,19 +81,6 @@
             <a href="{{ url_for('stat.record_events', point_id=point.id) }}" class="btn btn-success">Record Stats</a>
             <a href="{{ url_for('point.edit_point', point_id=point.id) }}" class="btn btn-outline-primary">Edit Point</a>
             <a href="{{ url_for('point.game_points', game_id=point.game_id) }}" class="btn btn-secondary">Back to Points</a>
-        </div>
-    </div>
-
-    <!-- Debug Info - Remove after debugging -->
-    <div class="card mb-4">
-        <div class="card-header">Debug Info</div>
-        <div class="card-body">
-            <p><strong>Point ID:</strong> {{ point.id }}</p>
-            <p><strong>Point Number:</strong> {{ point.point_number }}</p>
-            <p><strong>Point Outcome:</strong> {{ point.point_outcome }}</p>
-            <p><strong>Lineups Count:</strong> {{ lineups|length }}</p>
-            <p><strong>Events Count:</strong> {{ events|length }}</p>
-            <p><strong>Events with Position:</strong> <span id="events-with-position">Calculating...</span></p>
         </div>
     </div>
 
@@ -179,7 +166,8 @@
                     <h5>Point Visualization</h5>
                 </div>
                 <div class="card-body">
-                    <div class="field-container" id="field">
+                    <!-- Important: Set explicit height and width -->
+                    <div class="field-container" id="field" style="height: 300px; width: 100%;">
                         <!-- Field markings -->
                         <div class="field-endzone left"></div>
                         <div class="field-endzone right"></div>
@@ -319,14 +307,13 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Debug info
+        // Field visualization data
         const events = {{ events_data|tojson }};
         const eventsWithPosition = events.filter(e => 
-            e.field_position_x !== null && e.field_position_y !== null
+            e.field_position_x !== null && 
+            e.field_position_y !== null
         );
-        document.getElementById('events-with-position').textContent = eventsWithPosition.length;
         
-        // Log detailed event data
         console.log('All events:', events);
         console.log('Events with position:', eventsWithPosition);
         
@@ -337,6 +324,9 @@
             console.error('Field element not found');
             return;
         }
+        
+        // Force the field to have proper dimensions
+        field.style.height = '300px';
         
         const fieldWidth = field.offsetWidth;
         const fieldHeight = field.offsetHeight;
