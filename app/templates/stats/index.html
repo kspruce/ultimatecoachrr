@@ -869,7 +869,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .selectAll('circle')
             .data(connections.nodes)
             .enter().append('circle')
-            .attr('r', 15)
+            .attr('r', 18)  // Increased from 15 to 18 (20% increase)
             .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
                              (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
             .call(d3.drag()
@@ -929,7 +929,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .data(connections.nodes)
             .enter().append('text')
             .text(d => d.jersey_number || '?')  // Use jersey number as the label
-            .attr('font-size', 10)
+            .attr('font-size', 12)  // Increased from 10 to 12 to match larger nodes
             .attr('text-anchor', 'middle')  // Center the text
             .attr('dy', 4)  // Slight vertical adjustment
             .attr('fill', 'white');
