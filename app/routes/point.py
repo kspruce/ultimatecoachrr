@@ -548,13 +548,38 @@ def point_detail(point_id):
     from app.models.event import Event
     events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
     
+    # Reorder events to ensure assists and hockey assists appear before goals
+    reordered_events = []
+    goal_events = []
+    assist_events = []
+    hockey_assist_events = []
+    other_events = []
+    
+    for event in events:
+        if event.event_type == 'goal':
+            goal_events.append(event)
+        elif event.event_type == 'assist':
+            assist_events.append(event)
+        elif event.event_type == 'hockey_assist':
+            hockey_assist_events.append(event)
+        else:
+            other_events.append(event)
+    
+    # First add all non-goal/assist/hockey_assist events
+    reordered_events.extend(other_events)
+    
+    # Then add hockey assists, assists, and goals in that order
+    reordered_events.extend(hockey_assist_events)
+    reordered_events.extend(assist_events)
+    reordered_events.extend(goal_events)
+    
     # Explicitly load lineups
     from app.models.point import LineUp
     lineups = LineUp.query.filter_by(point_id=point_id).all()
     
     # Create a serializable version of events for JavaScript
     events_data = []
-    for event in events:
+    for event in reordered_events:  # Use reordered_events instead of events
         event_dict = {
             'id': event.id,
             'event_type': event.event_type,
@@ -572,9 +597,10 @@ def point_detail(point_id):
     return render_template('point/point_detail.html', 
                           point=point, 
                           game=game, 
-                          events=events,
+                          events=reordered_events,  # Use reordered_events here too
                           events_data=events_data,
                           lineups=lineups)
+
 
 
 
