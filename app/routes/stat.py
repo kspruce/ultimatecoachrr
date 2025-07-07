@@ -130,7 +130,20 @@ def record_events(point_id):
                             )
                         )
                         db.session.add(hockey_throw)
+                        # Remove any regular throws that are now hockey assists
+                        regular_throw = Throw.query.filter(
+                            Throw.point_id == point_id,
+                            Throw.thrower_id == hockey_assist_event.player_id,
+                            Throw.receiver_id == assist_event.player_id,
+                            Throw.throw_type == 'regular'
+                        ).first()
+                        
+                        if regular_throw:
+                            print(f"Removing regular throw {regular_throw.id} that is now a hockey assist")
+                            db.session.delete(regular_throw)
 
+                        
+                        
             # Create regular throw if this is a catch
             elif event.event_type == 'catch' and previous_event:
                 regular_throw = Throw(
@@ -318,6 +331,33 @@ def finish_point(point_id):
         game.our_score = point.our_score_after
         game.their_score = point.their_score_after
 
+        # Remove duplicate throws (regular throws that were later marked as hockey assists)
+        from app.models.throws import Throw
+        
+        # Get all hockey assist throws in this point
+        hockey_assists = Throw.query.filter_by(
+            point_id=point_id,
+            throw_type='hockey_assist'
+        ).all()
+        
+        # For each hockey assist, find and remove any regular throws with the same coordinates
+        for hockey in hockey_assists:
+            duplicate_throws = Throw.query.filter(
+                Throw.point_id == point_id,
+                Throw.throw_type == 'regular',
+                Throw.thrower_id == hockey.thrower_id,
+                Throw.receiver_id == hockey.receiver_id,
+                Throw.x_start == hockey.x_start,
+                Throw.y_start == hockey.y_start,
+                Throw.x_end == hockey.x_end,
+                Throw.y_end == hockey.y_end,
+                Throw.id != hockey.id  # Make sure we don't delete the hockey assist itself
+            ).all()
+            
+            for duplicate in duplicate_throws:
+                print(f"Removing duplicate throw: {duplicate.id} (regular) in favor of hockey assist: {hockey.id}")
+                db.session.delete(duplicate)
+
         # Calculate final stats for all players in the point
         for lineup in point.lineups:
             stats = PlayerPointStats.query.filter_by(
@@ -341,6 +381,7 @@ def finish_point(point_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
 
 
 
