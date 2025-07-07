@@ -21,6 +21,12 @@ class Player(db.Model):
     notes = db.Column(db.Text)
     points_played = db.Column(db.Integer, default=0)
     games_played = db.Column(db.Integer, default=0)
+    short_term_goals = db.Column(db.Text)
+    mid_term_goals = db.Column(db.Text)
+    long_term_goals = db.Column(db.Text)
+    skills_to_develop = db.Column(db.Text)
+    coach_feedback = db.Column(db.Text) 
+
 
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)

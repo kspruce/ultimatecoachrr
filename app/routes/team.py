@@ -231,3 +231,33 @@ def player_detail(player_id):
 def debug():
     players = Player.query.all()
     return render_template('team/debug.html', players=players)
+
+@bp.route('/player/<int:player_id>/update_goals', methods=['POST'])
+@login_required
+def update_player_goals(player_id):
+    player = Player.query.get_or_404(player_id)
+    
+    # Check permissions - only the player, coaches, or admins can update goals
+    if not (current_user.is_admin or current_user.id == player.user_id or 
+            (hasattr(current_user, 'role') and current_user.role == 'coach')):
+        flash('You do not have permission to update goals for this player.', 'danger')
+        return redirect(url_for('team.player_detail', player_id=player_id))
+    
+    try:
+        # Update player goals
+        player.short_term_goals = request.form.get('short_term_goals')
+        player.mid_term_goals = request.form.get('mid_term_goals')
+        player.long_term_goals = request.form.get('long_term_goals')
+        player.skills_to_develop = request.form.get('skills_to_develop')
+        
+        # Only admins and coaches can update feedback
+        if current_user.is_admin or (hasattr(current_user, 'role') and current_user.role == 'coach'):
+            player.coach_feedback = request.form.get('coach_feedback')
+        
+        db.session.commit()
+        flash('Player goals updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating goals: {str(e)}', 'danger')
+    
+    return redirect(url_for('team.player_detail', player_id=player_id))
