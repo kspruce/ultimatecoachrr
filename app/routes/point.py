@@ -527,7 +527,7 @@ def point_detail(point_id):
     point = Point.query.get_or_404(point_id)
     game = Game.query.get(point.game_id)
     
-    # Option 2: Use a direct query instead of the relationship property
+    # Query events directly instead of using the relationship
     from app.models.event import Event
     events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
     
@@ -538,16 +538,24 @@ def point_detail(point_id):
             'id': event.id,
             'event_type': event.event_type,
             'timestamp': event.timestamp,
-            'field_position_x': event.field_position_x,
-            'field_position_y': event.field_position_y,
-            'player_id': event.player_id,
-            'player_name': event.player.name if event.player else None,
-            'throw_type': getattr(event, 'throw_type', None),
-            'throw_distance': getattr(event, 'throw_distance', None),
-            'is_break_throw': getattr(event, 'is_break_throw', False),
-            'receiver_id': getattr(event, 'receiver_id', None),
-            'receiver_name': event.receiver.name if hasattr(event, 'receiver') and event.receiver else None
+            'field_position_x': getattr(event, 'field_position_x', None),
+            'field_position_y': getattr(event, 'field_position_y', None),
+            'player_id': event.player_id if hasattr(event, 'player_id') else None,
+            'player_name': event.player.name if hasattr(event, 'player') and event.player else None,
         }
+        
+        # Add throw-specific attributes if they exist
+        if hasattr(event, 'throw_type'):
+            event_dict['throw_type'] = event.throw_type
+        if hasattr(event, 'throw_distance'):
+            event_dict['throw_distance'] = event.throw_distance
+        if hasattr(event, 'is_break_throw'):
+            event_dict['is_break_throw'] = event.is_break_throw
+        if hasattr(event, 'receiver_id'):
+            event_dict['receiver_id'] = event.receiver_id
+            if hasattr(event, 'receiver') and event.receiver:
+                event_dict['receiver_name'] = event.receiver.name
+    
         events_data.append(event_dict)
     
     return render_template('point/point_detail.html', 
@@ -555,5 +563,6 @@ def point_detail(point_id):
                           game=game, 
                           events=events,
                           events_data=events_data)
+
 
 
