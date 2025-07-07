@@ -1,4 +1,4 @@
-from flask import Markup, Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
@@ -12,6 +12,7 @@ from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required
 from app.models.session import SessionPlan
 from datetime import datetime
+from markupsafe import Markup
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 

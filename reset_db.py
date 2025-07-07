@@ -152,7 +152,7 @@ def reset_database():
                     "our_score": 15,
                     "their_score": 7,
                     "tournament_id": tournament.id,
-                    "video_link": None,
+                    "youtube_link": None,
                     "notes": "First game of the tournament"
                 },
                 {
@@ -161,7 +161,7 @@ def reset_database():
                     "our_score": 15,
                     "their_score": 4,
                     "tournament_id": tournament.id,
-                    "video_link": None,
+                    "youtube_link": None,
                     "notes": "Second game of the tournament"
                 },
                 {
@@ -170,7 +170,7 @@ def reset_database():
                     "our_score": 12,
                     "their_score": 8,
                     "tournament_id": tournament.id,
-                    "video_link": None,
+                    "youtube_link": None,
                     "notes": "Third game of the tournament"
                 },
                 # Day 2 - June 8, 2025
@@ -180,7 +180,7 @@ def reset_database():
                     "our_score": 14,
                     "their_score": 4,
                     "tournament_id": tournament.id,
-                    "video_link": None,
+                    "youtube_link": None,
                     "notes": "Fourth game of the tournament"
                 },
                 {
@@ -189,7 +189,7 @@ def reset_database():
                     "our_score": 13,
                     "their_score": 8,
                     "tournament_id": tournament.id,
-                    "video_link": None,
+                    "youtube_link": None,
                     "notes": "Fifth game of the tournament"
                 },
                 {
@@ -198,7 +198,7 @@ def reset_database():
                     "our_score": 13,
                     "their_score": 9,
                     "tournament_id": tournament.id,
-                    "video_link": None,
+                    "youtube_link": None,
                     "notes": "Final game of the tournament"
                 }
             ]
