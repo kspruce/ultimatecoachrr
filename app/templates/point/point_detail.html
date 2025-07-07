@@ -16,21 +16,25 @@
         z-index: 1; /* Lower z-index for the container */
     }
     
-    /* Field markings */
+    /* Enhanced endzone styling */
     .field-endzone {
-        position: absolute;
-        height: 100%;
-        width: 18%;
-        background-color: rgba(255, 255, 255, 0.2);
-        border: 2px dashed white;
+        position: absolute !important;
+        height: 100% !important; /* Full height */
+        width: 18% !important; /* Standard endzone width */
+        background-color: rgba(255, 255, 255, 0.15) !important; /* Slightly transparent white */
+        border: 2px dashed white !important; /* Dashed white border */
         pointer-events: none;
         z-index: 2;
+        top: 0 !important; /* Ensure it starts at the top */
     }
+    
+    /* Position endzones explicitly */
     .field-endzone.left {
-        left: 0;
+        left: 0 !important; /* Left endzone at left edge */
     }
+    
     .field-endzone.right {
-        right: 0;
+        right: 0 !important; /* Right endzone at right edge */
     }
     
     /* Endzone labels */
@@ -43,14 +47,21 @@
         opacity: 0.7;
         pointer-events: none;
         z-index: 3;
+        text-align: center;
+        width: 18%; /* Match endzone width */
     }
+    
+    /* Position labels in middle of endzones */
     .endzone-label.left {
-        top: 10px;
-        left: 10px;
+        top: 50%;
+        left: 0;
+        transform: translateY(-50%);
     }
+    
     .endzone-label.right {
-        top: 10px;
-        right: 10px;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
     }
     
     .field-midline {
@@ -389,47 +400,88 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Field element found:', field);
     
-    // Add field markings
+    // Add field markings with improved endzone implementation
     function addFieldMarkings() {
-        // Clear any existing markings first
-        const existingMarkings = field.querySelectorAll('.field-endzone, .field-midline, .yard-line, .endzone-label');
-        existingMarkings.forEach(marking => marking.remove());
+        // Clear existing field markings
+        while (field.firstChild) {
+            field.removeChild(field.firstChild);
+        }
         
-        // Add endzones
+        // Create left endzone with inline styles
         const leftEndzone = document.createElement('div');
-        leftEndzone.className = 'field-endzone left';
+        leftEndzone.style.position = 'absolute';
+        leftEndzone.style.left = '0';
+        leftEndzone.style.top = '0';
+        leftEndzone.style.width = '18%';
+        leftEndzone.style.height = '100%';
+        leftEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+        leftEndzone.style.border = '2px dashed white';
+        leftEndzone.style.zIndex = '2';
         field.appendChild(leftEndzone);
         
+        // Create "ENDZONE" text for left endzone
+        const leftText = document.createElement('div');
+        leftText.textContent = 'ENDZONE';
+        leftText.style.position = 'absolute';
+        leftText.style.left = '9%'; // Center in endzone
+        leftText.style.top = '50%';
+        leftText.style.transform = 'translate(-50%, -50%)';
+        leftText.style.color = 'white';
+        leftText.style.fontWeight = 'bold';
+        leftText.style.opacity = '0.7';
+        leftText.style.zIndex = '3';
+        field.appendChild(leftText);
+        
+        // Create right endzone with inline styles
         const rightEndzone = document.createElement('div');
-        rightEndzone.className = 'field-endzone right';
+        rightEndzone.style.position = 'absolute';
+        rightEndzone.style.right = '0';
+        rightEndzone.style.top = '0';
+        rightEndzone.style.width = '18%';
+        rightEndzone.style.height = '100%';
+        rightEndzone.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+        rightEndzone.style.border = '2px dashed white';
+        rightEndzone.style.zIndex = '2';
         field.appendChild(rightEndzone);
         
-        // Add endzone labels
-        const leftLabel = document.createElement('div');
-        leftLabel.className = 'endzone-label left';
-        leftLabel.textContent = 'Endzone';
-        field.appendChild(leftLabel);
-        
-        const rightLabel = document.createElement('div');
-        rightLabel.className = 'endzone-label right';
-        rightLabel.textContent = 'Endzone';
-        field.appendChild(rightLabel);
+        // Create "ENDZONE" text for right endzone
+        const rightText = document.createElement('div');
+        rightText.textContent = 'ENDZONE';
+        rightText.style.position = 'absolute';
+        rightText.style.right = '9%'; // Center in endzone
+        rightText.style.top = '50%';
+        rightText.style.transform = 'translate(50%, -50%)';
+        rightText.style.color = 'white';
+        rightText.style.fontWeight = 'bold';
+        rightText.style.opacity = '0.7';
+        rightText.style.zIndex = '3';
+        field.appendChild(rightText);
         
         // Add midline
         const midline = document.createElement('div');
-        midline.className = 'field-midline';
+        midline.style.position = 'absolute';
+        midline.style.left = '50%';
+        midline.style.top = '0';
+        midline.style.height = '100%';
+        midline.style.width = '2px';
+        midline.style.backgroundColor = 'white';
+        midline.style.transform = 'translateX(-50%)';
         field.appendChild(midline);
         
-        // Add yard lines (every 10 yards)
+        // Add yard lines
         for (let i = 1; i < 10; i++) {
             if (i === 5) continue; // Skip midline
             const yardLine = document.createElement('div');
-            yardLine.className = 'yard-line';
+            yardLine.style.position = 'absolute';
             yardLine.style.left = `${i * 10}%`;
+            yardLine.style.top = '0';
+            yardLine.style.height = '100%';
+            yardLine.style.width = '1px';
+            yardLine.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
             field.appendChild(yardLine);
         }
         
-        console.log('Field markings added');
+        console.log('Field markings added with inline styles');
     }
     
     // Add field markings immediately
@@ -772,7 +824,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Add debugging for endzone elements
+    console.log('Checking field elements:');
+    const endzones = field.querySelectorAll('div[style*="endzone"]');
+    console.log('Endzones found:', endzones.length);
+    endzones.forEach((zone, i) => {
+        console.log(`Endzone ${i}:`, zone);
+        console.log('Style:', zone.style);
+    });
+    
     console.log('Field visualization initialization complete');
 });
 </script>
 {% endblock %}
+
