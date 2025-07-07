@@ -543,13 +543,16 @@
                             <th>Player</th>
                             <th data-toggle="tooltip" title="Games Played">Games</th>
                             <th data-toggle="tooltip" title="Points Played">Points</th>
+                            <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
+                            <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
                             <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
                             <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
-                            <th data-toggle="tooltip" title="Turnovers (Throwaways + Drops)">Turns</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
+                            <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
                             <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
                             <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
                         </tr>
@@ -566,6 +569,8 @@
                             </td>
                             <td>{{ player_stats[player.id].games_played }}</td>
                             <td>{{ player_stats[player.id].points_played }}</td>
+                            <td>{{ player_stats[player.id].o_line_points_played }}</td>
+                            <td>{{ player_stats[player.id].d_line_points_played }}</td>
                             <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
                             <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
                             <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
@@ -575,9 +580,11 @@
                                 {{ player_stats[player.id].completions }}
                                 <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
                             </td>
-                            <td>{{ player_stats[player.id].turnovers }}</td>
+                            <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
+                            <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
                             <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                   player_stats[player.id].blocks - player_stats[player.id].turnovers)|round(1) }}</td>
+                                   player_stats[player.id].blocks - player_stats[player.id].throwaways - 
+                                   player_stats[player.id].drops)|round(1) }}</td>
                             <td>{{ player_stats[player.id].per|round(1) }}</td>
                         </tr>
                         {% endif %}
@@ -610,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize DataTable with improved configuration
     const playerStatsTable = $('#player-stats-table').DataTable({
         pageLength: 25,
-        order: [[10, "desc"]], // Sort by PER by default
+        order: [[14, "desc"]], // Sort by PER by default (now column 14)
         dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
@@ -626,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
             leftColumns: 1
         },
         columnDefs: [
-            { targets: [7], // Completion percentage column
+            { targets: [10], // Completion percentage column
                 render: function(data, type, row) {
                     if (type === 'sort') {
                         const match = data.match(/\((.*?)%\)/);
@@ -637,65 +644,58 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         ]
     });
+
     
     // Add filtering functionality for the player stats table
-    document.querySelectorAll('.stats-filter-btn').forEach(button => {
+    document.querySelectorAll('[data-view]').forEach(button => {
         button.addEventListener('click', function() {
             // Update active button
-            document.querySelectorAll('.stats-filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
             
             const view = this.dataset.view;
+            const table = $('#player-stats-table').DataTable();
             
-            // Clear any existing search and filters
-            playerStatsTable.search('').columns().search('');
-            
-            // Remove any existing custom filters
-            while ($.fn.dataTable.ext.search.length > 0) {
-                $.fn.dataTable.ext.search.pop();
-            }
+            // Clear any existing search
+            table.search('').columns().search('');
             
             if (view === 'offense') {
                 // Custom filtering function for offensive stats
                 $.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
                         // Check goals, assists, hockey assists, or completions
-                        const goals = parseInt(data[3]) || 0;
-                        const assists = parseInt(data[4]) || 0;
-                        const hockey = parseInt(data[5]) || 0;
-                        const breaks = parseInt(data[6]) || 0;
-                        const completions = parseInt(data[7].split('(')[0].trim()) || 0;
+                        const goals = parseInt(data[5]) || 0;
+                        const assists = parseInt(data[6]) || 0;
+                        const hockey = parseInt(data[7]) || 0;
+                        const completions = parseInt(data[10].split('(')[0].trim()) || 0;
                         
-                        return goals > 0 || assists > 0 || hockey > 0 || completions > 0;
+                        return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
                     }
                 );
-                
-                // Highlight offensive columns
-                $('.offensive-stat').addClass('bg-light');
-                $('.defensive-stat').removeClass('bg-light');
-                
             } else if (view === 'defense') {
                 // Custom filtering function for defensive stats
                 $.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
                         // Check blocks
-                        const blocks = parseInt(data[6]) || 0;
+                        const blocks = parseInt(data[9]) || 0;
                         return blocks > 0;
                     }
                 );
-                
-                // Highlight defensive columns
-                $('.defensive-stat').addClass('bg-light');
-                $('.offensive-stat').removeClass('bg-light');
             } else {
-                // Remove highlighting for 'all' view
-                $('.offensive-stat, .defensive-stat').removeClass('bg-light');
+                // Remove any custom filtering for 'all' view
+                $.fn.dataTable.ext.search.pop();
             }
             
             // Redraw the table with the new filter
-            playerStatsTable.draw();
+            table.draw();
+            
+            // Clear the custom filter after drawing
+            if (view !== 'all') {
+                $.fn.dataTable.ext.search.pop();
+            }
         });
     });
+
     
     // Add responsive behavior
     $(window).on('resize', function() {
@@ -1002,10 +1002,10 @@ document.querySelectorAll('[data-view]').forEach(button => {
             $.fn.dataTable.ext.search.push(
                 function(settings, data, dataIndex) {
                     // Check goals, assists, hockey assists, or completions
-                    const goals = parseInt(data[3]) || 0;
-                    const assists = parseInt(data[4]) || 0;
-                    const hockey = parseInt(data[5]) || 0;
-                    const completions = parseInt(data[7].split('(')[0].trim()) || 0;
+                    const goals = parseInt(data[5]) || 0;
+                    const assists = parseInt(data[6]) || 0;
+                    const hockey = parseInt(data[7]) || 0;
+                    const completions = parseInt(data[10].split('(')[0].trim()) || 0;
                     
                     return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
                 }
@@ -1015,7 +1015,7 @@ document.querySelectorAll('[data-view]').forEach(button => {
             $.fn.dataTable.ext.search.push(
                 function(settings, data, dataIndex) {
                     // Check blocks
-                    const blocks = parseInt(data[6]) || 0;
+                    const blocks = parseInt(data[9]) || 0;
                     return blocks > 0;
                 }
             );
@@ -1033,6 +1033,7 @@ document.querySelectorAll('[data-view]').forEach(button => {
         }
     });
 });
+
 
 
 </script>
