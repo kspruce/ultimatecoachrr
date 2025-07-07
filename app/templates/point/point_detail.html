@@ -6,7 +6,7 @@
     .field-container {
         position: relative;
         width: 100%;
-        height: 300px; /* Fixed height */
+        height: 300px !important; /* Force height */
         background-color: #8BC34A;
         border: 2px solid white;
         margin: 20px 0;
@@ -14,34 +14,32 @@
     }
     .field-marker {
         position: absolute;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background-color: red;
         transform: translate(-50%, -50%);
         z-index: 10;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5); /* Add shadow for visibility */
     }
     .field-line {
         position: absolute;
-        height: 2px;
-        background-color: rgba(255, 255, 255, 0.7);
+        height: 3px; /* Make lines thicker */
+        background-color: rgba(0, 0, 0, 0.4); /* Make lines darker */
         transform-origin: left center;
         z-index: 5;
     }
-    .event-badge {
-        font-size: 0.8rem;
-        padding: 0.2rem 0.5rem;
-    }
     .disc {
         position: absolute;
-        width: 15px;
-        height: 15px;
+        width: 20px; /* Make disc larger */
+        height: 20px;
         border-radius: 50%;
         background-color: yellow;
-        border: 2px solid black;
+        border: 3px solid black;
         transform: translate(-50%, -50%);
         z-index: 100;
         transition: all 0.5s ease-in-out;
+        box-shadow: 0 0 10px rgba(255,255,0,0.8); /* Add glow effect */
     }
     .field-endzone {
         position: absolute;
@@ -65,6 +63,11 @@
     }
     .active-event {
         background-color: rgba(255, 255, 0, 0.3);
+    }
+    
+    /* Debug outline for field container */
+    .field-container {
+        outline: 3px solid red;
     }
 </style>
 {% endblock %}
@@ -169,8 +172,13 @@
                     <h5>Point Visualization</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Debug info for field container -->
+                    <div class="alert alert-info mb-3">
+                        Field container dimensions: <span id="field-dimensions">Loading...</span>
+                    </div>
+                    
                     <!-- Important: Set explicit height and width -->
-                    <div class="field-container" id="field" style="height: 300px; width: 100%;">
+                    <div class="field-container" id="field">
                         <!-- Field markings -->
                         <div class="field-endzone left"></div>
                         <div class="field-endzone right"></div>
@@ -308,25 +316,35 @@
         // Field visualization data
         const events = {{ events_data|tojson }};
         
-        // Sort events by sequence (we'll use the order they appear in the table)
-        // This is important since timestamps are missing
-        const eventSequence = [];
-        document.querySelectorAll('#events-table .event-row').forEach(row => {
-            const eventId = parseInt(row.dataset.eventId);
-            const event = events.find(e => e.id === eventId);
-            if (event) {
-                eventSequence.push(event);
-            }
-        });
+        // Sort events into logical sequence for ultimate frisbee
+        function sortEventsInLogicalOrder(events) {
+            // Create a copy to avoid modifying the original
+            const sortedEvents = [...events];
+            
+            // First, separate events by type
+            const goalEvents = sortedEvents.filter(e => e.event_type === 'goal');
+            const assistEvents = sortedEvents.filter(e => e.event_type === 'assist');
+            const hockeyAssistEvents = sortedEvents.filter(e => e.event_type === 'hockey_assist');
+            const otherEvents = sortedEvents.filter(e => 
+                e.event_type !== 'goal' && 
+                e.event_type !== 'assist' && 
+                e.event_type !== 'hockey_assist'
+            );
+            
+            // For other events, sort by field position (from our endzone to theirs)
+            otherEvents.sort((a, b) => a.field_position_x - b.field_position_x);
+            
+            // Combine in logical order: other events, then hockey assist, then assist, then goal
+            return [...otherEvents, ...hockeyAssistEvents, ...assistEvents, ...goalEvents];
+        }
         
-        // Filter for events with position data
-        const eventsWithPosition = eventSequence.filter(e => 
-            e.field_position_x !== null && 
-            e.field_position_y !== null
+        // Filter for events with position data and sort them
+        const eventsWithPosition = sortEventsInLogicalOrder(
+            events.filter(e => e.field_position_x !== null && e.field_position_y !== null)
         );
         
-        console.log('Events in sequence:', eventSequence);
-        console.log('Events with position:', eventsWithPosition);
+        console.log('Original events:', events);
+        console.log('Sorted events with position:', eventsWithPosition);
         
         // Field visualization
         const field = document.getElementById('field');
@@ -340,230 +358,250 @@
         // Force the field to have proper dimensions
         field.style.height = '300px';
         
-        const fieldWidth = field.offsetWidth;
-        const fieldHeight = field.offsetHeight;
-        console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
-        
-        // Check if we have events with position data
-        if (eventsWithPosition.length === 0) {
-            // No position data available
-            const noDataMsg = document.createElement('div');
-            noDataMsg.className = 'alert alert-info m-3';
-            noDataMsg.textContent = 'No position data available for this point';
-            field.appendChild(noDataMsg);
-            return;
-        }
-        
-        // Plot all disc positions
-        eventsWithPosition.forEach(function(event, index) {
-            try {
-                const marker = document.createElement('div');
-                marker.className = 'field-marker';
-                marker.dataset.eventId = event.id;
-                
-                // Scale field positions to fit the container
-                const x = (event.field_position_x / 100) * fieldWidth;
-                const y = (event.field_position_y / 40) * fieldHeight;
-                
-                console.log(`Adding marker for event ${index} at position (${x}, ${y})`);
-                
-                marker.style.left = x + 'px';
-                marker.style.top = y + 'px';
-                
-                // Color based on event type
-                if (event.event_type === 'goal') {
-                    marker.style.backgroundColor = 'green';
-                } else if (event.event_type === 'throwaway') {
-                    marker.style.backgroundColor = 'red';
-                } else if (event.event_type === 'block') {
-                    marker.style.backgroundColor = 'orange';
-                } else {
-                    marker.style.backgroundColor = 'blue';
-                }
-                
-                field.appendChild(marker);
-                
-                // Add tooltip with event info
-                marker.title = `${event.event_type} by ${event.player_name || 'Unknown'}`;
-                
-                // Only draw lines if we have a previous event with position
-                if (index > 0) {
-                    const prevEvent = eventsWithPosition[index - 1];
-                    const prevX = (prevEvent.field_position_x / 100) * fieldWidth;
-                    const prevY = (prevEvent.field_position_y / 40) * fieldHeight;
-                    
-                    const line = document.createElement('div');
-                    line.className = 'field-line';
-                    
-                    // Calculate line length and angle
-                    const dx = x - prevX;
-                    const dy = y - prevY;
-                    const length = Math.sqrt(dx * dx + dy * dy);
-                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-                    
-                    console.log(`Adding line from (${prevX}, ${prevY}) to (${x}, ${y}), length: ${length}, angle: ${angle}`);
-                    
-                    line.style.width = length + 'px';
-                    line.style.left = prevX + 'px';
-                    line.style.top = prevY + 'px';
-                    line.style.transform = `rotate(${angle}deg)`;
-                    
-                    field.appendChild(line);
-                }
-            } catch (err) {
-                console.error('Error plotting event:', err, event);
-            }
-        });
-        
-        // Animation functionality
-        const animateButton = document.getElementById('animate-button');
-        const resetButton = document.getElementById('reset-button');
-        
-        let disc = null;
-        let animationTimeout = null;
-        
-        function resetAnimation() {
-            // Clear any ongoing animation
-            if (animationTimeout) {
-                clearTimeout(animationTimeout);
-                animationTimeout = null;
-            }
+        // Wait a moment for the layout to stabilize
+        setTimeout(() => {
+            const fieldWidth = field.offsetWidth;
+            const fieldHeight = field.offsetHeight;
+            console.log('Field dimensions:', fieldWidth, 'x', fieldHeight);
             
-            // Remove existing disc
-            if (disc) {
-                disc.remove();
-                disc = null;
-            }
+            // Update debug info
+            document.getElementById('field-dimensions').textContent = `${fieldWidth}px × ${fieldHeight}px`;
             
-            // Reset all markers and lines
-            const markers = field.querySelectorAll('.field-marker');
-            const lines = field.querySelectorAll('.field-line');
-            
-            markers.forEach(marker => {
-                marker.style.opacity = '1';
-                marker.style.transform = 'translate(-50%, -50%) scale(1)';
-            });
-            
-            lines.forEach(line => {
-                line.style.opacity = '1';
-            });
-            
-            // Reset event table highlighting
-            document.querySelectorAll('.event-row').forEach(row => {
-                row.classList.remove('active-event');
-            });
-            
-            // Reset animation status
-            if (animationStatus) {
-                animationStatus.textContent = '';
-            }
-        }
-        
-        function animateThrows() {
-            resetAnimation();
-            
-            if (eventsWithPosition.length < 1) {
-                console.log('Not enough events with position data for animation');
+            // Check if we have events with position data
+            if (eventsWithPosition.length === 0) {
+                // No position data available
+                const noDataMsg = document.createElement('div');
+                noDataMsg.className = 'alert alert-info m-3';
+                noDataMsg.textContent = 'No position data available for this point';
+                field.appendChild(noDataMsg);
                 return;
             }
             
-            // Create a disc element
-            disc = document.createElement('div');
-            disc.className = 'disc';
-            field.appendChild(disc);
-            
-            // Start at the first position
-            const firstEvent = eventsWithPosition[0];
-            const firstX = (firstEvent.field_position_x / 100) * fieldWidth;
-            const firstY = (firstEvent.field_position_y / 40) * fieldHeight;
-            
-            // Position disc at first position
-            disc.style.left = firstX + 'px';
-            disc.style.top = firstY + 'px';
-            
-            // Highlight the first marker and table row
-            const firstMarker = field.querySelector(`.field-marker[data-event-id="${firstEvent.id}"]`);
-            if (firstMarker) {
-                firstMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
-            }
-            
-            const firstRow = document.querySelector(`.event-row[data-event-id="${firstEvent.id}"]`);
-            if (firstRow) {
-                firstRow.classList.add('active-event');
-            }
-            
-            // Update animation status
-            if (animationStatus) {
-                animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
-            }
-            
-            // Animate through each position
-            let currentIndex = 1;
-            
-            function moveToNextPosition() {
-                if (currentIndex >= eventsWithPosition.length) {
-                    console.log('Animation complete');
-                    if (animationStatus) {
-                        animationStatus.textContent = 'Animation complete';
+            // Plot all disc positions
+            eventsWithPosition.forEach(function(event, index) {
+                try {
+                    const marker = document.createElement('div');
+                    marker.className = 'field-marker';
+                    marker.dataset.eventId = event.id;
+                    
+                    // Scale field positions to fit the container
+                    const x = (event.field_position_x / 100) * fieldWidth;
+                    const y = (event.field_position_y / 40) * fieldHeight;
+                    
+                    console.log(`Adding marker for event ${index} (${event.event_type}) at position (${x}, ${y})`);
+                    
+                    marker.style.left = x + 'px';
+                    marker.style.top = y + 'px';
+                    
+                    // Color based on event type
+                    if (event.event_type === 'goal') {
+                        marker.style.backgroundColor = 'green';
+                    } else if (event.event_type === 'throwaway') {
+                        marker.style.backgroundColor = 'red';
+                    } else if (event.event_type === 'block') {
+                        marker.style.backgroundColor = 'orange';
+                    } else if (event.event_type === 'assist') {
+                        marker.style.backgroundColor = 'cyan';
+                    } else if (event.event_type === 'hockey_assist') {
+                        marker.style.backgroundColor = 'purple';
+                    } else {
+                        marker.style.backgroundColor = 'blue';
                     }
+                    
+                    field.appendChild(marker);
+                    
+                    // Add tooltip with event info
+                    marker.title = `${event.event_type} by ${event.player_name || 'Unknown'}`;
+                    
+                    // Only draw lines if we have a previous event with position
+                    if (index > 0) {
+                        const prevEvent = eventsWithPosition[index - 1];
+                        const prevX = (prevEvent.field_position_x / 100) * fieldWidth;
+                        const prevY = (prevEvent.field_position_y / 40) * fieldHeight;
+                        
+                        const line = document.createElement('div');
+                        line.className = 'field-line';
+                        
+                        // Calculate line length and angle
+                        const dx = x - prevX;
+                        const dy = y - prevY;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        
+                        console.log(`Adding line from (${prevX}, ${prevY}) to (${x}, ${y}), length: ${length}, angle: ${angle}`);
+                        
+                        line.style.width = length + 'px';
+                        line.style.left = prevX + 'px';
+                        line.style.top = prevY + 'px';
+                        line.style.transform = `rotate(${angle}deg)`;
+                        
+                        field.appendChild(line);
+                    }
+                } catch (err) {
+                    console.error('Error plotting event:', err, event);
+                }
+            });
+            
+            // Animation functionality
+            const animateButton = document.getElementById('animate-button');
+            const resetButton = document.getElementById('reset-button');
+            
+            let disc = null;
+            let animationTimeout = null;
+            
+            function resetAnimation() {
+                // Clear any ongoing animation
+                if (animationTimeout) {
+                    clearTimeout(animationTimeout);
+                    animationTimeout = null;
+                }
+                
+                // Remove existing disc
+                if (disc) {
+                    disc.remove();
+                    disc = null;
+                }
+                
+                // Reset all markers and lines
+                const markers = field.querySelectorAll('.field-marker');
+                const lines = field.querySelectorAll('.field-line');
+                
+                markers.forEach(marker => {
+                    marker.style.opacity = '1';
+                    marker.style.transform = 'translate(-50%, -50%) scale(1)';
+                });
+                
+                lines.forEach(line => {
+                    line.style.opacity = '1';
+                });
+                
+                // Reset event table highlighting
+                document.querySelectorAll('.event-row').forEach(row => {
+                    row.classList.remove('active-event');
+                });
+                
+                // Reset animation status
+                if (animationStatus) {
+                    animationStatus.textContent = '';
+                }
+            }
+            
+            function animateThrows() {
+                resetAnimation();
+                
+                if (eventsWithPosition.length < 1) {
+                    console.log('Not enough events with position data for animation');
                     return;
                 }
                 
-                const nextEvent = eventsWithPosition[currentIndex];
-                const nextX = (nextEvent.field_position_x / 100) * fieldWidth;
-                const nextY = (nextEvent.field_position_y / 40) * fieldHeight;
+                // Create a disc element
+                disc = document.createElement('div');
+                disc.className = 'disc';
+                field.appendChild(disc);
                 
-                console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
+                // Start at the first position
+                const firstEvent = eventsWithPosition[0];
+                const firstX = (firstEvent.field_position_x / 100) * fieldWidth;
+                const firstY = (firstEvent.field_position_y / 40) * fieldHeight;
                 
-                // Move disc to next position
-                disc.style.left = nextX + 'px';
-                disc.style.top = nextY + 'px';
+                // Position disc at first position
+                disc.style.left = firstX + 'px';
+                disc.style.top = firstY + 'px';
                 
-                // Highlight current marker and table row
-                const currentMarker = field.querySelector(`.field-marker[data-event-id="${nextEvent.id}"]`);
-                if (currentMarker) {
-                    currentMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                // Highlight the first marker
+                const firstMarker = field.querySelector(`.field-marker[data-event-id="${firstEvent.id}"]`);
+                if (firstMarker) {
+                    firstMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
                 }
                 
-                // Remove highlight from previous row
-                if (currentIndex > 0) {
-                    const prevEvent = eventsWithPosition[currentIndex - 1];
-                    const prevRow = document.querySelector(`.event-row[data-event-id="${prevEvent.id}"]`);
-                    if (prevRow) {
-                        prevRow.classList.remove('active-event');
+                // Find and highlight the corresponding table row
+                const eventRows = document.querySelectorAll('.event-row');
+                let firstRow = null;
+                eventRows.forEach(row => {
+                    if (parseInt(row.dataset.eventId) === firstEvent.id) {
+                        firstRow = row;
                     }
-                }
+                });
                 
-                // Highlight current row
-                const currentRow = document.querySelector(`.event-row[data-event-id="${nextEvent.id}"]`);
-                if (currentRow) {
-                    currentRow.classList.add('active-event');
-                    // Scroll to the row if needed
-                    currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (firstRow) {
+                    firstRow.classList.add('active-event');
                 }
                 
                 // Update animation status
                 if (animationStatus) {
-                    animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
+                    animationStatus.textContent = `Event 1/${eventsWithPosition.length}: ${firstEvent.event_type}`;
                 }
                 
-                currentIndex++;
-                // Use a consistent 2-second interval between events
+                // Animate through each position
+                let currentIndex = 1;
+                
+                function moveToNextPosition() {
+                    if (currentIndex >= eventsWithPosition.length) {
+                        console.log('Animation complete');
+                        if (animationStatus) {
+                            animationStatus.textContent = 'Animation complete';
+                        }
+                        return;
+                    }
+                    
+                    const nextEvent = eventsWithPosition[currentIndex];
+                    const nextX = (nextEvent.field_position_x / 100) * fieldWidth;
+                    const nextY = (nextEvent.field_position_y / 40) * fieldHeight;
+                    
+                    console.log(`Moving disc to position ${currentIndex + 1}: (${nextX}, ${nextY})`);
+                    
+                    // Move disc to next position
+                    disc.style.left = nextX + 'px';
+                    disc.style.top = nextY + 'px';
+                    
+                    // Highlight current marker
+                    const currentMarker = field.querySelector(`.field-marker[data-event-id="${nextEvent.id}"]`);
+                    if (currentMarker) {
+                        currentMarker.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                    }
+                    
+                    // Remove highlight from previous row
+                    document.querySelectorAll('.event-row').forEach(row => {
+                        row.classList.remove('active-event');
+                    });
+                    
+                    // Find and highlight the corresponding table row
+                    let currentRow = null;
+                    eventRows.forEach(row => {
+                        if (parseInt(row.dataset.eventId) === nextEvent.id) {
+                            currentRow = row;
+                        }
+                    });
+                    
+                    if (currentRow) {
+                        currentRow.classList.add('active-event');
+                        // Scroll to the row if needed
+                        currentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    
+                    // Update animation status
+                    if (animationStatus) {
+                        animationStatus.textContent = `Event ${currentIndex + 1}/${eventsWithPosition.length}: ${nextEvent.event_type}`;
+                    }
+                    
+                    currentIndex++;
+                    // Use a consistent 2-second interval between events
+                    animationTimeout = setTimeout(moveToNextPosition, 2000);
+                }
+                
+                // Start the animation
                 animationTimeout = setTimeout(moveToNextPosition, 2000);
             }
             
-            // Start the animation
-            animationTimeout = setTimeout(moveToNextPosition, 2000);
-        }
-        
-        // Add event listeners
-        if (animateButton) {
-            animateButton.addEventListener('click', animateThrows);
-        }
-        
-        if (resetButton) {
-            resetButton.addEventListener('click', resetAnimation);
-        }
+            // Add event listeners
+            if (animateButton) {
+                animateButton.addEventListener('click', animateThrows);
+            }
+            
+            if (resetButton) {
+                resetButton.addEventListener('click', resetAnimation);
+            }
+        }, 500); // Wait 500ms for layout to stabilize
     });
 </script>
 {% endblock %}
