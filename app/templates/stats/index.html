@@ -852,7 +852,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create force simulation
         const simulation = d3.forceSimulation(connections.nodes)
             .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
-            .force('charge', d3.forceManyBody().strength(-300))
+            .force('charge', d3.forceManyBody().strength(-400)) // repusion strength
             .force('center', d3.forceCenter(width / 2, height / 2));
     
         // Draw links
@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .selectAll('line')
             .data(connections.links)
             .enter().append('line')
-            .attr('stroke-width', d => Math.sqrt(d.value))
+            .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
             .attr('stroke', '#999')
             .attr('stroke-opacity', 0.6);
     
@@ -869,7 +869,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .selectAll('circle')
             .data(connections.nodes)
             .enter().append('circle')
-            .attr('r', 18)  // Increased from 15 to 18 (20% increase)
+            .attr('r', 25)  // increase size here
             .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
                              (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
             .call(d3.drag()
@@ -929,7 +929,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .data(connections.nodes)
             .enter().append('text')
             .text(d => d.jersey_number || '?')  // Use jersey number as the label
-            .attr('font-size', 12)  // Increased from 10 to 12 to match larger nodes
+            .attr('font-size', 14)  // node font size
             .attr('text-anchor', 'middle')  // Center the text
             .attr('dy', 4)  // Slight vertical adjustment
             .attr('fill', 'white');
