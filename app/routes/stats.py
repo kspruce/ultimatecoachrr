@@ -801,9 +801,23 @@ def index():
         # Calculate team summary and stats
         recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
         if recent_games:
+            # Calculate team summary stats
             team_summary = calculate_team_summary(recent_games)
-            # Add this line to include additional metrics
+            
+            # Add additional metrics for radar charts
             team_summary.update(calculate_additional_team_metrics(recent_games))
+            
+            # Calculate previous period stats for comparison
+            prev_games = get_previous_period_games(None, None)  # No filters for index page
+            prev_summary = calculate_team_summary(prev_games)
+            prev_metrics = calculate_additional_team_metrics(prev_games)
+            
+            # Add previous metrics with 'prev_' prefix
+            for key, value in prev_metrics.items():
+                team_summary[f'prev_{key}'] = value
+            for key, value in prev_summary.items():
+                if key not in team_summary:
+                    team_summary[f'prev_{key}'] = value
             
             team_stats = []
             for game in recent_games:
@@ -816,6 +830,7 @@ def index():
         else:
             team_summary = default_context['team_summary']
             team_stats = []
+
 
 
         # Calculate team averages once for all players
