@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include 'partials/breadcrumbs.html' %}
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
@@ -24,6 +25,18 @@
             </div>
         </div>
     </div>
+    
+    {% if game.tournament %}
+    <div class="mb-3">
+      <a href="{{ url_for('tournament.detail', tournament_id=game.tournament.id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to {{ game.tournament.name }}
+      </a>
+      <a href="{{ url_for('game.index', tournament_id=game.tournament.id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-list"></i> All Games in {{ game.tournament.name }}
+      </a>
+    </div>
+    {% endif %}
+
 
     <!-- Game Summary Card -->
     <div class="row mb-4">

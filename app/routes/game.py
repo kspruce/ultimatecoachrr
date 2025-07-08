@@ -10,6 +10,7 @@ from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Event, Pull
 from app.utils.utils import admin_required
+from datetime import datetime
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -47,10 +48,16 @@ def index():
     # Get games and sort by date (most recent first)
     games = query.order_by(Game.date.desc()).all()
     
+    # Get tournaments for quick filters
+    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    
     return render_template('game/index.html', 
                          games=games, 
                          form=form,
-                         delete_form=delete_form)
+                         delete_form=delete_form,
+                         tournaments=tournaments)
+
+
 
 @bp.route('/<int:game_id>')
 @login_required
@@ -251,3 +258,39 @@ def update_players(game_id):
     db.session.commit()
     flash('Players updated successfully!', 'success')
     return redirect(url_for('game.detail', game_id=game_id))
+
+@bp.route('/add_multiple', methods=['GET', 'POST'])
+@login_required
+def add_multiple():
+    tournament_id = request.args.get('tournament_id', type=int)
+    tournament = None
+    if tournament_id:
+        tournament = Tournament.query.get_or_404(tournament_id)
+    
+    if request.method == 'POST':
+        games_data = request.form.to_dict(flat=False)
+        games_count = len(games_data.get('opponent[]', []))
+        
+        for i in range(games_count):
+            game = Game(
+                opponent=games_data['opponent[]'][i],
+                our_score=int(games_data['our_score[]'][i]),
+                their_score=int(games_data['their_score[]'][i]),
+                date=datetime.strptime(games_data['date[]'][i], '%Y-%m-%d').date(),
+                youtube_link=games_data['youtube_link[]'][i] if games_data['youtube_link[]'][i] else None,
+                notes=games_data['notes[]'][i] if games_data['notes[]'][i] else None
+            )
+            
+            if tournament_id:
+                game.tournament_id = tournament_id
+                
+            db.session.add(game)
+        
+        db.session.commit()
+        flash(f'{games_count} games have been added!', 'success')
+        
+        if tournament_id:
+            return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+        return redirect(url_for('game.index'))
+    
+    return render_template('game/add_multiple.html', tournament=tournament)

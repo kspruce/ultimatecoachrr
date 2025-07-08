@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Add Multiple Games</h1>
+            {% if tournament %}
+            <p class="lead">Adding games to tournament: <strong>{{ tournament.name }}</strong></p>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            {% if tournament %}
+            <a href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}" class="btn btn-secondary me-2">Back to Tournament</a>
+            {% endif %}
+            <a href="{{ url_for('game.index') }}" class="btn btn-secondary">Back to Games</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" id="multipleGamesForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div id="gamesContainer">
+                            <!-- Game template will be added here -->
+                            <div class="game-entry card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5>Game 1</h5>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-game" disabled>Remove</button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Date</label>
+                                            <input type="date" name="date[]" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Opponent</label>
+                                            <input type="text" name="opponent[]" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Our Score</label>
+                                            <input type="number" name="our_score[]" class="form-control" min="0" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Their Score</label>
+                                            <input type="number" name="their_score[]" class="form-control" min="0" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">YouTube Link</label>
+                                        <input type="url" name="youtube_link[]" class="form-control">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Notes</label>
+                                        <textarea name="notes[]" class="form-control" rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-3">
+                            <button type="button" id="addGameBtn" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle"></i> Add Another Game
+                            </button>
+                            <button type="submit" class="btn btn-primary">Save All Games</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const gamesContainer = document.getElementById('gamesContainer');
+    const addGameBtn = document.getElementById('addGameBtn');
+    let gameCount = 1;
+    
+    addGameBtn.addEventListener('click', function() {
+        gameCount++;
+        const gameTemplate = document.querySelector('.game-entry').cloneNode(true);
+        gameTemplate.querySelector('h5').textContent = `Game ${gameCount}`;
+        
+        // Clear input values
+        const inputs = gameTemplate.querySelectorAll('input, textarea');
+        inputs.forEach(input => input.value = '');
+        
+        // Enable remove button
+        const removeBtn = gameTemplate.querySelector('.remove-game');
+        removeBtn.disabled = false;
+        removeBtn.addEventListener('click', function() {
+            gameTemplate.remove();
+            updateGameNumbers();
+        });
+        
+        gamesContainer.appendChild(gameTemplate);
+        
+        // Enable all remove buttons if we have more than one game
+        if (gameCount > 1) {
+            document.querySelectorAll('.remove-game').forEach(btn => btn.disabled = false);
+        }
+    });
+    
+    function updateGameNumbers() {
+        const gameEntries = document.querySelectorAll('.game-entry');
+        gameCount = gameEntries.length;
+        
+        gameEntries.forEach((entry, index) => {
+            entry.querySelector('h5').textContent = `Game ${index + 1}`;
+            
+            // Disable remove button if only one game left
+            if (gameCount === 1) {
+                entry.querySelector('.remove-game').disabled = true;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

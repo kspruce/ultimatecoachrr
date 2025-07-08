@@ -7,7 +7,8 @@
             <h1>Games</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('game.add') }}" class="btn btn-primary">Add Game</a>
+            <a href="{{ url_for('game.add') }}" class="btn btn-outline-primary me-2">Add Game</a>
+            <a href="{{ url_for('game.add_multiple') }}" class="btn btn-primary">Add Multiple Games</a>
         </div>
     </div>
 
@@ -41,6 +42,15 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div class="mb-3">
+        <strong>Quick Filters:</strong>
+        <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-secondary">All Games</a>
+        <a href="{{ url_for('game.index', result='win') }}" class="btn btn-sm btn-outline-success">Wins</a>
+        <a href="{{ url_for('game.index', result='loss') }}" class="btn btn-sm btn-outline-danger">Losses</a>
+        {% for tournament in tournaments %}
+            <a href="{{ url_for('game.index', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">{{ tournament.name }}</a>
+        {% endfor %}
     </div>
 
     <div class="row">

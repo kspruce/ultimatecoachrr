@@ -1,0 +1,14 @@
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    {% if request.endpoint == 'tournament.detail' %}
+      <li class="breadcrumb-item"><a href="{{ url_for('tournament.index') }}">Tournaments</a></li>
+      <li class="breadcrumb-item active">{{ tournament.name }}</li>
+    {% elif request.endpoint == 'game.detail' %}
+      <li class="breadcrumb-item"><a href="{{ url_for('game.index') }}">Games</a></li>
+      {% if game.tournament %}
+        <li class="breadcrumb-item"><a href="{{ url_for('tournament.detail', tournament_id=game.tournament.id) }}">{{ game.tournament.name }}</a></li>
+      {% endif %}
+      <li class="breadcrumb-item active">{{ game.opponent }}</li>
+    {% endif %}
+  </ol>
+</nav>
