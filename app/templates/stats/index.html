@@ -214,30 +214,123 @@
         text-align: left;
     }
   
-    .quick-nav-card {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* Enhanced Navigation Styling */
+    .stats-nav-container {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        overflow: hidden;
         transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.08);
     }
     
-    .quick-nav-card:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    .stats-nav-container:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
     }
     
-    .nav-btn {
-        padding: 8px 16px;
-        margin-left: 5px;
-        border-radius: 6px;
-        font-weight: 500;
+    .stats-nav-header {
+        padding: 15px 20px;
+        background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .stats-nav-header h5 {
+        margin: 0;
+        color: #495057;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .stats-nav-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 15px;
+        gap: 15px;
+    }
+    
+    .stats-nav-btn {
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #fff;
         transition: all 0.2s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
     }
     
-    .nav-btn:hover {
-        transform: translateY(-2px);
+    .stats-nav-btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0);
+        transition: background 0.3s ease;
+        z-index: 1;
     }
-
-  
+    
+    .stats-nav-btn:hover::after {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    .stats-nav-btn:active {
+        transform: translateY(2px);
+    }
+    
+    .btn-icon {
+        font-size: 1.8rem;
+        margin-right: 15px;
+        z-index: 2;
+    }
+    
+    .btn-content {
+        display: flex;
+        flex-direction: column;
+        z-index: 2;
+    }
+    
+    .btn-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 3px;
+    }
+    
+    .btn-subtitle {
+        font-size: 0.8rem;
+        opacity: 0.9;
+    }
+    
+    .player-btn {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+    
+    .team-btn {
+        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+    }
+    
+    .games-btn {
+        background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .stats-nav-buttons {
+            flex-direction: column;
+        }
+        
+        .stats-nav-btn {
+            width: 100%;
+        }
+    }
     
 </style>
 {% endblock %}
@@ -250,91 +343,38 @@
             <h1>Team Statistics Dashboard</h1>
             <p class="text-muted">Real-time analytics and performance metrics</p>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary"
-                   data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                   title="View comprehensive team statistics">
-                    <i class="bi bi-bar-chart-fill"></i> Team Stats
-                </a>
-                {% if recent_games %}
-                <a href="{{ url_for('stats_dashboard.game_stats', game_id=recent_games[0].id) }}" 
-                   class="btn btn-outline-primary"
-                   data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                   title="View latest game statistics">
-                    <i class="bi bi-graph-up"></i> Latest Game
-                </a>
-                {% endif %}
-            </div>
-        </div>
     </div>
     <!-- Navigation Section -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-0">Quick Navigation</h5>
+            <div class="stats-nav-container">
+                <div class="stats-nav-header">
+                    <h5><i class="bi bi-compass"></i> Navigation</h5>
+                </div>
+                <div class="stats-nav-buttons">
+                    {% if current_user.player %}
+                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="stats-nav-btn player-btn">
+                        <div class="btn-icon"><i class="bi bi-person-badge"></i></div>
+                        <div class="btn-content">
+                            <span class="btn-title">My Stats</span>
+                            <span class="btn-subtitle">View your personal statistics</span>
                         </div>
-                        <div class="btn-group">
-                            {% if current_user.player %}
-                            <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="btn btn-primary">
-                                <i class="bi bi-person"></i> My Stats
-                            </a>
-                            {% endif %}
-                            <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-info">
-                                <i class="bi bi-people"></i> Team Stats
-                            </a>
-                            <a href="{{ url_for('game.index') }}" class="btn btn-secondary">
-                                <i class="bi bi-controller"></i> Games
-                            </a>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('stats_dashboard.team_stats') }}" class="stats-nav-btn team-btn">
+                        <div class="btn-icon"><i class="bi bi-people-fill"></i></div>
+                        <div class="btn-content">
+                            <span class="btn-title">Team Stats</span>
+                            <span class="btn-subtitle">Team performance analytics</span>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Quick Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <h6 class="stat-label">Season Record</h6>
-                    <div class="stat-value">
-                        {{ team_summary.wins }}-{{ team_summary.losses }}
-                        {% if team_summary.ties > 0 %}-{{ team_summary.ties }}{% endif %}
-                    </div>
-                    <div class="text-muted">
-                        Win Rate: {{ team_summary.win_percentage|round(1) }}%
-                        {% if team_summary.win_percentage > 50 %}
-                        <span class="trend-indicator trend-up"><i class="bi bi-arrow-up"></i></span>
-                        {% else %}
-                        <span class="trend-indicator trend-down"><i class="bi bi-arrow-down"></i></span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <h6 class="stat-label">O-Line Efficiency</h6>
-                    <div class="stat-value">{{ team_summary.o_line_conversion_rate|round(1) }}%</div>
-                    <div class="text-muted">
-                        {{ team_summary.o_line_conversions }}/{{ team_summary.o_line_points }} Points
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <h6 class="stat-label">D-Line Efficiency</h6>
-                    <div class="stat-value">{{ team_summary.d_line_conversion_rate|round(1) }}%</div>
-                    <div class="text-muted">
-                        {{ team_summary.d_line_conversions }}/{{ team_summary.d_line_points }} Points
-                    </div>
+                    </a>
+                    <a href="{{ url_for('game.index') }}" class="stats-nav-btn games-btn">
+                        <div class="btn-icon"><i class="bi bi-controller"></i></div>
+                        <div class="btn-content">
+                            <span class="btn-title">Games</span>
+                            <span class="btn-subtitle">View all game records</span>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
