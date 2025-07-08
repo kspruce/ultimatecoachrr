@@ -802,6 +802,9 @@ def index():
         recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
         if recent_games:
             team_summary = calculate_team_summary(recent_games)
+            # Add this line to include additional metrics
+            team_summary.update(calculate_additional_team_metrics(recent_games))
+            
             team_stats = []
             for game in recent_games:
                 try:
@@ -813,6 +816,7 @@ def index():
         else:
             team_summary = default_context['team_summary']
             team_stats = []
+
 
         # Calculate team averages once for all players
         team_avgs = calculate_team_averages(recent_games)
