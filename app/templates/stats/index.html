@@ -228,6 +228,44 @@
         </div>
     </div>
     
+    <!-- Navigation Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Navigation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <a href="{{ url_for('stats_dashboard.team') }}" class="btn btn-primary btn-lg w-100">
+                                <i class="bi bi-people-fill me-2"></i>Team Stats
+                            </a>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-person-fill me-2"></i>My Stats
+                            </a>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <a href="#" class="btn btn-info btn-lg w-100 dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="bi bi-controller me-2"></i>View Games
+                            </a>
+                            <ul class="dropdown-menu w-100">
+                                {% for game in recent_games %}
+                                <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.game_stats', game_id=game.id) }}">{{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') }})</a></li>
+                                {% endfor %}
+                                {% if not recent_games %}
+                                <li><a class="dropdown-item disabled">No recent games</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Visualization Sections -->
     <div class="row mb-4">
         <div class="col-md-12">
@@ -287,192 +325,7 @@
             </div>
         </div>
     </div>
-    <!-- Optimal Lines -->
-    <div class="row mb-4">
-        <!-- O-Line card -->
-        <div class="col-md-6">
-            <div class="card line-card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Optimal O-Line
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested O-line based on O-point efficiency"></i>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if o_line_players %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Name</th>
-                                    <th>Position</th>
-                                    <th>Gender</th>
-                                    <th>Efficiency</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if o_line_women %}
-                                <!-- Women section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Women (Top {{ o_line_women|length }})</td>
-                                </tr>
-                                {% for player in o_line_women %}
-                                <tr class="player-card o-line female">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>F</td>
-                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if o_line_men %}
-                                <!-- Men section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Men (Top {{ o_line_men|length }})</td>
-                                </tr>
-                                {% for player in o_line_men %}
-                                <tr class="player-card o-line male">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>M</td>
-                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if not o_line_women and not o_line_men %}
-                                <!-- If no gender data, show all players -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Top Players (Gender data unavailable)</td>
-                                </tr>
-                                {% for player in o_line_players %}
-                                <tr class="player-card o-line">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
-                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-center">Not enough data to generate optimal line.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- D-Line card -->
-        <div class="col-md-6">
-            <div class="card line-card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Optimal D-Line
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested D-line based on D point efficiency"></i>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if d_line_players %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Name</th>
-                                    <th>Position</th>
-                                    <th>Gender</th>
-                                    <th>Efficiency</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if d_line_women %}
-                                <!-- Women section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Women (Top {{ d_line_women|length }})</td>
-                                </tr>
-                                {% for player in d_line_women %}
-                                <tr class="player-card d-line female">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>F</td>
-                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if d_line_men %}
-                                <!-- Men section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Men (Top {{ d_line_men|length }})</td>
-                                </tr>
-                                {% for player in d_line_men %}
-                                <tr class="player-card d-line male">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>M</td>
-                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if not d_line_women and not d_line_men %}
-                                <!-- If no gender data, show all players -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Top Players (Gender data unavailable)</td>
-                                </tr>
-                                {% for player in d_line_players %}
-                                <tr class="player-card d-line">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
-                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-center">Not enough data to generate optimal line.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
+
 
 
     <!-- Player Statistics Table -->
