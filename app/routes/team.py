@@ -222,12 +222,23 @@ def delete_player(player_id):
 @bp.route('/player/<int:player_id>')
 @login_required
 def player_detail(player_id):
+    from sqlalchemy import func, desc
+    
     player = Player.query.get_or_404(player_id)
     
-    # Calculate games played directly in the route
-    from sqlalchemy import func
+    # Get recent lineups
+    recent_lineups = player.lineups.order_by(desc('id')).limit(10).all()
     
-    # Get distinct game IDs from the player's lineups
+    # Create a list of unique games from these lineups
+    unique_games = {}
+    recent_games = []
+    for lineup in recent_lineups:
+        game_id = lineup.point.game.id
+        if game_id not in unique_games:
+            unique_games[game_id] = 1
+            recent_games.append(lineup.point.game)
+    
+    # Calculate games played
     subquery = db.session.query(
         LineUp.point_id
     ).join(
@@ -247,8 +258,10 @@ def player_detail(player_id):
         player=player, 
         now=now,
         games_played=games_played,
-        points_played=points_played
+        points_played=points_played,
+        recent_games=recent_games
     )
+
 
 
 @bp.route('/debug')

@@ -127,18 +127,14 @@
                             <h5>Recent Games</h5>
                         </div>
                         <div class="card-body">
-                            {% if player.lineups.count() > 0 %}
-                                {% set unique_games = {} %}
+                            {% if recent_games %}
                                 <ul class="list-group">
-                                {% for lineup in player.lineups.order_by('id desc').limit(10).all() %}
-                                    {% if lineup.point.game.id not in unique_games %}
-                                        {% set _ = unique_games.update({lineup.point.game.id: 1}) %}
-                                        <li class="list-group-item">
-                                            <a href="{{ url_for('game.detail', game_id=lineup.point.game.id) }}">
-                                                vs {{ lineup.point.game.opponent }} ({{ lineup.point.game.date.strftime('%Y-%m-%d') }})
-                                            </a>
-                                        </li>
-                                    {% endif %}
+                                {% for game in recent_games %}
+                                    <li class="list-group-item">
+                                        <a href="{{ url_for('game.detail', game_id=game.id) }}">
+                                            vs {{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') }})
+                                        </a>
+                                    </li>
                                 {% endfor %}
                                 </ul>
                             {% else %}
