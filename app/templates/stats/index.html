@@ -238,12 +238,12 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 text-center">
-                            <a href="{{ url_for('stats_.team') }}" class="btn btn-primary btn-lg w-100">
+                            <a href="{{ url_for('stats.team') }}" class="btn btn-primary btn-lg w-100">
                                 <i class="bi bi-people-fill me-2"></i>Team Stats
                             </a>
                         </div>
                         <div class="col-md-4 text-center">
-                            <a href="{{ url_for('stats_.player_stats', player_id=current_user.player.id) }}" class="btn btn-success btn-lg w-100">
+                            <a href="{{ url_for('stats.player_stats', player_id=current_user.player.id) }}" class="btn btn-success btn-lg w-100">
                                 <i class="bi bi-person-fill me-2"></i>My Stats
                             </a>
                         </div>
@@ -253,7 +253,7 @@
                             </a>
                             <ul class="dropdown-menu w-100">
                                 {% for game in recent_games %}
-                                <li><a class="dropdown-item" href="{{ url_for('stats_.game_stats', game_id=game.id) }}">{{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') }})</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('stats.game_stats', game_id=game.id) }}">{{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') }})</a></li>
                                 {% endfor %}
                                 {% if not recent_games %}
                                 <li><a class="dropdown-item disabled">No recent games</a></li>
@@ -369,7 +369,7 @@
                         {% if player.id in player_stats %}
                         <tr>
                             <td>
-                                <a href="{{ url_for('stats_.player_stats', player_id=player.id) }}">
+                                <a href="{{ url_for('stats.player_stats', player_id=player.id) }}">
                                     {{ player.name }}
                                     <small class="text-muted">#{{ player.jersey_number }}</small>
                                 </a>
