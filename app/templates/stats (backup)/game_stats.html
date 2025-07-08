@@ -175,6 +175,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
+                        <!-- Update player stats table -->
                         <table class="table table-striped" id="player-stats-table">
                             <thead>
                                 <tr>
@@ -182,11 +183,13 @@
                                     <th>Points</th>
                                     <th>Goals</th>
                                     <th>Assists</th>
+                                    <th>Hockey Assists</th>
                                     <th>Blocks</th>
                                     <th>Completions</th>
                                     <th>Turnovers</th>
                                     <th>+/-</th>
                                     <th>PER</th>
+                                    <th>Impact Score</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -200,11 +203,16 @@
                                     <td>{{ item.stats.points_played }}</td>
                                     <td>{{ item.stats.goals }}</td>
                                     <td>{{ item.stats.assists }}</td>
+                                    <td>{{ item.stats.hockey_assists }}</td>
                                     <td>{{ item.stats.blocks }}</td>
-                                    <td>{{ item.stats.completions }}</td>
-                                    <td>{{ item.stats.throwaways + item.stats.drops }}</td>
-                                    <td>{{ item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.throwaways - item.stats.drops }}</td>
+                                    <td>
+                                        {{ item.stats.completions }}
+                                        <small class="text-muted">({{ item.stats.completion_rate|round(1) }}%)</small>
+                                    </td>
+                                    <td>{{ item.stats.turnovers }}</td>
+                                    <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
                                     <td>{{ item.stats.per|round(1) }}</td>
+                                    <td>{{ calculate_impact_score(item.stats)|round(1) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -215,6 +223,43 @@
         </div>
     </div>
 </div>
+
+
+<!-- Improve heatmap controls -->
+<div class="heatmap-controls mb-3">
+    <div class="btn-group">
+        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
+        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
+        <button class="btn btn-outline-primary" data-filter="catches">Catches</button>
+        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
+    </div>
+    <div class="form-check form-switch ms-3">
+        <input class="form-check-input" type="checkbox" id="showTrajectories">
+        <label class="form-check-label" for="showTrajectories">Show Trajectories</label>
+    </div>
+</div>
+
+<!-- Add error states -->
+<script>
+function initializeHeatmap() {
+    try {
+        const heatmapData = {{ heatmap_data|safe }};
+        if (!heatmapData || !Array.isArray(heatmapData)) {
+            throw new Error("Invalid heatmap data");
+        }
+        
+        const heatmap = createHeatmap(heatmapData);
+        setupHeatmapFilters(heatmap);
+    } catch (e) {
+        console.error("Heatmap initialization error:", e);
+        document.getElementById('field-heatmap').innerHTML = `
+            <div class="alert alert-warning">
+                Unable to load heatmap visualization. Please try refreshing the page.
+            </div>
+        `;
+    }
+}
+</script>
 {% endblock %}
 
 {% block scripts %}
