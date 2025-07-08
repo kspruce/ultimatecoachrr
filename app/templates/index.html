@@ -73,6 +73,8 @@
     .activity-icon.game { background-color: #e74c3c; }
     .activity-icon.practice { background-color: #2ecc71; }
     .activity-icon.stats { background-color: #f1c40f; }
+    .activity-icon.theory { background-color: #9b59b6; }
+    .activity-icon.playbook { background-color: #3498db; }
 
     .upcoming-event {
         border-left: 4px solid;
@@ -89,6 +91,13 @@
     .upcoming-event.game { border-color: #e74c3c; }
     .upcoming-event.practice { border-color: #2ecc71; }
     .upcoming-event.tournament { border-color: #f1c40f; }
+    
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
 </style>
 {% endblock %}
 
@@ -165,11 +174,46 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">Team Stats</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('game.index') }}">Game Stats</a></li>
+                            {% if current_user.is_authenticated and current_user.player %}
+                            <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}">Your Stats</a></li>
+                            {% endif %}
                         </ul>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-book-fill me-2"></i>
+                        Playbook
+                    </h5>
+                    <p class="card-text">Create, organize and review team plays and formations.</p>
+                    <a href="{{ url_for('playbook.index') }}" class="btn btn-primary">
+                        View Playbook
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-mortarboard-fill me-2"></i>
+                        Theory
+                    </h5>
+                    <p class="card-text">Access educational content and learn Ultimate Frisbee concepts.</p>
+                    <a href="{{ url_for('theory.index') }}" class="btn btn-primary">
+                        Learn Theory
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Third Row Feature Cards -->
+    <div class="row mt-2">
         <div class="col-md-4">
             <div class="card feature-card mb-4">
                 <div class="card-body">
@@ -194,6 +238,20 @@
                     <p class="card-text">Track information about opposing teams and players for game preparation.</p>
                     <a href="{{ url_for('scouting.index') }}" class="btn btn-primary">
                         View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-flag-fill me-2"></i>
+                        Tournaments
+                    </h5>
+                    <p class="card-text">Manage tournament schedules, results, and team participation.</p>
+                    <a href="{{ url_for('tournament.index') }}" class="btn btn-primary">
+                        View Tournaments
                     </a>
                 </div>
             </div>
@@ -238,9 +296,47 @@
                 </div>
                 <div class="col-md-3">
                     <div class="d-grid gap-2">
+                        <a href="{{ url_for('playbook.add_play') }}" class="btn btn-outline-primary quick-action-btn">
+                            <i class="bi bi-diagram-3-fill me-2"></i>
+                            Add New Play
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Second row of quick actions -->
+            <div class="row mt-2">
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
                         <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary quick-action-btn">
                             <i class="bi bi-graph-up me-2"></i>
                             View Team Stats
+                        </a>
+                    </div>
+                </div>
+                {% if current_user.player %}
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('team.player_detail', player_id=current_user.player.id) }}" class="btn btn-outline-primary quick-action-btn">
+                            <i class="bi bi-person-badge me-2"></i>
+                            Your Profile
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('theory.index') }}" class="btn btn-outline-primary quick-action-btn">
+                            <i class="bi bi-book me-2"></i>
+                            Theory Library
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('tournament.index') }}" class="btn btn-outline-primary quick-action-btn">
+                            <i class="bi bi-trophy me-2"></i>
+                            Tournaments
                         </a>
                     </div>
                 </div>
@@ -368,6 +464,45 @@
                 {% endif %}
             </div>
         </div>
+        
+        <!-- Player Quick Links (if user has a linked player) -->
+        {% if current_user.player %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Your Player Dashboard
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="flex-shrink-0">
+                        <div class="bg-primary text-white rounded-circle p-3">
+                            <i class="bi bi-person-fill fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="mb-1">{{ current_user.player.name }}</h5>
+                        <p class="text-muted mb-0">{{ current_user.player.position or 'No position set' }}</p>
+                    </div>
+                </div>
+                <div class="list-group">
+                    <a href="{{ url_for('team.player_detail', player_id=current_user.player.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-person-vcard me-2"></i> Your Profile</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-graph-up me-2"></i> Your Stats</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('session.player_attendance', player_id=current_user.player.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-calendar-check me-2"></i> Your Attendance</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% else %}
