@@ -801,24 +801,26 @@ def index():
         # Calculate team summary and stats
         recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
         if recent_games:
-            # Calculate team summary stats
+            # Calculate team summary stats - SAME AS TEAM_STATS ROUTE
             team_summary = calculate_team_summary(recent_games)
             
-            # Add additional metrics for radar charts
+            # Add additional metrics for radar charts - SAME AS TEAM_STATS ROUTE
             team_summary.update(calculate_additional_team_metrics(recent_games))
             
-            # Calculate previous period stats for comparison
-            prev_games = get_previous_period_games(None, None)  # No filters for index page
+            # Calculate previous period stats for comparison - SAME AS TEAM_STATS ROUTE
+            # For index, we don't have filters, so we'll get previous games based on dates
+            prev_games = recent_games[1:] if len(recent_games) > 1 else []
             prev_summary = calculate_team_summary(prev_games)
             prev_metrics = calculate_additional_team_metrics(prev_games)
             
-            # Add previous metrics with 'prev_' prefix
+            # Add previous metrics with 'prev_' prefix - SAME AS TEAM_STATS ROUTE
             for key, value in prev_metrics.items():
                 team_summary[f'prev_{key}'] = value
             for key, value in prev_summary.items():
                 if key not in team_summary:
                     team_summary[f'prev_{key}'] = value
             
+            # Calculate game stats
             team_stats = []
             for game in recent_games:
                 try:
