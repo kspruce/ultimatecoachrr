@@ -251,12 +251,12 @@
                 <div class="card-body">
                     <h6 class="stat-label">Season Record</h6>
                     <div class="stat-value">
-                        {{ team_summary.wins }}-{{ team_summary.losses }}
-                        {% if team_summary.ties > 0 %}-{{ team_summary.ties }}{% endif %}
+                        {{ team_summary.wins|default(0) }}-{{ team_summary.losses|default(0) }}
+                        {% if team_summary.ties|default(0) > 0 %}-{{ team_summary.ties }}{% endif %}
                     </div>
                     <div class="text-muted">
-                        Win Rate: {{ team_summary.win_percentage|round(1) }}%
-                        {% if team_summary.win_percentage > 50 %}
+                        Win Rate: {{ team_summary.win_percentage|default(0)|round(1) }}%
+                        {% if team_summary.win_percentage|default(0) > 50 %}
                         <span class="trend-indicator trend-up"><i class="bi bi-arrow-up"></i></span>
                         {% else %}
                         <span class="trend-indicator trend-down"><i class="bi bi-arrow-down"></i></span>
@@ -269,9 +269,9 @@
             <div class="card stat-card">
                 <div class="card-body">
                     <h6 class="stat-label">O-Line Efficiency</h6>
-                    <div class="stat-value">{{ team_summary.o_line_conversion_rate|round(1) }}%</div>
+                    <div class="stat-value">{{ team_summary.o_line_conversion_rate|default(0)|round(1) }}%</div>
                     <div class="text-muted">
-                        {{ team_summary.o_line_conversions }}/{{ team_summary.o_line_points }} Points
+                        {{ team_summary.o_line_conversions|default(0) }}/{{ team_summary.o_line_points|default(0) }} Points
                     </div>
                 </div>
             </div>
@@ -280,9 +280,9 @@
             <div class="card stat-card">
                 <div class="card-body">
                     <h6 class="stat-label">D-Line Efficiency</h6>
-                    <div class="stat-value">{{ team_summary.d_line_conversion_rate|round(1) }}%</div>
+                    <div class="stat-value">{{ team_summary.d_line_conversion_rate|default(0)|round(1) }}%</div>
                     <div class="text-muted">
-                        {{ team_summary.d_line_conversions }}/{{ team_summary.d_line_points }} Points
+                        {{ team_summary.d_line_conversions|default(0) }}/{{ team_summary.d_line_points|default(0) }} Points
                     </div>
                 </div>
             </div>
