@@ -47,7 +47,7 @@
         max-width: 100%;
         background: #f8f9fa;
         border-radius: 0;
-        margin-bottom: 0;
+        margin-bottom: 1rem;
     }
 
     .embed-container iframe {
@@ -97,9 +97,18 @@
         font-weight: 600;
     }
     
-    /* Play video preview */
-    .play-video {
-        margin-bottom: 1rem;
+    /* Play details */
+    .play-details {
+        padding-top: 1rem;
+    }
+    
+    /* Chevron animation */
+    .rotate-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    [aria-expanded="true"] .rotate-icon {
+        transform: rotate(180deg);
     }
 </style>
 {% endblock %}
@@ -200,12 +209,6 @@
                                 <h5 class="mb-0">{{ formation.name }}</h5>
                             </div>
                             
-                            {% if formation.ultiplay_embed %}
-                            <div class="embed-container">
-                                {{ formation.ultiplay_embed|safe }}
-                            </div>
-                            {% endif %}
-                            
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
@@ -214,6 +217,19 @@
                                     <small class="text-muted">Used in {{ formation.plays|length if formation.plays else 0 }} plays</small>
                                 </div>
                                 <p class="card-text">{{ formation.description|truncate(150) }}</p>
+                                
+                                {% if formation.ultiplay_embed %}
+                                <button class="btn btn-sm btn-outline-secondary mt-2" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#conceptVideo{{ formation.id }}">
+                                    <i class="fas fa-play me-1"></i> View Animation
+                                </button>
+                                
+                                <div class="collapse mt-3" id="conceptVideo{{ formation.id }}">
+                                    <div class="embed-container">
+                                        {{ formation.ultiplay_embed|safe }}
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
                             
                             <div class="card-footer bg-transparent">
@@ -290,48 +306,42 @@
                                 {% endif %}
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
-                                    <i class="fas fa-chevron-down"></i>
+                                    <i class="fas fa-chevron-down rotate-icon"></i>
                                 </button>
                             </div>
                         </div>
                         
-                        {% if play.ultiplay_embed %}
-                        <div class="play-video">
-                            <div class="embed-container">
-                                {{ play.ultiplay_embed|safe }}
-                            </div>
-                        </div>
-                        {% endif %}
-                        
                         <div class="collapse" id="playDetails{{ play.id }}">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-12">
-                                        <h6>Description</h6>
-                                        <p>{{ play.description }}</p>
-                                        
-                                        {% if play.tags %}
-                                        <h6>Tags</h6>
-                                        <div class="mb-3">
-                                            {% for tag in play.tags %}
-                                            <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                                            {% endfor %}
-                                        </div>
-                                        {% endif %}
-                                        
-                                        <div class="d-flex mt-3">
-                                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                               class="btn btn-sm btn-primary me-2">Full Details</a>
-                                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                               class="btn btn-sm btn-outline-secondary me-2">Edit</a>
-                                            {% if current_user.is_admin %}
-                                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                                        data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                                    Delete
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
+                            <div class="card-body play-details">
+                                {% if play.ultiplay_embed %}
+                                <div class="embed-container">
+                                    {{ play.ultiplay_embed|safe }}
+                                </div>
+                                {% endif %}
+                                
+                                <h6>Description</h6>
+                                <p>{{ play.description }}</p>
+                                
+                                {% if play.tags %}
+                                <h6>Tags</h6>
+                                <div class="mb-3">
+                                    {% for tag in play.tags %}
+                                    <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex mt-3">
+                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
+                                       class="btn btn-sm btn-primary me-2">Full Details</a>
+                                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                                       class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                    {% if current_user.is_admin %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
+                                            Delete
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -388,48 +398,42 @@
                                 {% endif %}
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
-                                    <i class="fas fa-chevron-down"></i>
+                                    <i class="fas fa-chevron-down rotate-icon"></i>
                                 </button>
                             </div>
                         </div>
                         
-                        {% if play.ultiplay_embed %}
-                        <div class="play-video">
-                            <div class="embed-container">
-                                {{ play.ultiplay_embed|safe }}
-                            </div>
-                        </div>
-                        {% endif %}
-                        
                         <div class="collapse" id="playDetails{{ play.id }}">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-12">
-                                        <h6>Description</h6>
-                                        <p>{{ play.description }}</p>
-                                        
-                                        {% if play.tags %}
-                                        <h6>Tags</h6>
-                                        <div class="mb-3">
-                                            {% for tag in play.tags %}
-                                            <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                                            {% endfor %}
-                                        </div>
-                                        {% endif %}
-                                        
-                                        <div class="d-flex mt-3">
-                                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                               class="btn btn-sm btn-primary me-2">Full Details</a>
-                                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                               class="btn btn-sm btn-outline-secondary me-2">Edit</a>
-                                            {% if current_user.is_admin %}
-                                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                                        data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                                    Delete
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
+                            <div class="card-body play-details">
+                                {% if play.ultiplay_embed %}
+                                <div class="embed-container">
+                                    {{ play.ultiplay_embed|safe }}
+                                </div>
+                                {% endif %}
+                                
+                                <h6>Description</h6>
+                                <p>{{ play.description }}</p>
+                                
+                                {% if play.tags %}
+                                <h6>Tags</h6>
+                                <div class="mb-3">
+                                    {% for tag in play.tags %}
+                                    <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="d-flex mt-3">
+                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
+                                       class="btn btn-sm btn-primary me-2">Full Details</a>
+                                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                                       class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                    {% if current_user.is_admin %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
+                                            Delete
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
