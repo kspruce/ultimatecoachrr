@@ -13,13 +13,13 @@
     }
     
     /* Card enhancements */
-    .formation-card {
+    .concept-card {
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         border: none;
         box-shadow: 0 2px 5px rgba(0,0,0,0.08);
     }
     
-    .formation-card:hover {
+    .concept-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
@@ -96,6 +96,11 @@
         font-size: 2rem;
         font-weight: 600;
     }
+    
+    /* Play video preview */
+    .play-video {
+        margin-bottom: 1rem;
+    }
 </style>
 {% endblock %}
 
@@ -112,7 +117,7 @@
                         <i class="fas fa-plus"></i> Add Play
                     </a>
                     <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-light mx-2">
-                        <i class="fas fa-plus"></i> Add Formation
+                        <i class="fas fa-plus"></i> Add Team Concept
                     </a>
                 {% endif %}
             </div>
@@ -121,15 +126,15 @@
     
     <!-- Stats Overview -->
     <div class="row mb-4">
-        <div class="col-md-3 col-6 mb-3">
+        <div class="col-md-4 col-6 mb-3">
             <div class="card text-center h-100 stats-card">
                 <div class="card-body">
                     <h3 class="text-primary">{{ formations|length }}</h3>
-                    <p class="card-text">Formations</p>
+                    <p class="card-text">Team Concepts</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-6 mb-3">
+        <div class="col-md-4 col-6 mb-3">
             <div class="card text-center h-100 stats-card">
                 <div class="card-body">
                     <h3 class="text-success">{{ offensive_plays|length }}</h3>
@@ -137,19 +142,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 col-6 mb-3">
+        <div class="col-md-4 col-6 mb-3">
             <div class="card text-center h-100 stats-card">
                 <div class="card-body">
                     <h3 class="text-danger">{{ defensive_plays|length }}</h3>
                     <p class="card-text">Defensive Plays</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6 mb-3">
-            <div class="card text-center h-100 stats-card">
-                <div class="card-body">
-                    <h3 class="text-info">{{ all_tags|length if all_tags is defined else 0 }}</h3>
-                    <p class="card-text">Categories</p>
                 </div>
             </div>
         </div>
@@ -159,7 +156,7 @@
     <div class="row mb-4">
         <div class="col-md-8 mb-3 mb-md-0">
             <div class="input-group">
-                <input type="text" class="form-control" id="playSearch" placeholder="Search plays and formations...">
+                <input type="text" class="form-control" id="playSearch" placeholder="Search plays and concepts...">
                 <button class="btn btn-outline-secondary" type="button">
                     <i class="fas fa-search"></i>
                 </button>
@@ -180,7 +177,7 @@
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="playbookTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="formations-tab" data-bs-toggle="tab" data-bs-target="#formations" type="button" role="tab">Formations</button>
+            <button class="nav-link active" id="concepts-tab" data-bs-toggle="tab" data-bs-target="#concepts" type="button" role="tab">Team Concepts</button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="offense-tab" data-bs-toggle="tab" data-bs-target="#offense" type="button" role="tab">Offense</button>
@@ -192,13 +189,13 @@
     
     <!-- Tab Content -->
     <div class="tab-content" id="playbookTabContent">
-        <!-- Formations Tab -->
-        <div class="tab-pane fade show active" id="formations" role="tabpanel" aria-labelledby="formations-tab">
+        <!-- Team Concepts Tab -->
+        <div class="tab-pane fade show active" id="concepts" role="tabpanel" aria-labelledby="concepts-tab">
             <div class="row g-4">
                 {% if formations %}
                     {% for formation in formations %}
                     <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 formation-card">
+                        <div class="card h-100 concept-card">
                             <div class="card-header bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} text-white">
                                 <h5 class="mb-0">{{ formation.name }}</h5>
                             </div>
@@ -214,7 +211,7 @@
                                     <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
                                         {{ formation.type|title }}
                                     </span>
-                                    <small class="text-muted">Used in {{ formation.plays|length }} plays</small>
+                                    <small class="text-muted">Used in {{ formation.plays|length if formation.plays else 0 }} plays</small>
                                 </div>
                                 <p class="card-text">{{ formation.description|truncate(150) }}</p>
                             </div>
@@ -239,14 +236,14 @@
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title">Delete Formation</h5>
+                                            <h5 class="modal-title">Delete Team Concept</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <p>Are you sure you want to delete the formation "{{ formation.name }}"?</p>
+                                            <p>Are you sure you want to delete the team concept "{{ formation.name }}"?</p>
                                             {% if formation.plays %}
                                             <div class="alert alert-warning">
-                                                Warning: This formation is used in {{ formation.plays|length }} play(s).
+                                                Warning: This concept is used in {{ formation.plays|length }} play(s).
                                                 Deleting it will remove it from these plays.
                                             </div>
                                             {% endif %}
@@ -255,7 +252,7 @@
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                             <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-danger">Delete Formation</button>
+                                                <button type="submit" class="btn btn-danger">Delete Concept</button>
                                             </form>
                                         </div>
                                     </div>
@@ -267,10 +264,10 @@
                 {% else %}
                     <div class="col-12">
                         <div class="alert alert-info text-center">
-                            <p>No formations added yet.</p>
+                            <p>No team concepts added yet.</p>
                             {% if current_user.is_admin %}
                                 <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-primary mt-2">
-                                    <i class="fas fa-plus"></i> Add your first formation
+                                    <i class="fas fa-plus"></i> Add your first team concept
                                 </a>
                             {% endif %}
                         </div>
@@ -298,19 +295,18 @@
                             </div>
                         </div>
                         
+                        {% if play.ultiplay_embed %}
+                        <div class="play-video">
+                            <div class="embed-container">
+                                {{ play.ultiplay_embed|safe }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         <div class="collapse" id="playDetails{{ play.id }}">
                             <div class="card-body">
                                 <div class="row">
-                                    {% if play.ultiplay_embed %}
-                                    <div class="col-md-7">
-                                        <div class="embed-container">
-                                            {{ play.ultiplay_embed|safe }}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-5">
-                                    {% else %}
                                     <div class="col-12">
-                                    {% endif %}
                                         <h6>Description</h6>
                                         <p>{{ play.description }}</p>
                                         
@@ -397,19 +393,18 @@
                             </div>
                         </div>
                         
+                        {% if play.ultiplay_embed %}
+                        <div class="play-video">
+                            <div class="embed-container">
+                                {{ play.ultiplay_embed|safe }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         <div class="collapse" id="playDetails{{ play.id }}">
                             <div class="card-body">
                                 <div class="row">
-                                    {% if play.ultiplay_embed %}
-                                    <div class="col-md-7">
-                                        <div class="embed-container">
-                                            {{ play.ultiplay_embed|safe }}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-5">
-                                    {% else %}
                                     <div class="col-12">
-                                    {% endif %}
                                         <h6>Description</h6>
                                         <p>{{ play.description }}</p>
                                         
@@ -496,9 +491,9 @@ document.addEventListener('DOMContentLoaded', function() {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
             
-            // Search formations
-            const formationCards = document.querySelectorAll('.formation-card');
-            formationCards.forEach(card => {
+            // Search team concepts
+            const conceptCards = document.querySelectorAll('.concept-card');
+            conceptCards.forEach(card => {
                 const title = card.querySelector('h5').textContent.toLowerCase();
                 const description = card.querySelector('.card-text')?.textContent.toLowerCase() || '';
                 const isMatch = title.includes(searchTerm) || description.includes(searchTerm);
