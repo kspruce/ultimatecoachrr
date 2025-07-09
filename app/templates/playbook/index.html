@@ -3,6 +3,42 @@
 {% block styles %}
 {{ super() }}
 <style>
+    /* Hero section with gradient background */
+    .hero-section {
+        background: linear-gradient(135deg, #13547a 0%, #80d0c7 100%);
+        color: white;
+        padding: 3rem 0;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    /* Card enhancements */
+    .formation-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    }
+    
+    .formation-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* Play cards */
+    .play-card {
+        border-left: 4px solid #007bff;
+        transition: box-shadow 0.2s ease;
+    }
+    
+    .play-card:hover {
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .play-card.defense {
+        border-left-color: #dc3545;
+    }
+    
+    /* Embed container */
     .embed-container {
         position: relative;
         padding-bottom: 56.25%;
@@ -10,7 +46,8 @@
         overflow: hidden;
         max-width: 100%;
         background: #f8f9fa;
-        border-radius: 4px 4px 0 0;
+        border-radius: 0;
+        margin-bottom: 0;
     }
 
     .embed-container iframe {
@@ -21,301 +58,422 @@
         height: 100%;
         border: 0;
     }
-
-    .video-placeholder {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6c757d;
-        text-align: center;
-    }
-
-    .card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
+    
+    /* Badge styling */
     .badge {
         margin-right: 0.25rem;
         margin-bottom: 0.25rem;
     }
-
-    .list-group-item {
-        transition: background-color 0.2s ease;
+    
+    /* Tab styling */
+    .nav-tabs .nav-link {
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
     }
-
-    .list-group-item:hover {
-        background-color: #f8f9fa;
+    
+    .nav-tabs .nav-link.active {
+        border-bottom: 3px solid #007bff;
+    }
+    
+    /* Animation for content */
+    .tab-pane {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    /* Stats cards */
+    .stats-card {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    }
+    
+    .stats-card h3 {
+        font-size: 2rem;
+        font-weight: 600;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Team Playbook</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
+    <!-- Hero Section with Overview -->
+    <div class="row mb-5">
+        <div class="col-12 text-center py-4 hero-section">
+            <h1 class="display-4">Team Playbook</h1>
+            <p class="lead">Our offensive and defensive strategies in one place</p>
+            <div class="mt-3">
                 {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
+                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-light mx-2">
                         <i class="fas fa-plus"></i> Add Play
                     </a>
-                    <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-primary">
+                    <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-light mx-2">
                         <i class="fas fa-plus"></i> Add Formation
                     </a>
                 {% endif %}
             </div>
         </div>
     </div>
-
-    <!-- Formations Section -->
+    
+    <!-- Stats Overview -->
     <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Formations</h5>
-                </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100 stats-card">
                 <div class="card-body">
-                    {% if formations %}
-                    <div class="row">
-                        {% for formation in formations %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                {% if formation.ultiplay_embed %}
-                                <div class="embed-container">
-                                    {{ formation.ultiplay_embed|safe }}
-                                </div>
-                                {% endif %}
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ formation.name }}</h5>
-                                    <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
-                                        {{ formation.type|title }}
-                                    </span>
-                                    <p class="card-text mt-2">{{ formation.description|truncate(100) }}</p>
-                                </div>
-                                <div class="card-footer">
-                                    <div class="btn-group w-100">
-                                        <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
-                                           class="btn btn-sm btn-outline-primary">Edit</a>
-                                        {% if current_user.is_admin %}
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-outline-danger"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#deleteFormationModal{{ formation.id }}">Delete</button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {% if current_user.is_admin %}
-                                <!-- Formation Delete Modal -->
-                                <div class="modal fade" id="deleteFormationModal{{ formation.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Delete Formation</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p>Are you sure you want to delete the formation "{{ formation.name }}"?</p>
-                                                {% if formation.plays %}
-                                                <div class="alert alert-warning">
-                                                    Warning: This formation is used in {{ formation.plays|length }} play(s).
-                                                    Deleting it will remove it from these plays.
-                                                </div>
-                                                {% endif %}
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                    <button type="submit" class="btn btn-danger">Delete Formation</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-center">
-                        No formations added yet. 
-                        {% if current_user.is_admin %}
-                            <a href="{{ url_for('playbook.add_formation') }}">Add your first formation</a>
-                        {% endif %}
-                    </p>
-                    {% endif %}
+                    <h3 class="text-primary">{{ formations|length }}</h3>
+                    <p class="card-text">Formations</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100 stats-card">
+                <div class="card-body">
+                    <h3 class="text-success">{{ offensive_plays|length }}</h3>
+                    <p class="card-text">Offensive Plays</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100 stats-card">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ defensive_plays|length }}</h3>
+                    <p class="card-text">Defensive Plays</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100 stats-card">
+                <div class="card-body">
+                    <h3 class="text-info">{{ all_tags|length if all_tags is defined else 0 }}</h3>
+                    <p class="card-text">Categories</p>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Plays Section -->
-    <div class="row">
-        <!-- Offensive Plays -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Offensive Plays</h5>
-                </div>
-                <div class="card-body">
-                    {% if offensive_plays %}
-                    <div class="list-group">
-                        {% for play in offensive_plays %}
-                        <div class="list-group-item">
-                            {% if play.ultiplay_embed %}
-                            <div class="embed-container mb-3">
-                                {{ play.ultiplay_embed|safe }}
-                            </div>
-                            {% endif %}
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
-                                        {{ play.name }}
-                                    </a>
-                                </h6>
-                                {% if play.formation %}
-                                <small class="text-muted">{{ play.formation.name }}</small>
-                                {% endif %}
-                            </div>
-                            {% if play.tags %}
-                            <div class="mb-2">
-                                {% for tag in play.tags %}
-                                <span class="badge bg-secondary">{{ tag.name }}</span>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                   class="btn btn-outline-secondary">Edit</a>
-                                {% if current_user.is_admin %}
-                                    <button type="button" 
-                                            class="btn btn-outline-danger"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deletePlayModal{{ play.id }}">Delete</button>
-                                {% endif %}
-                            </div>
-
-                            {% if current_user.is_admin %}
-                                <!-- Play Delete Modal -->
-                                <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Delete Play</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p>Are you sure you want to delete the play "{{ play.name }}"?</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                    <button type="submit" class="btn btn-danger">Delete Play</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-center">No offensive plays added yet.</p>
-                    {% endif %}
-                </div>
+    
+    <!-- Search and Filter -->
+    <div class="row mb-4">
+        <div class="col-md-8 mb-3 mb-md-0">
+            <div class="input-group">
+                <input type="text" class="form-control" id="playSearch" placeholder="Search plays and formations...">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
         </div>
-
-        <!-- Defensive Plays -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Defensive Plays</h5>
-                </div>
-                <div class="card-body">
-                    {% if defensive_plays %}
-                    <div class="list-group">
-                        {% for play in defensive_plays %}
-                        <div class="list-group-item">
-                            {% if play.ultiplay_embed %}
-                            <div class="embed-container mb-3">
-                                {{ play.ultiplay_embed|safe }}
+        <div class="col-md-4">
+            <select class="form-select" id="tagFilter">
+                <option selected value="">Filter by tag</option>
+                {% if all_tags is defined %}
+                    {% for tag in all_tags %}
+                    <option value="{{ tag.id }}">{{ tag.name }}</option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="playbookTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="formations-tab" data-bs-toggle="tab" data-bs-target="#formations" type="button" role="tab">Formations</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="offense-tab" data-bs-toggle="tab" data-bs-target="#offense" type="button" role="tab">Offense</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="defense-tab" data-bs-toggle="tab" data-bs-target="#defense" type="button" role="tab">Defense</button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="playbookTabContent">
+        <!-- Formations Tab -->
+        <div class="tab-pane fade show active" id="formations" role="tabpanel" aria-labelledby="formations-tab">
+            <div class="row g-4">
+                {% if formations %}
+                    {% for formation in formations %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 formation-card">
+                            <div class="card-header bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} text-white">
+                                <h5 class="mb-0">{{ formation.name }}</h5>
+                            </div>
+                            
+                            {% if formation.ultiplay_embed %}
+                            <div class="embed-container">
+                                {{ formation.ultiplay_embed|safe }}
                             </div>
                             {% endif %}
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}">
-                                        {{ play.name }}
-                                    </a>
-                                </h6>
-                                {% if play.formation %}
-                                <small class="text-muted">{{ play.formation.name }}</small>
-                                {% endif %}
+                            
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
+                                        {{ formation.type|title }}
+                                    </span>
+                                    <small class="text-muted">Used in {{ formation.plays|length }} plays</small>
+                                </div>
+                                <p class="card-text">{{ formation.description|truncate(150) }}</p>
                             </div>
-                            {% if play.tags %}
-                            <div class="mb-2">
-                                {% for tag in play.tags %}
-                                <span class="badge bg-secondary">{{ tag.name }}</span>
-                                {% endfor %}
+                            
+                            <div class="card-footer bg-transparent">
+                                <div class="btn-group w-100">
+                                    <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">Edit</a>
+                                    {% if current_user.is_admin %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal" data-bs-target="#deleteFormationModal{{ formation.id }}">
+                                            Delete
+                                        </button>
+                                    {% endif %}
+                                </div>
                             </div>
-                            {% endif %}
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                   class="btn btn-outline-secondary">Edit</a>
-                                {% if current_user.is_admin %}
-                                    <button type="button" 
-                                            class="btn btn-outline-danger"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deletePlayModal{{ play.id }}">Delete</button>
-                                {% endif %}
-                            </div>
-
-                            {% if current_user.is_admin %}
-                                <!-- Play Delete Modal -->
-                                <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Delete Play</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        
+                        {% if current_user.is_admin %}
+                            <!-- Formation Delete Modal -->
+                            <div class="modal fade" id="deleteFormationModal{{ formation.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Delete Formation</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the formation "{{ formation.name }}"?</p>
+                                            {% if formation.plays %}
+                                            <div class="alert alert-warning">
+                                                Warning: This formation is used in {{ formation.plays|length }} play(s).
+                                                Deleting it will remove it from these plays.
                                             </div>
-                                            <div class="modal-body">
-                                                <p>Are you sure you want to delete the play "{{ play.name }}"?</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                    <button type="submit" class="btn btn-danger">Delete Play</button>
-                                                </form>
-                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                <button type="submit" class="btn btn-danger">Delete Formation</button>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info text-center">
+                            <p>No formations added yet.</p>
+                            {% if current_user.is_admin %}
+                                <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-primary mt-2">
+                                    <i class="fas fa-plus"></i> Add your first formation
+                                </a>
                             {% endif %}
                         </div>
-                        {% endfor %}
                     </div>
-                    {% else %}
-                    <p class="text-center">No defensive plays added yet.</p>
-                    {% endif %}
-                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Offensive Plays Tab -->
+        <div class="tab-pane fade" id="offense" role="tabpanel" aria-labelledby="offense-tab">
+            <div class="play-list">
+                {% if offensive_plays %}
+                    {% for play in offensive_plays %}
+                    <div class="card mb-3 play-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ play.name }}</h5>
+                            <div>
+                                {% if play.formation %}
+                                <span class="badge bg-light text-dark me-2">{{ play.formation.name }}</span>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="collapse" id="playDetails{{ play.id }}">
+                            <div class="card-body">
+                                <div class="row">
+                                    {% if play.ultiplay_embed %}
+                                    <div class="col-md-7">
+                                        <div class="embed-container">
+                                            {{ play.ultiplay_embed|safe }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                    {% else %}
+                                    <div class="col-12">
+                                    {% endif %}
+                                        <h6>Description</h6>
+                                        <p>{{ play.description }}</p>
+                                        
+                                        {% if play.tags %}
+                                        <h6>Tags</h6>
+                                        <div class="mb-3">
+                                            {% for tag in play.tags %}
+                                            <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="d-flex mt-3">
+                                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
+                                               class="btn btn-sm btn-primary me-2">Full Details</a>
+                                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                                               class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                            {% if current_user.is_admin %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
+                                                    Delete
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if current_user.is_admin %}
+                            <!-- Play Delete Modal -->
+                            <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Delete Play</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the play "{{ play.name }}"?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                <button type="submit" class="btn btn-danger">Delete Play</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info text-center">
+                        <p>No offensive plays added yet.</p>
+                        {% if current_user.is_admin %}
+                            <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-plus"></i> Add your first offensive play
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Defensive Plays Tab -->
+        <div class="tab-pane fade" id="defense" role="tabpanel" aria-labelledby="defense-tab">
+            <div class="play-list">
+                {% if defensive_plays %}
+                    {% for play in defensive_plays %}
+                    <div class="card mb-3 play-card defense">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ play.name }}</h5>
+                            <div>
+                                {% if play.formation %}
+                                <span class="badge bg-light text-dark me-2">{{ play.formation.name }}</span>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="collapse" id="playDetails{{ play.id }}">
+                            <div class="card-body">
+                                <div class="row">
+                                    {% if play.ultiplay_embed %}
+                                    <div class="col-md-7">
+                                        <div class="embed-container">
+                                            {{ play.ultiplay_embed|safe }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                    {% else %}
+                                    <div class="col-12">
+                                    {% endif %}
+                                        <h6>Description</h6>
+                                        <p>{{ play.description }}</p>
+                                        
+                                        {% if play.tags %}
+                                        <h6>Tags</h6>
+                                        <div class="mb-3">
+                                            {% for tag in play.tags %}
+                                            <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="d-flex mt-3">
+                                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
+                                               class="btn btn-sm btn-primary me-2">Full Details</a>
+                                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                                               class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                            {% if current_user.is_admin %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
+                                                    Delete
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if current_user.is_admin %}
+                            <!-- Play Delete Modal -->
+                            <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Delete Play</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the play "{{ play.name }}"?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                <button type="submit" class="btn btn-danger">Delete Play</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-info text-center">
+                        <p>No defensive plays added yet.</p>
+                        {% if current_user.is_admin %}
+                            <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-plus"></i> Add your first defensive play
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -326,11 +484,74 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize any Bootstrap components if needed
+    // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
+    
+    // Search functionality
+    const searchInput = document.getElementById('playSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            // Search formations
+            const formationCards = document.querySelectorAll('.formation-card');
+            formationCards.forEach(card => {
+                const title = card.querySelector('h5').textContent.toLowerCase();
+                const description = card.querySelector('.card-text')?.textContent.toLowerCase() || '';
+                const isMatch = title.includes(searchTerm) || description.includes(searchTerm);
+                card.closest('.col-md-6, .col-lg-4').style.display = isMatch ? '' : 'none';
+            });
+            
+            // Search plays
+            const playCards = document.querySelectorAll('.play-card');
+            playCards.forEach(card => {
+                const title = card.querySelector('h5').textContent.toLowerCase();
+                const description = card.querySelector('p')?.textContent.toLowerCase() || '';
+                const tags = Array.from(card.querySelectorAll('.badge'))
+                    .map(badge => badge.textContent.toLowerCase());
+                
+                const isMatch = title.includes(searchTerm) || 
+                               description.includes(searchTerm) ||
+                               tags.some(tag => tag.includes(searchTerm));
+                               
+                card.style.display = isMatch ? '' : 'none';
+            });
+        });
+    }
+    
+    // Tag filtering
+    const tagFilter = document.getElementById('tagFilter');
+    if (tagFilter) {
+        tagFilter.addEventListener('change', function() {
+            const selectedTag = this.value;
+            const playCards = document.querySelectorAll('.play-card');
+            
+            if (!selectedTag) {
+                playCards.forEach(card => card.style.display = '');
+                return;
+            }
+            
+            playCards.forEach(card => {
+                const tags = Array.from(card.querySelectorAll('.badge[data-tag-id]'))
+                    .map(badge => badge.getAttribute('data-tag-id'));
+                card.style.display = tags.includes(selectedTag) ? '' : 'none';
+            });
+        });
+    }
+    
+    // Ensure correct tab is shown when navigating directly to a tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab) {
+        const tabElement = document.querySelector(`#${tab}-tab`);
+        if (tabElement) {
+            const tabInstance = new bootstrap.Tab(tabElement);
+            tabInstance.show();
+        }
+    }
 });
 </script>
 {% endblock %}
