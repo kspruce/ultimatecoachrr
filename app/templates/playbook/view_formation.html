@@ -24,17 +24,79 @@
         border: 0;
     }
     
-    .related-play {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .related-play:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
     .description-card {
-        height: 100%;
+        margin-bottom: 2rem;
+    }
+    
+    /* Markdown styling */
+    .markdown-content h1 {
+        font-size: 1.8rem;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+    
+    .markdown-content h3 {
+        font-size: 1.3rem;
+        margin-top: 1rem;
+        margin-bottom: 0.7rem;
+    }
+    
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content blockquote {
+        border-left: 4px solid #e9ecef;
+        padding-left: 1rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+    }
+    
+    .markdown-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+    
+    .markdown-content table th,
+    .markdown-content table td {
+        padding: 0.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .markdown-content table th {
+        background-color: #f8f9fa;
+    }
+    
+    .markdown-content p {
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 1rem;
     }
 </style>
 {% endblock %}
@@ -74,7 +136,7 @@
     
     <div class="row">
         <!-- Formation Details -->
-        <div class="col-lg-8">
+        <div class="col-12">
             <!-- Animation/Video -->
             {% if formation.ultiplay_embed %}
                 <div class="card mb-4">
@@ -94,45 +156,15 @@
                 </div>
             {% endif %}
             
-            <!-- Description -->
-            <div class="card mb-4 description-card">
+            <!-- Description with Markdown -->
+            <div class="card description-card">
                 <div class="card-header">
                     <h5 class="mb-0">Description</h5>
                 </div>
                 <div class="card-body">
-                    <p>{{ formation.description|nl2br }}</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Related Plays -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Plays Using This Formation</h5>
-                </div>
-                <div class="card-body">
-                    {% if related_plays %}
-                        <div class="list-group">
-                            {% for play in related_plays %}
-                                <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                   class="list-group-item list-group-item-action related-play">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h6 class="mb-1">{{ play.name }}</h6>
-                                        <small class="text-{{ 'primary' if play.type == 'offense' else 'danger' }}">
-                                            {{ play.type|title }}
-                                        </small>
-                                    </div>
-                                    <small class="text-muted">{{ play.description|truncate(60) }}</small>
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No plays are currently using this formation.</p>
-                        <a href="{{ url_for('playbook.add_play') }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-plus"></i> Create a play with this formation
-                        </a>
-                    {% endif %}
+                    <div class="markdown-content">
+                        {{ formation.description|markdown }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -150,9 +182,9 @@
                 </div>
                 <div class="modal-body">
                     <p>Are you sure you want to delete the team concept "{{ formation.name }}"?</p>
-                    {% if related_plays %}
+                    {% if formation.plays %}
                     <div class="alert alert-warning">
-                        Warning: This concept is used in {{ related_plays|length }} play(s).
+                        Warning: This concept is used in {{ formation.plays|length }} play(s).
                         Deleting it will remove it from these plays.
                     </div>
                     {% endif %}
