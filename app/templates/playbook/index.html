@@ -117,6 +117,15 @@
         margin-bottom: 1rem;
         border: 0;
     }
+
+    /* Button group styling */
+    .btn-group-vertical .btn {
+        margin-bottom: 0.25rem;
+    }
+    
+    .btn-group-vertical .btn:last-child {
+        margin-bottom: 0;
+    }
 </style>
 {% endblock %}
 
@@ -245,13 +254,19 @@
                             </div>
                             
                             <div class="card-footer bg-transparent">
-                                <div class="btn-group w-100">
+                                <div class="btn-group-vertical w-100">
+                                    <a href="{{ url_for('playbook.view_formation', formation_id=formation.id) }}" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye me-1"></i> View Details
+                                    </a>
                                     <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
-                                       class="btn btn-sm btn-outline-primary">Edit</a>
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
                                     {% if current_user.is_admin %}
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-bs-toggle="modal" data-bs-target="#deleteFormationModal{{ formation.id }}">
-                                            Delete
+                                            <i class="fas fa-trash me-1"></i> Delete
                                         </button>
                                     {% endif %}
                                 </div>
@@ -348,15 +363,19 @@
                                 </div>
                                 {% endif %}
                                 
-                                <div class="d-flex mt-3">
+                                <div class="d-flex flex-wrap gap-2 mt-3">
                                     <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-primary me-2">Full Details</a>
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye me-1"></i> Full Details
+                                    </a>
                                     <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
                                     {% if current_user.is_admin %}
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                            Delete
+                                            <i class="fas fa-trash me-1"></i> Delete
                                         </button>
                                     {% endif %}
                                 </div>
@@ -445,15 +464,19 @@
                                 </div>
                                 {% endif %}
                                 
-                                <div class="d-flex mt-3">
+                                <div class="d-flex flex-wrap gap-2 mt-3">
                                     <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-primary me-2">Full Details</a>
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye me-1"></i> Full Details
+                                    </a>
                                     <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit me-1"></i> Edit
+                                    </a>
                                     {% if current_user.is_admin %}
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                            Delete
+                                            <i class="fas fa-trash me-1"></i> Delete
                                         </button>
                                     {% endif %}
                                 </div>
