@@ -16,6 +16,8 @@ login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
 
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -81,6 +83,27 @@ def create_app(config_class=Config):
             'success': False,
             'message': f'File too large. Maximum size is {app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)}MB'
         }), 413
+    
+    import markdown
+    from flask import Markup
+    
+    @app.template_filter('markdown')
+    def markdown_filter(text):
+        if text is None:
+            return ''
+        # Convert markdown to HTML with extensions
+        md_html = markdown.markdown(
+            text,
+            extensions=[
+                'markdown.extensions.fenced_code',
+                'markdown.extensions.tables',
+                'markdown.extensions.nl2br',
+                'markdown.extensions.sane_lists'
+            ]
+        )
+        # Return as safe HTML
+        return Markup(md_html)
+
     
     # Register blueprints
     from app.routes.main import bp as main_bp
@@ -156,3 +179,4 @@ def create_app(config_class=Config):
         db.create_all()
     
     return app
+
