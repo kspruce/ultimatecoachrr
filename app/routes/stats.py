@@ -2290,3 +2290,166 @@ def calculate_line_efficiency(players, games, is_offensive=True):
 
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
 
+@bp.route('/debug/line_plus_minus/<int:player_id>')
+@login_required
+def debug_line_plus_minus(player_id):
+    """Debug view for O-line and D-line plus/minus calculation"""
+    player = Player.query.get_or_404(player_id)
+    
+    # Get filter parameters
+    tournament_id = request.args.get('tournament_id', type=int)
+    game_id = request.args.get('game_id', type=int)
+
+    # Determine which games to analyze
+    if game_id:
+        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+    elif tournament_id:
+        tournament = Tournament.query.get(tournament_id)
+        games = tournament.games.all() if tournament else []
+    else:
+        games = Game.query.all()
+    
+    # Get points played by this player
+    lineup_query = LineUp.query.filter_by(player_id=player.id)
+    if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
+        lineup_query = lineup_query.filter(LineUp.point_id.in_(point_ids))
+    
+    points_played = lineup_query.all()
+    
+    # Separate into O-line and D-line points
+    o_line_points = [p for p in points_played if p.point.our_line_type == 'O-line']
+    d_line_points = [p for p in points_played if p.point.our_line_type == 'D-line']
+    
+    # Initialize debug data structures
+    o_line_events = []
+    d_line_events = []
+    o_line_plus_minus = 0
+    d_line_plus_minus = 0
+    
+    # Define positive and negative event types
+    positive_events = ['goal', 'assist', 'block']
+    negative_events = ['throwaway', 'drop', 'stall']
+    
+    # Get all events for this player
+    events_query = Event.query.filter_by(player_id=player.id)
+    if games:
+        events_query = events_query.filter(Event.point_id.in_(point_ids))
+    
+    # Process all events for this player
+    for event in events_query.order_by(Event.timestamp).all():
+        # Get the point for this event
+        point = Point.query.get(event.point_id)
+        
+        # Skip if point is None
+        if not point:
+            continue
+            
+        # Create event data for display
+        event_data = {
+            'point_id': point.id,
+            'game': f"{point.game.our_team} vs {point.game.their_team}" if point.game else "Unknown",
+            'game_date': point.game.date.strftime('%Y-%m-%d') if point.game and point.game.date else "Unknown",
+            'event_type': event.event_type,
+            'timestamp': event.timestamp.strftime('%H:%M:%S') if event.timestamp else "Unknown",
+            'impact': 0,
+            'running_total': 0
+        }
+        
+        # Determine if this is an O-line or D-line point
+        is_o_line = point.our_line_type == 'O-line'
+        
+        # Update plus/minus based on event type
+        if event.event_type in positive_events:
+            event_data['impact'] = 1
+            if is_o_line:
+                o_line_plus_minus += 1
+                event_data['running_total'] = o_line_plus_minus
+                o_line_events.append(event_data)
+            else:
+                d_line_plus_minus += 1
+                event_data['running_total'] = d_line_plus_minus
+                d_line_events.append(event_data)
+        elif event.event_type in negative_events:
+            event_data['impact'] = -1
+            if is_o_line:
+                o_line_plus_minus -= 1
+                event_data['running_total'] = o_line_plus_minus
+                o_line_events.append(event_data)
+            else:
+                d_line_plus_minus -= 1
+                event_data['running_total'] = d_line_plus_minus
+                d_line_events.append(event_data)
+    
+    # Get throws data for completeness (in case throwaways are tracked there)
+    throws_query = Throw.query.filter_by(thrower_id=player.id)
+    if games:
+        throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+    
+    # Process throws that are throwaways
+    throwaway_events = []
+    for throw in throws_query.filter_by(throw_type='throwaway').order_by(Throw.created_at).all():
+        # Get the point for this throw
+        point = Point.query.get(throw.point_id)
+        
+        # Skip if point is None
+        if not point:
+            continue
+            
+        # Create event data for display
+        event_data = {
+            'point_id': point.id,
+            'game': f"{point.game.our_team} vs {point.game.their_team}" if point.game else "Unknown",
+            'game_date': point.game.date.strftime('%Y-%m-%d') if point.game and point.game.date else "Unknown",
+            'event_type': 'throwaway (from Throw model)',
+            'timestamp': throw.created_at.strftime('%H:%M:%S') if throw.created_at else "Unknown",
+            'impact': -1,
+            'running_total': 0
+        }
+        
+        # Determine if this is an O-line or D-line point
+        is_o_line = point.our_line_type == 'O-line'
+        
+        # Update plus/minus based on throw type
+        if is_o_line:
+            o_line_plus_minus -= 1
+            event_data['running_total'] = o_line_plus_minus
+            o_line_events.append(event_data)
+        else:
+            d_line_plus_minus -= 1
+            event_data['running_total'] = d_line_plus_minus
+            d_line_events.append(event_data)
+        
+        throwaway_events.append(event_data)
+    
+    # Calculate per point stats
+    o_line_plus_minus_per_point = o_line_plus_minus / len(o_line_points) if o_line_points else 0
+    d_line_plus_minus_per_point = d_line_plus_minus / len(d_line_points) if d_line_points else 0
+    
+    # Get tournaments for filter
+    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    
+    # Sort events by timestamp
+    o_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
+    d_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
+    
+    return render_template(
+        'stats/debug_line_plus_minus.html',
+        player=player,
+        o_line_points=o_line_points,
+        d_line_points=d_line_points,
+        o_line_events=o_line_events,
+        d_line_events=d_line_events,
+        throwaway_events=throwaway_events,
+        o_line_plus_minus=o_line_plus_minus,
+        d_line_plus_minus=d_line_plus_minus,
+        o_line_plus_minus_per_point=o_line_plus_minus_per_point,
+        d_line_plus_minus_per_point=d_line_plus_minus_per_point,
+        tournaments=tournaments,
+        selected_tournament=tournament_id,
+        selected_game=game_id,
+        games=games
+    )

@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block title %}Debug Line Plus/Minus - {{ player.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Debug Line Plus/Minus for {{ player.name }}</h1>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label for="tournament_id" class="form-label">Tournament</label>
+                    <select name="tournament_id" id="tournament_id" class="form-select">
+                        <option value="">All Tournaments</option>
+                        {% for tournament in tournaments %}
+                        <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                            {{ tournament.name }} ({{ tournament.start_date.strftime('%Y-%m-%d') if tournament.start_date }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label for="game_id" class="form-label">Game</label>
+                    <select name="game_id" id="game_id" class="form-select">
+                        <option value="">All Games</option>
+                        {% for game in games %}
+                        <option value="{{ game.id }}" {% if selected_game == game.id %}selected{% endif %}>
+                            {{ game.our_team }} vs {{ game.their_team }} ({{ game.date.strftime('%Y-%m-%d') if game.date }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Summary -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>O-line Stats</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Points Played:</th>
+                            <td>{{ o_line_points|length }}</td>
+                        </tr>
+                        <tr>
+                            <th>Plus/Minus:</th>
+                            <td>{{ o_line_plus_minus }}</td>
+                        </tr>
+                        <tr>
+                            <th>Plus/Minus Per Point:</th>
+                            <td>{{ o_line_plus_minus_per_point|round(2) }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>D-line Stats</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Points Played:</th>
+                            <td>{{ d_line_points|length }}</td>
+                        </tr>
+                        <tr>
+                            <th>Plus/Minus:</th>
+                            <td>{{ d_line_plus_minus }}</td>
+                        </tr>
+                        <tr>
+                            <th>Plus/Minus Per Point:</th>
+                            <td>{{ d_line_plus_minus_per_point|round(2) }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- O-line Events -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>O-line Events ({{ o_line_events|length }})</h5>
+        </div>
+        <div class="card-body">
+            {% if o_line_events %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Game</th>
+                            <th>Date</th>
+                            <th>Point ID</th>
+                            <th>Event Type</th>
+                            <th>Timestamp</th>
+                            <th>Impact</th>
+                            <th>Running Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in o_line_events %}
+                        <tr>
+                            <td>{{ event.game }}</td>
+                            <td>{{ event.game_date }}</td>
+                            <td>{{ event.point_id }}</td>
+                            <td>{{ event.event_type }}</td>
+                            <td>{{ event.timestamp }}</td>
+                            <td class="{% if event.impact > 0 %}text-success{% elif event.impact < 0 %}text-danger{% endif %}">
+                                {{ event.impact }}
+                            </td>
+                            <td>{{ event.running_total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No O-line events found.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- D-line Events -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>D-line Events ({{ d_line_events|length }})</h5>
+        </div>
+        <div class="card-body">
+            {% if d_line_events %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Game</th>
+                            <th>Date</th>
+                            <th>Point ID</th>
+                            <th>Event Type</th>
+                            <th>Timestamp</th>
+                            <th>Impact</th>
+                            <th>Running Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in d_line_events %}
+                        <tr>
+                            <td>{{ event.game }}</td>
+                            <td>{{ event.game_date }}</td>
+                            <td>{{ event.point_id }}</td>
+                            <td>{{ event.event_type }}</td>
+                            <td>{{ event.timestamp }}</td>
+                            <td class="{% if event.impact > 0 %}text-success{% elif event.impact < 0 %}text-danger{% endif %}">
+                                {{ event.impact }}
+                            </td>
+                            <td>{{ event.running_total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No D-line events found.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Throwaway Events (from Throw model) -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Throwaway Events from Throw Model ({{ throwaway_events|length }})</h5>
+        </div>
+        <div class="card-body">
+            {% if throwaway_events %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Game</th>
+                            <th>Date</th>
+                            <th>Point ID</th>
+                            <th>Event Type</th>
+                            <th>Timestamp</th>
+                            <th>Impact</th>
+                            <th>Running Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in throwaway_events %}
+                        <tr>
+                            <td>{{ event.game }}</td>
+                            <td>{{ event.game_date }}</td>
+                            <td>{{ event.point_id }}</td>
+                            <td>{{ event.event_type }}</td>
+                            <td>{{ event.timestamp }}</td>
+                            <td class="{% if event.impact > 0 %}text-success{% elif event.impact < 0 %}text-danger{% endif %}">
+                                {{ event.impact }}
+                            </td>
+                            <td>{{ event.running_total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No throwaway events found in Throw model.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Points Played -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Points Played</h5>
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs" id="pointsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="o-line-tab" data-bs-toggle="tab" data-bs-target="#o-line" type="button" role="tab" aria-controls="o-line" aria-selected="true">
+                        O-line ({{ o_line_points|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="d-line-tab" data-bs-toggle="tab" data-bs-target="#d-line" type="button" role="tab" aria-controls="d-line" aria-selected="false">
+                        D-line ({{ d_line_points|length }})
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content" id="pointsTabsContent">
+                <div class="tab-pane fade show active" id="o-line" role="tabpanel" aria-labelledby="o-line-tab">
+                    {% if o_line_points %}
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Point ID</th>
+                                    <th>Game</th>
+                                    <th>Date</th>
+                                    <th>Point Number</th>
+                                    <th>We Scored</th>
+                                    <th>They Scored</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lineup in o_line_points %}
+                                <tr>
+                                    <td>{{ lineup.point_id }}</td>
+                                    <td>{{ lineup.point.game.our_team }} vs {{ lineup.point.game.their_team }}</td>
+                                    <td>{{ lineup.point.game.date.strftime('%Y-%m-%d') if lineup.point.game.date }}</td>
+                                    <td>{{ lineup.point.point_number }}</td>
+                                    <td>{{ "Yes" if lineup.point.we_scored else "No" }}</td>
+                                    <td>{{ "Yes" if lineup.point.they_scored else "No" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mt-3">No O-line points played.</p>
+                    {% endif %}
+                </div>
+                <div class="tab-pane fade" id="d-line" role="tabpanel" aria-labelledby="d-line-tab">
+                    {% if d_line_points %}
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Point ID</th>
+                                    <th>Game</th>
+                                    <th>Date</th>
+                                    <th>Point Number</th>
+                                    <th>We Scored</th>
+                                    <th>They Scored</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lineup in d_line_points %}
+                                <tr>
+                                    <td>{{ lineup.point_id }}</td>
+                                    <td>{{ lineup.point.game.our_team }} vs {{ lineup.point.game.their_team }}</td>
+                                    <td>{{ lineup.point.game.date.strftime('%Y-%m-%d') if lineup.point.game.date }}</td>
+                                    <td>{{ lineup.point.point_number }}</td>
+                                    <td>{{ "Yes" if lineup.point.we_scored else "No" }}</td>
+                                    <td>{{ "Yes" if lineup.point.they_scored else "No" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mt-3">No D-line points played.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Implementation Notes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Implementation Notes</h5>
+        </div>
+        <div class="card-body">
+            <h6>How Plus/Minus is Calculated</h6>
+            <ul>
+                <li><strong>Positive events (+1):</strong> goal, assist, block</li>
+                <li><strong>Negative events (-1):</strong> throwaway, drop, stall</li>
+            </ul>
+            
+            <h6>Calculation Formula</h6>
+            <pre>plus_minus = (goals + assists + blocks) - (throwaways + drops + stalls)</pre>
+            
+            <h6>Per Point Formula</h6>
+            <pre>plus_minus_per_point = plus_minus / points_played</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
