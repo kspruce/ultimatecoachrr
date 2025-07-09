@@ -85,7 +85,7 @@ def create_app(config_class=Config):
         }), 413
     
     import markdown
-    from flask import Markup
+    from markupsafe import Markup
     
     @app.template_filter('markdown')
     def markdown_filter(text):
