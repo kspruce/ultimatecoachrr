@@ -524,23 +524,51 @@ def get_player_base_stats(player, games=None):
         # Calculate O-line and D-line stats
         o_line_points = [p for p in points_played if p.point.our_line_type == 'O-line']
         d_line_points = [p for p in points_played if p.point.our_line_type == 'D-line']
-
+        
         stats['o_line_points_played'] = len(o_line_points)
         stats['d_line_points_played'] = len(d_line_points)
-
-        # Calculate plus/minus for each line
-        for point in o_line_points:
-            if point.point.we_scored:
-                stats['o_line_plus_minus'] += 1
-            if point.point.they_scored:
-                stats['o_line_plus_minus'] -= 1
-
-        for point in d_line_points:
-            if point.point.we_scored:
-                stats['d_line_plus_minus'] += 1
-            if point.point.they_scored:
-                stats['d_line_plus_minus'] -= 1
-
+        
+        # Initialize plus/minus counters for each line
+        stats['o_line_plus_minus'] = 0
+        stats['d_line_plus_minus'] = 0
+        
+        # Get all events for this player
+        events_query = Event.query.filter_by(player_id=player.id)
+        if games:
+            if isinstance(games, list):
+                point_ids = [p.id for g in games for p in g.points]
+            else:
+                point_ids = [p.id for p in games.points]
+            events_query = events_query.filter(Event.point_id.in_(point_ids))
+        
+        # Define positive and negative event types
+        positive_events = ['goal', 'assist', 'block']
+        negative_events = ['throwaway', 'drop', 'stall']
+        
+        # Process all events for this player
+        for event in events_query.all():
+            # Get the point for this event
+            point = Point.query.get(event.point_id)
+            
+            # Skip if point is None
+            if not point:
+                continue
+                
+            # Determine if this is an O-line or D-line point
+            is_o_line = point.our_line_type == 'O-line'
+            
+            # Update plus/minus based on event type
+            if event.event_type in positive_events:
+                if is_o_line:
+                    stats['o_line_plus_minus'] += 1
+                else:
+                    stats['d_line_plus_minus'] += 1
+            elif event.event_type in negative_events:
+                if is_o_line:
+                    stats['o_line_plus_minus'] -= 1
+                else:
+                    stats['d_line_plus_minus'] -= 1
+        
         # Calculate per point stats
         if stats['o_line_points_played'] > 0:
             stats['o_line_plus_minus_per_point'] = stats['o_line_plus_minus'] / stats['o_line_points_played']
