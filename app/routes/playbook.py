@@ -267,3 +267,16 @@ def delete_formation(formation_id):
             'success': False,
             'message': 'An error occurred while deleting the formation.'
         }), 500
+    
+    
+@bp.route('/formation/<int:formation_id>')
+@login_required
+def view_formation(formation_id):
+    formation = Formation.query.get_or_404(formation_id)
+    
+    # Get plays that use this formation
+    related_plays = Play.query.filter_by(formation_id=formation_id).all()
+    
+    return render_template('playbook/view_formation.html', 
+                          formation=formation,
+                          related_plays=related_plays)
