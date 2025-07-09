@@ -2337,6 +2337,10 @@ def debug_line_plus_minus(player_id):
     # Get all events for this player
     events_query = Event.query.filter_by(player_id=player.id)
     if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
         events_query = events_query.filter(Event.point_id.in_(point_ids))
     
     # Process all events for this player
@@ -2388,6 +2392,10 @@ def debug_line_plus_minus(player_id):
     # Get throws data for completeness (in case throwaways are tracked there)
     throws_query = Throw.query.filter_by(thrower_id=player.id)
     if games:
+        if isinstance(games, list):
+            point_ids = [p.id for g in games for p in g.points]
+        else:
+            point_ids = [p.id for p in games.points]
         throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
     
     # Process throws that are throwaways
@@ -2456,47 +2464,3 @@ def debug_line_plus_minus(player_id):
         games=games
     )
 
-        
-        # Determine if this is an O-line or D-line point
-        is_o_line = point.our_line_type == 'O-line'
-        
-        # Update plus/minus based on throw type
-        if is_o_line:
-            o_line_plus_minus -= 1
-            event_data['running_total'] = o_line_plus_minus
-            o_line_events.append(event_data)
-        else:
-            d_line_plus_minus -= 1
-            event_data['running_total'] = d_line_plus_minus
-            d_line_events.append(event_data)
-        
-        throwaway_events.append(event_data)
-    
-    # Calculate per point stats
-    o_line_plus_minus_per_point = o_line_plus_minus / len(o_line_points) if o_line_points else 0
-    d_line_plus_minus_per_point = d_line_plus_minus / len(d_line_points) if d_line_points else 0
-    
-    # Get tournaments for filter
-    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
-    
-    # Sort events by timestamp
-    o_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
-    d_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
-    
-    return render_template(
-        'stats/debug_line_plus_minus.html',
-        player=player,
-        o_line_points=o_line_points,
-        d_line_points=d_line_points,
-        o_line_events=o_line_events,
-        d_line_events=d_line_events,
-        throwaway_events=throwaway_events,
-        o_line_plus_minus=o_line_plus_minus,
-        d_line_plus_minus=d_line_plus_minus,
-        o_line_plus_minus_per_point=o_line_plus_minus_per_point,
-        d_line_plus_minus_per_point=d_line_plus_minus_per_point,
-        tournaments=tournaments,
-        selected_tournament=tournament_id,
-        selected_game=game_id,
-        games=games
-    )
