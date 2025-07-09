@@ -2351,8 +2351,9 @@ def debug_line_plus_minus(player_id):
         # Create event data for display
         event_data = {
             'point_id': point.id,
-            'game': f"{point.game.our_team} vs {point.game.their_team}" if point.game else "Unknown",
-            'game_date': point.game.date.strftime('%Y-%m-%d') if point.game and point.game.date else "Unknown",
+            'game_id': point.game_id,
+            'game_description': f"Game #{point.game_id}" if point.game_id else "Unknown",
+            'game_date': point.game.date.strftime('%Y-%m-%d') if point.game and hasattr(point.game, 'date') and point.game.date else "Unknown",
             'event_type': event.event_type,
             'timestamp': event.timestamp.strftime('%H:%M:%S') if event.timestamp else "Unknown",
             'impact': 0,
@@ -2402,13 +2403,59 @@ def debug_line_plus_minus(player_id):
         # Create event data for display
         event_data = {
             'point_id': point.id,
-            'game': f"{point.game.our_team} vs {point.game.their_team}" if point.game else "Unknown",
-            'game_date': point.game.date.strftime('%Y-%m-%d') if point.game and point.game.date else "Unknown",
+            'game_id': point.game_id,
+            'game_description': f"Game #{point.game_id}" if point.game_id else "Unknown",
+            'game_date': point.game.date.strftime('%Y-%m-%d') if point.game and hasattr(point.game, 'date') and point.game.date else "Unknown",
             'event_type': 'throwaway (from Throw model)',
             'timestamp': throw.created_at.strftime('%H:%M:%S') if throw.created_at else "Unknown",
             'impact': -1,
             'running_total': 0
         }
+        
+        # Determine if this is an O-line or D-line point
+        is_o_line = point.our_line_type == 'O-line'
+        
+        # Update plus/minus based on throw type
+        if is_o_line:
+            o_line_plus_minus -= 1
+            event_data['running_total'] = o_line_plus_minus
+            o_line_events.append(event_data)
+        else:
+            d_line_plus_minus -= 1
+            event_data['running_total'] = d_line_plus_minus
+            d_line_events.append(event_data)
+        
+        throwaway_events.append(event_data)
+    
+    # Calculate per point stats
+    o_line_plus_minus_per_point = o_line_plus_minus / len(o_line_points) if o_line_points else 0
+    d_line_plus_minus_per_point = d_line_plus_minus / len(d_line_points) if d_line_points else 0
+    
+    # Get tournaments for filter
+    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    
+    # Sort events by timestamp
+    o_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
+    d_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
+    
+    return render_template(
+        'stats/debug_line_plus_minus.html',
+        player=player,
+        o_line_points=o_line_points,
+        d_line_points=d_line_points,
+        o_line_events=o_line_events,
+        d_line_events=d_line_events,
+        throwaway_events=throwaway_events,
+        o_line_plus_minus=o_line_plus_minus,
+        d_line_plus_minus=d_line_plus_minus,
+        o_line_plus_minus_per_point=o_line_plus_minus_per_point,
+        d_line_plus_minus_per_point=d_line_plus_minus_per_point,
+        tournaments=tournaments,
+        selected_tournament=tournament_id,
+        selected_game=game_id,
+        games=games
+    )
+
         
         # Determine if this is an O-line or D-line point
         is_o_line = point.our_line_type == 'O-line'
