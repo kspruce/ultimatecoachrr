@@ -38,15 +38,14 @@
         border-left-color: #dc3545;
     }
     
-    /* Embed container */
+    /* Fixed embed container */
     .embed-container {
         position: relative;
-        padding-bottom: 56.25%;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
         height: 0;
         overflow: hidden;
         max-width: 100%;
         background: #f8f9fa;
-        border-radius: 0;
         margin-bottom: 1rem;
     }
 
@@ -54,8 +53,8 @@
         position: absolute;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
+        width: 100% !important; /* Override inline width */
+        height: 100% !important; /* Override inline height */
         border: 0;
     }
     
@@ -111,27 +110,12 @@
         transform: rotate(180deg);
     }
     
-    /* Debug styles */
-    .debug-info {
-        background-color: #f8d7da;
-        border: 1px solid #f5c6cb;
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-        font-family: monospace;
-        white-space: pre-wrap;
-        word-break: break-all;
-    }
-    
-    .embed-code {
-        background-color: #e9ecef;
-        border: 1px solid #dee2e6;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 4px;
-        font-family: monospace;
-        white-space: pre-wrap;
-        word-break: break-all;
+    /* Direct iframe container */
+    .iframe-direct-container {
+        width: 100%;
+        height: 300px;
+        margin-bottom: 1rem;
+        border: 0;
     }
 </style>
 {% endblock %}
@@ -248,22 +232,14 @@
                                 </button>
                                 
                                 <div class="collapse mt-3" id="conceptVideo{{ formation.id }}">
-                                    <!-- Debug info -->
-                                    <div class="debug-info">
-                                        <strong>Debug Info:</strong>
-                                        <br>Has embed code: {{ formation.ultiplay_embed is not none }}
-                                        <br>Embed code length: {{ formation.ultiplay_embed|length if formation.ultiplay_embed else 0 }}
-                                    </div>
-                                    
-                                    <div class="embed-container" id="concept-embed-{{ formation.id }}">
-                                        {{ formation.ultiplay_embed|safe }}
-                                    </div>
-                                    
-                                    <!-- Raw embed code -->
-                                    <div class="embed-code">
-                                        <strong>Raw Embed Code:</strong>
-                                        <code>{{ formation.ultiplay_embed }}</code>
-                                    </div>
+                                    {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
+                                        {% set embed_url = formation.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                                        <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                                    {% else %}
+                                        <div class="embed-container">
+                                            {{ formation.ultiplay_embed|safe }}
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 {% endif %}
                             </div>
@@ -350,24 +326,14 @@
                         <div class="collapse" id="playDetails{{ play.id }}">
                             <div class="card-body play-details">
                                 {% if play.ultiplay_embed %}
-                                <!-- Debug info -->
-                                <div class="debug-info">
-                                    <strong>Debug Info:</strong>
-                                    <br>Has embed code: {{ play.ultiplay_embed is not none }}
-                                    <br>Embed code length: {{ play.ultiplay_embed|length if play.ultiplay_embed else 0 }}
-                                    <br>Play ID: {{ play.id }}
-                                    <br>Play Name: {{ play.name }}
-                                </div>
-                                
-                                <div class="embed-container" id="play-embed-{{ play.id }}">
-                                    {{ play.ultiplay_embed|safe }}
-                                </div>
-                                
-                                <!-- Raw embed code -->
-                                <div class="embed-code">
-                                    <strong>Raw Embed Code:</strong>
-                                    <code>{{ play.ultiplay_embed }}</code>
-                                </div>
+                                    {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
+                                        {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                                        <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                                    {% else %}
+                                        <div class="embed-container">
+                                            {{ play.ultiplay_embed|safe }}
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                                 
                                 <h6>Description</h6>
@@ -457,24 +423,14 @@
                         <div class="collapse" id="playDetails{{ play.id }}">
                             <div class="card-body play-details">
                                 {% if play.ultiplay_embed %}
-                                <!-- Debug info -->
-                                <div class="debug-info">
-                                    <strong>Debug Info:</strong>
-                                    <br>Has embed code: {{ play.ultiplay_embed is not none }}
-                                    <br>Embed code length: {{ play.ultiplay_embed|length if play.ultiplay_embed else 0 }}
-                                    <br>Play ID: {{ play.id }}
-                                    <br>Play Name: {{ play.name }}
-                                </div>
-                                
-                                <div class="embed-container" id="play-embed-{{ play.id }}">
-                                    {{ play.ultiplay_embed|safe }}
-                                </div>
-                                
-                                <!-- Raw embed code -->
-                                <div class="embed-code">
-                                    <strong>Raw Embed Code:</strong>
-                                    <code>{{ play.ultiplay_embed }}</code>
-                                </div>
+                                    {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
+                                        {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                                        <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                                    {% else %}
+                                        <div class="embed-container">
+                                            {{ play.ultiplay_embed|safe }}
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                                 
                                 <h6>Description</h6>
@@ -555,50 +511,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
     
-    // Debug iframe loading
-    function checkIframes() {
-        console.log("Checking iframes...");
-        const iframes = document.querySelectorAll('.embed-container iframe');
-        console.log(`Found ${iframes.length} iframes`);
-        
-        iframes.forEach((iframe, index) => {
-            console.log(`Iframe ${index}:`, {
-                src: iframe.src,
-                width: iframe.width,
-                height: iframe.height,
-                style: iframe.style.cssText,
-                parentStyle: iframe.parentElement.style.cssText
-            });
+    // Fix iframe loading issues
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+        button.addEventListener('click', function() {
+            // Get the target element
+            const targetId = this.getAttribute('data-bs-target');
+            const targetElement = document.querySelector(targetId);
             
-            // Try to force iframe to be visible
-            iframe.style.position = 'absolute';
-            iframe.style.top = '0';
-            iframe.style.left = '0';
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.style.border = '2px solid red'; // Make border visible for debugging
-        });
-    }
-    
-    // Run iframe check when tab is shown
-    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function() {
-            setTimeout(checkIframes, 500); // Check after tab transition
-        });
-    });
-    
-    // Run iframe check when collapsible sections are shown
-    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const target = document.querySelector(this.getAttribute('data-bs-target'));
-            if (target) {
-                setTimeout(checkIframes, 500); // Check after collapse transition
+            // Check if it contains an iframe
+            if (targetElement) {
+                setTimeout(() => {
+                    const iframes = targetElement.querySelectorAll('iframe');
+                    iframes.forEach(iframe => {
+                        // Force iframe reload
+                        const src = iframe.src;
+                        iframe.src = '';
+                        setTimeout(() => {
+                            iframe.src = src;
+                        }, 50);
+                    });
+                }, 300); // Wait for collapse animation
             }
         });
     });
-    
-    // Initial check
-    setTimeout(checkIframes, 1000);
     
     // Search functionality
     const searchInput = document.getElementById('playSearch');
