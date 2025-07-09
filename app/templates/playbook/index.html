@@ -96,16 +96,6 @@
                                 <div class="embed-container">
                                     {{ formation.ultiplay_embed|safe }}
                                 </div>
-                                {% else %}
-                                <div class="embed-container">
-                                    <div class="video-placeholder">
-                                        <div>
-                                            <i class="fas fa-video fa-3x mb-2"></i>
-                                            <br>
-                                            No video available
-                                        </div>
-                                    </div>
-                                </div>
                                 {% endif %}
                                 <div class="card-body">
                                     <h5 class="card-title">{{ formation.name }}</h5>
@@ -127,7 +117,7 @@
                                     </div>
                                 </div>
                             </div>
-
+                            
                             {% if current_user.is_admin %}
                                 <!-- Formation Delete Modal -->
                                 <div class="modal fade" id="deleteFormationModal{{ formation.id }}" tabindex="-1">
