@@ -110,6 +110,29 @@
     [aria-expanded="true"] .rotate-icon {
         transform: rotate(180deg);
     }
+    
+    /* Debug styles */
+    .debug-info {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    .embed-code {
+        background-color: #e9ecef;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
 </style>
 {% endblock %}
 
@@ -225,8 +248,21 @@
                                 </button>
                                 
                                 <div class="collapse mt-3" id="conceptVideo{{ formation.id }}">
-                                    <div class="embed-container">
+                                    <!-- Debug info -->
+                                    <div class="debug-info">
+                                        <strong>Debug Info:</strong>
+                                        <br>Has embed code: {{ formation.ultiplay_embed is not none }}
+                                        <br>Embed code length: {{ formation.ultiplay_embed|length if formation.ultiplay_embed else 0 }}
+                                    </div>
+                                    
+                                    <div class="embed-container" id="concept-embed-{{ formation.id }}">
                                         {{ formation.ultiplay_embed|safe }}
+                                    </div>
+                                    
+                                    <!-- Raw embed code -->
+                                    <div class="embed-code">
+                                        <strong>Raw Embed Code:</strong>
+                                        <code>{{ formation.ultiplay_embed }}</code>
                                     </div>
                                 </div>
                                 {% endif %}
@@ -314,8 +350,23 @@
                         <div class="collapse" id="playDetails{{ play.id }}">
                             <div class="card-body play-details">
                                 {% if play.ultiplay_embed %}
-                                <div class="embed-container">
+                                <!-- Debug info -->
+                                <div class="debug-info">
+                                    <strong>Debug Info:</strong>
+                                    <br>Has embed code: {{ play.ultiplay_embed is not none }}
+                                    <br>Embed code length: {{ play.ultiplay_embed|length if play.ultiplay_embed else 0 }}
+                                    <br>Play ID: {{ play.id }}
+                                    <br>Play Name: {{ play.name }}
+                                </div>
+                                
+                                <div class="embed-container" id="play-embed-{{ play.id }}">
                                     {{ play.ultiplay_embed|safe }}
+                                </div>
+                                
+                                <!-- Raw embed code -->
+                                <div class="embed-code">
+                                    <strong>Raw Embed Code:</strong>
+                                    <code>{{ play.ultiplay_embed }}</code>
                                 </div>
                                 {% endif %}
                                 
@@ -406,8 +457,23 @@
                         <div class="collapse" id="playDetails{{ play.id }}">
                             <div class="card-body play-details">
                                 {% if play.ultiplay_embed %}
-                                <div class="embed-container">
+                                <!-- Debug info -->
+                                <div class="debug-info">
+                                    <strong>Debug Info:</strong>
+                                    <br>Has embed code: {{ play.ultiplay_embed is not none }}
+                                    <br>Embed code length: {{ play.ultiplay_embed|length if play.ultiplay_embed else 0 }}
+                                    <br>Play ID: {{ play.id }}
+                                    <br>Play Name: {{ play.name }}
+                                </div>
+                                
+                                <div class="embed-container" id="play-embed-{{ play.id }}">
                                     {{ play.ultiplay_embed|safe }}
+                                </div>
+                                
+                                <!-- Raw embed code -->
+                                <div class="embed-code">
+                                    <strong>Raw Embed Code:</strong>
+                                    <code>{{ play.ultiplay_embed }}</code>
                                 </div>
                                 {% endif %}
                                 
@@ -488,6 +554,51 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
+    
+    // Debug iframe loading
+    function checkIframes() {
+        console.log("Checking iframes...");
+        const iframes = document.querySelectorAll('.embed-container iframe');
+        console.log(`Found ${iframes.length} iframes`);
+        
+        iframes.forEach((iframe, index) => {
+            console.log(`Iframe ${index}:`, {
+                src: iframe.src,
+                width: iframe.width,
+                height: iframe.height,
+                style: iframe.style.cssText,
+                parentStyle: iframe.parentElement.style.cssText
+            });
+            
+            // Try to force iframe to be visible
+            iframe.style.position = 'absolute';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = '2px solid red'; // Make border visible for debugging
+        });
+    }
+    
+    // Run iframe check when tab is shown
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function() {
+            setTimeout(checkIframes, 500); // Check after tab transition
+        });
+    });
+    
+    // Run iframe check when collapsible sections are shown
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = document.querySelector(this.getAttribute('data-bs-target'));
+            if (target) {
+                setTimeout(checkIframes, 500); // Check after collapse transition
+            }
+        });
+    });
+    
+    // Initial check
+    setTimeout(checkIframes, 1000);
     
     // Search functionality
     const searchInput = document.getElementById('playSearch');
