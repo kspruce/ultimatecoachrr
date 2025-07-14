@@ -1,8 +1,15 @@
 from app import create_app, db
-# Import models directly to ensure they're registered
+# Import models directly from app.models
+from app.models.user import User
+from app.models.player import Player
+from app.models.tournament import Tournament
+from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
-from cutting_skill import CuttingSkill  # Import our new model
+from app.models.clip import Clip, ClipTag, ClipAnnotation
+from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
+# Import the CuttingSkill model - make sure this file exists in app/models/
+from app.models.cutting_skill import CuttingSkill
 from datetime import datetime
 import sys
 
@@ -26,7 +33,6 @@ def reset_database():
             print_status("Created all tables")
 
             # Create admin user
-            from app.models.user import User
             admin = User(username='admin', email='admin@example.com', is_admin=True)
             admin.set_password('password')
             db.session.add(admin)
@@ -55,7 +61,6 @@ def reset_database():
             print_status("Created admin, captains and bonus users")
 
             # Add test players
-            from app.models.player import Player
             test_players = [
                 {"name": "Camilla Spearing", "jersey_number": "1", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "O"},
                 {"name": "Bon Leung", "jersey_number": "18", "position": "hybrid", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
@@ -122,7 +127,6 @@ def reset_database():
             print_status("Created theory sections")
 
             # Create some default clip tags
-            from app.models.clip import ClipTag
             default_tags = [
                 {'name': 'Offense', 'category': 'phase'},
                 {'name': 'Defense', 'category': 'phase'},
@@ -138,7 +142,6 @@ def reset_database():
             print_status("Created default clip tags")
             
             # Create Moooxed tournament
-            from app.models.tournament import Tournament
             tournament = Tournament(
                 name="Moooxed",
                 start_date=datetime(2025, 6, 7),
@@ -150,7 +153,6 @@ def reset_database():
             print_status("Created Moooxed tournament")
             
             # Create games for the tournament
-            from app.models.game import Game
             games = [
                 # Day 1 - June 7, 2025
                 {
