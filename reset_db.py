@@ -2,7 +2,7 @@ from app import create_app, db
 # Import models directly to ensure they're registered
 from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
-from cutting_skill_fixed import CuttingSkill  # Import our new model
+from cutting_skill import CuttingSkill  # Import our new model
 from datetime import datetime
 import sys
 
