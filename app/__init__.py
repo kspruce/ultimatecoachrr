@@ -148,23 +148,24 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
     
+    from app.routes.cutting_skill import bp as cutting_skill_bp
+    app.register_blueprint(cutting_skill_bp)
+    
    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,
        Event, Pull, Clip, ClipTag, ClipAnnotation,
-       SessionPlan, SessionComponent, SavedDrill, Attendance
-   )
+       SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill
+    )
     
-        # Create upload directory in /tmp
+    # Create upload directory in /tmp
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         # Create subdirectories
         for subdir in ['drills', 'playbook', 'theory', 'temp']:
             os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], subdir), exist_ok=True)
-    except Exception as e:
-        app.logger.warning(f"Could not create upload directories: {e}")
-            
+        
         # Test write permissions
         test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
         with open(test_file, 'w') as f:
@@ -179,4 +180,3 @@ def create_app(config_class=Config):
         db.create_all()
     
     return app
-

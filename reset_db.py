@@ -1,5 +1,8 @@
 from app import create_app, db
-from app.models import *
+# Import models directly to ensure they're registered
+from app.models.point import Point, LineUp
+from app.models.event import Event, Pull
+from cutting_skill_fixed import CuttingSkill  # Import our new model
 from datetime import datetime
 import sys
 
@@ -23,6 +26,7 @@ def reset_database():
             print_status("Created all tables")
 
             # Create admin user
+            from app.models.user import User
             admin = User(username='admin', email='admin@example.com', is_admin=True)
             admin.set_password('password')
             db.session.add(admin)
@@ -51,6 +55,7 @@ def reset_database():
             print_status("Created admin, captains and bonus users")
 
             # Add test players
+            from app.models.player import Player
             test_players = [
                 {"name": "Camilla Spearing", "jersey_number": "1", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "O"},
                 {"name": "Bon Leung", "jersey_number": "18", "position": "hybrid", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
@@ -89,8 +94,6 @@ def reset_database():
                 {"name": "Kai Meller", "jersey_number": "28", "position": "handler", "gender": "male", "gender_match": "male", "team": "Team B", "line_preference": "O"},
             ]
 
-
-
             for player_data in test_players:
                 player = Player(**player_data)
                 db.session.add(player)
@@ -99,6 +102,7 @@ def reset_database():
             print_status(f"Added {len(test_players)} test players")
 
             # Create theory sections
+            from app.models.theory import TheorySection
             sections = [
                 {'name': 'Defense', 'slug': 'defense', 
                  'description': 'Master defensive techniques including footwork, positioning, forcing, and guarding resets.', 'order': 1},
@@ -118,6 +122,7 @@ def reset_database():
             print_status("Created theory sections")
 
             # Create some default clip tags
+            from app.models.clip import ClipTag
             default_tags = [
                 {'name': 'Offense', 'category': 'phase'},
                 {'name': 'Defense', 'category': 'phase'},
@@ -133,6 +138,7 @@ def reset_database():
             print_status("Created default clip tags")
             
             # Create Moooxed tournament
+            from app.models.tournament import Tournament
             tournament = Tournament(
                 name="Moooxed",
                 start_date=datetime(2025, 6, 7),
@@ -144,6 +150,7 @@ def reset_database():
             print_status("Created Moooxed tournament")
             
             # Create games for the tournament
+            from app.models.game import Game
             games = [
                 # Day 1 - June 7, 2025
                 {

@@ -24,6 +24,7 @@ from app.models.throws import Throw
 from app.models.clip import Clip, ClipTag
 from app.models.annotation import ClipAnnotation
 from app.models.scouting import ScoutingReport
+from app.models.cutting_skill import CuttingSkill
 
 # Statistics and Export models
 from app.models.stats import PlayerPointStats
@@ -37,5 +38,5 @@ __all__ = [
     'Tournament', 'Game', 'Point', 'LineUp',
     'Event', 'Pull',
     'Clip', 'ClipTag', 'ClipAnnotation', 'ScoutingReport',
-    'PlayerPointStats', 'ExportLog'
+    'PlayerPointStats', 'ExportLog', 'CuttingSkill'
 ]
