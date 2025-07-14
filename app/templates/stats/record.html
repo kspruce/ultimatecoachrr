@@ -82,9 +82,20 @@
         pointer-events: none;
         border: 2px solid white;
         z-index: 10;
-}
+    }
 
-
+    /* Cutting skill marker */
+    .cutting-marker {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        border: 2px solid white;
+        background-color: purple; /* Different color for cutting skills */
+        z-index: 10;
+    }
 
     /* Brick marks */
     .brick-mark {
@@ -115,7 +126,7 @@
     }
 
     /* Selection panels */
-    .player-select, .action-select {
+    .player-select, .action-select, .cutting-select, .outcome-select {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -141,8 +152,31 @@
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
 
+    /* Cutting grid - 2x2 layout */
+    .cutting-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Outcome grid */
+    .outcome-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
     /* Cards and buttons */
-    .player-card, .action-button {
+    .player-card, .action-button, .cutting-button, .outcome-button {
         padding: 10px;
         text-align: center;
         border: 1px solid #ddd;
@@ -151,7 +185,7 @@
         background: white;
     }
 
-    .player-card:hover, .action-button:hover {
+    .player-card:hover, .action-button:hover, .cutting-button:hover, .outcome-button:hover {
         background-color: #f8f9fa;
     }
 
@@ -170,7 +204,31 @@
         z-index: 1060;
     }
 
+    /* Mode toggle button */
+    .mode-toggle {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        padding: 10px 20px;
+        border-radius: 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        z-index: 1060;
+    }
 
+    /* Tables container */
+    .tables-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .table-section {
+        flex: 1;
+        min-width: 300px;
+    }
 
     .marker-catch { background-color: blue; }
     .marker-goal { background-color: green; }
@@ -195,28 +253,59 @@
         </div>
     </div>
 
+    <!-- Mode toggle button -->
+    <button class="mode-toggle" id="mode-toggle">Mode: Event Tracking</button>
+
+    <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
         <div class="endzone endzone-left"></div>
         <div class="center-line"></div>
         <div class="endzone endzone-right"></div>
     </div>
-    <!-- Add this events table container -->
+
+    <!-- Tables container with both tables side by side -->
     <div class="container mt-3">
-        <h5>Recorded Events</h5>
-        <div class="table-responsive">
-            <table class="table table-striped table-sm">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Player</th>
-                        <th>Action</th>
-                        <th>Position</th>
-                    </tr>
-                </thead>
-                <tbody id="events-table-body">
-                    <!-- Events will be added here dynamically -->
-                </tbody>
-            </table>
+        <div class="tables-container">
+            <!-- Events table -->
+            <div class="table-section">
+                <h5>Recorded Events</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Player</th>
+                                <th>Action</th>
+                                <th>Position</th>
+                            </tr>
+                        </thead>
+                        <tbody id="events-table-body">
+                            <!-- Events will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Cutting Skills table -->
+            <div class="table-section">
+                <h5>Recorded Cutting Skills</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Player</th>
+                                <th>Cut Type</th>
+                                <th>Outcome</th>
+                                <th>Position</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cutting-skills-table-body">
+                            <!-- Cutting skills will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -243,6 +332,34 @@
         <div class="action-grid" id="action-grid"></div>
     </div>
 
+    <!-- Cutting Type Selection Panel -->
+    <div class="cutting-select" id="cutting-select">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Select Cut Type</h5>
+            <button type="button" class="btn-close" onclick="closeCuttingSelect()"></button>
+        </div>
+        <div class="cutting-grid">
+            <button class="cutting-button" data-cutting-type="open_deep">Open Deep</button>
+            <button class="cutting-button" data-cutting-type="break_deep">Break Deep</button>
+            <button class="cutting-button" data-cutting-type="open_under">Open Under</button>
+            <button class="cutting-button" data-cutting-type="break_under">Break Under</button>
+        </div>
+    </div>
+
+    <!-- Outcome Selection Panel -->
+    <div class="outcome-select" id="outcome-select">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Select Outcome</h5>
+            <button type="button" class="btn-close" onclick="closeOutcomeSelect()"></button>
+        </div>
+        <div class="outcome-grid">
+            <button class="outcome-button" data-outcome="open_looked_off">Open (Looked Off)</button>
+            <button class="outcome-button" data-outcome="guarded_looked_off">Guarded (Looked Off)</button>
+            <button class="outcome-button" data-outcome="open_thrown_to">Open (Thrown To)</button>
+            <button class="outcome-button" data-outcome="guarded_thrown_to">Guarded (Thrown To)</button>
+        </div>
+    </div>
+
     <button class="undo-button" id="undo-button">
         <i class="bi bi-arrow-counterclockwise"></i> Undo
     </button>
@@ -256,7 +373,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const field = document.getElementById('field');
     const playerSelect = document.getElementById('player-select');
     const actionSelect = document.getElementById('action-select');
+    const cuttingSelect = document.getElementById('cutting-select');
+    const outcomeSelect = document.getElementById('outcome-select');
     const undoButton = document.getElementById('undo-button');
+    const modeToggle = document.getElementById('mode-toggle');
 
     // Add this after your DOMContentLoaded event
     function checkFieldDimensions() {
@@ -275,7 +395,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('load', checkFieldDimensions);
     window.addEventListener('resize', checkFieldDimensions);
 
-
     // Define event types
     const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop'];
     const DEFENSIVE_EVENTS = ['shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'];
@@ -283,11 +402,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // State management
     let selectedPosition = null;
     let selectedPlayer = null;
+    let selectedCuttingType = null;
     let gameState = {
         possession: '{{ point.starting_position }}',
         events: [],
+        cuttingSkills: [],
         is_offensive: {{ 'true' if point.starting_position == 'offense' else 'false' }}
     };
+
+    // Track which mode we're in (events or cutting skills)
+    let currentMode = 'events';
+
+    // Mode toggle handler
+    modeToggle.addEventListener('click', function() {
+        currentMode = currentMode === 'events' ? 'cutting' : 'events';
+        modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'}`;
+        console.log('Switched to mode:', currentMode);
+    });
 
     // End Point button listener
     document.getElementById('finish-point').addEventListener('click', function() {
@@ -310,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Field click handler
+    // Field click handler for both events and cutting skills
     field.addEventListener('click', function(e) {
         const rect = field.getBoundingClientRect();
         const relativeX = (e.clientX - rect.left) / rect.width;
@@ -322,13 +453,9 @@ document.addEventListener('DOMContentLoaded', function() {
             inEndzone: relativeX < 0.18 || relativeX > 0.82
         };
 
-        console.log('Click coordinates:', {
+        console.log(`${currentMode} field click coordinates:`, {
             clientX: e.clientX,
             clientY: e.clientY,
-            rectLeft: rect.left,
-            rectTop: rect.top,
-            rectWidth: rect.width,
-            rectHeight: rect.height,
             fieldX: selectedPosition.x,
             fieldY: selectedPosition.y
         });
@@ -342,11 +469,16 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedPlayer = this.dataset.playerId;
             console.log('Selected player:', selectedPlayer);
             playerSelect.style.display = 'none';
-            showActionSelect();
+            
+            if (currentMode === 'events') {
+                showActionSelect();
+            } else {
+                showCuttingSelect();
+            }
         });
     });
 
-    // Action handling
+    // Action handling for events
     function handleAction(action) {
         // Validate position data before sending
         if (!selectedPosition || typeof selectedPosition.x !== 'number' || typeof selectedPosition.y !== 'number') {
@@ -430,10 +562,91 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Cutting type handling
+    function handleCuttingType(cuttingType) {
+        selectedCuttingType = cuttingType;
+        console.log('Selected cutting type:', selectedCuttingType);
+        cuttingSelect.style.display = 'none';
+        showOutcomeSelect();
+    }
+
+    // Outcome handling for cutting skills
+    function handleOutcome(outcome) {
+        // Validate position data before sending
+        if (!selectedPosition || typeof selectedPosition.x !== 'number' || typeof selectedPosition.y !== 'number') {
+            console.error('Invalid position data:', selectedPosition);
+            alert('Invalid position data. Please try again.');
+            return;
+        }
+    
+        // Add error handling for CSRF token
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfMeta) {
+            console.error('CSRF token meta tag not found');
+            alert('Error: CSRF token not found. Please refresh the page.');
+            return;
+        }
+        
+        const csrfToken = csrfMeta.getAttribute('content');
+        if (!csrfToken) {
+            console.error('CSRF token is empty');
+            alert('Error: CSRF token is empty. Please refresh the page.');
+            return;
+        }
+    
+        // Create cutting skill data
+        const cuttingSkillData = {
+            player_id: parseInt(selectedPlayer),
+            cutting_type: selectedCuttingType,
+            outcome: outcome,
+            field_position_x: parseFloat(selectedPosition.x.toFixed(2)), // Round to 2 decimal places
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2)) // Round to 2 decimal places
+        };
+    
+        console.log('Sending cutting skill data:', cuttingSkillData);
+    
+        fetch(`/cutting-skills/record/{{ point.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(cuttingSkillData)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.text().then(text => {
+                try {
+                    if (!response.ok) {
+                        throw new Error(text);
+                    }
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Response text:', text);
+                    throw new Error('Invalid JSON response from server');
+                }
+            });
+        })
+        .then(data => {
+            console.log('Server response:', data);
+            addCuttingSkillMarker(data);
+            updateCuttingSkillsState(data);
+            updateCuttingSkillsTable();
+            outcomeSelect.style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error recording cutting skill: ' + error.message);
+        });
+    }
+
     // UI Functions
     function showPlayerSelect() {
         playerSelect.style.display = 'block';
         actionSelect.style.display = 'none';
+        cuttingSelect.style.display = 'none';
+        outcomeSelect.style.display = 'none';
     }
 
     function showActionSelect() {
@@ -455,11 +668,27 @@ document.addEventListener('DOMContentLoaded', function() {
         actionSelect.style.display = 'block';
     }
 
+    function showCuttingSelect() {
+        cuttingSelect.style.display = 'block';
+    }
+
+    function showOutcomeSelect() {
+        outcomeSelect.style.display = 'block';
+    }
+
     function addEventMarker(event) {
         const marker = document.createElement('div');
         marker.className = `event-marker marker-${event.event_type}`;
         marker.style.left = `${event.field_position_x}%`;
         marker.style.top = `${(event.field_position_y / 37) * 100}%`;
+        field.appendChild(marker);
+    }
+
+    function addCuttingSkillMarker(cuttingSkill) {
+        const marker = document.createElement('div');
+        marker.className = 'cutting-marker';
+        marker.style.left = `${cuttingSkill.field_position_x}%`;
+        marker.style.top = `${(cuttingSkill.field_position_y / 37) * 100}%`;
         field.appendChild(marker);
     }
 
@@ -474,6 +703,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function updateCuttingSkillsState(cuttingSkill) {
+        gameState.cuttingSkills.push({
+            id: cuttingSkill.id,
+            cutting_type: cuttingSkill.cutting_type,
+            outcome: cuttingSkill.outcome,
+            position: {
+                x: cuttingSkill.field_position_x,
+                y: cuttingSkill.field_position_y
+            },
+            player: cuttingSkill.player_id
+        });
+    }
+
     // Close panel functions
     window.closePlayerSelect = function() {
         playerSelect.style.display = 'none';
@@ -481,6 +723,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.closeActionSelect = function() {
         actionSelect.style.display = 'none';
+    };
+
+    window.closeCuttingSelect = function() {
+        cuttingSelect.style.display = 'none';
+    };
+
+    window.closeOutcomeSelect = function() {
+        outcomeSelect.style.display = 'none';
     };
     
     // Add this function after the existing functions
@@ -518,6 +768,52 @@ document.addEventListener('DOMContentLoaded', function() {
             // Position
             const positionCell = document.createElement('td');
             positionCell.textContent = `X: ${event.position.x.toFixed(1)}, Y: ${event.position.y.toFixed(1)}`;
+            row.appendChild(positionCell);
+            
+            tableBody.appendChild(row);
+        });
+    }
+
+    // Function to update cutting skills table
+    function updateCuttingSkillsTable() {
+        const tableBody = document.getElementById('cutting-skills-table-body');
+        if (!tableBody) return; // Safety check
+        
+        tableBody.innerHTML = '';
+        
+        gameState.cuttingSkills.forEach((skill, index) => {
+            const row = document.createElement('tr');
+            
+            // Skill number
+            const numCell = document.createElement('td');
+            numCell.textContent = index + 1;
+            row.appendChild(numCell);
+            
+            // Player name and number
+            const playerCell = document.createElement('td');
+            const playerCard = document.querySelector(`.player-card[data-player-id="${skill.player}"]`);
+            if (playerCard) {
+                const playerNumber = playerCard.querySelector('.player-number').textContent;
+                const playerName = playerCard.querySelector('.player-name').textContent;
+                playerCell.textContent = `${playerNumber} ${playerName}`;
+            } else {
+                playerCell.textContent = `Player ${skill.player}`;
+            }
+            row.appendChild(playerCell);
+            
+            // Cutting type
+            const typeCell = document.createElement('td');
+            typeCell.textContent = skill.cutting_type.replace('_', ' ').toUpperCase();
+            row.appendChild(typeCell);
+            
+            // Outcome
+            const outcomeCell = document.createElement('td');
+            outcomeCell.textContent = skill.outcome.replace('_', ' ').toUpperCase();
+            row.appendChild(outcomeCell);
+            
+            // Position
+            const positionCell = document.createElement('td');
+            positionCell.textContent = `X: ${skill.position.x.toFixed(1)}, Y: ${skill.position.y.toFixed(1)}`;
             row.appendChild(positionCell);
             
             tableBody.appendChild(row);
@@ -568,9 +864,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Add event listeners for cutting buttons
+    document.querySelectorAll('.cutting-button').forEach(button => {
+        button.addEventListener('click', function() {
+            handleCuttingType(this.dataset.cuttingType);
+        });
+    });
+
+    // Add event listeners for outcome buttons
+    document.querySelectorAll('.outcome-button').forEach(button => {
+        button.addEventListener('click', function() {
+            handleOutcome(this.dataset.outcome);
+        });
+    });
+
+    // Load existing cutting skills for this point
+    function loadCuttingSkills() {
+        fetch(`/cutting-skills/list/{{ point.id }}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(skill => {
+                    // Add to state
+                    updateCuttingSkillsState(skill);
+                    // Add marker
+                    addCuttingSkillMarker(skill);
+                });
+                // Update table
+                updateCuttingSkillsTable();
+            })
+            .catch(error => {
+                console.error('Error loading cutting skills:', error);
+            });
+    }
+
+    // Call this function when the page loads
+    loadCuttingSkills();
 });
-
-
 </script>
 {% endblock %}
-
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
