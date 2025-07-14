@@ -5,11 +5,8 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Pull
-from app.forms.point import PointForm
+from app.forms.point import PointForm, PullForm
 from app.models.event import Event
-from app.models.throws import Throw
-from app.models.stats import PlayerPointStats
-from app.utils.utils import admin_required
 
 bp = Blueprint('point', __name__, url_prefix='/points')
 
@@ -122,7 +119,6 @@ def get_player_stats(game_id):
             completion_rate = round((stats['completions'] / stats['throws']) * 100, 1)
         
         player_stats[player.id] = {
-            'player_id': player.id,  # Add this line to include player ID
             'player_name': player.name,
             'jersey_number': player.jersey_number,
             'points_played': points_played,
@@ -184,7 +180,31 @@ def calculate_completion_rate(game_id):
     return round((completions / (completions + throwaways)) * 100, 1)
 
 
-
+def calculate_completion_rate(game_id):
+    """Calculate the team's completion rate for the game so far."""
+    # Get all points for this game
+    points = Point.query.filter_by(game_id=game_id).all()
+    point_ids = [p.id for p in points]
+    
+    if not point_ids:
+        return 0
+    
+    # Count completions (including regular throws, assists, and hockey assists)
+    completions = Event.query.filter(
+        Event.point_id.in_(point_ids),
+        Event.event_type.in_(['regular', 'assist', 'hockey_assist'])
+    ).count()
+    
+    # Count throwaways
+    throwaways = Event.query.filter(
+        Event.point_id.in_(point_ids),
+        Event.event_type == 'throwaway'
+    ).count()
+    
+    if completions + throwaways == 0:
+        return 0
+        
+    return round((completions / (completions + throwaways)) * 100, 1)
 
 
 def determine_gender_ratio(point_number):
@@ -215,26 +235,11 @@ def determine_line_and_position(previous_point):
         # They scored, so we're now on offense
         return 'O-line', 'offense'
 
-
-
 @bp.route('/add/<int:game_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_point(game_id):
     game = Game.query.get_or_404(game_id)
     form = PointForm()
-    
-    # Get all active players
-    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
-    
-    # Get player stats
-    player_stats = get_player_stats(game_id)
-    
-    # Create a dictionary for quick player stats lookup
-    player_stats_dict = {}
-    for stat in player_stats:
-        if 'player_id' in stat:
-            player_stats_dict[stat['player_id']] = stat
     
     # Get the last point for this game
     last_point = Point.query.filter_by(game_id=game_id)\
@@ -259,72 +264,8 @@ def add_point(game_id):
         form.our_line_type.data = line_type
         form.starting_position.data = starting_position
     
-    # Process the player selection before form validation
-    if request.method == 'POST':
-        # Get the selected players from the form data
-        selected_players_str = request.form.get('players', '')
-        print(f"DEBUG: Raw players field value: '{selected_players_str}'")
-        
-        if selected_players_str:
-            try:
-                # Convert comma-separated string to list of integers
-                selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
-                print(f"DEBUG: Selected players: {selected_players}")
-                
-                # Set the data directly, bypassing validation
-                form.players.data = selected_players
-                
-                # Clear any errors for this field
-                if 'players' in form.errors:
-                    del form.errors['players']
-            except ValueError as e:
-                print(f"DEBUG: Error converting player IDs: {e}")
-                form.players.data = []
-        else:
-            print("DEBUG: No players selected in form data")
-            form.players.data = []
-    
-    if form.validate_on_submit() or (request.method == 'POST' and form.errors.get('players') and len(form.errors) == 1):
+    if form.validate_on_submit():
         try:
-            # Check if we have exactly 7 players
-            if len(form.players.data) != 7:
-                flash(f'You must select exactly 7 players. You selected {len(form.players.data)}.', 'danger')
-                return render_template('point/point_form.html',
-                                     form=form,
-                                     game=game,
-                                     title='Add Point',
-                                     completion_rate=calculate_completion_rate(game_id),
-                                     player_stats=player_stats,
-                                     all_players=all_players,
-                                     player_stats_dict=player_stats_dict)
-            
-            # Validate gender ratio
-            male_count = 0
-            female_count = 0
-            
-            for player_id in form.players.data:
-                player = Player.query.get(player_id)
-                if player:
-                    if player.gender == "male":
-                        male_count += 1
-                    elif player.gender == "female":
-                        female_count += 1
-            
-            # Get required ratio
-            required_male, required_female = map(int, form.gender_ratio.data.split('-'))
-            
-            if male_count != required_male or female_count != required_female:
-                flash(f'Selected players do not match the gender ratio. Need {required_male} male and {required_female} female players. You selected {male_count} male and {female_count} female players.', 'danger')
-                return render_template('point/point_form.html',
-                                     form=form,
-                                     game=game,
-                                     title='Add Point',
-                                     completion_rate=calculate_completion_rate(game_id),
-                                     player_stats=player_stats,
-                                     all_players=all_players,
-                                     player_stats_dict=player_stats_dict)
-            
-            # Create the point
             point = Point(
                 game_id=game_id,
                 point_number=form.point_number.data,
@@ -366,79 +307,29 @@ def add_point(game_id):
             
         except Exception as e:
             db.session.rollback()
-            import traceback
             print(f"Error saving point: {str(e)}")
-            print(traceback.format_exc())
-            flash(f'Error saving point: {str(e)}', 'danger')
-    else:
-        # If form validation failed, print the errors
-        if form.errors:
-            print(f"DEBUG: Form validation errors: {form.errors}")
-            for field, errors in form.errors.items():
-                for error in errors:
-                    flash(f"{field}: {error}", 'danger')
+            flash(f'Error saving point: {str(e)}', 'error')
     
     return render_template('point/point_form.html',
                          form=form,
                          game=game,
                          title='Add Point',
                          completion_rate=calculate_completion_rate(game_id),
-                         player_stats=player_stats,
-                         all_players=all_players,
-                         player_stats_dict=player_stats_dict)
-
+                         player_stats=get_player_stats(game_id))
 
 
 
 
 @bp.route('/edit/<int:point_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_point(point_id):
     point = Point.query.get_or_404(point_id)
     game = Game.query.get(point.game_id)
     form = PointForm(obj=point)
     
-    # Get all active players
-    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
-    
-    # Get player stats
-    player_stats = get_player_stats(game.id)
-    
-    # Create a dictionary for quick player stats lookup
-    player_stats_dict = {}
-    for stat in player_stats:
-        if 'player_id' in stat:
-            player_stats_dict[stat['player_id']] = stat
-    
-    # Pre-select players on GET request
+    # Pre-select players
     if request.method == 'GET':
-        # Get the current lineup player IDs
-        current_lineup_player_ids = [lineup.player_id for lineup in point.lineups]
-        form.players.data = current_lineup_player_ids
-        print(f"DEBUG: Pre-selected players: {current_lineup_player_ids}")
-    
-    # Process the player selection before form validation on POST
-    if request.method == 'POST':
-        # Get the selected players from the form data
-        selected_players_str = request.form.get('players', '')
-        print(f"DEBUG: Raw players field value: '{selected_players_str}'")
-        
-        if selected_players_str:
-            try:
-                # Convert comma-separated string to list of integers
-                selected_players = [int(pid) for pid in selected_players_str.split(',') if pid]
-                print(f"DEBUG: Selected players: {selected_players}")
-                
-                # Set the data directly
-                form.players.data = selected_players
-            except ValueError as e:
-                print(f"DEBUG: Error converting player IDs: {e}")
-                form.players.data = []
-        else:
-            print("DEBUG: No players selected in form data")
-            # IMPORTANT: Instead of setting to empty list, keep the existing lineup
-            form.players.data = [lineup.player_id for lineup in point.lineups]
+        form.players.data = [lineup.player_id for lineup in point.lineups]
     
     if form.validate_on_submit():
         point.point_number = form.point_number.data
@@ -458,41 +349,21 @@ def edit_point(point_id):
             point.our_score_after = form.our_score_before.data
             point.their_score_after = form.their_score_before.data + 1
         
-        # IMPORTANT: Only update lineup if players were explicitly selected
-        if form.players.data:
-            # First, get the current lineup player IDs
-            current_lineup_player_ids = [lineup.player_id for lineup in point.lineups]
-            
-            # Only update if the selection has changed
-            if set(current_lineup_player_ids) != set(form.players.data):
-                print(f"DEBUG: Updating lineup from {current_lineup_player_ids} to {form.players.data}")
-                
-                # Remove all existing lineups
-                LineUp.query.filter_by(point_id=point.id).delete()
-                
-                # Then add the new ones
-                for player_id in form.players.data:
-                    lineup = LineUp(point_id=point.id, player_id=player_id)
-                    db.session.add(lineup)
-            else:
-                print("DEBUG: Lineup unchanged, not updating")
-        else:
-            print("DEBUG: No players selected, keeping existing lineup")
+        # Update lineup
+        # First, remove all existing lineups
+        LineUp.query.filter_by(point_id=point.id).delete()
+        
+        # Then add the new ones
+        for player_id in form.players.data:
+            lineup = LineUp(point_id=point.id, player_id=player_id)
+            db.session.add(lineup)
         
         db.session.commit()
         
         flash(f'Point {point.point_number} has been updated!', 'success')
         return redirect(url_for('point.game_points', game_id=point.game_id))
     
-    return render_template('point/point_form.html', 
-                          form=form, 
-                          game=game, 
-                          point=point, 
-                          title='Edit Point',
-                          player_stats=player_stats,
-                          all_players=all_players,
-                          player_stats_dict=player_stats_dict)
-
+    return render_template('point/point_form.html', form=form, game=game, point=point, title='Edit Point')
 
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
@@ -501,139 +372,40 @@ def delete_point(point_id):
     game_id = point.game_id
     point_number = point.point_number
     
-    try:
-        # First, get all event IDs for this point
-        event_ids = [event.id for event in Event.query.filter_by(point_id=point.id).all()]
-        
-        # Delete throws that reference these events
-        if event_ids:
-            Throw.query.filter(Throw.throwing_event_id.in_(event_ids)).delete(synchronize_session=False)
-            
-        # Delete player_point_stats records
-        PlayerPointStats.query.filter_by(point_id=point.id).delete()
-        
-        # Delete lineups
-        LineUp.query.filter_by(point_id=point.id).delete()
-        
-        # Now it's safe to delete events
-        Event.query.filter_by(point_id=point.id).delete()
-        
-        # Delete pulls
-        Pull.query.filter_by(point_id=point.id).delete()
-        
-        # Delete the point
-        db.session.delete(point)
+    # Delete all related records (lineups, events, pulls)
+    LineUp.query.filter_by(point_id=point.id).delete()
+    
+    # Delete the point
+    db.session.delete(point)
+    db.session.commit()
+    
+    flash(f'Point {point_number} has been deleted!', 'success')
+    return redirect(url_for('point.game_points', game_id=game_id))
+
+@bp.route('/add_pull/<int:point_id>', methods=['GET', 'POST'])
+@login_required
+def add_pull(point_id):
+    point = Point.query.get_or_404(point_id)
+    form = PullForm(point=point)
+    
+    if form.validate_on_submit():
+        pull = Pull(
+            point_id=point_id,
+            player_id=form.player_id.data,
+            is_inbounds=form.is_inbounds.data
+        )
+        db.session.add(pull)
         db.session.commit()
         
-        flash(f'Point {point_number} has been deleted!', 'success')
-        return redirect(url_for('point.game_points', game_id=game_id))
+        flash('Pull has been recorded!', 'success')
+        return redirect(url_for('stat.record_events', point_id=point_id))
     
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error deleting point: {str(e)}', 'danger')
-        return redirect(url_for('point.game_points', game_id=game_id))
-
-
-
-
-
+    return render_template('point/pull_form.html', form=form, point=point)
 
 @bp.route('/<int:point_id>')
 @login_required
 def point_detail(point_id):
     point = Point.query.get_or_404(point_id)
     game = Game.query.get(point.game_id)
-    
-    # Get events
-    from app.models.event import Event
-    events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
-    
-    # Reorder events to ensure assists and hockey assists appear before goals
-    reordered_events = []
-    goal_events = []
-    assist_events = []
-    hockey_assist_events = []
-    other_events = []
-    
-    for event in events:
-        if event.event_type == 'goal':
-            goal_events.append(event)
-        elif event.event_type == 'assist':
-            assist_events.append(event)
-        elif event.event_type == 'hockey_assist':
-            hockey_assist_events.append(event)
-        else:
-            other_events.append(event)
-    
-    # First add all non-goal/assist/hockey_assist events
-    reordered_events.extend(other_events)
-    
-    # Then add hockey assists, assists, and goals in that order
-    reordered_events.extend(hockey_assist_events)
-    reordered_events.extend(assist_events)
-    reordered_events.extend(goal_events)
-    
-    # Explicitly load lineups
-    from app.models.point import LineUp
-    lineups = LineUp.query.filter_by(point_id=point_id).all()
-    
-    # Create a serializable version of events for JavaScript
-    events_data = []
-    for event in reordered_events:  # Use reordered_events instead of events
-        event_dict = {
-            'id': event.id,
-            'event_type': event.event_type,
-            'timestamp': event.timestamp,
-            'field_position_x': event.field_position_x,
-            'field_position_y': event.field_position_y,
-            'player_id': event.player_id,
-            'player_name': event.player.name if event.player else None,
-            'receiver_id': event.receiver_id,
-            'receiver_name': event.receiver.name if event.receiver else None,
-            'is_offensive': event.is_offensive
-        }
-        events_data.append(event_dict)
-    
-    return render_template('point/point_detail.html', 
-                          point=point, 
-                          game=game, 
-                          events=reordered_events,  # Use reordered_events here too
-                          events_data=events_data,
-                          lineups=lineups)
-
-
-
-
-@bp.route('/fix_lineups/<int:point_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def fix_lineups(point_id):
-    point = Point.query.get_or_404(point_id)
-    
-    if request.method == 'POST':
-        # Get selected players
-        player_ids = request.form.getlist('players')
-        
-        if len(player_ids) != 7:
-            flash(f'You must select exactly 7 players. You selected {len(player_ids)}.', 'danger')
-            return redirect(url_for('point.fix_lineups', point_id=point_id))
-        
-        # Delete existing lineups
-        LineUp.query.filter_by(point_id=point_id).delete()
-        
-        # Add new lineups
-        for player_id in player_ids:
-            lineup = LineUp(point_id=point_id, player_id=player_id)
-            db.session.add(lineup)
-        
-        db.session.commit()
-        flash('Lineups have been updated!', 'success')
-        return redirect(url_for('point.point_detail', point_id=point_id))
-    
-    # Get all active players
-    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
-    
-    return render_template('point/fix_lineups.html', 
-                          point=point, 
-                          all_players=all_players)
-
+    events = point.events.order_by('timestamp').all()
+    return render_template('point/point_detail.html', point=point, game=game, events=events)

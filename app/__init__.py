@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -16,40 +16,21 @@ login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
 
-
-
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-    
-    # Initialize extensions
+
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app)
-
-    # Ensure the SECRET_KEY is set
-    if not app.config.get('SECRET_KEY'):
-        app.config['SECRET_KEY'] = os.urandom(24)
     
-    # Configure S3
-    with app.app_context():
-        from app.utils.s3_utils import check_s3_configuration
-        if not check_s3_configuration():
-            app.logger.warning("S3 storage is not properly configured!")
-            
-        # Add S3 URL to template context
-        @app.context_processor
-        def inject_s3_url():
-            return {
-                's3_bucket_url': f"https://{app.config['AWS_BUCKET_NAME']}.s3.amazonaws.com" if app.config['AWS_BUCKET_NAME'] else None
-            }
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Configure static file serving
+    # Configure static file serving for uploads
     app.static_folder = 'static'
     app.static_url_path = '/static'
     
-    # Template filters
     def markdown_filter(text):
         if text:
             return markdown.markdown(text, extensions=['fenced_code', 'tables'])
@@ -57,54 +38,23 @@ def create_app(config_class=Config):
     
     app.jinja_env.filters['markdown'] = markdown_filter
     
-    @app.template_filter('initials')
-    def initials_filter(name):
-        """Convert a name to initials."""
-        words = name.split()
-        return ''.join(word[0].upper() for word in words if word)
+    def init_filters(app):
+        @app.template_filter('initials')
+        def initials_filter(name):
+            """Convert a name to initials."""
+            words = name.split()
+            return ''.join(word[0].upper() for word in words if word)
     
+    init_filters(app)
+    
+   
+    # Add custom Jinja2 filters
     @app.template_filter('nl2br')
     def nl2br_filter(s):
         if s is None:
             return ''
         return s.replace('\n', '<br>')
-    
-    # Error handlers
-    @app.errorhandler(CSRFError)
-    def handle_csrf_error(e):
-        return jsonify({
-            'success': False,
-            'message': 'CSRF token missing or invalid'
-        }), 400
-    
-    @app.errorhandler(413)
-    def too_large(e):
-        return jsonify({
-            'success': False,
-            'message': f'File too large. Maximum size is {app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)}MB'
-        }), 413
-    
-    import markdown
-    from markupsafe import Markup
-    
-    @app.template_filter('markdown')
-    def markdown_filter(text):
-        if text is None:
-            return ''
-        # Convert markdown to HTML with extensions
-        md_html = markdown.markdown(
-            text,
-            extensions=[
-                'markdown.extensions.fenced_code',
-                'markdown.extensions.tables',
-                'markdown.extensions.nl2br',
-                'markdown.extensions.sane_lists'
-            ]
-        )
-        # Return as safe HTML
-        return Markup(md_html)
 
-    
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -139,8 +89,8 @@ def create_app(config_class=Config):
     from app.routes.scouting import bp as scouting_bp
     app.register_blueprint(scouting_bp)
 
-    #from app.routes.drill_routes import drill_bp
-    #app.register_blueprint(drill_bp)
+    from app.routes.drill_routes import drill_bp
+    app.register_blueprint(drill_bp)
 
     from app.routes.playbook import bp as playbook_bp
     app.register_blueprint(playbook_bp)
@@ -148,35 +98,20 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
     
-    from app.routes.cutting_skill import bp as cutting_skill_bp
-    app.register_blueprint(cutting_skill_bp)
+    # Import all models to ensure they're registered with SQLAlchemy
+    from app.models.user import User
+    from app.models.player import Player
+    from app.models.tournament import Tournament
+    from app.models.game import Game
+    from app.models.point import Point, LineUp
+    from app.models.event import Event, Pull
+    from app.models.clip import Clip, ClipTag, ClipTagRelation, ClipPlayer
+    from app.models.annotation import ClipAnnotation
+    from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
     
-   
-    # Import models
-    from app.models import (
-       User, Player, Tournament, Game, Point, LineUp,
-       Event, Pull, Clip, ClipTag, ClipAnnotation,
-       SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill
-    )
-    
-    # Create upload directory in /tmp
-    try:
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        # Create subdirectories
-        for subdir in ['drills', 'playbook', 'theory', 'temp']:
-            os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], subdir), exist_ok=True)
-        
-        # Test write permissions
-        test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
-        with open(test_file, 'w') as f:
-            f.write('test')
-        os.remove(test_file)
-    except Exception as e:
-        app.logger.error(f"Storage initialization error: {str(e)}")
-        raise
-    
-    # Create database tables
+    # Create database tables if they don't exist
     with app.app_context():
         db.create_all()
     
     return app
+

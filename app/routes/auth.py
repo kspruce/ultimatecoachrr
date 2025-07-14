@@ -108,14 +108,14 @@ def add_user():
             user.set_password(form.password.data)
         
         db.session.add(user)
-        db.session.commit()  # Commit first to get user.id
         
         # Link to player if selected
-        if form.player_id.data and form.player_id.data > 0:
+        if form.player_id.data > 0:
             player = Player.query.get(form.player_id.data)
             if player:
-                player.user_id = user.id  # Set the user_id on the player
-                db.session.commit()
+                player.user_id = user.id
+        
+        db.session.commit()
         
         flash(f'User {user.username} has been created!', 'success')
         return redirect(url_for('auth.users'))
@@ -226,9 +226,5 @@ def link_player():
                 
                 flash(f'You are now linked to player {player.name}!', 'success')
                 return redirect(url_for('auth.profile'))
-            else:
-                flash('Invalid player selected.', 'error')
-        else:
-            flash('Please select a player.', 'error')
     
     return render_template('auth/link_player.html', players=available_players)

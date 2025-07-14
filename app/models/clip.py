@@ -1,65 +1,48 @@
 from app import db
 from datetime import datetime
 
-# Association tables
-clip_tag_relation = db.Table('clip_tag_relation',
-    db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('clip_tag.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
-)
-
-clip_player = db.Table('clip_player',
-    db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
-    db.Column('player_id', db.Integer, db.ForeignKey('player.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
-)
-
 class Clip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=True)
-    title = db.Column(db.String(100))
-    start_time = db.Column(db.Integer)  # in seconds
-    end_time = db.Column(db.Integer)    # in seconds
-    youtube_link = db.Column(db.String(200))  # Added for YouTube functionality
-    video_source = db.Column(db.String(20), default='youtube')  # Added for multiple video sources
+    video_source = db.Column(db.String(20), nullable=False, default='youtube')
+    title = db.Column(db.String(100), nullable=False)
+    youtube_link = db.Column(db.String(200), nullable=False)
+    start_time = db.Column(db.Integer, nullable=True)
+    end_time = db.Column(db.Integer, nullable=True)
+    description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    description = db.Column(db.Text, nullable=True)
-
+    
     # Relationships
-    game = db.relationship('Game', back_populates='clips')
-    point = db.relationship('Point', back_populates='clips')
-    tags = db.relationship('ClipTag', 
-                         secondary=clip_tag_relation,
-                         backref=db.backref('clips', lazy='dynamic'))
-    players = db.relationship('Player', 
-                            secondary=clip_player,
-                            backref=db.backref('clip_appearances', lazy='dynamic'))
-    annotations = db.relationship('ClipAnnotation', back_populates='clip', cascade='all, delete-orphan')
-
+    tags = db.relationship('ClipTagRelation', backref='clip', lazy='dynamic', cascade='all, delete-orphan')
+    players = db.relationship('ClipPlayer', backref='clip', lazy='dynamic', cascade='all, delete-orphan')
+    annotations = db.relationship('ClipAnnotation', backref='clip', lazy='dynamic', cascade='all, delete-orphan')
+    
     def __repr__(self):
         return f'<Clip {self.title}>'
-
+    
     @property
     def tag_list(self):
         """Return a list of tags for this clip."""
-        return self.tags
-
-    @property
-    def player_list(self):
-        """Return a list of players in this clip."""
-        return self.players
-
+        return [relation.tag for relation in self.tags]
+    
     @property
     def embed_url(self):
         """Return the appropriate embed URL based on video source"""
         if self.video_source == 'youtube':
             return self.youtube_embed_url
         elif self.video_source == 'veo':
+            # Implement Veo embed URL logic
             return self.veo_embed_url
+        # Add more platforms as needed
         return None
-
+    
+    @property
+    def player_list(self):
+        """Return a list of players in this clip."""
+        return [relation.player for relation in self.players]
+    
     @property
     def youtube_embed_url(self):
         """Return the YouTube embed URL for this clip."""
@@ -85,22 +68,36 @@ class Clip(db.Model):
         
         return embed_url
 
-    @property
-    def veo_embed_url(self):
-        """Return the Veo embed URL for this clip."""
-        # Implement Veo-specific embedding logic here
-        return None
+
 
 
 class ClipTag(db.Model):
-    __tablename__ = 'clip_tag'
-    
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    category = db.Column(db.String(50))
+    name = db.Column(db.String(50), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    
+    # Relationships
+    clips = db.relationship('ClipTagRelation', backref='tag', lazy='dynamic')
+    
     def __repr__(self):
         return f'<ClipTag {self.name}>'
 
 
+class ClipTagRelation(db.Model):
+    clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), primary_key=True)
+    tag_id = db.Column(db.Integer, db.ForeignKey('clip_tag.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ClipTagRelation {self.clip_id}-{self.tag_id}>'
+
+
+
+class ClipPlayer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ClipPlayer {self.clip_id}-{self.player_id}>'

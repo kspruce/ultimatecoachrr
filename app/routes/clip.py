@@ -2,15 +2,14 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from app import db
-from app.models import Clip, ClipTag, ClipAnnotation 
+from app.models.clip import Clip, ClipTag, ClipTagRelation, ClipPlayer
 from app.models.game import Game
 from app.models.point import Point
 from app.models.player import Player
-from app.models import ClipAnnotation 
+from app.models.annotation import ClipAnnotation
 from app.forms.annotation import AnnotationForm
 from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
 import re
-from app.utils.utils import admin_required
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
@@ -18,30 +17,38 @@ bp = Blueprint('clip', __name__, url_prefix='/clips')
 @login_required
 def index():
     form = ClipFilterForm()
-    delete_form = FlaskForm()
-
+    delete_form = FlaskForm()  # Add this line
+    
     # Get filter parameters
     game_id = request.args.get('game_id', type=int)
     tag_id = request.args.get('tag_id', type=int)
     player_id = request.args.get('player_id', type=int)
-
+    
+    # Set form values from query parameters
+    if game_id:
+        form.game_id.data = game_id
+    if tag_id:
+        form.tag_id.data = tag_id
+    if player_id:
+        form.player_id.data = player_id
+    
     # Build query based on filters
     query = Clip.query
-
+    
     if game_id:
         query = query.filter(Clip.game_id == game_id)
     if tag_id:
-        query = query.filter(Clip.tags.any(ClipTag.id == tag_id))
+        query = query.join(ClipTagRelation).filter(ClipTagRelation.tag_id == tag_id)
     if player_id:
-        query = query.filter(Clip.players.any(Player.id == player_id))
-
+        query = query.join(ClipPlayer).filter(ClipPlayer.player_id == player_id)
+    
     # Get clips and sort by creation date (newest first)
     clips = query.order_by(Clip.created_at.desc()).all()
-
+    
     return render_template('clip/index.html', 
                          clips=clips, 
                          form=form, 
-                         delete_form=delete_form)
+                         delete_form=delete_form)  # Add delete_form
 
 @bp.route('/game/<int:game_id>')
 @login_required
@@ -61,43 +68,70 @@ def point_clips(point_id):
 
 @bp.route('/add_clip', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_clip():
     form = ClipForm()
-    
-    # Check if there are any tags
     tags_exist = ClipTag.query.count() > 0
-    
+
     if form.validate_on_submit():
+        video_source = form.video_source.data
+        video_link = form.youtube_link.data
+        
+        if video_source == 'youtube':
+            video_id = extract_youtube_id(video_link)
+            if not video_id:
+                flash('Invalid YouTube link. Please provide a valid YouTube URL.', 'danger')
+                return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
+            standard_link = f'https://www.youtube.com/watch?v={video_id}'
+        elif video_source == 'veo':
+            if not validate_veo_link(video_link):
+                flash('Invalid Veo link. Please provide a valid Veo URL.', 'danger')
+                return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
+            standard_link = video_link
+
         clip = Clip(
             title=form.title.data,
-            video_source=form.video_source.data,
-            youtube_link=form.youtube_link.data,
-            game_id=form.game_id.data if form.game_id.data else None,
-            point_id=form.point_id.data if form.point_id.data else None,
+            video_source=video_source,
+            youtube_link=standard_link,  # We'll keep using youtube_link field for now
+            game_id=form.game_id.data if form.game_id.data and form.game_id.data > 0 else None,
+            point_id=form.point_id.data if form.point_id.data and form.point_id.data > 0 else None,
             start_time=form.start_time.data,
             end_time=form.end_time.data,
             description=form.description.data
         )
-
-        # Add tags and players using the new relationship pattern
-        if form.tags.data:
-            tags = ClipTag.query.filter(ClipTag.id.in_(form.tags.data)).all()
-            clip.tags = tags
-
-        if form.players.data:
-            players = Player.query.filter(Player.id.in_(form.players.data)).all()
-            clip.players = players
-
+        
         db.session.add(clip)
         db.session.commit()
-
+        
+        # Add tags if selected
+        if form.tags.data:
+            for tag_id in form.tags.data:
+                tag_relation = ClipTagRelation(clip_id=clip.id, tag_id=tag_id)
+                db.session.add(tag_relation)
+        
+        # Add players if selected
+        if form.players.data:
+            for player_id in form.players.data:
+                player_relation = ClipPlayer(clip_id=clip.id, player_id=player_id)
+                db.session.add(player_relation)
+        
+        db.session.commit()
+        
         flash(f'Clip "{clip.title}" has been added!', 'success')
         return redirect(url_for('clip.index'))
     
-    # Add this return statement for GET requests or failed form validation
+    # Pre-select game and point if coming from game or point page
+    game_id = request.args.get('game_id', type=int)
+    point_id = request.args.get('point_id', type=int)
+    
+    if game_id:
+        form.game_id.data = game_id
+    if point_id:
+        point = Point.query.get(point_id)
+        if point:
+            form.game_id.data = point.game_id
+            form.point_id.data = point_id
+    
     return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
-
 
 def validate_veo_link(url):
     """Validate Veo video URL"""
@@ -114,7 +148,6 @@ def get_veo_embed_url(url):
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_clip(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     form = ClipForm(obj=clip)
@@ -123,9 +156,9 @@ def edit_clip(clip_id):
     tags_exist = ClipTag.query.count() > 0
     
     if request.method == 'GET':
-        # Pre-select tags and players using the new relationship pattern
-        form.tags.data = [tag.id for tag in clip.tags]
-        form.players.data = [player.id for player in clip.players]
+        # Pre-select tags and players
+        form.tags.data = [relation.tag_id for relation in clip.tags]
+        form.players.data = [relation.player_id for relation in clip.players]
         
         # If clip has a point, populate the point choices
         if clip.game_id:
@@ -133,27 +166,38 @@ def edit_clip(clip_id):
             form.point_id.choices = [(0, 'Select Point')] + [(p.id, f"Point {p.point_number}") for p in points]
     
     if form.validate_on_submit():
+        # Extract video ID from YouTube link
+        youtube_link = form.youtube_link.data
+        video_id = extract_youtube_id(youtube_link)
+        
+        if not video_id:
+            flash('Invalid YouTube link. Please provide a valid YouTube URL.', 'danger')
+            return render_template('clip/clip_form.html', form=form, title='Edit Clip', tags_exist=tags_exist)
+        
+        # Create standardized YouTube link
+        standard_link = f'https://www.youtube.com/watch?v={video_id}'
+        
         clip.title = form.title.data
         clip.game_id = form.game_id.data if form.game_id.data and form.game_id.data > 0 else None
         clip.point_id = form.point_id.data if form.point_id.data and form.point_id.data > 0 else None
-        clip.youtube_link = form.youtube_link.data
+        clip.youtube_link = standard_link
         clip.start_time = form.start_time.data
         clip.end_time = form.end_time.data
         clip.description = form.description.data
         
-        # Update tags using the new relationship pattern
+        # Update tags
+        ClipTagRelation.query.filter_by(clip_id=clip.id).delete()
         if form.tags.data:
-            tags = ClipTag.query.filter(ClipTag.id.in_(form.tags.data)).all()
-            clip.tags = tags
-        else:
-            clip.tags = []
+            for tag_id in form.tags.data:
+                tag_relation = ClipTagRelation(clip_id=clip.id, tag_id=tag_id)
+                db.session.add(tag_relation)
         
-        # Update players using the new relationship pattern
+        # Update players
+        ClipPlayer.query.filter_by(clip_id=clip.id).delete()
         if form.players.data:
-            players = Player.query.filter(Player.id.in_(form.players.data)).all()
-            clip.players = players
-        else:
-            clip.players = []
+            for player_id in form.players.data:
+                player_relation = ClipPlayer(clip_id=clip.id, player_id=player_id)
+                db.session.add(player_relation)
         
         db.session.commit()
         
@@ -165,18 +209,17 @@ def edit_clip(clip_id):
 
 @bp.route('/delete/<int:clip_id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_clip(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     title = clip.title
-
-    # Clear relationships
-    clip.tags = []
-    clip.players = []
+    
+    # Delete related records
+    ClipTagRelation.query.filter_by(clip_id=clip.id).delete()
+    ClipPlayer.query.filter_by(clip_id=clip.id).delete()
     
     db.session.delete(clip)
     db.session.commit()
-
+    
     flash(f'Clip "{title}" has been deleted!', 'success')
     return redirect(url_for('clip.index'))
 
@@ -197,7 +240,6 @@ def view_clip(clip_id):
 
 @bp.route('/add_annotation/<int:clip_id>', methods=['POST'])
 @login_required
-@admin_required
 def add_annotation(clip_id):
     clip = Clip.query.get_or_404(clip_id)
     form = AnnotationForm()
@@ -233,7 +275,6 @@ def add_annotation(clip_id):
 
 @bp.route('/edit_annotation/<int:annotation_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_annotation(annotation_id):
     annotation = ClipAnnotation.query.get_or_404(annotation_id)
     form = AnnotationForm(obj=annotation)
@@ -265,7 +306,6 @@ def edit_annotation(annotation_id):
 
 @bp.route('/delete_annotation/<int:annotation_id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_annotation(annotation_id):
     annotation = ClipAnnotation.query.get_or_404(annotation_id)
     clip_id = annotation.clip_id
@@ -284,7 +324,6 @@ def tags():
 
 @bp.route('/tags/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_tag():
     form = ClipTagForm()
     
@@ -306,7 +345,6 @@ def add_tag():
 
 @bp.route('/tags/edit/<int:tag_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_tag(tag_id):
     tag = ClipTag.query.get_or_404(tag_id)
     form = ClipTagForm(obj=tag)
@@ -328,14 +366,12 @@ def edit_tag(tag_id):
 
 @bp.route('/tags/delete/<int:tag_id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_tag(tag_id):
     tag = ClipTag.query.get_or_404(tag_id)
     name = tag.name
     
-    # Clear relationships using the new pattern
-    for clip in tag.clips:
-        clip.tags.remove(tag)
+    # Delete related records
+    ClipTagRelation.query.filter_by(tag_id=tag.id).delete()
     
     db.session.delete(tag)
     db.session.commit()

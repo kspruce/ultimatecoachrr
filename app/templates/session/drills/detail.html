@@ -27,19 +27,6 @@
 
     <div class="row">
         <div class="col-md-8">
-            {% if drill.ultiplay_embed %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4>Drill Video</h4>
-                </div>
-                <div class="card-body">
-                    <div class="embed-responsive embed-responsive-16by9">
-                        {{ drill.ultiplay_embed|safe }}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
             <div class="card mb-4">
                 <div class="card-header">
                     <h4>Drill Details</h4>
@@ -68,8 +55,26 @@
                             Not specified
                         {% endif %}
                     </p>
+                    {% if drill.video_url %}
+                        <p><strong>Video URL:</strong> <a href="{{ drill.video_url }}" target="_blank">{{ drill.video_url }}</a></p>
+                    {% endif %}
                 </div>
             </div>
+
+            {% if drill.diagram_url %}
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Drill Diagram</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if drill.diagram_url.startswith('http') %}
+                            <img src="{{ drill.diagram_url }}" alt="Drill Diagram" class="img-fluid">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='images/drills/' + drill.diagram_url) }}" alt="Drill Diagram" class="img-fluid">
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
         </div>
 
         <div class="col-md-4">
@@ -84,8 +89,7 @@
                     <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" class="btn btn-outline-secondary btn-block mb-2">
                         Edit Drill
                     </a>
-                    <form action="{{ url_for('session.delete_drill', drill_id=drill.id) }}" method="post" 
-                          onsubmit="return confirm('Are you sure you want to delete this drill?');">
+                    <form action="{{ url_for('session.delete_drill', drill_id=drill.id) }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-outline-danger btn-block">Delete Drill</button>
                     </form>
@@ -95,28 +99,41 @@
     </div>
 </div>
 
-{% block styles %}
-{{ super() }}
-<style>
-    .embed-responsive {
-        position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
-        height: 0;
-        overflow: hidden;
+<script>
+function deleteDrill(drillId) {
+    if (confirm('Are you sure you want to delete this drill?')) {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        
+        fetch(`/sessions/api/drills/${drillId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Success:', data);
+            if (data.success) {
+                window.location.href = '/sessions/drills';
+            } else {
+                alert(data.message || 'Unknown error occurred');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error.message);
+        });
     }
-    .embed-responsive iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-    }
-    .btn-block {
-        display: block;
-        width: 100%;
-    }
-</style>
-{% endblock %}
-
+}
+</script>
 {% endblock %}

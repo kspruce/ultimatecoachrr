@@ -2,362 +2,53 @@
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.1.0/css/fixedColumns.dataTables.min.css">
-<script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 <style>
     .stat-card {
-        transition: all 0.3s ease;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+        padding: 15px;
+        margin-bottom: 20px;
     }
     
     .stat-value {
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: bold;
-        color: #2c3e50;
     }
     
     .stat-label {
         font-size: 0.9rem;
-        color: #7f8c8d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        color: #666;
     }
     
-    .trend-indicator {
-        font-size: 0.9rem;
-        margin-left: 5px;
+    .table-responsive {
+        overflow-x: auto;
     }
     
-    .trend-up { color: #2ecc71; }
-    .trend-down { color: #e74c3c; }
-    
-    .line-card {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    #player-stats-table th, 
+    #player-stats-table td {
+        white-space: nowrap;
     }
-    
-    .player-card {
-        border-left: 4px solid transparent;
-    }
-    
-    .o-line { border-left-color: #3498db; }
-    .d-line { border-left-color: #e74c3c; }
-    
-    .field-container {
-        position: relative;
-        width: 100%;
-        height: 400px;
-        background-color: #4CAF50;
-        border: 2px solid #333;
-        margin-bottom: 20px;
-        overflow: hidden;
-    }
-    
-    .endzone {
-        position: absolute;
-        height: 100%;
-        width: 18%;
-        background-color: #388E3C;
-        z-index: 1;
-    }
-    
-    .endzone-left { left: 0; }
-    .endzone-right { right: 0; }
-    
-    #field-heatmap canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 2;
-    }
-
-    .heatmap-canvas {
-        z-index: 2;
-    }
-    
-    .network-chart {
-        height: 400px;
-        width: 100%;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-    }
-    
-    .tooltip-inner {
-        max-width: 300px;
-        text-align: left;
-    }
-
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255,255,255,0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .chart-container {
-        position: relative;
-        min-height: 300px;
-    }
-    
-    /* Fixed header and first column */
-    .stats-table-container {
-        position: relative;
-        overflow: auto;
-        max-height: 600px;
-        width: 100%;
-    }
-    
-    .stats-table-container table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    
-    .stats-table-container th {
-        position: sticky;
-        top: 0;
-        background-color: #f8f9fa;
-        z-index: 10;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
-    .stats-table-container td:first-child,
-    .stats-table-container th:first-child {
-        position: sticky;
-        left: 0;
-        background-color: #f8f9fa;
-        z-index: 5;
-        border-right: 2px solid #dee2e6;
-    }
-    
-    .stats-table-container th:first-child {
-        z-index: 15; /* Higher than other headers to appear above them */
-    }
-    
-    /* Highlight rows on hover */
-    .stats-table-container tr:hover {
-        background-color: rgba(0,123,255,0.1) !important;
-    }
-    
-    /* Filter buttons styling */
-    .stats-filter-btn.active {
-        background-color: #0d6efd;
-        color: white;
-    }
-    
-    /* Stats category indicators */
-    .stat-cell {
-        position: relative;
-    }
-    
-    .offensive-stat {
-        background-color: rgba(52, 152, 219, 0.1);
-    }
-    
-    .defensive-stat {
-        background-color: rgba(231, 76, 60, 0.1);
-    }
-    
-    /* Tooltip improvements */
-    .stats-tooltip {
-        position: absolute;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        z-index: 100;
-        display: none;
-    }
-
-    /* Gender styling for optimal lines */
-    .player-card.female {
-        border-left: 4px solid #e83e8c;
-    }
-    
-    .player-card.male {
-        border-left: 4px solid #007bff;
-    }
-    
-    /* Section dividers */
-    .gender-divider {
-        background-color: #f8f9fa;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        color: #6c757d;
-    }  
-    
-    .d3-tooltip {
-        position: absolute;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        pointer-events: none;
-        z-index: 1000;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        max-width: 200px;
-        text-align: left;
-    }
-  
-    
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header Section -->
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>Team Statistics Dashboard</h1>
-            <p class="text-muted">Real-time analytics and performance metrics</p>
+            <h1>Statistics Dashboard</h1>
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary"
-                   data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                   title="View comprehensive team statistics">
-                    <i class="bi bi-bar-chart-fill"></i> Team Stats
-                </a>
-                {% if recent_games %}
-                <a href="{{ url_for('stats_dashboard.game_stats', game_id=recent_games[0].id) }}" 
-                   class="btn btn-outline-primary"
-                   data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                   title="View latest game statistics">
-                    <i class="bi bi-graph-up"></i> Latest Game
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <!-- Quick Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <h6 class="stat-label">Season Record</h6>
-                    <div class="stat-value">
-                        {{ team_summary.wins }}-{{ team_summary.losses }}
-                        {% if team_summary.ties > 0 %}-{{ team_summary.ties }}{% endif %}
-                    </div>
-                    <div class="text-muted">
-                        Win Rate: {{ team_summary.win_percentage|round(1) }}%
-                        {% if team_summary.win_percentage > 50 %}
-                        <span class="trend-indicator trend-up"><i class="bi bi-arrow-up"></i></span>
-                        {% else %}
-                        <span class="trend-indicator trend-down"><i class="bi bi-arrow-down"></i></span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <h6 class="stat-label">O-Line Efficiency</h6>
-                    <div class="stat-value">{{ team_summary.o_line_conversion_rate|round(1) }}%</div>
-                    <div class="text-muted">
-                        {{ team_summary.o_line_conversions }}/{{ team_summary.o_line_points }} Points
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="card-body">
-                    <h6 class="stat-label">D-Line Efficiency</h6>
-                    <div class="stat-value">{{ team_summary.d_line_conversion_rate|round(1) }}%</div>
-                    <div class="text-muted">
-                        {{ team_summary.d_line_conversions }}/{{ team_summary.d_line_points }} Points
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Visualization Sections -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Field Heatmap
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Heat map showing concentration of throws on the field"></i>
-                    </h5>
-                    <div class="btn-group btn-group-sm mt-2">
-                        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
-                        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
-                        <button class="btn btn-outline-primary" data-filter="goals">Goals</button>
-                        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
-                        <button class="btn btn-outline-primary" data-filter="scored_on">Scored On</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="field-container" id="field-heatmap">
-                        <div class="endzone endzone-left"></div>
-                        <div class="endzone endzone-right"></div>
-                        {% if not heatmap_data %}
-                        <div class="loading-overlay">
-                            <p>No throw data available</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary">Team Stats</a>
+                <a href="{{ url_for('stats_dashboard.visualizations') }}" class="btn btn-outline-primary">Visualizations</a>
             </div>
         </div>
     </div>
 
-    <!-- Player Connections Section -->
     <div class="row mb-4">
-        <div class="col-md-12">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>Player Connections
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Network diagram showing throw connections between players"></i>
-                    </h5>
-                    <div class="btn-group btn-group-sm mt-2">
-                        <button class="btn btn-outline-primary active" data-strength="all">All Connections</button>
-                        <button class="btn btn-outline-primary" data-strength="strong">Strong Connections</button>
-                        <button class="btn btn-outline-primary" data-strength="weak">Weak Connections</button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="network-chart" id="player-connections">
-                        {% if not connection_data %}
-                        <div class="loading-overlay">
-                            <p>No connection data available</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Optimal Lines -->
-    <div class="row mb-4">
-        <!-- O-Line card -->
-        <div class="col-md-6">
-            <div class="card line-card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Optimal O-Line
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested O-line based on O-point efficiency"></i>
-                    </h5>
+                    <h5>Optimal O-Line</h5>
                 </div>
                 <div class="card-body">
                     {% if o_line_players %}
@@ -368,88 +59,34 @@
                                     <th>#</th>
                                     <th>Name</th>
                                     <th>Position</th>
-                                    <th>Gender</th>
-                                    <th>Efficiency</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% if o_line_women %}
-                                <!-- Women section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Women (Top {{ o_line_women|length }})</td>
-                                </tr>
-                                {% for player in o_line_women %}
-                                <tr class="player-card o-line female">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>F</td>
-                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if o_line_men %}
-                                <!-- Men section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Men (Top {{ o_line_men|length }})</td>
-                                </tr>
-                                {% for player in o_line_men %}
-                                <tr class="player-card o-line male">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>M</td>
-                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if not o_line_women and not o_line_men %}
-                                <!-- If no gender data, show all players -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Top Players (Gender data unavailable)</td>
-                                </tr>
                                 {% for player in o_line_players %}
-                                <tr class="player-card o-line">
+                                <tr>
                                     <td>{{ player.jersey_number }}</td>
                                     <td>
                                         <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
-                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
+                                    <td>{{ player.position|capitalize }}</td>
                                 </tr>
                                 {% endfor %}
-                                {% endif %}
                             </tbody>
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-center">Not enough data to generate optimal line.</p>
+                    <p class="text-center">Not enough player data to generate optimal line.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
         
-        <!-- D-Line card -->
         <div class="col-md-6">
-            <div class="card line-card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Optimal D-Line
-                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested D-line based on D point efficiency"></i>
-                    </h5>
+            <div class="card">
+                <div class="card-header">
+                    <h5>Optimal D-Line</h5>
                 </div>
                 <div class="card-body">
                     {% if d_line_players %}
@@ -460,635 +97,162 @@
                                     <th>#</th>
                                     <th>Name</th>
                                     <th>Position</th>
-                                    <th>Gender</th>
-                                    <th>Efficiency</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% if d_line_women %}
-                                <!-- Women section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Women (Top {{ d_line_women|length }})</td>
-                                </tr>
-                                {% for player in d_line_women %}
-                                <tr class="player-card d-line female">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>F</td>
-                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if d_line_men %}
-                                <!-- Men section -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Men (Top {{ d_line_men|length }})</td>
-                                </tr>
-                                {% for player in d_line_men %}
-                                <tr class="player-card d-line male">
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>M</td>
-                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
-                                </tr>
-                                {% endfor %}
-                                {% endif %}
-                                
-                                {% if not d_line_women and not d_line_men %}
-                                <!-- If no gender data, show all players -->
-                                <tr class="gender-divider">
-                                    <td colspan="5">Top Players (Gender data unavailable)</td>
-                                </tr>
                                 {% for player in d_line_players %}
-                                <tr class="player-card d-line">
+                                <tr>
                                     <td>{{ player.jersey_number }}</td>
                                     <td>
                                         <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
-                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
+                                    <td>{{ player.position|capitalize }}</td>
                                 </tr>
                                 {% endfor %}
-                                {% endif %}
                             </tbody>
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-center">Not enough data to generate optimal line.</p>
+                    <p class="text-center">Not enough player data to generate optimal line.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
-
-
-    <!-- Player Statistics Table -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Player Statistics
-                <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                   title="Comprehensive player statistics from recent games"></i>
-            </h5>
-            <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary stats-filter-btn active" data-view="all">All Stats</button>
-                <button class="btn btn-outline-primary stats-filter-btn" data-view="offense">Offensive Stats</button>
-                <button class="btn btn-outline-primary stats-filter-btn" data-view="defense">Defensive Stats</button>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Game Performance</h5>
+                </div>
+                <div class="card-body">
+                    {% if team_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Game</th>
+                                    <th>Result</th>
+                                    <th>O-Line Efficiency</th>
+                                    <th>D-Line Efficiency</th>
+                                    <th>Breaks</th>
+                                    <th>Holds</th>
+                                    <th>Turnovers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in team_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.game_stats', game_id=item.game.id) }}">
+                                            vs {{ item.game.opponent }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if item.game.is_win %}bg-success{% elif item.game.is_loss %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ item.game.result_string }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.stats.o_line_conversion_rate|round(1) }}%</td>
+                                    <td>{{ item.stats.d_line_conversion_rate|round(1) }}%</td>
+                                    <td>{{ item.stats.breaks }}</td>
+                                    <td>{{ item.stats.holds }}</td>
+                                    <td>{{ item.stats.turnovers }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">No recent games found.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        <div class="card-body">
-            {% if players and player_stats %}
-            <div class="stats-table-container">
-                <table class="table table-striped" id="player-stats-table">
-                    <thead>
-                        <tr>
-                            <th>Player</th>
-                            <th data-toggle="tooltip" title="Games Played">Games</th>
-                            <th data-toggle="tooltip" title="Points Played">Points</th>
-                            <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
-                            <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
-                            <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
-                            <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
-                            <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for player in players %}
-                        {% if player.id in player_stats %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                    {{ player.name }}
-                                    <small class="text-muted">#{{ player.jersey_number }}</small>
-                                </a>
-                            </td>
-                            <td>{{ player_stats[player.id].games_played }}</td>
-                            <td>{{ player_stats[player.id].points_played }}</td>
-                            <td>{{ player_stats[player.id].o_line_points_played }}</td>
-                            <td>{{ player_stats[player.id].d_line_points_played }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
-                            <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
-                            <td class="offensive-stat">
-                                {{ player_stats[player.id].completions }}
-                                <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
-                            </td>
-                            <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
-                            <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                   player_stats[player.id].blocks - player_stats[player.id].throwaways - 
-                                   player_stats[player.id].drops)|round(1) }}</td>
-                            <td>{{ player_stats[player.id].per|round(1) }}</td>
-                        </tr>
-                        {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="player-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Points</th>
+                                    <th>Catch</th>
+                                    <th>Throw</th>
+                                    <th>Assist</th>
+                                    <th>Hockey Assist</th>
+                                    <th>Throwaway</th>
+                                    <th>Drop</th>
+                                    <th>Turnover</th>
+                                    <th>Goal</th>
+                                    <th>Block</th>
+                                    <th>Total Throw Dist</th>
+                                    <th>Avg Throw Dist</th>
+                                    <th>Comp %</th>
+                                    <th>Catch %</th>
+                                    <th>AUDL +/-</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in players %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.points_played }}</td>
+                                    <td>{{ player_stats[player.id].catches if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].throws if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].assists if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].hockey_assists if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].throwaways if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].drops if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].turnovers if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].goals if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].blocks if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].total_throw_distance|round(1) if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].avg_throw_distance|round(1) if player.id in player_stats else 0 }}</td>
+                                    <td>{{ player_stats[player.id].completion_rate|round(1) if player.id in player_stats else 0 }}%</td>
+                                    <td>{{ player_stats[player.id].catch_rate|round(1) if player.id in player_stats else 0 }}%</td>
+                                    <td>{{ player_stats[player.id].per|round(2) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            {% else %}
-            <div class="alert alert-info">No player statistics available yet.</div>
-            {% endif %}
         </div>
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/heatmap.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-
-    // Initialize DataTable with improved configuration
-    const playerStatsTable = $('#player-stats-table').DataTable({
-        pageLength: 25,
-        order: [[14, "desc"]], // Sort by PER by default (now column 14)
-        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-             "<'row'<'col-sm-12'tr>>" +
-             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-        language: {
-            search: "Search players:",
-            lengthMenu: "Show _MENU_ players"
-        },
-        scrollX: true,
-        scrollY: "500px",
-        scrollCollapse: true,
-        paging: false,
-        fixedColumns: {
-            leftColumns: 1
-        },
-        columnDefs: [
-            { targets: [10], // Completion percentage column
-                render: function(data, type, row) {
-                    if (type === 'sort') {
-                        const match = data.match(/\((.*?)%\)/);
-                        return match ? parseFloat(match[1]) : 0;
-                    }
-                    return data;
-                }
-            }
-        ]
-    });
-
-    
-    // Add filtering functionality for the player stats table
-    document.querySelectorAll('[data-view]').forEach(button => {
-        button.addEventListener('click', function() {
-            // Update active button
-            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            const view = this.dataset.view;
-            const table = $('#player-stats-table').DataTable();
-            
-            // Clear any existing search
-            table.search('').columns().search('');
-            
-            if (view === 'offense') {
-                // Custom filtering function for offensive stats
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Check goals, assists, hockey assists, or completions
-                        const goals = parseInt(data[5]) || 0;
-                        const assists = parseInt(data[6]) || 0;
-                        const hockey = parseInt(data[7]) || 0;
-                        const completions = parseInt(data[10].split('(')[0].trim()) || 0;
-                        
-                        return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
-                    }
-                );
-            } else if (view === 'defense') {
-                // Custom filtering function for defensive stats
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Check blocks
-                        const blocks = parseInt(data[9]) || 0;
-                        return blocks > 0;
-                    }
-                );
-            } else {
-                // Remove any custom filtering for 'all' view
-                $.fn.dataTable.ext.search.pop();
-            }
-            
-            // Redraw the table with the new filter
-            table.draw();
-            
-            // Clear the custom filter after drawing
-            if (view !== 'all') {
-                $.fn.dataTable.ext.search.pop();
+    $(document).ready(function() {
+        $('#player-stats-table').DataTable({
+            "pageLength": 10,
+            "order": [[15, "desc"]],  // Sort by AUDL +/- column (index 15)
+            "scrollX": true,  // Enable horizontal scrolling for many columns
+            "language": {
+                "search": "Search players:",
+                "lengthMenu": "Show _MENU_ players per page",
+                "info": "Showing _START_ to _END_ of _TOTAL_ players"
             }
         });
     });
-
-    
-    // Add responsive behavior
-    $(window).on('resize', function() {
-        if ($(window).width() < 768) {
-            $('.stats-table-container').css('max-height', '400px');
-        } else {
-            $('.stats-table-container').css('max-height', '600px');
-        }
-    });
-    
-    // Initialize responsive behavior
-    $(window).trigger('resize');
-
-
-    // Initialize Heatmap
-    if (document.getElementById('field-heatmap')) {
-        const heatmapContainer = document.getElementById('field-heatmap');
-        const heatmapInstance = h337.create({
-            container: heatmapContainer,
-            radius: 15,
-            maxOpacity: 0.6,
-            minOpacity: 0.1,
-            blur: 0.75,
-            gradient: {
-                '.5': 'blue',
-                '.8': 'red',
-                '.95': 'white'
-            }
-        });
-
-        {% if heatmap_data %}
-        const heatmapData = {{ heatmap_data|safe }};
-        
-        // Convert field coordinates to pixel coordinates
-        const fieldWidth = heatmapContainer.offsetWidth;
-        const fieldHeight = heatmapContainer.offsetHeight;
-        const fieldLengthMeters = 100;  // Length in meters
-        const fieldWidthMeters = 37;    // Width in meters
-        
-        function updateHeatmap(filter = 'all') {
-            let filteredData = heatmapData;
-            if (filter !== 'all') {
-                filteredData = heatmapData.filter(point => {
-                    switch(filter) {
-                        case 'throws':
-                            return point.type === 'throw_start';  // Only show throw start positions
-                        case 'goals':
-                            return point.type === 'goal';  // Only show goal locations
-                        case 'turnovers':
-                            return point.type === 'throwaway';  // Only show throwaways
-                        case 'scored_on':
-                            return point.type === 'scored_on';  // Only show scored-on events
-                        default:
-                            return true;
-                    }
-                });
-            }
-        
-            // Use different gradients based on the filter
-            if (filter === 'turnovers') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.2': '#ff9999',
-                        '.8': '#ff0000'
-                    }
-                });
-            } else if (filter === 'goals') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.2': '#90EE90',
-                        '.8': '#006400'
-                    }
-                });
-            } else if (filter === 'scored_on') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.2': '#FFB6C1',
-                        '.8': '#8B0000'
-                    }
-                });
-            } else {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.2': 'blue',
-                        '.4': 'cyan',
-                        '.6': 'lime',
-                        '.8': 'yellow',
-                        '.95': 'red'
-                    }
-                });
-            }
-        
-            const pixelData = {
-                max: Math.max(1, filteredData.length / 10),
-                min: 0,
-                data: filteredData.map(point => ({
-                    x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
-                    y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                    value: 1
-                }))
-            };
-        
-            heatmapInstance.setData(pixelData);
-        }
-
-
-        // Initialize with all data
-        updateHeatmap();
-
-        // Add event listeners to heatmap filter buttons
-        document.querySelectorAll('[data-filter]').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                updateHeatmap(this.dataset.filter);
-            });
-        });
-        {% endif %}
-    }
-
-    // Enhanced Player Connections Network
-    if (document.getElementById('player-connections')) {
-        {% if connection_data %}
-        const connections = {{ connection_data|safe }};
-        const width = document.getElementById('player-connections').offsetWidth;
-        const height = 400;
-    
-        const svg = d3.select('#player-connections')
-            .append('svg')
-            .attr('width', width)
-            .attr('height', height)
-            .call(d3.zoom().on("zoom", function(event) {
-                g.attr("transform", event.transform);
-            }));
-    
-        // Create a group for all elements to enable zooming
-        const g = svg.append("g");
-    
-        // Create force simulation
-        const simulation = d3.forceSimulation(connections.nodes)
-            .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
-            .force('charge', d3.forceManyBody().strength(-400)) // repusion strength
-            .force('center', d3.forceCenter(width / 2, height / 2));
-    
-        // Draw links
-        const link = g.append('g')
-            .selectAll('line')
-            .data(connections.links)
-            .enter().append('line')
-            .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
-            .attr('stroke', '#999')
-            .attr('stroke-opacity', 0.6);
-    
-        // Draw nodes
-        const node = g.append('g')
-            .selectAll('circle')
-            .data(connections.nodes)
-            .enter().append('circle')
-            .attr('r', 25)  // increase size here
-            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
-                             (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
-            .call(d3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
-                .on('end', dragended));
-        
-        // Create custom tooltips instead of using the default title attribute
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "d3-tooltip")
-            .style("position", "absolute")
-            .style("background", "rgba(0,0,0,0.7)")
-            .style("color", "white")
-            .style("padding", "8px")
-            .style("border-radius", "4px")
-            .style("font-size", "12px")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .style("z-index", 1000);
-        
-        // Add tooltip behavior
-        node.on("mouseover", function(event, d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add tooltips for links to show connection strength
-        link.on("mouseover", function(event, d) {
-                const source = connections.nodes.find(n => n.id === d.source.id);
-                const target = connections.nodes.find(n => n.id === d.target.id);
-                
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add labels - use jersey numbers instead of initials
-        const label = g.append('g')
-            .selectAll('text')
-            .data(connections.nodes)
-            .enter().append('text')
-            .text(d => d.jersey_number || '?')  // Use jersey number as the label
-            .attr('font-size', 14)  // node font size
-            .attr('text-anchor', 'middle')  // Center the text
-            .attr('dy', 4)  // Slight vertical adjustment
-            .attr('fill', 'white');
-
-    
-        // Update positions on tick
-        simulation.on('tick', () => {
-            link
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
-        
-            node
-                .attr('cx', d => d.x)
-                .attr('cy', d => d.y);
-        
-            label
-                .attr('x', d => d.x)  // Center the text horizontally
-                .attr('y', d => d.y); // Center the text vertically
-        });
-
-    
-        // Add reset zoom button
-        svg.append("rect")
-            .attr("x", 10)
-            .attr("y", 10)
-            .attr("width", 80)
-            .attr("height", 30)
-            .attr("rx", 5)
-            .attr("fill", "rgba(255,255,255,0.7)")
-            .attr("stroke", "#999");
-            
-        svg.append("text")
-            .attr("x", 50)
-            .attr("y", 30)
-            .attr("text-anchor", "middle")
-            .text("Reset Zoom")
-            .style("font-size", "12px")
-            .style("cursor", "pointer")
-            .on("click", function() {
-                svg.transition().duration(750).call(
-                    d3.zoom().transform,
-                    d3.zoomIdentity
-                );
-            });
-    
-        // Drag functions
-        function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }
-    
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-    
-        function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-        }
-    
-        // Add connection strength filter functionality
-        document.querySelectorAll('[data-strength]').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                const strength = this.dataset.strength;
-                
-                link.style('display', d => {
-                    if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
-                    if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
-                    return 'block';
-                });
-            });
-        });
-        {% endif %}
-    }
-
-
-    // Add window resize handler
-    window.addEventListener('resize', debounce(function() {
-        // Redraw visualizations on window resize
-        if (typeof heatmapInstance !== 'undefined') {
-            updateHeatmap();
-        }
-        if (typeof simulation !== 'undefined') {
-            const width = document.getElementById('player-connections').offsetWidth;
-            simulation.force('center', d3.forceCenter(width / 2, height / 2));
-            simulation.alpha(0.3).restart();
-        }
-    }, 250));
-
-    // Debounce function
-    function debounce(func, wait) {
-        let timeout;
-        return function() {
-            const context = this, args = arguments;
-            clearTimeout(timeout);
-            timeout = setTimeout(function() {
-                func.apply(context, args);
-            }, wait);
-        };
-    }
-});
-// Add filtering functionality for the player stats table
-document.querySelectorAll('[data-view]').forEach(button => {
-    button.addEventListener('click', function() {
-        // Update active button
-        document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
-        this.classList.add('active');
-        
-        const view = this.dataset.view;
-        const table = $('#player-stats-table').DataTable();
-        
-        // Clear any existing search
-        table.search('').columns().search('');
-        
-        if (view === 'offense') {
-            // Custom filtering function for offensive stats
-            $.fn.dataTable.ext.search.push(
-                function(settings, data, dataIndex) {
-                    // Check goals, assists, hockey assists, or completions
-                    const goals = parseInt(data[5]) || 0;
-                    const assists = parseInt(data[6]) || 0;
-                    const hockey = parseInt(data[7]) || 0;
-                    const completions = parseInt(data[10].split('(')[0].trim()) || 0;
-                    
-                    return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
-                }
-            );
-        } else if (view === 'defense') {
-            // Custom filtering function for defensive stats
-            $.fn.dataTable.ext.search.push(
-                function(settings, data, dataIndex) {
-                    // Check blocks
-                    const blocks = parseInt(data[9]) || 0;
-                    return blocks > 0;
-                }
-            );
-        } else {
-            // Remove any custom filtering for 'all' view
-            $.fn.dataTable.ext.search.pop();
-        }
-        
-        // Redraw the table with the new filter
-        table.draw();
-        
-        // Clear the custom filter after drawing
-        if (view !== 'all') {
-            $.fn.dataTable.ext.search.pop();
-        }
-    });
-});
-
-
-
 </script>
 {% endblock %}

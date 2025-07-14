@@ -140,9 +140,9 @@
                 </div>
                 <div class="collapse" id="playerListCollapse">
                     <div class="card-body">
-                        {% if clip.players %}
+                        {% if clip.player_list %}
                         <ul class="list-group">
-                            {% for player in clip.players %}
+                            {% for player in clip.player_list %}
                             <li class="list-group-item">
                                 <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
                                     {{ player.name }} (#{{ player.jersey_number }})

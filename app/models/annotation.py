@@ -29,33 +29,26 @@ def timestamp_to_seconds(timestamp):
         return None
 
 class ClipAnnotation(db.Model):
-    __tablename__ = 'clip_annotation'
-    __table_args__ = {'extend_existing': True}
-
     id = db.Column(db.Integer, primary_key=True)
     clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), nullable=False)
-    timestamp = db.Column(db.Integer)
-    event_type = db.Column(db.String(50))
-    our_score = db.Column(db.Integer)
-    their_score = db.Column(db.Integer)
-    offense = db.Column(db.String(20))
-    defense = db.Column(db.String(20))
-    notes = db.Column(db.Text)
+    timestamp = db.Column(db.Integer, nullable=False)  # in seconds
+    event_type = db.Column(db.String(50), nullable=False)  # point_start, drill_start, turnover, score, etc.
+    our_score = db.Column(db.Integer, nullable=True)
+    their_score = db.Column(db.Integer, nullable=True)
+    offense = db.Column(db.String(50), nullable=True)  # us, them
+    defense = db.Column(db.String(50), nullable=True)  # us, them
+    notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationship
-    clip = db.relationship('Clip', back_populates='annotations')
-
+    
+    def __repr__(self):
+        return f'<ClipAnnotation {self.event_type} at {self.timestamp}s>'
+    
     @property
     def formatted_timestamp(self):
-        if self.timestamp is None:
-            return ""
-        hours = self.timestamp // 3600
-        minutes = (self.timestamp % 3600) // 60
-        seconds = self.timestamp % 60
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-       
+        """Return timestamp in HH:MM:SS format"""
+        return seconds_to_timestamp(self.timestamp)
+    
     
     @property
     def youtube_timestamp_link(self):

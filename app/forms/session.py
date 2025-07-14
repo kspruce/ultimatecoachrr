@@ -29,39 +29,50 @@ class SessionPlanForm(FlaskForm):
     submit = SubmitField('Save Session Plan')
 
 class DrillForm(FlaskForm):
-    title = StringField('Title', validators=[
-        DataRequired(), 
-        Length(max=100)
-    ])
-    description = TextAreaField('Description')
-    setup_instructions = TextAreaField('Setup Instructions')
+    title = StringField('Drill Title', validators=[DataRequired(), Length(max=100)])
+    description = TextAreaField('Description', validators=[Optional()])
+    setup_instructions = TextAreaField('Setup Instructions', validators=[Optional()])
     recommended_duration = IntegerField('Recommended Duration (minutes)', 
-        validators=[Optional(), NumberRange(min=1, max=120)]
-    )
-    min_players = IntegerField('Minimum Players',
-        validators=[Optional(), NumberRange(min=1)]
-    )
-    max_players = IntegerField('Maximum Players',
-        validators=[Optional(), NumberRange(min=1)]
-    )
-    skill_level = SelectField('Skill Level',
-        choices=[
-            ('', 'Any Level'),
-            ('beginner', 'Beginner'),
-            ('intermediate', 'Intermediate'),
-            ('advanced', 'Advanced')
-        ],
-        validators=[Optional()]
-    )
-    focus_area = StringField('Focus Area')
-    equipment_needed = StringField('Equipment Needed')
-    ultiplay_embed = TextAreaField('Ultiplay Embed Code')
+                                      validators=[Optional(), NumberRange(min=1)])
+    min_players = IntegerField('Minimum Players', 
+                             validators=[Optional(), NumberRange(min=1)])
+    max_players = IntegerField('Maximum Players', 
+                             validators=[Optional(), NumberRange(min=1)])
+    skill_level = SelectField('Skill Level', choices=[
+        ('', 'Select...'),
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+        ('all', 'All Levels')
+    ], validators=[Optional()])
+    focus_area = StringField('Focus Area', validators=[Optional(), Length(max=100)])
+    equipment_needed = StringField('Equipment Needed', validators=[Optional(), Length(max=200)])
+    diagram_url = URLField('Diagram URL', validators=[Optional(), URL()])
+    video_url = URLField('Video URL', validators=[Optional(), URL()])
+    has_visual_diagram = BooleanField('Has Visual Diagram')
     is_public = BooleanField('Make this drill public')
+    elements = TextAreaField('Drill Elements', validators=[Optional()])
+    submit = SubmitField('Save Drill')
+    # Add file upload field
+    diagram_file = FileField('Upload Diagram', 
+        validators=[
+            Optional(),
+            FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!')
+        ]
+    )
+    diagram_url = URLField('Or use external image URL', 
+        validators=[Optional(), URL()],
+        description="You can either upload an image or provide a URL to an existing image"
+    )
 
     def __init__(self, *args, **kwargs):
+        drill_type = kwargs.pop('drill_type', 'basic') if 'drill_type' in kwargs else 'basic'
         super(DrillForm, self).__init__(*args, **kwargs)
-        # Remove the has_visual_diagram initialization
-        # It's no longer needed since we're using embed codes
+        self.has_visual_diagram.data = (drill_type == 'visual')
+        
+        # Hide diagram_url field for visual drills
+        if drill_type == 'visual':
+            del self.diagram_url
 
 class SessionComponentForm(FlaskForm):
     title = StringField('Component Title', validators=[DataRequired(), Length(max=100)])

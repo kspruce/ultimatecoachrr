@@ -1,48 +1,5 @@
+{# templates/playbook/formation_form.html #}
 {% extends "base.html" %}
-
-{% block styles %}
-{{ super() }}
-<style>
-    .embed-preview {
-        position: relative;
-        padding-bottom: 56.25%;
-        height: 0;
-        overflow: hidden;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        margin-top: 10px;
-        background: #f8f9fa;
-    }
-
-    .embed-preview iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-    }
-
-    .preview-placeholder {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6c757d;
-    }
-
-    .embed-help {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 4px;
-        margin-top: 10px;
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -62,7 +19,7 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST">
+                    <form method="POST" enctype="multipart/form-data">
                         {{ form.hidden_tag() }}
                         
                         <div class="row mb-3">
@@ -70,7 +27,7 @@
                             <div class="col-md-8">
                                 <div class="form-group">
                                     {{ form.name.label(class="form-label") }}
-                                    {{ form.name(class="form-control",
+                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
                                                placeholder="e.g., Horizontal Stack, Vertical Stack") }}
                                     {% for error in form.name.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
@@ -82,7 +39,7 @@
                             <div class="col-md-4">
                                 <div class="form-group">
                                     {{ form.type.label(class="form-label") }}
-                                    {{ form.type(class="form-select") }}
+                                    {{ form.type(class="form-select" + (" is-invalid" if form.type.errors else "")) }}
                                     {% for error in form.type.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
                                     {% endfor %}
@@ -93,7 +50,7 @@
                         <!-- Description -->
                         <div class="form-group mb-3">
                             {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control",
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""),
                                               rows="4",
                                               placeholder="Describe the formation setup and key positions...") }}
                             {% for error in form.description.errors %}
@@ -101,40 +58,27 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Ultiplay Embed -->
+                        <!-- Diagram Upload -->
                         <div class="form-group mb-4">
-                            <label class="form-label">Formation Video</label>
-                            
-                            <div class="mb-3">
-                                {{ form.ultiplay_embed.label(class="form-label") }}
-                                {{ form.ultiplay_embed(class="form-control", rows=3, 
-                                    placeholder="Paste the embed code from Ultiplay here...",
-                                    oninput="previewEmbed(this.value)") }}
+                            <label class="form-label">Formation Diagram</label>
+                            {% if formation and formation.diagram_url %}
+                            <div class="mb-2">
+                                <img src="{{ url_for('static', filename=formation.diagram_url) }}"
+                                     class="img-fluid mb-2"
+                                     alt="Current formation diagram"
+                                     style="max-height: 200px;">
+                                <br>
+                                <small class="text-muted">Upload a new image to replace the current one</small>
                             </div>
-
-                            <!-- Embed Preview -->
-                            <div class="embed-preview">
-                                <div id="embed-preview-content">
-                                    <div class="preview-placeholder">
-                                        <div class="text-center">
-                                            <i class="fas fa-video fa-3x mb-2"></i>
-                                            <br>
-                                            Video preview will appear here
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Help Text -->
-                            <div class="embed-help">
-                                <h6><i class="fas fa-info-circle"></i> How to get the embed code:</h6>
-                                <ol>
-                                    <li>Go to your video on Ultiplay</li>
-                                    <li>Click the "Share" button</li>
-                                    <li>Select "Embed"</li>
-                                    <li>Copy the entire embed code and paste it above</li>
-                                </ol>
-                            </div>
+                            {% endif %}
+                            {{ form.diagram_file.label(class="form-label") }}
+                            {{ form.diagram_file(class="form-control" + (" is-invalid" if form.diagram_file.errors else "")) }}
+                            {% for error in form.diagram_file.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">
+                                Accepted formats: JPG, JPEG, PNG, GIF. Max size: 5MB
+                            </small>
                         </div>
 
                         <!-- Submit Buttons -->
@@ -169,8 +113,8 @@
                         </li>
                         <li class="mb-3">
                             <i class="bi bi-check-circle text-success"></i>
-                            <strong>Video Demonstration:</strong>
-                            <p class="text-muted small">Add a video showing the formation setup and key movements.</p>
+                            <strong>Visual Diagram:</strong>
+                            <p class="text-muted small">Upload a clear diagram showing player positions and movement options.</p>
                         </li>
                         <li class="mb-3">
                             <i class="bi bi-info-circle text-primary"></i>
@@ -185,6 +129,16 @@
                     </ul>
                 </div>
             </div>
+
+            <!-- Preview Card (shows up when image is selected) -->
+            <div class="card mt-3" id="previewCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Diagram Preview</h5>
+                </div>
+                <div class="card-body">
+                    <img id="diagramPreview" src="" alt="Formation diagram preview" class="img-fluid">
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -193,41 +147,42 @@
 {% block scripts %}
 {{ super() }}
 <script>
-function previewEmbed(embedCode) {
-    const previewContainer = document.getElementById('embed-preview-content');
-    
-    if (embedCode.trim()) {
-        // Basic XSS protection by only allowing iframe tags with specific attributes
-        const sanitized = embedCode.replace(/[<>]/g, match => {
-            return {
-                '<': '<',
-                '>': '>'
-            }[match];
-        });
-        
-        // Only process if it looks like an iframe embed code
-        if (sanitized.toLowerCase().includes('iframe')) {
-            previewContainer.innerHTML = embedCode;
-        }
-    } else {
-        previewContainer.innerHTML = `
-            <div class="preview-placeholder">
-                <div class="text-center">
-                    <i class="fas fa-video fa-3x mb-2"></i>
-                    <br>
-                    Video preview will appear here
-                </div>
-            </div>
-        `;
-    }
-}
-
-// Initialize preview if there's existing embed code
 document.addEventListener('DOMContentLoaded', function() {
-    const embedInput = document.querySelector('#ultiplay_embed');
-    if (embedInput && embedInput.value) {
-        previewEmbed(embedInput.value);
-    }
+    // Image preview functionality
+    const fileInput = document.querySelector('input[type="file"]');
+    const previewCard = document.getElementById('previewCard');
+    const previewImage = document.getElementById('diagramPreview');
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewCard.style.display = 'block';
+                
+                // Also update the inline preview if it exists
+                const inlinePreview = fileInput.parentElement.querySelector('img');
+                if (inlinePreview) {
+                    inlinePreview.src = e.target.result;
+                }
+            }
+            
+            reader.readAsDataURL(this.files[0]);
+        } else {
+            previewCard.style.display = 'none';
+        }
+    });
+
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
 });
 </script>
 {% endblock %}

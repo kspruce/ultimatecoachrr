@@ -20,9 +20,6 @@
                 <div class="card-body">
                     {% if players %}
                     <form method="post">
-                        <!-- Add CSRF Token here -->
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
                         <div class="mb-3">
                             <label for="player_id" class="form-label">Player</label>
                             <select name="player_id" id="player_id" class="form-select" required>

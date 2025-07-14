@@ -3,7 +3,6 @@ from app import db
 from datetime import datetime
 import math
 
-
 class Throw(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
@@ -38,34 +37,21 @@ class Throw(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    point = db.relationship('Point', back_populates='throws')
-    thrower = db.relationship('Player', 
-                            foreign_keys=[thrower_id], 
-                            back_populates='throws_made')  # Change backref to back_populates
-    receiver = db.relationship('Player', 
-                             foreign_keys=[receiver_id], 
-                             back_populates='throws_received')  # Change backref to back_populates
+    point = db.relationship('Point', backref='throws')
+    thrower = db.relationship('Player', foreign_keys=[thrower_id], backref='throws_made')
+    receiver = db.relationship('Player', foreign_keys=[receiver_id], backref='throws_received')
     throwing_event = db.relationship('Event', foreign_keys=[throwing_event_id])
     receiving_event = db.relationship('Event', foreign_keys=[receiving_event_id])
-    
-    def calculate_distance(self):
-        """Calculate the distance of the throw in meters"""
-        if self.x_start is not None and self.y_start is not None and self.x_end is not None and self.y_end is not None:
-            # Convert percentage positions to actual field coordinates
-            # Assuming field is 100m long and 37m wide
-            x_start_meters = self.x_start  # Already in meters (0-100)
-            y_start_meters = self.y_start  # Already in meters (0-37)
-            x_end_meters = self.x_end
-            y_end_meters = self.y_end
-            
-            # Calculate Euclidean distance
-            distance = math.sqrt(
-                (x_end_meters - x_start_meters) ** 2 +
-                (y_end_meters - y_start_meters) ** 2
-            )
-            return distance
-        return None
 
+    def calculate_distance(self):
+        """Calculate the distance of the throw"""
+        if (self.x_start is not None and self.y_start is not None and 
+            self.x_end is not None and self.y_end is not None):
+            return math.sqrt(
+                (self.x_end - self.x_start) ** 2 + 
+                (self.y_end - self.y_start) ** 2
+            )
+        return None
     
     def to_vector(self, normalize=False):
         """Convert throw to vector format for visualization"""
@@ -93,5 +79,3 @@ class Throw(db.Model):
 
     def __repr__(self):
         return f'<Throw {self.id} by {self.thrower_id} to {self.receiver_id}>'
-
-

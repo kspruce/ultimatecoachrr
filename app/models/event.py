@@ -20,8 +20,7 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_offensive = db.Column(db.Boolean, nullable=False, default=True)  # Track possession
-    point = db.relationship('Point', back_populates='events')
-    
+
     # Define valid event types
     VALID_EVENT_TYPES = [
         'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events
@@ -69,10 +68,6 @@ class Pull(db.Model):
     is_inbounds = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationships
-    point = db.relationship('Point', back_populates='pulls')
-    player = db.relationship('Player', back_populates='pulls')
-
     def __repr__(self):
         return f'<Pull by Player {self.player_id} in Point {self.point_id}>'
 

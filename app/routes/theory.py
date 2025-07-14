@@ -8,7 +8,6 @@ from app.utils.utils import save_uploaded_file
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
-from app.utils.utils import admin_required
 
 bp = Blueprint('theory', __name__, url_prefix='/theory')
 
@@ -42,7 +41,6 @@ def topic(topic_id):
 # Section Management
 @bp.route('/add_section', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_section():
     form = TheorySectionForm()
     if form.validate_on_submit():
@@ -64,7 +62,6 @@ def add_section():
 
 @bp.route('/edit_section/<int:section_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_section(section_id):
     section = TheorySection.query.get_or_404(section_id)
     form = TheorySectionForm(obj=section)
@@ -86,7 +83,6 @@ def edit_section(section_id):
 
 @bp.route('/delete_section/<int:section_id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_section(section_id):
     section = TheorySection.query.get_or_404(section_id)
     name = section.name
@@ -104,7 +100,6 @@ def delete_section(section_id):
 # Topic Management
 @bp.route('/add_topic', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_topic():
     form = TheoryTopicForm()
     form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.order_by(TheorySection.name).all()]
@@ -149,7 +144,6 @@ def add_topic():
 
 @bp.route('/edit_topic/<int:topic_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_topic(topic_id):
     topic = TheoryTopic.query.get_or_404(topic_id)
     form = TheoryTopicForm(obj=topic)
@@ -176,7 +170,6 @@ def edit_topic(topic_id):
 
 @bp.route('/delete_topic/<int:topic_id>', methods=['POST'])
 @login_required
-@admin_required
 def delete_topic(topic_id):
     topic = TheoryTopic.query.get_or_404(topic_id)
     section_slug = topic.section.slug
@@ -195,7 +188,6 @@ def delete_topic(topic_id):
 # Video Management
 @bp.route('/add_video/<int:topic_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def add_video(topic_id):
     topic = TheoryTopic.query.get_or_404(topic_id)
     form = TheoryVideoForm()

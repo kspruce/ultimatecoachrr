@@ -38,7 +38,7 @@ class UserForm(FlaskForm):
         ('coach', 'Coach'),
         ('admin', 'Admin')
     ], validators=[DataRequired()])
-    player_id = SelectField('Link to Player', coerce=int, default=0)  # Make it optional
+    player_id = SelectField('Link to Player', coerce=int, validators=[])
     submit = SubmitField('Save User')
     
     def __init__(self, original_username=None, *args, **kwargs):

@@ -1,31 +1,5 @@
 {% extends "base.html" %}
 
-{% block styles %}
-{{ super() }}
-<style>
-    .embed-container {
-        position: relative;
-        padding-bottom: 56.25%;
-        height: 0;
-        overflow: hidden;
-        max-width: 100%;
-    }
-
-    .embed-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-    }
-
-    .badge {
-        margin-right: 0.25rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <!-- Header Section -->
@@ -63,16 +37,17 @@
     <div class="row">
         <!-- Main Content -->
         <div class="col-md-8">
-            <!-- Video Section -->
-            {% if play.ultiplay_embed %}
+            <!-- Diagram Section -->
+            {% if play.diagram_url %}
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Play Video</h5>
+                    <h5 class="card-title mb-0">Play Diagram</h5>
                 </div>
-                <div class="card-body">
-                    <div class="embed-container">
-                        {{ play.ultiplay_embed|safe }}
-                    </div>
+                <div class="card-body text-center">
+                    <img src="{{ url_for('static', filename=play.diagram_url) }}" 
+                         class="img-fluid" 
+                         alt="{{ play.name }} diagram"
+                         style="max-height: 400px;">
                 </div>
             </div>
             {% endif %}
@@ -116,10 +91,10 @@
                 </div>
                 <div class="card-body">
                     <h6>{{ play.formation.name }}</h6>
-                    {% if play.formation.ultiplay_embed %}
-                    <div class="embed-container mb-3">
-                        {{ play.formation.ultiplay_embed|safe }}
-                    </div>
+                    {% if play.formation.diagram_url %}
+                    <img src="{{ url_for('static', filename=play.formation.diagram_url) }}" 
+                         class="img-fluid mb-2" 
+                         alt="{{ play.formation.name }}">
                     {% endif %}
                     {% if play.formation.description %}
                     <p class="mb-0">{{ play.formation.description }}</p>
