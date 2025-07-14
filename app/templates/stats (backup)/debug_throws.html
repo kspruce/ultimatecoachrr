@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Throws Debug View</h1>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="throws-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Point</th>
+                            <th>Thrower</th>
+                            <th>Receiver</th>
+                            <th>Type</th>
+                            <th>Start (x,y)</th>
+                            <th>End (x,y)</th>
+                            <th>Distance</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for throw in throws %}
+                        <tr>
+                            <td>{{ throw.id }}</td>
+                            <td>
+                                <a href="{{ url_for('point.point_detail', point_id=throw.point_id) }}">
+                                    Point {{ throw.point_id }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if throw.thrower %}
+                                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=throw.thrower_id) }}">
+                                        {{ throw.thrower.name }}
+                                    </a>
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if throw.receiver and throw.receiver_id %}
+                                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=throw.receiver_id) }}">
+                                        {{ throw.receiver.name }}
+                                    </a>
+                                {% else %}
+                                    {% if throw.throw_type == 'throwaway' %}
+                                        Throwaway
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if throw.is_completion else 'danger' }}">
+                                    {{ throw.throw_type }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if throw.x_start is not none and throw.y_start is not none %}
+                                    ({{ "%.1f"|format(throw.x_start) }}, {{ "%.1f"|format(throw.y_start) }})
+                                {% else %}
+                                    (-, -)
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if throw.x_end is not none and throw.y_end is not none %}
+                                    ({{ "%.1f"|format(throw.x_end) }}, {{ "%.1f"|format(throw.y_end) }})
+                                {% else %}
+                                    (-, -)
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if throw.distance is not none %}
+                                    {{ "%.1f"|format(throw.distance) }}m
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ throw.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Visualization of selected throw -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Throw Visualization</h5>
+        </div>
+        <div class="card-body">
+            <div class="field-container" id="throw-viz">
+                <div class="endzone endzone-left"></div>
+                <div class="endzone endzone-right"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#throws-table').DataTable({
+        order: [[0, 'desc']],
+        pageLength: 25
+    });
+    
+    // Add click handler to visualize throws
+    $('#throws-table tbody tr').click(function() {
+        const cells = $(this).find('td');
+        const startText = cells.eq(5).text();
+        const endText = cells.eq(6).text();
+        
+        // Check if we have valid coordinates
+        if (startText !== '(-, -)' && endText !== '(-, -)') {
+            const startCoords = startText.match(/\((.*?)\)/)[1].split(',').map(Number);
+            const endCoords = endText.match(/\((.*?)\)/)[1].split(',').map(Number);
+            visualizeThrow(startCoords, endCoords);
+        } else {
+            alert('This throw has incomplete coordinate data');
+        }
+    });
+});
+
+function visualizeThrow(start, end) {
+    const container = document.getElementById('throw-viz');
+    const width = container.offsetWidth;
+    const height = container.offsetHeight;
+    
+    // Clear previous visualization
+    container.innerHTML = `
+        <div class="endzone endzone-left"></div>
+        <div class="endzone endzone-right"></div>
+    `;
+    
+    // Add throw vector
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', '100%');
+    
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute('x1', start[0] * width / 100);
+    line.setAttribute('y1', start[1] * height / 37);
+    line.setAttribute('x2', end[0] * width / 100);
+    line.setAttribute('y2', end[1] * height / 37);
+    line.setAttribute('stroke', 'blue');
+    line.setAttribute('stroke-width', '2');
+    
+    svg.appendChild(line);
+    container.appendChild(svg);
+}
+</script>
+{% endblock %}

@@ -14,6 +14,7 @@
         </div>
     </div>
 
+    <!-- Filter section remains unchanged -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -91,30 +92,39 @@
                         <div class="btn-group w-100">
                             <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                             <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">Delete</button>
+                            {% if current_user.is_admin %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">Delete</button>
+                            {% endif %}
                         </div>
                         
-                        <!-- Delete Confirmation Modal -->
-                        <div class="modal fade" id="deleteModal{{ clip.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ clip.id }}" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">Confirm Delete</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        Are you sure you want to delete the clip "{{ clip.title }}"?
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <form action="{{ url_for('clip.delete_clip', clip_id=clip.id) }}" method="post">
-                                            {{ delete_form.csrf_token }}
-                                            <button type="submit" class="btn btn-danger">Delete</button>
-                                        </form>
+                        {% if current_user.is_admin %}
+                            <!-- Delete Confirmation Modal -->
+                            <div class="modal fade" id="deleteModal{{ clip.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ clip.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the clip "{{ clip.title }}"?</p>
+                                            {% if clip.annotations|length > 0 %}
+                                            <div class="alert alert-warning">
+                                                This clip has {{ clip.annotations|length }} annotations that will also be deleted.
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('clip.delete_clip', clip_id=clip.id) }}" method="post" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                <button type="submit" class="btn btn-danger">Delete Clip</button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

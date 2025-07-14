@@ -5,42 +5,48 @@
 {% block styles %}
 {{ super() }}
 <style>
-    .diagram-preview {
-        max-width: 100%;
-        max-height: 300px;
+    .embed-preview {
+        position: relative;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        height: 0;
+        overflow: hidden;
         border: 1px solid #dee2e6;
         border-radius: 4px;
-        padding: 10px;
+        margin-top: 10px;
+        background: #f8f9fa;
+    }
+
+    .embed-preview iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+
+    .preview-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+
+    .embed-help {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
         margin-top: 10px;
     }
 
-    .drawing-canvas {
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        background: #fff;
-        cursor: crosshair;
-    }
-
-    .drawing-tools {
-        padding: 10px;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        margin-bottom: 10px;
-    }
-
-    .preview-container {
-        text-align: center;
-        margin-top: 10px;
-        padding: 10px;
-        background: #f8f9fa;
-        border-radius: 4px;
-    }
-
-    .preview-container img {
-        max-width: 100%;
-        max-height: 300px;
-        object-fit: contain;
+    .embed-help ol {
+        margin-bottom: 0;
+        padding-left: 20px;
     }
 </style>
 {% endblock %}
@@ -62,7 +68,7 @@
         <div class="col-md-8 offset-md-2">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST">
                         {{ form.hidden_tag() }}
 
                         <!-- Basic Information -->
@@ -141,97 +147,43 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Diagram Section -->
+                        <!-- Ultiplay Embed Section -->
                         <div class="mb-4">
-                            <label class="form-label">Drill Diagram</label>
+                            <label class="form-label">Ultiplay Video</label>
                             
-                            <!-- Tabs for upload options -->
-                            <ul class="nav nav-tabs mb-3" role="tablist">
-                                <li class="nav-item">
-                                    <a class="nav-link active" data-bs-toggle="tab" href="#upload-tab">
-                                        <i class="fas fa-upload"></i> Upload Image
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" data-bs-toggle="tab" href="#url-tab">
-                                        <i class="fas fa-link"></i> Use URL
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" data-bs-toggle="tab" href="#drawing-tab">
-                                        <i class="fas fa-pencil-alt"></i> Draw Diagram
-                                    </a>
-                                </li>
-                            </ul>
+                            <div class="mb-3">
+                                {{ form.ultiplay_embed.label(class="form-label") }}
+                                {{ form.ultiplay_embed(class="form-control", rows=3, 
+                                    placeholder="Paste the embed code from Ultiplay here...",
+                                    oninput="previewEmbed(this.value)") }}
+                                {% for error in form.ultiplay_embed.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
 
-                            <!-- Tab content -->
-                            <div class="tab-content">
-                                <!-- Upload Tab -->
-                                <div class="tab-pane fade show active" id="upload-tab">
-                                    <div class="mb-3">
-                                        {{ form.diagram_file.label(class="form-label") }}
-                                        {{ form.diagram_file(class="form-control") }}
-                                        <div class="form-text">
-                                            Supported formats: JPG, PNG, GIF. Max size: 5MB
+                            <!-- Embed Preview -->
+                            <div class="embed-preview">
+                                <div id="embed-preview-content">
+                                    <div class="preview-placeholder">
+                                        <div class="text-center">
+                                            <i class="fas fa-video fa-3x mb-2"></i>
+                                            <br>
+                                            Video preview will appear here
                                         </div>
-                                    </div>
-                                    
-                                    <!-- Image preview -->
-                                    <div id="image-preview" class="preview-container" style="display: none;">
-                                        <img src="" alt="Preview">
-                                    </div>
-                                </div>
-
-                                <!-- URL Tab -->
-                                <div class="tab-pane fade" id="url-tab">
-                                    <div class="mb-3">
-                                        {{ form.diagram_url.label(class="form-label") }}
-                                        {{ form.diagram_url(class="form-control", placeholder="https://...") }}
-                                        <div class="form-text">
-                                            Enter the URL of an existing image
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- URL preview -->
-                                    <div id="url-preview" class="preview-container" style="display: none;">
-                                        <img src="" alt="Preview">
-                                    </div>
-                                </div>
-
-                                <!-- Drawing Tab -->
-                                <div class="tab-pane fade" id="drawing-tab">
-                                    <div class="drawing-tools">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="pen-tool">
-                                                <i class="fas fa-pen"></i> Pen
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="eraser-tool">
-                                                <i class="fas fa-eraser"></i> Eraser
-                                            </button>
-                                        </div>
-                                        <input type="color" id="color-picker" class="ms-2">
-                                        <input type="range" id="line-width" min="1" max="20" value="2" class="ms-2">
-                                    </div>
-                                    <canvas id="drawing-canvas" class="drawing-canvas" width="600" height="400"></canvas>
-                                    <div class="btn-group mt-2">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearCanvas()">
-                                            <i class="fas fa-eraser"></i> Clear
-                                        </button>
-                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="saveDrawing()">
-                                            <i class="fas fa-save"></i> Use Drawing
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Video URL -->
-                        <div class="mb-3">
-                            {{ form.video_url.label(class="form-label") }}
-                            {{ form.video_url(class="form-control", placeholder="https://youtube.com/...") }}
-                            {% for error in form.video_url.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
+                            <!-- Help Text -->
+                            <div class="embed-help">
+                                <h6><i class="fas fa-info-circle"></i> How to get the embed code:</h6>
+                                <ol>
+                                    <li>Go to your video on Ultiplay</li>
+                                    <li>Click the "Share" button</li>
+                                    <li>Select "Embed"</li>
+                                    <li>Copy the entire embed code and paste it above</li>
+                                </ol>
+                            </div>
                         </div>
 
                         <!-- Public/Private -->
@@ -244,7 +196,9 @@
 
                         <!-- Submit Button -->
                         <div class="d-grid">
-                            {{ form.submit(class="btn btn-primary") }}
+                            <button type="submit" class="btn btn-primary">
+                                {% if drill %}Update{% else %}Create{% endif %} Drill
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -257,102 +211,41 @@
 {% block scripts %}
 {{ super() }}
 <script>
-// Image preview for file upload
-document.getElementById('diagram_file').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.querySelector('#image-preview img');
-            preview.src = e.target.result;
-            document.getElementById('image-preview').style.display = 'block';
+function previewEmbed(embedCode) {
+    const previewContainer = document.getElementById('embed-preview-content');
+    
+    if (embedCode.trim()) {
+        // Basic XSS protection by only allowing iframe tags with specific attributes
+        const sanitized = embedCode.replace(/[<>]/g, match => {
+            return {
+                '<': '<',
+                '>': '>'
+            }[match];
+        });
+        
+        // Only process if it looks like an iframe embed code
+        if (sanitized.toLowerCase().includes('iframe')) {
+            previewContainer.innerHTML = embedCode;
         }
-        reader.readAsDataURL(file);
+    } else {
+        previewContainer.innerHTML = `
+            <div class="preview-placeholder">
+                <div class="text-center">
+                    <i class="fas fa-video fa-3x mb-2"></i>
+                    <br>
+                    Video preview will appear here
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Initialize preview if there's existing embed code
+document.addEventListener('DOMContentLoaded', function() {
+    const embedInput = document.querySelector('#ultiplay_embed');
+    if (embedInput && embedInput.value) {
+        previewEmbed(embedInput.value);
     }
 });
-
-// URL preview
-document.getElementById('diagram_url').addEventListener('input', function(e) {
-    const url = e.target.value;
-    if (url) {
-        const preview = document.querySelector('#url-preview img');
-        preview.src = url;
-        document.getElementById('url-preview').style.display = 'block';
-    }
-});
-
-// Drawing functionality
-const canvas = document.getElementById('drawing-canvas');
-const ctx = canvas.getContext('2d');
-let isDrawing = false;
-let lastX = 0;
-let lastY = 0;
-
-// Initialize drawing settings
-ctx.strokeStyle = '#000000';
-ctx.lineWidth = 2;
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-
-// Drawing event listeners
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
-
-// Tool controls
-document.getElementById('pen-tool').addEventListener('click', () => {
-    ctx.globalCompositeOperation = 'source-over';
-});
-
-document.getElementById('eraser-tool').addEventListener('click', () => {
-    ctx.globalCompositeOperation = 'destination-out';
-});
-
-document.getElementById('color-picker').addEventListener('input', (e) => {
-    ctx.strokeStyle = e.target.value;
-});
-
-document.getElementById('line-width').addEventListener('input', (e) => {
-    ctx.lineWidth = e.target.value;
-});
-
-function startDrawing(e) {
-    isDrawing = true;
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-}
-
-function draw(e) {
-    if (!isDrawing) return;
-    
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-}
-
-function stopDrawing() {
-    isDrawing = false;
-}
-
-function clearCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function saveDrawing() {
-    const dataUrl = canvas.toDataURL('image/png');
-    // Create hidden input to store the drawing
-    let input = document.getElementById('drawing-data');
-    if (!input) {
-        input = document.createElement('input');
-        input.type = 'hidden';
-        input.id = 'drawing-data';
-        input.name = 'drawing_data';
-        canvas.parentNode.appendChild(input);
-    }
-    input.value = dataUrl;
-}
 </script>
 {% endblock %}

@@ -3,88 +3,273 @@
 {% block styles %}
 <style>
     .jumbotron {
-        padding: 2rem;
+        padding: 2.5rem;
         margin-bottom: 2rem;
-        background-color: #e9ecef;
-        border-radius: .3rem;
+        background: linear-gradient(135deg, #e9ecef 0%, #d1d9e6 100%);
+        border-radius: .5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .section-heading {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .section-heading:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background-color: #3498db;
     }
 
     .feature-card {
-        transition: transform 0.3s ease-in-out;
+        transition: all 0.3s ease-in-out;
         height: 100%;
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        overflow: hidden;
     }
 
     .feature-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    }
+    
+    .feature-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .feature-card .card-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        background-color: rgba(52, 152, 219, 0.1);
+        color: #3498db;
     }
 
     .card-title {
         color: #2c3e50;
         font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+    
+    .card-text {
+        color: #7f8c8d;
+        margin-bottom: 1.25rem;
     }
 
-    .quick-action-btn {
-        transition: all 0.3s ease;
+    .btn-primary {
+        background-color: #3498db;
+        border-color: #3498db;
+        padding: 0.5rem 1.25rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.2s;
     }
-
-    .quick-action-btn:hover {
-        transform: scale(1.05);
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 10px rgba(52, 152, 219, 0.3);
+    }
+    
+    .btn-outline-primary {
+        color: #3498db;
+        border-color: #3498db;
+        padding: 0.5rem 1.25rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: #3498db;
+        border-color: #3498db;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 10px rgba(52, 152, 219, 0.2);
     }
 
     .recent-activity {
-        max-height: 300px;
+        max-height: 350px;
         overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .recent-activity::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .recent-activity::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .recent-activity::-webkit-scrollbar-thumb {
+        background: #bdc3c7;
+        border-radius: 3px;
+    }
+    
+    .recent-activity::-webkit-scrollbar-thumb:hover {
+        background: #95a5a6;
     }
 
     .stat-highlight {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
         font-weight: bold;
-        color: #3498db;
+        color: white;
     }
 
     .activity-icon {
-        width: 40px;
-        height: 40px;
-        line-height: 40px;
-        text-align: center;
-        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
         margin-right: 15px;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
     }
 
-    .activity-icon.game {
-        background-color: #e74c3c;
-        color: white;
+    .activity-icon.game { background-color: #e74c3c; }
+    .activity-icon.practice { background-color: #2ecc71; }
+    .activity-icon.stats { background-color: #f1c40f; }
+    .activity-icon.theory { background-color: #9b59b6; }
+    .activity-icon.playbook { background-color: #3498db; }
+    .activity-icon.tournament { background-color: #e67e22; }
+
+    .upcoming-event {
+        border-left: 4px solid;
+        margin-bottom: 1.25rem;
+        padding: 0.75rem 1.25rem;
+        background-color: #f8f9fa;
+        border-radius: 0 0.375rem 0.375rem 0;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    .activity-icon.practice {
-        background-color: #2ecc71;
-        color: white;
+    .upcoming-event:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    .activity-icon.stats {
-        background-color: #f1c40f;
+    .upcoming-event.game { border-color: #e74c3c; }
+    .upcoming-event.practice { border-color: #2ecc71; }
+    .upcoming-event.tournament { border-color: #f1c40f; }
+    
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.07);
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1rem 1.5rem;
+    }
+    
+    .card-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .stats-dropdown-wrapper {
+        position: relative;
+        z-index: 100;
+    }
+    
+    .player-dashboard-card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .player-avatar {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        background: linear-gradient(135deg, #3498db, #2980b9);
         color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+    }
+    
+    .list-group-item {
+        border: none;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.25rem;
+        border-radius: 0.375rem !important;
+        transition: all 0.2s;
+    }
+    
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(3px);
+    }
+    
+    .list-group-item i.bi-chevron-right {
+        transition: transform 0.2s;
+    }
+    
+    .list-group-item:hover i.bi-chevron-right {
+        transform: translateX(3px);
+    }
+    
+    .quick-stats-card {
+        border-radius: 1rem;
+        overflow: hidden;
+        transition: all 0.3s;
+    }
+    
+    .quick-stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    
+    .quick-stats-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+        opacity: 0.8;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="jumbotron">
-    <h1 class="display-4">Welcome to Ultimate Coach</h1>
+    <h1 class="display-4 mb-3">Welcome to Ultimate Coach</h1>
     <p class="lead">Your all-in-one solution for Ultimate Frisbee team management, game analysis, and coaching.</p>
     <hr class="my-4">
-    <p>Manage your team, track game statistics, analyze performance, and develop training sessions all in one place.</p>
+    <p class="mb-4">Manage your team, track game statistics, analyze performance, and develop training sessions all in one place.</p>
     
-    <!-- Main Feature Cards -->
-    <div class="row mt-4">
+    <h2 class="section-heading">Organization</h2>
+    <!-- Organization Section -->
+    <div class="row">
         <div class="col-md-4">
             <div class="card feature-card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-people-fill me-2"></i>
-                        Team Management
-                    </h5>
+                    <div class="card-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <h5 class="card-title">Team Management</h5>
                     <p class="card-text">Manage your roster, assign roles, and track player information.</p>
                     <a href="{{ url_for('team.index') }}" class="btn btn-primary">
                         Manage Team
@@ -95,10 +280,24 @@
         <div class="col-md-4">
             <div class="card feature-card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-trophy-fill me-2"></i>
-                        Game Statistics
-                    </h5>
+                    <div class="card-icon">
+                        <i class="bi bi-flag-fill"></i>
+                    </div>
+                    <h5 class="card-title">Tournaments</h5>
+                    <p class="card-text">Manage tournament schedules, results, and team participation.</p>
+                    <a href="{{ url_for('tournament.index') }}" class="btn btn-primary">
+                        View Tournaments
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <div class="card-icon">
+                        <i class="bi bi-trophy-fill"></i>
+                    </div>
+                    <h5 class="card-title">Game Management</h5>
                     <p class="card-text">Track game results, record detailed statistics, and analyze performance.</p>
                     <a href="{{ url_for('game.index') }}" class="btn btn-primary">
                         View Games
@@ -106,13 +305,18 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <h2 class="section-heading">Team Planning</h2>
+    <!-- Team Planning Section -->
+    <div class="row">
         <div class="col-md-4">
             <div class="card feature-card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-calendar-check-fill me-2"></i>
-                        Training Sessions
-                    </h5>
+                    <div class="card-icon">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <h5 class="card-title">Training Sessions</h5>
                     <p class="card-text">Create and manage practice plans, drills, and track attendance.</p>
                     <a href="{{ url_for('session.index') }}" class="btn btn-primary">
                         Plan Sessions
@@ -120,44 +324,16 @@
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Additional Feature Cards -->
-    <div class="row mt-2">
         <div class="col-md-4">
             <div class="card feature-card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-graph-up me-2"></i>
-                        Statistics Analysis
-                    </h5>
-                    <p class="card-text">Visualize player and team performance with detailed analytics.</p>
-                    <div class="btn-group">
-                        <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-primary">
-                            View Stats
-                        </a>
-                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="visually-hidden">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">Team Stats</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('game.index') }}">Game Stats</a></li>
-                        </ul>
+                    <div class="card-icon">
+                        <i class="bi bi-book-fill"></i>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card feature-card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-camera-video-fill me-2"></i>
-                        Clip Library
-                    </h5>
-                    <p class="card-text">Store and organize video clips of games and plays for review.</p>
-                    <a href="{{ url_for('clip.index') }}" class="btn btn-primary">
-                        Browse Clips
+                    <h5 class="card-title">Playbook</h5>
+                    <p class="card-text">Create, organize and review team plays and formations.</p>
+                    <a href="{{ url_for('playbook.index') }}" class="btn btn-primary">
+                        View Playbook
                     </a>
                 </div>
             </div>
@@ -165,13 +341,74 @@
         <div class="col-md-4">
             <div class="card feature-card mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">
-                        <i class="bi bi-binoculars-fill me-2"></i>
-                        Scouting Reports
-                    </h5>
+                    <div class="card-icon">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <h5 class="card-title">Theory</h5>
+                    <p class="card-text">Access educational content and learn Ultimate Frisbee concepts.</p>
+                    <a href="{{ url_for('theory.index') }}" class="btn btn-primary">
+                        Learn Theory
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <h2 class="section-heading">Analysis</h2>
+    <!-- Analysis Section -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <div class="card-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h5 class="card-title">Statistics Analysis</h5>
+                    <p class="card-text">Visualize player and team performance with detailed analytics.</p>
+                    <div class="stats-dropdown-wrapper">
+                        <div class="btn-group">
+                            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-primary">
+                                View Stats
+                            </a>
+                            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">Team Stats</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('game.index') }}">Game Stats</a></li>
+                                {% if current_user.is_authenticated and current_user.player %}
+                                <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}">Your Stats</a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <div class="card-icon">
+                        <i class="bi bi-binoculars-fill"></i>
+                    </div>
+                    <h5 class="card-title">Scouting Reports</h5>
                     <p class="card-text">Track information about opposing teams and players for game preparation.</p>
                     <a href="{{ url_for('scouting.index') }}" class="btn btn-primary">
                         View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card mb-4">
+                <div class="card-body">
+                    <div class="card-icon">
+                        <i class="bi bi-camera-video-fill"></i>
+                    </div>
+                    <h5 class="card-title">Clip Library</h5>
+                    <p class="card-text">Store and organize video clips of games and plays for review.</p>
+                    <a href="{{ url_for('clip.index') }}" class="btn btn-primary">
+                        Browse Clips
                     </a>
                 </div>
             </div>
@@ -180,133 +417,184 @@
 </div>
 
 {% if current_user.is_authenticated %}
-<div class="mt-4">
-    <h2>
-        <i class="bi bi-lightning-fill me-2"></i>
-        Quick Actions
-    </h2>
-    <div class="row">
-        <div class="col-md-3">
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('team.add_player') }}" class="btn btn-outline-primary quick-action-btn">
-                    <i class="bi bi-person-plus-fill me-2"></i>
-                    Add New Player
-                </a>
+<div class="row mt-4">
+    <!-- Left Column: Recent Activity and Quick Stats -->
+    <div class="col-md-8">
+        <!-- Recent Activity -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="recent-activity">
+                    {% if recent_activities %}
+                        {% for activity in recent_activities %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="activity-icon {{ activity.type }}">
+                                <i class="bi {{ activity.icon }} text-white"></i>
+                            </div>
+                            <div>
+                                <a href="{{ activity.link }}" class="text-decoration-none">
+                                    <div class="fw-bold text-dark">{{ activity.title }}</div>
+                                    <small class="text-muted">{{ activity.timestamp }}</small>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Recent activity will be displayed here as you use the application.
+                        </p>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('game.add') }}" class="btn btn-outline-primary quick-action-btn">
-                    <i class="bi bi-plus-circle-fill me-2"></i>
-                    Record New Game
-                </a>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('session.add_session') }}" class="btn btn-outline-primary quick-action-btn">
-                    <i class="bi bi-calendar-plus-fill me-2"></i>
-                    Create Practice Session
-                </a>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary quick-action-btn">
-                    <i class="bi bi-graph-up me-2"></i>
-                    View Team Stats
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="mt-4">
-    <h2>
-        <i class="bi bi-clock-history me-2"></i>
-        Recent Activity
-    </h2>
-    <div class="card">
-        <div class="card-body">
-            <div class="recent-activity">
-                {% if recent_activities %}
-                    {% for activity in recent_activities %}
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="activity-icon {{ activity.type }}">
-                            <i class="bi {{ activity.icon }}"></i>
+        <!-- Quick Stats (Admin Only) -->
+        {% if current_user.is_admin %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-speedometer2 me-2"></i>
+                    Quick Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="card quick-stats-card bg-primary text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people-fill quick-stats-icon"></i>
+                                <h6 class="mb-2">Active Players</h6>
+                                <div class="stat-highlight">{{ stats.active_players_count }}</div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="fw-bold">{{ activity.title }}</div>
-                            <small class="text-muted">{{ activity.timestamp }}</small>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card quick-stats-card bg-success text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-controller quick-stats-icon"></i>
+                                <h6 class="mb-2">Games This Season</h6>
+                                <div class="stat-highlight">{{ stats.games_count }}</div>
+                            </div>
                         </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card quick-stats-card bg-info text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-graph-up quick-stats-icon"></i>
+                                <h6 class="mb-2">Win Rate</h6>
+                                <div class="stat-highlight">{{ stats.win_rate }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card quick-stats-card bg-warning text-white h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-calendar-event quick-stats-icon"></i>
+                                <h6 class="mb-2">Next Game</h6>
+                                <div class="stat-highlight" style="font-size: 1.2rem;">{{ stats.next_game_date|default('None') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Upcoming Events -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-event me-2"></i>
+                    Upcoming Events
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_events %}
+                    {% for event in upcoming_events %}
+                    <div class="upcoming-event {{ event.type }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">{{ event.title }}</h6>
+                            <span class="badge bg-{{ event.badge_color }}">{{ event.type|title }}</span>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            {{ event.date_time }}
+                        </small>
+                        {% if event.location %}
+                        <div class="small">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            {{ event.location }}
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted text-center mb-0">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Recent activity will be displayed here as you use the application.
-                    </p>
+                    <p class="text-muted text-center mb-0">No upcoming events scheduled.</p>
                 {% endif %}
             </div>
         </div>
+        
+        <!-- Player Quick Links (if user has a linked player) -->
+        {% if current_user.player %}
+        <div class="card mt-4 player-dashboard-card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Your Player Dashboard
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="flex-shrink-0">
+                        <div class="player-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 class="mb-1">{{ current_user.player.name }}</h5>
+                        <p class="text-muted mb-0">{{ current_user.player.position or 'No position set' }}</p>
+                    </div>
+                </div>
+                <div class="list-group">
+                    <a href="{{ url_for('team.player_detail', player_id=current_user.player.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-person-vcard me-2"></i> Your Profile</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-graph-up me-2"></i> Your Stats</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('session.player_attendance', player_id=current_user.player.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-calendar-check me-2"></i> Your Attendance</span>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
-
-{% if current_user.is_admin %}
-<div class="mt-4">
-    <h2>
-        <i class="bi bi-speedometer2 me-2"></i>
-        Quick Stats
-    </h2>
-    <div class="row">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Active Players</h6>
-                    <div class="stat-highlight">{{ active_players_count }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Games This Season</h6>
-                    <div class="stat-highlight">{{ games_count }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Win Rate</h6>
-                    <div class="stat-highlight">{{ win_rate }}%</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Next Game</h6>
-                    <div class="stat-highlight">{{ next_game_date|default('None scheduled') }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
 {% else %}
-<div class="mt-4 text-center">
+<!-- Login/Register prompt for non-authenticated users -->
+<div class="mt-4">
     <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Get Started</h5>
-            <p class="card-text">Please log in or register to access all features of Ultimate Coach.</p>
-            <div class="d-flex justify-content-center gap-3">
-                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+        <div class="card-body text-center py-5">
+            <h3 class="card-title mb-4">Get Started with Ultimate Coach</h3>
+            <p class="card-text mb-4">Please log in or register to access all features and start managing your Ultimate Frisbee team.</p>
+            <div class="d-flex justify-content-center gap-4">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
                     <i class="bi bi-box-arrow-in-right me-2"></i>
                     Log In
                 </a>
-                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-lg">
                     <i class="bi bi-person-plus me-2"></i>
                     Register
                 </a>
@@ -320,8 +608,8 @@
 {% block scripts %}
 {{ super() }}
 <script>
-    // Initialize tooltips for dynamic content
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         tooltipTriggerList.forEach(function(tooltipTriggerEl) {
             new bootstrap.Tooltip(tooltipTriggerEl)

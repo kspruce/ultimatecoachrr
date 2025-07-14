@@ -33,14 +33,12 @@ class SavedDrill(db.Model):
     skill_level = db.Column(db.String(20), nullable=True)
     focus_area = db.Column(db.String(100), nullable=True)
     equipment_needed = db.Column(db.String(200), nullable=True)
-    diagram_url = db.Column(db.String(200), nullable=True)
-    video_url = db.Column(db.String(200), nullable=True)
-    has_visual_diagram = db.Column(db.Boolean, default=False)
+    ultiplay_embed = db.Column(db.Text, nullable=True)
     is_public = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    
     # Relationship to SessionComponent
     components = db.relationship('SessionComponent', back_populates='saved_drill', lazy='dynamic')
 

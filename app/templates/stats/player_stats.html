@@ -5,20 +5,11 @@
 <!-- Load D3.js from CDN -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+<!-- 07-2025 -- Add Chart.js and Radar plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+
 <style>
-    .field-container {
-        position: relative;
-        width: 100%;
-        height: 400px;
-        min-height: 400px;
-        border: 2px solid #4CAF50;
-        background-color: #E8F5E9;
-        margin-bottom: 20px;
-    }
-    .field-line {
-        position: absolute;
-        background-color: white;
-    }
     .stat-card {
         transition: transform 0.3s;
     }
@@ -30,28 +21,44 @@
         height: 200px;
         margin: 0 auto;
     }
-    .throw-vector {
-        stroke: blue;
-        stroke-width: 2;
-        opacity: 0.7;
-        pointer-events: none;
-    }
-    .throwaway-location {
-        fill: red;
-        opacity: 0.7;
-    }
-    .throwaway-vector {
-        stroke: red;
-        stroke-width: 2;
-        stroke-dasharray: 5,5;
-        opacity: 0.7;
-    }
+
+
     .nav-tabs .nav-link {
         color: #495057;
     }
     .nav-tabs .nav-link.active {
         color: #007bff;
         font-weight: bold;
+    }
+    
+    #perDisplay {
+        transition: transform 0.3s ease;
+    }
+    
+    #perDisplay:hover {
+        transform: scale(1.05);
+    }
+    
+    #perValue {
+        transition: color 0.3s ease;
+        line-height: 1;
+        margin-bottom: 0.2em;
+    }
+
+<!-- Add Radar style -->
+   .radar-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+        margin-bottom: 20px;
+        border: 1px solid #eee; /* Add a border to see the container */
+    }
+    
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
     }
 </style>
 {% endblock %}
@@ -118,26 +125,33 @@
     </div>
 
     <!-- PER and Summary Stats -->
-    <!-- Update PER display section -->
-    <div class="card stat-card h-100">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                Player Efficiency Rating (PER)
-                <i class="bi bi-info-circle" 
-                   data-bs-toggle="tooltip" 
-                   title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
-                </i>
-            </h5>
-        </div>
-        <div class="card-body text-center">
-            <div class="per-gauge" id="perGauge"></div>
-            <h2 class="mt-3">{{ stats.per|round(2) }}</h2>
-            <div class="small text-muted">
-                <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
-                <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
+    <div class="row mb-4">
+        <!-- PER Display -->
+        <div class="col-md-4">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        Player Efficiency Rating (PER)
+                        <i class="bi bi-info-circle" 
+                           data-bs-toggle="tooltip" 
+                           title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
+                        </i>
+                    </h5>
+                </div>
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <div id="perDisplay">
+                        <div class="display-1 fw-bold" id="perValue">{{ stats.per|round(1) }}</div>
+                        <div class="text-muted">Player Efficiency Rating</div>
+                    </div>
+                    <div class="small text-muted mt-3">
+                        <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
+                        <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
+                    </div>
+                </div>
             </div>
         </div>
         
+        <!-- Summary Statistics -->
         <div class="col-md-8">
             <div class="card stat-card h-100">
                 <div class="card-header bg-primary text-white">
@@ -191,6 +205,10 @@
                                     <th>Hockey Assists</th>
                                     <td>{{ stats.hockey_assists }}</td>
                                 </tr>
+                                <tr>
+                                    <th>Break Throws</th>
+                                    <td>{{ stats.break_throws }}</td>
+                                </tr>
                             </table>
                         </div>
                     </div>
@@ -199,29 +217,10 @@
         </div>
     </div>
     
-    <!-- Add hockey assist visualization -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Scoring Sequences</h5>
-                </div>
-                <div class="card-body">
-                    <div id="scoring-sequences"></div>
-                    <div class="sequence-legend mt-3">
-                        <span class="badge bg-primary">Throw</span>
-                        <span class="badge bg-success">Assist</span>
-                        <span class="badge bg-warning">Hockey Assist</span>
-                        <span class="badge bg-danger">Goal</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+
     <!-- Detailed Stats -->
     <div class="row mb-4">
-        <div class="col-md-6">
+         <div class="col-md-6">
             <div class="card stat-card h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">Offensive Stats</h5>
@@ -259,6 +258,10 @@
                                     <td>{{ stats.hockey_assists }}</td>
                                 </tr>
                                 <tr>
+                                    <th>Break Throws</th>
+                                    <td>{{ stats.break_throws }}</td>
+                                </tr>
+                                <tr>
                                     <th>Total Distance</th>
                                     <td>{{ total_throw_distance|round(1) }} m</td>
                                 </tr>
@@ -273,10 +276,6 @@
                                 <tr>
                                     <th>O-Line +/-</th>
                                     <td>{{ stats.o_line_plus_minus }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Callahans</th>
-                                    <td>{{ stats.callahans }}</td>
                                 </tr>
                             </table>
                         </div>
@@ -297,6 +296,14 @@
                                 <tr>
                                     <th>Blocks</th>
                                     <td>{{ stats.blocks }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Shutdowns</th>
+                                    <td>{{ stats.shutdowns }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Forced Turnovers</th>
+                                    <td>{{ stats.blocks + stats.stalls }}</td>
                                 </tr>
                                 <tr>
                                     <th>D-Line Points</th>
@@ -330,33 +337,90 @@
         </div>
     </div>
 
-    <!-- Throw Visualizations -->
+ 
+    <!-- Radar Charts -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Offensive Radar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="radar-container">
+                        <canvas id="offensiveRadar"></canvas>
+                    </div>
+                    <div class="radar-legend mt-2">
+                        <small class="text-muted">
+                            <strong>Scaling:</strong> 100% represents excellent performance
+                            <ul class="mb-0 ps-3">
+                                <li>Throws: 10 per point</li>
+                                <li>Assists: 0.5 per point</li>
+                                <li>Hockey Assists: 0.5 per point</li>
+                                <li>Avg Distance: 70m</li>
+                                <li>Catches: 8 per point</li>
+                                <li>Average Distance Thrown: 70 m</li>
+                                <li>Hucks: 0.5 per point</li>
+                            </ul>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card stat-card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Defensive Radar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="radar-container">
+                        <canvas id="defensiveRadar"></canvas>
+                    </div>
+                    <div class="radar-legend mt-2">
+                        <small class="text-muted">
+                            <strong>Scaling:</strong> 100% represents excellent performance
+                            <ul class="mb-0 ps-3">
+                                <li>Blocks: 0.5 per point</li>
+                                <li>Shutdowns: 0.3 per point</li>
+                                <li>Stalls: 0.3 per point</li>
+                                <li>Forced Turnover: 0.8 per point</li>
+                                <li>Plus Minus: 1.0 per point</li>
+                            </ul>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Throw Direction Radar -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs" id="throwVisualizationTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="field-tab" data-bs-toggle="tab" data-bs-target="#field-content" type="button" role="tab" aria-controls="field-content" aria-selected="true">Field View</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="centralized-tab" data-bs-toggle="tab" data-bs-target="#centralized-content" type="button" role="tab" aria-controls="centralized-content" aria-selected="false">Centralized View</button>
-                        </li>
-                    </ul>
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Throw Direction Analysis</h5>
                 </div>
                 <div class="card-body">
-                    <div class="tab-content" id="throwVisualizationTabContent">
-                        <div class="tab-pane fade show active" id="field-content" role="tabpanel" aria-labelledby="field-tab">
-                            <div class="field-container" id="throwVectorsField" style="height: 400px; min-height: 400px;">
-                                <!-- Field will be drawn here -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="radar-container">
+                                <canvas id="throwDirectionRadar"></canvas>
                             </div>
-                            <p class="text-center text-muted">Blue lines represent completed throws, orange lines represent assists</p>
                         </div>
-                        <div class="tab-pane fade" id="centralized-content" role="tabpanel" aria-labelledby="centralized-tab">
-                            <div class="field-container" id="centralizedVectorsField" style="height: 400px; min-height: 400px;">
-                                <!-- Centralized vectors will be drawn here -->
+                        <div class="col-md-4">
+                            <div class="direction-legend mt-2">
+                                <h6>Throw Direction Distribution</h6>
+                                <small class="text-muted">
+                                    <p>This chart shows the distribution of throw directions relative to the field orientation.</p>
+                                    <ul class="mb-0 ps-3">
+                                        <li><strong>FORWARD</strong>: Directly upfield (East)</li>
+                                        <li><strong>RIGHT</strong>: Across field to the right (North)</li>
+                                        <li><strong>BACK</strong>: Directly downfield (West)</li>
+                                        <li><strong>LEFT</strong>: Across field to the left (South)</li>
+                                        <li>The chart is divided into 16 directions for detailed analysis</li>
+                                    </ul>
+                                </small>
                             </div>
-                            <p class="text-center text-muted">All throws shown from a central point</p>
                         </div>
                     </div>
                 </div>
@@ -364,22 +428,6 @@
         </div>
     </div>
 
-    <!-- Throwaway Locations -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Throwaway Locations</h5>
-                </div>
-                <div class="card-body">
-                    <div class="field-container" id="throwawayLocationsField" style="height: 400px; min-height: 400px;">
-                        <!-- Field will be drawn here -->
-                    </div>
-                    <p class="text-center text-muted">Red dots represent throwaway locations, dashed lines show attempted throws</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
 <!-- Game History -->
 <div class="row mb-4">
@@ -428,7 +476,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 {{ super() }}
 <script>
@@ -436,8 +483,23 @@
 const vizData = {
     throwVectors: {{ throw_vectors|safe }},
     throwawayLocations: {{ throwaway_locations|safe }},
-    perValue: {{ stats.per|round(2) }}
-};
+    perValue: {{ stats.per|round(2) }},
+    // Add debug logging to check throw vector structure
+    init: function() {
+        console.log("Initializing vizData with", this.throwVectors.length, "throw vectors");
+        if (this.throwVectors.length > 0) {
+            console.log("Sample throw vector:", this.throwVectors[0]);
+        }
+        return this;
+    }
+}.init();
+
+
+function pythonBoolToJS(value) {
+    if (value === "True" || value === true) return true;
+    if (value === "False" || value === false) return false;
+    return value; // Return original value if not a boolean
+}
 
 // Utility functions
 function debounce(func, wait) {
@@ -457,373 +519,847 @@ function getPerColor(value) {
     return '#dc3545';
 }
 
-// Visualization functions
-function createPERGauge() {
-    const container = d3.select('#perGauge');
-    const width = 200;
-    const height = 200;
-    const radius = Math.min(width, height) / 2;
+// Add radar chart initialization
+function initializeRadarCharts() {
+    console.log('initializeRadarCharts called');
     
-    const svg = container.append('svg')
-        .attr('width', width)
-        .attr('height', height)
-        .append('g')
-        .attr('transform', `translate(${width/2},${height/2})`);
-    
-    const scale = d3.scaleLinear()
-        .domain([0, 30])
-        .range([-Math.PI/2, Math.PI/2]);
-    
-    const arc = d3.arc()
-        .innerRadius(radius * 0.6)
-        .outerRadius(radius * 0.8)
-        .startAngle(-Math.PI/2);
-    
-    svg.append('path')
-        .datum({endAngle: Math.PI/2})
-        .style('fill', '#e6e6e6')
-        .attr('d', arc);
-    
-    svg.append('path')
-        .datum({endAngle: scale(vizData.perValue)})
-        .style('fill', getPerColor(vizData.perValue))
-        .attr('d', arc);
-    
-    svg.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.5em')
-        .attr('class', 'gauge-value')
-        .style('font-size', '24px')
-        .style('font-weight', 'bold')
-        .text(vizData.perValue);
-    
-    svg.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dy', '2em')
-        .style('font-size', '14px')
-        .text('PER');
-}
-
-function drawField(containerId) {
-    const container = d3.select(`#${containerId}`);
-    container.html('');
-    
-    const containerWidth = container.node().getBoundingClientRect().width;
-    const containerHeight = 400;
-    
-    const svg = container.append('svg')
-        .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
-        .attr('preserveAspectRatio', 'xMidYMid meet')
-        .attr('width', '100%')
-        .attr('height', '100%')
-        .attr('data-width', containerWidth)
-        .attr('data-height', containerHeight);
-    
-    // Field background
-    svg.append('rect')
-        .attr('width', containerWidth)
-        .attr('height', containerHeight)
-        .attr('fill', '#E8F5E9')
-        .attr('stroke', '#4CAF50')
-        .attr('stroke-width', 2);
-    
-    // Center line
-    svg.append('line')
-        .attr('x1', containerWidth / 2)
-        .attr('y1', 0)
-        .attr('x2', containerWidth / 2)
-        .attr('y2', containerHeight)
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-    
-    // End zones
-    svg.append('rect')
-        .attr('x', 0)
-        .attr('y', 0)
-        .attr('width', containerWidth * 0.2)
-        .attr('height', containerHeight)
-        .attr('fill', 'none')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-    
-    svg.append('rect')
-        .attr('x', containerWidth * 0.8)
-        .attr('y', 0)
-        .attr('width', containerWidth * 0.2)
-        .attr('height', containerHeight)
-        .attr('fill', 'none')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2);
-    
-    return svg;
-}
-
-function drawThrowVectors(containerId, centralizeVectors = false, minDistanceThreshold = 2) {
-    console.log('Drawing vectors for', containerId, 'centralized:', centralizeVectors);
-    console.log('Initial vector count:', vizData.throwVectors.length);
-
-    const svg = d3.select(`#${containerId} svg`);
-    if (!svg.node()) {
-        console.error('No SVG found in container:', containerId);
-        return;
-    }
-
-    const width = parseFloat(svg.attr('data-width'));
-    const height = parseFloat(svg.attr('data-height'));
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // Clear existing vectors
-    svg.selectAll('.vector-group').remove();
-    
-    const vectorGroup = svg.append('g').attr('class', 'vector-group');
-
-    // Add arrowhead definition
-    svg.selectAll('defs').remove(); // Remove existing defs
-    const defs = svg.append('defs');
-    
-    defs.append('marker')
-        .attr('id', `arrowhead-${containerId}`)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 8)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'blue');
-
-    defs.append('marker')
-        .attr('id', `arrowhead-assist-${containerId}`)
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 8)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', '#ff9900');
-
-    // Filter vectors based on total distance
-    const filteredVectors = vizData.throwVectors.filter(vector => {
-        const xDiff = Math.abs(vector.end_x - vector.start_x);
-        const yDiff = Math.abs(vector.end_y - vector.start_y);
-        const distance = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+    // Check if Chart is defined
+    if (typeof Chart === 'undefined') {
+        console.log('Chart.js is not loaded yet. Loading Chart.js dynamically...');
         
-        console.log(`Vector distance: ${distance}, Threshold: ${minDistanceThreshold}`);
-        return distance > minDistanceThreshold;
-    });
-
-    console.log('Filtered vector count:', filteredVectors.length);
-
-    // Draw only the filtered vectors
-    filteredVectors.forEach((vector, i) => {
-        let startX, startY, endX, endY;
-
-        if (centralizeVectors) {
-            startX = centerX;
-            startY = centerY;
-            const dx = vector.end_x - vector.start_x;
-            const dy = vector.end_y - vector.start_y;
-            const fixedScale = 3;
-            endX = centerX + (dx * fixedScale);
-            endY = centerY + (dy * fixedScale);
-        } else {
-            startX = vector.start_x / 100 * width;
-            startY = vector.start_y / 37 * height;
-            endX = vector.end_x / 100 * width;
-            endY = vector.end_y / 37 * height;
-        }
-
-        console.log(`Drawing vector ${i}:`, {startX, startY, endX, endY});
-
-        const isAssist = vector.type === 'assist';
-        const color = isAssist ? '#ff9900' : 'blue';
-        const arrowheadId = isAssist ? `arrowhead-assist-${containerId}` : `arrowhead-${containerId}`;
-
-        vectorGroup.append('line')
-            .attr('x1', startX)
-            .attr('y1', startY)
-            .attr('x2', endX)
-            .attr('y2', endY)
-            .attr('class', 'throw-vector')
-            .attr('stroke', color)
-            .attr('stroke-width', 2)
-            .attr('marker-end', `url(#${arrowheadId})`);
-
-        vectorGroup.append('circle')
-            .attr('cx', startX)
-            .attr('cy', startY)
-            .attr('r', 3)
-            .attr('fill', color);
-    });
-}
-
-function drawThrowawayLocations(containerId) {
-    if (!vizData.throwawayLocations || vizData.throwawayLocations.length === 0) {
-        console.log('No throwaway locations to draw');
+        // Load Chart.js dynamically
+        const chartScript = document.createElement('script');
+        chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+        
+        chartScript.onload = function() {
+            console.log('Chart.js loaded successfully');
+            // Load Radar plugin after Chart.js is loaded
+            const radarPlugin = document.createElement('script');
+            radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js';          
+            radarPlugin.onload = function() {
+                console.log('Radar plugin loaded successfully');
+                // Wait a moment for everything to initialize
+                setTimeout(function() {
+                    createRadarCharts();
+                }, 100);
+            };
+            
+            radarPlugin.onerror = function() {
+                console.error('Failed to load Radar plugin');
+            };
+            
+            document.head.appendChild(radarPlugin);
+        };
+        
+        chartScript.onerror = function() {
+            console.error('Failed to load Chart.js');
+        };
+        
+        document.head.appendChild(chartScript);
         return;
     }
+    
+    console.log('Chart.js already loaded, creating charts directly');
+    createRadarCharts();
+}
 
-    const svg = d3.select(`#${containerId} svg`);
-    if (!svg.node()) {
-        console.error('No SVG found in container:', containerId);
+// Separate function to create the actual charts
+function createRadarCharts() {
+    console.log('Creating radar charts...');
+    
+    // Check if canvas elements exist
+    const offensiveCanvas = document.getElementById('offensiveRadar');
+    const defensiveCanvas = document.getElementById('defensiveRadar');
+    
+    if (!offensiveCanvas || !defensiveCanvas) {
+        console.error('Canvas elements not found');
         return;
     }
-
-    const width = parseFloat(svg.attr('data-width'));
-    const height = parseFloat(svg.attr('data-height'));
-
-    // Create a group for throwaway locations
-    const throwawayGroup = svg.append('g').attr('class', 'throwaway-group');
-
-    vizData.throwawayLocations.forEach(location => {
-        const x = location.x / 100 * width;
-        const y = location.y / 37 * height;
-
-        throwawayGroup.append('circle')
-            .attr('cx', x)
-            .attr('cy', y)
-            .attr('r', 5)
-            .attr('fill', 'red')
-            .attr('opacity', 0.7);
-
-        if (location.prev_x !== undefined && location.prev_y !== undefined) {
-            const prevX = location.prev_x / 100 * width;
-            const prevY = location.prev_y / 37 * height;
-
-            throwawayGroup.append('line')
-                .attr('x1', prevX)
-                .attr('y1', prevY)
-                .attr('x2', x)
-                .attr('y2', y)
-                .attr('stroke', 'red')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', '5,5')
-                .attr('opacity', 0.7);
-        }
-    });
+    
+    // Destroy existing charts if they exist
+    const existingOffensiveChart = Chart.getChart(offensiveCanvas);
+    if (existingOffensiveChart) {
+        existingOffensiveChart.destroy();
+    }
+    
+    const existingDefensiveChart = Chart.getChart(defensiveCanvas);
+    if (existingDefensiveChart) {
+        existingDefensiveChart.destroy();
+    }
+    
+    // Get player stats from the template
+    const stats = {
+        // Offensive stats
+        throws: {{ stats.throws|default(0) }},
+        completions: {{ stats.completions|default(0) }},
+        completion_rate: {{ stats.completion_rate|default(0) }},
+        assists: {{ stats.assists|default(0) }},
+        hockey_assists: {{ stats.hockey_assists|default(0) }},
+        goals: {{ stats.goals|default(0) }},
+        throwaways: {{ stats.throwaways|default(0) }},
+        drops: {{ stats.drops|default(0) }},
+        avg_throw_distance: {{ stats.avg_throw_distance|default(0) }},
+        catches: {{ stats.catches|default(0) }},
+        catch_rate: {{ stats.catch_rate|default(0) }},
+        
+        // Defensive stats
+        blocks: {{ stats.blocks|default(0) }},
+        stalls: {{ stats.stalls|default(0) }},
+        shutdowns: {{ stats.shutdowns|default(0) }},
+        d_line_plus_minus: {{ stats.d_line_plus_minus|default(0) }},
+        d_line_points_played: {{ stats.d_line_points_played|default(0) }},
+        o_line_points_played: {{ stats.o_line_points_played|default(0) }},
+        
+        // Calculate hucks (throws over 20m)
+        hucks: {{ stats.hucks|default(0) }}
+    };
+    
+    // Get team average stats from the template
+    const teamStats = {
+        // Offensive stats
+        completion_rate: {{ team_stats.completion_rate|default(0) }},
+        catch_rate: {{ team_stats.catch_rate|default(0) }},
+        avg_throw_distance: {{ team_stats.avg_throw_distance|default(0) }},
+        assists_per_point: {{ team_stats.assists_per_point|default(0) }},
+        hockey_assists_per_point: {{ team_stats.hockey_assists_per_point|default(0) }},
+        goals_per_point: {{ team_stats.goals_per_point|default(0) }},
+        throws_per_point: {{ team_stats.throws_per_point|default(0) }},
+        catches_per_point: {{ team_stats.catches_per_point|default(0) }},
+        hucks_per_point: {{ team_stats.hucks_per_point|default(0) }},
+        
+        // Defensive stats
+        blocks_per_point: {{ team_stats.blocks_per_point|default(0) }},
+        stalls_per_point: {{ team_stats.stalls_per_point|default(0) }},
+        shutdowns_per_point: {{ team_stats.shutdowns_per_point|default(0) }},
+        d_line_plus_minus_per_point: {{ team_stats.d_line_plus_minus_per_point|default(0) }},
+        turnovers_forced_per_point: {{ team_stats.turnovers_forced_per_point|default(0) }}
+    };
+    
+    // Define scaling factors for different stat types
+    const maxPerPointValues = {
+        // Offensive stats (per O-line point)
+        assists: 0.5,        // 1 assist every 2 points is excellent
+        hockey_assists: 0.5, // 1 hockey assist every 2 points is excellent
+        goals: 0.5,          // 1 goal every 2 points is excellent
+        hucks: 0.5,          // 1 huck every 2 points is excellent
+        throws: 10.0,        // 10 throws per point is a high volume
+        catches: 8.0,        // 8 catches per point is a high volume
+        avg_throw_distance: 70.0, // 70m as the maximum average throw distance
+        
+        // Defensive stats (per D-line point)
+        blocks: 0.5,         // 1 block every 2 points is excellent
+        stalls: 0.3,         // 1 stall every 3-4 points is excellent
+        shutdowns: 0.3,      // 1 shutdown every 3-4 points is excellent
+        turnovers_forced: 0.8, // Forcing ~1 turnover per point is excellent
+        plus_minus: 1.0      // +1 per point is excellent
+    };
+    
+    try {
+        // Calculate derived metrics
+        const oLinePoints = Math.max(1, stats.o_line_points_played); // Avoid division by zero
+        const dLinePoints = Math.max(1, stats.d_line_points_played); // Avoid division by zero
+        
+        // Calculate per-point statistics for offensive stats
+        const perPointOffensive = {
+            assists: stats.assists / oLinePoints,
+            hockey_assists: stats.hockey_assists / oLinePoints,
+            goals: stats.goals / oLinePoints,
+            hucks: stats.hucks / oLinePoints,
+            throws: stats.throws / oLinePoints,
+            catches: stats.catches / oLinePoints
+        };
+        
+        // Calculate per-point statistics for defensive stats
+        const perPointDefensive = {
+            blocks: stats.blocks / dLinePoints,
+            stalls: stats.stalls / dLinePoints,
+            shutdowns: stats.shutdowns / dLinePoints,
+            turnovers_forced: (stats.blocks + stats.stalls) / dLinePoints,
+            plus_minus: (stats.d_line_plus_minus + 10) / dLinePoints // Adjust for negative values
+        };
+        
+        console.log('Per-point offensive stats:', perPointOffensive);
+        console.log('Per-point defensive stats:', perPointDefensive);
+        console.log('Team average stats:', teamStats);
+        
+        // Normalize values for radar chart (0-100 scale) using our scaling factors
+        const normalizeValue = (value, statType) => {
+            const maxValue = maxPerPointValues[statType] || 1.0;
+            return Math.min(100, (value / maxValue) * 100);
+        };
+        
+        // Create offensive radar chart
+        const offensiveCtx = offensiveCanvas.getContext('2d');
+        const offensiveRadar = new Chart(offensiveCtx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Completion %', 
+                    'Assists/Point', 
+                    'Hockey Assists/Point',
+                    'Goals/Point',
+                    'Avg Distance (max 70m)',
+                    'Hucks/Point',
+                    'Throws/Point',
+                    'Catch Rate'
+                ],
+                datasets: [
+                    {
+                        label: 'Player Stats',
+                        data: [
+                            stats.completion_rate,
+                            normalizeValue(perPointOffensive.assists, 'assists'),
+                            normalizeValue(perPointOffensive.hockey_assists, 'hockey_assists'),
+                            normalizeValue(perPointOffensive.goals, 'goals'),
+                            normalizeValue(stats.avg_throw_distance, 'avg_throw_distance'),
+                            normalizeValue(perPointOffensive.hucks, 'hucks'),
+                            normalizeValue(perPointOffensive.throws, 'throws'),
+                            stats.catch_rate
+                        ],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Team Average',
+                        data: [
+                            teamStats.completion_rate,
+                            normalizeValue(teamStats.assists_per_point, 'assists'),
+                            normalizeValue(teamStats.hockey_assists_per_point, 'hockey_assists'),
+                            normalizeValue(teamStats.goals_per_point, 'goals'),
+                            normalizeValue(teamStats.avg_throw_distance, 'avg_throw_distance'),
+                            normalizeValue(teamStats.hucks_per_point, 'hucks'),
+                            normalizeValue(teamStats.throws_per_point, 'throws'),
+                            teamStats.catch_rate
+                        ],
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+                        pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const datasetLabel = context.dataset.label || '';
+                                
+                                if (datasetLabel === 'Player Stats') {
+                                    const originalValues = [
+                                        stats.completion_rate.toFixed(1) + '%',
+                                        perPointOffensive.assists.toFixed(2) + ' assists/point',
+                                        perPointOffensive.hockey_assists.toFixed(2) + ' hockey assists/point',
+                                        perPointOffensive.goals.toFixed(2) + ' goals/point',
+                                        stats.avg_throw_distance.toFixed(1) + 'm (max 70m)',
+                                        perPointOffensive.hucks.toFixed(2) + ' hucks/point',
+                                        perPointOffensive.throws.toFixed(1) + ' throws/point',
+                                        stats.catch_rate.toFixed(1) + '%'
+                                    ];
+                                    return datasetLabel + ': ' + originalValues[context.dataIndex];
+                                } else {
+                                    const teamValues = [
+                                        teamStats.completion_rate.toFixed(1) + '%',
+                                        teamStats.assists_per_point.toFixed(2) + ' assists/point',
+                                        teamStats.hockey_assists_per_point.toFixed(2) + ' hockey assists/point',
+                                        teamStats.goals_per_point.toFixed(2) + ' goals/point',
+                                        teamStats.avg_throw_distance.toFixed(1) + 'm',
+                                        teamStats.hucks_per_point.toFixed(2) + ' hucks/point',
+                                        teamStats.throws_per_point.toFixed(1) + ' throws/point',
+                                        teamStats.catch_rate.toFixed(1) + '%'
+                                    ];
+                                    return datasetLabel + ': ' + teamValues[context.dataIndex];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Create defensive radar chart
+        const defensiveCtx = defensiveCanvas.getContext('2d');
+        const defensiveRadar = new Chart(defensiveCtx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Blocks/Point', 
+                    'Stalls/Point',
+                    'Shutdowns/Point',
+                    'Turnovers Forced/Point',
+                    'Defensive Efficiency'
+                ],
+                datasets: [
+                    {
+                        label: 'Player Stats',
+                        data: [
+                            normalizeValue(perPointDefensive.blocks, 'blocks'),
+                            normalizeValue(perPointDefensive.stalls, 'stalls'),
+                            normalizeValue(perPointDefensive.shutdowns, 'shutdowns'),
+                            normalizeValue(perPointDefensive.turnovers_forced, 'turnovers_forced'),
+                            stats.d_line_conversion_rate
+                        ],
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Team Average',
+                        data: [
+                            normalizeValue(teamStats.blocks_per_point, 'blocks'),
+                            normalizeValue(teamStats.stalls_per_point, 'stalls'),
+                            normalizeValue(teamStats.shutdowns_per_point, 'shutdowns'),
+                            normalizeValue(teamStats.turnovers_forced_per_point, 'turnovers_forced'),
+                            teamStats.d_line_conversion_rate || 0
+                        ],
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1,
+                        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+                        pointRadius: 3
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const datasetLabel = context.dataset.label || '';
+                                
+                                if (datasetLabel === 'Player Stats') {
+                                    const originalValues = [
+                                        perPointDefensive.blocks.toFixed(2) + ' blocks/point',
+                                        perPointDefensive.plus_minus.toFixed(2) + ' +/-/point',
+                                        perPointDefensive.stalls.toFixed(2) + ' stalls/point',
+                                        perPointDefensive.shutdowns.toFixed(2) + ' shutdowns/point',
+                                        perPointDefensive.turnovers_forced.toFixed(2) + ' turnovers forced/point'
+                                    ];
+                                    return datasetLabel + ': ' + originalValues[context.dataIndex];
+                                } else {
+                                    const teamValues = [
+                                        teamStats.blocks_per_point.toFixed(2) + ' blocks/point',
+                                        teamStats.d_line_plus_minus_per_point.toFixed(2) + ' +/-/point',
+                                        teamStats.stalls_per_point.toFixed(2) + ' stalls/point',
+                                        teamStats.shutdowns_per_point.toFixed(2) + ' shutdowns/point',
+                                        teamStats.turnovers_forced_per_point.toFixed(2) + ' turnovers forced/point'
+                                    ];
+                                    return datasetLabel + ': ' + teamValues[context.dataIndex];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('Radar charts created successfully');
+    } catch (error) {
+        console.error('Error creating radar charts:', error);
+    }
 }
 
 
-// Initialization and event handling
+
+
+// Visualization functions
+function getPerColor(value) {
+    // Convert to 0-100 scale for color determination
+    const value100 = value * (100/30);
+    
+    if (value100 >= 67) return '#28a745';  // Green for excellent (67-100)
+    if (value100 >= 50) return '#17a2b8';  // Blue for good (50-67)
+    if (value100 >= 33) return '#ffc107';  // Yellow for average (33-50)
+    if (value100 >= 17) return '#fd7e14';  // Orange for below average (17-33)
+    return '#dc3545';                      // Red for poor (0-17)
+}
+
 function initializeVisualizations() {
     console.log('Initializing visualizations');
     
-    // Initialize PER gauge
-    createPERGauge();
-    
-    // Initialize main field views
-    drawField('throwVectorsField');
-    drawThrowVectors('throwVectorsField', false);
-    
-    drawField('throwawayLocationsField');
-    drawThrowawayLocations('throwawayLocationsField');
-}
-
-function handleTabChange(tabId) {
-    console.log('Handling tab change:', tabId);
-    
-    switch(tabId) {
-        case 'centralized-tab':
-            const centralizedField = document.getElementById('centralizedVectorsField');
-            centralizedField.innerHTML = '';
-            drawField('centralizedVectorsField');
-            drawThrowVectors('centralizedVectorsField', true);
-            break;
-            
+    // Apply color to the PER value based on its value
+    const perValueElement = document.getElementById('perValue');
+    if (perValueElement) {
+        const perValue = parseFloat(perValueElement.textContent);
+        perValueElement.style.color = getPerColor(perValue);
     }
 }
 
-function setupTabHandlers() {
-    const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
-    console.log('Setting up tab handlers for', tabElements.length, 'tabs');
-    
-    tabElements.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(event) {
-            console.log('Tab shown:', event.target.id);
-            handleTabChange(event.target.id);
-        });
-        
-        // Also add click handler as backup
-        tab.addEventListener('click', function() {
-            console.log('Tab clicked:', this.id);
-            setTimeout(() => handleTabChange(this.id), 100);
-        });
-    });
-}
+
 
 // Main initialization
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded');
-    console.log('Visualization data:', vizData);
+    console.log('Visualization data available:', !!vizData);
     
+    // Check if throw vectors are available and valid
+    if (vizData && vizData.throwVectors) {
+        console.log(`Found ${vizData.throwVectors.length} throw vectors`);       
+        
+    }
+    
+    function loadChartJsWithDependencies(callback) {
+        // Check if Chart.js is already loaded
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js already loaded');
+            
+            // Check if Radar plugin is loaded
+            if (Chart.controllers.radar) {
+                console.log('Radar plugin already loaded');
+                callback();
+            } else {
+                console.log('Loading Radar plugin...');
+                const radarPlugin = document.createElement('script');
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js';
+                radarPlugin.crossOrigin = 'anonymous';
+                
+                radarPlugin.onload = function() {
+                    console.log('Radar plugin loaded successfully');
+                    setTimeout(callback, 100);
+                };
+                
+                radarPlugin.onerror = function(e) {
+                    console.error('Failed to load Radar plugin:', e);
+                };
+                
+                document.head.appendChild(radarPlugin);
+            }
+        } else {
+            console.log('Loading Chart.js...');
+            const chartScript = document.createElement('script');
+            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+            chartScript.crossOrigin = 'anonymous';
+            
+            chartScript.onload = function() {
+                console.log('Chart.js loaded successfully');
+                
+                const radarPlugin = document.createElement('script');
+                radarPlugin.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js';
+                radarPlugin.crossOrigin = 'anonymous';
+                
+                radarPlugin.onload = function() {
+                    console.log('Radar plugin loaded successfully');
+                    setTimeout(callback, 100);
+                };
+                
+                radarPlugin.onerror = function(e) {
+                    console.error('Failed to load Radar plugin:', e);
+                };
+                
+                document.head.appendChild(radarPlugin);
+            };
+            
+            chartScript.onerror = function(e) {
+                console.error('Failed to load Chart.js:', e);
+            };
+            
+            document.head.appendChild(chartScript);
+        }
+    }
+    
+    // Then use this function in your initialization
+    function initializeAll() {
+        console.log('Starting initialization sequence');
+        
+        // Initialize basic visualizations (PER gauge)
+        initializeVisualizations();
+        
+        // Load Chart.js and dependencies, then initialize radar charts
+        loadChartJsWithDependencies(function() {
+            console.log('Chart.js and dependencies loaded, initializing radar charts');
+            
+            // Initialize offensive and defensive radar charts
+            initializeRadarCharts();
+            
+            // Initialize throw direction radar chart
+            try {
+                createThrowDirectionRadar();
+            } catch (error) {
+                console.error('Error creating throw direction radar chart:', error);
+            }
+        });
+    }
+
+    
+    // Load dependencies if needed
     if (typeof d3 === 'undefined') {
+        console.log('Loading D3.js dynamically...');
         const script = document.createElement('script');
         script.src = 'https://d3js.org/d3.v7.min.js';
         script.onload = function() {
-            initializeVisualizations();
-            setupTabHandlers();
+            console.log('D3.js loaded successfully');
+            initializeAll();
+        };
+        script.onerror = function() {
+            console.error('Failed to load D3.js');
         };
         document.head.appendChild(script);
     } else {
-        initializeVisualizations();
-        setupTabHandlers();
+        console.log('D3.js already loaded');
+        initializeAll();
     }
 });
 
-// Window resize handler
-window.addEventListener('resize', debounce(function() {
-    const activeTab = document.querySelector('.tab-pane.active');
-    if (!activeTab) return;
-    
-    switch(activeTab.id) {
-        case 'field-content':
-            document.getElementById('throwVectorsField').innerHTML = '';
-            drawField('throwVectorsField');
-            drawThrowVectors('throwVectorsField', false, 1);
-            break;
-        case 'centralized-content':
-            document.getElementById('centralizedVectorsField').innerHTML = '';
-            drawField('centralizedVectorsField');
-            drawThrowVectors('centralizedVectorsField', true, 1);
-            break;
-    }
-    
-    document.getElementById('throwawayLocationsField').innerHTML = '';
-    drawField('throwawayLocationsField');
-    drawThrowawayLocations('throwawayLocationsField');
-}, 250));
 
-// Add CSS for vectors
-const style = document.createElement('style');
-style.textContent = `
-    .throw-vector {
-        pointer-events: none;
+
+
+
+// Create the throw direction radar chart
+function createThrowDirectionRadar() {
+    console.log('Creating throw direction chart');
+    
+    try {
+        // Get direction data from the template variables
+        let throwDirections = {{ throw_directions|tojson }};
+        let completionByDirection = {{ completion_by_direction|tojson }};
+        
+        // Debug logs
+        console.log('throwDirections data:', throwDirections);
+        console.log('completionByDirection data:', completionByDirection);
+        
+        // Define all 16 directions in the correct order for the chart
+        // We'll align the chart so that East (forward) is exactly at the top
+        const allDirections = [
+            'E',                // Forward (0°)
+            'ENE', 'NE', 'NNE', // Forward-Right quadrant
+            'N',                // Right (90°)
+            'NNW', 'NW', 'WNW', // Back-Right quadrant
+            'W',                // Back (180°)
+            'WSW', 'SW', 'SSW', // Back-Left quadrant
+            'S',                // Left (270°)
+            'SSE', 'SE', 'ESE'  // Forward-Left quadrant
+        ];
+        
+        // Create a mapping from compass directions to field directions
+        const directionMapping = {
+            'N': 'Left',    // North is right
+            'NNE': 'Forward-Very Left',
+            'NE': 'Forward-Left',
+            'ENE': 'Forward-Slight Left',
+            'E': 'Forward',      // East is forward
+            'ESE': 'Forward-Slight Right',
+            'SE': 'Forward-Right',
+            'SSE': 'Forward-Very Right',
+            'S': 'Right',       // South is left
+            'SSW': 'Back-Slight Right',
+            'SW': 'Back-Right',
+            'WSW': 'Back-Very Right',
+            'W': 'Back',       // West is back
+            'WNW': 'Back-Slight Left',
+            'NW': 'Back-Left',
+            'NNW': 'Back-Very Left'
+        };
+
+
+        
+        // Ensure all directions exist in our data objects
+        allDirections.forEach(dir => {
+            if (!(dir in throwDirections)) {
+                throwDirections[dir] = 0;
+            }
+            if (!(dir in completionByDirection)) {
+                completionByDirection[dir] = 0;
+            }
+        });
+        
+        // Calculate total throws for percentage calculation
+        let totalThrows = Object.values(throwDirections).reduce((sum, count) => sum + count, 0);
+        console.log(`Total throws: ${totalThrows}`);
+        
+        // If no throw directions data, but we have completion data, use that as a fallback
+        if (totalThrows === 0) {
+            console.log('No throw directions data, using completion data as fallback');
+            
+            // Use completion data to populate throw directions
+            totalThrows = Object.values(completionByDirection).reduce((sum, count) => sum + count, 0);
+            
+            if (totalThrows > 0) {
+                // Copy completion data to throw directions
+                throwDirections = {...completionByDirection};
+                console.log(`Using ${totalThrows} completions as throw directions`);
+            } else if (vizData && vizData.throwVectors && vizData.throwVectors.length > 0) {
+                console.log('No throw directions data, calculating from throw vectors');
+                
+                // Initialize direction counts for all 16 directions
+                allDirections.forEach(dir => {
+                    throwDirections[dir] = 0;
+                    completionByDirection[dir] = 0;
+                });
+                
+                // Process throw vectors to get directional data
+                vizData.throwVectors.forEach((vector, index) => {
+                    try {
+                        // Skip invalid vectors
+                        if (!vector || typeof vector !== 'object') {
+                            return;
+                        }
+                        
+                        // Check for required properties
+                        if (vector.start_x === undefined || vector.start_y === undefined || 
+                            vector.end_x === undefined || vector.end_y === undefined) {
+                            return;
+                        }
+                        
+                        // Calculate vector direction
+                        const dx = vector.end_x - vector.start_x;
+                        const dy = vector.end_y - vector.start_y;
+                        
+                        // Skip zero-length vectors
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        if (distance < 0.001) {
+                            return;
+                        }
+                        
+                        // Calculate angle in radians
+                        let angle = Math.atan2(dy, dx);
+                        
+                        // Convert to degrees and normalize to 0-360
+                        // No need to add 90 degrees since we're already aligning East as forward
+                        let degrees = (angle * 180 / Math.PI);
+                        if (degrees < 0) degrees += 360;
+                        
+                        // Map angle to 16-point direction
+                        // Each direction covers 22.5 degrees (360/16)
+                        const directionIndex = Math.floor(((degrees + 11.25) % 360) / 22.5);
+                        const direction = allDirections[directionIndex];
+                        
+                        // Increment count for this direction
+                        throwDirections[direction]++;
+                        
+                        // Determine if it's a completion
+                        let isCompletion = false;
+                        if ('is_completion' in vector) {
+                            isCompletion = pythonBoolToJS(vector.is_completion);
+                        } else if ('type' in vector) {
+                            isCompletion = vector.type !== 'throwaway';
+                        }
+                        
+                        // If it's a completion, increment completion count
+                        if (isCompletion) {
+                            completionByDirection[direction]++;
+                        }
+                        
+                    } catch (error) {
+                        console.error(`Error processing vector ${index}:`, error);
+                    }
+                });
+                
+                // Recalculate total throws
+                totalThrows = Object.values(throwDirections).reduce((sum, count) => sum + count, 0);
+                
+                console.log('Calculated throwDirections:', throwDirections);
+                console.log('Calculated completionByDirection:', completionByDirection);
+            }
+        }
+        
+        console.log(`Total throws after processing: ${totalThrows}`);
+        
+        // Check if we have any throws to display
+        if (totalThrows === 0) {
+            console.error('No throw data available to display chart');
+            return;
+        }
+        
+        // Check if canvas element exists
+        const canvas = document.getElementById('throwDirectionRadar');
+        if (!canvas) {
+            console.error('Canvas element for throw direction chart not found');
+            return;
+        }
+        
+        // Destroy existing chart if it exists
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+        
+        // Convert counts to percentages
+        const throwPercentages = {};
+        allDirections.forEach(dir => {
+            throwPercentages[dir] = (throwDirections[dir] || 0) / totalThrows * 100;
+        });
+        
+        // Calculate completion percentages by direction
+        const completionPercentages = {};
+        for (const direction of allDirections) {
+            if (throwDirections[direction] > 0) {
+                completionPercentages[direction] = (completionByDirection[direction] || 0) / throwDirections[direction] * 100;
+            } else {
+                completionPercentages[direction] = 0;
+            }
+        }
+        
+        // Create display labels that map compass directions to field directions
+        const displayLabels = allDirections.map(dir => directionMapping[dir] || dir);
+        
+        // Create the polar bar chart
+        const ctx = canvas.getContext('2d');
+        const throwDirectionChart = new Chart(ctx, {
+            type: 'polarArea', // Change to polarArea for bar-like segments
+            data: {
+                labels: displayLabels,
+                datasets: [
+                    {
+                        label: 'Throw Distribution (%)',
+                        data: allDirections.map(dir => throwPercentages[dir]),
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.8)',  // E (Forward)
+                            'rgba(54, 162, 235, 0.6)',  // ENE
+                            'rgba(54, 162, 235, 0.4)',  // NE
+                            'rgba(54, 162, 235, 0.2)',  // NNE
+                            'rgba(255, 206, 86, 0.8)',  // N (Right)
+                            'rgba(255, 206, 86, 0.6)',  // NNW
+                            'rgba(255, 206, 86, 0.4)',  // NW
+                            'rgba(255, 206, 86, 0.2)',  // WNW
+                            'rgba(255, 99, 132, 0.8)',  // W (Back)
+                            'rgba(255, 99, 132, 0.6)',  // WSW
+                            'rgba(255, 99, 132, 0.4)',  // SW
+                            'rgba(255, 99, 132, 0.2)',  // SSW
+                            'rgba(75, 192, 192, 0.8)',  // S (Left)
+                            'rgba(75, 192, 192, 0.6)',  // SSE
+                            'rgba(75, 192, 192, 0.4)',  // SE
+                            'rgba(75, 192, 192, 0.2)'   // ESE
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',    // E (Forward)
+                            'rgba(54, 162, 235, 0.9)',  // ENE
+                            'rgba(54, 162, 235, 0.8)',  // NE
+                            'rgba(54, 162, 235, 0.7)',  // NNE
+                            'rgba(255, 206, 86, 1)',    // N (Right)
+                            'rgba(255, 206, 86, 0.9)',  // NNW
+                            'rgba(255, 206, 86, 0.8)',  // NW
+                            'rgba(255, 206, 86, 0.7)',  // WNW
+                            'rgba(255, 99, 132, 1)',    // W (Back)
+                            'rgba(255, 99, 132, 0.9)',  // WSW
+                            'rgba(255, 99, 132, 0.8)',  // SW
+                            'rgba(255, 99, 132, 0.7)',  // SSW
+                            'rgba(75, 192, 192, 1)',    // S (Left)
+                            'rgba(75, 192, 192, 0.9)',  // SSE
+                            'rgba(75, 192, 192, 0.8)',  // SE
+                            'rgba(75, 192, 192, 0.7)'   // ESE
+                        ],
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false // Hide legend for cleaner look
+                    },        
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const chart = context.chart;
+                                const dataset = context.dataset;
+                                const dataIndex = context.dataIndex;
+                    
+                                // Get the actual direction (N, NNE, etc.)
+                                const actualDirection = chart.data.labels[dataIndex];  // Corrected
+                    
+                                // Get the percentage for the current segment
+                                const percentage = dataset.data[dataIndex].toFixed(1);
+                    
+                                // Get the throw counts and completion rate for the actual direction
+                                const count = throwDirections[actualDirection] || 0;
+                                const completions = completionByDirection[actualDirection] || 0;
+                                const completionRate = (count > 0) ? ((completions / count) * 100).toFixed(1) : 0;
+                    
+                                return [
+                                    `Direction: ${actualDirection}`, // Show actual direction
+                                    `${percentage}% of all throws (${count} throws)`,
+                                    `Completion rate: ${completionRate}% (${completions}/${count})`
+                                ];
+                            }
+                        }
+                    }
+
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: Math.ceil(Math.max(...Object.values(throwPercentages)) / 5) * 5, // Round up to nearest 5%
+                        ticks: {
+                            stepSize: 5
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 10,
+                                weight: 'bold'
+                            },
+                            callback: function(label) {
+                                // Simplify labels for better display
+                                if (label === 'Forward' || label === 'Back' || 
+                                    label === 'Left' || label === 'Right') {
+                                    return label.toUpperCase();
+                                }
+                                // For other labels, just show the first letter of each part
+                                return label.split(' ')[0];
+                            }
+                        }
+                    }
+                },
+                startAngle: 0
+            } 
+        });
+        
+        console.log('Throw direction chart created successfully');
+    } catch (error) {
+        console.error('Error creating throw direction chart:', error);
     }
-    .vector-point {
-        pointer-events: none;
+}
+
+
+
+
+
+
+// Ensure radar charts are initialized
+setTimeout(function() {
+    console.log('Delayed initialization of radar charts');
+    // Only initialize if charts don't exist yet
+    if (!Chart.getChart('offensiveRadar') && !Chart.getChart('defensiveRadar')) {
+        initializeRadarCharts();
     }
-    .direction-label {
-        font-size: 12px;
-        font-weight: bold;
-    }
-    .throwaway-location {
-        fill: red;
-        opacity: 0.7;
-    }
-    .throwaway-vector {
-        stroke: red;
-        stroke-width: 2;
-        stroke-dasharray: 5,5;
-        opacity: 0.7;
-    }
-`;
-document.head.appendChild(style);
+}, 1000);
+
 </script>
 {% endblock %}
-
-
-

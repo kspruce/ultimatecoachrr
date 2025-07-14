@@ -13,9 +13,12 @@ class Game(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    points = db.relationship('Point', backref='game', lazy='dynamic', cascade='all, delete-orphan')
-    clips = db.relationship('Clip', backref='game', lazy='dynamic', cascade='all, delete-orphan')
+    # Relationships - add lazy='dynamic' to get query objects
+    tournament = db.relationship('Tournament', back_populates='games')
+    points = db.relationship('Point', back_populates='game', 
+                           cascade='all, delete-orphan', lazy='dynamic')
+    clips = db.relationship('Clip', back_populates='game', 
+                          cascade='all, delete-orphan', lazy='dynamic')
     
     def __repr__(self):
         return f'<Game vs {self.opponent}>'

@@ -1,10 +1,21 @@
 # app/utils.py
 import os
 from werkzeug.utils import secure_filename
-from flask import current_app
+from flask import current_app, flash, redirect, url_for
 from PIL import Image
 import uuid
 from datetime import datetime
+from functools import wraps
+from flask_login import current_user
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            flash('You do not have permission to perform this action.', 'danger')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def allowed_file(filename):
     return '.' in filename and \

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include 'partials/breadcrumbs.html' %}
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
@@ -21,11 +22,24 @@
             </p>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-primary">Add Game</a>
-            <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Edit Tournament</a>
-            <a href="{{ url_for('tournament.index') }}" class="btn btn-secondary">Back to Tournaments</a>
+            <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-outline-primary me-2">Add Game</a>
+            <a href="{{ url_for('game.add_multiple', tournament_id=tournament.id) }}" class="btn btn-primary">Add Multiple Games</a>
+            <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-outline-primary ms-2">Edit</a>
         </div>
     </div>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}">Overview</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('game.index', tournament_id=tournament.id) }}">Games</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('tournament.index') }}">All Tournaments</a>
+  </li>
+</ul>
+
 
     <div class="row mb-4">
         <div class="col-md-4">

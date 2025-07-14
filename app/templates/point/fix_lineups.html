@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>Fix Lineups for Point {{ point.point_number }}</h1>
+            <p class="lead">Select the 7 players who were on this line</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Select Players</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            {% for player in all_players %}
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="players" value="{{ player.id }}" id="player{{ player.id }}">
+                                    <label class="form-check-label" for="player{{ player.id }}">
+                                        #{{ player.jersey_number }} - {{ player.name }} ({{ player.position|capitalize }})
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">Save Lineups</button>
+                            <a href="{{ url_for('point.point_detail', point_id=point.id) }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

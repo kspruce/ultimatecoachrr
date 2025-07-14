@@ -73,33 +73,41 @@
                             <td>{{ tournament.game_count }}</td>
                             <td>{{ tournament.win_count }}-{{ tournament.loss_count }}</td>
                             <td>
-                                <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tournament.id }}">Delete</button>
-                                
-                                <!-- Delete Confirmation Modal -->
-                                <div class="modal fade" id="deleteModal{{ tournament.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tournament.id }}" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="deleteModalLabel{{ tournament.id }}">Confirm Delete</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                Are you sure you want to delete {{ tournament.name }}?
-                                                {% if tournament.game_count > 0 %}
-                                                <div class="alert alert-warning mt-2">
-                                                    This tournament has {{ tournament.game_count }} games associated with it. You cannot delete it until those games are removed or reassigned.
+                                <div class="btn-group">
+                                    <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    {% if current_user.is_admin %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tournament.id }}">Delete</button>
+                                        
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal{{ tournament.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tournament.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel{{ tournament.id }}">Confirm Delete</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>Are you sure you want to delete {{ tournament.name }}?</p>
+                                                        {% if tournament.game_count > 0 %}
+                                                        <div class="alert alert-warning">
+                                                            Warning: This will also delete:
+                                                            <ul class="mb-0">
+                                                                <li>{{ tournament.game_count }} games and their associated data</li>
+                                                            </ul>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form action="{{ url_for('tournament.delete', tournament_id=tournament.id) }}" method="POST" class="d-inline">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                            <button type="submit" class="btn btn-danger">Delete Tournament</button>
+                                                        </form>
+                                                    </div>
                                                 </div>
-                                                {% endif %}
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <form action="{{ url_for('tournament.delete', tournament_id=tournament.id) }}" method="post">
-                                                    <button type="submit" class="btn btn-danger" {% if tournament.game_count > 0 %}disabled{% endif %}>Delete</button>
-                                                </form>
                                             </div>
                                         </div>
-                                    </div>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>

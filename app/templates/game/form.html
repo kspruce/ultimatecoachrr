@@ -7,7 +7,10 @@
             <h1>{{ title }}</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('game.index') }}" class="btn btn-secondary">Back to Games</a>
+          {% if request.args.get('tournament_id') %}
+            <a href="{{ url_for('tournament.detail', tournament_id=request.args.get('tournament_id')) }}" class="btn btn-secondary me-2">Back to Tournament</a>
+          {% endif %}
+          <a href="{{ url_for('game.index') }}" class="btn btn-secondary">Back to Games</a>
         </div>
     </div>
 

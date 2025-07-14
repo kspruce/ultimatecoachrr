@@ -7,33 +7,13 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.playbook import Play, Formation, PlayTag
 from app.forms.playbook import PlayForm, FormationForm
-from app.utils.utils import save_uploaded_file, delete_file
 from werkzeug.utils import secure_filename
 import os
 import json
+from app.utils.storage import store_file, delete_file, get_file_url
+from app.utils.utils import admin_required
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
-
-# Helper Functions
-def save_diagram(file, folder_type, item_id):
-    """Save a diagram file and return the path"""
-    if not file:
-        return None
-    
-    try:
-        # Create specific folder for plays or formations
-        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], folder_type, str(item_id))
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(upload_dir, filename)
-        file.save(filepath)
-        
-        # Return relative path for database storage
-        return os.path.join(folder_type, str(item_id), filename)
-    except Exception as e:
-        current_app.logger.error(f"Error saving diagram: {str(e)}")
-        return None
 
 # Main Routes
 @bp.route('/')
@@ -52,16 +32,13 @@ def index():
 # Play Routes
 @bp.route('/plays/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_play():
+    if not current_user.is_admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+
     form = PlayForm()
-    
-    # Populate formation choices
-    form.formation_id.choices = [(0, 'None')] + [
-        (f.id, f.name) for f in Formation.query.order_by(Formation.name).all()
-    ]
-    
-    # Populate tag choices if you have any
-    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.order_by(PlayTag.name).all()]
     
     if form.validate_on_submit():
         play = Play(
@@ -69,25 +46,28 @@ def add_play():
             type=form.type.data,
             description=form.description.data,
             notes=form.notes.data,
+            ultiplay_embed=form.ultiplay_embed.data,
             created_by=current_user.id
         )
         
         if form.formation_id.data and form.formation_id.data > 0:
             play.formation_id = form.formation_id.data
             
-        # Handle diagram upload
-        if form.diagram_file.data:
-            diagram_path = save_diagram(form.diagram_file.data, 'plays', play.id)
-            if diagram_path:
-                play.diagram_url = diagram_path
-        
+        # Handle tags if any are selected
+        if form.tags.data:
+            for tag_id in form.tags.data:
+                tag = PlayTag.query.get(tag_id)
+                if tag:
+                    play.tags.append(tag)
+
         db.session.add(play)
         db.session.commit()
         
         flash(f'Play "{play.name}" has been created!', 'success')
         return redirect(url_for('playbook.index'))
-        
+    
     return render_template('playbook/play_form.html', form=form, title='Add Play')
+
 
 @bp.route('/plays/<int:play_id>')
 @login_required
@@ -97,11 +77,11 @@ def view_play(play_id):
 
 @bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit_play(play_id):
     play = Play.query.get_or_404(play_id)
     form = PlayForm(obj=play)
     
-    # Populate choices as in add_play
     form.formation_id.choices = [(0, 'None')] + [
         (f.id, f.name) for f in Formation.query.order_by(Formation.name).all()
     ]
@@ -119,16 +99,25 @@ def edit_play(play_id):
             play.formation_id = None
             
         if form.diagram_file.data:
-            # Delete old diagram if it exists
-            if play.diagram_url:
-                old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], play.diagram_url)
-                if os.path.exists(old_path):
-                    os.remove(old_path)
-            
-            # Save new diagram
-            diagram_path = save_diagram(form.diagram_file.data, 'plays', play.id)
-            if diagram_path:
-                play.diagram_url = diagram_path
+            try:
+                # Delete old file if it exists
+                if play.s3_key:
+                    delete_file(play.s3_key)
+                
+                # Upload new file
+                url, path = store_file(
+                    file=form.diagram_file.data,
+                    folder='plays',
+                    allowed_types=current_app.config['ALLOWED_EXTENSIONS']['image']
+                )
+                if url:
+                    play.diagram_url = url
+                    play.s3_key = path
+                else:
+                    flash('Failed to upload new diagram', 'error')
+            except Exception as e:
+                current_app.logger.error(f"Error updating play diagram: {str(e)}")
+                flash('Error updating diagram', 'error')
         
         db.session.commit()
         flash(f'Play "{play.name}" has been updated!', 'success')
@@ -136,62 +125,11 @@ def edit_play(play_id):
         
     return render_template('playbook/play_form.html', form=form, play=play, title='Edit Play')
 
-@bp.route('/plays/<int:play_id>/delete', methods=['POST'])
-@login_required
-def delete_play(play_id):
-    """Delete a play with CSRF protection"""
-    if not request.is_json:
-        # If it's a form submission, verify CSRF token
-        form = PlayForm()
-        if not form.validate():
-            flash('CSRF token missing or invalid', 'danger')
-            return redirect(url_for('playbook.index'))
-    
-    try:
-        play = Play.query.get_or_404(play_id)
-        
-        # Check permissions
-        if play.created_by != current_user.id and not current_user.is_admin:
-            return jsonify({
-                'success': False,
-                'message': 'Permission denied'
-            }), 403
-        
-        # Delete associated diagram if it exists
-        if play.diagram_url:
-            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], play.diagram_url)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
-        name = play.name
-        db.session.delete(play)
-        db.session.commit()
-        
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'message': f'Play "{name}" has been deleted!'
-            })
-        
-        flash(f'Play "{name}" has been deleted!', 'success')
-        return redirect(url_for('playbook.index'))
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error deleting play {play_id}: {str(e)}")
-        
-        if request.is_json:
-            return jsonify({
-                'success': False,
-                'message': str(e)
-            }), 500
-            
-        flash(f'Error deleting play: {str(e)}', 'danger')
-        return redirect(url_for('playbook.index'))
 
-# Formation Routes (similar structure to Play routes)
+# Formation Routes
 @bp.route('/formations/add', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_formation():
     form = FormationForm()
     if form.validate_on_submit():
@@ -199,13 +137,9 @@ def add_formation():
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
+            ultiplay_embed=form.ultiplay_embed.data,  # Add this line
             created_by=current_user.id
         )
-        
-        if form.diagram_file.data:
-            diagram_path = save_diagram(form.diagram_file.data, 'formations', formation.id)
-            if diagram_path:
-                formation.diagram_url = diagram_path
         
         db.session.add(formation)
         db.session.commit()
@@ -234,3 +168,115 @@ def internal_error(error):
             'message': 'Internal server error'
         }), 500
     return render_template('500.html'), 500
+
+@bp.route('/formations/edit/<int:formation_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_formation(formation_id):
+    if not current_user.is_admin:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    formation = Formation.query.get_or_404(formation_id)
+    form = FormationForm(obj=formation)
+    
+    if form.validate_on_submit():
+        formation.name = form.name.data
+        formation.type = form.type.data
+        formation.description = form.description.data
+        
+        # Handle ultiplay embed update
+        if form.ultiplay_embed.data:
+            formation.ultiplay_embed = form.ultiplay_embed.data
+        
+        db.session.commit()
+        flash(f'Formation "{formation.name}" has been updated!', 'success')
+        return redirect(url_for('playbook.index'))
+    
+    return render_template(
+        'playbook/formation_form.html',
+        form=form,
+        formation=formation,
+        title='Edit Formation'
+    )
+
+# Also add a delete route for formations
+@bp.route('/plays/<int:play_id>/delete', methods=['POST'])  # Changed to match JS URL
+@login_required
+@admin_required
+def delete_play(play_id):
+    if not current_user.is_admin:
+        return jsonify({
+            'success': False,
+            'message': 'Permission denied'
+        }), 403
+    
+    play = Play.query.get_or_404(play_id)
+    
+    try:
+        title = play.name
+        db.session.delete(play)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Play "{title}" has been deleted!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting play: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while deleting the play.'
+        }), 500
+
+@bp.route('/formations/<int:formation_id>/delete', methods=['POST'])  # Changed to match JS URL
+@login_required
+@admin_required
+def delete_formation(formation_id):
+    if not current_user.is_admin:
+        return jsonify({
+            'success': False,
+            'message': 'Permission denied'
+        }), 403
+    
+    formation = Formation.query.get_or_404(formation_id)
+    
+    # Check if formation is being used by any plays
+    if formation.plays:
+        return jsonify({
+            'success': False,
+            'message': 'Cannot delete formation that is being used by plays.'
+        }), 400
+    
+    try:
+        name = formation.name
+        db.session.delete(formation)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Formation "{name}" has been deleted!'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting formation: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while deleting the formation.'
+        }), 500
+    
+    
+@bp.route('/formation/<int:formation_id>')
+@login_required
+def view_formation(formation_id):
+    formation = Formation.query.get_or_404(formation_id)
+    
+    # Get plays that use this formation
+    related_plays = Play.query.filter_by(formation_id=formation_id).all()
+    
+    return render_template('playbook/view_formation.html', 
+                          formation=formation,
+                          related_plays=related_plays)

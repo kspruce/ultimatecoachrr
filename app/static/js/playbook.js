@@ -108,8 +108,21 @@ const playbookManager = {
         reader.onload = function(e) {
             previewElement.src = e.target.result;
             previewElement.style.display = 'block';
+            
+            // Store original file for form submission
+            previewElement.dataset.originalFile = file;
         };
         reader.readAsDataURL(file);
+    },
+
+    // Add method to handle S3 URLs
+    handleS3Image: function(s3Url, previewElement) {
+        if (s3Url) {
+            previewElement.src = s3Url;
+            previewElement.style.display = 'block';
+        } else {
+            previewElement.style.display = 'none';
+        }
     },
 
     // Form handling
@@ -160,8 +173,7 @@ const playbookManager = {
                     // Update formation preview if it exists
                     const preview = document.getElementById('formation-preview');
                     if (preview && data.formation.diagram_url) {
-                        preview.src = data.formation.diagram_url;
-                        preview.style.display = 'block';
+                        this.handleS3Image(data.formation.diagram_url, preview);
                     }
                 }
             })
@@ -224,6 +236,16 @@ const playbookManager = {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    },
+
+    // File upload handling for S3
+    handleFileUpload: function(fileInput, formData) {
+        const file = fileInput.files[0];
+        if (file) {
+            formData.append('file', file);
+            return true;
+        }
+        return false;
     },
 
     // Initialization

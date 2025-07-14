@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>PER Calculation Debug for {{ player.name }}</h1>
+            <p class="lead">
+                {% if player.jersey_number %}#{{ player.jersey_number }} | {% endif %}
+                {{ player.position|capitalize if player.position else 'No position' }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}" class="btn btn-outline-secondary">Back to Player Stats</a>
+                <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Filter Stats</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('stats_dashboard.debug_per_calculation', player_id=player.id) }}">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <label for="tournament_id" class="form-label">Tournament</label>
+                                <select name="tournament_id" id="tournament_id" class="form-select">
+                                    <option value="">All Tournaments</option>
+                                    {% for tournament in tournaments %}
+                                    <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                                        {{ tournament.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="game_id" class="form-label">Game</label>
+                                <select name="game_id" id="game_id" class="form-select">
+                                    <option value="">All Games</option>
+                                    {% for game in games %}
+                                    <option value="{{ game.id }}" {% if selected_game == game.id %}selected{% endif %}>
+                                        vs {{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') if game.date }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if debug_info %}
+    <!-- Raw Stats -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Raw Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr><th>Points Played</th><td>{{ debug_info.raw_stats.points_played }}</td></tr>
+                                <tr><th>Goals</th><td>{{ debug_info.raw_stats.goals }}</td></tr>
+                                <tr><th>Assists</th><td>{{ debug_info.raw_stats.assists }}</td></tr>
+                                <tr><th>Hockey Assists</th><td>{{ debug_info.raw_stats.hockey_assists }}</td></tr>
+                                <tr><th>Blocks</th><td>{{ debug_info.raw_stats.blocks }}</td></tr>
+                                <tr><th>Throwaways</th><td>{{ debug_info.raw_stats.throwaways }}</td></tr>
+                                <tr><th>Drops</th><td>{{ debug_info.raw_stats.drops }}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr><th>Completions</th><td>{{ debug_info.raw_stats.completions }}</td></tr>
+                                <tr><th>Completion Rate</th><td>{{ debug_info.raw_stats.completion_rate|round(2) }}%</td></tr>
+                                <tr><th>Catches</th><td>{{ debug_info.raw_stats.catches }}</td></tr>
+                                <tr><th>Catch Rate</th><td>{{ debug_info.raw_stats.catch_rate|round(2) }}%</td></tr>
+                                <tr><th>O-Line +/- Per Point</th><td>{{ debug_info.raw_stats.o_line_plus_minus_per_point|round(3) }}</td></tr>
+                                <tr><th>D-Line +/- Per Point</th><td>{{ debug_info.raw_stats.d_line_plus_minus_per_point|round(3) }}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Averages -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Team Averages</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr><th>Average uPER</th><td>{{ debug_info.team_avgs.avg_uper|round(3) }}</td></tr>
+                        <tr><th>Avg O-Line +/- Per Point</th><td>{{ debug_info.team_avgs.avg_o_line_plus_minus_per_point|round(3) }}</td></tr>
+                        <tr><th>Avg D-Line +/- Per Point</th><td>{{ debug_info.team_avgs.avg_d_line_plus_minus_per_point|round(3) }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Box Component -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Box Score Component</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Formula:</strong> (Weight * Stat^0.75)
+                    </div>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Raw Value</th>
+                                <th>Weight</th>
+                                <th>Formula</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Goals</td>
+                                <td>{{ debug_info.raw_stats.goals }}</td>
+                                <td>{{ debug_info.weights.scoring }}</td>
+                                <td>{{ debug_info.weights.scoring }} * ({{ debug_info.raw_stats.goals }}^0.75)</td>
+                                <td>{{ debug_info.box_component.goals|round(3) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Assists</td>
+                                <td>{{ debug_info.raw_stats.assists }}</td>
+                                <td>{{ debug_info.weights.assist }}</td>
+                                <td>{{ debug_info.weights.assist }} * ({{ debug_info.raw_stats.assists }}^0.75)</td>
+                                <td>{{ debug_info.box_component.assists|round(3) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Hockey Assists</td>
+                                <td>{{ debug_info.raw_stats.hockey_assists }}</td>
+                                <td>{{ debug_info.weights.assist * 0.5 }}</td>
+                                <td>{{ debug_info.weights.assist * 0.5 }} * ({{ debug_info.raw_stats.hockey_assists }}^0.75)</td>
+                                <td>{{ debug_info.box_component.hockey_assists|round(3) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Turnovers</td>
+                                <td>{{ debug_info.raw_stats.throwaways + debug_info.raw_stats.drops }}</td>
+                                <td>{{ debug_info.weights.turnover }}</td>
+                                <td>{{ debug_info.weights.turnover }} * (({{ debug_info.raw_stats.throwaways }} + {{ debug_info.raw_stats.drops }})^0.75)</td>
+                                <td>{{ debug_info.box_component.turnovers|round(3) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Blocks</td>
+                                <td>{{ debug_info.raw_stats.blocks }}</td>
+                                <td>{{ debug_info.weights.defense }}</td>
+                                <td>{{ debug_info.weights.defense }} * ({{ debug_info.raw_stats.blocks }}^0.75)</td>
+                                <td>{{ debug_info.box_component.blocks|round(3) }}</td>
+                            </tr>
+                            <tr class="table-dark">
+                                <td colspan="4"><strong>Box Component Total</strong></td>
+                                <td><strong>{{ debug_info.box_component.total|round(3) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Passing Component -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Passing Component</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Formula:</strong> 0.05 * ((completions^0.75 * completion_rate^3) + (catches^0.75 * catch_rate^3))
+                    </div>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Raw Value</th>
+                                <th>Rate</th>
+                                <th>Formula</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Completions</td>
+                                <td>{{ debug_info.raw_stats.completions }}</td>
+                                <td>{{ debug_info.raw_stats.completion_rate|round(2) }}%</td>
+                                <td>({{ debug_info.raw_stats.completions }}^0.75) * ({{ debug_info.raw_stats.completion_rate/100 }}^3)</td>
+                                <td>{{ debug_info.passing_component.completions|round(3) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Catches</td>
+                                <td>{{ debug_info.raw_stats.catches }}</td>
+                                <td>{{ debug_info.raw_stats.catch_rate|round(2) }}%</td>
+                                <td>({{ debug_info.raw_stats.catches }}^0.75) * ({{ debug_info.raw_stats.catch_rate/100 }}^3)</td>
+                                <td>{{ debug_info.passing_component.catches|round(3) }}</td>
+                            </tr>
+                            <tr class="table-dark">
+                                <td colspan="4"><strong>Passing Component Total (with 0.05 weight)</strong></td>
+                                <td><strong>{{ debug_info.passing_component.total|round(3) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plus-Minus Component -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Plus-Minus Component</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Formula:</strong> 0.1 * ((player_o_line_pm - team_avg_o_line_pm) + (player_d_line_pm - team_avg_d_line_pm))
+                    </div>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Player Value</th>
+                                <th>Team Average</th>
+                                <th>Difference</th>
+                                <th>Weighted Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>O-Line +/- Per Point</td>
+                                <td>{{ debug_info.raw_stats.o_line_plus_minus_per_point|round(3) }}</td>
+                                <td>{{ debug_info.team_avgs.avg_o_line_plus_minus_per_point|round(3) }}</td>
+                                <td>{{ debug_info.plus_minus_component.o_line|round(3) }}</td>
+                                <td>{{ (debug_info.plus_minus_component.o_line * debug_info.weights.plus_minus)|round(3) }}</td>
+                            </tr>
+                            <tr>
+                                <td>D-Line +/- Per Point</td>
+                                <td>{{ debug_info.raw_stats.d_line_plus_minus_per_point|round(3) }}</td>
+                                <td>{{ debug_info.team_avgs.avg_d_line_plus_minus_per_point|round(3) }}</td>
+                                <td>{{ debug_info.plus_minus_component.d_line|round(3) }}</td>
+                                <td>{{ (debug_info.plus_minus_component.d_line * debug_info.weights.plus_minus)|round(3) }}</td>
+                            </tr>
+                            <tr class="table-dark">
+                                <td colspan="4"><strong>Plus-Minus Component Total</strong></td>
+                                <td><strong>{{ debug_info.plus_minus_component.total|round(3) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Calculation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Final PER Calculation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Formula:</strong> (1 / points_played) * (box_component + passing_component + plus_minus_component)
+                    </div>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Component</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr>
+                            <td>Box Component</td>
+                            <td>{{ debug_info.box_component.total|round(3) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Passing Component</td>
+                            <td>{{ debug_info.passing_component.total|round(3) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Plus-Minus Component</td>
+                            <td>{{ debug_info.plus_minus_component.total|round(3) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Points Played</td>
+                            <td>{{ debug_info.raw_stats.points_played }}</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td><strong>Raw uPER</strong></td>
+                            <td><strong>{{ debug_info.calculation.raw_uper|round(3) }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Team Average uPER</td>
+                            <td>{{ debug_info.calculation.avg_uper|round(3) }}</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td><strong>Scaled PER (15 / avg_uper)</strong></td>
+                            <td><strong>{{ debug_info.calculation.scaled_per|round(3) }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Maximum PER Value</td>
+                            <td>{{ debug_info.calculation.max_per|round(3) }}</td>
+                        </tr>
+                        <tr class="table-primary">
+                            <td><strong>Final PER (0-100 scale)</strong></td>
+                            <td><strong>{{ debug_info.calculation.final_per|round(1) }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Players -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Top Players by Raw PER</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Raw PER</th>
+                                <th>Normalized PER</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(debug_info.top_players.player_id|length) %}
+                            <tr {% if debug_info.top_players.player_id[i] == player.id %}class="table-primary"{% endif %}>
+                                <td>
+                                    <a href="{{ url_for('stats_dashboard.debug_per_calculation', player_id=debug_info.top_players.player_id[i]) }}">
+                                        {{ debug_info.top_players.player_name[i] }}
+                                    </a>
+                                </td>
+                                <td>{{ debug_info.top_players.raw_per[i]|round(3) }}</td>
+                                <td>{{ ((debug_info.top_players.raw_per[i] / debug_info.calculation.max_per) * 100)|round(1) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        No data available for PER calculation. Player may not have played any points in the selected games.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

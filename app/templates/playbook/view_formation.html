@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .formation-header {
+        background: linear-gradient(135deg, 
+            {% if formation.type == 'offense' %}#007bff, #0056b3{% else %}#dc3545, #a71d2a{% endif %});
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 8px;
+    }
+    
+    .formation-badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .iframe-direct-container {
+        width: 100%;
+        height: 400px;
+        margin-bottom: 1rem;
+        border: 0;
+    }
+    
+    .description-card {
+        margin-bottom: 2rem;
+    }
+    
+    /* Markdown styling */
+    .markdown-content h1 {
+        font-size: 1.8rem;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
+    }
+    
+    .markdown-content h3 {
+        font-size: 1.3rem;
+        margin-top: 1rem;
+        margin-bottom: 0.7rem;
+    }
+    
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content blockquote {
+        border-left: 4px solid #e9ecef;
+        padding-left: 1rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+    }
+    
+    .markdown-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+    
+    .markdown-content table th,
+    .markdown-content table td {
+        padding: 0.5rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .markdown-content table th {
+        background-color: #f8f9fa;
+    }
+    
+    .markdown-content p {
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Back button -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Playbook
+            </a>
+        </div>
+    </div>
+    
+    <!-- Formation Header -->
+    <div class="row formation-header align-items-center">
+        <div class="col-md-8">
+            <h1>{{ formation.name }}</h1>
+            <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} formation-badge">
+                {{ formation.type|title }}
+            </span>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+               class="btn btn-light">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% if current_user.is_admin %}
+                <button type="button" class="btn btn-outline-light"
+                        data-bs-toggle="modal" data-bs-target="#deleteFormationModal">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Formation Details -->
+        <div class="col-12">
+            <!-- Animation/Video -->
+            {% if formation.ultiplay_embed %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Animation</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
+                            {% set embed_url = formation.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                            <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                        {% else %}
+                            <div class="embed-container">
+                                {{ formation.ultiplay_embed|safe }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Description with Markdown -->
+            <div class="card description-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Description</h5>
+                </div>
+                <div class="card-body">
+                    <div class="markdown-content">
+                        {{ formation.description|markdown }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_admin %}
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteFormationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Team Concept</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the team concept "{{ formation.name }}"?</p>
+                    {% if formation.plays %}
+                    <div class="alert alert-warning">
+                        Warning: This concept is used in {{ formation.plays|length }} play(s).
+                        Deleting it will remove it from these plays.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="btn btn-danger">Delete Concept</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
+{% endblock %}
