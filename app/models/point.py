@@ -27,7 +27,8 @@ class Point(db.Model):
     clips = db.relationship('Clip', back_populates='point')
     point_stats = db.relationship('PlayerPointStats', back_populates='point')
     throws = db.relationship('Throw', back_populates='point')  # Add this line
-    
+    cutting_skills = db.relationship('CuttingSkill', back_populates='point', cascade='all, delete-orphan')
+
     def __repr__(self):
         return f'<Point {self.point_number} in Game {self.game_id}>'
 
