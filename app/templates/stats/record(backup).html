@@ -239,24 +239,23 @@
 <div class="record-container">
     <meta name="csrf-token" content="{{ csrf_token() }}">
         <div class="record-header">
-        <div class="row align-items-center">
-            <div class="col">
-                <h4 class="mb-0">Point {{ point.point_number }}</h4>
-                <small>{{ point.our_line_type }} - {{ point.starting_position }}</small>
-            </div>
-            <div class="col text-center">
-                <h3 class="mb-0">{{ point.our_score_before }} - {{ point.their_score_before }}</h3>
-            </div>
-            <div class="col text-end">
-                <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
-                <button id="finish-point" class="btn btn-success">End Point</button>
+            <div class="row align-items-center">
+                <div class="col">
+                    <h4 class="mb-0">Point {{ point.point_number }}</h4>
+                    <small>{{ point.our_line_type }} - {{ point.starting_position }}</small>
+                </div>
+                <div class="col text-center">
+                    <h3 class="mb-0">{{ point.our_score_before }} - {{ point.their_score_before }}</h3>
+                </div>
+                <div class="col text-end">
+                    <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
+                    <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
+                    <button id="finish-point" class="btn btn-success">End Point</button>
+                </div>
             </div>
         </div>
     </div>
 
-
-    <!-- Mode toggle button -->
-    <button class="mode-toggle" id="mode-toggle">Mode: Event Tracking</button>
 
     <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
@@ -466,7 +465,14 @@ document.addEventListener('DOMContentLoaded', function() {
         currentMode = currentMode === 'events' ? 'cutting' : 'events';
         modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'}`;
         console.log('Switched to mode:', currentMode);
+        
+        // Close any open panels
+        playerSelect.style.display = 'none';
+        actionSelect.style.display = 'none';
+        cuttingSelect.style.display = 'none';
+        outcomeSelect.style.display = 'none';
     });
+
 
     // End Point button listener
     document.getElementById('finish-point').addEventListener('click', function() {
@@ -569,10 +575,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Handle special player types
         if (selectedPlayer === 'unknown') {
-            eventData.player_id = -1; // Use -1 for unknown player
+            // Use the first player in the lineup as a placeholder
+            const firstPlayerCard = document.querySelector('.player-card:not(.special-player)');
+            const placeholderId = firstPlayerCard ? firstPlayerCard.dataset.playerId : 1;
+            eventData.player_id = parseInt(placeholderId);
             eventData.is_unknown_player = true;
         } else if (selectedPlayer === 'opponent') {
-            eventData.player_id = -2; // Use -2 for opponent
+            // Use the first player in the lineup as a placeholder
+            const firstPlayerCard = document.querySelector('.player-card:not(.special-player)');
+            const placeholderId = firstPlayerCard ? firstPlayerCard.dataset.playerId : 1;
+            eventData.player_id = parseInt(placeholderId);
             eventData.is_opponent = true;
         } else {
             eventData.player_id = parseInt(selectedPlayer);
@@ -622,12 +634,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('finish-point').click();
             }
         })
-
         .catch(error => {
             console.error('Error:', error);
             alert('Error recording event: ' + error.message);
         });
     }
+
 
     // Cutting type handling
     function handleCuttingType(cuttingType) {
@@ -1058,18 +1070,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 
                 // Add event listener to the new player card
-                newPlayerCard.addEventListener('click', function() {
-                    selectedPlayer = this.dataset.playerId;
-                    console.log('Selected player:', selectedPlayer);
-                    playerSelect.style.display = 'none';
-                    
-                    // Determine which panel to show based on current mode
-                    if (currentMode === 'events') {
-                        showActionSelect();
-                    } else {
-                        showCuttingSelect();
-                    }
+                // Player selection
+                document.querySelectorAll('.player-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        selectedPlayer = this.dataset.playerId;
+                        console.log('Selected player:', selectedPlayer);
+                        
+                        // Handle special player types
+                        if (selectedPlayer === 'unknown' || selectedPlayer === 'opponent') {
+                            // For special players, check if they're appropriate for current possession
+                            if (selectedPlayer === 'opponent' && gameState.is_offensive) {
+                                alert("Cannot select 'Opponent' during offensive possession");
+                                return;
+                            }
+                            if (selectedPlayer === 'unknown' && !gameState.is_offensive) {
+                                alert("Cannot select 'Unknown' during defensive possession");
+                                return;
+                            }
+                            
+                            // Special players can only be used in event mode, not cutting mode
+                            if (currentMode !== 'events') {
+                                alert("Special players can only be used in Event Tracking mode");
+                                return;
+                            }
+                        }
+                        
+                        playerSelect.style.display = 'none';
+                        
+                        // Show the appropriate panel based on the current mode
+                        if (currentMode === 'events') {
+                            showActionSelect();
+                        } else {
+                            showCuttingSelect();
+                        }
+                    });
                 });
+
                 
                 playerCards.appendChild(newPlayerCard);
                 
