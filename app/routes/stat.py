@@ -573,27 +573,14 @@ def available_players(point_id):
         current_player_ids = [lineup.player_id for lineup in point.lineups]
         print(f"Current player IDs in lineup: {current_player_ids}")
         
-        # Get all players from the same team who are active but not in the current point
+        # Get all active players not in the current lineup
         from app.models.player import Player
         
-        # Get the team name from the game or from existing players in the point
-        team_name = None
-        if hasattr(game, 'team'):
-            team_name = game.team
-        elif point.lineups and point.lineups[0].player:
-            team_name = point.lineups[0].player.team
-            
-        query = Player.query.filter(Player.active == True)
+        # Get all active players
+        available_players = Player.query.filter_by(active=True).all()
         
-        # Filter by team if we have a team name
-        if team_name:
-            query = query.filter(Player.team == team_name)
-            
-        # Exclude players already in the point
-        if current_player_ids:
-            query = query.filter(~Player.id.in_(current_player_ids))
-            
-        available_players = query.all()
+        # Filter out players already in the lineup
+        available_players = [p for p in available_players if p.id not in current_player_ids]
         
         print(f"Found {len(available_players)} available players")
         
@@ -616,6 +603,7 @@ def available_players(point_id):
         return jsonify({'error': str(e), 'available_players': []}), 500
 
 
+
 @bp.route('/substitute_player/<int:point_id>', methods=['POST'])
 @login_required
 def substitute_player(point_id):
@@ -631,7 +619,7 @@ def substitute_player(point_id):
         player_out = Player.query.get_or_404(player_out_id)
         player_in = Player.query.get_or_404(player_in_id)
         
-        # Remove the player_out from the lineup
+        # Check if player_out is in the lineup
         lineup_out = LineUp.query.filter_by(
             point_id=point_id,
             player_id=player_out_id
@@ -640,7 +628,9 @@ def substitute_player(point_id):
         if not lineup_out:
             return jsonify({'success': False, 'error': 'Player not found in lineup'}), 400
         
-        db.session.delete(lineup_out)
+        # Instead of removing player_out, we'll keep them in the lineup
+        # but mark them as substituted out (if you have such a field)
+        # If you don't have a field to track substitution status, you can add one
         
         # Add the player_in to the lineup
         lineup_in = LineUp(
@@ -659,6 +649,9 @@ def substitute_player(point_id):
             is_offensive=point.starting_position == 'offense'
         )
         db.session.add(sub_event)
+        
+        # Add a reference to the player being substituted out
+        sub_event.receiver_id = player_out_id  # Using receiver_id to store the player being subbed out
         
         db.session.commit()
         
@@ -681,4 +674,5 @@ def substitute_player(point_id):
         print(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
 

@@ -945,6 +945,147 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Substitution handling
+    document.getElementById('sub-player').addEventListener('click', function() {
+        // Fetch available players for substitution
+        fetch(`/stats/available_players/{{ point.id }}`)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `Server returned ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.available_players || !Array.isArray(data.available_players)) {
+                    console.error('Response missing available_players array:', data);
+                    throw new Error('Invalid server response format');
+                }
+                
+                const playerInSelect = document.getElementById('player-in');
+                playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
+                
+                if (data.available_players.length === 0) {
+                    const option = document.createElement('option');
+                    option.disabled = true;
+                    option.textContent = 'No available players found';
+                    playerInSelect.appendChild(option);
+                } else {
+                    data.available_players.forEach(player => {
+                        const option = document.createElement('option');
+                        option.value = player.id;
+                        option.textContent = `#${player.jersey_number} - ${player.name}`;
+                        playerInSelect.appendChild(option);
+                    });
+                }
+                
+                // Show the modal using our helper function
+                if (window.showSubstitutionModal) {
+                    window.showSubstitutionModal();
+                } else {
+                    // Fallback
+                    try {
+                        const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
+                        subModal.show();
+                    } catch (e) {
+                        console.error('Error showing modal:', e);
+                        alert('Error showing substitution dialog. Please try again.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching available players:', error);
+                alert('Error loading available players: ' + error.message);
+            });
+    });
+    
+    // Handle substitution confirmation
+    document.getElementById('confirm-substitution').addEventListener('click', function() {
+        const playerOutId = document.getElementById('player-out').value;
+        const playerInId = document.getElementById('player-in').value;
+        
+        if (!playerOutId || !playerInId) {
+            alert('Please select both players for substitution');
+            return;
+        }
+        
+        fetch(`/stats/substitute_player/{{ point.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                player_out_id: playerOutId,
+                player_in_id: playerInId
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `Server returned ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Close the modal
+                const modalElement = document.getElementById('substitutionModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                } else {
+                    // Fallback if bootstrap.Modal.getInstance doesn't work
+                    $(modalElement).modal('hide');
+                }
+                
+                // Update the player cards
+                const playerCards = document.querySelector('.player-grid');
+                
+                // Remove the subbed out player
+                const playerOutCard = document.querySelector(`.player-card[data-player-id="${playerOutId}"]`);
+                if (playerOutCard) playerOutCard.remove();
+                
+                // Add the subbed in player
+                const newPlayerCard = document.createElement('div');
+                newPlayerCard.className = 'player-card';
+                newPlayerCard.dataset.playerId = playerInId;
+                newPlayerCard.innerHTML = `
+                    <div class="player-number">#${data.player_in.jersey_number || 'N/A'}</div>
+                    <div class="player-name">${data.player_in.name}</div>
+                `;
+                
+                // Add event listener to the new player card
+                newPlayerCard.addEventListener('click', function() {
+                    selectedPlayer = this.dataset.playerId;
+                    console.log('Selected player:', selectedPlayer);
+                    playerSelect.style.display = 'none';
+                    
+                    // Determine which panel to show based on current mode
+                    if (currentMode === 'events') {
+                        showActionSelect();
+                    } else {
+                        showCuttingSelect();
+                    }
+                });
+                
+                playerCards.appendChild(newPlayerCard);
+                
+                // Show success message
+                alert(`Successfully substituted ${data.player_out.name} with ${data.player_in.name}`);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error making substitution:', error);
+            alert('Error making substitution: ' + error.message);
+        });
+    });
+
+
     // Load existing cutting skills for this point
     function loadCuttingSkills() {
         fetch(`/cutting-skills/list/{{ point.id }}`)
@@ -967,51 +1108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Call this function when the page loads
     loadCuttingSkills();
 });
-// Substitution handling
-document.getElementById('sub-player').addEventListener('click', function() {
-    // Fetch available players for substitution
-    fetch(`/stats/available_players/{{ point.id }}`)
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || `Server returned ${response.status}`);
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (!data.available_players || !Array.isArray(data.available_players)) {
-                console.error('Response missing available_players array:', data);
-                throw new Error('Invalid server response format');
-            }
-            
-            const playerInSelect = document.getElementById('player-in');
-            playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
-            
-            if (data.available_players.length === 0) {
-                const option = document.createElement('option');
-                option.disabled = true;
-                option.textContent = 'No available players found';
-                playerInSelect.appendChild(option);
-            } else {
-                data.available_players.forEach(player => {
-                    const option = document.createElement('option');
-                    option.value = player.id;
-                    option.textContent = `#${player.jersey_number} - ${player.name}`;
-                    playerInSelect.appendChild(option);
-                });
-            }
-            
-            // Show the modal
-            const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
-            subModal.show();
-        })
-        .catch(error => {
-            console.error('Error fetching available players:', error);
-            alert('Error loading available players: ' + error.message);
-        });
-});
-
 
 </script>
 {% endblock %}
