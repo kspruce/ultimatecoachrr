@@ -870,21 +870,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create cutting skill data - Using the dedicated cutting_skill endpoint
         const cuttingSkillData = {
-            player_id: selectedPlayer,
+            player_id: parseInt(selectedPlayer, 10), // Ensure it's an integer
             cutting_type: selectedCuttingType,
             outcome: outcome,
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
             field_position_y: parseFloat(selectedPosition.y.toFixed(2))
-            // Note: is_offensive is not needed for cutting skills as they do not affect possession
         };
         
-        console.log("Sending cutting skill data:", cuttingSkillData);
-        
+        console.log("Sending cutting skill data with player ID:", parseInt(selectedPlayer, 10));
+                
         // Show loading indicator
         showLoading(`Recording ${selectedCuttingType} cut (${outcome})...`);
         
         // Use the dedicated cutting_skill endpoint
-        fetch(`/stats/record_cutting_skill/{{ point.id }}`, {
+        fetch(`/cutting-skills/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -954,13 +953,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Create event-style data for the fallback
             const fallbackData = {
-                player_id: selectedPlayer,
-                event_type: "cutting_skill", // Mark as cutting skill
-                cutting_type: selectedCuttingType, // Include cutting data
+                player_id: parseInt(selectedPlayer, 10),
+                event_type: "catch", // Use a valid event type
+                // Add a custom field to identify it as a cutting skill
+                is_cutting_skill: true,
+                cutting_type: selectedCuttingType,
                 outcome: outcome,
                 field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
                 field_position_y: parseFloat(selectedPosition.y.toFixed(2)),
-                is_offensive: gameState.is_offensive // Include offensive state
+                is_offensive: gameState.is_offensive
             };
             
             // Show loading indicator for fallback
