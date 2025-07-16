@@ -13,7 +13,7 @@ from app.models.clip import Clip
 import json
 import math
 from app.utils.utils import admin_required
-from datetime import datetime
+from datetime import datetime, date
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
@@ -1104,9 +1104,10 @@ def calculate_performance_trends(games):
         if not game.date:
             return datetime.min
         # Convert date to datetime if it's a date object
-        if isinstance(game.date, datetime.date) and not isinstance(game.date, datetime.datetime):
+        if isinstance(game.date, date) and not isinstance(game.date, datetime):
             return datetime.combine(game.date, datetime.min.time())
         return game.date
+
     
     # Sort games by date
     sorted_games = sorted(games, key=get_sort_key)
