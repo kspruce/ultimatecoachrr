@@ -615,13 +615,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create cutting skill data
+        // Create cutting skill data - FIXED: Using event_type for cutting skills
         const cuttingSkillData = {
             player_id: selectedPlayer,
+            event_type: "cutting_skill", // This is required by the backend
             cutting_type: selectedCuttingType,
             outcome: outcome,
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
-            field_position_y: parseFloat(selectedPosition.y.toFixed(2))
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2)),
+            is_offensive: gameState.is_offensive // Add this field
         };
         
         console.log('Sending cutting skill data:', cuttingSkillData);
@@ -633,10 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify({
-                ...cuttingSkillData,
-                is_cutting_skill: true // Add a flag to indicate this is a cutting skill
-            })
+            body: JSON.stringify(cuttingSkillData)
         })
         .then(response => {
             if (!response.ok) {
@@ -659,6 +658,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateCuttingSkillsTable();
                 
                 // Show the undo button
+                undoButton.style.display = 'block';
+            } else if (data.event) {
+                // Backend might return event instead of cutting_skill
+                const cuttingSkill = {
+                    id: data.event.id,
+                    cutting_type: selectedCuttingType,
+                    outcome: outcome,
+                    player_id: data.event.player_id,
+                    player_name: data.event.player_name || document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                    field_position_x: data.event.field_position_x,
+                    field_position_y: data.event.field_position_y
+                };
+                
+                addCuttingSkillMarker(cuttingSkill);
+                updateCuttingSkillsState(cuttingSkill);
+                updateCuttingSkillsTable();
                 undoButton.style.display = 'block';
             } else {
                 console.log('Cutting skill recorded but no data returned');
