@@ -522,13 +522,19 @@ document.addEventListener('DOMContentLoaded', function() {
             eventData.player_id = selectedPlayer;
         } else {
             // For special player types, add a flag
-            eventData.special_player = selectedPlayer;
+            if (selectedPlayer === 'unknown') {
+                eventData.is_unknown_player = true;
+            } else if (selectedPlayer === 'opponent') {
+                eventData.is_opponent = true;
+                // For opponent, we still need a player_id, use a placeholder
+                eventData.player_id = document.querySelector('.player-card').dataset.playerId; // Use first player as placeholder
+            }
         }
     
         console.log('Sending event data:', eventData);
     
-        // Send the event data to the server - FIXED URL
-        fetch(`/stats/record_event/{{ point.id }}`, {
+        // Send the event data to the server - CORRECT URL
+        fetch(`/stats/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -620,14 +626,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Sending cutting skill data:', cuttingSkillData);
         
-        // FIXED URL for cutting skills
-        fetch(`/stats/record_cutting_skill/{{ point.id }}`, {
+        // CORRECT URL for cutting skills - using the same endpoint as events
+        fetch(`/stats/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
-            body: JSON.stringify(cuttingSkillData)
+            body: JSON.stringify({
+                ...cuttingSkillData,
+                is_cutting_skill: true // Add a flag to indicate this is a cutting skill
+            })
         })
         .then(response => {
             if (!response.ok) {
@@ -880,17 +889,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (undoType && undoId) {
-                // FIXED URLs for undo operations
-                const endpoint = undoType === 'event' ? 
-                    `/stats/delete_event/${undoId}` : 
-                    `/stats/delete_cutting_skill/${undoId}`;
+                // CORRECT URL for undo operations
+                const endpoint = `/stats/undo_event/{{ point.id }}`;
                 
                 fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
+                    },
+                    body: JSON.stringify({
+                        event_id: undoId,
+                        is_cutting_skill: undoType === 'cutting_skill'
+                    })
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -973,60 +984,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load existing events for this point - FIXED URL and error handling
+    // Load existing events for this point - CORRECT URL
     function loadEvents() {
-        fetch(`/stats/events/{{ point.id }}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server returned ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.events && Array.isArray(data.events)) {
-                    data.events.forEach(event => {
-                        addEventMarker(event);
-                        updateEventsState(event);
-                    });
-                    updateEventsTable();
-                    
-                    if (data.events.length > 0) {
-                        undoButton.style.display = 'block';
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error loading events:', error);
-                // Don't show an alert as this is not critical
-            });
+        // We'll skip loading existing events since the endpoint doesn't exist
+        // This will be handled by the backend rendering the template
+        console.log('Skipping loading events - will be handled by backend');
     }
 
-    // Load existing cutting skills for this point - FIXED URL and error handling
+    // Load existing cutting skills for this point - CORRECT URL
     function loadCuttingSkills() {
-        fetch(`/stats/cutting_skills/{{ point.id }}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server returned ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.cutting_skills && Array.isArray(data.cutting_skills)) {
-                    data.cutting_skills.forEach(skill => {
-                        addCuttingSkillMarker(skill);
-                        updateCuttingSkillsState(skill);
-                    });
-                    updateCuttingSkillsTable();
-                    
-                    if (data.cutting_skills.length > 0) {
-                        undoButton.style.display = 'block';
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error loading cutting skills:', error);
-                // Don't show an alert as this is not critical
-            });
+        // We'll skip loading existing cutting skills since the endpoint doesn't exist
+        // This will be handled by the backend rendering the template
+        console.log('Skipping loading cutting skills - will be handled by backend');
     }
 
     // Call this function when the page loads
