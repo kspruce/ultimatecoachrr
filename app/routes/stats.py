@@ -1100,8 +1100,31 @@ def calculate_performance_trends(games):
             'break_percentage': []
         }
     
+    # Filter out games with no points
+    games_with_points = []
+    for game in games:
+        try:
+            # If game.points is a query object
+            points = game.points.all()
+            if len(points) > 0:
+                games_with_points.append(game)
+        except AttributeError:
+            # If game.points is already a list
+            if len(game.points) > 0:
+                games_with_points.append(game)
+    
+    # If no games with points, return empty data
+    if not games_with_points:
+        return {
+            'dates': [],
+            'labels': [],
+            'o_line_efficiency': [],
+            'd_line_efficiency': [],
+            'break_percentage': []
+        }
+    
     # Sort games by date using string representation (safest approach)
-    sorted_games = sorted(games, key=lambda g: str(g.date) if g.date else "")
+    sorted_games = sorted(games_with_points, key=lambda g: str(g.date) if g.date else "")
     
     # Calculate metrics for each game
     dates = []
@@ -1118,10 +1141,12 @@ def calculate_performance_trends(games):
             dates.append('Unknown')
         
         # Create custom label with opposition and tournament name
-        opposition_name = game.opposition_team if hasattr(game, 'opposition_team') and game.opposition_team else "Unknown"
+        # Use game.opponent instead of game.opposition_team
+        opposition_name = game.opponent if hasattr(game, 'opponent') and game.opponent else "Unknown"
         tournament_name = game.tournament.name if hasattr(game, 'tournament') and game.tournament else "Unknown"
         custom_label = f"{opposition_name} ({tournament_name})"
         labels.append(custom_label)
+
         
         # Calculate O-line efficiency - handle both query objects and lists
         try:

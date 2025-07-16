@@ -793,6 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn("teamDefensiveRadar element not found");
         }
         
+
         // Performance Trends Chart
         const trendsCtx = document.getElementById('performanceTrendsChart');
         if (trendsCtx) {
@@ -803,19 +804,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const dLineEfficiency = {{ performance_trends.d_line_efficiency|safe if performance_trends else '[]' }};
             const breakPercentage = {{ performance_trends.break_percentage|safe if performance_trends else '[]' }};
             
-            new Chart(trendsCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,  // Use the custom labels instead of dates
-                    datasets: [
-                        {
-                            label: 'O-Line Efficiency',
-                            data: oLineEfficiency,
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            tension: 0.1,
-                            fill: false
-                        },
+            // Check if we have data to display
+            if (labels.length === 0) {
+                // No data available, show a message
+                const ctx = trendsCtx.getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#666';
+                ctx.fillText('No game data available with sufficient points', trendsCtx.width / 2, trendsCtx.height / 2);
+            } else {
+                // We have data, create the chart
+                new Chart(trendsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'O-Line Efficiency',
+                                data: oLineEfficiency,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                tension: 0.1,
+                                fill: false,
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            },
                         {
                             label: 'D-Line Efficiency',
                             data: dLineEfficiency,
@@ -879,10 +892,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
-            console.log("Performance trends chart initialized");
-        } else {
-            console.warn("performanceTrendsChart element not found");
+            console.log("Performance trends chart initialized with " + labels.length + " games");
         }
+    } else {
+        console.warn("performanceTrendsChart element not found");
+    }
 
     } catch (e) {
         console.error("Error initializing charts:", e);
