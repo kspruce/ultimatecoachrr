@@ -639,16 +639,29 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            window.location.href = data.redirect_url;
+            console.log('Point finished successfully:', data);
+            
+            // Check if we have a redirect URL
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else if (data.redirect) {
+                window.location.href = data.redirect;
+            } else if (data.game_id) {
+                // Use game_id if available
+                window.location.href = `/points/game/${data.game_id}`;
+            } else {
+                // Fallback to the game points page using the point's game_id
+                window.location.href = `/points/game/{{ point.game_id }}`;
+            }
         })
         .catch(error => {
             console.error('Error finishing point:', error);
             alert('Error finishing point: ' + error.message);
             // Hide loading indicator only on error
-            // On success, we're redirecting so no need to hide
             hideLoading();
         });
     });
+
 
     // Field click handler for both events and cutting skills
     field.addEventListener('click', function(e) {
@@ -832,6 +845,74 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     console.log("No possession change after", action);
                 }
+                // Add notification for goal/scored_on events
+                if (action === 'goal' || action === 'callahan') {
+                    // Show a notification that we scored
+                    const toast = document.createElement('div');
+                    toast.className = 'position-fixed top-0 end-0 p-3';
+                    toast.style.zIndex = '1070';
+                    toast.innerHTML = `
+                        <div class="toast show bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="toast-header bg-success text-white">
+                                <strong class="me-auto">Point Scored!</strong>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                            <div class="toast-body">
+                                Your team scored! You can end the point now.
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-light end-point-toast">End Point</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    // Add click handler to the end point button in the toast
+                    toast.querySelector('.end-point-toast').addEventListener('click', function() {
+                        finishPointButton.click();
+                    });
+                    
+                    // Remove the toast after 10 seconds if not clicked
+                    setTimeout(() => {
+                        if (document.body.contains(toast)) {
+                            toast.remove();
+                        }
+                    }, 10000);
+                } else if (action === 'scored_on') {
+                    // Show a notification that opponent scored
+                    const toast = document.createElement('div');
+                    toast.className = 'position-fixed top-0 end-0 p-3';
+                    toast.style.zIndex = '1070';
+                    toast.innerHTML = `
+                        <div class="toast show bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="toast-header bg-danger text-white">
+                                <strong class="me-auto">Point Conceded</strong>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                            <div class="toast-body">
+                                Opponent scored. You can end the point now.
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-light end-point-toast">End Point</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    // Add click handler to the end point button in the toast
+                    toast.querySelector('.end-point-toast').addEventListener('click', function() {
+                        finishPointButton.click();
+                    });
+                    
+                    // Remove the toast after 10 seconds if not clicked
+                    setTimeout(() => {
+                        if (document.body.contains(toast)) {
+                            toast.remove();
+                        }
+                    }, 10000);
+                }
+                
+                
             } else {
                 console.log('Event recorded but no event data returned');
                 // Create a local event object for display

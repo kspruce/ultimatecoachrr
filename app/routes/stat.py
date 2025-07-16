@@ -424,9 +424,13 @@ def finish_point(point_id):
                 print(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
 
         db.session.commit()
+        
+        # Return both redirect and redirect_url for compatibility
         return jsonify({
             'message': 'Point finished', 
-            'redirect': url_for('point.game_points', game_id=game.id)
+            'redirect': url_for('point.game_points', game_id=game.id),
+            'redirect_url': url_for('point.game_points', game_id=game.id),
+            'game_id': game.id  # Include game_id explicitly
         }), 200
 
     except Exception as e:
