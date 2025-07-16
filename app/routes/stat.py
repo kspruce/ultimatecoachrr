@@ -279,8 +279,9 @@ def undo_event(point_id):
             elif last_event.event_type == 'scored_on':
                 point.point_outcome = None
                 point.their_score_after = point.their_score_before
-            elif last_event.event_type in ['throwaway', 'drop', 'block', 'handblock', 'stallout', 'forced_turnover', 'unforced_turnover']:
-                point.is_offensive = not point.is_offensive  # Toggle possession back
+            
+            # Don't try to update point.is_offensive as it doesn't exist
+            # The client-side code will handle possession state
 
             # Update player stats if necessary
             from app.models.stats import PlayerPointStats
@@ -311,9 +312,40 @@ def undo_event(point_id):
             return jsonify({'error': 'No events to undo'}), 400
 
     except Exception as e:
+        import traceback
+        print("Error in undo_event:", str(e))
+        print(traceback.format_exc())
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@bp.route('/undo_cutting_skill/<int:point_id>', methods=['POST'])
+@login_required
+def undo_cutting_skill(point_id):
+    try:
+        data = request.get_json()
+        cutting_skill_id = data.get('cutting_skill_id')
+        
+        if not cutting_skill_id:
+            return jsonify({'error': 'No cutting skill ID provided'}), 400
+        
+        from app.models.cutting_skill import CuttingSkill
+        cutting_skill = CuttingSkill.query.get_or_404(cutting_skill_id)
+        
+        if cutting_skill.point_id != point_id:
+            return jsonify({'error': 'Cutting skill does not belong to this point'}), 400
+        
+        db.session.delete(cutting_skill)
+        db.session.commit()
+        
+        return jsonify({'message': 'Cutting skill undone'}), 200
+    
+    except Exception as e:
+        import traceback
+        print("Error in undo_cutting_skill:", str(e))
+        print(traceback.format_exc())
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/finish_point/<int:point_id>', methods=['POST'])
@@ -558,6 +590,35 @@ def recalculate_throw_distances():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/record_cutting_skill/<int:point_id>', methods=['POST'])
+@login_required
+def record_cutting_skill(point_id):
+    try:
+        data = request.get_json()
+        point = Point.query.get_or_404(point_id)
+        
+        # Create new cutting skill
+        from app.models.cutting_skill import CuttingSkill
+        cutting_skill = CuttingSkill(
+            point_id=point_id,
+            player_id=int(data['player_id']),
+            cutting_type=data['cutting_type'],
+            outcome=data['outcome'],
+            field_position_x=float(data.get('field_position_x', 0)),
+            field_position_y=float(data.get('field_position_y', 0))
+        )
+        
+        db.session.add(cutting_skill)
+        db.session.commit()
+        
+        return jsonify(cutting_skill.to_dict()), 201
+    
+    except Exception as e:
+        print("Error recording cutting skill:", str(e))
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
 
 @bp.route('/available_players/<int:point_id>', methods=['GET'])
 @login_required

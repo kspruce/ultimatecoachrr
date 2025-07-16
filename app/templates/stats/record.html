@@ -636,6 +636,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Handle special player types
             if (selectedPlayer === 'unknown' || selectedPlayer === 'opponent') {
+                // Special players can only be used in event mode, not cutting mode
+                if (currentMode === 'cutting') {
+                    alert("Special players cannot be used for cutting skills");
+                    return;
+                }
+                
                 // For special players, check if they're appropriate for current possession
                 if (selectedPlayer === 'opponent' && gameState.is_offensive) {
                     alert("Cannot select 'Opponent' during offensive possession");
@@ -795,26 +801,39 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create cutting skill data - FIXED: Using direct fields for cutting skills
+        // Add error handling for CSRF token
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (!csrfMeta) {
+            console.error('CSRF token meta tag not found');
+            alert('Error: CSRF token not found. Please refresh the page.');
+            return;
+        }
+        
+        const csrfToken = csrfMeta.getAttribute('content');
+        if (!csrfToken) {
+            console.error('CSRF token is empty');
+            alert('Error: CSRF token is empty. Please refresh the page.');
+            return;
+        }
+        
+        // Create cutting skill data
         const cuttingSkillData = {
-            player_id: selectedPlayer,
+            player_id: parseInt(selectedPlayer),
             cutting_type: selectedCuttingType,
             outcome: outcome,
-            field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
-            field_position_y: parseFloat(selectedPosition.y.toFixed(2))
+            field_position_x: parseFloat(selectedPosition.x.toFixed(2)), // Round to 2 decimal places
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2)) // Round to 2 decimal places
         };
-        
+    
         console.log('Sending cutting skill data:', cuttingSkillData);
-        
-        // Show loading indicator
-        showLoading(`Recording ${selectedCuttingType} cut (${outcome})...`);
-        
-        // Create a custom endpoint for cutting skills
+    
+        // Use the correct endpoint for cutting skills
         fetch(`/stats/record_cutting_skill/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                'Accept': 'application/json',
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify(cuttingSkillData)
         })
@@ -1019,6 +1038,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 y: event.field_position_y
             },
             is_offensive: event.is_offensive
+        });
+    }
+
+    function updateGameState(action) {
+        // Defensive events that should change possession to offensive
+        if (['block', 'forced_turnover', 'unforced_turnover'].includes(action)) {
+            gameState.is_offensive = true;
+            console.log('Possession changed to offensive after', action);
+        }
+        // Offensive events that should change possession to defensive
+        else if (['throwaway', 'drop'].includes(action)) {
+            gameState.is_offensive = false;
+            console.log('Possession changed to defensive after', action);
+        }
+        
+        gameState.events.push({
+            action: action,
+            position: selectedPosition,
+            player: selectedPlayer
         });
     }
 
