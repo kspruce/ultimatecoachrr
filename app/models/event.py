@@ -23,6 +23,8 @@ class Event(db.Model):
     is_unknown_player = db.Column(db.Boolean, default=False)  # Add this line
     is_opponent = db.Column(db.Boolean, default=False)  # Add this line
     
+    point = db.relationship('Point', back_populates='events')
+    
     # Define valid event types
     VALID_EVENT_TYPES = [
         'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events
