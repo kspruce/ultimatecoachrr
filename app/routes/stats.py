@@ -1099,8 +1099,17 @@ def calculate_performance_trends(games):
             'break_percentage': []
         }
     
+    # Fix the sorting by converting all dates to datetime objects
+    def get_sort_key(game):
+        if not game.date:
+            return datetime.min
+        # Convert date to datetime if it's a date object
+        if isinstance(game.date, datetime.date) and not isinstance(game.date, datetime.datetime):
+            return datetime.combine(game.date, datetime.min.time())
+        return game.date
+    
     # Sort games by date
-    sorted_games = sorted(games, key=lambda g: g.date if g.date else datetime.min)
+    sorted_games = sorted(games, key=get_sort_key)
     
     # Calculate metrics for each game
     dates = []
