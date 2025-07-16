@@ -770,22 +770,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 undoButton.style.display = 'block';
                 
                 // Update game state based on the event
+                const defensiveToOffensiveEvents = ["block", "forced_turnover", "unforced_turnover"];
+                const offensiveToDefensiveEvents = ["throwaway", "drop"];
+                
+                // Store the previous state for logging
+                const previousState = gameState.is_offensive;
+                
                 // Defensive events that should change to offense
-                if (!gameState.is_offensive && (action === 'block' || action === 'forced_turnover' || action === 'unforced_turnover')) {
+                if (!gameState.is_offensive && defensiveToOffensiveEvents.includes(action)) {
                     gameState.is_offensive = true;
-                    console.log('Possession changed to offense after defensive play');
-                    updatePossessionIndicator();
-                    logGameState();
                 } 
                 // Offensive events that should change to defense
-                else if (gameState.is_offensive && (action === 'throwaway' || action === 'drop')) {
+                else if (gameState.is_offensive && offensiveToDefensiveEvents.includes(action)) {
                     gameState.is_offensive = false;
-                    console.log('Possession changed to defense after turnover');
+                }
+                // Legacy support for "turnover" and "goal" events
+                else if (action === "turnover" || action === "goal") {
+                    gameState.is_offensive = !gameState.is_offensive;
+                }
+                
+                // If possession changed, update the UI and log it
+                if (previousState !== gameState.is_offensive) {
+                    console.log("Possession changed from", previousState ? "offense" : "defense", 
+                                "to", gameState.is_offensive ? "offense" : "defense", 
+                                "after", action);
                     updatePossessionIndicator();
                     logGameState();
-                }
-                // Legacy support for 'turnover' and 'goal' events
-                else if (action === 'turnover' || action === 'goal') {
                     gameState.is_offensive = !gameState.is_offensive;
                     console.log('Possession changed. Now on', gameState.is_offensive ? 'offense' : 'defense');
                     updatePossessionIndicator();
@@ -841,24 +851,23 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create cutting skill data - Modified to work with the event endpoint
+        // Create cutting skill data - Using the dedicated cutting_skill endpoint
         const cuttingSkillData = {
             player_id: selectedPlayer,
-            event_type: 'cutting_skill', // This is the key change - we're using the event endpoint
             cutting_type: selectedCuttingType,
             outcome: outcome,
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
-            field_position_y: parseFloat(selectedPosition.y.toFixed(2)),
-            is_offensive: gameState.is_offensive // Include offensive state
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2))
+            // Note: is_offensive is not needed for cutting skills as they do not affect possession
         };
         
-        console.log('Sending cutting skill data:', cuttingSkillData);
+        console.log("Sending cutting skill data:", cuttingSkillData);
         
         // Show loading indicator
         showLoading(`Recording ${selectedCuttingType} cut (${outcome})...`);
         
-        // Use the regular event endpoint since the cutting_skill endpoint doesn't exist
-        fetch(`/stats/record/{{ point.id }}`, {
+        // Use the dedicated cutting_skill endpoint
+        fetch(`/stats/record_cutting_skill/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -874,21 +883,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return response.json();
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || `Server returned ${response.status}`);
-                });
-            }
-            return response.json();
-        })
         .then(data => {
-            console.log('Cutting skill recorded successfully:', data);
+            console.log("Cutting skill recorded successfully:", data);
             
-            // Since we're using the event endpoint, we should always get an event back
-            if (data.event) {
-                // Create a cutting skill object from the event data
+            // The cutting_skill endpoint returns the cutting skill directly
+            if (data.id) {
+                // Use the returned cutting skill data
                 const cuttingSkill = {
+                    id: data.id,
+                    cutting_type: data.cutting_type,
+                    outcome: data.outcome,
+                    player_id: data.player_id,
+                    player_name: data.player_name || document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || "Unknown",
+                    field_position_x: data.field_position_x,
+                    field_position_y: data.field_position_y
+                };
                     id: data.event.id,
                     cutting_type: selectedCuttingType, // Use our local data since the server might not return it
                     outcome: outcome, // Use our local data since the server might not return it
@@ -929,24 +938,84 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .catch(error => {
-            console.error('Error recording cutting skill:', error);
-            alert('Error recording cutting skill: ' + error.message);
+            console.error("Error recording cutting skill:", error);
             
-            // Even if there's an error, add a local marker to keep the UI responsive
-            const localCuttingSkill = {
-                id: Date.now(), // Use timestamp as temporary ID
-                cutting_type: selectedCuttingType,
-                outcome: outcome,
+            // Try the event endpoint as a fallback
+            console.log("Trying fallback to event endpoint for cutting skills");
+            
+            // Create event-style data for the fallback
+            const fallbackData = {
                 player_id: selectedPlayer,
-                player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
-                field_position_x: selectedPosition.x,
-                field_position_y: selectedPosition.y
+                event_type: "cutting_skill", // Mark as cutting skill
+                cutting_type: selectedCuttingType, // Include cutting data
+                outcome: outcome,
+                field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
+                field_position_y: parseFloat(selectedPosition.y.toFixed(2)),
+                is_offensive: gameState.is_offensive // Include offensive state
             };
             
-            addCuttingSkillMarker(localCuttingSkill);
-            updateCuttingSkillsState(localCuttingSkill);
-            updateCuttingSkillsTable();
-            undoButton.style.display = 'block';
+            // Show loading indicator for fallback
+            showLoading(`Trying alternative method for ${selectedCuttingType} cut...`);
+            
+            // Try the regular event endpoint as fallback
+            fetch(`/stats/record/{{ point.id }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": document.querySelector("meta[name="csrf-token"]").getAttribute("content")
+                },
+                body: JSON.stringify(fallbackData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `Server returned ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Fallback successful:", data);
+                
+                // Create a cutting skill from the event data
+                const cuttingSkill = {
+                    id: data.id || Date.now(),
+                    cutting_type: selectedCuttingType,
+                    outcome: outcome,
+                    player_id: selectedPlayer,
+                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || "Unknown",
+                    field_position_x: selectedPosition.x,
+                    field_position_y: selectedPosition.y
+                };
+                
+                addCuttingSkillMarker(cuttingSkill);
+                updateCuttingSkillsState(cuttingSkill);
+                updateCuttingSkillsTable();
+                undoButton.style.display = "block";
+            })
+            .catch(fallbackError => {
+                console.error("Fallback also failed:", fallbackError);
+                alert("Error recording cutting skill: " + error.message);
+                
+                // Even if both attempts fail, add a local marker to keep the UI responsive
+                const localCuttingSkill = {
+                    id: Date.now(), // Use timestamp as temporary ID
+                    cutting_type: selectedCuttingType,
+                    outcome: outcome,
+                    player_id: selectedPlayer,
+                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || "Unknown",
+                    field_position_x: selectedPosition.x,
+                    field_position_y: selectedPosition.y
+                };
+                
+                addCuttingSkillMarker(localCuttingSkill);
+                updateCuttingSkillsState(localCuttingSkill);
+                updateCuttingSkillsTable();
+                undoButton.style.display = "block";
+            })
+            .finally(() => {
+                hideLoading();
+            });
         })
         .finally(() => {
             // Hide loading indicator
@@ -1227,22 +1296,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         updateEventsTable();
                         
                         // Check if we need to update possession based on the event type
-                        const defensiveToOffensiveEvents = ['block', 'forced_turnover', 'unforced_turnover'];
-                        const offensiveToDefensiveEvents = ['throwaway', 'drop'];
+                        const defensiveToOffensiveEvents = ["block", "forced_turnover", "unforced_turnover"];
+                        const offensiveToDefensiveEvents = ["throwaway", "drop"];
                         
-                        console.log('Undoing event:', lastEvent);
+                        console.log("Undoing event:", lastEvent);
+                        
+                        // Store the previous state for logging
+                        const previousState = gameState.is_offensive;
                         
                         // If it was a defensive event that changed to offense, change back to defense
                         if (defensiveToOffensiveEvents.includes(lastEvent.event_type)) {
                             gameState.is_offensive = false;
-                            console.log('Possession changed back to defense after undoing', lastEvent.event_type);
-                            updatePossessionIndicator();
-                            logGameState();
                         } 
                         // If it was an offensive event that changed to defense, change back to offense
                         else if (offensiveToDefensiveEvents.includes(lastEvent.event_type)) {
                             gameState.is_offensive = true;
-                            console.log('Possession changed back to offense after undoing', lastEvent.event_type);
+                        }
+                        // Legacy support for turnover and goal events
+                        else if (lastEvent.event_type === "turnover" || lastEvent.event_type === "goal") {
+                            gameState.is_offensive = !gameState.is_offensive;
+                        }
+                        
+                        // If possession changed, update the UI and log it
+                        if (previousState !== gameState.is_offensive) {
+                            console.log("Possession changed from", previousState ? "offense" : "defense", 
+                                      "to", gameState.is_offensive ? "offense" : "defense", 
+                                      "after undoing", lastEvent.event_type);
+                            updatePossessionIndicator();
+                            logGameState();
                             updatePossessionIndicator();
                             logGameState();
                         }
