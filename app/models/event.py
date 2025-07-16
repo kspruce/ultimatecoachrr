@@ -20,12 +20,14 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_offensive = db.Column(db.Boolean, nullable=False, default=True)  # Track possession
-    point = db.relationship('Point', back_populates='events')
+    is_unknown_player = db.Column(db.Boolean, default=False)  # Add this line
+    is_opponent = db.Column(db.Boolean, default=False)  # Add this line
     
     # Define valid event types
     VALID_EVENT_TYPES = [
         'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events
-        'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'  # defensive events
+        'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on',  # defensive events
+        'substitution'  # Add this
     ]
 
     # Relationships

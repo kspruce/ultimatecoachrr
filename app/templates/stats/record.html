@@ -238,7 +238,7 @@
 
 <div class="record-container">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <div class="record-header">
+        <div class="record-header">
         <div class="row align-items-center">
             <div class="col">
                 <h4 class="mb-0">Point {{ point.point_number }}</h4>
@@ -248,10 +248,12 @@
                 <h3 class="mb-0">{{ point.our_score_before }} - {{ point.their_score_before }}</h3>
             </div>
             <div class="col text-end">
+                <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
                 <button id="finish-point" class="btn btn-success">End Point</button>
             </div>
         </div>
     </div>
+
 
     <!-- Mode toggle button -->
     <button class="mode-toggle" id="mode-toggle">Mode: Event Tracking</button>
@@ -315,6 +317,17 @@
             <button type="button" class="btn-close" onclick="closePlayerSelect()"></button>
         </div>
         <div class="player-grid">
+            <!-- Special options -->
+            <div class="player-card special-player" data-player-id="unknown" style="background-color: #f0f0f0;">
+                <div class="player-number">?</div>
+                <div class="player-name">Unknown</div>
+            </div>
+            <div class="player-card special-player" data-player-id="opponent" style="background-color: #ffeeee;">
+                <div class="player-number">X</div>
+                <div class="player-name">Opponent</div>
+            </div>
+            
+            <!-- Existing players -->
             {% for lineup in point.lineups %}
             <div class="player-card" data-player-id="{{ lineup.player.id }}">
                 <div class="player-number">#{{ lineup.player.jersey_number }}</div>
@@ -363,6 +376,41 @@
     <button class="undo-button" id="undo-button">
         <i class="bi bi-arrow-counterclockwise"></i> Undo
     </button>
+    <!-- Substitution Modal -->
+    <div class="modal fade" id="substitutionModal" tabindex="-1" aria-labelledby="substitutionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="substitutionModalLabel">Player Substitution</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="player-out" class="form-label">Player Out:</label>
+                        <select class="form-select" id="player-out">
+                            <option value="">Select player to sub out</option>
+                            {% for lineup in point.lineups %}
+                            <option value="{{ lineup.player.id }}">
+                                #{{ lineup.player.jersey_number }} - {{ lineup.player.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="player-in" class="form-label">Player In:</label>
+                        <select class="form-select" id="player-in">
+                            <option value="">Select player to sub in</option>
+                            <!-- This will be populated via AJAX -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirm-substitution">Confirm Substitution</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -468,13 +516,22 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('click', function() {
             selectedPlayer = this.dataset.playerId;
             console.log('Selected player:', selectedPlayer);
-            playerSelect.style.display = 'none';
             
-            if (currentMode === 'events') {
-                showActionSelect();
-            } else {
-                showCuttingSelect();
+            // Handle special player types
+            if (selectedPlayer === 'unknown' || selectedPlayer === 'opponent') {
+                // For special players, check if they're appropriate for current possession
+                if (selectedPlayer === 'opponent' && gameState.is_offensive) {
+                    alert("Cannot select 'Opponent' during offensive possession");
+                    return;
+                }
+                if (selectedPlayer === 'unknown' && !gameState.is_offensive) {
+                    alert("Cannot select 'Unknown' during defensive possession");
+                    return;
+                }
             }
+            
+            playerSelect.style.display = 'none';
+            showActionSelect();
         });
     });
 
@@ -502,14 +559,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
     
-        // Create eventData only once with all the necessary data
+        // Create eventData with special handling for unknown/opponent
         const eventData = {
             event_type: action,
-            player_id: parseInt(selectedPlayer),
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)), // Round to 2 decimal places
             field_position_y: parseFloat(selectedPosition.y.toFixed(2)), // Round to 2 decimal places
             is_offensive: gameState.is_offensive
         };
+        
+        // Handle special player types
+        if (selectedPlayer === 'unknown') {
+            eventData.player_id = -1; // Use -1 for unknown player
+            eventData.is_unknown_player = true;
+        } else if (selectedPlayer === 'opponent') {
+            eventData.player_id = -2; // Use -2 for opponent
+            eventData.is_opponent = true;
+        } else {
+            eventData.player_id = parseInt(selectedPlayer);
+        }
     
         // Add logging to debug position data
         console.log('Sending position data:', {
@@ -900,6 +967,95 @@ document.addEventListener('DOMContentLoaded', function() {
     // Call this function when the page loads
     loadCuttingSkills();
 });
+// Substitution handling
+document.getElementById('sub-player').addEventListener('click', function() {
+    // Fetch available players for substitution
+    fetch(`/stats/available_players/{{ point.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const playerInSelect = document.getElementById('player-in');
+            playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
+            
+            data.available_players.forEach(player => {
+                const option = document.createElement('option');
+                option.value = player.id;
+                option.textContent = `#${player.jersey_number} - ${player.name}`;
+                playerInSelect.appendChild(option);
+            });
+            
+            // Show the modal
+            const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
+            subModal.show();
+        })
+        .catch(error => {
+            console.error('Error fetching available players:', error);
+            alert('Error loading available players');
+        });
+});
+
+// Handle substitution confirmation
+document.getElementById('confirm-substitution').addEventListener('click', function() {
+    const playerOutId = document.getElementById('player-out').value;
+    const playerInId = document.getElementById('player-in').value;
+    
+    if (!playerOutId || !playerInId) {
+        alert('Please select both players for substitution');
+        return;
+    }
+    
+    fetch(`/stats/substitute_player/{{ point.id }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            player_out_id: playerOutId,
+            player_in_id: playerInId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('substitutionModal')).hide();
+            
+            // Update the player cards
+            const playerCards = document.querySelector('.player-grid');
+            
+            // Remove the subbed out player
+            const playerOutCard = document.querySelector(`.player-card[data-player-id="${playerOutId}"]`);
+            if (playerOutCard) playerOutCard.remove();
+            
+            // Add the subbed in player
+            const newPlayerCard = document.createElement('div');
+            newPlayerCard.className = 'player-card';
+            newPlayerCard.dataset.playerId = playerInId;
+            newPlayerCard.innerHTML = `
+                <div class="player-number">#${data.player_in.jersey_number}</div>
+                <div class="player-name">${data.player_in.name}</div>
+            `;
+            newPlayerCard.addEventListener('click', function() {
+                selectedPlayer = this.dataset.playerId;
+                console.log('Selected player:', selectedPlayer);
+                playerSelect.style.display = 'none';
+                showActionSelect();
+            });
+            
+            playerCards.appendChild(newPlayerCard);
+            
+            // Show success message
+            alert(`Successfully substituted ${data.player_out.name} with ${data.player_in.name}`);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error making substitution:', error);
+        alert('Error making substitution');
+    });
+});
+
 </script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

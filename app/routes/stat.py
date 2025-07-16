@@ -49,14 +49,21 @@ def record_events(point_id):
             data = request.get_json()
             point = Point.query.get_or_404(point_id)
             
+            # Handle special player IDs
+            player_id = data.get('player_id')
+            is_unknown_player = data.get('is_unknown_player', False)
+            is_opponent = data.get('is_opponent', False)
+            
             # Create new event
             event = Event(
                 point_id=point_id,
-                player_id=int(data['player_id']),
+                player_id=int(player_id),
                 event_type=data['event_type'],
                 field_position_x=float(data.get('field_position_x', 0)),
                 field_position_y=float(data.get('field_position_y', 0)),
-                is_offensive=bool(data.get('is_offensive', True))
+                is_offensive=bool(data.get('is_offensive', True)),
+                is_unknown_player=is_unknown_player,
+                is_opponent=is_opponent
             )
             
             # Add and flush the event to get its ID
@@ -551,3 +558,98 @@ def recalculate_throw_distances():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/available_players/<int:point_id>', methods=['GET'])
+@login_required
+def available_players(point_id):
+    try:
+        point = Point.query.get_or_404(point_id)
+        game = Game.query.get_or_404(point.game_id)
+        
+        # Get players already in the point
+        current_player_ids = [lineup.player_id for lineup in point.lineups]
+        
+        # Get all players in the game roster who aren't already in this point
+        from app.models.player import Player
+        from app.models.roster import Roster
+        
+        available_players = Player.query.join(Roster).filter(
+            Roster.game_id == game.id,
+            ~Player.id.in_(current_player_ids)
+        ).all()
+        
+        return jsonify({
+            'available_players': [
+                {
+                    'id': player.id,
+                    'name': player.name,
+                    'jersey_number': player.jersey_number
+                }
+                for player in available_players
+            ]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/substitute_player/<int:point_id>', methods=['POST'])
+@login_required
+def substitute_player(point_id):
+    try:
+        data = request.get_json()
+        point = Point.query.get_or_404(point_id)
+        
+        player_out_id = int(data['player_out_id'])
+        player_in_id = int(data['player_in_id'])
+        
+        # Get the players
+        from app.models.player import Player
+        player_out = Player.query.get_or_404(player_out_id)
+        player_in = Player.query.get_or_404(player_in_id)
+        
+        # Remove the player_out from the lineup
+        lineup_out = LineUp.query.filter_by(
+            point_id=point_id,
+            player_id=player_out_id
+        ).first()
+        
+        if not lineup_out:
+            return jsonify({'success': False, 'error': 'Player not found in lineup'}), 400
+        
+        db.session.delete(lineup_out)
+        
+        # Add the player_in to the lineup
+        lineup_in = LineUp(
+            point_id=point_id,
+            player_id=player_in_id
+        )
+        db.session.add(lineup_in)
+        
+        # Record the substitution as an event
+        sub_event = Event(
+            point_id=point_id,
+            player_id=player_in_id,
+            event_type='substitution',
+            field_position_x=50,  # Center of field
+            field_position_y=18.5,
+            is_offensive=point.starting_position == 'offense'
+        )
+        db.session.add(sub_event)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'player_out': {
+                'id': player_out.id,
+                'name': player_out.name,
+                'jersey_number': player_out.jersey_number
+            },
+            'player_in': {
+                'id': player_in.id,
+                'name': player_in.name,
+                'jersey_number': player_in.jersey_number
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
