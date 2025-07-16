@@ -8,6 +8,7 @@ from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.stats import PlayerPointStats#
 from app.models.throws import Throw
+from app.models.cutting_skill import CuttingSkill
 from app.models.clip import Clip
 import json
 import math
@@ -1167,6 +1168,10 @@ def player_stats(player_id):
     tournament_id = request.args.get('tournament_id', type=int)
     game_id = request.args.get('game_id', type=int)
 
+    # Get filter parameters from request
+    selected_game = request.args.get('game_id', type=int)
+    selected_tournament = request.args.get('tournament_id', type=int)
+
     # Determine which games to analyze
     if game_id:
         games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
@@ -1261,6 +1266,91 @@ def player_stats(player_id):
         Event.query.filter_by(player_id=player.id),
         ['shutdown']
     )
+    
+    # Get cutting skills data
+    cutting_skills = CuttingSkill.query.filter_by(player_id=player_id).all()
+    
+    # Process cutting skills data for frontend
+    cutting_data = [skill.to_dict() for skill in cutting_skills]
+    
+    # Calculate cutting stats
+    cutting_stats = {
+        'total_cuts': len(cutting_skills),
+        'total_open_looked_off': sum(1 for s in cutting_skills if s.outcome == 'open_looked_off'),
+        'total_guarded_looked_off': sum(1 for s in cutting_skills if s.outcome == 'guarded_looked_off'),
+        'total_open_thrown_to': sum(1 for s in cutting_skills if s.outcome == 'open_thrown_to'),
+        'total_guarded_thrown_to': sum(1 for s in cutting_skills if s.outcome == 'guarded_thrown_to'),
+        'by_type': {},
+        'success_rate': 0,
+        'open_rate': 0,
+        'preferred_cut': 'N/A'
+    }
+    
+    # Calculate success rate (thrown to / total)
+    successful_cuts = cutting_stats['total_open_thrown_to'] + cutting_stats['total_guarded_thrown_to']
+    if cutting_stats['total_cuts'] > 0:
+        cutting_stats['success_rate'] = (successful_cuts / cutting_stats['total_cuts']) * 100
+        
+        # Calculate open rate (open / total)
+        open_cuts = cutting_stats['total_open_looked_off'] + cutting_stats['total_open_thrown_to']
+        cutting_stats['open_rate'] = (open_cuts / cutting_stats['total_cuts']) * 100
+    
+    # Calculate stats by cutting type
+    cut_types = ['open_deep', 'open_under', 'break_deep', 'break_under']
+    for cut_type in cut_types:
+        type_skills = [s for s in cutting_skills if s.cutting_type == cut_type]
+        
+        open_looked_off = sum(1 for s in type_skills if s.outcome == 'open_looked_off')
+        guarded_looked_off = sum(1 for s in type_skills if s.outcome == 'guarded_looked_off')
+        open_thrown_to = sum(1 for s in type_skills if s.outcome == 'open_thrown_to')
+        guarded_thrown_to = sum(1 for s in type_skills if s.outcome == 'guarded_thrown_to')
+        
+        total = len(type_skills)
+        success_rate = 0
+        if total > 0:
+            success_rate = ((open_thrown_to + guarded_thrown_to) / total) * 100
+            
+        cutting_stats['by_type'][cut_type] = {
+            'total': total,
+            'open_looked_off': open_looked_off,
+            'guarded_looked_off': guarded_looked_off,
+            'open_thrown_to': open_thrown_to,
+            'guarded_thrown_to': guarded_thrown_to,
+            'success_rate': success_rate
+        }
+    
+    # Determine preferred cut (most used)
+    if cutting_stats['total_cuts'] > 0:
+        preferred_cut_type = max(cut_types, key=lambda ct: cutting_stats['by_type'][ct]['total'] if ct in cutting_stats['by_type'] else 0)
+        if cutting_stats['by_type'].get(preferred_cut_type, {}).get('total', 0) > 0:
+            cutting_stats['preferred_cut'] = preferred_cut_type.replace('_', ' ').title()
+    
+    # Filter cutting data based on selected game/tournament if applicable
+    if selected_game:
+        # Get points from the selected game
+        game_points = Point.query.filter_by(game_id=selected_game).all()
+        game_point_ids = [p.id for p in game_points]
+        
+        # Filter cutting skills to only include those from the selected game
+        cutting_skills = [s for s in cutting_skills if s.point_id in game_point_ids]
+        cutting_data = [skill.to_dict() for skill in cutting_skills]
+        
+        # Recalculate stats for the filtered data
+        # (You could refactor the above stats calculation into a function to avoid code duplication)
+    
+    elif selected_tournament:
+        # Get games from the selected tournament
+        tournament_games = Game.query.filter_by(tournament_id=selected_tournament).all()
+        tournament_game_ids = [g.id for g in tournament_games]
+        
+        # Get points from those games
+        tournament_points = Point.query.filter(Point.game_id.in_(tournament_game_ids)).all()
+        tournament_point_ids = [p.id for p in tournament_points]
+        
+        # Filter cutting skills to only include those from the selected tournament
+        cutting_skills = [s for s in cutting_skills if s.point_id in tournament_point_ids]
+        cutting_data = [skill.to_dict() for skill in cutting_skills]
+    
     
     # Calculate team averages for radar charts
     team_stats = calculate_team_radar_stats(games, player.team)
@@ -1372,7 +1462,9 @@ def player_stats(player_id):
         total_throw_distance=total_distance,
         avg_throw_distance=avg_distance,
         throw_directions=throw_directions,
-        completion_by_direction=completion_by_direction
+        completion_by_direction=completion_by_direction,
+        cutting_data=cutting_data,
+        cutting_stats=cutting_stats
     )
 
 
