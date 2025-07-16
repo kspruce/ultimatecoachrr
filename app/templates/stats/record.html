@@ -461,12 +461,19 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Helper function to safely get player name from DOM
     function getPlayerNameFromDOM(playerId) {
-        var playerElement = document.querySelector(".player-card[data-player-id='" + playerId + "']");
+        if (!playerId) return "Unknown";
+        
+        // Convert to string to ensure proper selector matching
+        const playerIdStr = String(playerId);
+        
+        var playerElement = document.querySelector(`.player-card[data-player-id="${playerIdStr}"]`);
         if (playerElement && playerElement.textContent) {
             return playerElement.textContent.trim();
         }
+        
         return "Unknown";
     }
+    
     // Constants and DOM elements
     const field = document.getElementById('field');
     const playerSelect = document.getElementById('player-select');
@@ -768,10 +775,17 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Current possession before processing:', gameState.is_offensive ? 'offense' : 'defense');
             console.log('Action type:', action);
             
-            // Add event marker to the field - FIXED to handle potential missing data
+            // Add event marker to the field
             if (data) {
                 // Use data directly if it's the event, or data.event if that exists
                 const eventData = data.event || data;
+                
+                // Add player name to the event data if it's not already there
+                if (!eventData.player_name && eventData.player_id) {
+                    eventData.player_name = getPlayerNameFromDOM(eventData.player_id);
+                    console.log(`Added player name to event: ${eventData.player_name} (ID: ${eventData.player_id})`);
+                }
+                
                 addEventMarker(eventData);
                 
                 // Update the events table
@@ -875,14 +889,16 @@ document.addEventListener('DOMContentLoaded', function() {
             outcome: outcome,
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
             field_position_y: parseFloat(selectedPosition.y.toFixed(2))
+            // Note: is_offensive is not needed for cutting skills as they do not affect possession
         };
         
-        console.log("Sending cutting skill data with player ID:", parseInt(selectedPlayer, 10));
-                
+        console.log("Sending cutting skill data:", cuttingSkillData);
+        console.log("Player ID type:", typeof selectedPlayer, "Value:", selectedPlayer);
+        
         // Show loading indicator
         showLoading(`Recording ${selectedCuttingType} cut (${outcome})...`);
         
-        // Use the dedicated cutting_skill endpoint
+        // Use the correct endpoint
         fetch(`/cutting-skills/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
@@ -948,14 +964,14 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error("Error recording cutting skill:", error);
             
-            // Try the event endpoint as a fallback
+            // Try the event endpoint as a fallback with a valid event type
             console.log("Trying fallback to event endpoint for cutting skills");
             
             // Create event-style data for the fallback
             const fallbackData = {
                 player_id: parseInt(selectedPlayer, 10),
                 event_type: "catch", // Use a valid event type
-                // Add a custom field to identify it as a cutting skill
+                // Add custom fields to identify it as a cutting skill
                 is_cutting_skill: true,
                 cutting_type: selectedCuttingType,
                 outcome: outcome,
@@ -1122,22 +1138,36 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateEventsState(event) {
         if (!event) return;
         
+        // Get player name from DOM using the player ID
+        let playerName = 'Unknown';
+        if (event.player_id) {
+            playerName = getPlayerNameFromDOM(event.player_id);
+        }
+        
         gameState.events.push({
             id: event.id,
             event_type: event.event_type,
             player: event.player_id,
-            player_name: event.player_name || 'Unknown',
+            player_name: event.player_name || playerName,
             position: {
                 x: event.field_position_x,
                 y: event.field_position_y
             },
             is_offensive: event.is_offensive
         });
+        
+        console.log(`Added event to game state: ${event.event_type} by ${playerName} (ID: ${event.player_id})`);
     }
 
     // Update game state with new cutting skill
     function updateCuttingSkillsState(cuttingSkill) {
         if (!cuttingSkill) return;
+        
+        // Get player name from DOM using the player ID
+        let playerName = 'Unknown';
+        if (cuttingSkill.player_id) {
+            playerName = getPlayerNameFromDOM(cuttingSkill.player_id);
+        }
         
         gameState.cuttingSkills.push({
             id: cuttingSkill.id,
@@ -1148,8 +1178,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 y: cuttingSkill.field_position_y
             },
             player: cuttingSkill.player_id,
-            player_name: cuttingSkill.player_name || 'Unknown'
+            player_name: cuttingSkill.player_name || playerName
         });
+        
+        console.log(`Added cutting skill to game state: ${cuttingSkill.cutting_type} (${cuttingSkill.outcome}) by ${playerName} (ID: ${cuttingSkill.player_id})`);
     }
 
     // Function to update events table
@@ -1200,6 +1232,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const playerCard = document.querySelector(`.player-card[data-player-id="${skill.player}"]`);
                 playerCell.textContent = playerCard ? playerCard.textContent.trim() : `Player ${skill.player}`;
             }
+            
             row.appendChild(playerCell);
             
             const typeCell = document.createElement('td');
@@ -1280,12 +1313,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     return response;
                 })
                 .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || `Server returned ${response.status}`);
-                        });
+                    if (response.json) {
+                        return response.json();
+                    } else {
+                        return { success: true };
                     }
-                    return response.json();
                 })
                 .then(data => {
                     console.log('Undo successful:', data);
@@ -1600,4 +1632,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
