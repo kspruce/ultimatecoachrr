@@ -591,33 +591,6 @@ def recalculate_throw_distances():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/record_cutting_skill/<int:point_id>', methods=['POST'])
-@login_required
-def record_cutting_skill(point_id):
-    try:
-        data = request.get_json()
-        point = Point.query.get_or_404(point_id)
-        
-        # Create new cutting skill
-        from app.models.cutting_skill import CuttingSkill
-        cutting_skill = CuttingSkill(
-            point_id=point_id,
-            player_id=int(data['player_id']),
-            cutting_type=data['cutting_type'],
-            outcome=data['outcome'],
-            field_position_x=float(data.get('field_position_x', 0)),
-            field_position_y=float(data.get('field_position_y', 0))
-        )
-        
-        db.session.add(cutting_skill)
-        db.session.commit()
-        
-        return jsonify(cutting_skill.to_dict()), 201
-    
-    except Exception as e:
-        print("Error recording cutting skill:", str(e))
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
 
 
 @bp.route('/available_players/<int:point_id>', methods=['GET'])

@@ -461,7 +461,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Helper function to safely get player name from DOM
     function getPlayerNameFromDOM(playerId) {
-        var playerElement = document.querySelector(".player-card[data-player-id="" + playerId + ""]");
+        var playerElement = document.querySelector(".player-card[data-player-id='" + playerId + "']");
         if (playerElement && playerElement.textContent) {
             return playerElement.textContent.trim();
         }
@@ -804,10 +804,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 "after", action);
                     updatePossessionIndicator();
                     logGameState();
-                    gameState.is_offensive = !gameState.is_offensive;
-                    console.log('Possession changed. Now on', gameState.is_offensive ? 'offense' : 'defense');
-                    updatePossessionIndicator();
-                    logGameState();
                 }
             } else {
                 console.log('Event recorded but no event data returned');
@@ -906,14 +902,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     field_position_x: data.field_position_x,
                     field_position_y: data.field_position_y
                 };
-                    id: data.event.id,
-                    cutting_type: selectedCuttingType, // Use our local data since the server might not return it
-                    outcome: outcome, // Use our local data since the server might not return it
-                    player_id: data.event.player_id,
-                    player_name: data.event.player_name || getPlayerNameFromDOM(selectedPlayer),
-                    field_position_x: data.event.field_position_x,
-                    field_position_y: data.event.field_position_y
-                };
                 
                 addCuttingSkillMarker(cuttingSkill);
                 updateCuttingSkillsState(cuttingSkill);
@@ -970,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": document.querySelector("meta[name="csrf-token"]").getAttribute("content")
+                    "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').getAttribute("content")
                 },
                 body: JSON.stringify(fallbackData)
             })
@@ -1330,15 +1318,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log("Possession changed from", previousState ? "offense" : "defense", 
                                       "to", gameState.is_offensive ? "offense" : "defense", 
                                       "after undoing", lastEvent.event_type);
-                            updatePossessionIndicator();
-                            logGameState();
-                            updatePossessionIndicator();
-                            logGameState();
-                        }
-                        // Legacy support for 'turnover' and 'goal' events
-                        else if (lastEvent.event_type === 'turnover' || lastEvent.event_type === 'goal') {
-                            gameState.is_offensive = !gameState.is_offensive;
-                            console.log('Possession changed back to', gameState.is_offensive ? 'offense' : 'defense');
                             updatePossessionIndicator();
                             logGameState();
                         }
