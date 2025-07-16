@@ -765,13 +765,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             console.log('Event recorded successfully:', data);
+            console.log('Current possession before processing:', gameState.is_offensive ? 'offense' : 'defense');
+            console.log('Action type:', action);
             
             // Add event marker to the field - FIXED to handle potential missing data
-            if (data.event) {
-                addEventMarker(data.event);
+            if (data) {
+                // Use data directly if it's the event, or data.event if that exists
+                const eventData = data.event || data;
+                addEventMarker(eventData);
                 
                 // Update the events table
-                updateEventsState(data.event);
+                updateEventsState(eventData);
                 updateEventsTable();
                 
                 // Show the undo button
@@ -781,19 +785,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 const defensiveToOffensiveEvents = ["block", "forced_turnover", "unforced_turnover"];
                 const offensiveToDefensiveEvents = ["throwaway", "drop"];
                 
+                console.log('Defensive events that change possession:', defensiveToOffensiveEvents);
+                console.log('Is this a defensive event that should change possession?', 
+                           !gameState.is_offensive && defensiveToOffensiveEvents.includes(action));
+                
                 // Store the previous state for logging
                 const previousState = gameState.is_offensive;
                 
                 // Defensive events that should change to offense
                 if (!gameState.is_offensive && defensiveToOffensiveEvents.includes(action)) {
+                    console.log(`Switching possession: ${action} detected while on defense`);
                     gameState.is_offensive = true;
                 } 
                 // Offensive events that should change to defense
                 else if (gameState.is_offensive && offensiveToDefensiveEvents.includes(action)) {
+                    console.log(`Switching possession: ${action} detected while on offense`);
                     gameState.is_offensive = false;
                 }
                 // Legacy support for "turnover" and "goal" events
                 else if (action === "turnover" || action === "goal") {
+                    console.log(`Switching possession: Legacy ${action} event`);
                     gameState.is_offensive = !gameState.is_offensive;
                 }
                 
@@ -804,6 +815,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 "after", action);
                     updatePossessionIndicator();
                     logGameState();
+                } else {
+                    console.log("No possession change after", action);
                 }
             } else {
                 console.log('Event recorded but no event data returned');
