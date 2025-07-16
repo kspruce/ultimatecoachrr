@@ -176,6 +176,12 @@ def delete(game_id):
                 text("DELETE FROM player_point_stats WHERE point_id = :point_id"),
                 {"point_id": point.id}
             )
+            
+            # Delete cutting skills - ADD THIS LINE
+            db.session.execute(
+                text("DELETE FROM cutting_skill WHERE point_id = :point_id"),
+                {"point_id": point.id}
+            )
 
             # Delete events
             Event.query.filter_by(point_id=point.id).delete()
