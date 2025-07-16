@@ -576,28 +576,53 @@ document.addEventListener('DOMContentLoaded', function() {
         // Team Offensive Radar Chart
         const offensiveCtx = document.getElementById('teamOffensiveRadar');
         if (offensiveCtx) {
+            // Define excellent performance values for normalization
+            const offensiveExcellentValues = {
+                'Completion Rate': 100, // 100%
+                'O-Line Conversion': 80, // 80%
+                'Goals Per Point': 1.0,
+                'Assists Per Point': 1.0,
+                'Throws Per Point': 10.0,
+                'Hucks Per Point': 0.5
+            };
+            
+            // Get raw values
+            const rawValues = [
+                {{ team_summary.completion_rate|default(0)|round(1) }},
+                {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.goals_per_point|default(0)|round(2) }},
+                {{ team_summary.assists_per_point|default(0)|round(2) }},
+                {{ team_summary.throws_per_point|default(0)|round(1) }},
+                {{ team_summary.hucks_per_point|default(0)|round(2) }}
+            ];
+            
+            // Get previous period raw values
+            const prevRawValues = [
+                {{ team_summary.prev_completion_rate|default(0)|round(1) }},
+                {{ team_summary.prev_o_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.prev_goals_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_assists_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_throws_per_point|default(0)|round(1) }},
+                {{ team_summary.prev_hucks_per_point|default(0)|round(2) }}
+            ];
+            
+            // Normalize values to 0-100 scale
+            const labels = Object.keys(offensiveExcellentValues);
+            const normalizedValues = rawValues.map((value, index) => 
+                Math.min(100, (value / offensiveExcellentValues[labels[index]]) * 100)
+            );
+            const normalizedPrevValues = prevRawValues.map((value, index) => 
+                Math.min(100, (value / offensiveExcellentValues[labels[index]]) * 100)
+            );
+            
             new Chart(offensiveCtx, {
                 type: 'radar',
                 data: {
-                    labels: [
-                        'Completion Rate', 
-                        'O-Line Conversion', 
-                        'Goals Per Point',
-                        'Assists Per Point',
-                        'Throws Per Point',
-                        'Hucks Per Point'
-                    ],
+                    labels: labels,
                     datasets: [
                         {
                             label: 'Team Stats',
-                            data: [
-                                {{ team_summary.completion_rate|default(0)|round(1) }},
-                                {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
-                                {{ team_summary.goals_per_point|default(0)|round(2) }},
-                                {{ team_summary.assists_per_point|default(0)|round(2) }},
-                                {{ team_summary.throws_per_point|default(0)|round(1) }},
-                                {{ team_summary.hucks_per_point|default(0)|round(2) }}
-                            ],
+                            data: normalizedValues,
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 2,
@@ -606,14 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         {
                             label: 'Previous Period',
-                            data: [
-                                {{ team_summary.prev_completion_rate|default(0)|round(1) }},
-                                {{ team_summary.prev_o_line_conversion_rate|default(0)|round(1) }},
-                                {{ team_summary.prev_goals_per_point|default(0)|round(2) }},
-                                {{ team_summary.prev_assists_per_point|default(0)|round(2) }},
-                                {{ team_summary.prev_throws_per_point|default(0)|round(1) }},
-                                {{ team_summary.prev_hucks_per_point|default(0)|round(2) }}
-                            ],
+                            data: normalizedPrevValues,
                             backgroundColor: 'rgba(153, 102, 255, 0.2)',
                             borderColor: 'rgba(153, 102, 255, 1)',
                             borderWidth: 1,
@@ -639,6 +657,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         legend: {
                             display: true,
                             position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const datasetIndex = context.datasetIndex;
+                                    const rawValue = datasetIndex === 0 ? rawValues[index] : prevRawValues[index];
+                                    const normalizedValue = context.raw.toFixed(1);
+                                    return `${context.dataset.label}: ${rawValue} (${normalizedValue}% of target)`;
+                                }
+                            }
                         }
                     }
                 }
@@ -651,26 +680,50 @@ document.addEventListener('DOMContentLoaded', function() {
         // Team Defensive Radar Chart
         const defensiveCtx = document.getElementById('teamDefensiveRadar');
         if (defensiveCtx) {
+            // Define excellent performance values for normalization
+            const defensiveExcellentValues = {
+                'D-Line Conversion': 50, // 50%
+                'Blocks Per Point': 0.8,
+                'Break Percentage': 40, // 40%
+                'Turnovers Forced': 1.0,
+                'Defensive Efficiency': 80 // 80%
+            };
+            
+            // Get raw values
+            const rawValues = [
+                {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.blocks_per_point|default(0)|round(2) }},
+                {{ team_summary.break_percentage|default(0)|round(1) }},
+                {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }},
+                {{ team_summary.defensive_efficiency|default(0)|round(1) }}
+            ];
+            
+            // Get previous period raw values
+            const prevRawValues = [
+                {{ team_summary.prev_d_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.prev_blocks_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_break_percentage|default(0)|round(1) }},
+                {{ team_summary.prev_turnovers_forced_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_defensive_efficiency|default(0)|round(1) }}
+            ];
+            
+            // Normalize values to 0-100 scale
+            const labels = Object.keys(defensiveExcellentValues);
+            const normalizedValues = rawValues.map((value, index) => 
+                Math.min(100, (value / defensiveExcellentValues[labels[index]]) * 100)
+            );
+            const normalizedPrevValues = prevRawValues.map((value, index) => 
+                Math.min(100, (value / defensiveExcellentValues[labels[index]]) * 100)
+            );
+            
             new Chart(defensiveCtx, {
                 type: 'radar',
                 data: {
-                    labels: [
-                        'D-Line Conversion', 
-                        'Blocks Per Point', 
-                        'Break Percentage',
-                        'Turnovers Forced',
-                        'Defensive Efficiency'
-                    ],
+                    labels: labels,
                     datasets: [
                         {
                             label: 'Team Stats',
-                            data: [
-                                {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
-                                {{ team_summary.blocks_per_point|default(0)|round(2) }},
-                                {{ team_summary.break_percentage|default(0)|round(1) }},
-                                {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }},
-                                {{ team_summary.defensive_efficiency|default(0)|round(1) }}
-                            ],
+                            data: normalizedValues,
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
                             borderColor: 'rgba(255, 99, 132, 1)',
                             borderWidth: 2,
@@ -679,13 +732,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         {
                             label: 'Previous Period',
-                            data: [
-                                {{ team_summary.prev_d_line_conversion_rate|default(0)|round(1) }},
-                                {{ team_summary.prev_blocks_per_point|default(0)|round(2) }},
-                                {{ team_summary.prev_break_percentage|default(0)|round(1) }},
-                                {{ team_summary.prev_turnovers_forced_per_point|default(0)|round(2) }},
-                                {{ team_summary.prev_defensive_efficiency|default(0)|round(1) }}
-                            ],
+                            data: normalizedPrevValues,
                             backgroundColor: 'rgba(153, 102, 255, 0.2)',
                             borderColor: 'rgba(153, 102, 255, 1)',
                             borderWidth: 1,
@@ -711,6 +758,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         legend: {
                             display: true,
                             position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const datasetIndex = context.datasetIndex;
+                                    const rawValue = datasetIndex === 0 ? rawValues[index] : prevRawValues[index];
+                                    const normalizedValue = context.raw.toFixed(1);
+                                    return `${context.dataset.label}: ${rawValue} (${normalizedValue}% of target)`;
+                                }
+                            }
                         }
                     }
                 }
