@@ -563,33 +563,58 @@ def recalculate_throw_distances():
 @login_required
 def available_players(point_id):
     try:
+        print(f"Fetching available players for point {point_id}")
         point = Point.query.get_or_404(point_id)
+        print(f"Found point: {point}")
         game = Game.query.get_or_404(point.game_id)
+        print(f"Found game: {game}")
         
         # Get players already in the point
         current_player_ids = [lineup.player_id for lineup in point.lineups]
+        print(f"Current player IDs in lineup: {current_player_ids}")
         
-        # Get all players in the game roster who aren't already in this point
+        # Get all players from the same team who are active but not in the current point
         from app.models.player import Player
-        from app.models.roster import Roster
         
-        available_players = Player.query.join(Roster).filter(
-            Roster.game_id == game.id,
-            ~Player.id.in_(current_player_ids)
-        ).all()
+        # Get the team name from the game or from existing players in the point
+        team_name = None
+        if hasattr(game, 'team'):
+            team_name = game.team
+        elif point.lineups and point.lineups[0].player:
+            team_name = point.lineups[0].player.team
+            
+        query = Player.query.filter(Player.active == True)
         
-        return jsonify({
+        # Filter by team if we have a team name
+        if team_name:
+            query = query.filter(Player.team == team_name)
+            
+        # Exclude players already in the point
+        if current_player_ids:
+            query = query.filter(~Player.id.in_(current_player_ids))
+            
+        available_players = query.all()
+        
+        print(f"Found {len(available_players)} available players")
+        
+        result = {
             'available_players': [
                 {
                     'id': player.id,
                     'name': player.name,
-                    'jersey_number': player.jersey_number
+                    'jersey_number': player.jersey_number or 'N/A'
                 }
                 for player in available_players
             ]
-        })
+        }
+        print(f"Returning result: {result}")
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        print("Error in available_players:", str(e))
+        print(traceback.format_exc())
+        return jsonify({'error': str(e), 'available_players': []}), 500
+
 
 @bp.route('/substitute_player/<int:point_id>', methods=['POST'])
 @login_required
@@ -642,14 +667,18 @@ def substitute_player(point_id):
             'player_out': {
                 'id': player_out.id,
                 'name': player_out.name,
-                'jersey_number': player_out.jersey_number
+                'jersey_number': player_out.jersey_number or 'N/A'
             },
             'player_in': {
                 'id': player_in.id,
                 'name': player_in.name,
-                'jersey_number': player_in.jersey_number
+                'jersey_number': player_in.jersey_number or 'N/A'
             }
         })
     except Exception as e:
+        import traceback
+        print("Error in substitute_player:", str(e))
+        print(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
