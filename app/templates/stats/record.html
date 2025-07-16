@@ -459,6 +459,14 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Helper function to safely get player name from DOM
+    function getPlayerNameFromDOM(playerId) {
+        var playerElement = document.querySelector(".player-card[data-player-id="" + playerId + ""]");
+        if (playerElement && playerElement.textContent) {
+            return playerElement.textContent.trim();
+        }
+        return "Unknown";
+    }
     // Constants and DOM elements
     const field = document.getElementById('field');
     const playerSelect = document.getElementById('player-select');
@@ -808,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     id: Date.now(), // Use timestamp as temporary ID
                     event_type: action,
                     player_id: selectedPlayer,
-                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                    player_name: getPlayerNameFromDOM(selectedPlayer),
                     field_position_x: selectedPosition.x,
                     field_position_y: selectedPosition.y,
                     is_offensive: gameState.is_offensive
@@ -894,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cutting_type: data.cutting_type,
                     outcome: data.outcome,
                     player_id: data.player_id,
-                    player_name: data.player_name || document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || "Unknown",
+                    player_name: data.player_name || getPlayerNameFromDOM(selectedPlayer),
                     field_position_x: data.field_position_x,
                     field_position_y: data.field_position_y
                 };
@@ -902,7 +910,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cutting_type: selectedCuttingType, // Use our local data since the server might not return it
                     outcome: outcome, // Use our local data since the server might not return it
                     player_id: data.event.player_id,
-                    player_name: data.event.player_name || document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                    player_name: data.event.player_name || getPlayerNameFromDOM(selectedPlayer),
                     field_position_x: data.event.field_position_x,
                     field_position_y: data.event.field_position_y
                 };
@@ -926,7 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cutting_type: selectedCuttingType,
                     outcome: outcome,
                     player_id: selectedPlayer,
-                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                    player_name: getPlayerNameFromDOM(selectedPlayer),
                     field_position_x: selectedPosition.x,
                     field_position_y: selectedPosition.y
                 };
@@ -983,7 +991,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cutting_type: selectedCuttingType,
                     outcome: outcome,
                     player_id: selectedPlayer,
-                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || "Unknown",
+                    player_name: getPlayerNameFromDOM(selectedPlayer),
                     field_position_x: selectedPosition.x,
                     field_position_y: selectedPosition.y
                 };
@@ -1003,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     cutting_type: selectedCuttingType,
                     outcome: outcome,
                     player_id: selectedPlayer,
-                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || "Unknown",
+                    player_name: getPlayerNameFromDOM(selectedPlayer),
                     field_position_x: selectedPosition.x,
                     field_position_y: selectedPosition.y
                 };
