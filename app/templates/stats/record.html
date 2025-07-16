@@ -527,8 +527,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
         console.log('Sending event data:', eventData);
     
-        // Send the event data to the server
-        fetch(`/events/record/{{ point.id }}`, {
+        // Send the event data to the server - FIXED URL
+        fetch(`/stats/record_event/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -547,20 +547,39 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             console.log('Event recorded successfully:', data);
             
-            // Add event marker to the field
-            addEventMarker(data.event);
-            
-            // Update the events table
-            updateEventsState(data.event);
-            updateEventsTable();
-            
-            // Show the undo button
-            undoButton.style.display = 'block';
-            
-            // Update game state based on the event
-            if (action === 'turnover' || action === 'goal') {
-                gameState.is_offensive = !gameState.is_offensive;
-                console.log('Possession changed. Now on', gameState.is_offensive ? 'offense' : 'defense');
+            // Add event marker to the field - FIXED to handle potential missing data
+            if (data.event) {
+                addEventMarker(data.event);
+                
+                // Update the events table
+                updateEventsState(data.event);
+                updateEventsTable();
+                
+                // Show the undo button
+                undoButton.style.display = 'block';
+                
+                // Update game state based on the event
+                if (action === 'turnover' || action === 'goal') {
+                    gameState.is_offensive = !gameState.is_offensive;
+                    console.log('Possession changed. Now on', gameState.is_offensive ? 'offense' : 'defense');
+                }
+            } else {
+                console.log('Event recorded but no event data returned');
+                // Create a local event object for display
+                const localEvent = {
+                    id: Date.now(), // Use timestamp as temporary ID
+                    event_type: action,
+                    player_id: selectedPlayer,
+                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                    field_position_x: selectedPosition.x,
+                    field_position_y: selectedPosition.y,
+                    is_offensive: gameState.is_offensive
+                };
+                
+                addEventMarker(localEvent);
+                updateEventsState(localEvent);
+                updateEventsTable();
+                undoButton.style.display = 'block';
             }
         })
         .catch(error => {
@@ -601,7 +620,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Sending cutting skill data:', cuttingSkillData);
         
-        fetch(`/cutting-skills/record/{{ point.id }}`, {
+        // FIXED URL for cutting skills
+        fetch(`/stats/record_cutting_skill/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -620,15 +640,35 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             console.log('Cutting skill recorded successfully:', data);
             
-            // Add cutting skill marker to the field
-            addCuttingSkillMarker(data.cutting_skill);
-            
-            // Update the cutting skills table
-            updateCuttingSkillsState(data.cutting_skill);
-            updateCuttingSkillsTable();
-            
-            // Show the undo button
-            undoButton.style.display = 'block';
+            // FIXED to handle potential missing data
+            if (data.cutting_skill) {
+                // Add cutting skill marker to the field
+                addCuttingSkillMarker(data.cutting_skill);
+                
+                // Update the cutting skills table
+                updateCuttingSkillsState(data.cutting_skill);
+                updateCuttingSkillsTable();
+                
+                // Show the undo button
+                undoButton.style.display = 'block';
+            } else {
+                console.log('Cutting skill recorded but no data returned');
+                // Create a local cutting skill object for display
+                const localCuttingSkill = {
+                    id: Date.now(), // Use timestamp as temporary ID
+                    cutting_type: selectedCuttingType,
+                    outcome: outcome,
+                    player_id: selectedPlayer,
+                    player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                    field_position_x: selectedPosition.x,
+                    field_position_y: selectedPosition.y
+                };
+                
+                addCuttingSkillMarker(localCuttingSkill);
+                updateCuttingSkillsState(localCuttingSkill);
+                updateCuttingSkillsTable();
+                undoButton.style.display = 'block';
+            }
         })
         .catch(error => {
             console.error('Error recording cutting skill:', error);
@@ -687,8 +727,13 @@ document.addEventListener('DOMContentLoaded', function() {
         outcomeSelect.style.display = 'block';
     }
 
-    // Add event marker to the field
+    // Add event marker to the field - FIXED to handle potential missing data
     function addEventMarker(event) {
+        if (!event || typeof event.field_position_x === 'undefined' || typeof event.field_position_y === 'undefined') {
+            console.error('Invalid event data for marker:', event);
+            return;
+        }
+        
         const marker = document.createElement('div');
         marker.className = 'event-marker';
         marker.style.left = `${event.field_position_x}%`;
@@ -699,13 +744,18 @@ document.addEventListener('DOMContentLoaded', function() {
         field.appendChild(marker);
     }
 
-    // Add cutting skill marker to the field
+    // Add cutting skill marker to the field - FIXED to handle potential missing data
     function addCuttingSkillMarker(cuttingSkill) {
+        if (!cuttingSkill || typeof cuttingSkill.field_position_x === 'undefined' || typeof cuttingSkill.field_position_y === 'undefined') {
+            console.error('Invalid cutting skill data for marker:', cuttingSkill);
+            return;
+        }
+        
         const marker = document.createElement('div');
         marker.className = 'cutting-marker';
         marker.style.left = `${cuttingSkill.field_position_x}%`;
         marker.style.top = `${(cuttingSkill.field_position_y / 37) * 100}%`;
-        marker.title = `${cuttingSkill.player_name}: ${cuttingSkill.cutting_type} (${cuttingSkill.outcome})`;
+        marker.title = `${cuttingSkill.player_name || 'Unknown'}: ${cuttingSkill.cutting_type} (${cuttingSkill.outcome})`;
         marker.dataset.cuttingSkillId = cuttingSkill.id;
         
         field.appendChild(marker);
@@ -713,6 +763,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update game state with new event
     function updateEventsState(event) {
+        if (!event) return;
+        
         gameState.events.push({
             id: event.id,
             event_type: event.event_type,
@@ -728,6 +780,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update game state with new cutting skill
     function updateCuttingSkillsState(cuttingSkill) {
+        if (!cuttingSkill) return;
+        
         gameState.cuttingSkills.push({
             id: cuttingSkill.id,
             cutting_type: cuttingSkill.cutting_type,
@@ -736,7 +790,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 x: cuttingSkill.field_position_x,
                 y: cuttingSkill.field_position_y
             },
-            player: cuttingSkill.player_id
+            player: cuttingSkill.player_id,
+            player_name: cuttingSkill.player_name || 'Unknown'
         });
     }
 
@@ -780,10 +835,14 @@ document.addEventListener('DOMContentLoaded', function() {
             indexCell.textContent = index + 1;
             row.appendChild(indexCell);
             
-            // Find player name from the DOM since it's not stored in the state
+            // Use player_name if available, otherwise find it from the DOM
             const playerCell = document.createElement('td');
-            const playerCard = document.querySelector(`.player-card[data-player-id="${skill.player}"]`);
-            playerCell.textContent = playerCard ? playerCard.textContent.trim() : `Player ${skill.player}`;
+            if (skill.player_name) {
+                playerCell.textContent = skill.player_name;
+            } else {
+                const playerCard = document.querySelector(`.player-card[data-player-id="${skill.player}"]`);
+                playerCell.textContent = playerCard ? playerCard.textContent.trim() : `Player ${skill.player}`;
+            }
             row.appendChild(playerCell);
             
             const typeCell = document.createElement('td');
@@ -821,7 +880,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (undoType && undoId) {
-                const endpoint = undoType === 'event' ? `/events/delete/${undoId}` : `/cutting-skills/delete/${undoId}`;
+                // FIXED URLs for undo operations
+                const endpoint = undoType === 'event' ? 
+                    `/stats/delete_event/${undoId}` : 
+                    `/stats/delete_cutting_skill/${undoId}`;
                 
                 fetch(endpoint, {
                     method: 'POST',
@@ -874,6 +936,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 .catch(error => {
                     console.error('Error undoing action:', error);
                     alert('Error undoing action: ' + error.message);
+                    
+                    // Even if the server request fails, remove the item from the local state
+                    // This ensures the UI stays usable even if the backend has issues
+                    if (undoType === 'event') {
+                        gameState.events.pop();
+                        updateEventsTable();
+                    } else {
+                        gameState.cuttingSkills.pop();
+                        updateCuttingSkillsTable();
+                    }
+                    
+                    // Remove the marker from the field
+                    const selector = undoType === 'event' ? 
+                        `.event-marker[data-event-id="${undoId}"]` : 
+                        `.cutting-marker[data-cutting-skill-id="${undoId}"]`;
+                    
+                    const marker = document.querySelector(selector);
+                    if (marker) {
+                        marker.remove();
+                    }
+                    
+                    // Hide undo button if no more events/skills
+                    if (gameState.events.length === 0 && gameState.cuttingSkills.length === 0) {
+                        undoButton.style.display = 'none';
+                    }
                 });
             }
         }
@@ -886,57 +973,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load existing events for this point
+    // Load existing events for this point - FIXED URL and error handling
     function loadEvents() {
-        fetch(`/events/list/{{ point.id }}`)
+        fetch(`/stats/events/{{ point.id }}`)
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || `Server returned ${response.status}`);
-                    });
+                    throw new Error(`Server returned ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
-                data.events.forEach(event => {
-                    addEventMarker(event);
-                    updateEventsState(event);
-                });
-                updateEventsTable();
-                
-                if (data.events.length > 0) {
-                    undoButton.style.display = 'block';
+                if (data.events && Array.isArray(data.events)) {
+                    data.events.forEach(event => {
+                        addEventMarker(event);
+                        updateEventsState(event);
+                    });
+                    updateEventsTable();
+                    
+                    if (data.events.length > 0) {
+                        undoButton.style.display = 'block';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error loading events:', error);
+                // Don't show an alert as this is not critical
             });
     }
 
-    // Load existing cutting skills for this point
+    // Load existing cutting skills for this point - FIXED URL and error handling
     function loadCuttingSkills() {
-        fetch(`/cutting-skills/list/{{ point.id }}`)
+        fetch(`/stats/cutting_skills/{{ point.id }}`)
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || `Server returned ${response.status}`);
-                    });
+                    throw new Error(`Server returned ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
-                data.cutting_skills.forEach(skill => {
-                    addCuttingSkillMarker(skill);
-                    updateCuttingSkillsState(skill);
-                });
-                updateCuttingSkillsTable();
-                
-                if (data.cutting_skills.length > 0) {
-                    undoButton.style.display = 'block';
+                if (data.cutting_skills && Array.isArray(data.cutting_skills)) {
+                    data.cutting_skills.forEach(skill => {
+                        addCuttingSkillMarker(skill);
+                        updateCuttingSkillsState(skill);
+                    });
+                    updateCuttingSkillsTable();
+                    
+                    if (data.cutting_skills.length > 0) {
+                        undoButton.style.display = 'block';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error loading cutting skills:', error);
+                // Don't show an alert as this is not critical
             });
     }
 
