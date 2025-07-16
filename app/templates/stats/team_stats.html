@@ -17,6 +17,21 @@
         font-size: 0.9rem;
         color: #666;
     }
+    .chart-container {
+        height: 400px;  /* Increase height to accommodate rotated labels */
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    /* Add this to your existing styles */
+    @media (max-width: 768px) {
+        .chart-container {
+            height: 500px;  /* Even more height on mobile */
+        }
+    }
+
+    
+    
 </style>
 {% endblock %}
 
@@ -781,14 +796,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Performance Trends Chart
         const trendsCtx = document.getElementById('performanceTrendsChart');
         if (trendsCtx) {
+            // Get the data from the backend
+            const dates = {{ performance_trends.dates|safe if performance_trends else '[]' }};
+            const labels = {{ performance_trends.labels|safe if performance_trends else '[]' }};
+            const oLineEfficiency = {{ performance_trends.o_line_efficiency|safe if performance_trends else '[]' }};
+            const dLineEfficiency = {{ performance_trends.d_line_efficiency|safe if performance_trends else '[]' }};
+            const breakPercentage = {{ performance_trends.break_percentage|safe if performance_trends else '[]' }};
+            
             new Chart(trendsCtx, {
                 type: 'line',
                 data: {
-                    labels: {{ performance_trends.dates|safe if performance_trends else '[]' }},
+                    labels: labels,  // Use the custom labels instead of dates
                     datasets: [
                         {
                             label: 'O-Line Efficiency',
-                            data: {{ performance_trends.o_line_efficiency|safe if performance_trends else '[]' }},
+                            data: oLineEfficiency,
                             borderColor: 'rgba(75, 192, 192, 1)',
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             tension: 0.1,
@@ -796,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         {
                             label: 'D-Line Efficiency',
-                            data: {{ performance_trends.d_line_efficiency|safe if performance_trends else '[]' }},
+                            data: dLineEfficiency,
                             borderColor: 'rgba(255, 99, 132, 1)',
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
                             tension: 0.1,
@@ -804,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         {
                             label: 'Break Percentage',
-                            data: {{ performance_trends.break_percentage|safe if performance_trends else '[]' }},
+                            data: breakPercentage,
                             borderColor: 'rgba(255, 206, 86, 1)',
                             backgroundColor: 'rgba(255, 206, 86, 0.2)',
                             tension: 0.1,
@@ -814,6 +836,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             position: 'top',
@@ -821,6 +844,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         title: {
                             display: true,
                             text: 'Team Performance Trends'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    // Show both the opposition/tournament and the date
+                                    const index = context[0].dataIndex;
+                                    const label = labels[index];
+                                    const date = dates[index];
+                                    return `${label}\nDate: ${date}`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -835,7 +869,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         x: {
                             title: {
                                 display: true,
-                                text: 'Game Date'
+                                text: 'Games'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     }
@@ -845,6 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             console.warn("performanceTrendsChart element not found");
         }
+
     } catch (e) {
         console.error("Error initializing charts:", e);
     }

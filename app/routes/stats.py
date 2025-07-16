@@ -1094,35 +1094,34 @@ def calculate_performance_trends(games):
     if not games:
         return {
             'dates': [],
+            'labels': [],
             'o_line_efficiency': [],
             'd_line_efficiency': [],
             'break_percentage': []
         }
     
-    # Fix the sorting by converting all dates to datetime objects
-    def get_sort_key(game):
-        if not game.date:
-            return datetime.min
-        # Convert date to datetime if it's a date object
-        if isinstance(game.date, date) and not isinstance(game.date, datetime):
-            return datetime.combine(game.date, datetime.min.time())
-        return game.date
-
-    
-    # Sort games by date
-    sorted_games = sorted(games, key=get_sort_key)
+    # Sort games by date using string representation (safest approach)
+    sorted_games = sorted(games, key=lambda g: str(g.date) if g.date else "")
     
     # Calculate metrics for each game
     dates = []
+    labels = []
     o_line_efficiency = []
     d_line_efficiency = []
     break_percentage = []
     
     for game in sorted_games:
+        # Add date for sorting purposes
         if game.date:
-            dates.append(game.date.strftime('%Y-%m-%d'))
+            dates.append(game.date.strftime('%Y-%m-%d') if hasattr(game.date, 'strftime') else str(game.date))
         else:
             dates.append('Unknown')
+        
+        # Create custom label with opposition and tournament name
+        opposition_name = game.opposition_team if hasattr(game, 'opposition_team') and game.opposition_team else "Unknown"
+        tournament_name = game.tournament.name if hasattr(game, 'tournament') and game.tournament else "Unknown"
+        custom_label = f"{opposition_name} ({tournament_name})"
+        labels.append(custom_label)
         
         # Calculate O-line efficiency - handle both query objects and lists
         try:
@@ -1162,6 +1161,7 @@ def calculate_performance_trends(games):
     
     return {
         'dates': json.dumps(dates),
+        'labels': json.dumps(labels),
         'o_line_efficiency': json.dumps(o_line_efficiency),
         'd_line_efficiency': json.dumps(d_line_efficiency),
         'break_percentage': json.dumps(break_percentage)
