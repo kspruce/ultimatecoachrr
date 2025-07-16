@@ -22,7 +22,6 @@
         margin: 0 auto;
     }
 
-
     .nav-tabs .nav-link {
         color: #495057;
     }
@@ -45,8 +44,8 @@
         margin-bottom: 0.2em;
     }
 
-<!-- Add Radar style -->
-   .radar-container {
+    /* Add Radar style */
+    .radar-container {
         position: relative;
         height: 300px;
         width: 100%;
@@ -59,6 +58,81 @@
     }
     .stat-card:hover {
         transform: translateY(-5px);
+    }
+
+    /* Cutting Skills Styles */
+    .field-container {
+        position: relative;
+        width: 100%;
+        height: 400px;
+        background-color: #4CAF50;
+        border: 2px solid #333;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    
+    .endzone {
+        position: absolute;
+        height: 100%;
+        width: 18%;
+        background-color: #388E3C;
+        z-index: 1;
+    }
+    
+    .endzone-left { left: 0; }
+    .endzone-right { right: 0; }
+    
+    .cutting-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 10px;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    
+    .cutting-quadrant {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background-color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .cutting-quadrant h4 {
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+    
+    .cutting-quadrant .success-rate {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .cutting-quadrant .attempts {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .cutting-stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 0;
+    }
+    
+    .cutting-stat-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .cutting-filter-btn.active {
+        background-color: #007bff;
+        color: white;
     }
 </style>
 {% endblock %}
@@ -124,300 +198,183 @@
         </div>
     </div>
 
-    <!-- PER and Summary Stats -->
-    <div class="row mb-4">
-        <!-- PER Display -->
-        <div class="col-md-4">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        Player Efficiency Rating (PER)
-                        <i class="bi bi-info-circle" 
-                           data-bs-toggle="tooltip" 
-                           title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
-                        </i>
-                    </h5>
-                </div>
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <div id="perDisplay">
-                        <div class="display-1 fw-bold" id="perValue">{{ stats.per|round(1) }}</div>
-                        <div class="text-muted">Player Efficiency Rating</div>
-                    </div>
-                    <div class="small text-muted mt-3">
-                        <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
-                        <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Summary Statistics -->
-        <div class="col-md-8">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Summary Statistics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Games Played</th>
-                                    <td>{{ stats.games_played }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Points Played</th>
-                                    <td>{{ stats.points_played }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Goals</th>
-                                    <td>{{ stats.goals }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Assists</th>
-                                    <td>{{ stats.assists }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Blocks</th>
-                                    <td>{{ stats.blocks }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Completion Rate</th>
-                                    <td>{{ stats.completion_rate|round(1) }}%</td>
-                                </tr>
-                                <tr>
-                                    <th>Catch Rate</th>
-                                    <td>{{ stats.catch_rate|round(1) }}%</td>
-                                </tr>
-                                <tr>
-                                    <th>Throwaways</th>
-                                    <td>{{ stats.throwaways }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Drops</th>
-                                    <td>{{ stats.drops }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Hockey Assists</th>
-                                    <td>{{ stats.hockey_assists }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Break Throws</th>
-                                    <td>{{ stats.break_throws }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+    <!-- Main Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="playerStatsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
+                    data-bs-target="#overview" type="button" role="tab" 
+                    aria-controls="overview" aria-selected="true">Overview</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="offensive-tab" data-bs-toggle="tab" 
+                    data-bs-target="#offensive" type="button" role="tab" 
+                    aria-controls="offensive" aria-selected="false">Offensive</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="defensive-tab" data-bs-toggle="tab" 
+                    data-bs-target="#defensive" type="button" role="tab" 
+                    aria-controls="defensive" aria-selected="false">Defensive</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="throws-tab" data-bs-toggle="tab" 
+                    data-bs-target="#throws" type="button" role="tab" 
+                    aria-controls="throws" aria-selected="false">Throws</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cutting-tab" data-bs-toggle="tab" 
+                    data-bs-target="#cutting" type="button" role="tab" 
+                    aria-controls="cutting" aria-selected="false">Cutting Skills</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab" 
+                    data-bs-target="#history" type="button" role="tab" 
+                    aria-controls="history" aria-selected="false">Game History</button>
+        </li>
+    </ul>
 
-    <!-- Detailed Stats -->
-    <div class="row mb-4">
-         <div class="col-md-6">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Offensive Stats</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Throws</th>
-                                    <td>{{ stats.throws }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Completions</th>
-                                    <td>{{ stats.completions }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Catches</th>
-                                    <td>{{ stats.catches }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Goals</th>
-                                    <td>{{ stats.goals }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Assists</th>
-                                    <td>{{ stats.assists }}</td>
-                                </tr>
-                            </table>
+    <div class="tab-content" id="playerStatsTabContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+            <!-- PER and Summary Stats -->
+            <div class="row mb-4">
+                <!-- PER Display -->
+                <div class="col-md-4">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                Player Efficiency Rating (PER)
+                                <i class="bi bi-info-circle" 
+                                   data-bs-toggle="tooltip" 
+                                   title="PER factors in scoring, assists, turnovers, defense, throw efficiency, and plus/minus relative to team averages">
+                                </i>
+                            </h5>
                         </div>
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Hockey Assists</th>
-                                    <td>{{ stats.hockey_assists }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Break Throws</th>
-                                    <td>{{ stats.break_throws }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Total Distance</th>
-                                    <td>{{ total_throw_distance|round(1) }} m</td>
-                                </tr>
-                                <tr>
-                                    <th>Avg Throw Distance</th>
-                                    <td>{{ avg_throw_distance|round(1) }} m</td>
-                                </tr>
-                                <tr>
-                                    <th>O-Line Points</th>
-                                    <td>{{ stats.o_line_points_played }}</td>
-                                </tr>
-                                <tr>
-                                    <th>O-Line +/-</th>
-                                    <td>{{ stats.o_line_plus_minus }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Defensive Stats</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Blocks</th>
-                                    <td>{{ stats.blocks }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Shutdowns</th>
-                                    <td>{{ stats.shutdowns }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Forced Turnovers</th>
-                                    <td>{{ stats.blocks + stats.stalls }}</td>
-                                </tr>
-                                <tr>
-                                    <th>D-Line Points</th>
-                                    <td>{{ stats.d_line_points_played }}</td>
-                                </tr>
-                                <tr>
-                                    <th>D-Line +/-</th>
-                                    <td>{{ stats.d_line_plus_minus }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <table class="table table-sm">
-                                <tr>
-                                    <th>Throwaways</th>
-                                    <td>{{ stats.throwaways }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Drops</th>
-                                    <td>{{ stats.drops }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Stalls</th>
-                                    <td>{{ stats.stalls }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
- 
-    <!-- Radar Charts -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Offensive Radar</h5>
-                </div>
-                <div class="card-body">
-                    <div class="radar-container">
-                        <canvas id="offensiveRadar"></canvas>
-                    </div>
-                    <div class="radar-legend mt-2">
-                        <small class="text-muted">
-                            <strong>Scaling:</strong> 100% represents excellent performance
-                            <ul class="mb-0 ps-3">
-                                <li>Throws: 10 per point</li>
-                                <li>Assists: 0.5 per point</li>
-                                <li>Hockey Assists: 0.5 per point</li>
-                                <li>Avg Distance: 70m</li>
-                                <li>Catches: 8 per point</li>
-                                <li>Average Distance Thrown: 70 m</li>
-                                <li>Hucks: 0.5 per point</li>
-                            </ul>
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card stat-card h-100">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Defensive Radar</h5>
-                </div>
-                <div class="card-body">
-                    <div class="radar-container">
-                        <canvas id="defensiveRadar"></canvas>
-                    </div>
-                    <div class="radar-legend mt-2">
-                        <small class="text-muted">
-                            <strong>Scaling:</strong> 100% represents excellent performance
-                            <ul class="mb-0 ps-3">
-                                <li>Blocks: 0.5 per point</li>
-                                <li>Shutdowns: 0.3 per point</li>
-                                <li>Stalls: 0.3 per point</li>
-                                <li>Forced Turnover: 0.8 per point</li>
-                                <li>Plus Minus: 1.0 per point</li>
-                            </ul>
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Throw Direction Radar -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Throw Direction Analysis</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="radar-container">
-                                <canvas id="throwDirectionRadar"></canvas>
+                        <div class="card-body text-center d-flex flex-column justify-content-center">
+                            <div id="perDisplay">
+                                <div class="display-1 fw-bold" id="perValue">{{ stats.per|round(1) }}</div>
+                                <div class="text-muted">Player Efficiency Rating</div>
+                            </div>
+                            <div class="small text-muted mt-3">
+                                <div>O-Line: {{ stats.o_line_plus_minus|default(0)|round(2) }}</div>
+                                <div>D-Line: {{ stats.d_line_plus_minus|default(0)|round(2) }}</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="direction-legend mt-2">
-                                <h6>Throw Direction Distribution</h6>
+                    </div>
+                </div>
+                
+                <!-- Summary Statistics -->
+                <div class="col-md-8">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Summary Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Games Played</th>
+                                            <td>{{ stats.games_played }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Points Played</th>
+                                            <td>{{ stats.points_played }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Goals</th>
+                                            <td>{{ stats.goals }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Assists</th>
+                                            <td>{{ stats.assists }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Blocks</th>
+                                            <td>{{ stats.blocks }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Completion Rate</th>
+                                            <td>{{ stats.completion_rate|round(1) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Catch Rate</th>
+                                            <td>{{ stats.catch_rate|round(1) }}%</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Throwaways</th>
+                                            <td>{{ stats.throwaways }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Drops</th>
+                                            <td>{{ stats.drops }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Hockey Assists</th>
+                                            <td>{{ stats.hockey_assists }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Break Throws</th>
+                                            <td>{{ stats.break_throws }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Radar Charts -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Offensive Radar</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="radar-container">
+                                <canvas id="offensiveRadar"></canvas>
+                            </div>
+                            <div class="radar-legend mt-2">
                                 <small class="text-muted">
-                                    <p>This chart shows the distribution of throw directions relative to the field orientation.</p>
+                                    <strong>Scaling:</strong> 100% represents excellent performance
                                     <ul class="mb-0 ps-3">
-                                        <li><strong>FORWARD</strong>: Directly upfield (East)</li>
-                                        <li><strong>RIGHT</strong>: Across field to the right (North)</li>
-                                        <li><strong>BACK</strong>: Directly downfield (West)</li>
-                                        <li><strong>LEFT</strong>: Across field to the left (South)</li>
-                                        <li>The chart is divided into 16 directions for detailed analysis</li>
+                                        <li>Throws: 10 per point</li>
+                                        <li>Assists: 0.5 per point</li>
+                                        <li>Hockey Assists: 0.5 per point</li>
+                                        <li>Avg Distance: 70m</li>
+                                        <li>Catches: 8 per point</li>
+                                        <li>Average Distance Thrown: 70 m</li>
+                                        <li>Hucks: 0.5 per point</li>
+                                    </ul>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">Defensive Radar</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="radar-container">
+                                <canvas id="defensiveRadar"></canvas>
+                            </div>
+                            <div class="radar-legend mt-2">
+                                <small class="text-muted">
+                                    <strong>Scaling:</strong> 100% represents excellent performance
+                                    <ul class="mb-0 ps-3">
+                                        <li>Blocks: 0.5 per point</li>
+                                        <li>Shutdowns: 0.3 per point</li>
+                                        <li>Stalls: 0.3 per point</li>
+                                        <li>Forced Turnover: 0.8 per point</li>
+                                        <li>Plus Minus: 1.0 per point</li>
                                     </ul>
                                 </small>
                             </div>
@@ -426,56 +383,497 @@
                 </div>
             </div>
         </div>
-    </div>
-
-
-<!-- Game History -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5>Game History</h5>
+        
+        <!-- Offensive Tab -->
+        <div class="tab-pane fade" id="offensive" role="tabpanel" aria-labelledby="offensive-tab">
+            <!-- Offensive Stats Content -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Offensive Stats</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Throws</th>
+                                            <td>{{ stats.throws }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Completions</th>
+                                            <td>{{ stats.completions }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Catches</th>
+                                            <td>{{ stats.catches }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Goals</th>
+                                            <td>{{ stats.goals }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Assists</th>
+                                            <td>{{ stats.assists }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Hockey Assists</th>
+                                            <td>{{ stats.hockey_assists }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Break Throws</th>
+                                            <td>{{ stats.break_throws }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Total Distance</th>
+                                            <td>{{ total_throw_distance|round(1) }} m</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Avg Throw Distance</th>
+                                            <td>{{ avg_throw_distance|round(1) }} m</td>
+                                        </tr>
+                                        <tr>
+                                            <th>O-Line Points</th>
+                                            <td>{{ stats.o_line_points_played }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>O-Line +/-</th>
+                                            <td>{{ stats.o_line_plus_minus }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Opponent</th>
-                                <th>Points</th>
-                                <th>Goals</th>
-                                <th>Assists</th>
-                                <th>Blocks</th>
-                                <th>Throwaways</th>
-                                <th>PER</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for game_data in player_games %}
-                            <tr>
-                                <td>{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else 'No date' }}</td>
-                                <td>
-                                    <a href="{{ url_for('game.detail', game_id=game_data.game.id) }}">
-                                        vs {{ game_data.game.opponent }}
-                                    </a>
-                                </td>
-                                <td>{{ game_data.stats.points_played }}</td>
-                                <td>{{ game_data.stats.goals }}</td>
-                                <td>{{ game_data.stats.assists }}</td>
-                                <td>{{ game_data.stats.blocks }}</td>
-                                <td>{{ game_data.stats.throwaways }}</td>
-                                <td>{{ game_data.stats.per|round(2) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        </div>
+        
+        <!-- Defensive Tab -->
+        <div class="tab-pane fade" id="defensive" role="tabpanel" aria-labelledby="defensive-tab">
+            <!-- Defensive Stats Content -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">Defensive Stats</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Blocks</th>
+                                            <td>{{ stats.blocks }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Shutdowns</th>
+                                            <td>{{ stats.shutdowns }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Forced Turnovers</th>
+                                            <td>{{ stats.blocks + stats.stalls }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>D-Line Points</th>
+                                            <td>{{ stats.d_line_points_played }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>D-Line +/-</th>
+                                            <td>{{ stats.d_line_plus_minus }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <th>Throwaways</th>
+                                            <td>{{ stats.throwaways }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Drops</th>
+                                            <td>{{ stats.drops }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Stalls</th>
+                                            <td>{{ stats.stalls }}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Throws Tab -->
+        <div class="tab-pane fade" id="throws" role="tabpanel" aria-labelledby="throws-tab">
+            <!-- Throw Direction Radar -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Throw Direction Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="radar-container">
+                                        <canvas id="throwDirectionRadar"></canvas>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="direction-legend mt-2">
+                                        <h6>Throw Direction Distribution</h6>
+                                        <small class="text-muted">
+                                            <p>This chart shows the distribution of throw directions relative to the field orientation.</p>
+                                            <ul class="mb-0 ps-3">
+                                                <li><strong>FORWARD</strong>: Directly upfield (East)</li>
+                                                <li><strong>RIGHT</strong>: Across field to the right (North)</li>
+                                                <li><strong>BACK</strong>: Directly downfield (West)</li>
+                                                <li><strong>LEFT</strong>: Across field to the left (South)</li>
+                                                <li>The chart is divided into 16 directions for detailed analysis</li>
+                                            </ul>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cutting Skills Tab -->
+        <div class="tab-pane fade" id="cutting" role="tabpanel" aria-labelledby="cutting-tab">
+            <!-- Cutting Skills Content -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Cutting Skills Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="nav nav-tabs" id="cuttingSkillsTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="cutting-summary-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#cutting-summary" type="button" role="tab" 
+                                            aria-controls="cutting-summary" aria-selected="true">Summary</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="cutting-heatmap-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#cutting-heatmap" type="button" role="tab" 
+                                            aria-controls="cutting-heatmap" aria-selected="false">Heatmap</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="cutting-details-tab" data-bs-toggle="tab" 
+                                            data-bs-target="#cutting-details" type="button" role="tab" 
+                                            aria-controls="cutting-details" aria-selected="false">Detailed Stats</button>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content mt-3" id="cuttingSkillsTabContent">
+                                <!-- Summary Tab -->
+                                <div class="tab-pane fade show active" id="cutting-summary" role="tabpanel" aria-labelledby="cutting-summary-tab">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Cutting Success Rate</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <canvas id="cuttingSuccessChart" height="250"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Cutting Type Distribution</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <canvas id="cuttingTypeChart" height="250"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-4">
+                                        <div class="col-md-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Cutting Skills Summary</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-3">
+                                                            <div class="stat-card text-center">
+                                                                <h3 id="totalCuts">{{ cutting_stats.total_cuts|default(0) }}</h3>
+                                                                <div class="text-muted">Total Cuts</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <div class="stat-card text-center">
+                                                                <h3 id="successRate">{{ cutting_stats.success_rate|default(0)|round(1) }}%</h3>
+                                                                <div class="text-muted">Success Rate</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <div class="stat-card text-center">
+                                                                <h3 id="openRate">{{ cutting_stats.open_rate|default(0)|round(1) }}%</h3>
+                                                                <div class="text-muted">Open Rate</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <div class="stat-card text-center">
+                                                                <h3 id="preferredCut">{{ cutting_stats.preferred_cut|default('N/A') }}</h3>
+                                                                <div class="text-muted">Preferred Cut</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-4">
+                                        <div class="col-md-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Cutting Quadrants Analysis</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="cutting-grid">
+                                                        <div class="cutting-quadrant">
+                                                            <h4>Open Deep</h4>
+                                                            <div class="success-rate">{{ cutting_stats.by_type.open_deep.success_rate|default(0)|round(1) }}%</div>
+                                                            <div class="attempts">{{ cutting_stats.by_type.open_deep.total|default(0) }} attempts</div>
+                                                        </div>
+                                                        <div class="cutting-quadrant">
+                                                            <h4>Break Deep</h4>
+                                                            <div class="success-rate">{{ cutting_stats.by_type.break_deep.success_rate|default(0)|round(1) }}%</div>
+                                                            <div class="attempts">{{ cutting_stats.by_type.break_deep.total|default(0) }} attempts</div>
+                                                        </div>
+                                                        <div class="cutting-quadrant">
+                                                            <h4>Open Under</h4>
+                                                            <div class="success-rate">{{ cutting_stats.by_type.open_under.success_rate|default(0)|round(1) }}%</div>
+                                                            <div class="attempts">{{ cutting_stats.by_type.open_under.total|default(0) }} attempts</div>
+                                                        </div>
+                                                        <div class="cutting-quadrant">
+                                                            <h4>Break Under</h4>
+                                                            <div class="success-rate">{{ cutting_stats.by_type.break_under.success_rate|default(0)|round(1) }}%</div>
+                                                            <div class="attempts">{{ cutting_stats.by_type.break_under.total|default(0) }} attempts</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Heatmap Tab -->
+                                <div class="tab-pane fade" id="cutting-heatmap" role="tabpanel" aria-labelledby="cutting-heatmap-tab">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Cutting Position Heatmap</h6>
+                                                    <div class="btn-group btn-group-sm mt-2">
+                                                        <button class="btn btn-outline-primary active" data-cutting-filter="
+                                                        <button class="btn btn-outline-primary active" data-cutting-filter="all">All Cuts</button>
+                                                        <button class="btn btn-outline-success" data-cutting-filter="successful">Successful Cuts</button>
+                                                        <button class="btn btn-outline-danger" data-cutting-filter="unsuccessful">Unsuccessful Cuts</button>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="field-container" id="cutting-field-heatmap" style="height: 400px; position: relative;">
+                                                        <div class="endzone endzone-left"></div>
+                                                        <div class="endzone endzone-right"></div>
+                                                        <div id="cutting-heatmap-container"></div>
+                                                        {% if not cutting_data or cutting_data|length == 0 %}
+                                                        <div class="d-flex justify-content-center align-items-center h-100">
+                                                            <p class="text-center text-muted">No cutting data available</p>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mt-4">
+                                        <div class="col-md-12">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6 class="mb-0">Cutting Type Filters</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-outline-primary active" data-cutting-type="all">All Types</button>
+                                                        <button class="btn btn-outline-primary" data-cutting-type="open_deep">Open Deep</button>
+                                                        <button class="btn btn-outline-primary" data-cutting-type="open_under">Open Under</button>
+                                                        <button class="btn btn-outline-primary" data-cutting-type="break_deep">Break Deep</button>
+                                                        <button class="btn btn-outline-primary" data-cutting-type="break_under">Break Under</button>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <small class="text-muted">
+                                                            <strong>Note:</strong> The heatmap shows where on the field the player makes cuts. 
+                                                            Use the filters above to focus on specific cut types or outcomes.
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Detailed Stats Tab -->
+                                <div class="tab-pane fade" id="cutting-details" role="tabpanel" aria-labelledby="cutting-details-tab">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped" id="cutting-stats-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Cutting Type</th>
+                                                    <th>Total Attempts</th>
+                                                    <th>Open Looked Off</th>
+                                                    <th>Guarded Looked Off</th>
+                                                    <th>Open Thrown To</th>
+                                                    <th>Guarded Thrown To</th>
+                                                    <th>Success Rate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for cut_type in ['open_deep', 'open_under', 'break_deep', 'break_under'] %}
+                                                <tr>
+                                                    <td>{{ cut_type|replace('_', ' ')|title }}</td>
+                                                    <td>{{ cutting_stats.by_type[cut_type].total|default(0) }}</td>
+                                                    <td>{{ cutting_stats.by_type[cut_type].open_looked_off|default(0) }}</td>
+                                                    <td>{{ cutting_stats.by_type[cut_type].guarded_looked_off|default(0) }}</td>
+                                                    <td>{{ cutting_stats.by_type[cut_type].open_thrown_to|default(0) }}</td>
+                                                    <td>{{ cutting_stats.by_type[cut_type].guarded_thrown_to|default(0) }}</td>
+                                                    <td>{{ cutting_stats.by_type[cut_type].success_rate|default(0)|round(1) }}%</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="table-primary">
+                                                    <th>Total</th>
+                                                    <th>{{ cutting_stats.total_cuts|default(0) }}</th>
+                                                    <th>{{ cutting_stats.total_open_looked_off|default(0) }}</th>
+                                                    <th>{{ cutting_stats.total_guarded_looked_off|default(0) }}</th>
+                                                    <th>{{ cutting_stats.total_open_thrown_to|default(0) }}</th>
+                                                    <th>{{ cutting_stats.total_guarded_thrown_to|default(0) }}</th>
+                                                    <th>{{ cutting_stats.success_rate|default(0)|round(1) }}%</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h6 class="mb-0">Cutting Skills Definitions</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <dl class="row">
+                                                    <dt class="col-sm-3">Open Deep</dt>
+                                                    <dd class="col-sm-9">A cut to the open side of the field, moving away from the handler.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Open Under</dt>
+                                                    <dd class="col-sm-9">A cut to the open side of the field, moving toward the handler.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Break Deep</dt>
+                                                    <dd class="col-sm-9">A cut to the break side of the field, moving away from the handler.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Break Under</dt>
+                                                    <dd class="col-sm-9">A cut to the break side of the field, moving toward the handler.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Open Looked Off</dt>
+                                                    <dd class="col-sm-9">Player was open but the throw wasn't made.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Guarded Looked Off</dt>
+                                                    <dd class="col-sm-9">Player was covered by a defender and the throw wasn't made.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Open Thrown To</dt>
+                                                    <dd class="col-sm-9">Player was open and received the throw.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Guarded Thrown To</dt>
+                                                    <dd class="col-sm-9">Player was covered but still received the throw.</dd>
+                                                    
+                                                    <dt class="col-sm-3">Success Rate</dt>
+                                                    <dd class="col-sm-9">Percentage of cuts that resulted in the player receiving the disc (Open Thrown To + Guarded Thrown To) / Total Attempts.</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game History Tab -->
+        <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+            <!-- Game History Content -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Game History</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Opponent</th>
+                                            <th>Points</th>
+                                            <th>Goals</th>
+                                            <th>Assists</th>
+                                            <th>Blocks</th>
+                                            <th>Throwaways</th>
+                                            <th>PER</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for game_data in player_games %}
+                                        <tr>
+                                            <td>{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else 'No date' }}</td>
+                                            <td>
+                                                <a href="{{ url_for('game.detail', game_id=game_data.game.id) }}">
+                                                    vs {{ game_data.game.opponent }}
+                                                </a>
+                                            </td>
+                                            <td>{{ game_data.stats.points_played }}</td>
+                                            <td>{{ game_data.stats.goals }}</td>
+                                            <td>{{ game_data.stats.assists }}</td>
+                                            <td>{{ game_data.stats.blocks }}</td>
+                                            <td>{{ game_data.stats.throwaways }}</td>
+                                            <td>{{ game_data.stats.per|round(2) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
+
 {% block scripts %}
 {{ super() }}
 <script>
