@@ -172,6 +172,33 @@
         display: none;
         z-index: 1060;
     }
+    
+    /* Loading spinner overlay */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        display: none;
+    }
+    
+    .spinner-container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
 
     /* Mode toggle button - Updated to not use fixed positioning */
     #mode-toggle {
@@ -181,6 +208,17 @@
         color: white;
         border: none;
         cursor: pointer;
+    }
+    
+    /* Custom button style for cutting mode */
+    .btn-purple {
+        background-color: #6f42c1;
+        color: white;
+    }
+    
+    .btn-purple:hover {
+        background-color: #5a32a3;
+        color: white;
     }
     
     /* Responsive adjustments */
@@ -209,7 +247,10 @@
             <div class="col text-end">
                 <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
                 <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
-                <button id="finish-point" class="btn btn-success">End Point</button>
+                <button id="finish-point" class="btn btn-success me-2">End Point</button>
+                <button id="help-button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal">
+                    <i class="bi bi-question-circle"></i> Help
+                </button>
             </div>
         </div>
     </div>
@@ -312,6 +353,68 @@
     <button class="undo-button" id="undo-button">
         <i class="bi bi-arrow-counterclockwise"></i> Undo
     </button>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 mb-0" id="loading-message">Processing...</p>
+        </div>
+    </div>
+    
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal fade" id="keyboardShortcutsModal" tabindex="-1" aria-labelledby="keyboardShortcutsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="keyboardShortcutsModalLabel">Keyboard Shortcuts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><kbd>M</kbd></td>
+                                <td>Toggle between Event and Cutting Skill tracking modes</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>U</kbd></td>
+                                <td>Undo last action</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>S</kbd></td>
+                                <td>Open substitution dialog</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>E</kbd></td>
+                                <td>End point</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Esc</kbd></td>
+                                <td>Close any open overlay</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>?</kbd></td>
+                                <td>Show this help dialog</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Substitution Modal -->
     <div class="modal fade" id="substitutionModal" tabindex="-1" aria-labelledby="substitutionModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -361,6 +464,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const outcomeSelect = document.getElementById('outcome-select');
     const undoButton = document.getElementById('undo-button');
     const modeToggle = document.getElementById('mode-toggle');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingMessage = document.getElementById('loading-message');
+    const finishPointButton = document.getElementById('finish-point');
+    const subPlayerButton = document.getElementById('sub-player');
+    
+    // Loading indicator functions
+    function showLoading(message = 'Processing...') {
+        loadingMessage.textContent = message;
+        loadingOverlay.style.display = 'flex';
+    }
+    
+    function hideLoading() {
+        loadingOverlay.style.display = 'none';
+    }
 
     // Add this after your DOMContentLoaded event
     function checkFieldDimensions() {
@@ -403,12 +520,65 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mode toggle handler
     modeToggle.addEventListener('click', function() {
         currentMode = currentMode === 'events' ? 'cutting' : 'events';
+        
+        // Update button text
         modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'}`;
+        
+        // Update button styling based on mode
+        if (currentMode === 'events') {
+            modeToggle.classList.remove('btn-purple');
+            modeToggle.classList.add('btn-info');
+            // Add a subtle animation
+            modeToggle.animate([
+                { transform: 'scale(1.1)' },
+                { transform: 'scale(1)' }
+            ], {
+                duration: 300,
+                easing: 'ease-out'
+            });
+        } else {
+            modeToggle.classList.remove('btn-info');
+            modeToggle.classList.add('btn-purple');
+            // Add a subtle animation
+            modeToggle.animate([
+                { transform: 'scale(1.1)' },
+                { transform: 'scale(1)' }
+            ], {
+                duration: 300,
+                easing: 'ease-out'
+            });
+        }
+        
+        // Show a temporary toast notification
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed top-0 end-0 p-3';
+        toast.style.zIndex = '1070';
+        toast.innerHTML = `
+            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    <strong class="me-auto">Mode Changed</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    Switched to ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'} mode
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Remove the toast after 2 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 2000);
+        
         console.log('Switched to mode:', currentMode);
     });
 
     // End Point button listener
     document.getElementById('finish-point').addEventListener('click', function() {
+        // Show loading indicator
+        showLoading('Finishing point and saving data...');
+        
         fetch(`/stats/finish_point/{{ point.id }}`, {
             method: 'POST',
             headers: {
@@ -430,6 +600,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error finishing point:', error);
             alert('Error finishing point: ' + error.message);
+            // Hide loading indicator only on error
+            // On success, we're redirecting so no need to hide
+            hideLoading();
         });
     });
 
@@ -532,6 +705,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     
         console.log('Sending event data:', eventData);
+        
+        // Show loading indicator
+        showLoading(`Recording ${action}...`);
     
         // Send the event data to the server - CORRECT URL
         fetch(`/stats/record/{{ point.id }}`, {
@@ -591,11 +767,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error recording event:', error);
             alert('Error recording event: ' + error.message);
+        })
+        .finally(() => {
+            // Hide loading indicator
+            hideLoading();
+            
+            // Hide the action select overlay
+            actionSelect.style.display = 'none';
+            outcomeSelect.style.display = 'none';
         });
-    
-        // Hide the action select overlay
-        actionSelect.style.display = 'none';
-        outcomeSelect.style.display = 'none';
     }
 
     // Cutting type handling
@@ -615,27 +795,47 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create cutting skill data - FIXED: Using event_type for cutting skills
+        // Create cutting skill data - FIXED: Using direct fields for cutting skills
         const cuttingSkillData = {
             player_id: selectedPlayer,
-            event_type: "cutting_skill", // This is required by the backend
             cutting_type: selectedCuttingType,
             outcome: outcome,
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
-            field_position_y: parseFloat(selectedPosition.y.toFixed(2)),
-            is_offensive: gameState.is_offensive // Add this field
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2))
         };
         
         console.log('Sending cutting skill data:', cuttingSkillData);
         
-        // CORRECT URL for cutting skills - using the same endpoint as events
-        fetch(`/stats/record/{{ point.id }}`, {
+        // Show loading indicator
+        showLoading(`Recording ${selectedCuttingType} cut (${outcome})...`);
+        
+        // Create a custom endpoint for cutting skills
+        fetch(`/stats/record_cutting_skill/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify(cuttingSkillData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Try the record endpoint as a fallback
+                console.log('Trying fallback endpoint for cutting skills');
+                return fetch(`/stats/record/{{ point.id }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        ...cuttingSkillData,
+                        event_type: 'cutting_skill',
+                        is_offensive: gameState.is_offensive
+                    })
+                });
+            }
+            return response;
         })
         .then(response => {
             if (!response.ok) {
@@ -697,11 +897,31 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error recording cutting skill:', error);
             alert('Error recording cutting skill: ' + error.message);
+            
+            // Even if there's an error, add a local marker to keep the UI responsive
+            const localCuttingSkill = {
+                id: Date.now(), // Use timestamp as temporary ID
+                cutting_type: selectedCuttingType,
+                outcome: outcome,
+                player_id: selectedPlayer,
+                player_name: document.querySelector(`.player-card[data-player-id="${selectedPlayer}"]`)?.textContent.trim() || 'Unknown',
+                field_position_x: selectedPosition.x,
+                field_position_y: selectedPosition.y
+            };
+            
+            addCuttingSkillMarker(localCuttingSkill);
+            updateCuttingSkillsState(localCuttingSkill);
+            updateCuttingSkillsTable();
+            undoButton.style.display = 'block';
+        })
+        .finally(() => {
+            // Hide loading indicator
+            hideLoading();
+            
+            // Hide the outcome select overlay
+            outcomeSelect.style.display = 'none';
+            cuttingSelect.style.display = 'none';
         });
-        
-        // Hide the outcome select overlay
-        outcomeSelect.style.display = 'none';
-        cuttingSelect.style.display = 'none';
     }
 
     // Show selection overlays
@@ -888,24 +1108,37 @@ document.addEventListener('DOMContentLoaded', function() {
             const lastEvent = gameState.events[gameState.events.length - 1];
             const lastCuttingSkill = gameState.cuttingSkills[gameState.cuttingSkills.length - 1];
             
-            let undoType, undoId;
+            let undoType, undoId, undoDescription;
             
             if (lastEvent && lastCuttingSkill) {
                 // Compare timestamps if both exist (not implemented here)
                 // For now, just undo the most recent event
                 undoType = 'event';
                 undoId = lastEvent.id;
+                undoDescription = `${lastEvent.player_name}'s ${lastEvent.event_type}`;
             } else if (lastEvent) {
                 undoType = 'event';
                 undoId = lastEvent.id;
+                undoDescription = `${lastEvent.player_name}'s ${lastEvent.event_type}`;
             } else if (lastCuttingSkill) {
                 undoType = 'cutting_skill';
                 undoId = lastCuttingSkill.id;
+                undoDescription = `${lastCuttingSkill.player_name}'s ${lastCuttingSkill.cutting_type} cut (${lastCuttingSkill.outcome})`;
             }
             
             if (undoType && undoId) {
+                // Show confirmation dialog
+                if (!confirm(`Are you sure you want to undo the last action: ${undoDescription}?`)) {
+                    return; // User canceled
+                }
+                
+                // Show loading indicator
+                showLoading(`Undoing last ${undoType}...`);
+                
                 // CORRECT URL for undo operations
-                const endpoint = `/stats/undo_event/{{ point.id }}`;
+                const endpoint = undoType === 'event' ? 
+                    `/stats/undo_event/{{ point.id }}` : 
+                    `/stats/undo_cutting_skill/{{ point.id }}`;
                 
                 fetch(endpoint, {
                     method: 'POST',
@@ -914,9 +1147,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
                     body: JSON.stringify({
-                        event_id: undoId,
-                        is_cutting_skill: undoType === 'cutting_skill'
+                        event_id: undoType === 'event' ? undoId : undefined,
+                        cutting_skill_id: undoType === 'cutting_skill' ? undoId : undefined
                     })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // Try fallback endpoint
+                        return fetch(`/stats/undo_event/{{ point.id }}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                event_id: undoId,
+                                is_cutting_skill: undoType === 'cutting_skill'
+                            })
+                        });
+                    }
+                    return response;
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -987,6 +1237,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (gameState.events.length === 0 && gameState.cuttingSkills.length === 0) {
                         undoButton.style.display = 'none';
                     }
+                })
+                .finally(() => {
+                    // Hide loading indicator
+                    hideLoading();
                 });
             }
         }
@@ -1018,11 +1272,165 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Call this function when the page loads
     loadCuttingSkills();
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Only process shortcuts if no overlay is visible and not typing in an input
+        const isOverlayVisible = 
+            playerSelect.style.display === 'block' || 
+            actionSelect.style.display === 'block' || 
+            cuttingSelect.style.display === 'block' || 
+            outcomeSelect.style.display === 'block';
+            
+        const isTyping = document.activeElement.tagName === 'INPUT' || 
+                         document.activeElement.tagName === 'TEXTAREA' || 
+                         document.activeElement.tagName === 'SELECT';
+                         
+        if (isOverlayVisible || isTyping) {
+            return;
+        }
+        
+        // Keyboard shortcuts
+        switch(e.key) {
+            case 'u': // Undo (u key)
+                if (undoButton.style.display === 'block') {
+                    undoButton.click();
+                }
+                break;
+                
+            case 'm': // Toggle mode (m key)
+                modeToggle.click();
+                break;
+                
+            case 's': // Substitution (s key)
+                subPlayerButton.click();
+                break;
+                
+            case 'e': // End point (e key)
+                if (confirm('Are you sure you want to end this point?')) {
+                    finishPointButton.click();
+                }
+                break;
+                
+            case '?': // Show keyboard shortcuts help
+                const shortcutsModal = new bootstrap.Modal(document.getElementById('keyboardShortcutsModal'));
+                shortcutsModal.show();
+                break;
+                
+            case 'Escape': // Close any visible overlay
+                if (playerSelect.style.display === 'block') playerSelect.style.display = 'none';
+                if (actionSelect.style.display === 'block') actionSelect.style.display = 'none';
+                if (cuttingSelect.style.display === 'block') cuttingSelect.style.display = 'none';
+                if (outcomeSelect.style.display === 'block') outcomeSelect.style.display = 'none';
+                break;
+        }
+    });
+    
+    // Add keyboard shortcut info to buttons
+    finishPointButton.setAttribute('title', 'End Point (E)');
+    subPlayerButton.setAttribute('title', 'Substitution (S)');
+    modeToggle.setAttribute('title', 'Toggle Mode (M)');
+    undoButton.setAttribute('title', 'Undo (U)');
 });
+
 // Substitution handling
-document.getElementById('sub-player').addEventListener('click', function() {
-    // Fetch available players for substitution
-    fetch(`/stats/available_players/{{ point.id }}`)
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingMessage = document.getElementById('loading-message');
+    
+    // Loading indicator functions
+    function showLoading(message = 'Processing...') {
+        loadingMessage.textContent = message;
+        loadingOverlay.style.display = 'flex';
+    }
+    
+    function hideLoading() {
+        loadingOverlay.style.display = 'none';
+    }
+    
+    document.getElementById('sub-player').addEventListener('click', function() {
+        // Show loading indicator
+        showLoading('Loading available players...');
+        
+        // Fetch available players for substitution
+        fetch(`/stats/available_players/{{ point.id }}`)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `Server returned ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.available_players || !Array.isArray(data.available_players)) {
+                    console.error('Response missing available_players array:', data);
+                    throw new Error('Invalid server response format');
+                }
+                
+                const playerInSelect = document.getElementById('player-in');
+                playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
+                
+                if (data.available_players.length === 0) {
+                    const option = document.createElement('option');
+                    option.disabled = true;
+                    option.textContent = 'No available players found';
+                    playerInSelect.appendChild(option);
+                } else {
+                    data.available_players.forEach(player => {
+                        const option = document.createElement('option');
+                        option.value = player.id;
+                        option.textContent = `#${player.jersey_number} - ${player.name}`;
+                        playerInSelect.appendChild(option);
+                    });
+                }
+                
+                // Show the modal
+                const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
+                subModal.show();
+            })
+            .catch(error => {
+                console.error('Error fetching available players:', error);
+                alert('Error loading available players: ' + error.message);
+            })
+            .finally(() => {
+                // Hide loading indicator
+                hideLoading();
+            });
+    });
+
+    // Add event listener for confirm substitution button
+    document.getElementById('confirm-substitution').addEventListener('click', function() {
+        const playerOutSelect = document.getElementById('player-out');
+        const playerInSelect = document.getElementById('player-in');
+        
+        const playerOutId = playerOutSelect.value;
+        const playerInId = playerInSelect.value;
+        
+        if (!playerOutId || !playerInId) {
+            alert('Please select both a player to sub out and a player to sub in');
+            return;
+        }
+        
+        // Get player names for the loading message
+        const playerOutName = playerOutSelect.options[playerOutSelect.selectedIndex].text;
+        const playerInName = playerInSelect.options[playerInSelect.selectedIndex].text;
+        
+        // Show loading indicator
+        showLoading(`Substituting ${playerOutName} with ${playerInName}...`);
+        
+        // Send substitution request to the server
+        fetch(`/stats/substitute_player/{{ point.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                player_out_id: playerOutId,
+                player_in_id: playerInId
+            })
+        })
         .then(response => {
             if (!response.ok) {
                 return response.json().then(data => {
@@ -1032,90 +1440,28 @@ document.getElementById('sub-player').addEventListener('click', function() {
             return response.json();
         })
         .then(data => {
-            if (!data.available_players || !Array.isArray(data.available_players)) {
-                console.error('Response missing available_players array:', data);
-                throw new Error('Invalid server response format');
-            }
+            console.log('Substitution successful:', data);
             
-            const playerInSelect = document.getElementById('player-in');
-            playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
+            // Close the modal
+            const subModal = bootstrap.Modal.getInstance(document.getElementById('substitutionModal'));
+            subModal.hide();
             
-            if (data.available_players.length === 0) {
-                const option = document.createElement('option');
-                option.disabled = true;
-                option.textContent = 'No available players found';
-                playerInSelect.appendChild(option);
-            } else {
-                data.available_players.forEach(player => {
-                    const option = document.createElement('option');
-                    option.value = player.id;
-                    option.textContent = `#${player.jersey_number} - ${player.name}`;
-                    playerInSelect.appendChild(option);
-                });
-            }
+            // Update the UI to reflect the substitution
+            alert(`Substitution successful: ${data.player_out.name} (#${data.player_out.jersey_number}) → ${data.player_in.name} (#${data.player_in.jersey_number})`);
             
-            // Show the modal
-            const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
-            subModal.show();
+            // Refresh the page to update the lineup display
+            location.reload();
         })
         .catch(error => {
-            console.error('Error fetching available players:', error);
-            alert('Error loading available players: ' + error.message);
-        });
-});
-
-// Add event listener for confirm substitution button
-document.getElementById('confirm-substitution').addEventListener('click', function() {
-    const playerOutSelect = document.getElementById('player-out');
-    const playerInSelect = document.getElementById('player-in');
-    
-    const playerOutId = playerOutSelect.value;
-    const playerInId = playerInSelect.value;
-    
-    if (!playerOutId || !playerInId) {
-        alert('Please select both a player to sub out and a player to sub in');
-        return;
-    }
-    
-    // Send substitution request to the server
-    fetch(`/stats/substitute_player/{{ point.id }}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            player_out_id: playerOutId,
-            player_in_id: playerInId
+            console.error('Error performing substitution:', error);
+            alert('Error performing substitution: ' + error.message);
         })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || `Server returned ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Substitution successful:', data);
-        
-        // Close the modal
-        const subModal = bootstrap.Modal.getInstance(document.getElementById('substitutionModal'));
-        subModal.hide();
-        
-        // Update the UI to reflect the substitution
-        alert(`Substitution successful: ${data.player_out.name} (#${data.player_out.jersey_number}) → ${data.player_in.name} (#${data.player_in.jersey_number})`);
-        
-        // Refresh the page to update the lineup display
-        location.reload();
-    })
-    .catch(error => {
-        console.error('Error performing substitution:', error);
-        alert('Error performing substitution: ' + error.message);
+        .finally(() => {
+            // Hide loading indicator
+            hideLoading();
+        });
     });
 });
-
 </script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
