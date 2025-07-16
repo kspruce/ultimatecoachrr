@@ -49,146 +49,115 @@
         top: 0;
         height: 100%;
         width: 18%;
-        background-color: #388E3C;
+        background-color: rgba(255, 255, 255, 0.2);
     }
     
     .endzone-left {
         left: 0;
-        border-right: 2px solid white;
     }
     
     .endzone-right {
         right: 0;
-        border-right: none;
-        border-left: 2px solid white;
     }
     
     .center-line {
         position: absolute;
-        left: 50%;
         top: 0;
+        left: 50%;
         height: 100%;
         width: 2px;
         background-color: white;
-        transform: translateX(-50%); /* Center the line */
     }
     
+    /* Event markers */
     .event-marker {
         position: absolute;
-        width: 12px;
-        height: 12px;
+        width: 15px;
+        height: 15px;
         border-radius: 50%;
+        background-color: red;
         transform: translate(-50%, -50%);
-        pointer-events: none;
-        border: 2px solid white;
         z-index: 10;
     }
-
-    /* Cutting skill marker */
+    
     .cutting-marker {
         position: absolute;
-        width: 12px;
-        height: 12px;
+        width: 15px;
+        height: 15px;
         border-radius: 50%;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        border: 2px solid white;
         background-color: purple; /* Different color for cutting skills */
+        transform: translate(-50%, -50%);
         z-index: 10;
     }
-
-    /* Brick marks */
-    .brick-mark {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        background-color: white;
-    }
-
-    .brick-mark::before {
-        content: '';
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        border: 2px solid white;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-    }
-
-    .brick-mark-left {
-        left: 20%;
-        top: 50%;
-    }
-
-    .brick-mark-right {
-        right: 20%;
-        top: 50%;
-    }
-
-    /* Selection panels */
+    
+    /* Selection overlays */
     .player-select, .action-select, .cutting-select, .outcome-select {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: white;
-        padding: 15px;
-        display: none;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border: 2px solid #333;
+        border-radius: 10px;
+        padding: 20px;
         z-index: 1050;
-        max-height: 40vh;
+        display: none;
+        max-width: 90%;
+        max-height: 80vh;
         overflow-y: auto;
     }
-
-    /* Grid layouts */
-    .player-grid, .action-grid {
+    
+    /* Grid layouts for buttons */
+    .player-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
-        margin-bottom: 20px;
+        margin-top: 10px;
     }
-
+    
     .action-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
     }
-
-    /* Cutting grid - 2x2 layout */
+    
     .cutting-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
-        margin-bottom: 20px;
-        max-width: 400px;
-        margin-left: auto;
-        margin-right: auto;
+        margin-top: 10px;
     }
-
-    /* Outcome grid */
+    
     .outcome-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
-        margin-bottom: 20px;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
+        margin-top: 10px;
     }
-
-    /* Cards and buttons */
+    
+    /* Button styles */
     .player-card, .action-button, .cutting-button, .outcome-button {
         padding: 10px;
-        text-align: center;
         border: 1px solid #ddd;
         border-radius: 5px;
-        cursor: pointer;
-        background: white;
-    }
-
-    .player-card:hover, .action-button:hover, .cutting-button:hover, .outcome-button:hover {
         background-color: #f8f9fa;
+        cursor: pointer;
+        text-align: center;
+        transition: background-color 0.2s;
     }
-
+    
+    .player-card:hover, .action-button:hover, .cutting-button:hover, .outcome-button:hover {
+        background-color: #e9ecef;
+    }
+    
+    /* Tables container */
+    .tables-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
     /* Undo button */
     .undo-button {
         position: fixed;
@@ -204,58 +173,48 @@
         z-index: 1060;
     }
 
-    /* Mode toggle button */
-    .mode-toggle {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        padding: 10px 20px;
-        border-radius: 5px;
-        background: #007bff;
+    /* Mode toggle button - Updated to not use fixed positioning */
+    #mode-toggle {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        background: #0dcaf0;
         color: white;
         border: none;
         cursor: pointer;
-        z-index: 1060;
     }
-
-    /* Tables container */
-    .tables-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .tables-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
     }
-
-    .table-section {
-        flex: 1;
-        min-width: 300px;
-    }
-
-    .marker-catch { background-color: blue; }
-    .marker-goal { background-color: green; }
-    .marker-throwaway { background-color: red; }
-    .marker-block { background-color: orange; }
 </style>
 
 <div class="record-container">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-        <div class="record-header">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h4 class="mb-0">Point {{ point.point_number }}</h4>
-                    <small>{{ point.our_line_type }} - {{ point.starting_position }}</small>
-                </div>
-                <div class="col text-center">
-                    <h3 class="mb-0">{{ point.our_score_before }} - {{ point.their_score_before }}</h3>
-                </div>
-                <div class="col text-end">
-                    <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
-                    <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
-                    <button id="finish-point" class="btn btn-success">End Point</button>
-                </div>
+    <div class="record-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h4>Recording Point #{{ point.point_number }}</h4>
+                <p class="mb-0">
+                    {{ point.our_score_before }}-{{ point.their_score_before }} | 
+                    {{ point.our_line_type }} | 
+                    Starting on {{ point.starting_position }}
+                </p>
+            </div>
+            <div class="col text-end">
+                <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
+                <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
+                <button id="finish-point" class="btn btn-success">End Point</button>
             </div>
         </div>
     </div>
 
+    <!-- Mode toggle button removed from here and moved next to substitution button above -->
 
     <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
@@ -298,7 +257,6 @@
                                 <th>Player</th>
                                 <th>Cut Type</th>
                                 <th>Outcome</th>
-                                <th>Position</th>
                             </tr>
                         </thead>
                         <tbody id="cutting-skills-table-body">
@@ -310,46 +268,31 @@
         </div>
     </div>
 
+    <!-- Player selection overlay -->
     <div class="player-select" id="player-select">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Select Player</h5>
-            <button type="button" class="btn-close" onclick="closePlayerSelect()"></button>
-        </div>
+        <h5>Select Player</h5>
         <div class="player-grid">
-            <!-- Special options -->
-            <div class="player-card special-player" data-player-id="unknown" style="background-color: #f0f0f0;">
-                <div class="player-number">?</div>
-                <div class="player-name">Unknown</div>
-            </div>
-            <div class="player-card special-player" data-player-id="opponent" style="background-color: #ffeeee;">
-                <div class="player-number">X</div>
-                <div class="player-name">Opponent</div>
-            </div>
-            
-            <!-- Existing players -->
             {% for lineup in point.lineups %}
-            <div class="player-card" data-player-id="{{ lineup.player.id }}">
-                <div class="player-number">#{{ lineup.player.jersey_number }}</div>
-                <div class="player-name">{{ lineup.player.name }}</div>
-            </div>
+            <button class="player-card" data-player-id="{{ lineup.player.id }}">
+                #{{ lineup.player.jersey_number }} - {{ lineup.player.name }}
+            </button>
             {% endfor %}
+            <button class="player-card" data-player-id="unknown">Unknown</button>
+            <button class="player-card" data-player-id="opponent">Opponent</button>
         </div>
     </div>
 
+    <!-- Action selection overlay -->
     <div class="action-select" id="action-select">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Select Action</h5>
-            <button type="button" class="btn-close" onclick="closeActionSelect()"></button>
+        <h5>Select Action</h5>
+        <div class="action-grid" id="action-grid">
+            <!-- Actions will be added here dynamically -->
         </div>
-        <div class="action-grid" id="action-grid"></div>
     </div>
 
-    <!-- Cutting Type Selection Panel -->
+    <!-- Cutting selection overlay -->
     <div class="cutting-select" id="cutting-select">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Select Cut Type</h5>
-            <button type="button" class="btn-close" onclick="closeCuttingSelect()"></button>
-        </div>
+        <h5>Select Cutting Type</h5>
         <div class="cutting-grid">
             <button class="cutting-button" data-cutting-type="open_deep">Open Deep</button>
             <button class="cutting-button" data-cutting-type="break_deep">Break Deep</button>
@@ -358,17 +301,11 @@
         </div>
     </div>
 
-    <!-- Outcome Selection Panel -->
+    <!-- Outcome selection overlay -->
     <div class="outcome-select" id="outcome-select">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Select Outcome</h5>
-            <button type="button" class="btn-close" onclick="closeOutcomeSelect()"></button>
-        </div>
-        <div class="outcome-grid">
-            <button class="outcome-button" data-outcome="open_looked_off">Open (Looked Off)</button>
-            <button class="outcome-button" data-outcome="guarded_looked_off">Guarded (Looked Off)</button>
-            <button class="outcome-button" data-outcome="open_thrown_to">Open (Thrown To)</button>
-            <button class="outcome-button" data-outcome="guarded_thrown_to">Guarded (Thrown To)</button>
+        <h5>Select Outcome</h5>
+        <div class="outcome-grid" id="outcome-grid">
+            <!-- Outcomes will be added here dynamically -->
         </div>
     </div>
 
@@ -434,19 +371,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // The ratio should be close to 37%
         if (Math.abs((height/width*100) - 37) > 1) {
-            console.warn('Field aspect ratio is not correct!');
+            console.warn(`Field ratio is off: ${(height/width*100).toFixed(2)}% (should be 37%)`);
         }
     }
     
-    // Call this function after the page loads
-    window.addEventListener('load', checkFieldDimensions);
+    // Call this function when the page loads and when the window is resized
+    checkFieldDimensions();
     window.addEventListener('resize', checkFieldDimensions);
 
-    // Define event types
+    // Define event types - UPDATED with correct event types
     const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop'];
     const DEFENSIVE_EVENTS = ['shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'];
+    
+    // Define cutting skill outcomes - UPDATED with correct outcomes
+    const CUTTING_OUTCOMES = ['open_looked_off', 'guarded_looked_off', 'open_thrown_to', 'guarded_thrown_to'];
 
-    // State management
+    // State variables
     let selectedPosition = null;
     let selectedPlayer = null;
     let selectedCuttingType = null;
@@ -465,14 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentMode = currentMode === 'events' ? 'cutting' : 'events';
         modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'}`;
         console.log('Switched to mode:', currentMode);
-        
-        // Close any open panels
-        playerSelect.style.display = 'none';
-        actionSelect.style.display = 'none';
-        cuttingSelect.style.display = 'none';
-        outcomeSelect.style.display = 'none';
     });
-
 
     // End Point button listener
     document.getElementById('finish-point').addEventListener('click', function() {
@@ -483,15 +416,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.redirect) {
-                window.location.href = data.redirect;
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `Server returned ${response.status}`);
+                });
             }
+            return response.json();
+        })
+        .then(data => {
+            window.location.href = data.redirect_url;
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error finishing point');
+            console.error('Error finishing point:', error);
+            alert('Error finishing point: ' + error.message);
         });
     });
 
@@ -517,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showPlayerSelect();
     });
 
-    // Player selection
+    // Player selection - UPDATED to check currentMode
     document.querySelectorAll('.player-card').forEach(card => {
         card.addEventListener('click', function() {
             selectedPlayer = this.dataset.playerId;
@@ -537,7 +475,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             playerSelect.style.display = 'none';
-            showActionSelect();
+            
+            // Check the current mode and show appropriate options
+            if (currentMode === 'cutting') {
+                showCuttingSelect();
+            } else {
+                showActionSelect();
+            }
         });
     });
 
@@ -569,77 +513,65 @@ document.addEventListener('DOMContentLoaded', function() {
         const eventData = {
             event_type: action,
             field_position_x: parseFloat(selectedPosition.x.toFixed(2)), // Round to 2 decimal places
-            field_position_y: parseFloat(selectedPosition.y.toFixed(2)), // Round to 2 decimal places
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2)),
             is_offensive: gameState.is_offensive
         };
-        
-        // Handle special player types
-        if (selectedPlayer === 'unknown') {
-            // Use the first player in the lineup as a placeholder
-            const firstPlayerCard = document.querySelector('.player-card:not(.special-player)');
-            const placeholderId = firstPlayerCard ? firstPlayerCard.dataset.playerId : 1;
-            eventData.player_id = parseInt(placeholderId);
-            eventData.is_unknown_player = true;
-        } else if (selectedPlayer === 'opponent') {
-            // Use the first player in the lineup as a placeholder
-            const firstPlayerCard = document.querySelector('.player-card:not(.special-player)');
-            const placeholderId = firstPlayerCard ? firstPlayerCard.dataset.playerId : 1;
-            eventData.player_id = parseInt(placeholderId);
-            eventData.is_opponent = true;
+    
+        // Add player_id only if it's a real player (not unknown/opponent)
+        if (selectedPlayer !== 'unknown' && selectedPlayer !== 'opponent') {
+            eventData.player_id = selectedPlayer;
         } else {
-            eventData.player_id = parseInt(selectedPlayer);
+            // For special player types, add a flag
+            eventData.special_player = selectedPlayer;
         }
     
-        // Add logging to debug position data
-        console.log('Sending position data:', {
-            x: eventData.field_position_x,
-            y: eventData.field_position_y
-        });
-        
         console.log('Sending event data:', eventData);
     
-        fetch(`/stats/record/{{ point.id }}`, {
+        // Send the event data to the server
+        fetch(`/events/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
                 'X-CSRFToken': csrfToken
             },
             body: JSON.stringify(eventData)
         })
         .then(response => {
-            console.log('Response status:', response.status);
-            return response.text().then(text => {
-                try {
-                    if (!response.ok) {
-                        throw new Error(text);
-                    }
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Response text:', text);
-                    throw new Error('Invalid JSON response from server');
-                }
-            });
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `Server returned ${response.status}`);
+                });
+            }
+            return response.json();
         })
         .then(data => {
-            console.log('Server response:', data);
-            addEventMarker(data);
-            updateGameState(action);
-            updateEventsTable(); // Add this line to update the events table
-            actionSelect.style.display = 'none';
+            console.log('Event recorded successfully:', data);
+            
+            // Add event marker to the field
+            addEventMarker(data.event);
+            
+            // Update the events table
+            updateEventsState(data.event);
+            updateEventsTable();
+            
+            // Show the undo button
             undoButton.style.display = 'block';
-        
-            // Automatically finish point for point-ending events
-            if (['goal', 'callahan', 'scored_on'].includes(action)) {
-                document.getElementById('finish-point').click();
+            
+            // Update game state based on the event
+            if (action === 'turnover' || action === 'goal') {
+                gameState.is_offensive = !gameState.is_offensive;
+                console.log('Possession changed. Now on', gameState.is_offensive ? 'offense' : 'defense');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error recording event:', error);
             alert('Error recording event: ' + error.message);
         });
+    
+        // Hide the action select overlay
+        actionSelect.style.display = 'none';
+        outcomeSelect.style.display = 'none';
     }
-
 
     // Cutting type handling
     function handleCuttingType(cuttingType) {
@@ -649,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showOutcomeSelect();
     }
 
-    // Outcome handling for cutting skills
+    // Outcome handling for cutting skills - UPDATED with correct outcomes
     function handleOutcome(outcome) {
         // Validate position data before sending
         if (!selectedPosition || typeof selectedPosition.x !== 'number' || typeof selectedPosition.y !== 'number') {
@@ -657,70 +589,58 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Invalid position data. Please try again.');
             return;
         }
-    
-        // Add error handling for CSRF token
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (!csrfMeta) {
-            console.error('CSRF token meta tag not found');
-            alert('Error: CSRF token not found. Please refresh the page.');
-            return;
-        }
         
-        const csrfToken = csrfMeta.getAttribute('content');
-        if (!csrfToken) {
-            console.error('CSRF token is empty');
-            alert('Error: CSRF token is empty. Please refresh the page.');
-            return;
-        }
-    
         // Create cutting skill data
         const cuttingSkillData = {
-            player_id: parseInt(selectedPlayer),
+            player_id: selectedPlayer,
             cutting_type: selectedCuttingType,
             outcome: outcome,
-            field_position_x: parseFloat(selectedPosition.x.toFixed(2)), // Round to 2 decimal places
-            field_position_y: parseFloat(selectedPosition.y.toFixed(2)) // Round to 2 decimal places
+            field_position_x: parseFloat(selectedPosition.x.toFixed(2)),
+            field_position_y: parseFloat(selectedPosition.y.toFixed(2))
         };
-    
+        
         console.log('Sending cutting skill data:', cuttingSkillData);
-    
+        
         fetch(`/cutting-skills/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRFToken': csrfToken
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             },
             body: JSON.stringify(cuttingSkillData)
         })
         .then(response => {
-            console.log('Response status:', response.status);
-            return response.text().then(text => {
-                try {
-                    if (!response.ok) {
-                        throw new Error(text);
-                    }
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Response text:', text);
-                    throw new Error('Invalid JSON response from server');
-                }
-            });
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `Server returned ${response.status}`);
+                });
+            }
+            return response.json();
         })
         .then(data => {
-            console.log('Server response:', data);
-            addCuttingSkillMarker(data);
-            updateCuttingSkillsState(data);
+            console.log('Cutting skill recorded successfully:', data);
+            
+            // Add cutting skill marker to the field
+            addCuttingSkillMarker(data.cutting_skill);
+            
+            // Update the cutting skills table
+            updateCuttingSkillsState(data.cutting_skill);
             updateCuttingSkillsTable();
-            outcomeSelect.style.display = 'none';
+            
+            // Show the undo button
+            undoButton.style.display = 'block';
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Error recording cutting skill:', error);
             alert('Error recording cutting skill: ' + error.message);
         });
+        
+        // Hide the outcome select overlay
+        outcomeSelect.style.display = 'none';
+        cuttingSelect.style.display = 'none';
     }
 
-    // UI Functions
+    // Show selection overlays
     function showPlayerSelect() {
         playerSelect.style.display = 'block';
         actionSelect.style.display = 'none';
@@ -752,36 +672,61 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showOutcomeSelect() {
+        const outcomeGrid = document.getElementById('outcome-grid');
+        outcomeGrid.innerHTML = '';
+
+        // Use the correct cutting outcomes
+        CUTTING_OUTCOMES.forEach(outcome => {
+            const btn = document.createElement('button');
+            btn.className = 'outcome-button';
+            btn.textContent = outcome.replace('_', ' ').toUpperCase();
+            btn.onclick = () => handleOutcome(outcome);
+            outcomeGrid.appendChild(btn);
+        });
+
         outcomeSelect.style.display = 'block';
     }
 
+    // Add event marker to the field
     function addEventMarker(event) {
         const marker = document.createElement('div');
-        marker.className = `event-marker marker-${event.event_type}`;
+        marker.className = 'event-marker';
         marker.style.left = `${event.field_position_x}%`;
         marker.style.top = `${(event.field_position_y / 37) * 100}%`;
+        marker.title = `${event.player_name || 'Unknown'}: ${event.event_type}`;
+        marker.dataset.eventId = event.id;
+        
         field.appendChild(marker);
     }
 
+    // Add cutting skill marker to the field
     function addCuttingSkillMarker(cuttingSkill) {
         const marker = document.createElement('div');
         marker.className = 'cutting-marker';
         marker.style.left = `${cuttingSkill.field_position_x}%`;
         marker.style.top = `${(cuttingSkill.field_position_y / 37) * 100}%`;
+        marker.title = `${cuttingSkill.player_name}: ${cuttingSkill.cutting_type} (${cuttingSkill.outcome})`;
+        marker.dataset.cuttingSkillId = cuttingSkill.id;
+        
         field.appendChild(marker);
     }
 
-    function updateGameState(action) {
-        if (['throwaway', 'drop', 'block', 'forced_turnover', 'unforced_turnover'].includes(action)) {
-            gameState.is_offensive = !gameState.is_offensive;
-        }
+    // Update game state with new event
+    function updateEventsState(event) {
         gameState.events.push({
-            action: action,
-            position: selectedPosition,
-            player: selectedPlayer
+            id: event.id,
+            event_type: event.event_type,
+            player: event.player_id,
+            player_name: event.player_name || 'Unknown',
+            position: {
+                x: event.field_position_x,
+                y: event.field_position_y
+            },
+            is_offensive: event.is_offensive
         });
     }
 
+    // Update game state with new cutting skill
     function updateCuttingSkillsState(cuttingSkill) {
         gameState.cuttingSkills.push({
             id: cuttingSkill.id,
@@ -795,58 +740,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Close panel functions
-    window.closePlayerSelect = function() {
-        playerSelect.style.display = 'none';
-    };
-
-    window.closeActionSelect = function() {
-        actionSelect.style.display = 'none';
-    };
-
-    window.closeCuttingSelect = function() {
-        cuttingSelect.style.display = 'none';
-    };
-
-    window.closeOutcomeSelect = function() {
-        outcomeSelect.style.display = 'none';
-    };
-    
-    // Add this function after the existing functions
+    // Function to update events table
     function updateEventsTable() {
         const tableBody = document.getElementById('events-table-body');
-        if (!tableBody) return; // Safety check
-        
         tableBody.innerHTML = '';
         
         gameState.events.forEach((event, index) => {
             const row = document.createElement('tr');
             
-            // Event number
-            const numCell = document.createElement('td');
-            numCell.textContent = index + 1;
-            row.appendChild(numCell);
+            const indexCell = document.createElement('td');
+            indexCell.textContent = index + 1;
+            row.appendChild(indexCell);
             
-            // Player name and number
             const playerCell = document.createElement('td');
-            const playerCard = document.querySelector(`.player-card[data-player-id="${event.player}"]`);
-            if (playerCard) {
-                const playerNumber = playerCard.querySelector('.player-number').textContent;
-                const playerName = playerCard.querySelector('.player-name').textContent;
-                playerCell.textContent = `${playerNumber} ${playerName}`;
-            } else {
-                playerCell.textContent = `Player ${event.player}`;
-            }
+            playerCell.textContent = event.player_name;
             row.appendChild(playerCell);
             
-            // Action
-            const actionCell = document.createElement('td');
-            actionCell.textContent = event.action.replace('_', ' ').toUpperCase();
-            row.appendChild(actionCell);
+            const typeCell = document.createElement('td');
+            typeCell.textContent = event.event_type.replace('_', ' ').toUpperCase();
+            row.appendChild(typeCell);
             
-            // Position
             const positionCell = document.createElement('td');
-            positionCell.textContent = `X: ${event.position.x.toFixed(1)}, Y: ${event.position.y.toFixed(1)}`;
+            positionCell.textContent = `(${event.position.x.toFixed(1)}, ${event.position.y.toFixed(1)})`;
             row.appendChild(positionCell);
             
             tableBody.appendChild(row);
@@ -856,44 +771,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update cutting skills table
     function updateCuttingSkillsTable() {
         const tableBody = document.getElementById('cutting-skills-table-body');
-        if (!tableBody) return; // Safety check
-        
         tableBody.innerHTML = '';
         
         gameState.cuttingSkills.forEach((skill, index) => {
             const row = document.createElement('tr');
             
-            // Skill number
-            const numCell = document.createElement('td');
-            numCell.textContent = index + 1;
-            row.appendChild(numCell);
+            const indexCell = document.createElement('td');
+            indexCell.textContent = index + 1;
+            row.appendChild(indexCell);
             
-            // Player name and number
+            // Find player name from the DOM since it's not stored in the state
             const playerCell = document.createElement('td');
             const playerCard = document.querySelector(`.player-card[data-player-id="${skill.player}"]`);
-            if (playerCard) {
-                const playerNumber = playerCard.querySelector('.player-number').textContent;
-                const playerName = playerCard.querySelector('.player-name').textContent;
-                playerCell.textContent = `${playerNumber} ${playerName}`;
-            } else {
-                playerCell.textContent = `Player ${skill.player}`;
-            }
+            playerCell.textContent = playerCard ? playerCard.textContent.trim() : `Player ${skill.player}`;
             row.appendChild(playerCell);
             
-            // Cutting type
             const typeCell = document.createElement('td');
             typeCell.textContent = skill.cutting_type.replace('_', ' ').toUpperCase();
             row.appendChild(typeCell);
             
-            // Outcome
             const outcomeCell = document.createElement('td');
             outcomeCell.textContent = skill.outcome.replace('_', ' ').toUpperCase();
             row.appendChild(outcomeCell);
-            
-            // Position
-            const positionCell = document.createElement('td');
-            positionCell.textContent = `X: ${skill.position.x.toFixed(1)}, Y: ${skill.position.y.toFixed(1)}`;
-            row.appendChild(positionCell);
             
             tableBody.appendChild(row);
         });
@@ -901,45 +800,82 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Undo button handler
     undoButton.addEventListener('click', function() {
-        if (gameState.events.length > 0) {
-            fetch(`/stats/undo_event/{{ point.id }}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Remove the last event marker from the field
-                const markers = field.querySelectorAll('.event-marker');
-                if (markers.length > 0) {
-                    markers[markers.length - 1].remove();
-                }
+        if (gameState.events.length > 0 || gameState.cuttingSkills.length > 0) {
+            // Determine what to undo based on the most recent action
+            const lastEvent = gameState.events[gameState.events.length - 1];
+            const lastCuttingSkill = gameState.cuttingSkills[gameState.cuttingSkills.length - 1];
+            
+            let undoType, undoId;
+            
+            if (lastEvent && lastCuttingSkill) {
+                // Compare timestamps if both exist (not implemented here)
+                // For now, just undo the most recent event
+                undoType = 'event';
+                undoId = lastEvent.id;
+            } else if (lastEvent) {
+                undoType = 'event';
+                undoId = lastEvent.id;
+            } else if (lastCuttingSkill) {
+                undoType = 'cutting_skill';
+                undoId = lastCuttingSkill.id;
+            }
+            
+            if (undoType && undoId) {
+                const endpoint = undoType === 'event' ? `/events/delete/${undoId}` : `/cutting-skills/delete/${undoId}`;
                 
-                // Get the last event before removing it
-                const lastEvent = gameState.events[gameState.events.length - 1];
-                
-                // Toggle possession back if it was a turnover event
-                if (['throwaway', 'drop', 'block', 'forced_turnover', 'unforced_turnover'].includes(lastEvent.action)) {
-                    gameState.is_offensive = !gameState.is_offensive;
-                }
-                
-                // Remove the event from our state
-                gameState.events.pop();
-                
-                // Update the events table
-                updateEventsTable();
-                
-                // Hide undo button if no more events
-                if (gameState.events.length === 0) {
-                    undoButton.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error undoing event');
-            });
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || `Server returned ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Undo successful:', data);
+                    
+                    // Remove the marker from the field
+                    const selector = undoType === 'event' ? 
+                        `.event-marker[data-event-id="${undoId}"]` : 
+                        `.cutting-marker[data-cutting-skill-id="${undoId}"]`;
+                    
+                    const marker = document.querySelector(selector);
+                    if (marker) {
+                        marker.remove();
+                    }
+                    
+                    // Update the state
+                    if (undoType === 'event') {
+                        gameState.events.pop();
+                        updateEventsTable();
+                        
+                        // Check if we need to update possession
+                        if (lastEvent.event_type === 'turnover' || lastEvent.event_type === 'goal') {
+                            gameState.is_offensive = !gameState.is_offensive;
+                            console.log('Possession changed back to', gameState.is_offensive ? 'offense' : 'defense');
+                        }
+                    } else {
+                        gameState.cuttingSkills.pop();
+                        updateCuttingSkillsTable();
+                    }
+                    
+                    // Hide undo button if no more events/skills
+                    if (gameState.events.length === 0 && gameState.cuttingSkills.length === 0) {
+                        undoButton.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error undoing action:', error);
+                    alert('Error undoing action: ' + error.message);
+                });
+            }
         }
     });
 
@@ -950,17 +886,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add event listeners for outcome buttons
-    document.querySelectorAll('.outcome-button').forEach(button => {
-        button.addEventListener('click', function() {
-            handleOutcome(this.dataset.outcome);
-        });
-    });
-
-    // Substitution handling
-    document.getElementById('sub-player').addEventListener('click', function() {
-        // Fetch available players for substitution
-        fetch(`/stats/available_players/{{ point.id }}`)
+    // Load existing events for this point
+    function loadEvents() {
+        fetch(`/events/list/{{ point.id }}`)
             .then(response => {
                 if (!response.ok) {
                     return response.json().then(data => {
@@ -970,69 +898,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                if (!data.available_players || !Array.isArray(data.available_players)) {
-                    console.error('Response missing available_players array:', data);
-                    throw new Error('Invalid server response format');
-                }
+                data.events.forEach(event => {
+                    addEventMarker(event);
+                    updateEventsState(event);
+                });
+                updateEventsTable();
                 
-                const playerInSelect = document.getElementById('player-in');
-                playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
-                
-                if (data.available_players.length === 0) {
-                    const option = document.createElement('option');
-                    option.disabled = true;
-                    option.textContent = 'No available players found';
-                    playerInSelect.appendChild(option);
-                } else {
-                    data.available_players.forEach(player => {
-                        const option = document.createElement('option');
-                        option.value = player.id;
-                        option.textContent = `#${player.jersey_number} - ${player.name}`;
-                        playerInSelect.appendChild(option);
-                    });
-                }
-                
-                // Show the modal using our helper function
-                if (window.showSubstitutionModal) {
-                    window.showSubstitutionModal();
-                } else {
-                    // Fallback
-                    try {
-                        const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
-                        subModal.show();
-                    } catch (e) {
-                        console.error('Error showing modal:', e);
-                        alert('Error showing substitution dialog. Please try again.');
-                    }
+                if (data.events.length > 0) {
+                    undoButton.style.display = 'block';
                 }
             })
             .catch(error => {
-                console.error('Error fetching available players:', error);
-                alert('Error loading available players: ' + error.message);
+                console.error('Error loading events:', error);
             });
-    });
-    
-    // Handle substitution confirmation
-    document.getElementById('confirm-substitution').addEventListener('click', function() {
-        const playerOutId = document.getElementById('player-out').value;
-        const playerInId = document.getElementById('player-in').value;
-        
-        if (!playerOutId || !playerInId) {
-            alert('Please select both players for substitution');
-            return;
-        }
-        
-        fetch(`/stats/substitute_player/{{ point.id }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({
-                player_out_id: playerOutId,
-                player_in_id: playerInId
+    }
+
+    // Load existing cutting skills for this point
+    function loadCuttingSkills() {
+        fetch(`/cutting-skills/list/{{ point.id }}`)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || `Server returned ${response.status}`);
+                    });
+                }
+                return response.json();
             })
-        })
+            .then(data => {
+                data.cutting_skills.forEach(skill => {
+                    addCuttingSkillMarker(skill);
+                    updateCuttingSkillsState(skill);
+                });
+                updateCuttingSkillsTable();
+                
+                if (data.cutting_skills.length > 0) {
+                    undoButton.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading cutting skills:', error);
+            });
+    }
+
+    // Call this function when the page loads
+    loadEvents();
+    
+    // Call this function when the page loads
+    loadCuttingSkills();
+});
+// Substitution handling
+document.getElementById('sub-player').addEventListener('click', function() {
+    // Fetch available players for substitution
+    fetch(`/stats/available_players/{{ point.id }}`)
         .then(response => {
             if (!response.ok) {
                 return response.json().then(data => {
@@ -1042,107 +959,88 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            if (data.success) {
-                // Close the modal
-                const modalElement = document.getElementById('substitutionModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                if (modalInstance) {
-                    modalInstance.hide();
-                } else {
-                    // Fallback if bootstrap.Modal.getInstance doesn't work
-                    $(modalElement).modal('hide');
-                }
-                
-                // Update the player cards
-                const playerCards = document.querySelector('.player-grid');
-                
-                // Remove the subbed out player
-                const playerOutCard = document.querySelector(`.player-card[data-player-id="${playerOutId}"]`);
-                if (playerOutCard) playerOutCard.remove();
-                
-                // Add the subbed in player
-                const newPlayerCard = document.createElement('div');
-                newPlayerCard.className = 'player-card';
-                newPlayerCard.dataset.playerId = playerInId;
-                newPlayerCard.innerHTML = `
-                    <div class="player-number">#${data.player_in.jersey_number || 'N/A'}</div>
-                    <div class="player-name">${data.player_in.name}</div>
-                `;
-                
-                // Add event listener to the new player card
-                // Player selection
-                document.querySelectorAll('.player-card').forEach(card => {
-                    card.addEventListener('click', function() {
-                        selectedPlayer = this.dataset.playerId;
-                        console.log('Selected player:', selectedPlayer);
-                        
-                        // Handle special player types
-                        if (selectedPlayer === 'unknown' || selectedPlayer === 'opponent') {
-                            // For special players, check if they're appropriate for current possession
-                            if (selectedPlayer === 'opponent' && gameState.is_offensive) {
-                                alert("Cannot select 'Opponent' during offensive possession");
-                                return;
-                            }
-                            if (selectedPlayer === 'unknown' && !gameState.is_offensive) {
-                                alert("Cannot select 'Unknown' during defensive possession");
-                                return;
-                            }
-                            
-                            // Special players can only be used in event mode, not cutting mode
-                            if (currentMode !== 'events') {
-                                alert("Special players can only be used in Event Tracking mode");
-                                return;
-                            }
-                        }
-                        
-                        playerSelect.style.display = 'none';
-                        
-                        // Show the appropriate panel based on the current mode
-                        if (currentMode === 'events') {
-                            showActionSelect();
-                        } else {
-                            showCuttingSelect();
-                        }
-                    });
-                });
-
-                
-                playerCards.appendChild(newPlayerCard);
-                
-                // Show success message
-                alert(`Successfully substituted ${data.player_out.name} with ${data.player_in.name}`);
-            } else {
-                alert('Error: ' + data.error);
+            if (!data.available_players || !Array.isArray(data.available_players)) {
+                console.error('Response missing available_players array:', data);
+                throw new Error('Invalid server response format');
             }
+            
+            const playerInSelect = document.getElementById('player-in');
+            playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
+            
+            if (data.available_players.length === 0) {
+                const option = document.createElement('option');
+                option.disabled = true;
+                option.textContent = 'No available players found';
+                playerInSelect.appendChild(option);
+            } else {
+                data.available_players.forEach(player => {
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = `#${player.jersey_number} - ${player.name}`;
+                    playerInSelect.appendChild(option);
+                });
+            }
+            
+            // Show the modal
+            const subModal = new bootstrap.Modal(document.getElementById('substitutionModal'));
+            subModal.show();
         })
         .catch(error => {
-            console.error('Error making substitution:', error);
-            alert('Error making substitution: ' + error.message);
+            console.error('Error fetching available players:', error);
+            alert('Error loading available players: ' + error.message);
         });
-    });
+});
 
-
-    // Load existing cutting skills for this point
-    function loadCuttingSkills() {
-        fetch(`/cutting-skills/list/{{ point.id }}`)
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(skill => {
-                    // Add to state
-                    updateCuttingSkillsState(skill);
-                    // Add marker
-                    addCuttingSkillMarker(skill);
-                });
-                // Update table
-                updateCuttingSkillsTable();
-            })
-            .catch(error => {
-                console.error('Error loading cutting skills:', error);
-            });
+// Add event listener for confirm substitution button
+document.getElementById('confirm-substitution').addEventListener('click', function() {
+    const playerOutSelect = document.getElementById('player-out');
+    const playerInSelect = document.getElementById('player-in');
+    
+    const playerOutId = playerOutSelect.value;
+    const playerInId = playerInSelect.value;
+    
+    if (!playerOutId || !playerInId) {
+        alert('Please select both a player to sub out and a player to sub in');
+        return;
     }
-
-    // Call this function when the page loads
-    loadCuttingSkills();
+    
+    // Send substitution request to the server
+    fetch(`/stats/substitute_player/{{ point.id }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            player_out_id: playerOutId,
+            player_in_id: playerInId
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `Server returned ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Substitution successful:', data);
+        
+        // Close the modal
+        const subModal = bootstrap.Modal.getInstance(document.getElementById('substitutionModal'));
+        subModal.hide();
+        
+        // Update the UI to reflect the substitution
+        alert(`Substitution successful: ${data.player_out.name} (#${data.player_out.jersey_number}) → ${data.player_in.name} (#${data.player_in.jersey_number})`);
+        
+        // Refresh the page to update the lineup display
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error performing substitution:', error);
+        alert('Error performing substitution: ' + error.message);
+    });
 });
 
 </script>
