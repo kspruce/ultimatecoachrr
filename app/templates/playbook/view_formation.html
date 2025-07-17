@@ -3,27 +3,259 @@
 {% block styles %}
 {{ super() }}
 <style>
-    /* Your existing styles */
+    /* Header styling with dynamic gradient based on concept type */
+    .concept-header {
+        background: linear-gradient(135deg, 
+            {% if formation.type == 'offense' %}#007bff, #0056b3{% else %}#dc3545, #a71d2a{% endif %});
+        color: white;
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
     
-    .concept-image {
-        max-width: 100%;
-        height: auto;
-        border-radius: 4px;
-        margin-bottom: 1rem;
+    .concept-header::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: linear-gradient(45deg, 
+            {% if formation.type == 'offense' %}rgba(0,123,255,0.1), rgba(0,86,179,0.2){% else %}rgba(220,53,69,0.1), rgba(167,29,42,0.2){% endif %});
+        z-index: 1;
+        pointer-events: none;
+    }
+    
+    .concept-header .container {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .concept-badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        font-weight: 500;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     
-    .img-error {
-        border: 2px dashed #dc3545;
+    /* Content styling */
+    .content-section {
+        margin-bottom: 2.5rem;
     }
     
-    .debug-info {
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+        background: linear-gradient(to right, #f8f9fa, #ffffff);
+        border-bottom: none;
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px 12px 0 0 !important;
+        font-weight: 600;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    /* Image styling */
+    .concept-image-container {
+        position: relative;
+        margin-bottom: 1.5rem;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .concept-image {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .concept-image:hover {
+        transform: scale(1.02);
+    }
+    
+    /* Video container styling */
+    .iframe-direct-container {
+        width: 100%;
+        height: 450px;
+        border-radius: 8px;
+        border: 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .embed-container {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        overflow: hidden;
+        max-width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .embed-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        border-radius: 8px;
+    }
+    
+    /* Description card styling */
+    .description-card {
+        margin-bottom: 2rem;
+    }
+    
+    /* Related plays section */
+    .related-plays {
+        margin-top: 2rem;
+    }
+    
+    .related-play-item {
+        border-left: 4px solid {% if formation.type == 'offense' %}#007bff{% else %}#dc3545{% endif %};
+        transition: all 0.2s ease;
+    }
+    
+    .related-play-item:hover {
         background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        padding: 1rem;
+        transform: translateX(5px);
+    }
+    
+    /* Button styling */
+    .btn-light {
+        background: rgba(255,255,255,0.9);
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .btn-light:hover {
+        background: #ffffff;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .btn-outline-light {
+        border-color: rgba(255,255,255,0.7);
+    }
+    
+    .btn-outline-light:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    /* Markdown styling */
+    .markdown-content {
+        line-height: 1.7;
+    }
+    
+    .markdown-content h1 {
+        font-size: 1.8rem;
+        margin-top: 1.5rem;
         margin-bottom: 1rem;
-        font-family: monospace;
+        color: #333;
+    }
+    
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
+        color: #444;
+    }
+    
+    .markdown-content h3 {
+        font-size: 1.3rem;
+        margin-top: 1rem;
+        margin-bottom: 0.7rem;
+        color: #555;
+    }
+    
+    .markdown-content ul, .markdown-content ol {
+        padding-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content blockquote {
+        border-left: 4px solid #e9ecef;
+        padding-left: 1rem;
+        color: #6c757d;
+        margin-bottom: 1rem;
+        font-style: italic;
+    }
+    
+    .markdown-content pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    
+    .markdown-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+    
+    .markdown-content table th,
+    .markdown-content table td {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .markdown-content table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .markdown-content p {
+        margin-bottom: 1rem;
+    }
+    
+    .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+    }
+    
+    /* Mobile optimization */
+    @media (max-width: 768px) {
+        .concept-header {
+            padding: 2rem 0;
+        }
+        
+        .btn {
+            padding: 0.6rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .iframe-direct-container {
+            height: 300px;
+        }
     }
 </style>
 {% endblock %}
@@ -39,98 +271,54 @@
         </div>
     </div>
     
-    <!-- Debug Info (Admin Only) -->
-    {% if current_user.is_admin %}
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-info text-white">Debug Information (Admin Only)</div>
-                <div class="card-body debug-info">
-                    <p><strong>Formation ID:</strong> {{ formation.id }}</p>
-                    <p><strong>Formation attributes:</strong> {{ formation.__dict__ }}</p>
-                    <p><strong>imgur_url attribute exists:</strong> {{ formation|attr('imgur_url') is defined }}</p>
-                    <p><strong>imgur_url value:</strong> "{{ formation.imgur_url|default('Not set', true) }}"</p>
-                    <p><strong>imgur_url is empty:</strong> {{ not formation.imgur_url }}</p>
-                    <p><strong>imgur_url is None:</strong> {{ formation.imgur_url is none }}</p>
+    <!-- Concept Header -->
+    <div class="concept-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold">{{ formation.name }}</h1>
+                    <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} concept-badge mt-2">
+                        {{ formation.type|title }} Concept
+                    </span>
+                </div>
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                    <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+                       class="btn btn-light me-2">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    {% if current_user.is_admin %}
+                        <button type="button" class="btn btn-outline-light"
+                                data-bs-toggle="modal" data-bs-target="#deleteConceptModal">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-    
-    <!-- Concept Header -->
-    <div class="row concept-header align-items-center">
-        <div class="col-md-8">
-            <h1>{{ formation.name }}</h1>
-            <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} concept-badge">
-                {{ formation.type|title }}
-            </span>
-        </div>
-        <div class="col-md-4 text-md-end mt-3 mt-md-0">
-            <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
-               class="btn btn-light">
-                <i class="fas fa-edit"></i> Edit
-            </a>
-            {% if current_user.is_admin %}
-                <button type="button" class="btn btn-outline-light"
-                        data-bs-toggle="modal" data-bs-target="#deleteConceptModal">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            {% endif %}
-        </div>
-    </div>
     
     <div class="row">
-        <!-- Concept Details -->
-        <div class="col-12">
-            <!-- Diagram/Image with Debug Info -->
+        <!-- Main Content Column -->
+        <div class="col-lg-8">
+            <!-- Diagram/Image -->
             {% if formation.imgur_url %}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Diagram</h5>
+                <div class="card content-section">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-image me-2"></i> Concept Diagram</h5>
                     </div>
                     <div class="card-body text-center">
-                        {% set img_url = formation.imgur_url %}
-                        
-                        <!-- URL Processing for Imgur -->
-                        {% if 'imgur.com' in img_url and not 'i.imgur.com' in img_url %}
-                            {% set img_url = img_url.replace('imgur.com', 'i.imgur.com') %}
-                            {% if not img_url.endswith('.jpg') and not img_url.endswith('.png') and not img_url.endswith('.gif') %}
-                                {% set img_url = img_url + '.jpg' %}
-                            {% endif %}
-                        {% endif %}
-                        
-                        <!-- Ensure HTTPS -->
-                        {% if img_url.startswith('http://') %}
-                            {% set img_url = img_url.replace('http://', 'https://') %}
-                        {% endif %}
-                        
-                        <img src="{{ img_url }}" alt="{{ formation.name }} diagram" class="concept-image" id="concept-image">
-                        
-                        {% if current_user.is_admin %}
-                        <div class="mt-2 text-muted small">
-                            <p><strong>Original URL:</strong> {{ formation.imgur_url }}</p>
-                            <p><strong>Processed URL:</strong> {{ img_url }}</p>
+                        <div class="concept-image-container">
+                            <img src="{{ formation.imgur_url }}" alt="{{ formation.name }} diagram" class="concept-image">
                         </div>
-                        {% endif %}
                     </div>
                 </div>
-            {% else %}
-                {% if current_user.is_admin %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> No Imgur URL set for this concept. 
-                    <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" class="alert-link">Edit this concept</a> to add an image.
-                </div>
-                {% endif %}
             {% endif %}
-            
-            <!-- Rest of your template remains the same -->
             
             <!-- Animation/Video -->
             {% if formation.ultiplay_embed %}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Animation</h5>
+                <div class="card content-section">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-film me-2"></i> Animation</h5>
                     </div>
                     <div class="card-body">
                         {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
@@ -146,9 +334,9 @@
             {% endif %}
             
             <!-- Description with Markdown -->
-            <div class="card description-card">
-                <div class="card-header">
-                    <h5 class="mb-0">Description</h5>
+            <div class="card description-card content-section">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Description</h5>
                 </div>
                 <div class="card-body">
                     <div class="markdown-content">
@@ -157,11 +345,74 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Sidebar Column -->
+        <div class="col-lg-4">
+            <!-- Concept Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i> Concept Details</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Type
+                            <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">{{ formation.type|title }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Plays Using This Concept
+                            <span class="badge bg-secondary">{{ formation.plays|length }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Related Plays -->
+            {% if formation.plays %}
+                <div class="card related-plays">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-link me-2"></i> Plays Using This Concept</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            {% for play in formation.plays %}
+                                <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
+                                   class="list-group-item list-group-item-action related-play-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="fw-medium">{{ play.name }}</span>
+                                    </div>
+                                    <span class="badge bg-{{ 'primary' if play.type == 'offense' else 'danger' }}">{{ play.type|title }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Quick Actions -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-2"></i> Edit Concept
+                        </a>
+                        <a href="{{ url_for('playbook.add_play') }}" 
+                           class="btn btn-outline-success">
+                            <i class="fas fa-plus me-2"></i> Create Play Using This Concept
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Delete Modal -->
 {% if current_user.is_admin %}
+    <!-- Delete Modal -->
     <div class="modal fade" id="deleteConceptModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -173,6 +424,7 @@
                     <p>Are you sure you want to delete the team concept "{{ formation.name }}"?</p>
                     {% if formation.plays %}
                     <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
                         Warning: This concept is used in {{ formation.plays|length }} play(s).
                         Deleting it will remove it from these plays.
                     </div>
@@ -182,7 +434,9 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <button type="submit" class="btn btn-danger">Delete Concept</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> Delete Concept
+                        </button>
                     </form>
                 </div>
             </div>
@@ -195,32 +449,29 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Debug image loading
-    console.log("Checking for concept images...");
-    const conceptImages = document.querySelectorAll('.concept-image');
-    console.log(`Found ${conceptImages.length} concept images`);
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
     
-    conceptImages.forEach((img, index) => {
-        console.log(`Image ${index + 1} src: ${img.src}`);
-        
-        img.addEventListener('load', function() {
-            console.log(`Image ${index + 1} loaded successfully`);
-        });
-        
+    // Fix image loading issues
+    document.querySelectorAll('.concept-image').forEach(img => {
         img.addEventListener('error', function() {
-            console.error(`Image ${index + 1} failed to load from: ${this.src}`);
             this.onerror = null;
-            this.src = '/static/images/placeholder-image.png'; 
+            this.src = '/static/images/placeholder-image.png'; // Replace with your placeholder image path
             this.alt = 'Image not available';
             this.classList.add('img-error');
-            
-            // Add visible error message
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'alert alert-danger mt-2';
-            errorMsg.innerHTML = `<strong>Error:</strong> Failed to load image from: ${this.src}`;
-            this.parentNode.appendChild(errorMsg);
-            
-            console.log(`Image ${index + 1} replaced with placeholder`);
+        });
+    });
+    
+    // Add smooth scrolling
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                behavior: 'smooth'
+            });
         });
     });
 });
