@@ -12,6 +12,7 @@ from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attend
 from app.models.cutting_skill import CuttingSkill
 from datetime import datetime
 import sys
+from sqlalchemy import text
 
 app = create_app()
 
@@ -25,13 +26,17 @@ def reset_database():
         try:
             print_status("Starting database reset...")
             
-            # Drop and recreate all tables
-            db.drop_all()
-            print_status("Dropped all tables")
+            # Execute DROP CASCADE for all tables
+            db.session.execute(text("DROP SCHEMA public CASCADE"))
+            db.session.execute(text("CREATE SCHEMA public"))
+            db.session.commit()
+            print_status("Dropped all tables with CASCADE")
             
+            # Create all tables
             db.create_all()
             print_status("Created all tables")
-
+            
+            # The rest of your function remains the same...
             # Create admin user
             admin = User(username='admin', email='admin@example.com', is_admin=True)
             admin.set_password('password')
