@@ -95,17 +95,8 @@
                 {% endif %}
             </div>
             {% endif %}
-
-            {% else %}
-            <div class="alert alert-info">
-                No topics have been added to this section yet.
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('theory.add_topic', section_id=section.id) }}">Add the first topic</a>
-                {% endif %}
-            </div>
-            {% endif %}
         </div>
-
+    
         <div class="col-md-4">
             <!-- Related Content Sidebar -->
             <div class="card mb-4">
