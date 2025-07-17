@@ -41,6 +41,14 @@
         border-radius: 4px;
         margin-top: 10px;
     }
+    
+    .image-preview {
+        max-width: 100%;
+        margin-top: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -48,7 +56,7 @@
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>{{ title }}</h1>
+            <h1>{{ title|replace('Formation', 'Team Concept') }}</h1>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
@@ -66,10 +74,10 @@
                         {{ form.hidden_tag() }}
                         
                         <div class="row mb-3">
-                            <!-- Formation Name -->
+                            <!-- Concept Name -->
                             <div class="col-md-8">
                                 <div class="form-group">
-                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name.label(class="form-label")|replace('Formation', 'Concept') }}
                                     {{ form.name(class="form-control",
                                                placeholder="e.g., Horizontal Stack, Vertical Stack") }}
                                     {% for error in form.name.errors %}
@@ -78,10 +86,10 @@
                                 </div>
                             </div>
                             
-                            <!-- Formation Type -->
+                            <!-- Concept Type -->
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    {{ form.type.label(class="form-label") }}
+                                    {{ form.type.label(class="form-label")|replace('Formation', 'Concept') }}
                                     {{ form.type(class="form-select") }}
                                     {% for error in form.type.errors %}
                                     <div class="invalid-feedback">{{ error }}</div>
@@ -95,15 +103,39 @@
                             {{ form.description.label(class="form-label") }}
                             {{ form.description(class="form-control",
                                               rows="4",
-                                              placeholder="Describe the formation setup and key positions...") }}
+                                              placeholder="Describe the concept setup and key positions...") }}
                             {% for error in form.description.errors %}
                             <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                         </div>
 
+                        <!-- Imgur Image URL -->
+                        <div class="form-group mb-4">
+                            <label class="form-label">Concept Diagram</label>
+                            
+                            <div class="mb-3">
+                                {{ form.imgur_url.label(class="form-label") if form.imgur_url else '<label class="form-label">Imgur Image URL</label>' }}
+                                {{ form.imgur_url(class="form-control", 
+                                    placeholder="Paste an Imgur image URL here...",
+                                    oninput="previewImage(this.value)") if form.imgur_url else '<input type="text" name="imgur_url" id="imgur_url" class="form-control" placeholder="Paste an Imgur image URL here..." oninput="previewImage(this.value)">' }}
+                            </div>
+
+                            <!-- Image Preview -->
+                            <img id="image-preview" class="image-preview" alt="Concept diagram preview">
+                            
+                            <div class="embed-help">
+                                <h6><i class="fas fa-info-circle"></i> How to add an image:</h6>
+                                <ol>
+                                    <li>Upload your image to <a href="https://imgur.com/" target="_blank">Imgur</a></li>
+                                    <li>Right-click on the image and select "Copy image address"</li>
+                                    <li>Paste the URL above</li>
+                                </ol>
+                            </div>
+                        </div>
+
                         <!-- Ultiplay Embed -->
                         <div class="form-group mb-4">
-                            <label class="form-label">Formation Video</label>
+                            <label class="form-label">Concept Video</label>
                             
                             <div class="mb-3">
                                 {{ form.ultiplay_embed.label(class="form-label") }}
@@ -140,7 +172,7 @@
                         <!-- Submit Buttons -->
                         <div class="form-group d-flex justify-content-between">
                             <button type="submit" class="btn btn-primary">
-                                {% if formation %}Update Formation{% else %}Create Formation{% endif %}
+                                {% if formation %}Update Team Concept{% else %}Create Team Concept{% endif %}
                             </button>
                             <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">Cancel</a>
                         </div>
@@ -153,14 +185,14 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Formation Guidelines</h5>
+                    <h5 class="card-title mb-0">Team Concept Guidelines</h5>
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled">
                         <li class="mb-3">
                             <i class="bi bi-check-circle text-success"></i>
                             <strong>Clear Name:</strong>
-                            <p class="text-muted small">Use a descriptive name that clearly identifies the formation.</p>
+                            <p class="text-muted small">Use a descriptive name that clearly identifies the concept.</p>
                         </li>
                         <li class="mb-3">
                             <i class="bi bi-check-circle text-success"></i>
@@ -169,8 +201,8 @@
                         </li>
                         <li class="mb-3">
                             <i class="bi bi-check-circle text-success"></i>
-                            <strong>Video Demonstration:</strong>
-                            <p class="text-muted small">Add a video showing the formation setup and key movements.</p>
+                            <strong>Visual Aids:</strong>
+                            <p class="text-muted small">Add diagrams or videos showing the concept setup and key movements.</p>
                         </li>
                         <li class="mb-3">
                             <i class="bi bi-info-circle text-primary"></i>
@@ -222,11 +254,27 @@ function previewEmbed(embedCode) {
     }
 }
 
-// Initialize preview if there's existing embed code
+function previewImage(imageUrl) {
+    const imagePreview = document.getElementById('image-preview');
+    
+    if (imageUrl.trim()) {
+        imagePreview.src = imageUrl;
+        imagePreview.style.display = 'block';
+    } else {
+        imagePreview.style.display = 'none';
+    }
+}
+
+// Initialize previews if there's existing content
 document.addEventListener('DOMContentLoaded', function() {
     const embedInput = document.querySelector('#ultiplay_embed');
     if (embedInput && embedInput.value) {
         previewEmbed(embedInput.value);
+    }
+    
+    const imgurInput = document.querySelector('#imgur_url');
+    if (imgurInput && imgurInput.value) {
+        previewImage(imgurInput.value);
     }
 });
 </script>
