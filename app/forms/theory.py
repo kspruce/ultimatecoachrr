@@ -25,7 +25,7 @@ class TheoryTopicForm(FlaskForm):
     content = TextAreaField('Content', validators=[DataRequired()])
     section_id = SelectField('Section', coerce=int, validators=[DataRequired()])
     order = IntegerField('Display Order', validators=[Optional()])
-    image_url = StringField('Image URL (Google Photos)', validators=[
+    image_url = StringField('Image URL (Imgur)', validators=[
         Optional(),
         URL(message="Please enter a valid URL")
     ])

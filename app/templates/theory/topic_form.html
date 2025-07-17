@@ -58,12 +58,12 @@
                             </div>
                             {% endif %}
                             {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else ""), 
-                                             placeholder="https://lh3.googleusercontent.com/...") }}
+                                             placeholder="https://i.imgur.com/example.jpg") }}
                             {% for error in form.image_url.errors %}
                             <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                             <small class="form-text text-muted">
-                                Paste the direct link to your Google Photos image. Make sure the image is shared publicly.
+                                Paste the direct link to your Imgur image (should start with https://i.imgur.com/)
                             </small>
                             <div id="image-preview" class="mt-2" style="display: none;">
                                 <h6>Preview:</h6>
@@ -73,28 +73,21 @@
 
                         <div class="card mt-3">
                             <div class="card-header bg-light">
-                                <h5 class="mb-0">How to Get Google Photos Image URLs</h5>
+                                <h5 class="mb-0">How to Use Imgur for Images</h5>
                             </div>
                             <div class="card-body">
                                 <ol>
-                                    <li>Open Google Photos and select the image you want to use</li>
-                                    <li>Click the share icon (usually in the top-right corner)</li>
-                                    <li>Click "Create link" or "Get link" to make the photo public</li>
-                                    <li>Click "Copy link"</li>
-                                    <li>For direct image embedding, you may need to:
-                                        <ul>
-                                            <li>Open the shared link in a new tab</li>
-                                            <li>Right-click on the image and select "Copy image address"</li>
-                                            <li>Use this direct image URL in the form</li>
-                                        </ul>
-                                    </li>
+                                    <li>Go to <a href="https://imgur.com/upload" target="_blank">Imgur.com/upload</a></li>
+                                    <li>Upload your image by dragging and dropping or clicking "Choose Photo/Video"</li>
+                                    <li>Once uploaded, right-click on the image and select "Copy image address"</li>
+                                    <li>Paste the copied URL into the Image URL field above</li>
+                                    <li>The URL should look like: <code>https://i.imgur.com/abcXYZ.jpg</code></li>
                                 </ol>
                                 <div class="alert alert-info">
-                                    <strong>Note:</strong> Make sure your Google Photos sharing settings allow public access to the image.
+                                    <strong>Note:</strong> You don't need an Imgur account to upload images, but creating one allows you to manage your uploads.
                                 </div>
                             </div>
                         </div>
-
 
                         <!-- Content -->
                         <div class="mb-3">
@@ -194,15 +187,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const imageUrlInput = document.getElementById('image_url');
     const previewContainer = document.getElementById('image-preview');
     const previewImg = previewContainer.querySelector('img');
-
+    
     imageUrlInput.addEventListener('input', function() {
         if (this.value) {
+            // Check if it's likely an Imgur URL
+            if (this.value.includes('imgur.com')) {
+                // Make sure we're using the direct image URL (i.imgur.com)
+                if (!this.value.includes('i.imgur.com')) {
+                    previewContainer.innerHTML = '<div class="alert alert-warning">This appears to be an Imgur page link, not a direct image URL. Right-click on the image and select "Copy image address" to get the direct URL (should start with https://i.imgur.com/)</div>';
+                    previewContainer.style.display = 'block';
+                    return;
+                }
+            }
+            
             previewImg.src = this.value;
             previewContainer.style.display = 'block';
             
             // Handle image load error
             previewImg.onerror = function() {
-                previewContainer.innerHTML = '<div class="alert alert-warning">Unable to load image from this URL. Make sure it\'s a direct image link and publicly accessible.</div>';
+                previewContainer.innerHTML = '<div class="alert alert-warning">Unable to load image from this URL. Make sure it\'s a direct image link (e.g., https://i.imgur.com/abcXYZ.jpg)</div>';
             };
             
             // Reset error handler when image loads successfully
