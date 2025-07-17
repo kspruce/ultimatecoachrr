@@ -219,6 +219,232 @@ def reset_database():
             db.session.commit()
             print_status(f"Added {len(games)} games to the Moooxed tournament")
 
+            # Create EUC Spring Invite tournament
+            euc_tournament = Tournament(
+                name="EUC Spring Invite",
+                start_date=datetime(2025, 4, 26),
+                end_date=datetime(2025, 4, 27),
+                location="Padova"
+            )
+            db.session.add(euc_tournament)
+            db.session.commit()
+            print_status("Created EUC Spring Invite tournament")
+            
+            # Create games for the EUC Spring Invite tournament
+            euc_games = [
+                # Day 1 - April 26, 2025
+                {
+                    "date": datetime(2025, 4, 26),
+                    "opponent": "Disconnection",
+                    "our_score": 13,
+                    "their_score": 12,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": "https://youtu.be/OJ-j1Ss1C5Y",
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 26),
+                    "opponent": "Padova Rangers",
+                    "our_score": 15,
+                    "their_score": 5,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 26),
+                    "opponent": "Lemmings",
+                    "our_score": 15,
+                    "their_score": 8,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - April 27, 2025
+                {
+                    "date": datetime(2025, 4, 27),
+                    "opponent": "Colarado",
+                    "our_score": 15,
+                    "their_score": 13,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 27),
+                    "opponent": "ZU Mixed",
+                    "our_score": 11,
+                    "their_score": 8,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fifth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 27),
+                    "opponent": "Remix",
+                    "our_score": 12,
+                    "their_score": 10,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Final game of the tournament"
+                }
+            ]
+            
+            for game_data in euc_games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(euc_games)} games to the EUC Spring Invite tournament")
+
+            # Create MT1 - Uni Fans tournament
+            uni_fans_tournament = Tournament(
+                name="MT1 - Uni Fans",
+                start_date=datetime(2025, 4, 5),
+                end_date=datetime(2025, 4, 6),
+                location="Nottingham"
+            )
+            db.session.add(uni_fans_tournament)
+            db.session.commit()
+            print_status("Created MT1 - Uni Fans tournament")
+            
+            # Create games for the MT1 - Uni Fans tournament
+            uni_fans_games = [
+                # Day 1 - April 5, 2025
+                {
+                    "date": datetime(2025, 4, 5),
+                    "opponent": "Reading2",
+                    "our_score": 13,
+                    "their_score": 4,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 5),
+                    "opponent": "Solent Mixed",
+                    "our_score": 10,
+                    "their_score": 5,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 5),
+                    "opponent": "Flyght Mixed",
+                    "our_score": 10,
+                    "their_score": 3,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - April 6, 2025
+                {
+                    "date": datetime(2025, 4, 6),
+                    "opponent": "Newcastle Brown",
+                    "our_score": 7,
+                    "their_score": 15,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 6),
+                    "opponent": "Oxford",
+                    "our_score": 12,
+                    "their_score": 15,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fifth game of the tournament"
+                }
+            ]
+            
+            for game_data in uni_fans_games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(uni_fans_games)} games to the MT1 - Uni Fans tournament")
+            
+            # Create MT4 tournament
+            mt4_tournament = Tournament(
+                name="MT4",
+                start_date=datetime(2025, 7, 12),
+                end_date=datetime(2025, 7, 13),
+                location="Birmingham"
+            )
+            db.session.add(mt4_tournament)
+            db.session.commit()
+            print_status("Created MT4 tournament")
+            
+            # Create games for the MT4 tournament
+            mt4_games = [
+                # Day 1 - July 12, 2025
+                {
+                    "date": datetime(2025, 7, 12),
+                    "opponent": "Flyght",
+                    "our_score": 14,
+                    "their_score": 6,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/LsVGDAm6QWE",
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 12),
+                    "opponent": "Reading2",
+                    "our_score": 15,
+                    "their_score": 4,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/xNIZburP_ko",
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 12),
+                    "opponent": "GUXYZ",
+                    "our_score": 15,
+                    "their_score": 1,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/kKAG--8Zrds",
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - July 13, 2025
+                {
+                    "date": datetime(2025, 7, 13),
+                    "opponent": "Sheffield Steal",
+                    "our_score": 14,
+                    "their_score": 10,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/KeefOJmYNVA",
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 13),
+                    "opponent": "GUX",
+                    "our_score": 12,
+                    "their_score": 5,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/-HM2PDm9Xc8",
+                    "notes": "Fifth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 13),
+                    "opponent": "Herd2",
+                    "our_score": 15,
+                    "their_score": 3,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/yZlqSB0ghdI",
+                    "notes": "Final game of the tournament"
+                }
+            ]
+            
+            for game_data in mt4_games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(mt4_games)} games to the MT4 tournament")
+
+
             print_status("\nDatabase reset completed successfully!")
 
         except Exception as e:
