@@ -3,30 +3,7 @@
 {% block styles %}
 {{ super() }}
 <style>
-    .concept-header {
-        background: linear-gradient(135deg, 
-            {% if formation.type == 'offense' %}#007bff, #0056b3{% else %}#dc3545, #a71d2a{% endif %});
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        border-radius: 8px;
-    }
-    
-    .concept-badge {
-        font-size: 1rem;
-        padding: 0.5rem 1rem;
-    }
-    
-    .iframe-direct-container {
-        width: 100%;
-        height: 400px;
-        margin-bottom: 1rem;
-        border: 0;
-    }
-    
-    .description-card {
-        margin-bottom: 2rem;
-    }
+    /* Your existing styles */
     
     .concept-image {
         max-width: 100%;
@@ -36,105 +13,17 @@
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     
-    .embed-container {
-        position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
-        height: 0;
-        overflow: hidden;
-        max-width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    .embed-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
+    .img-error {
+        border: 2px dashed #dc3545;
     }
     
-    /* Markdown styling */
-    .markdown-content h1 {
-        font-size: 1.8rem;
-        margin-top: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .markdown-content h2 {
-        font-size: 1.5rem;
-        margin-top: 1.2rem;
-        margin-bottom: 0.8rem;
-    }
-    
-    .markdown-content h3 {
-        font-size: 1.3rem;
-        margin-top: 1rem;
-        margin-bottom: 0.7rem;
-    }
-    
-    .markdown-content ul, .markdown-content ol {
-        padding-left: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .markdown-content blockquote {
-        border-left: 4px solid #e9ecef;
-        padding-left: 1rem;
-        color: #6c757d;
-        margin-bottom: 1rem;
-    }
-    
-    .markdown-content pre {
+    .debug-info {
         background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.25rem;
-        overflow-x: auto;
-        margin-bottom: 1rem;
-    }
-    
-    .markdown-content code {
-        background-color: #f8f9fa;
-        padding: 0.2rem 0.4rem;
-        border-radius: 0.25rem;
-    }
-    
-    .markdown-content table {
-        width: 100%;
-        margin-bottom: 1rem;
-        border-collapse: collapse;
-    }
-    
-    .markdown-content table th,
-    .markdown-content table td {
-        padding: 0.5rem;
         border: 1px solid #dee2e6;
-    }
-    
-    .markdown-content table th {
-        background-color: #f8f9fa;
-    }
-    
-    .markdown-content p {
+        border-radius: 4px;
+        padding: 1rem;
         margin-bottom: 1rem;
-    }
-    
-    .markdown-content img {
-        max-width: 100%;
-        height: auto;
-        margin-bottom: 1rem;
-    }
-    
-    /* Mobile optimization */
-    @media (max-width: 768px) {
-        .btn {
-            padding: 0.6rem 1rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .card {
-            margin-bottom: 1rem;
-        }
+        font-family: monospace;
     }
 </style>
 {% endblock %}
@@ -149,6 +38,25 @@
             </a>
         </div>
     </div>
+    
+    <!-- Debug Info (Admin Only) -->
+    {% if current_user.is_admin %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">Debug Information (Admin Only)</div>
+                <div class="card-body debug-info">
+                    <p><strong>Formation ID:</strong> {{ formation.id }}</p>
+                    <p><strong>Formation attributes:</strong> {{ formation.__dict__ }}</p>
+                    <p><strong>imgur_url attribute exists:</strong> {{ formation|attr('imgur_url') is defined }}</p>
+                    <p><strong>imgur_url value:</strong> "{{ formation.imgur_url|default('Not set', true) }}"</p>
+                    <p><strong>imgur_url is empty:</strong> {{ not formation.imgur_url }}</p>
+                    <p><strong>imgur_url is None:</strong> {{ formation.imgur_url is none }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Concept Header -->
     <div class="row concept-header align-items-center">
@@ -175,17 +83,48 @@
     <div class="row">
         <!-- Concept Details -->
         <div class="col-12">
-            <!-- Diagram/Image -->
+            <!-- Diagram/Image with Debug Info -->
             {% if formation.imgur_url %}
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Diagram</h5>
                     </div>
                     <div class="card-body text-center">
-                        <img src="{{ formation.imgur_url }}" alt="{{ formation.name }} diagram" class="concept-image">
+                        {% set img_url = formation.imgur_url %}
+                        
+                        <!-- URL Processing for Imgur -->
+                        {% if 'imgur.com' in img_url and not 'i.imgur.com' in img_url %}
+                            {% set img_url = img_url.replace('imgur.com', 'i.imgur.com') %}
+                            {% if not img_url.endswith('.jpg') and not img_url.endswith('.png') and not img_url.endswith('.gif') %}
+                                {% set img_url = img_url + '.jpg' %}
+                            {% endif %}
+                        {% endif %}
+                        
+                        <!-- Ensure HTTPS -->
+                        {% if img_url.startswith('http://') %}
+                            {% set img_url = img_url.replace('http://', 'https://') %}
+                        {% endif %}
+                        
+                        <img src="{{ img_url }}" alt="{{ formation.name }} diagram" class="concept-image" id="concept-image">
+                        
+                        {% if current_user.is_admin %}
+                        <div class="mt-2 text-muted small">
+                            <p><strong>Original URL:</strong> {{ formation.imgur_url }}</p>
+                            <p><strong>Processed URL:</strong> {{ img_url }}</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
+            {% else %}
+                {% if current_user.is_admin %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> No Imgur URL set for this concept. 
+                    <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" class="alert-link">Edit this concept</a> to add an image.
+                </div>
+                {% endif %}
             {% endif %}
+            
+            <!-- Rest of your template remains the same -->
             
             <!-- Animation/Video -->
             {% if formation.ultiplay_embed %}
@@ -217,31 +156,12 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Plays using this concept -->
-            {% if formation.plays %}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Plays Using This Concept</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group">
-                            {% for play in formation.plays %}
-                                <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                    {{ play.name }}
-                                    <span class="badge bg-{{ 'primary' if play.type == 'offense' else 'danger' }}">{{ play.type|title }}</span>
-                                </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
         </div>
     </div>
 </div>
 
+<!-- Delete Modal -->
 {% if current_user.is_admin %}
-    <!-- Delete Modal -->
     <div class="modal fade" id="deleteConceptModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -275,19 +195,32 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
+    // Debug image loading
+    console.log("Checking for concept images...");
+    const conceptImages = document.querySelectorAll('.concept-image');
+    console.log(`Found ${conceptImages.length} concept images`);
     
-    // Fix image loading issues
-    document.querySelectorAll('.concept-image').forEach(img => {
+    conceptImages.forEach((img, index) => {
+        console.log(`Image ${index + 1} src: ${img.src}`);
+        
+        img.addEventListener('load', function() {
+            console.log(`Image ${index + 1} loaded successfully`);
+        });
+        
         img.addEventListener('error', function() {
+            console.error(`Image ${index + 1} failed to load from: ${this.src}`);
             this.onerror = null;
-            this.src = '/static/images/placeholder-image.png'; // Replace with your placeholder image path
+            this.src = '/static/images/placeholder-image.png'; 
             this.alt = 'Image not available';
             this.classList.add('img-error');
+            
+            // Add visible error message
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'alert alert-danger mt-2';
+            errorMsg.innerHTML = `<strong>Error:</strong> Failed to load image from: ${this.src}`;
+            this.parentNode.appendChild(errorMsg);
+            
+            console.log(`Image ${index + 1} replaced with placeholder`);
         });
     });
 });

@@ -137,17 +137,21 @@ def add_formation():
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
-            ultiplay_embed=form.ultiplay_embed.data,  # Add this line
+            ultiplay_embed=form.ultiplay_embed.data,
+            imgur_url=form.imgur_url.data,  # Add this line
             created_by=current_user.id
         )
+        
+        # Debug print
+        print(f"Creating formation with imgur_url: {formation.imgur_url}")
         
         db.session.add(formation)
         db.session.commit()
         
-        flash(f'Formation "{formation.name}" has been created!', 'success')
+        flash(f'Team concept "{formation.name}" has been created!', 'success')
         return redirect(url_for('playbook.index'))
         
-    return render_template('playbook/formation_form.html', form=form, title='Add Formation')
+    return render_template('playbook/formation_form.html', form=form, title='Add Team Concept')
 
 # Error handlers
 @bp.errorhandler(404)
@@ -173,10 +177,6 @@ def internal_error(error):
 @login_required
 @admin_required
 def edit_formation(formation_id):
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    
     formation = Formation.query.get_or_404(formation_id)
     form = FormationForm(obj=formation)
     
@@ -184,21 +184,19 @@ def edit_formation(formation_id):
         formation.name = form.name.data
         formation.type = form.type.data
         formation.description = form.description.data
+        formation.ultiplay_embed = form.ultiplay_embed.data
         
-        # Handle ultiplay embed update
-        if form.ultiplay_embed.data:
-            formation.ultiplay_embed = form.ultiplay_embed.data
+        # Make sure this line is present
+        formation.imgur_url = form.imgur_url.data
+        
+        # Debug print
+        print(f"Saving formation with imgur_url: {formation.imgur_url}")
         
         db.session.commit()
-        flash(f'Formation "{formation.name}" has been updated!', 'success')
-        return redirect(url_for('playbook.index'))
+        flash(f'Team concept "{formation.name}" has been updated!', 'success')
+        return redirect(url_for('playbook.view_formation', formation_id=formation.id))
     
-    return render_template(
-        'playbook/formation_form.html',
-        form=form,
-        formation=formation,
-        title='Edit Formation'
-    )
+    return render_template('playbook/formation_form.html', form=form, formation=formation, title='Edit Formation')
 
 # Also add a delete route for formations
 @bp.route('/plays/<int:play_id>/delete', methods=['POST'])  # Changed to match JS URL
@@ -276,6 +274,9 @@ def view_formation(formation_id):
     
     # Get plays that use this formation
     related_plays = Play.query.filter_by(formation_id=formation_id).all()
+    # Debug print
+    print(f"Formation ID: {formation.id}, Name: {formation.name}")
+    print(f"Imgur URL: {formation.imgur_url}")
     
     return render_template('playbook/view_formation.html', 
                           formation=formation,
