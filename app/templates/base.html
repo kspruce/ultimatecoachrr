@@ -190,6 +190,13 @@
                         <a class="nav-link" href="{{ url_for('clip.index') }}"
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Manage video clips">Clips</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.how_to_use') }}"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                           title="Learn how to use Ultimate Coach">
+                            <i class="bi bi-question-circle"></i> Help
+                        </a>
                     </li>              
                 </ul>
                 {% if current_user.is_authenticated %}

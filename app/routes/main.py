@@ -158,3 +158,8 @@ def index():
 @bp.route('/about')
 def about():
     return render_template('about.html', title='About')
+
+@bp.route('/how-to-use')
+def how_to_use():
+    """Display the How to Use guide page."""
+    return render_template('how_to_use.html', title='How to Use Ultimate Coach')
