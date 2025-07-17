@@ -23,6 +23,7 @@ class Formation(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    imgur_url = db.Column(db.String(255))
 
 class Play(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,3 +40,22 @@ class Play(db.Model):
     # Relationships
     formation = db.relationship('Formation', backref='plays')
     tags = db.relationship('PlayTag', secondary=play_tag_association)
+    
+class PlayerPosition(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    
+    def __repr__(self):
+        return f'<Position {self.name}>'
+
+class PlayAssignment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    play_id = db.Column(db.Integer, db.ForeignKey('play.id'))
+    position_id = db.Column(db.Integer, db.ForeignKey('player_position.id'))
+    instructions = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    position = db.relationship('PlayerPosition')
+    play = db.relationship('Play', backref='assignments')

@@ -3,10 +3,10 @@ from flask import (
     Blueprint, render_template, redirect, url_for, flash, 
     request, jsonify, current_app
 )
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, abort
 from app import db
-from app.models.playbook import Play, Formation, PlayTag
-from app.forms.playbook import PlayForm, FormationForm
+from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, PlayerPosition
+from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
 from werkzeug.utils import secure_filename
 import os
 import json
@@ -280,3 +280,56 @@ def view_formation(formation_id):
     return render_template('playbook/view_formation.html', 
                           formation=formation,
                           related_plays=related_plays)
+
+@bp.route('/plays/<int:play_id>/assignments', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_assignments(play_id):
+    play = Play.query.get_or_404(play_id)
+    form = PositionAssignmentForm()
+    
+    # Get all positions for the dropdown
+    form.position_id.choices = [(p.id, p.name) for p in PlayerPosition.query.order_by(PlayerPosition.name).all()]
+    
+    if form.validate_on_submit():
+        # Check if assignment for this position already exists
+        existing = PlayAssignment.query.filter_by(
+            play_id=play.id, 
+            position_id=form.position_id.data
+        ).first()
+        
+        if existing:
+            existing.instructions = form.instructions.data
+            flash('Position assignment updated', 'success')
+        else:
+            assignment = PlayAssignment(
+                play_id=play.id,
+                position_id=form.position_id.data,
+                instructions=form.instructions.data
+            )
+            db.session.add(assignment)
+            flash('Position assignment added', 'success')
+            
+        db.session.commit()
+        return redirect(url_for('playbook.manage_assignments', play_id=play.id))
+    
+    # Get existing assignments
+    assignments = PlayAssignment.query.filter_by(play_id=play.id).all()
+    
+    return render_template('playbook/assignments.html', 
+                          play=play, form=form, assignments=assignments)
+
+@bp.route('/plays/<int:play_id>/assignments/<int:assignment_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_assignment(play_id, assignment_id):
+    assignment = PlayAssignment.query.get_or_404(assignment_id)
+    
+    # Verify the assignment belongs to the specified play
+    if assignment.play_id != play_id:
+        abort(404)
+        
+    db.session.delete(assignment)
+    db.session.commit()
+    flash('Assignment deleted', 'success')
+    return redirect(url_for('playbook.manage_assignments', play_id=play_id))

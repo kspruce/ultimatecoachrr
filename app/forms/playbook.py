@@ -5,7 +5,8 @@ from wtforms import (
     TextAreaField, 
     FileField, 
     SelectMultipleField,
-    SubmitField
+    SubmitField,
+    URL
 )
 from wtforms.validators import DataRequired, Optional, Length
 from flask_wtf.file import FileAllowed
@@ -46,3 +47,10 @@ class FormationForm(FlaskForm):
     description = TextAreaField('Description', validators=[Optional()])
     ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])
     submit = SubmitField('Save Formation')
+    imgur_url = StringField('Imgur Image URL', 
+                       validators=[Optional(), URL()])
+
+class PositionAssignmentForm(FlaskForm):
+    position_id = SelectField('Position', coerce=int, validators=[DataRequired()])
+    instructions = TextAreaField('Instructions', validators=[DataRequired()])
+    submit = SubmitField('Save Assignment')
