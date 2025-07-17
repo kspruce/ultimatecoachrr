@@ -123,6 +123,47 @@
                 </div>
             </div>
 
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Practice History</h5>
+                </div>
+                <div class="card-body">
+                    {% if play.session_components|length > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Session</th>
+                                        <th>Component</th>
+                                        <th>Focus Area</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for component in play.session_components %}
+                                    <tr>
+                                        <td>{{ component.session.date.strftime('%Y-%m-%d') if component.session.date else 'N/A' }}</td>
+                                        <td>{{ component.session.title }}</td>
+                                        <td>{{ component.title }}</td>
+                                        <td>{{ component.focus_area or 'N/A' }}</td>
+                                        <td>
+                                            <a href="{{ url_for('session.detail', session_id=component.session_id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View Session
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">This play hasn't been practiced in any sessions yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Notes Section -->
             <div class="card mb-4">
                 <div class="card-header">
