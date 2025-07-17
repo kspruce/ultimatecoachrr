@@ -109,7 +109,8 @@ class TheoryImage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationship
-    topic = db.relationship('TheoryTopic', backref=db.backref('images', cascade='all, delete-orphan'))
+    topic = db.relationship('TheoryTopic', back_populates='images')
+
 
 
 # Association Tables
