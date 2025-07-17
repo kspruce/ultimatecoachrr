@@ -1539,19 +1539,15 @@ def game_stats(game_id):
     # Sort by points played
     player_stats.sort(key=lambda x: x['stats']['points_played'], reverse=True)
     
-    # Generate visualization data
-    events = []
-    for point in game.points:
-        try:
-            # Try to treat it as a query object
-            events.extend(point.events.all())
-        except AttributeError:
-            # If it's already a list, just extend with it directly
-            events.extend(point.events)
-
+    # Get team name from the first player (assuming all players are on the same team)
+    team_name = None
+    if players_in_game:
+        first_player = next(iter(players_in_game))
+        team_name = first_player.team
     
-    heatmap_data = process_heatmap_data(events)
-    connection_data = generate_player_connections(events)
+    # Generate visualization data
+    heatmap_data = process_heatmap_data(team_name=team_name)
+    connection_data = generate_player_connections(team_name=team_name)
     
     return render_template(
         'stats/game_stats.html',
