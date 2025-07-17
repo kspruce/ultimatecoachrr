@@ -816,7 +816,6 @@ def edit_session(session_id):
 @login_required
 @admin_required
 def delete_session(session_id):
-    """Delete a session plan"""
     try:
         # Log the request
         current_app.logger.info(f"Delete request received for session {session_id}")
@@ -824,12 +823,10 @@ def delete_session(session_id):
         session = SessionPlan.query.get_or_404(session_id)
         
         # Check if user has permission (optional)
-        if not current_user.is_admin:  # Add any permission checks you need
+        if not current_user.is_admin:
             current_app.logger.warning(f"User {current_user.id} attempted to delete session {session_id} without permission")
-            return jsonify({
-                'success': False,
-                'message': 'Permission denied'
-            }), 403
+            flash('Permission denied', 'danger')
+            return redirect(url_for('session.index'))
 
         title = session.title
 
@@ -844,18 +841,15 @@ def delete_session(session_id):
 
         current_app.logger.info(f"Successfully deleted session {session_id}")
         
-        return jsonify({
-            'success': True,
-            'message': f'Session "{title}" has been deleted!'
-        })
+        flash(f'Session "{title}" has been deleted!', 'success')
+        return redirect(url_for('session.index'))
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting session {session_id}: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        flash(f'Error deleting session: {str(e)}', 'danger')
+        return redirect(url_for('session.index'))
+
 
 
 @bp.route('/drills/edit/<int:drill_id>', methods=['GET', 'POST'])
