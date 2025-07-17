@@ -416,8 +416,8 @@ def reset_database():
                 {
                     "date": datetime(2025, 7, 13),
                     "opponent": "Sheffield Steal",
-                    "our_score": 14,
-                    "their_score": 10,
+                    "our_score": 10,
+                    "their_score": 14,
                     "tournament_id": mt4_tournament.id,
                     "youtube_link": "https://youtu.be/KeefOJmYNVA",
                     "notes": "Fourth game of the tournament"
@@ -425,8 +425,8 @@ def reset_database():
                 {
                     "date": datetime(2025, 7, 13),
                     "opponent": "GUX",
-                    "our_score": 12,
-                    "their_score": 5,
+                    "our_score": 5,
+                    "their_score": 12,
                     "tournament_id": mt4_tournament.id,
                     "youtube_link": "https://youtu.be/-HM2PDm9Xc8",
                     "notes": "Fifth game of the tournament"
