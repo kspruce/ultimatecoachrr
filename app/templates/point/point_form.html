@@ -198,6 +198,7 @@
                             <div class="col-md-3">
                                 {{ form.point_outcome.label(class="form-label") }}
                                 {{ form.point_outcome(class="form-select") }}
+                                <small class="text-muted">Optional - will be determined from final event</small>
                                 {% for error in form.point_outcome.errors %}
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}

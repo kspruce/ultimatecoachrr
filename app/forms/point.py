@@ -37,10 +37,11 @@ class PointForm(FlaskForm):
         ('offense', 'Offense'),
         ('defense', 'Defense')
     ], validators=[DataRequired()])
-    point_outcome = SelectField('Point Outcome', choices=[
-        ('scored', 'We Scored'),
-        ('conceded', 'They Scored')
-    ], validators=[DataRequired()])
+    point_outcome = SelectField('Point Outcome', 
+                               choices=[('', 'Will be determined from events'), 
+                                       ('scored', 'We Scored'), 
+                                       ('conceded', 'They Scored')],
+                               validators=[Optional()])
     duration = IntegerField('Duration (seconds)', validators=[Optional(), NumberRange(min=0)])
     timestamp_in_video = IntegerField('Timestamp in Video (seconds)', validators=[Optional(), NumberRange(min=0)])
     

@@ -355,16 +355,32 @@ def finish_point(point_id):
         point = Point.query.get_or_404(point_id)
         game = Game.query.get_or_404(point.game_id)
 
-        # Ensure point outcome is set
-        if point.point_outcome is None:
-            last_event = Event.query.filter_by(point_id=point_id).order_by(Event.id.desc()).first()
-            if last_event:
-                if last_event.event_type in ['goal', 'callahan']:
-                    point.point_outcome = 'scored'
-                    point.our_score_after = point.our_score_before + 1
-                elif last_event.event_type == 'scored_on':
-                    point.point_outcome = 'conceded'
-                    point.their_score_after = point.their_score_before + 1
+        # Always check the last event to determine point outcome
+        last_event = Event.query.filter_by(point_id=point_id).order_by(Event.id.desc()).first()
+        
+        if last_event:
+            if last_event.event_type in ['goal', 'callahan']:
+                # We scored
+                point.point_outcome = 'scored'
+                point.our_score_after = point.our_score_before + 1
+                point.their_score_after = point.their_score_before  # Keep opponent score the same
+            elif last_event.event_type == 'scored_on':
+                # They scored
+                point.point_outcome = 'conceded'
+                point.our_score_after = point.our_score_before  # Keep our score the same
+                point.their_score_after = point.their_score_before + 1
+            else:
+                # If last event doesn't determine outcome, check if we already have an outcome
+                if point.point_outcome is None:
+                    # No outcome determined yet, provide a warning
+                    return jsonify({
+                        'error': 'Cannot determine point outcome from events. Please record a goal or scored_on event.'
+                    }), 400
+        else:
+            # No events recorded
+            return jsonify({
+                'error': 'No events recorded for this point. Please record at least one event.'
+            }), 400
 
         # Update game score
         game.our_score = point.our_score_after
@@ -427,10 +443,11 @@ def finish_point(point_id):
         
         # Return both redirect and redirect_url for compatibility
         return jsonify({
-            'message': 'Point finished', 
+            'message': f'Point finished. Outcome: {point.point_outcome}', 
             'redirect': url_for('point.game_points', game_id=game.id),
             'redirect_url': url_for('point.game_points', game_id=game.id),
-            'game_id': game.id  # Include game_id explicitly
+            'game_id': game.id,  # Include game_id explicitly
+            'point_outcome': point.point_outcome  # Include the determined outcome
         }), 200
 
     except Exception as e:
