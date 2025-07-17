@@ -155,7 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function updatePreview() {
         const content = contentInput.value;
         previewDiv.innerHTML = marked.parse(content);
+        // Add this line to ensure links open in new tabs
+        previewDiv.querySelectorAll('a').forEach(link => {
+            link.setAttribute('target', '_blank');
+        });
     }
+
 
     contentInput.addEventListener('input', updatePreview);
     updatePreview();

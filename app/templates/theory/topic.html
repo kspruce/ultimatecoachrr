@@ -1,5 +1,60 @@
 {# templates/theory/topic.html #}
 {% extends "base.html" %}
+{% block styles %}
+{{ super() }}
+<style>
+    .topic-content h2 {
+        color: #2c3e50;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-top: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .topic-content h3 {
+        color: #3498db;
+        margin-top: 25px;
+    }
+    
+    .topic-content p {
+        font-size: 1.05rem;
+        line-height: 1.7;
+    }
+    
+    .topic-content ul, .topic-content ol {
+        padding-left: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .topic-content li {
+        margin-bottom: 8px;
+    }
+    
+    .topic-content blockquote {
+        border-left: 4px solid #3498db;
+        padding-left: 15px;
+        color: #555;
+        font-style: italic;
+        margin: 20px 0;
+    }
+    
+    .topic-content code {
+        background-color: #f8f9fa;
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+    
+    /* Animation for section transitions */
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -37,13 +92,36 @@
                     {% if topic.image_url %}
                     <div class="topic-image mb-4">
                         <img src="{{ url_for('static', filename=topic.image_url) }}" 
-                             class="img-fluid rounded" 
+                             class="img-fluid rounded shadow" 
                              alt="{{ topic.name }}">
+                        <figcaption class="text-center text-muted mt-2">
+                            <small>{{ topic.name }} - Visual Guide</small>
+                        </figcaption>
                     </div>
                     {% endif %}
-                    
-                    <div class="topic-content">
-                        {{ topic.content|markdown|safe }}
+                    <div class="toc-container mb-4 d-none" id="table-of-contents">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Table of Contents</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ul class="list-group list-group-flush" id="toc-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="topic-content p-2">
+                        <div class="mb-4">
+                            {{ topic.content|markdown|safe }}
+                        </div>
+                        
+                        {% if topic.tags %}
+                        <div class="mt-4 mb-3">
+                            {% for tag in topic.tags %}
+                            <span class="badge bg-secondary me-1">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -112,4 +190,42 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate table of contents
+    const content = document.querySelector('.topic-content');
+    const headings = content.querySelectorAll('h2, h3');
+    const tocList = document.getElementById('toc-list');
+    const tocContainer = document.getElementById('table-of-contents');
+    
+    if (headings.length > 2) {
+        headings.forEach((heading, index) => {
+            // Add ID to the heading if it doesn't have one
+            if (!heading.id) {
+                heading.id = `section-${index}`;
+            }
+            
+            // Create TOC item
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            if (heading.tagName === 'H3') {
+                li.className += ' ps-4';
+            }
+            
+            const a = document.createElement('a');
+            a.href = `#${heading.id}`;
+            a.textContent = heading.textContent;
+            a.className = 'text-decoration-none';
+            
+            li.appendChild(a);
+            tocList.appendChild(li);
+        });
+        
+        tocContainer.classList.remove('d-none');
+    }
+});
+</script>
 {% endblock %}

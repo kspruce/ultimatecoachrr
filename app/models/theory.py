@@ -47,6 +47,8 @@ class TheoryTopic(db.Model):
     
     # Relationships
     section = db.relationship('TheorySection', back_populates='topics')
+    # Add this to the existing relationships in TheoryTopic
+    images = db.relationship('TheoryImage', back_populates='topic', cascade='all, delete-orphan')
     related_drills = db.relationship('SavedDrill', 
                                    secondary='topic_drill_association',
                                    backref=db.backref('theory_topics', lazy='dynamic'))
@@ -95,6 +97,20 @@ class TheoryTag(db.Model):
 
     def __repr__(self):
         return f'<TheoryTag {self.name}>'
+
+class TheoryImage(db.Model):
+    __tablename__ = 'theory_image'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('theory_topic.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    caption = db.Column(db.String(255))
+    order = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    topic = db.relationship('TheoryTopic', backref=db.backref('images', cascade='all, delete-orphan'))
+
 
 # Association Tables
 topic_drill_association = db.Table('topic_drill_association',
