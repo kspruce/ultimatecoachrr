@@ -84,6 +84,14 @@
                             {% endfor %}
                         </div>
                         
+                        <div class="form-group mb-3">
+                            {{ form.plays.label(class="form-label") }}
+                            {{ form.plays(class="form-select", multiple="multiple", size="5") }}
+                            <small class="form-text text-muted">
+                                Select plays that will be practiced in this component
+                            </small>
+                        </div>
+                        
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary") }}
                         </div>

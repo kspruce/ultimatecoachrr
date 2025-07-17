@@ -5,10 +5,9 @@ from wtforms import (
     TextAreaField, 
     FileField, 
     SelectMultipleField,
-    SubmitField,
-    URL
+    SubmitField
 )
-from wtforms.validators import DataRequired, Optional, Length
+from wtforms.validators import DataRequired, Optional, Length, URL
 from flask_wtf.file import FileAllowed
 from app.models.playbook import Formation, PlayTag
 

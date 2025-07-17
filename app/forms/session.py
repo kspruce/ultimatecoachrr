@@ -80,6 +80,12 @@ class SessionComponentForm(FlaskForm):
     focus_area = StringField('Focus Area', validators=[Optional(), Length(max=100)])
     notes = TextAreaField('Notes', validators=[Optional()])
     drill_id = SelectField('Use Saved Drill', coerce=int, validators=[Optional()])
+    plays = SelectMultipleField('Plays Used', coerce=int)
+    
+    def __init__(self, *args, **kwargs):
+        super(SessionComponentForm, self).__init__(*args, **kwargs)
+        from app.models.playbook import Play
+        self.plays.choices = [(p.id, p.name) for p in Play.query.order_by(Play.name).all()]    
     submit = SubmitField('Save Component')
 
 class AttendanceForm(FlaskForm):

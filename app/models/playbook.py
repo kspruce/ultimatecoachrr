@@ -41,6 +41,16 @@ class Play(db.Model):
     formation = db.relationship('Formation', backref='plays')
     tags = db.relationship('PlayTag', secondary=play_tag_association)
     
+    session_components = db.relationship('SessionComponent', 
+                                        secondary='play_session_component',
+                                        backref=db.backref('plays', lazy='dynamic'))
+    
+    # Create association table
+    play_session_component = db.Table('play_session_component',
+        db.Column('play_id', db.Integer, db.ForeignKey('play.id')),
+        db.Column('component_id', db.Integer, db.ForeignKey('session_component.id'))
+    )    
+    
 class PlayerPosition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
