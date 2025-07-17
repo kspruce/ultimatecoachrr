@@ -1561,7 +1561,8 @@ def game_stats(game_id):
         team_stats=team_stats,
         player_stats=player_stats,
         heatmap_data=json.dumps(heatmap_data),
-        connections=json.dumps(connection_data)
+        connections=json.dumps(connection_data),
+        calculate_impact_score=calculate_impact_score
     )
 
 @bp.route('/team')
