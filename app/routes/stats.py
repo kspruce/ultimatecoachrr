@@ -1542,7 +1542,13 @@ def game_stats(game_id):
     # Generate visualization data
     events = []
     for point in game.points:
-        events.extend(point.events.all())
+        try:
+            # Try to treat it as a query object
+            events.extend(point.events.all())
+        except AttributeError:
+            # If it's already a list, just extend with it directly
+            events.extend(point.events)
+
     
     heatmap_data = process_heatmap_data(events)
     connection_data = generate_player_connections(events)
