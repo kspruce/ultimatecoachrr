@@ -1545,6 +1545,12 @@ def game_stats(game_id):
         first_player = next(iter(players_in_game))
         team_name = first_player.team
     
+    def calculate_impact_score(stats):
+        # Your impact score calculation logic here
+        # For example:
+        return (stats['goals'] * 2 + stats['assists'] * 1.5 + 
+                stats['blocks'] * 1.5 - stats['turnovers'])
+    
     # Generate visualization data
     heatmap_data = process_heatmap_data(team_name=team_name)
     connection_data = generate_player_connections(team_name=team_name)
