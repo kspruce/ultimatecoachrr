@@ -25,11 +25,10 @@ class TheoryTopicForm(FlaskForm):
     content = TextAreaField('Content', validators=[DataRequired()])
     section_id = SelectField('Section', coerce=int, validators=[DataRequired()])
     order = IntegerField('Display Order', validators=[Optional()])
-    image = FileField('Topic Image', 
-                     validators=[
-                         Optional(),
-                         FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!')
-                     ])
+    image_url = StringField('Image URL (Google Photos)', validators=[
+        Optional(),
+        URL(message="Please enter a valid URL")
+    ])
     related_drills = SelectMultipleField('Related Drills', coerce=int, validators=[Optional()])
     
     tags = SelectMultipleField('Tags',

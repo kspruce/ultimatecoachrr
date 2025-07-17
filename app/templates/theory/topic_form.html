@@ -47,28 +47,54 @@
 
                         <!-- Image Upload -->
                         <div class="mb-3">
-                            {{ form.image.label(class="form-label") }}
+                            {{ form.image_url.label(class="form-label") }}
                             {% if topic and topic.image_url %}
                             <div class="current-image mb-2">
-                                <img src="{{ url_for('static', filename=topic.image_url) }}" 
+                                <img src="{{ topic.image_url }}" 
                                      alt="Current image" 
                                      class="img-fluid mb-2" 
                                      style="max-height: 200px;">
-                                <p class="text-muted">Upload a new image to replace the current one</p>
+                                <p class="text-muted">Enter a new URL to replace the current image</p>
                             </div>
                             {% endif %}
-                            {{ form.image(class="form-control" + (" is-invalid" if form.image.errors else "")) }}
-                            {% for error in form.image.errors %}
+                            {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else ""), 
+                                             placeholder="https://lh3.googleusercontent.com/...") }}
+                            {% for error in form.image_url.errors %}
                             <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                             <small class="form-text text-muted">
-                                Supported formats: JPG, JPEG, PNG, GIF. Max size: 5MB
+                                Paste the direct link to your Google Photos image. Make sure the image is shared publicly.
                             </small>
                             <div id="image-preview" class="mt-2" style="display: none;">
                                 <h6>Preview:</h6>
                                 <img src="" alt="Preview" class="img-fluid" style="max-height: 200px;">
                             </div>
                         </div>
+
+                        <div class="card mt-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">How to Get Google Photos Image URLs</h5>
+                            </div>
+                            <div class="card-body">
+                                <ol>
+                                    <li>Open Google Photos and select the image you want to use</li>
+                                    <li>Click the share icon (usually in the top-right corner)</li>
+                                    <li>Click "Create link" or "Get link" to make the photo public</li>
+                                    <li>Click "Copy link"</li>
+                                    <li>For direct image embedding, you may need to:
+                                        <ul>
+                                            <li>Open the shared link in a new tab</li>
+                                            <li>Right-click on the image and select "Copy image address"</li>
+                                            <li>Use this direct image URL in the form</li>
+                                        </ul>
+                                    </li>
+                                </ol>
+                                <div class="alert alert-info">
+                                    <strong>Note:</strong> Make sure your Google Photos sharing settings allow public access to the image.
+                                </div>
+                            </div>
+                        </div>
+
 
                         <!-- Content -->
                         <div class="mb-3">
@@ -161,29 +187,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-
     contentInput.addEventListener('input', updatePreview);
     updatePreview();
 
-    // Image preview
-    const imageInput = document.querySelector('input[type="file"]');
+    // Image URL preview
+    const imageUrlInput = document.getElementById('image_url');
     const previewContainer = document.getElementById('image-preview');
     const previewImg = previewContainer.querySelector('img');
 
-    imageInput.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            const reader = new FileReader();
+    imageUrlInput.addEventListener('input', function() {
+        if (this.value) {
+            previewImg.src = this.value;
+            previewContainer.style.display = 'block';
             
-            reader.onload = function(e) {
-                previewImg.src = e.target.result;
-                previewContainer.style.display = 'block';
-            }
+            // Handle image load error
+            previewImg.onerror = function() {
+                previewContainer.innerHTML = '<div class="alert alert-warning">Unable to load image from this URL. Make sure it\'s a direct image link and publicly accessible.</div>';
+            };
             
-            reader.readAsDataURL(this.files[0]);
+            // Reset error handler when image loads successfully
+            previewImg.onload = function() {
+                if (previewContainer.querySelector('.alert')) {
+                    previewContainer.innerHTML = '<h6>Preview:</h6><img src="' + imageUrlInput.value + '" alt="Preview" class="img-fluid" style="max-height: 200px;">';
+                    previewImg = previewContainer.querySelector('img');
+                }
+            };
         } else {
             previewContainer.style.display = 'none';
         }
     });
 });
 </script>
+
 {% endblock %}

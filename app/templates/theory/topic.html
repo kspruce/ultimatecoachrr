@@ -91,7 +91,7 @@
                 <div class="card-body">
                     {% if topic.image_url %}
                     <div class="topic-image mb-4">
-                        <img src="{{ url_for('static', filename=topic.image_url) }}" 
+                        <img src="{{ topic.image_url }}" 
                              class="img-fluid rounded shadow" 
                              alt="{{ topic.name }}">
                         <figcaption class="text-center text-muted mt-2">

@@ -115,27 +115,10 @@ def add_topic():
             content=form.content.data,
             section_id=form.section_id.data,
             order=form.order.data,
-            created_by=current_user.id
+            created_by=current_user.id,
+            image_url=form.image_url.data  # Use the URL directly
         )
         
-        # Handle image upload
-        if form.image.data:
-            try:
-                filename = secure_filename(form.image.data.filename)
-                # Create unique filename to prevent overwrites
-                unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-                # Create theory images directory if it doesn't exist
-                upload_path = os.path.join(current_app.static_folder, 'images', 'theory')
-                os.makedirs(upload_path, exist_ok=True)
-                # Save the file
-                filepath = os.path.join(upload_path, unique_filename)
-                form.image.data.save(filepath)
-                # Store the relative path in the database
-                topic.image_url = os.path.join('images', 'theory', unique_filename)
-            except Exception as e:
-                current_app.logger.error(f"Error saving image: {str(e)}")
-                flash('Error saving image file.', 'danger')
-
         db.session.add(topic)
         try:
             db.session.commit()
@@ -160,6 +143,7 @@ def edit_topic(topic_id):
         topic.content = form.content.data
         topic.section_id = form.section_id.data
         topic.order = form.order.data
+        topic.image_url = form.image_url.data  # Update the URL directly
         
         if form.related_drills.data:
             topic.related_drills = [form.related_drills.data]

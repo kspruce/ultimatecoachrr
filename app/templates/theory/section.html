@@ -43,7 +43,7 @@
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         {% if topic.image_url %}
-                        <img src="{{ url_for('static', filename=topic.image_url) }}" 
+                        <img src="{{ topic.image_url }}" 
                              class="card-img-top" alt="{{ topic.name }}"
                              style="height: 160px; object-fit: cover;">
                         {% else %}
