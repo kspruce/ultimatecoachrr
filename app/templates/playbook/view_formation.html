@@ -3,7 +3,7 @@
 {% block styles %}
 {{ super() }}
 <style>
-    .formation-header {
+    .concept-header {
         background: linear-gradient(135deg, 
             {% if formation.type == 'offense' %}#007bff, #0056b3{% else %}#dc3545, #a71d2a{% endif %});
         color: white;
@@ -12,7 +12,7 @@
         border-radius: 8px;
     }
     
-    .formation-badge {
+    .concept-badge {
         font-size: 1rem;
         padding: 0.5rem 1rem;
     }
@@ -26,6 +26,32 @@
     
     .description-card {
         margin-bottom: 2rem;
+    }
+    
+    .concept-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .embed-container {
+        position: relative;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        height: 0;
+        overflow: hidden;
+        max-width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .embed-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
     }
     
     /* Markdown styling */
@@ -98,6 +124,18 @@
         height: auto;
         margin-bottom: 1rem;
     }
+    
+    /* Mobile optimization */
+    @media (max-width: 768px) {
+        .btn {
+            padding: 0.6rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card {
+            margin-bottom: 1rem;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -112,11 +150,11 @@
         </div>
     </div>
     
-    <!-- Formation Header -->
-    <div class="row formation-header align-items-center">
+    <!-- Concept Header -->
+    <div class="row concept-header align-items-center">
         <div class="col-md-8">
             <h1>{{ formation.name }}</h1>
-            <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} formation-badge">
+            <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} concept-badge">
                 {{ formation.type|title }}
             </span>
         </div>
@@ -127,7 +165,7 @@
             </a>
             {% if current_user.is_admin %}
                 <button type="button" class="btn btn-outline-light"
-                        data-bs-toggle="modal" data-bs-target="#deleteFormationModal">
+                        data-bs-toggle="modal" data-bs-target="#deleteConceptModal">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             {% endif %}
@@ -135,8 +173,20 @@
     </div>
     
     <div class="row">
-        <!-- Formation Details -->
+        <!-- Concept Details -->
         <div class="col-12">
+            <!-- Diagram/Image -->
+            {% if formation.imgur_url %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Diagram</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ formation.imgur_url }}" alt="{{ formation.name }} diagram" class="concept-image">
+                    </div>
+                </div>
+            {% endif %}
+            
             <!-- Animation/Video -->
             {% if formation.ultiplay_embed %}
                 <div class="card mb-4">
@@ -167,13 +217,32 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Plays using this concept -->
+            {% if formation.plays %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Plays Using This Concept</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for play in formation.plays %}
+                                <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    {{ play.name }}
+                                    <span class="badge bg-{{ 'primary' if play.type == 'offense' else 'danger' }}">{{ play.type|title }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
 {% if current_user.is_admin %}
     <!-- Delete Modal -->
-    <div class="modal fade" id="deleteFormationModal" tabindex="-1">
+    <div class="modal fade" id="deleteConceptModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -210,6 +279,16 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Fix image loading issues
+    document.querySelectorAll('.concept-image').forEach(img => {
+        img.addEventListener('error', function() {
+            this.onerror = null;
+            this.src = '/static/images/placeholder-image.png'; // Replace with your placeholder image path
+            this.alt = 'Image not available';
+            this.classList.add('img-error');
+        });
     });
 });
 </script>
