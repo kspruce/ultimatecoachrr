@@ -818,10 +818,7 @@ def index():
             team_name = current_user.player.team
 
         # Get active players
-        players = Player.query.filter_by(active=True)
-        if team_name:
-            players = players.filter_by(team=team_name)
-        players = players.all()
+        players = Player.query.filter_by(active=True).all()
         
         if not players:
             flash("No active players found", "warning")
