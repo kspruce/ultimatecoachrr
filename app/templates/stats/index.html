@@ -451,7 +451,6 @@
         </div>
     </div>
     <!-- Player Statistics Table -->
-    <!-- Player Statistics Table -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Player Statistics
@@ -470,7 +469,6 @@
                 <thead>
                     <tr>
                         <th>Player</th>
-                        <th>Team</th> <!-- Added Team column -->
                         <th data-toggle="tooltip" title="Games Played">Games</th>
                         <th data-toggle="tooltip" title="Points Played">Points</th>
                         <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
@@ -497,7 +495,6 @@
                                 <small class="text-muted">#{{ player.jersey_number }}</small>
                             </a>
                         </td>
-                        <td>{{ player.team }}</td> <!-- Added Team column data -->
                         <td>{{ player_stats[player.id].games_played }}</td>
                         <td>{{ player_stats[player.id].points_played }}</td>
                         <td>{{ player_stats[player.id].o_line_points_played }}</td>
@@ -527,6 +524,7 @@
             {% endif %}
         </div>
     </div>
+
 </div>
 {% endblock %}
 {% block scripts %}
