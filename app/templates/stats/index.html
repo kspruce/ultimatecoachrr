@@ -112,42 +112,46 @@
         min-height: 300px;
     }
     
-    /* Fixed header and first column */
-    .stats-table-container {
-        position: relative;
-        overflow: auto;
-        max-height: 600px;
-        width: 100%;
-    }
-    
-    .stats-table-container table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    
-    .stats-table-container th {
+    /* Table styling for fixed headers and columns */
+    .dataTable th {
         position: sticky;
         top: 0;
         background-color: #f8f9fa;
         z-index: 10;
         border-bottom: 2px solid #dee2e6;
     }
-    
-    .stats-table-container td:first-child,
-    .stats-table-container th:first-child {
+
+    .dataTable td:first-child,
+    .dataTable th:first-child {
         position: sticky;
         left: 0;
         background-color: #f8f9fa;
         z-index: 5;
         border-right: 2px solid #dee2e6;
     }
-    
-    .stats-table-container th:first-child {
+
+    .dataTable th:first-child {
         z-index: 15; /* Higher than other headers to appear above them */
     }
-    
+
     /* Highlight rows on hover */
-    .stats-table-container tr:hover {
+    .dataTable tr:hover {
+        background-color: rgba(0,123,255,0.1) !important;
+    }
+
+    /* Card body for tables */
+    .card-body.p-0 {
+        overflow: visible !important;
+    }
+
+    /* DataTables wrapper adjustments */
+    .dataTables_wrapper {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* Make sure the fixed column has proper background on hover */
+    .dataTable tr:hover td:first-child {
         background-color: rgba(0,123,255,0.1) !important;
     }
     
@@ -452,66 +456,64 @@
                 <button class="btn btn-outline-primary stats-filter-btn" data-view="defense">Defensive Stats</button>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0"> <!-- Removed padding -->
             {% if players and player_stats %}
-            <div class="stats-table-container">
-                <table class="table table-striped" id="player-stats-table">
-                    <thead>
-                        <tr>
-                            <th>Player</th>
-                            <th data-toggle="tooltip" title="Games Played">Games</th>
-                            <th data-toggle="tooltip" title="Points Played">Points</th>
-                            <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
-                            <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
-                            <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
-                            <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
-                            <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for player in players %}
-                        {% if player.id in player_stats %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                    {{ player.name }}
-                                    <small class="text-muted">#{{ player.jersey_number }}</small>
-                                </a>
-                            </td>
-                            <td>{{ player_stats[player.id].games_played }}</td>
-                            <td>{{ player_stats[player.id].points_played }}</td>
-                            <td>{{ player_stats[player.id].o_line_points_played }}</td>
-                            <td>{{ player_stats[player.id].d_line_points_played }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
-                            <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
-                            <td class="offensive-stat">
-                                {{ player_stats[player.id].completions }}
-                                <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
-                            </td>
-                            <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
-                            <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
-                            <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                   player_stats[player.id].blocks - player_stats[player.id].throwaways - 
-                                   player_stats[player.id].drops)|round(1) }}</td>
-                            <td>{{ player_stats[player.id].per|round(1) }}</td>
-                        </tr>
-                        {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <table class="table table-striped" id="player-stats-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th data-toggle="tooltip" title="Games Played">Games</th>
+                        <th data-toggle="tooltip" title="Points Played">Points</th>
+                        <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
+                        <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
+                        <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
+                        <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
+                        <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
+                        <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in players %}
+                    {% if player.id in player_stats %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                {{ player.name }}
+                                <small class="text-muted">#{{ player.jersey_number }}</small>
+                            </a>
+                        </td>
+                        <td>{{ player_stats[player.id].games_played }}</td>
+                        <td>{{ player_stats[player.id].points_played }}</td>
+                        <td>{{ player_stats[player.id].o_line_points_played }}</td>
+                        <td>{{ player_stats[player.id].d_line_points_played }}</td>
+                        <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
+                        <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
+                        <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
+                        <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
+                        <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
+                        <td class="offensive-stat">
+                            {{ player_stats[player.id].completions }}
+                            <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
+                        </td>
+                        <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
+                        <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
+                        <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
+                               player_stats[player.id].blocks - player_stats[player.id].throwaways - 
+                               player_stats[player.id].drops)|round(1) }}</td>
+                        <td>{{ player_stats[player.id].per|round(1) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-            <div class="alert alert-info">No player statistics available yet.</div>
+            <div class="alert alert-info m-3">No player statistics available yet.</div>
             {% endif %}
         </div>
     </div>
@@ -535,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize DataTable with improved configuration
     const playerStatsTable = $('#player-stats-table').DataTable({
         pageLength: 25,
-        order: [[14, "desc"]], // Sort by PER by default (now column 14)
+        order: [[14, "desc"]], // Sort by PER by default (column 14)
         dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
@@ -546,9 +548,9 @@ document.addEventListener('DOMContentLoaded', function() {
         scrollX: true,
         scrollY: "500px",
         scrollCollapse: true,
-        paging: false,
+        paging: true, // Enable paging
         fixedColumns: {
-            leftColumns: 1
+            leftColumns: 1 // Fix Player column
         },
         columnDefs: [
             { targets: [10], // Completion percentage column
@@ -560,9 +562,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     return data;
                 }
             }
-        ]
+        ],
+        responsive: true
     });
 
+    // Add responsive behavior
+    $(window).on('resize', function() {
+        playerStatsTable.columns.adjust().draw();
+    });
     
     // Add filtering functionality for the player stats table
     document.querySelectorAll('[data-view]').forEach(button => {
@@ -613,19 +620,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-    
-    // Add responsive behavior
-    $(window).on('resize', function() {
-        if ($(window).width() < 768) {
-            $('.stats-table-container').css('max-height', '400px');
-        } else {
-            $('.stats-table-container').css('max-height', '600px');
-        }
-    });
-    
-    // Initialize responsive behavior
-    $(window).trigger('resize');
 
 
     // Initialize Heatmap
@@ -990,7 +984,6 @@ document.querySelectorAll('[data-view]').forEach(button => {
         }
     });
 });
-
 
 
 </script>
