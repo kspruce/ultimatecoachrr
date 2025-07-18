@@ -118,6 +118,7 @@ def drills():
 @bp.route('/drills/add', methods=['GET', 'POST'])
 @bp.route('/drills/add/<string:drill_type>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def add_drill(drill_type='basic'):
     form = DrillForm()
 

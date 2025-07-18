@@ -132,6 +132,7 @@ def add():
 
 @bp.route('/edit/<int:game_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def edit(game_id):
     game = Game.query.get_or_404(game_id)
     form = GameForm(obj=game)
