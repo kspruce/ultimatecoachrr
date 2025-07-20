@@ -8,6 +8,7 @@ import os
 from flask_wtf.csrf import CSRFError
 import json
 import markdown
+from flask_moment import Moment
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -15,7 +16,7 @@ login = LoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
-
+moment = Moment()
 
 
 def create_app(config_class=Config):
@@ -27,6 +28,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app)
+    moment.init_app(app)
 
     # Ensure the SECRET_KEY is set
     if not app.config.get('SECRET_KEY'):
