@@ -836,7 +836,7 @@ def index():
             return render_template('stats/index.html', **default_context)
 
         # Calculate team summary and stats
-        recent_games = Game.query.order_by(Game.date.desc()).limit(5).all()
+        recent_games = Game.query.order_by(Game.date.desc()).all()
         if recent_games:
             # Calculate team summary stats - SAME AS TEAM_STATS ROUTE
             team_summary = calculate_team_summary(recent_games)
@@ -1299,7 +1299,7 @@ def player_stats(player_id):
     team_avgs = calculate_team_averages(games)
     
     if stats['points_played'] > 0:
-        stats['per'] = calculate_per(player, games, team_avgs)
+        stats['per'] = calculate_per(player, team_avgs=team_avgs)
     
     # Add hucks to player stats
     stats['hucks'] = calculate_hucks(player, games)
