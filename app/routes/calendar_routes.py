@@ -184,7 +184,7 @@ def session_rsvp(session_id):
         form.status.data = existing_rsvp.status
         form.notes.data = existing_rsvp.notes
     
-    return render_template('rsvp.html', form=form, session=session, existing_rsvp=existing_rsvp)
+    return render_template('calendar/rsvp.html', form=form, session=session, existing_rsvp=existing_rsvp)
 
 @calendar_bp.route('/tournaments/<int:tournament_id>/rsvp', methods=['GET', 'POST'])
 @login_required
