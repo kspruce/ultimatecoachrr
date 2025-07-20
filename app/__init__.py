@@ -118,6 +118,10 @@ def create_app(config_class=Config):
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
     
+    from app.routes.calendar_routes import calendar_bp
+    app.register_blueprint(calendar_bp)
+
+    
     from app.routes.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
@@ -160,8 +164,6 @@ def create_app(config_class=Config):
     from app.routes.cutting_skill import bp as cutting_skill_bp
     app.register_blueprint(cutting_skill_bp)
     
-    from app.routes.calendar_routes import calendar_bp
-    app.register_blueprint(calendar_bp, url_prefix='/calendar')
    
     # Import models
     from app.models import (

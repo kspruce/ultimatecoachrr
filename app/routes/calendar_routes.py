@@ -114,7 +114,7 @@ def index():
         
         events.append(event)
     
-    return render_template('calendar.html', events=json.dumps(events))
+    return render_template('calendar/index.html', events=json.dumps(events))
 
 @calendar_bp.route('/sessions/<int:session_id>/rsvp', methods=['GET', 'POST'])
 @login_required
