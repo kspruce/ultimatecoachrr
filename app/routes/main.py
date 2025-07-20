@@ -243,7 +243,7 @@ def data_management():
                          exports=exports,
                          total_records=total_records,
                          last_export=last_export,
-                         export_dir=manager.export_dir)  # Pass the export directory to the template
+                         export_dir=manager.export_dir)
 
 
 @bp.route('/admin/export-data', methods=['POST'])
@@ -255,59 +255,39 @@ def export_data_route():
         export_name = request.form.get('export_name', '').strip()
         include_metadata = request.form.get('include_metadata') == 'on'
         
-        manager = DataManager()
+        manager = DataManager()  # Uses the Downloads directory
         
-        # Create export with timestamp
-        export_path = manager.export_all_data(timestamp=True)
-        
-        # Create a ZIP file of the export
-        import zipfile
-        import tempfile
-        
-        # Use the provided name or a default
+        # Create custom export directory name if provided
         if export_name:
-            zip_filename = f"{secure_filename(export_name)}.zip"
+            # Sanitize the export name
+            safe_name = secure_filename(export_name)
+            export_dir_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            export_dir = os.path.join(manager.export_dir, export_dir_name)
+            manager.export_dir = manager.export_dir  # Keep the base directory
+            export_path = manager.export_all_data(timestamp=False, custom_name=export_dir_name)
         else:
-            zip_filename = f"data_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+            export_path = manager.export_all_data(timestamp=True)
         
-        # Create a temporary file for the ZIP
-        temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
-        temp_zip.close()
-        
-        # Create the ZIP file
-        with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, dirs, files in os.walk(export_path):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    arcname = os.path.relpath(file_path, export_path)
-                    zipf.write(file_path, arcname)
-        
-        # Store the path in the session for download
-        session['export_zip'] = temp_zip.name
-        session['export_filename'] = zip_filename
-        
-        # Flash success message
-        flash(f'✅ Data exported successfully! Click the download button to save it.', 'success')
-        
-        # Return a JSON response for AJAX requests
-        if request.is_xhr:
-            return jsonify({
-                'success': True,
-                'message': 'Export completed successfully',
-                'download_url': url_for('main.download_export_zip')
-            })
-            
-        # Redirect to download page for form submissions
-        return redirect(url_for('main.download_export_page'))
+        # Load export summary for flash message
+        summary_path = os.path.join(export_path, 'export_summary.json')
+        if os.path.exists(summary_path):
+            with open(summary_path, 'r') as f:
+                summary = json.load(f)
+                total_records = sum(
+                    info.get('records_exported', 0) 
+                    for info in summary.values() 
+                    if isinstance(info, dict)
+                )
+                flash(f'✅ Data exported successfully! {total_records} records exported to {export_path}', 'success')
+        else:
+            flash(f'✅ Data exported successfully to {export_path}', 'success')
             
     except Exception as e:
         logging.error(f"Export failed: {e}")
         flash(f'❌ Export failed: {str(e)}', 'error')
-        
-        if request.is_xhr:
-            return jsonify({'success': False, 'message': str(e)}), 500
-            
-        return redirect(url_for('main.data_management'))
+    
+    return redirect(url_for('main.data_management'))
+
 
 
 
