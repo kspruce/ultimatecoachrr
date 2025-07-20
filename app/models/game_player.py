@@ -10,6 +10,7 @@ class GamePlayer(db.Model):
     
     # Relationships
     game = db.relationship('Game', back_populates='assigned_players')
+
     player = db.relationship('Player', backref=db.backref('game_assignments', lazy='dynamic'))
     
     def __repr__(self):

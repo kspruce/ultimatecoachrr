@@ -19,6 +19,7 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
 from app.models.throws import Throw 
+from app.models.game_player import GamePlayer
 
 # Video and Analysis models
 from app.models.clip import Clip, ClipTag

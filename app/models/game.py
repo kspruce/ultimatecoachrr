@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime
 
+
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=True)
@@ -20,8 +21,7 @@ class Game(db.Model):
     clips = db.relationship('Clip', back_populates='game', 
                           cascade='all, delete-orphan', lazy='dynamic')
     # Add relationship with GamePlayer
-    assigned_players = db.relationship('GamePlayer', back_populates='game',
-                                     cascade='all, delete-orphan', lazy='dynamic')
+    assigned_players = db.relationship('GamePlayer', back_populates='game', cascade='all, delete-orphan', lazy='dynamic')
     
     def __repr__(self):
         return f'<Game vs {self.opponent}>'
