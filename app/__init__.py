@@ -49,6 +49,10 @@ def create_app(config_class=Config):
     app.static_folder = 'static'
     app.static_url_path = '/static'
     
+    # Register custom commands
+    from commands import register_commands
+    register_commands(app)    
+    
     # Template filters
     def markdown_filter(text):
         if text:
@@ -151,6 +155,8 @@ def create_app(config_class=Config):
     from app.routes.cutting_skill import bp as cutting_skill_bp
     app.register_blueprint(cutting_skill_bp)
     
+    from app.routes.calendar_routes import calendar_bp
+    app.register_blueprint(calendar_bp, url_prefix='/calendar')
    
     # Import models
     from app.models import (

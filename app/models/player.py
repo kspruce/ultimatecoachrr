@@ -43,6 +43,8 @@ class Player(db.Model):
     pulls = db.relationship('Pull', back_populates='player', lazy='dynamic', cascade='all, delete-orphan')
     attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
     session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
+    # Add relationship with TournamentRSVP
+    tournament_rsvps = db.relationship('TournamentRSVP', back_populates='player', lazy='dynamic')
     point_stats = db.relationship('PlayerPointStats', back_populates='player', cascade='all, delete-orphan')
     throws_made = db.relationship('Throw',
                                 foreign_keys='Throw.thrower_id',

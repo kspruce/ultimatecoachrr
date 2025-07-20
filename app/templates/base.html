@@ -210,6 +210,9 @@
                             <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">Your Profile</a></li>
                             {% if current_user.is_admin %}
                             <li><a class="dropdown-item" href="{{ url_for('auth.users') }}">User Management</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.data_management') }}">
+                                <i class="fas fa-database me-2"></i>Data Management
+                            </a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>

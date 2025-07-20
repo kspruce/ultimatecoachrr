@@ -19,6 +19,9 @@ class Game(db.Model):
                            cascade='all, delete-orphan', lazy='dynamic')
     clips = db.relationship('Clip', back_populates='game', 
                           cascade='all, delete-orphan', lazy='dynamic')
+    # Add relationship with GamePlayer
+    assigned_players = db.relationship('GamePlayer', back_populates='game',
+                                     cascade='all, delete-orphan', lazy='dynamic')
     
     def __repr__(self):
         return f'<Game vs {self.opponent}>'
@@ -82,3 +85,8 @@ class Game(db.Model):
         
         scored = sum(1 for p in d_points if p.point_outcome == 'scored')
         return (scored / len(d_points)) * 100
+    
+    @property
+    def player_count(self):
+        """Return the number of players assigned to this game."""
+        return self.assigned_players.count()
