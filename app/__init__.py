@@ -72,8 +72,11 @@ def create_app(config_class=Config):
         if s is None:
             return ''
         return s.replace('\n', '<br>')
-    
-    # Error handlers
+    @app.template_filter('tojsonfilter')
+    def tojsonfilter(obj):
+        return json.dumps(obj)
+        # Error handlers
+        
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         return jsonify({
