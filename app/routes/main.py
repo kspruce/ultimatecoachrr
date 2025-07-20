@@ -182,49 +182,55 @@ def how_to_use():
 @admin_required
 def data_management():
     """Data management interface."""
-    manager = DataManager()
+    manager = DataManager()  # This will now use the Downloads directory by default
     model_info = manager.get_model_info()
     
     # Get available exports with details
     exports = []
-    export_dirs = [d for d in os.listdir('.') if d.startswith('data_exports') and os.path.isdir(d)]
     
-    for export_dir in sorted(export_dirs, reverse=True):  # Most recent first
-        try:
-            metadata_path = os.path.join(export_dir, 'metadata.json')
-            summary_path = os.path.join(export_dir, 'export_summary.json')
-            
-            export_info = {
-                'path': export_dir,
-                'name': export_dir.replace('data_exports_', '').replace('_', ' '),
-                'date': 'Unknown',
-                'records': 0,
-                'size': get_directory_size(export_dir)
-            }
-            
-            # Load metadata if available
-            if os.path.exists(metadata_path):
-                with open(metadata_path, 'r') as f:
-                    metadata = json.load(f)
-                    export_info['date'] = datetime.fromisoformat(
-                        metadata['export_timestamp']
-                    ).strftime('%Y-%m-%d %H:%M')
-            
-            # Load summary if available
-            if os.path.exists(summary_path):
-                with open(summary_path, 'r') as f:
-                    summary = json.load(f)
-                    export_info['records'] = sum(
-                        info.get('records_exported', 0) 
-                        for info in summary.values() 
-                        if isinstance(info, dict)
-                    )
-            
-            exports.append(export_info)
-            
-        except Exception as e:
-            # Use standard logging instead of current_app.logger
-            logging.error(f"Error processing export {export_dir}: {e}")
+    # Check if export directory exists
+    if os.path.exists(manager.export_dir):
+        # Get all directories in the export directory that look like exports
+        export_dirs = [d for d in os.listdir(manager.export_dir) 
+                      if os.path.isdir(os.path.join(manager.export_dir, d)) and 
+                      d.startswith('data_exports')]
+        
+        for export_dir_name in sorted(export_dirs, reverse=True):  # Most recent first
+            export_dir = os.path.join(manager.export_dir, export_dir_name)
+            try:
+                metadata_path = os.path.join(export_dir, 'metadata.json')
+                summary_path = os.path.join(export_dir, 'export_summary.json')
+                
+                export_info = {
+                    'path': export_dir,
+                    'name': export_dir_name.replace('data_exports_', '').replace('_', ' '),
+                    'date': 'Unknown',
+                    'records': 0,
+                    'size': get_directory_size(export_dir)
+                }
+                
+                # Load metadata if available
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, 'r') as f:
+                        metadata = json.load(f)
+                        export_info['date'] = datetime.fromisoformat(
+                            metadata['export_timestamp']
+                        ).strftime('%Y-%m-%d %H:%M')
+                
+                # Load summary if available
+                if os.path.exists(summary_path):
+                    with open(summary_path, 'r') as f:
+                        summary = json.load(f)
+                        export_info['records'] = sum(
+                            info.get('records_exported', 0) 
+                            for info in summary.values() 
+                            if isinstance(info, dict)
+                        )
+                
+                exports.append(export_info)
+                
+            except Exception as e:
+                logging.error(f"Error processing export {export_dir}: {e}")
     
     # Calculate total records
     total_records = sum(model['record_count'] for model in model_info['models'].values())
@@ -236,7 +242,9 @@ def data_management():
                          model_info=model_info, 
                          exports=exports,
                          total_records=total_records,
-                         last_export=last_export)
+                         last_export=last_export,
+                         export_dir=manager.export_dir)  # Pass the export directory to the template
+
 
 @bp.route('/admin/export-data', methods=['POST'])
 @login_required
@@ -247,15 +255,16 @@ def export_data_route():
         export_name = request.form.get('export_name', '').strip()
         include_metadata = request.form.get('include_metadata') == 'on'
         
-        manager = DataManager()
+        manager = DataManager()  # Uses the Downloads directory
         
         # Create custom export directory name if provided
         if export_name:
             # Sanitize the export name
             safe_name = secure_filename(export_name)
-            export_dir = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            manager.export_dir = export_dir
-            export_path = manager.export_all_data(timestamp=False)
+            export_dir_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            export_dir = os.path.join(manager.export_dir, export_dir_name)
+            manager.export_dir = manager.export_dir  # Keep the base directory
+            export_path = manager.export_all_data(timestamp=False, custom_name=export_dir_name)
         else:
             export_path = manager.export_all_data(timestamp=True)
         
@@ -278,6 +287,7 @@ def export_data_route():
         flash(f'❌ Export failed: {str(e)}', 'error')
     
     return redirect(url_for('main.data_management'))
+
 
 @bp.route('/admin/import-data', methods=['POST'])
 @login_required

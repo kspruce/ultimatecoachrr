@@ -9,6 +9,7 @@ from sqlalchemy import inspect as sqlalchemy_inspect
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.exc import IntegrityError
 from app import db
+from pathlib import Path
 
 class DataManager:
     """
@@ -16,8 +17,18 @@ class DataManager:
     Handles relationships, foreign keys, and maintains data integrity.
     """
     
-    def __init__(self, export_dir: str = "data_exports"):
-        self.export_dir = export_dir
+    def __init__(self, export_dir: str = None):
+        # Use a directory in the user's home directory if none specified
+        if export_dir is None:
+            # Create a directory in the user's Downloads folder or app directory
+            home_dir = str(Path.home())
+            self.export_dir = os.path.join(home_dir, "Downloads", "ultimate_coach_exports")
+            
+            # Create the directory if it doesn't exist
+            os.makedirs(self.export_dir, exist_ok=True)
+        else:
+            self.export_dir = export_dir
+            
         self.models = {}
         self.dependency_order = []
         self._discover_models()
@@ -92,7 +103,7 @@ class DataManager:
         
         return result
     
-    def export_all_data(self, timestamp: bool = True) -> str:
+    def export_all_data(self, timestamp: bool = True, custom_name: str = None) -> str:
         """
         Export all data from all models to JSON files.
         
@@ -103,10 +114,12 @@ class DataManager:
             Path to the export directory
         """
         # Create export directory
-        if timestamp:
-            export_path = f"{self.export_dir}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        if custom_name:
+            export_path = os.path.join(self.export_dir, custom_name)
+        elif timestamp:
+            export_path = os.path.join(self.export_dir, f"data_exports_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         else:
-            export_path = self.export_dir
+            export_path = os.path.join(self.export_dir, "data_exports")
             
         os.makedirs(export_path, exist_ok=True)
         
