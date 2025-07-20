@@ -103,26 +103,26 @@ class DataManager:
         
         return result
     
-        def export_all_data(self, timestamp: bool = True, custom_name: str = None) -> str:
-            """
-            Export all data from all models to JSON files.
+    def export_all_data(self, timestamp: bool = True, custom_name: str = None) -> str:
+        """
+        Export all data from all models to JSON files.
+        
+        Args:
+            timestamp: Whether to include timestamp in export directory name
+            custom_name: Optional custom name for the export directory
             
-            Args:
-                timestamp: Whether to include timestamp in export directory name
-                custom_name: Optional custom name for the export directory
-                
-            Returns:
-                Path to the export directory
-            """
-            # Create export directory
-            if custom_name:
-                export_path = os.path.join(self.export_dir, custom_name)
-            elif timestamp:
-                export_path = os.path.join(self.export_dir, f"data_exports_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-            else:
-                export_path = os.path.join(self.export_dir, "data_exports")
-                
-            os.makedirs(export_path, exist_ok=True)
+        Returns:
+            Path to the export directory
+        """
+        # Create export directory
+        if custom_name:
+            export_path = os.path.join(self.export_dir, custom_name)
+        elif timestamp:
+            export_path = os.path.join(self.export_dir, f"data_exports_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        else:
+            export_path = os.path.join(self.export_dir, "data_exports")
+            
+        os.makedirs(export_path, exist_ok=True)
     
 
 
