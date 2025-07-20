@@ -882,7 +882,7 @@ def index():
                 stats = get_player_base_stats(player)
                 if stats['points_played'] > 0:
                     # Pass the team_avgs to calculate_per
-                    stats['per'] = calculate_per(player, team_avgs=team_avgs)
+                    stats['per'] = calculate_per(player, recent_games, team_avgs)
                     player_stats[player.id] = stats
             except Exception as e:
                 print(f"Error calculating stats for player {player.id}: {str(e)}")
