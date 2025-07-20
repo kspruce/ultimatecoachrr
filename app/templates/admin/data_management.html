@@ -141,6 +141,7 @@
                         <p class="text-muted">Export all your application data to JSON files for backup or migration purposes.</p>
                         
                         <form id="exportForm" method="POST" action="{{ url_for('main.export_data_route') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
                                 <label for="export_name" class="form-label">Export Name (Optional)</label>
                                 <input type="text" class="form-control" id="export_name" name="export_name" 
@@ -190,6 +191,7 @@
                         <p class="text-muted">Import data from previously exported JSON files.</p>
                         
                         <form id="importForm" method="POST" action="{{ url_for('main.import_data_route') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
                                 <label for="import_dir" class="form-label">Select Export to Import</label>
                                 <select class="form-select" id="import_dir" name="import_dir" required>
@@ -592,7 +594,6 @@
         }
 
         function viewExportDetails(exportPath) {
-            // This would typically make an AJAX call to get export details
             addLogEntry(`Viewing details for export: ${exportPath}`, 'info');
             
             const content = `
@@ -608,17 +609,49 @@
             document.getElementById('exportDetailsContent').innerHTML = content;
             new bootstrap.Modal(document.getElementById('exportDetailsModal')).show();
             
-            // Simulate loading details
-            setTimeout(() => {
-                document.getElementById('exportDetailsContent').innerHTML = `
-                    <h6>Export Details</h6>
-                    <p><strong>Path:</strong> ${exportPath}</p>
-                    <p><strong>Status:</strong> <span class="badge bg-success">Complete</span></p>
-                    <p><strong>Files:</strong> Multiple JSON files</p>
-                    <p><strong>Models Exported:</strong> All available models</p>
-                `;
-            }, 1500);
+            // Fetch actual details instead of simulating
+            fetch(`/admin/export-details/${encodeURIComponent(exportPath)}`)
+                .then(response => response.json())
+                .then(data => {
+                    let detailsHtml = `
+                        <h6>Export Details</h6>
+                        <p><strong>Path:</strong> ${exportPath}</p>
+                        <p><strong>Status:</strong> <span class="badge bg-success">Complete</span></p>
+                    `;
+                    
+                    if (data.metadata) {
+                        detailsHtml += `
+                            <p><strong>Created:</strong> ${new Date(data.metadata.export_timestamp).toLocaleString()}</p>
+                            <p><strong>Models Exported:</strong> ${data.metadata.total_models}</p>
+                        `;
+                    }
+                    
+                    if (data.files && data.files.length > 0) {
+                        detailsHtml += `
+                            <h6 class="mt-3">Files (${data.files.length})</h6>
+                            <ul class="list-group">
+                                ${data.files.map(file => `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-file-code me-2"></i>${file.name}</span>
+                                        <span class="badge bg-secondary">${file.size}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        `;
+                    }
+                    
+                    document.getElementById('exportDetailsContent').innerHTML = detailsHtml;
+                })
+                .catch(error => {
+                    document.getElementById('exportDetailsContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading export details: ${error.message}
+                        </div>
+                    `;
+                });
         }
+
 
         function downloadExport(exportPath) {
             addLogEntry(`Downloading export: ${exportPath}`, 'info');
@@ -637,15 +670,27 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
                         },
                         body: JSON.stringify({path: exportPath})
-                    }).then(() => {
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
                         addLogEntry(`Export deleted: ${exportPath}`, 'success');
                         location.reload();
+                    })
+                    .catch(error => {
+                        addLogEntry(`Error deleting export: ${error.message}`, 'error');
                     });
                 }
             );
         }
+
 
         function showConfirmation(title, message, callback) {
             document.getElementById('confirmationContent').innerHTML = `
