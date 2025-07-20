@@ -254,4 +254,4 @@ def tournament_rsvp(tournament_id):
         form.status.data = existing_rsvp.status
         form.notes.data = existing_rsvp.notes
     
-    return render_template('tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
+    return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
