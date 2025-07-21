@@ -10,7 +10,7 @@ import json
 
 calendar_bp = Blueprint('calendar', __name__)
 
-@calendar_bp.route('/')
+@calendar_bp.route('/calendar')
 @login_required
 def index():
     # Get upcoming sessions
