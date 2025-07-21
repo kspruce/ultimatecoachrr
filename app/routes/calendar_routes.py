@@ -10,108 +10,77 @@ import json
 
 calendar_bp = Blueprint('calendar', __name__)
 
-@calendar_bp.route('/calendar')
+@bp.route('/')
 @login_required
 def index():
-    """Display the calendar view with sessions and tournaments."""
-    # Get upcoming sessions and tournaments (next 3 months)
-    today = datetime.now().date()
-    end_date = today + timedelta(days=90)
-    
-    # Get sessions
-    sessions = SessionPlan.query.filter(
-        (SessionPlan.date >= today) & (SessionPlan.date <= end_date)
+    # Get upcoming sessions
+    upcoming_sessions = SessionPlan.query.filter(
+        SessionPlan.date >= datetime.now().date()
     ).order_by(SessionPlan.date).all()
     
-    # Get tournaments
-    tournaments = Tournament.query.filter(
-        (Tournament.start_date >= today) | 
-        ((Tournament.start_date <= today) & (Tournament.end_date >= today))
+    # Get upcoming tournaments
+    upcoming_tournaments = Tournament.query.filter(
+        Tournament.start_date >= datetime.now().date()
     ).order_by(Tournament.start_date).all()
     
-    # Format events for FullCalendar
+    # Create events list for calendar
     events = []
     
-    # Add sessions to events
-    for session in sessions:
-        # Check if current user has RSVP'd
+    # Add session events
+    for session in upcoming_sessions:
+        # Check if user has RSVP'd
         rsvp_status = None
-        rsvp_notes = None
-        
         if current_user.player:
             rsvp = SessionRSVP.query.filter_by(
                 session_id=session.id,
                 player_id=current_user.player.id
             ).first()
-            
             if rsvp:
                 rsvp_status = rsvp.status
-                rsvp_notes = rsvp.notes
         
         event = {
             'id': session.id,
             'title': session.title,
-            'start': session.date.isoformat(),
-            'extendedProps': {
-                'id': session.id,
-                'type': 'session',
-                'formatted_date': session.formatted_date,
-                'formatted_time': session.formatted_time,
-                'location': session.location,
-                'focus_area': session.focus_area,
-                'notes': session.notes,
-                'rsvp_status': rsvp_status,
-                'rsvp_notes': rsvp_notes
-            }
+            'start': session.date.strftime('%Y-%m-%d'),
+            'type': 'session',
+            'formatted_date': session.formatted_date,
+            'formatted_time': session.formatted_time,
+            'location': session.location,
+            'focus_area': session.focus_area,
+            'notes': session.notes,
+            'rsvp_status': rsvp_status
         }
-        
-        # Add time if available
-        if session.start_time:
-            start_datetime = datetime.combine(session.date, session.start_time)
-            event['start'] = start_datetime.isoformat()
-            
-            if session.end_time:
-                end_datetime = datetime.combine(session.date, session.end_time)
-                event['end'] = end_datetime.isoformat()
-        
         events.append(event)
     
-    # Add tournaments to events
-    for tournament in tournaments:
-        # Check if current user has RSVP'd
+    # Add tournament events
+    for tournament in upcoming_tournaments:
+        # Check if user has RSVP'd
         rsvp_status = None
-        rsvp_notes = None
         selected_by_admin = False
-        
         if current_user.player:
             rsvp = TournamentRSVP.query.filter_by(
                 tournament_id=tournament.id,
                 player_id=current_user.player.id
             ).first()
-            
             if rsvp:
                 rsvp_status = rsvp.status
-                rsvp_notes = rsvp.notes
                 selected_by_admin = rsvp.selected_by_admin
+        
+        # Format date range
+        formatted_date = tournament.formatted_date_range
         
         event = {
             'id': tournament.id,
             'title': tournament.name,
-            'start': tournament.start_date.isoformat(),
-            'end': (tournament.end_date + timedelta(days=1)).isoformat() if tournament.end_date else None,
-            'allDay': True,
-            'extendedProps': {
-                'id': tournament.id,
-                'type': 'tournament',
-                'formatted_date': tournament.formatted_date_range,
-                'location': tournament.location,
-                'notes': '',
-                'rsvp_status': rsvp_status,
-                'rsvp_notes': rsvp_notes,
-                'selected_by_admin': selected_by_admin
-            }
+            'start': tournament.start_date.strftime('%Y-%m-%d'),
+            'end': tournament.end_date.strftime('%Y-%m-%d') if tournament.end_date else None,
+            'type': 'tournament',
+            'formatted_date': formatted_date,
+            'location': tournament.location,
+            'notes': '',
+            'rsvp_status': rsvp_status,
+            'selected_by_admin': selected_by_admin
         }
-        
         events.append(event)
     
     return render_template('calendar/index.html', events=json.dumps(events))
@@ -255,3 +224,67 @@ def tournament_rsvp(tournament_id):
         form.notes.data = existing_rsvp.notes
     
     return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
+
+@calendar_bp.route('/api/rsvp', methods=['POST'])
+@login_required
+def api_rsvp():
+    if not request.is_json:
+        return jsonify({'success': False, 'message': 'Invalid request format'}), 400
+    
+    data = request.get_json()
+    event_id = data.get('id')
+    event_type = data.get('type')
+    status = data.get('status')
+    notes = data.get('notes', '')
+    
+    if not all([event_id, event_type, status]):
+        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+    
+    if not current_user.player:
+        return jsonify({'success': False, 'message': 'You need to link your account to a player first'}), 400
+    
+    try:
+        if event_type == 'session':
+            # Handle session RSVP
+            existing_rsvp = SessionRSVP.query.filter_by(
+                session_id=event_id,
+                player_id=current_user.player.id
+            ).first()
+            
+            if existing_rsvp:
+                existing_rsvp.status = status
+                existing_rsvp.notes = notes
+            else:
+                rsvp = SessionRSVP(
+                    session_id=event_id,
+                    player_id=current_user.player.id,
+                    status=status,
+                    notes=notes
+                )
+                db.session.add(rsvp)
+        
+        elif event_type == 'tournament':
+            # Handle tournament RSVP
+            existing_rsvp = TournamentRSVP.query.filter_by(
+                tournament_id=event_id,
+                player_id=current_user.player.id
+            ).first()
+            
+            if existing_rsvp:
+                existing_rsvp.status = status
+                existing_rsvp.notes = notes
+            else:
+                rsvp = TournamentRSVP(
+                    tournament_id=event_id,
+                    player_id=current_user.player.id,
+                    status=status,
+                    notes=notes
+                )
+                db.session.add(rsvp)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'RSVP updated successfully'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

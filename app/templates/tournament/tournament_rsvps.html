@@ -13,7 +13,7 @@
     </div>
 
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card mb-4">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">Attending ({{ attending|length }})</h5>
@@ -47,7 +47,7 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card mb-4">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0">Maybe ({{ maybe|length }})</h5>
@@ -81,7 +81,7 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card mb-4">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">Not Attending ({{ not_attending|length }})</h5>
@@ -114,6 +114,37 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">No RSVP ({{ no_rsvp_players|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if no_rsvp_players %}
+                    <div class="list-group">
+                        {% for player in no_rsvp_players %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">{{ player.name }}</h6>
+                                    {% if player.jersey_number %}
+                                    <small>#{{ player.jersey_number }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input player-select" type="checkbox" name="selected_players" value="{{ player.id }}">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">All active players have RSVP'd.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="card mt-4">
@@ -121,9 +152,9 @@
             <h5>Player Selection</h5>
         </div>
         <div class="card-body">
-            <form method="post" action="{{ url_for('tournament.update_selections', tournament_id=tournament.id) }}">
+            <form method="post" action="{{ url_for('tournament.update_selections', tournament_id=tournament.id) }}" id="selection-form">
                 {{ selection_form.hidden_tag() }}
-                <p>Select players who will participate in this tournament. Currently selected: <strong>{{ selected_players|length }}</strong> players.</p>
+                <p>Select players who will participate in this tournament. Currently selected: <strong><span id="selected-count">{{ selected_players|length }}</span></strong> players.</p>
                 
                 <div id="selected-players-container">
                     <!-- Hidden inputs will be added here via JavaScript -->
@@ -142,17 +173,22 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const checkboxes = document.querySelectorAll('.player-select');
-    const form = document.querySelector('form');
+    const form = document.getElementById('selection-form');
     const container = document.getElementById('selected-players-container');
+    const selectedCountDisplay = document.getElementById('selected-count');
     
     // Update hidden inputs when checkboxes change
     function updateSelectedPlayers() {
         // Clear existing inputs
         container.innerHTML = '';
         
+        // Count selected players
+        let selectedCount = 0;
+        
         // Add new inputs for each selected player
         checkboxes.forEach(checkbox => {
             if (checkbox.checked) {
+                selectedCount++;
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'selected_players';
@@ -160,6 +196,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 container.appendChild(input);
             }
         });
+        
+        // Update the count display
+        selectedCountDisplay.textContent = selectedCount;
     }
     
     // Add event listeners to checkboxes

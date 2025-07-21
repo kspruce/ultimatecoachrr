@@ -40,7 +40,6 @@
   </li>
 </ul>
 
-
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card">
@@ -59,6 +58,52 @@
                     </p>
                 </div>
             </div>
+            
+            {% if current_user.is_authenticated and current_user.player %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Your RSVP</h5>
+                </div>
+                <div class="card-body">
+                    {% if player_rsvp %}
+                        <p>Your current status: 
+                            <span class="badge 
+                                {% if player_rsvp.status == 'attending' %}bg-success
+                                {% elif player_rsvp.status == 'maybe' %}bg-warning
+                                {% else %}bg-danger{% endif %}">
+                                {{ player_rsvp.status|replace('_', ' ')|capitalize }}
+                            </span>
+                        </p>
+                        {% if player_rsvp.selected_by_admin %}
+                        <div class="alert alert-info">
+                            You have been selected by the admin to participate in this tournament.
+                        </div>
+                        {% endif %}
+                        <a href="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Update RSVP</a>
+                    {% else %}
+                        <p>You haven't RSVP'd to this tournament yet.</p>
+                        <a href="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="btn btn-primary">RSVP Now</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if current_user.is_admin %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>RSVPs</h5>
+                </div>
+                <div class="card-body">
+                    <p>Attending: {{ tournament.attending_count }}</p>
+                    <p>Total RSVPs: {{ tournament.rsvp_count }}</p>
+                    <p>Selected Players: {{ tournament.selected_players_count }}</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('tournament.rsvps', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Manage RSVPs & Select Players</a>
+                        <a href="{{ url_for('tournament.assign_players', tournament_id=tournament.id) }}" class="btn btn-outline-secondary">Assign Players to Games</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
         <div class="col-md-8">
             <div class="card">
@@ -105,43 +150,5 @@
             </div>
         </div>
     </div>
-    {% if current_user.is_authenticated and current_user.player %}
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5>Your RSVP</h5>
-        </div>
-        <div class="card-body">
-            {% set player_rsvp = current_user.player.tournament_rsvps.filter_by(tournament_id=tournament.id).first() %}
-            {% if player_rsvp %}
-                <p>Your current status: 
-                    <span class="badge 
-                        {% if player_rsvp.status == 'attending' %}bg-success
-                        {% elif player_rsvp.status == 'maybe' %}bg-warning
-                        {% else %}bg-danger{% endif %}">
-                        {{ player_rsvp.status|replace('_', ' ')|capitalize }}
-                    </span>
-                </p>
-                <a href="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Update RSVP</a>
-            {% else %}
-                <p>You haven't RSVP'd to this tournament yet.</p>
-                <a href="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="btn btn-primary">RSVP Now</a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-    
-    {% if current_user.is_admin %}
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5>RSVPs</h5>
-        </div>
-        <div class="card-body">
-            <p>Attending: {{ tournament.attending_count }}</p>
-            <p>Total RSVPs: {{ tournament.rsvp_count }}</p>
-            <a href="{{ url_for('tournament.rsvps', tournament_id=tournament.id) }}" class="btn btn-outline-primary">View All RSVPs</a>
-        </div>
-    </div>
-    {% endif %}
-
 </div>
 {% endblock %}

@@ -9,6 +9,7 @@ from app.forms.point import PointForm
 from app.models.event import Event
 from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
+from app.models.tournament_rsvp import TournamentRSVP
 from app.utils.utils import admin_required
 
 bp = Blueprint('point', __name__, url_prefix='/points')
@@ -226,6 +227,20 @@ def add_point(game_id):
     
     # Get all active players
     all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    
+    # If this is a tournament game, filter players to only show those selected for the tournament
+    if game.tournament_id:
+        selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
+            tournament_id=game.tournament_id,
+            selected_by_admin=True
+        ).all()
+        selected_player_ids = [id[0] for id in selected_player_ids]
+        
+        if selected_player_ids:
+            all_players = Player.query.filter(
+                Player.active == True,
+                Player.id.in_(selected_player_ids)
+            ).order_by(Player.jersey_number).all()
     
     # Get player stats
     player_stats = get_player_stats(game_id)

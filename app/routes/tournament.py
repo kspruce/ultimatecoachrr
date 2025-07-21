@@ -1,3 +1,5 @@
+# app/routes/tournament.py
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
@@ -11,7 +13,7 @@ from app.models.player import Player
 from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
 from app.utils.utils import admin_required
-from wtforms import SubmitField
+from wtforms import SubmitField, HiddenField
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -47,10 +49,20 @@ def detail(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     games = tournament.games.order_by(Game.date.desc()).all()
     delete_form = FlaskForm()  # Add CSRF form here too
+    
+    # Get player RSVP if user has a player profile
+    player_rsvp = None
+    if current_user.player:
+        player_rsvp = TournamentRSVP.query.filter_by(
+            tournament_id=tournament_id, 
+            player_id=current_user.player.id
+        ).first()
+    
     return render_template('tournament/detail.html', 
                          tournament=tournament, 
                          games=games,
-                         delete_form=delete_form)
+                         delete_form=delete_form,
+                         player_rsvp=player_rsvp)
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -161,6 +173,9 @@ def delete(tournament_id):
             # Delete the game
             db.session.delete(game)
 
+        # Delete all RSVPs
+        TournamentRSVP.query.filter_by(tournament_id=tournament_id).delete()
+        
         # Finally delete the tournament
         db.session.delete(tournament)
         db.session.commit()
@@ -173,8 +188,97 @@ def delete(tournament_id):
         flash(f'Error deleting tournament: {str(e)}', 'danger')
         return redirect(url_for('tournament.index'))
 
-# Add the routes from tournament_routes.py below
+# RSVP Routes
+@bp.route('/<int:tournament_id>/rsvp', methods=['GET', 'POST'])
+@login_required
+def rsvp(tournament_id):
+    """Handle RSVPs for a tournament."""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    
+    # Get the current user's player
+    if not current_user.player:
+        flash('You need to link your account to a player before you can RSVP.', 'warning')
+        return redirect(url_for('auth.link_player'))
+    
+    player = current_user.player
+    
+    # Check if player has already RSVP'd
+    existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
+    
+    form = RSVPForm(obj=existing_rsvp)
+    
+    if form.validate_on_submit():
+        if existing_rsvp:
+            # Update existing RSVP
+            existing_rsvp.status = form.status.data
+            existing_rsvp.notes = form.notes.data
+            flash('Your RSVP has been updated!', 'success')
+        else:
+            # Create new RSVP
+            rsvp = TournamentRSVP(
+                tournament_id=tournament_id,
+                player_id=player.id,
+                status=form.status.data,
+                notes=form.notes.data
+            )
+            db.session.add(rsvp)
+            flash('Your RSVP has been submitted!', 'success')
+        
+        db.session.commit()
+        return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+    
+    return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
 
+# API endpoint for RSVP from calendar
+@bp.route('/<int:tournament_id>/rsvp_api', methods=['POST'])
+@login_required
+def rsvp_api(tournament_id):
+    """API endpoint for tournament RSVPs."""
+    if not request.is_json:
+        return jsonify({'success': False, 'message': 'Invalid request format'}), 400
+    
+    tournament = Tournament.query.get_or_404(tournament_id)
+    
+    # Get the current user's player
+    if not current_user.player:
+        return jsonify({'success': False, 'message': 'You need to link your account to a player first'}), 400
+    
+    player = current_user.player
+    data = request.get_json()
+    
+    # Validate data
+    if 'status' not in data:
+        return jsonify({'success': False, 'message': 'Status is required'}), 400
+    
+    status = data['status']
+    notes = data.get('notes', '')
+    
+    # Check if player has already RSVP'd
+    existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
+    
+    try:
+        if existing_rsvp:
+            # Update existing RSVP
+            existing_rsvp.status = status
+            existing_rsvp.notes = notes
+        else:
+            # Create new RSVP
+            rsvp = TournamentRSVP(
+                tournament_id=tournament_id,
+                player_id=player.id,
+                status=status,
+                notes=notes
+            )
+            db.session.add(rsvp)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'RSVP updated successfully'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Admin RSVP Management
 @bp.route('/<int:tournament_id>/rsvps')
 @login_required
 @admin_required
@@ -186,6 +290,15 @@ def rsvps(tournament_id):
     attending = TournamentRSVP.query.filter_by(tournament_id=tournament_id, status='attending').all()
     maybe = TournamentRSVP.query.filter_by(tournament_id=tournament_id, status='maybe').all()
     not_attending = TournamentRSVP.query.filter_by(tournament_id=tournament_id, status='not_attending').all()
+    
+    # Get all active players who haven't RSVP'd
+    rsvp_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(tournament_id=tournament_id).all()
+    rsvp_player_ids = [id[0] for id in rsvp_player_ids]
+    
+    no_rsvp_players = Player.query.filter(
+        Player.active == True,
+        ~Player.id.in_(rsvp_player_ids) if rsvp_player_ids else True
+    ).all()
     
     # Get selected players
     selected_players = Player.query.join(TournamentRSVP).filter(
@@ -207,6 +320,7 @@ def rsvps(tournament_id):
         attending=attending,
         maybe=maybe,
         not_attending=not_attending,
+        no_rsvp_players=no_rsvp_players,
         selected_players=selected_players,
         selection_form=selection_form
     )
@@ -224,8 +338,26 @@ def update_selections(tournament_id):
     # Update all RSVPs for this tournament
     all_rsvps = TournamentRSVP.query.filter_by(tournament_id=tournament_id).all()
     
+    # Create a set of player IDs with RSVPs
+    rsvp_player_ids = {rsvp.player_id for rsvp in all_rsvps}
+    
+    # Update existing RSVPs
     for rsvp in all_rsvps:
         rsvp.selected_by_admin = str(rsvp.player_id) in selected_player_ids
+    
+    # Create new RSVPs for players who didn't have one but were selected
+    for player_id in selected_player_ids:
+        player_id = int(player_id)
+        if player_id not in rsvp_player_ids:
+            # Create a new RSVP with admin selection
+            new_rsvp = TournamentRSVP(
+                tournament_id=tournament_id,
+                player_id=player_id,
+                status='attending',  # Default status
+                selected_by_admin=True,
+                notes='Added by admin'
+            )
+            db.session.add(new_rsvp)
     
     db.session.commit()
     
@@ -302,92 +434,3 @@ def update_game_players(tournament_id, game_id):
     
     flash(f'{len(selected_player_ids)} players assigned to game vs {game.opponent}', 'success')
     return redirect(url_for('tournament.assign_players', tournament_id=tournament_id))
-
-@bp.route('/<int:tournament_id>/rsvp', methods=['GET', 'POST'])
-@login_required
-def rsvp(tournament_id):
-    """Handle RSVPs for a tournament."""
-    tournament = Tournament.query.get_or_404(tournament_id)
-    
-    # Get the current user's player
-    if not current_user.player:
-        flash('You need to link your account to a player before you can RSVP.', 'warning')
-        return redirect(url_for('auth.link_player'))
-    
-    player = current_user.player
-    
-    # Check if player has already RSVP'd
-    existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
-    
-    form = RSVPForm(obj=existing_rsvp)
-    
-    if form.validate_on_submit():
-        if existing_rsvp:
-            # Update existing RSVP
-            existing_rsvp.status = form.status.data
-            existing_rsvp.notes = form.notes.data
-            flash('Your RSVP has been updated!', 'success')
-        else:
-            # Create new RSVP
-            rsvp = TournamentRSVP(
-                tournament_id=tournament_id,
-                player_id=player.id,
-                status=form.status.data,
-                notes=form.notes.data
-            )
-            db.session.add(rsvp)
-            flash('Your RSVP has been submitted!', 'success')
-        
-        db.session.commit()
-        return redirect(url_for('tournament.detail', tournament_id=tournament_id))
-    
-    return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
-
-# Add API endpoint for RSVP from calendar
-@bp.route('/<int:tournament_id>/rsvp', methods=['POST'])
-@login_required
-def rsvp_api(tournament_id):
-    """API endpoint for tournament RSVPs."""
-    if not request.is_json:
-        return jsonify({'success': False, 'message': 'Invalid request format'}), 400
-    
-    tournament = Tournament.query.get_or_404(tournament_id)
-    
-    # Get the current user's player
-    if not current_user.player:
-        return jsonify({'success': False, 'message': 'You need to link your account to a player first'}), 400
-    
-    player = current_user.player
-    data = request.get_json()
-    
-    # Validate data
-    if 'status' not in data:
-        return jsonify({'success': False, 'message': 'Status is required'}), 400
-    
-    status = data['status']
-    notes = data.get('notes', '')
-    
-    # Check if player has already RSVP'd
-    existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
-    
-    try:
-        if existing_rsvp:
-            # Update existing RSVP
-            existing_rsvp.status = status
-            existing_rsvp.notes = notes
-        else:
-            # Create new RSVP
-            rsvp = TournamentRSVP(
-                tournament_id=tournament_id,
-                player_id=player.id,
-                status=status,
-                notes=notes
-            )
-            db.session.add(rsvp)
-        
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'RSVP updated successfully'})
-    
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
