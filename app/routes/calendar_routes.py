@@ -27,34 +27,34 @@ def index():
     events = []
     
     # Add session events
-    for session in upcoming_sessions:
+    for session_plan in upcoming_sessions:  # Changed variable name from 'session' to 'session_plan'
         # Check if user has RSVP'd
         rsvp_status = None
         if current_user.player:
             rsvp = SessionRSVP.query.filter_by(
-                session_id=session.id,
+                session_id=session_plan.id,  # Changed from session.id
                 player_id=current_user.player.id
             ).first()
             if rsvp:
                 rsvp_status = rsvp.status
         
-    event = {
-            'id': session.id,
-            'title': session.title,
-            'start': session.date.strftime('%Y-%m-%d'),
+        event = {
+            'id': session_plan.id,  # Changed from session.id
+            'title': session_plan.title,  # Changed from session.title
+            'start': session_plan.date.strftime('%Y-%m-%d'),  # Changed from session.date
             'type': 'session',
-            'formatted_date': session.formatted_date,
-            'formatted_time': session.formatted_time,
-            'location': session.location,
-            'focus_area': session.focus_area,
-            'notes': session.notes,
+            'formatted_date': session_plan.formatted_date,  # Changed from session.formatted_date
+            'formatted_time': session_plan.formatted_time,  # Changed from session.formatted_time
+            'location': session_plan.location,  # Changed from session.location
+            'focus_area': session_plan.focus_area,  # Changed from session.focus_area
+            'notes': session_plan.notes,  # Changed from session.notes
             'rsvp_status': rsvp_status,
             # Add these URLs
-            'details_url': url_for('session.detail', session_id=session.id),
-            'edit_url': url_for('session.edit_session', session_id=session.id),
-            'manage_url': url_for('session.rsvps', session_id=session.id)
-    }
-    events.append(event)
+            'details_url': url_for('session.detail', session_id=session_plan.id),  # Changed from session.id
+            'edit_url': url_for('session.edit_session', session_id=session_plan.id),  # Changed from session.id
+            'manage_url': url_for('session.rsvps', session_id=session_plan.id)  # Changed from session.id
+        }
+        events.append(event)
     
     # Add tournament events
     for tournament in upcoming_tournaments:
@@ -79,7 +79,7 @@ def index():
             'start': tournament.start_date.strftime('%Y-%m-%d'),
             'end': tournament.end_date.strftime('%Y-%m-%d') if tournament.end_date else None,
             'type': 'tournament',
-            'formatted_date': tournament.formatted_date_range,
+            'formatted_date': formatted_date,
             'location': tournament.location,
             'notes': '',
             'rsvp_status': rsvp_status,
