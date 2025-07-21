@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Assign Players to Games</h1>
+            <p class="lead">{{ tournament.name }} | {{ tournament.formatted_date_range }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}" class="btn btn-secondary">Back to Tournament</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Selected Players ({{ selected_players|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if selected_players %}
+                    <div class="list-group">
+                        {% for player in selected_players %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">{{ player.name }}</h6>
+                                    {% if player.jersey_number %}
+                                    <small>#{{ player.jersey_number }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No players selected for this tournament yet.</p>
+                    <a href="{{ url_for('tournament.rsvps', tournament_id=tournament.id) }}" class="btn btn-primary">Select Players</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Games ({{ games|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if games %}
+                    <div class="accordion" id="gamesAccordion">
+                        {% for game in games %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ game.id }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ game.id }}" aria-expanded="false" aria-controls="collapse{{ game.id }}">
+                                    vs {{ game.opponent }} - {{ game.date.strftime('%b %d, %Y') }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ game.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ game.id }}" data-bs-parent="#gamesAccordion">
+                                <div class="accordion-body">
+                                    <form method="post" action="{{ url_for('tournament.update_game_players', tournament_id=tournament.id, game_id=game.id) }}">
+                                        {{ form.hidden_tag() }}
+                                        <p>Select players for this game:</p>
+                                        
+                                        <div class="mb-3">
+                                            {% for player in selected_players %}
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="game_players" value="{{ player.id }}" id="player{{ player.id }}_game{{ game.id }}" {% if player.id in game_players[game.id] %}checked{% endif %}>
+                                                <label class="form-check-label" for="player{{ player.id }}_game{{ game.id }}">
+                                                    {{ player.name }} {% if player.jersey_number %}(#{{ player.jersey_number }}){% endif %}
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2">
+                                            {{ form.submit(class="btn btn-primary") }}
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No games added to this tournament yet.</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-primary">Add Game</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
