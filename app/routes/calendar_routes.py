@@ -38,7 +38,7 @@ def index():
             if rsvp:
                 rsvp_status = rsvp.status
         
-       event = {
+    event = {
             'id': session.id,
             'title': session.title,
             'start': session.date.strftime('%Y-%m-%d'),
@@ -53,8 +53,8 @@ def index():
             'details_url': url_for('session.detail', session_id=session.id),
             'edit_url': url_for('session.edit_session', session_id=session.id),
             'manage_url': url_for('session.rsvps', session_id=session.id)
-        }
-        events.append(event)
+    }
+    events.append(event)
     
     # Add tournament events
     for tournament in upcoming_tournaments:
