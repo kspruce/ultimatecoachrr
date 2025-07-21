@@ -136,7 +136,7 @@ def index():
                     'location': session.location,
                     'badge_color': 'success'
                 })
-
+                
             # Future Tournaments
             future_tournaments = Tournament.query.filter(
                 Tournament.start_date >= datetime.now()
@@ -146,9 +146,10 @@ def index():
                 upcoming_events.append({
                     'type': 'tournament',
                     'title': tournament.name,
-                    'date_time': tournament.start_date.strftime('%b %d, %Y'),
+                    'date_time': tournament.formatted_date_range,
                     'location': tournament.location,
-                    'badge_color': 'warning'
+                    'badge_color': 'warning',
+                    'link': url_for('tournament.detail', tournament_id=tournament.id)
                 })
 
             # Sort upcoming events by date
