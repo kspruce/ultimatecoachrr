@@ -205,16 +205,44 @@ def rsvp(tournament_id):
     # Check if player has already RSVP'd
     existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
     
+    # Handle API request (JSON)
+    if request.is_json:
+        data = request.get_json()
+        status = data.get('status')
+        notes = data.get('notes', '')
+        
+        if not status:
+            return jsonify({'success': False, 'message': 'Status is required'}), 400
+        
+        try:
+            if existing_rsvp:
+                existing_rsvp.status = status
+                existing_rsvp.notes = notes
+            else:
+                rsvp = TournamentRSVP(
+                    tournament_id=tournament_id,
+                    player_id=player.id,
+                    status=status,
+                    notes=notes
+                )
+                db.session.add(rsvp)
+            
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'RSVP updated successfully'})
+        
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': str(e)}), 500
+    
+    # Handle form submission
     form = RSVPForm(obj=existing_rsvp)
     
     if form.validate_on_submit():
         if existing_rsvp:
-            # Update existing RSVP
             existing_rsvp.status = form.status.data
             existing_rsvp.notes = form.notes.data
             flash('Your RSVP has been updated!', 'success')
         else:
-            # Create new RSVP
             rsvp = TournamentRSVP(
                 tournament_id=tournament_id,
                 player_id=player.id,
@@ -228,6 +256,7 @@ def rsvp(tournament_id):
         return redirect(url_for('tournament.detail', tournament_id=tournament_id))
     
     return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
+
 
 # API endpoint for RSVP from calendar
 @bp.route('/<int:tournament_id>/rsvp_api', methods=['POST'])

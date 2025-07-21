@@ -417,6 +417,22 @@ def edit_point(point_id):
     # Get all active players
     all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
     
+    # If this is a tournament game, filter players to only show those selected for the tournament
+    if game.tournament_id:
+        selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
+            tournament_id=game.tournament_id,
+            selected_by_admin=True
+        ).all()
+        selected_player_ids = [id[0] for id in selected_player_ids]
+        
+        if selected_player_ids:
+            all_players = Player.query.filter(
+                Player.active == True,
+                Player.id.in_(selected_player_ids)
+            ).order_by(Player.jersey_number).all()
+    
+
+    
     # Get player stats
     player_stats = get_player_stats(game.id)
     
@@ -624,6 +640,7 @@ def point_detail(point_id):
 @admin_required
 def fix_lineups(point_id):
     point = Point.query.get_or_404(point_id)
+    game = Game.query.get(point.game_id)
     
     if request.method == 'POST':
         # Get selected players
@@ -648,7 +665,22 @@ def fix_lineups(point_id):
     # Get all active players
     all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
     
+    # If this is a tournament game, filter players to only show those selected for the tournament
+    if game.tournament_id:
+        selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
+            tournament_id=game.tournament_id,
+            selected_by_admin=True
+        ).all()
+        selected_player_ids = [id[0] for id in selected_player_ids]
+        
+        if selected_player_ids:
+            all_players = Player.query.filter(
+                Player.active == True,
+                Player.id.in_(selected_player_ids)
+            ).order_by(Player.jersey_number).all()
+    
     return render_template('point/fix_lineups.html', 
                           point=point, 
                           all_players=all_players)
+
 
