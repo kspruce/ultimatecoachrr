@@ -283,38 +283,41 @@
             }
             
             // Set up RSVP buttons
+            // *** FIX IS HERE: Use event.id instead of event.extendedProps.id ***
             document.getElementById('rsvp-yes').onclick = function() {
-                submitRSVP(event.extendedProps.id, event.extendedProps.type, 'attending');
+                submitRSVP(event.id, event.extendedProps.type, 'attending');
             };
             
             document.getElementById('rsvp-maybe').onclick = function() {
-                submitRSVP(event.extendedProps.id, event.extendedProps.type, 'maybe');
+                submitRSVP(event.id, event.extendedProps.type, 'maybe');
             };
             
             document.getElementById('rsvp-no').onclick = function() {
-                submitRSVP(event.extendedProps.id, event.extendedProps.type, 'not_attending');
+                submitRSVP(event.id, event.extendedProps.type, 'not_attending');
             };
             
             // Show admin section for admins
             if ({{ current_user.is_admin|tojson }}) {
                 adminSection.classList.remove('d-none');
                 
+                // *** FIX IS HERE: Use event.id instead of event.extendedProps.id ***
                 if (event.extendedProps.type === 'session') {
-                    manageLink.href = `/sessions/${event.extendedProps.id}/rsvps`;
-                    editLink.href = `/sessions/${event.extendedProps.id}/edit`;
+                    manageLink.href = `/sessions/${event.id}/rsvps`;
+                    editLink.href = `/sessions/${event.id}/edit`;
                 } else {
-                    manageLink.href = `/tournaments/${event.extendedProps.id}/rsvps`;
-                    editLink.href = `/tournaments/${event.extendedProps.id}/edit`;
+                    manageLink.href = `/tournaments/${event.id}/rsvps`;
+                    editLink.href = `/tournaments/${event.id}/edit`;
                 }
             } else {
                 adminSection.classList.add('d-none');
             }
             
             // Set view details link
+            // *** FIX IS HERE: Use event.id instead of event.extendedProps.id ***
             if (event.extendedProps.type === 'session') {
-                viewDetailsLink.href = `/sessions/${event.extendedProps.id}`;
+                viewDetailsLink.href = `/sessions/${event.id}`;
             } else {
-                viewDetailsLink.href = `/tournaments/${event.extendedProps.id}`;
+                viewDetailsLink.href = `/tournaments/${event.id}`;
             }
             
             // Show modal
