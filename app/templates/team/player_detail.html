@@ -192,6 +192,25 @@
                             {% endif %}
                         </div>
                     </div>
+                    <h6 class="mt-4">Tournament RSVPs</h6>
+                    {% if player.tournament_rsvps.count() > 0 %}
+                        <ul class="list-group mb-3">
+                        {% for rsvp in player.tournament_rsvps.all() %}
+                            {% if rsvp.tournament.start_date >= now %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{{ url_for('tournament.detail', tournament_id=rsvp.tournament_id) }}">
+                                        {{ rsvp.tournament.name }} ({{ rsvp.tournament.start_date.strftime('%Y-%m-%d') }})
+                                    </a>
+                                    <span class="badge {% if rsvp.status == 'attending' %}bg-success{% elif rsvp.status == 'not_attending' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ rsvp.status|replace('_', ' ')|capitalize }}
+                                    </span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No tournament RSVPs.</p>
+                    {% endif %}                                        
                 </div>
             </div>
         </div>

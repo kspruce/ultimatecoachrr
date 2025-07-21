@@ -9,6 +9,7 @@ from app.models.player import Player
 from app.decorators import admin_required
 from datetime import datetime
 from sqlalchemy import and_
+from app.forms.rsvp_form import RSVPForm
 
 tournament_bp = Blueprint('tournament', __name__)
 
@@ -42,7 +43,7 @@ def rsvps(tournament_id):
     selection_form = SelectionForm()
     
     return render_template(
-        'tournament_rsvps.html',
+        'tournament/tournament_rsvps.html',  # Updated template path
         tournament=tournament,
         attending=attending,
         maybe=maybe,
@@ -145,3 +146,43 @@ def update_game_players(tournament_id, game_id):
     
     flash(f'{len(selected_player_ids)} players assigned to game vs {game.opponent}', 'success')
     return redirect(url_for('tournament.assign_players', tournament_id=tournament_id))
+
+@tournament_bp.route('/tournaments/<int:tournament_id>/rsvp', methods=['GET', 'POST'])
+@login_required
+def tournament_rsvp(tournament_id):
+    """Handle RSVPs for a tournament."""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    
+    # Get the current user's player
+    if not current_user.player:
+        flash('You need to link your account to a player before you can RSVP.', 'warning')
+        return redirect(url_for('auth.link_player'))
+    
+    player = current_user.player
+    
+    # Check if player has already RSVP'd
+    existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
+    
+    form = RSVPForm(obj=existing_rsvp)
+    
+    if form.validate_on_submit():
+        if existing_rsvp:
+            # Update existing RSVP
+            existing_rsvp.status = form.status.data
+            existing_rsvp.notes = form.notes.data
+            flash('Your RSVP has been updated!', 'success')
+        else:
+            # Create new RSVP
+            rsvp = TournamentRSVP(
+                tournament_id=tournament_id,
+                player_id=player.id,
+                status=form.status.data,
+                notes=form.notes.data
+            )
+            db.session.add(rsvp)
+            flash('Your RSVP has been submitted!', 'success')
+        
+        db.session.commit()
+        return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+    
+    return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)

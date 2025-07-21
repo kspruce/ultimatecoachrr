@@ -7,6 +7,9 @@ from app.models.tournament import Tournament
 from app.models.game import Game
 from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.utils.utils import admin_required
+from app.forms.rsvp_form import RSVPForm
+from app.models.tournament_rsvp import TournamentRSVP
+from flask_login import current_user
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -167,3 +170,42 @@ def delete(tournament_id):
         db.session.rollback()
         flash(f'Error deleting tournament: {str(e)}', 'danger')
         return redirect(url_for('tournament.index'))
+
+@bp.route('/<int:tournament_id>/rsvp', methods=['GET', 'POST'])
+@login_required
+def rsvp(tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    
+    # Get the current user's player
+    if not current_user.player:
+        flash('You need to link your account to a player before you can RSVP.', 'warning')
+        return redirect(url_for('auth.link_player'))
+    
+    player = current_user.player
+    
+    # Check if player has already RSVP'd
+    existing_rsvp = TournamentRSVP.query.filter_by(tournament_id=tournament_id, player_id=player.id).first()
+    
+    form = RSVPForm(obj=existing_rsvp)
+    
+    if form.validate_on_submit():
+        if existing_rsvp:
+            # Update existing RSVP
+            existing_rsvp.status = form.status.data
+            existing_rsvp.notes = form.notes.data
+            flash('Your RSVP has been updated!', 'success')
+        else:
+            # Create new RSVP
+            rsvp = TournamentRSVP(
+                tournament_id=tournament_id,
+                player_id=player.id,
+                status=form.status.data,
+                notes=form.notes.data
+            )
+            db.session.add(rsvp)
+            flash('Your RSVP has been submitted!', 'success')
+        
+        db.session.commit()
+        return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+    
+    return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
