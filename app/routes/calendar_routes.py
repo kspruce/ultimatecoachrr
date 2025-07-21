@@ -38,7 +38,7 @@ def index():
             if rsvp:
                 rsvp_status = rsvp.status
         
-        event = {
+       event = {
             'id': session.id,
             'title': session.title,
             'start': session.date.strftime('%Y-%m-%d'),
@@ -48,7 +48,11 @@ def index():
             'location': session.location,
             'focus_area': session.focus_area,
             'notes': session.notes,
-            'rsvp_status': rsvp_status
+            'rsvp_status': rsvp_status,
+            # Add these URLs
+            'details_url': url_for('session.detail', session_id=session.id),
+            'edit_url': url_for('session.edit_session', session_id=session.id),
+            'manage_url': url_for('session.rsvps', session_id=session.id)
         }
         events.append(event)
     
@@ -75,11 +79,15 @@ def index():
             'start': tournament.start_date.strftime('%Y-%m-%d'),
             'end': tournament.end_date.strftime('%Y-%m-%d') if tournament.end_date else None,
             'type': 'tournament',
-            'formatted_date': formatted_date,
+            'formatted_date': tournament.formatted_date_range,
             'location': tournament.location,
             'notes': '',
             'rsvp_status': rsvp_status,
-            'selected_by_admin': selected_by_admin
+            'selected_by_admin': selected_by_admin,
+            # Add these URLs
+            'details_url': url_for('tournament.detail', tournament_id=tournament.id),
+            'edit_url': url_for('tournament.edit', tournament_id=tournament.id),
+            'manage_url': url_for('tournament.rsvps', tournament_id=tournament.id)
         }
         events.append(event)
     
