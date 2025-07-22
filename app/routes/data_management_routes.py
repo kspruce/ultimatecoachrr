@@ -4,7 +4,7 @@ Enhanced data management routes for Flask Application
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from app.utils.utils import admin_required
-from app_utils_enhanced_data_manager import EnhancedDataManager
+from app.utils.enhanced_data_manager import EnhancedDataManager
 import os
 import json
 import shutil
