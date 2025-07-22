@@ -37,12 +37,25 @@ logger = logging.getLogger(__name__)
 class EnhancedDataManager:
     """Enhanced data manager with Excel export and ZIP functionality"""
     
-    def __init__(self, export_dir='data_exports'):
+    def __init__(self, export_dir=None):
         """Initialize the data manager"""
-        self.export_dir = export_dir
+        from flask import current_app
         
-        # Create export directory if it doesn't exist
-        os.makedirs(self.export_dir, exist_ok=True)
+        # Try to use the provided export_dir or the configured DATA_EXPORT_DIR
+        self.export_dir = export_dir or current_app.config.get('DATA_EXPORT_DIR')
+        
+        # Check if the directory is writable, if not, fall back to TEMP_EXPORT_DIR
+        if self.export_dir:
+            try:
+                os.makedirs(self.export_dir, exist_ok=True)
+            except PermissionError:
+                logger.warning(f"Permission denied for {self.export_dir}, falling back to temporary directory")
+                self.export_dir = current_app.config.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
+                os.makedirs(self.export_dir, exist_ok=True)
+        else:
+            # If no export_dir was provided or configured, use the temporary directory
+            self.export_dir = current_app.config.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
+            os.makedirs(self.export_dir, exist_ok=True)
         
         # Load all models
         self.models = self._load_models()
@@ -335,8 +348,15 @@ class EnhancedDataManager:
             return export_path
 
     
-    def _save_as_excel(self, data, file_path, table_name):
-        """Save data as an Excel file with formatting"""
+    def _save_as_excel(self, data, file_path_or_object, table_name):
+        """
+        Save data as an Excel file with formatting
+        
+        Parameters:
+        - data: List of dictionaries containing the data
+        - file_path_or_object: Either a string file path or a file-like object (BytesIO)
+        - table_name: Name of the table/sheet
+        """
         if not data:
             # Create empty DataFrame with column names
             df = pd.DataFrame()
@@ -344,8 +364,8 @@ class EnhancedDataManager:
             # Create DataFrame from data
             df = pd.DataFrame(data)
         
-        # Save to Excel
-        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+        # Save to Excel - pandas handles both file paths and file-like objects
+        with pd.ExcelWriter(file_path_or_object, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name=table_name, index=False)
             
             # Get the worksheet
@@ -384,6 +404,7 @@ class EnhancedDataManager:
             for row in worksheet.iter_rows(min_row=1, max_row=len(data) + 1):
                 for cell in row:
                     cell.border = thin_border
+
     
     def _create_zip_archive(self, export_path):
         """Create a ZIP archive of the export directory"""
