@@ -329,6 +329,7 @@ class EnhancedDataManager:
         temp_dir = tempfile.mkdtemp()
         
         try:
+            logger.info(f"Extracting ZIP file: {zip_file_path}")
             # Extract ZIP file
             with zipfile.ZipFile(zip_file_path, 'r') as zipf:
                 zipf.extractall(temp_dir)
@@ -338,34 +339,47 @@ class EnhancedDataManager:
             for root, dirs, files in os.walk(temp_dir):
                 if 'metadata.json' in files:
                     metadata_path = os.path.join(root, 'metadata.json')
+                    logger.info(f"Found metadata.json at: {metadata_path}")
                     break
             
             if not metadata_path:
+                logger.error("No metadata.json found in ZIP file")
                 raise ValueError("Invalid export ZIP: metadata.json not found")
             
             # The directory containing metadata.json is the export root
             import_dir = os.path.dirname(metadata_path)
+            logger.info(f"Import directory determined as: {import_dir}")
             
             # Import data from the extracted directory
             return self.import_all_data(import_dir, clear_existing)
             
+        except Exception as e:
+            logger.error(f"Error in import_from_zip: {e}", exc_info=True)
+            raise
         finally:
             # Clean up temporary directory
+            logger.info(f"Cleaning up temporary directory: {temp_dir}")
             shutil.rmtree(temp_dir)
+
     
     def import_all_data(self, import_dir, clear_existing=False):
         """Import all data from JSON files"""
+        logger.info(f"Starting import from directory: {import_dir}")
+        
         if not os.path.exists(import_dir):
+            logger.error(f"Import directory does not exist: {import_dir}")
             raise ValueError(f"Import directory does not exist: {import_dir}")
         
         # Check for metadata.json
         metadata_path = os.path.join(import_dir, 'metadata.json')
         if not os.path.exists(metadata_path):
+            logger.error(f"metadata.json not found in {import_dir}")
             raise ValueError(f"Invalid export directory: metadata.json not found in {import_dir}")
         
         # Load metadata
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)
+            logger.info(f"Loaded metadata: {metadata}")
         
         # Import summary
         import_summary = {
@@ -378,6 +392,7 @@ class EnhancedDataManager:
         # Process each model in dependency order
         # If clear_existing is True, delete all data in reverse dependency order
         if clear_existing:
+            logger.info("Clearing existing data before import")
             for table_name in reversed(self.dependency_order):
                 if table_name in self.models:
                     try:
@@ -394,6 +409,7 @@ class EnhancedDataManager:
                         }
         
         # Import data in dependency order
+        logger.info("Starting data import in dependency order")
         for table_name in self.dependency_order:
             if table_name in self.models:
                 model = self.models[table_name]
@@ -412,6 +428,8 @@ class EnhancedDataManager:
                     # Load data from JSON
                     with open(json_path, 'r') as f:
                         data = json.load(f)
+                    
+                    logger.info(f"Loaded {len(data)} records from {json_path}")
                     
                     # Import records
                     imported_count = 0
@@ -464,7 +482,9 @@ class EnhancedDataManager:
         import_summary['status'] = 'completed'
         import_summary['completed_timestamp'] = datetime.now().isoformat()
         
+        logger.info(f"Import completed with status: {import_summary['status']}")
         return import_summary
+
     
     def export_to_excel(self, table_name=None):
         """Export data to Excel file(s)"""

@@ -163,13 +163,10 @@ def import_data_route():
                 flash(f'❌ Import failed: {summary.get("error", "Unknown error")}', 'error')
                 
         except Exception as e:
-            logger.error(f"Import failed: {e}", exc_info=True)  # Add exc_info=True to get full traceback
+            logger.error(f"Import failed: {e}", exc_info=True)
             flash(f'❌ Import failed: {str(e)}', 'error')
         
         return redirect(url_for('data_management.data_management'))
-    
-    # Rest of the function remains the same...
-
             
     elif import_type == 'directory_import':
         # Directory import
@@ -218,6 +215,7 @@ def import_data_route():
     else:
         flash('❌ Invalid import type', 'error')
         return redirect(url_for('data_management.data_management'))
+
 
 @bp.route('/export-details/<path:export_path>')
 @login_required
