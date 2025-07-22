@@ -166,6 +166,8 @@ def create_app(config_class=Config):
     
     from app.routes.cutting_skill import bp as cutting_skill_bp
     app.register_blueprint(cutting_skill_bp)
+    from data_management_routes import bp as data_management_bp
+    app.register_blueprint(data_management_bp)
     
    
     # Import models
