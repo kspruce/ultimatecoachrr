@@ -30,11 +30,11 @@ manager = None
 def get_manager():
     global manager
     if manager is None:
-        # Get export directory from config if available
-        from flask import current_app
-        export_dir = current_app.config.get('DATA_EXPORT_DIR', '/tmp/data_exports')
+        # Always use /tmp directory which should be writable
+        export_dir = '/tmp/data_exports'
         manager = EnhancedDataManager(export_dir=export_dir)
     return manager
+
 
 @bp.route('/enhanced-data-management')
 @login_required
@@ -66,57 +66,35 @@ def data_management():
 @admin_required
 def export_data_route():
     """Export data via web interface."""
-    manager = get_manager()  # Get the manager instance
-    model_info = manager.get_model_info()
     try:
         export_name = request.form.get('export_name', '').strip()
-        include_metadata = request.form.get('include_metadata') == 'on'
         export_format = request.form.get('export_format', 'json')
-        download_directly = request.form.get('download_directly') == 'on'
         
-        if download_directly:
-            # Generate in-memory export and send directly to user
-            memory_file, filename = manager.export_all_data(
-                timestamp=True, 
-                format=export_format, 
-                in_memory=True
-            )
-            
-            return send_file(
-                memory_file,
-                as_attachment=True,
-                download_name=filename,
-                mimetype='application/zip'
-            )
-        else:
-            # Create custom export directory name if provided
-            if export_name:
-                # Sanitize the export name
-                safe_name = secure_filename(export_name)
-                export_dir_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                export_path = manager.export_all_data(timestamp=False, custom_name=export_dir_name, format=export_format)
-            else:
-                export_path = manager.export_all_data(timestamp=True, format=export_format)
-            
-            # Load export summary for flash message
-            summary_path = os.path.join(export_path, 'export_summary.json')
-            if os.path.exists(summary_path):
-                with open(summary_path, 'r') as f:
-                    summary = json.load(f)
-                    total_records = sum(
-                        info.get('records_exported', 0) 
-                        for info in summary.values() 
-                        if isinstance(info, dict)
-                    )
-                    flash(f'✅ Data exported successfully! {total_records} records exported to {export_path}', 'success')
-            else:
-                flash(f'✅ Data exported successfully to {export_path}', 'success')
+        # Generate custom name if provided
+        custom_name = None
+        if export_name:
+            safe_name = secure_filename(export_name)
+            custom_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Generate in-memory export
+        memory_file, filename = get_manager().export_all_data(
+            timestamp=True if not custom_name else False,
+            custom_name=custom_name,
+            format=export_format
+        )
+        
+        return send_file(
+            memory_file,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/zip'
+        )
                 
     except Exception as e:
         logger.error(f"Export failed: {e}")
         flash(f'❌ Export failed: {str(e)}', 'error')
-    
-    return redirect(url_for('data_management.data_management'))
+        return redirect(url_for('data_management.data_management'))
+
 
 
 
