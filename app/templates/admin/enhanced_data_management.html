@@ -677,23 +677,25 @@
         location.reload();
     }
 
+
     // Export functionality
     document.getElementById('exportForm').addEventListener('submit', function(e) {
         // Don't prevent default form submission for file downloads
-        // e.preventDefault();
+        // e.preventDefault();  <-- REMOVE THIS LINE
         
         const exportBtn = document.getElementById('exportBtn');
+        const progressContainer = document.getElementById('exportProgress');
+        
         exportBtn.disabled = true;
         exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+        progressContainer.style.display = 'block';
         
         addLogEntry('Starting data export...', 'info');
         
-        // No need for simulated progress for direct downloads
-        // The browser will handle the download automatically
-        
-        // Form submits normally, browser handles file download
+        // Let the form submit naturally for file download
         return true;
     });
+
 
 
     // Import functionality
@@ -732,14 +734,24 @@
                 'Are you sure you want to clear all existing data?',
                 'This action cannot be undone. All current data will be permanently deleted.',
                 () => {
+                    // Make sure we're not removing the import_type field
+                    const importTypeField = document.createElement('input');
+                    importTypeField.type = 'hidden';
+                    importTypeField.name = 'import_type';
+                    importTypeField.value = 'file_upload';
+                    this.appendChild(importTypeField);
+                    
                     addLogEntry('Starting data import with data clearing...', 'warning');
                     this.submit();
                 }
             );
         } else {
+            // Make sure we're not preventing the default form submission
             addLogEntry('Starting data import from uploaded file...', 'info');
+            // Don't prevent default here
         }
     });
+
 
     // File upload handling
     const dropZone = document.getElementById('dropZone');

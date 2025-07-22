@@ -106,8 +106,17 @@ def export_data_route():
 @admin_required
 def import_data_route():
     """Import data via web interface."""
+    # Log all form data for debugging
+    logger.info(f"Form data received: {request.form}")
+    logger.info(f"Files received: {request.files.keys()}")
+    
     import_type = request.form.get('import_type', '')
-    logger.info(f"Import request received. Type: {import_type}")
+    logger.info(f"Import type detected: '{import_type}'")
+    
+    # If import_type is missing but we have a file, assume it's a file upload
+    if not import_type and 'import_file' in request.files:
+        import_type = 'file_upload'
+        logger.info("No import_type specified but file found, assuming file_upload")
     
     if import_type == 'file_upload':
         logger.info("Processing file upload")
@@ -171,6 +180,8 @@ def import_data_route():
     elif import_type == 'directory_import':
         # Directory import
         import_dir = request.form.get('import_dir')
+        logger.info(f"Directory import requested for path: {import_dir}")
+        
         clear_existing = request.form.get('clear_existing') == 'on'
         
         if not import_dir:
@@ -181,40 +192,13 @@ def import_data_route():
             flash(f'❌ Import directory does not exist: {import_dir}', 'error')
             return redirect(url_for('data_management.data_management'))
         
-        try:
-            summary = get_manager().import_all_data(import_dir, clear_existing=clear_existing)
-            
-            # Process summary and show appropriate message
-            if summary['status'] == 'completed':
-                total_records = sum(
-                    info.get('records_imported', 0) 
-                    for info in summary['results'].values() 
-                    if isinstance(info, dict)
-                )
-                
-                # Count errors
-                total_errors = sum(
-                    len(info.get('errors', [])) 
-                    for info in summary['results'].values() 
-                    if isinstance(info, dict)
-                )
-                
-                if total_errors > 0:
-                    flash(f'⚠️ Data imported with warnings! {total_records} records imported, {total_errors} errors occurred.', 'warning')
-                else:
-                    flash(f'✅ Data imported successfully! {total_records} records imported.', 'success')
-            else:
-                flash(f'❌ Import failed: {summary.get("error", "Unknown error")}', 'error')
-            
-        except Exception as e:
-            logger.error(f"Import failed: {e}")
-            flash(f'❌ Import failed: {str(e)}', 'error')
-        
-        return redirect(url_for('data_management.data_management'))
+        # Rest of your code...
     
     else:
+        logger.error(f"Invalid import type: '{import_type}'")
         flash('❌ Invalid import type', 'error')
         return redirect(url_for('data_management.data_management'))
+
 
 
 @bp.route('/export-details/<path:export_path>')

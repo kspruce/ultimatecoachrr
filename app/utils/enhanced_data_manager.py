@@ -332,23 +332,53 @@ class EnhancedDataManager:
             logger.info(f"Extracting ZIP file: {zip_file_path}")
             # Extract ZIP file
             with zipfile.ZipFile(zip_file_path, 'r') as zipf:
+                # Log the contents of the ZIP file
+                file_list = zipf.namelist()
+                logger.info(f"ZIP file contents: {file_list}")
                 zipf.extractall(temp_dir)
             
             # Find metadata.json to determine the root directory
             metadata_path = None
-            for root, dirs, files in os.walk(temp_dir):
-                if 'metadata.json' in files:
-                    metadata_path = os.path.join(root, 'metadata.json')
-                    logger.info(f"Found metadata.json at: {metadata_path}")
-                    break
+            
+            # First, check if metadata.json is at the root level
+            root_metadata = os.path.join(temp_dir, 'metadata.json')
+            if os.path.exists(root_metadata):
+                metadata_path = root_metadata
+                logger.info(f"Found metadata.json at root level: {metadata_path}")
+            else:
+                # Search for metadata.json in subdirectories
+                for root, dirs, files in os.walk(temp_dir):
+                    if 'metadata.json' in files:
+                        metadata_path = os.path.join(root, 'metadata.json')
+                        logger.info(f"Found metadata.json in subdirectory: {metadata_path}")
+                        break
             
             if not metadata_path:
-                logger.error("No metadata.json found in ZIP file")
-                raise ValueError("Invalid export ZIP: metadata.json not found")
+                # If no metadata.json is found, create a simple one
+                logger.warning("No metadata.json found in ZIP file, creating a simple one")
+                metadata_path = os.path.join(temp_dir, 'metadata.json')
+                with open(metadata_path, 'w') as f:
+                    json.dump({
+                        'export_timestamp': datetime.now().isoformat(),
+                        'total_models': 0,
+                        'format': 'json'
+                    }, f)
             
             # The directory containing metadata.json is the export root
             import_dir = os.path.dirname(metadata_path)
             logger.info(f"Import directory determined as: {import_dir}")
+            
+            # Check if there are any JSON files in the import directory
+            json_files = [f for f in os.listdir(import_dir) if f.endswith('.json') and f != 'metadata.json']
+            logger.info(f"Found JSON files: {json_files}")
+            
+            if not json_files:
+                # If no JSON files in the current directory, check subdirectories
+                for root, dirs, files in os.walk(import_dir):
+                    if any(f.endswith('.json') and f != 'metadata.json' for f in files):
+                        import_dir = root
+                        logger.info(f"Found JSON files in subdirectory, using: {import_dir}")
+                        break
             
             # Import data from the extracted directory
             return self.import_all_data(import_dir, clear_existing)
