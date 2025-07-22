@@ -667,23 +667,22 @@
 
     // Export functionality
     document.getElementById('exportForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+        // Don't prevent default form submission for file downloads
+        // e.preventDefault();
         
         const exportBtn = document.getElementById('exportBtn');
-        const progressContainer = document.getElementById('exportProgress');
-        
         exportBtn.disabled = true;
         exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
-        progressContainer.style.display = 'block';
         
         addLogEntry('Starting data export...', 'info');
         
-        // Simulate progress (replace with actual AJAX call)
-        simulateProgress('export', () => {
-            // Submit the form
-            this.submit();
-        });
+        // No need for simulated progress for direct downloads
+        // The browser will handle the download automatically
+        
+        // Form submits normally, browser handles file download
+        return true;
     });
+
 
     // Import functionality
     document.getElementById('importForm').addEventListener('submit', function(e) {

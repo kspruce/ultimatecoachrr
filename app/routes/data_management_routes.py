@@ -153,6 +153,8 @@ def import_data_route():
         except Exception as e:
             logger.error(f"Import failed: {e}")
             flash(f'❌ Import failed: {str(e)}', 'error')
+        
+        return redirect(url_for('data_management.data_management'))
             
     elif import_type == 'directory_import':
         # Directory import
@@ -171,13 +173,36 @@ def import_data_route():
             summary = get_manager().import_all_data(import_dir, clear_existing=clear_existing)
             
             # Process summary and show appropriate message
-            # (same as in the file upload case)
+            if summary['status'] == 'completed':
+                total_records = sum(
+                    info.get('records_imported', 0) 
+                    for info in summary['results'].values() 
+                    if isinstance(info, dict)
+                )
+                
+                # Count errors
+                total_errors = sum(
+                    len(info.get('errors', [])) 
+                    for info in summary['results'].values() 
+                    if isinstance(info, dict)
+                )
+                
+                if total_errors > 0:
+                    flash(f'⚠️ Data imported with warnings! {total_records} records imported, {total_errors} errors occurred.', 'warning')
+                else:
+                    flash(f'✅ Data imported successfully! {total_records} records imported.', 'success')
+            else:
+                flash(f'❌ Import failed: {summary.get("error", "Unknown error")}', 'error')
             
         except Exception as e:
             logger.error(f"Import failed: {e}")
             flash(f'❌ Import failed: {str(e)}', 'error')
+        
+        return redirect(url_for('data_management.data_management'))
+    
     else:
         flash('❌ Invalid import type', 'error')
+        return redirect(url_for('data_management.data_management'))
 
 @bp.route('/export-details/<path:export_path>')
 @login_required
