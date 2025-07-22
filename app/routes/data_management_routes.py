@@ -408,25 +408,122 @@ def format_file_size(size_bytes):
     return f"{s} {size_names[i]}"
 
 
-@bp.route('/debug-import', methods=['GET', 'POST'])
+@bp.route('/debug-zip', methods=['POST'])
 @login_required
 @admin_required
-def debug_import():
-    """Debug route for import issues."""
-    if request.method == 'POST':
-        # Log all form data
-        logger.info("DEBUG - Form data:")
-        for key, value in request.form.items():
-            logger.info(f"  {key}: {value}")
+def debug_zip():
+    """Debug route for ZIP file issues."""
+    if 'import_file' not in request.files:
+        return jsonify({'error': 'No file uploaded'})
         
-        # Log all files
-        logger.info("DEBUG - Files:")
-        for key, file in request.files.items():
-            logger.info(f"  {key}: {file.filename}")
+    import_file = request.files['import_file']
+    if not import_file.filename:
+        return jsonify({'error': 'Empty filename'})
+    
+    # Save the file to a temporary location
+    temp_dir = tempfile.mkdtemp()
+    temp_file = os.path.join(temp_dir, secure_filename(import_file.filename))
+    import_file.save(temp_file)
+    
+    try:
+        # Check if it's a valid ZIP file
+        if not zipfile.is_zipfile(temp_file):
+            return jsonify({'error': 'Not a valid ZIP file'})
+        
+        # Extract the contents
+        extract_dir = os.path.join(temp_dir, 'extracted')
+        os.makedirs(extract_dir)
+        
+        with zipfile.ZipFile(temp_file, 'r') as zipf:
+            zipf.extractall(extract_dir)
+        
+        # List all files
+        all_files = []
+        for root, dirs, files in os.walk(extract_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                rel_path = os.path.relpath(file_path, extract_dir)
+                file_size = os.path.getsize(file_path)
+                all_files.append({
+                    'path': rel_path,
+                    'size': file_size,
+                    'is_json': file.endswith('.json')
+                })
         
         return jsonify({
-            'form': {k: v for k, v in request.form.items()},
-            'files': {k: f.filename for k, f in request.files.items()}
+            'success': True,
+            'filename': import_file.filename,
+            'file_count': len(all_files),
+            'files': all_files
         })
     
-    return render_template('admin/debug_import.html')
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    
+    finally:
+        shutil.rmtree(temp_dir)
+
+
+@bp.route('/import-zip-file', methods=['POST'])
+@login_required
+@admin_required
+def import_zip_file_route():
+    """Direct route for importing ZIP files."""
+    logger.info("ZIP file import route called")
+    
+    # Check if file was uploaded
+    if 'import_file' not in request.files:
+        logger.error("No import_file in request.files")
+        flash('❌ No file selected for upload', 'error')
+        return redirect(url_for('data_management.data_management'))
+        
+    import_file = request.files['import_file']
+    if not import_file.filename:
+        logger.error("import_file has no filename")
+        flash('❌ No file selected for upload', 'error')
+        return redirect(url_for('data_management.data_management'))
+        
+    logger.info(f"File uploaded: {import_file.filename}")
+    clear_existing = request.form.get('clear_existing') == 'on'
+    
+    try:
+        # Save uploaded file to temporary location
+        temp_dir = tempfile.mkdtemp()
+        temp_file = os.path.join(temp_dir, secure_filename(import_file.filename))
+        import_file.save(temp_file)
+        logger.info(f"File saved to temporary location: {temp_file}")
+        
+        # Import from ZIP file
+        logger.info("Starting import_from_zip")
+        summary = get_manager().import_from_zip(temp_file, clear_existing=clear_existing)
+        logger.info(f"Import completed with status: {summary['status']}")
+        
+        # Clean up
+        shutil.rmtree(temp_dir)
+        
+        if summary['status'] == 'completed':
+            total_records = sum(
+                info.get('records_imported', 0) 
+                for info in summary['results'].values() 
+                if isinstance(info, dict)
+            )
+            
+            # Count errors
+            total_errors = sum(
+                len(info.get('errors', [])) 
+                for info in summary['results'].values() 
+                if isinstance(info, dict)
+            )
+            
+            if total_errors > 0:
+                flash(f'⚠️ Data imported with warnings! {total_records} records imported, {total_errors} errors occurred.', 'warning')
+            else:
+                flash(f'✅ Data imported successfully! {total_records} records imported.', 'success')
+        else:
+            flash(f'❌ Import failed: {summary.get("error", "Unknown error")}', 'error')
+            
+    except Exception as e:
+        logger.error(f"Import failed: {e}", exc_info=True)
+        flash(f'❌ Import failed: {str(e)}', 'error')
+    
+    return redirect(url_for('data_management.data_management'))

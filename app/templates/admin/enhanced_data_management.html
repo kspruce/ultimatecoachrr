@@ -243,10 +243,8 @@
                             <!-- File Upload Section -->
                             <div class="mb-4">
                                 <h6><i class="fas fa-file-upload me-2"></i>Upload Export File</h6>
-                                <form id="uploadForm" method="POST" action="{{ url_for('data_management.import_data_route') }}" enctype="multipart/form-data">
+                                <form id="uploadForm" method="POST" action="{{ url_for('data_management.import_zip_file_route') }}" enctype="multipart/form-data">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <!-- Add a hidden field to indicate this is a file upload -->
-                                    <input type="hidden" name="import_type" value="file_upload">
                                     
                                     <div class="file-upload-container" id="dropZone">
                                         <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
@@ -717,6 +715,7 @@
         }
     });
 
+
     // Upload form handling
     document.getElementById('uploadForm').addEventListener('submit', function(e) {
         const clearExisting = document.getElementById('clear_existing_upload').checked;
@@ -725,7 +724,7 @@
         if (!fileInput.files.length) {
             e.preventDefault();
             addLogEntry('No file selected for upload', 'error');
-            return;
+            return false;
         }
         
         if (clearExisting) {
@@ -734,23 +733,17 @@
                 'Are you sure you want to clear all existing data?',
                 'This action cannot be undone. All current data will be permanently deleted.',
                 () => {
-                    // Make sure we're not removing the import_type field
-                    const importTypeField = document.createElement('input');
-                    importTypeField.type = 'hidden';
-                    importTypeField.name = 'import_type';
-                    importTypeField.value = 'file_upload';
-                    this.appendChild(importTypeField);
-                    
                     addLogEntry('Starting data import with data clearing...', 'warning');
                     this.submit();
                 }
             );
-        } else {
-            // Make sure we're not preventing the default form submission
-            addLogEntry('Starting data import from uploaded file...', 'info');
-            // Don't prevent default here
+            return false;
         }
+        
+        addLogEntry('Starting data import from uploaded file...', 'info');
+        return true; // Allow the form to submit normally
     });
+
 
 
     // File upload handling

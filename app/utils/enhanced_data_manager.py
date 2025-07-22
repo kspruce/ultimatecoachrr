@@ -327,8 +327,16 @@ class EnhancedDataManager:
         """Import data from a ZIP file"""
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp()
+        logger.info(f"Created temporary directory: {temp_dir}")
         
         try:
+            # Check if the file exists and is a ZIP file
+            if not os.path.exists(zip_file_path):
+                raise ValueError(f"ZIP file does not exist: {zip_file_path}")
+            
+            if not zipfile.is_zipfile(zip_file_path):
+                raise ValueError(f"File is not a valid ZIP file: {zip_file_path}")
+            
             logger.info(f"Extracting ZIP file: {zip_file_path}")
             # Extract ZIP file
             with zipfile.ZipFile(zip_file_path, 'r') as zipf:
@@ -336,6 +344,13 @@ class EnhancedDataManager:
                 file_list = zipf.namelist()
                 logger.info(f"ZIP file contents: {file_list}")
                 zipf.extractall(temp_dir)
+            
+            # List all files in the temp directory for debugging
+            all_files = []
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    all_files.append(os.path.join(root, file))
+            logger.info(f"All extracted files: {all_files}")
             
             # Find metadata.json to determine the root directory
             metadata_path = None
@@ -353,32 +368,34 @@ class EnhancedDataManager:
                         logger.info(f"Found metadata.json in subdirectory: {metadata_path}")
                         break
             
+            # If no metadata.json is found, look for any JSON files
             if not metadata_path:
-                # If no metadata.json is found, create a simple one
-                logger.warning("No metadata.json found in ZIP file, creating a simple one")
-                metadata_path = os.path.join(temp_dir, 'metadata.json')
-                with open(metadata_path, 'w') as f:
-                    json.dump({
-                        'export_timestamp': datetime.now().isoformat(),
-                        'total_models': 0,
-                        'format': 'json'
-                    }, f)
+                logger.warning("No metadata.json found, looking for any JSON files")
+                json_files = []
+                for root, dirs, files in os.walk(temp_dir):
+                    for file in files:
+                        if file.endswith('.json'):
+                            json_files.append(os.path.join(root, file))
+                
+                if json_files:
+                    # Use the directory containing the first JSON file
+                    import_dir = os.path.dirname(json_files[0])
+                    logger.info(f"Using directory with JSON files: {import_dir}")
+                    
+                    # Create a simple metadata.json
+                    metadata_path = os.path.join(import_dir, 'metadata.json')
+                    with open(metadata_path, 'w') as f:
+                        json.dump({
+                            'export_timestamp': datetime.now().isoformat(),
+                            'total_models': len(json_files),
+                            'format': 'json'
+                        }, f)
+                else:
+                    raise ValueError("No JSON files found in the ZIP file")
             
             # The directory containing metadata.json is the export root
             import_dir = os.path.dirname(metadata_path)
             logger.info(f"Import directory determined as: {import_dir}")
-            
-            # Check if there are any JSON files in the import directory
-            json_files = [f for f in os.listdir(import_dir) if f.endswith('.json') and f != 'metadata.json']
-            logger.info(f"Found JSON files: {json_files}")
-            
-            if not json_files:
-                # If no JSON files in the current directory, check subdirectories
-                for root, dirs, files in os.walk(import_dir):
-                    if any(f.endswith('.json') and f != 'metadata.json' for f in files):
-                        import_dir = root
-                        logger.info(f"Found JSON files in subdirectory, using: {import_dir}")
-                        break
             
             # Import data from the extracted directory
             return self.import_all_data(import_dir, clear_existing)
@@ -390,6 +407,7 @@ class EnhancedDataManager:
             # Clean up temporary directory
             logger.info(f"Cleaning up temporary directory: {temp_dir}")
             shutil.rmtree(temp_dir)
+
 
     
     def import_all_data(self, import_dir, clear_existing=False):
