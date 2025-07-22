@@ -119,7 +119,7 @@ class EnhancedDataManager:
         
         # Reverse to get correct order (dependencies first)
         return list(reversed(order))
-    
+        
     def get_model_info(self):
         """Get information about all models"""
         model_info = {
@@ -166,8 +166,13 @@ class EnhancedDataManager:
         
         return model_info
     
-    def export_all_data(self, timestamp=True, custom_name=None, format='json'):
-        """Export all data to JSON or Excel files"""
+    def export_all_data(self, timestamp=True, custom_name=None, format='json', in_memory=False):
+        """
+        Export all data to JSON or Excel files
+        
+        If in_memory=True, returns a BytesIO object containing a ZIP file
+        Otherwise, writes to filesystem and returns the path
+        """
         if custom_name:
             export_dir_name = custom_name
         elif timestamp:
@@ -175,85 +180,160 @@ class EnhancedDataManager:
         else:
             export_dir_name = "data_exports"
         
-        export_path = os.path.join(self.export_dir, export_dir_name)
-        os.makedirs(export_path, exist_ok=True)
-        
-        # Create metadata
-        metadata = {
-            'export_timestamp': datetime.now().isoformat(),
-            'total_models': len(self.models),
-            'format': format
-        }
-        
-        # Save metadata
-        with open(os.path.join(export_path, 'metadata.json'), 'w') as f:
-            json.dump(metadata, f, indent=2)
-        
-        # Export summary
-        export_summary = {
-            'status': 'in_progress',
-            'timestamp': datetime.now().isoformat(),
-            'format': format
-        }
-        
-        # Process each model in dependency order
-        for table_name in self.dependency_order:
-            if table_name in self.models:
-                model = self.models[table_name]
+        if in_memory:
+            # Create in-memory ZIP file
+            memory_file = io.BytesIO()
+            with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Add metadata
+                metadata = {
+                    'export_timestamp': datetime.now().isoformat(),
+                    'total_models': len(self.models),
+                    'format': format
+                }
+                zipf.writestr('metadata.json', json.dumps(metadata, indent=2))
                 
-                try:
-                    # Get all records
-                    records = model.query.all()
+                # Export summary
+                export_summary = {
+                    'status': 'in_progress',
+                    'timestamp': datetime.now().isoformat(),
+                    'format': format
+                }
+                
+                # Process each model in dependency order
+                for table_name in self.dependency_order:
+                    if table_name in self.models:
+                        model = self.models[table_name]
+                        
+                        try:
+                            # Get all records
+                            records = model.query.all()
+                            
+                            # Convert to list of dictionaries
+                            data = []
+                            for record in records:
+                                record_dict = {}
+                                for column in model.__table__.columns:
+                                    value = getattr(record, column.name)
+                                    # Handle datetime objects
+                                    if isinstance(value, datetime):
+                                        value = value.isoformat()
+                                    record_dict[column.name] = value
+                                data.append(record_dict)
+                            
+                            # Add JSON to ZIP
+                            zipf.writestr(f"{table_name}.json", json.dumps(data, indent=2))
+                            
+                            # If Excel format is requested, also add Excel
+                            if format == 'excel' or format == 'both':
+                                excel_buffer = io.BytesIO()
+                                self._save_as_excel(data, excel_buffer, table_name)
+                                excel_buffer.seek(0)
+                                zipf.writestr(f"{table_name}.xlsx", excel_buffer.getvalue())
+                            
+                            # Update summary
+                            export_summary[table_name] = {
+                                'status': 'completed',
+                                'records_exported': len(data)
+                            }
+                            
+                            logger.info(f"Exported {len(data)} records from {table_name}")
+                            
+                        except Exception as e:
+                            logger.error(f"Error exporting {table_name}: {e}")
+                            export_summary[table_name] = {
+                                'status': 'error',
+                                'error': str(e)
+                            }
+                
+                # Update and save summary
+                export_summary['status'] = 'completed'
+                export_summary['completed_timestamp'] = datetime.now().isoformat()
+                zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
+            
+            memory_file.seek(0)
+            return memory_file, f"{export_dir_name}.zip"
+        else:
+            # Original filesystem-based implementation
+            export_path = os.path.join(self.export_dir, export_dir_name)
+            os.makedirs(export_path, exist_ok=True)
+            
+            # Create metadata
+            metadata = {
+                'export_timestamp': datetime.now().isoformat(),
+                'total_models': len(self.models),
+                'format': format
+            }
+            
+            # Save metadata
+            with open(os.path.join(export_path, 'metadata.json'), 'w') as f:
+                json.dump(metadata, f, indent=2)
+            
+            # Export summary
+            export_summary = {
+                'status': 'in_progress',
+                'timestamp': datetime.now().isoformat(),
+                'format': format
+            }
+            
+            # Process each model in dependency order
+            for table_name in self.dependency_order:
+                if table_name in self.models:
+                    model = self.models[table_name]
                     
-                    # Convert to list of dictionaries
-                    data = []
-                    for record in records:
-                        record_dict = {}
-                        for column in model.__table__.columns:
-                            value = getattr(record, column.name)
-                            # Handle datetime objects
-                            if isinstance(value, datetime):
-                                value = value.isoformat()
-                            record_dict[column.name] = value
-                        data.append(record_dict)
-                    
-                    # Save as JSON
-                    json_path = os.path.join(export_path, f"{table_name}.json")
-                    with open(json_path, 'w') as f:
-                        json.dump(data, f, indent=2)
-                    
-                    # If Excel format is requested, also save as Excel
-                    if format == 'excel' or format == 'both':
-                        excel_path = os.path.join(export_path, f"{table_name}.xlsx")
-                        self._save_as_excel(data, excel_path, table_name)
-                    
-                    # Update summary
-                    export_summary[table_name] = {
-                        'status': 'completed',
-                        'records_exported': len(data),
-                        'file_path': f"{table_name}.json"
-                    }
-                    
-                    logger.info(f"Exported {len(data)} records from {table_name}")
-                    
-                except Exception as e:
-                    logger.error(f"Error exporting {table_name}: {e}")
-                    export_summary[table_name] = {
-                        'status': 'error',
-                        'error': str(e)
-                    }
-        
-        # Update and save summary
-        export_summary['status'] = 'completed'
-        export_summary['completed_timestamp'] = datetime.now().isoformat()
-        
-        with open(os.path.join(export_path, 'export_summary.json'), 'w') as f:
-            json.dump(export_summary, f, indent=2)
-        
-        # Create ZIP file
-        zip_path = self._create_zip_archive(export_path)
-        
-        return export_path
+                    try:
+                        # Get all records
+                        records = model.query.all()
+                        
+                        # Convert to list of dictionaries
+                        data = []
+                        for record in records:
+                            record_dict = {}
+                            for column in model.__table__.columns:
+                                value = getattr(record, column.name)
+                                # Handle datetime objects
+                                if isinstance(value, datetime):
+                                    value = value.isoformat()
+                                record_dict[column.name] = value
+                            data.append(record_dict)
+                        
+                        # Save as JSON
+                        json_path = os.path.join(export_path, f"{table_name}.json")
+                        with open(json_path, 'w') as f:
+                            json.dump(data, f, indent=2)
+                        
+                        # If Excel format is requested, also save as Excel
+                        if format == 'excel' or format == 'both':
+                            excel_path = os.path.join(export_path, f"{table_name}.xlsx")
+                            self._save_as_excel(data, excel_path, table_name)
+                        
+                        # Update summary
+                        export_summary[table_name] = {
+                            'status': 'completed',
+                            'records_exported': len(data),
+                            'file_path': f"{table_name}.json"
+                        }
+                        
+                        logger.info(f"Exported {len(data)} records from {table_name}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error exporting {table_name}: {e}")
+                        export_summary[table_name] = {
+                            'status': 'error',
+                            'error': str(e)
+                        }
+            
+            # Update and save summary
+            export_summary['status'] = 'completed'
+            export_summary['completed_timestamp'] = datetime.now().isoformat()
+            
+            with open(os.path.join(export_path, 'export_summary.json'), 'w') as f:
+                json.dump(export_summary, f, indent=2)
+            
+            # Create ZIP file
+            zip_path = self._create_zip_archive(export_path)
+            
+            return export_path
+
     
     def _save_as_excel(self, data, file_path, table_name):
         """Save data as an Excel file with formatting"""

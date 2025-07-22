@@ -59,35 +59,53 @@ def export_data_route():
         export_name = request.form.get('export_name', '').strip()
         include_metadata = request.form.get('include_metadata') == 'on'
         export_format = request.form.get('export_format', 'json')
+        download_directly = request.form.get('download_directly') == 'on'
         
-        # Create custom export directory name if provided
-        if export_name:
-            # Sanitize the export name
-            safe_name = secure_filename(export_name)
-            export_dir_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            export_path = manager.export_all_data(timestamp=False, custom_name=export_dir_name, format=export_format)
-        else:
-            export_path = manager.export_all_data(timestamp=True, format=export_format)
-        
-        # Load export summary for flash message
-        summary_path = os.path.join(export_path, 'export_summary.json')
-        if os.path.exists(summary_path):
-            with open(summary_path, 'r') as f:
-                summary = json.load(f)
-                total_records = sum(
-                    info.get('records_exported', 0) 
-                    for info in summary.values() 
-                    if isinstance(info, dict)
-                )
-                flash(f'✅ Data exported successfully! {total_records} records exported to {export_path}', 'success')
-        else:
-            flash(f'✅ Data exported successfully to {export_path}', 'success')
+        if download_directly:
+            # Generate in-memory export and send directly to user
+            memory_file, filename = manager.export_all_data(
+                timestamp=True, 
+                format=export_format, 
+                in_memory=True
+            )
             
+            return send_file(
+                memory_file,
+                as_attachment=True,
+                download_name=filename,
+                mimetype='application/zip'
+            )
+        else:
+            # Create custom export directory name if provided
+            if export_name:
+                # Sanitize the export name
+                safe_name = secure_filename(export_name)
+                export_dir_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                export_path = manager.export_all_data(timestamp=False, custom_name=export_dir_name, format=export_format)
+            else:
+                export_path = manager.export_all_data(timestamp=True, format=export_format)
+            
+            # Load export summary for flash message
+            summary_path = os.path.join(export_path, 'export_summary.json')
+            if os.path.exists(summary_path):
+                with open(summary_path, 'r') as f:
+                    summary = json.load(f)
+                    total_records = sum(
+                        info.get('records_exported', 0) 
+                        for info in summary.values() 
+                        if isinstance(info, dict)
+                    )
+                    flash(f'✅ Data exported successfully! {total_records} records exported to {export_path}', 'success')
+            else:
+                flash(f'✅ Data exported successfully to {export_path}', 'success')
+                
     except Exception as e:
         logger.error(f"Export failed: {e}")
         flash(f'❌ Export failed: {str(e)}', 'error')
     
     return redirect(url_for('data_management.data_management'))
+
+
 
 @bp.route('/import-data', methods=['POST'])
 @login_required
@@ -364,3 +382,5 @@ def format_file_size(size_bytes):
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
     return f"{s} {size_names[i]}"
+
+
