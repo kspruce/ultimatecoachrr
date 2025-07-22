@@ -25,14 +25,25 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('data_management', __name__, url_prefix='/admin')
 
 # Initialize data manager
-manager = EnhancedDataManager()
+manager = None
+
+def get_manager():
+    global manager
+    if manager is None:
+        # Get export directory from config if available
+        from flask import current_app
+        export_dir = current_app.config.get('DATA_EXPORT_DIR', '/tmp/data_exports')
+        manager = EnhancedDataManager(export_dir=export_dir)
+    return manager
 
 @bp.route('/enhanced-data-management')
 @login_required
 @admin_required
 def data_management():
     """Enhanced data management interface."""
+    manager = get_manager()  # Get the manager instance
     model_info = manager.get_model_info()
+
     
     # Get available exports with details
     exports = manager.get_available_exports()
@@ -55,6 +66,8 @@ def data_management():
 @admin_required
 def export_data_route():
     """Export data via web interface."""
+    manager = get_manager()  # Get the manager instance
+    model_info = manager.get_model_info()
     try:
         export_name = request.form.get('export_name', '').strip()
         include_metadata = request.form.get('include_metadata') == 'on'
@@ -113,6 +126,8 @@ def export_data_route():
 def import_data_route():
     """Import data via web interface."""
     # Check if file upload or directory import
+    manager = get_manager()  # Get the manager instance
+    model_info = manager.get_model_info()
     if 'import_file' in request.files and request.files['import_file'].filename:
         # File upload
         import_file = request.files['import_file']
@@ -284,6 +299,8 @@ def download_export():
 def download_excel():
     """Download data as Excel file."""
     table_name = request.args.get('table')
+    manager = get_manager()  # Get the manager instance
+    model_info = manager.get_model_info()
     
     try:
         output, filename = manager.export_to_excel(table_name)
@@ -331,6 +348,8 @@ def delete_export():
 @admin_required
 def model_details_api(table_name):
     """Get detailed information about a specific model."""
+    manager = get_manager()  # Get the manager instance
+    model_info = manager.get_model_info()
     try:
         if table_name not in manager.models:
             return jsonify({'error': 'Model not found'}), 404

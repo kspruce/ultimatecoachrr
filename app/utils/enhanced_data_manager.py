@@ -37,25 +37,16 @@ logger = logging.getLogger(__name__)
 class EnhancedDataManager:
     """Enhanced data manager with Excel export and ZIP functionality"""
     
-    def __init__(self, export_dir=None):
+    def __init__(self, export_dir='data_exports'):
         """Initialize the data manager"""
-        from flask import current_app
+        self.export_dir = export_dir
         
-        # Try to use the provided export_dir or the configured DATA_EXPORT_DIR
-        self.export_dir = export_dir or current_app.config.get('DATA_EXPORT_DIR')
+        # Use a simple default path that doesn't require permissions
+        if self.export_dir == 'data_exports':
+            self.export_dir = '/tmp/data_exports'
         
-        # Check if the directory is writable, if not, fall back to TEMP_EXPORT_DIR
-        if self.export_dir:
-            try:
-                os.makedirs(self.export_dir, exist_ok=True)
-            except PermissionError:
-                logger.warning(f"Permission denied for {self.export_dir}, falling back to temporary directory")
-                self.export_dir = current_app.config.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
-                os.makedirs(self.export_dir, exist_ok=True)
-        else:
-            # If no export_dir was provided or configured, use the temporary directory
-            self.export_dir = current_app.config.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
-            os.makedirs(self.export_dir, exist_ok=True)
+        # Create export directory if it doesn't exist
+        os.makedirs(self.export_dir, exist_ok=True)
         
         # Load all models
         self.models = self._load_models()
