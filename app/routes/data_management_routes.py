@@ -68,6 +68,7 @@ def export_data_route():
     """Export data via web interface."""
     try:
         export_name = request.form.get('export_name', '').strip()
+        include_metadata = request.form.get('include_metadata') == 'on'
         export_format = request.form.get('export_format', 'json')
         
         # Generate custom name if provided
@@ -76,13 +77,15 @@ def export_data_route():
             safe_name = secure_filename(export_name)
             custom_name = f"data_exports_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
-        # Generate in-memory export
+        # Always generate in-memory export for direct download
         memory_file, filename = get_manager().export_all_data(
             timestamp=True if not custom_name else False,
             custom_name=custom_name,
-            format=export_format
+            format=export_format,
+            in_memory=True  # Always use in-memory for direct download
         )
         
+        # Send file directly to browser
         return send_file(
             memory_file,
             as_attachment=True,

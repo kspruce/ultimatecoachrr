@@ -167,7 +167,7 @@ class EnhancedDataManager:
         
         return model_info
     
-    def export_all_data(self, timestamp=True, custom_name=None, format='json'):
+    def export_all_data(self, timestamp=True, custom_name=None, format='json', in_memory=False):
         """Export all data to in-memory ZIP file"""
         if custom_name:
             export_dir_name = custom_name
