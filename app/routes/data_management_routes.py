@@ -1,10 +1,10 @@
 """
-Enhanced data management routes for Flask application
+Enhanced data management routes for Flask Application
 """
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.utils.utils import admin_required
-from enhanced_data_manager import EnhancedDataManager
+from app_utils_enhanced_data_manager import EnhancedDataManager
 import os
 import json
 import shutil
@@ -27,11 +27,11 @@ bp = Blueprint('data_management', __name__, url_prefix='/admin')
 # Initialize data manager
 manager = EnhancedDataManager()
 
-@bp.route('/data-management')
+@bp.route('/enhanced-data-management')
 @login_required
 @admin_required
 def data_management():
-    """Data management interface."""
+    """Enhanced data management interface."""
     model_info = manager.get_model_info()
     
     # Get available exports with details
@@ -43,7 +43,7 @@ def data_management():
     # Get last export date
     last_export = exports[0]['date'] if exports else None
     
-    return render_template('admin/data_management.html', 
+    return render_template('admin/enhanced_data_management.html', 
                          model_info=model_info, 
                          exports=exports,
                          total_records=total_records,
@@ -322,16 +322,15 @@ def model_details_api(table_name):
         # Get sample data (first 5 records)
         sample_records = []
         try:
-            with manager.app.app_context():
-                records = model.query.limit(5).all()
-                for record in records:
-                    record_dict = {}
-                    for column in model.__table__.columns:
-                        value = getattr(record, column.name)
-                        if isinstance(value, datetime):
-                            value = value.isoformat()
-                        record_dict[column.name] = value
-                    sample_records.append(record_dict)
+            records = model.query.limit(5).all()
+            for record in records:
+                record_dict = {}
+                for column in model.__table__.columns:
+                    value = getattr(record, column.name)
+                    if isinstance(value, datetime):
+                        value = value.isoformat()
+                    record_dict[column.name] = value
+                sample_records.append(record_dict)
         except Exception as e:
             logger.warning(f"Could not fetch sample data for {table_name}: {e}")
         

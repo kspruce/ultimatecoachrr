@@ -1,0 +1,1167 @@
+{% extends "base.html" %}
+    
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-database me-2"></i>Enhanced Data Management
+                    </h1>
+                    <p class="text-muted">Export, import and manage your application data</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary" onclick="refreshPage()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-table fa-2x mb-2"></i>
+                    <h4>{{ model_info.total_models }}</h4>
+                    <p class="mb-0">Total Models</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-database fa-2x mb-2"></i>
+                    <h4>{{ total_records }}</h4>
+                    <p class="mb-0">Total Records</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-download fa-2x mb-2"></i>
+                    <h4>{{ exports|length }}</h4>
+                    <p class="mb-0">Available Exports</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h4 id="last-export">{{ last_export or 'Never' }}</h4>
+                    <p class="mb-0">Last Export</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Tabs -->
+    <ul class="nav nav-tabs mb-4" id="dataTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-content" type="button" role="tab">
+                <i class="fas fa-upload me-2"></i>Export Data
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import-content" type="button" role="tab">
+                <i class="fas fa-download me-2"></i>Import Data
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="exports-tab" data-bs-toggle="tab" data-bs-target="#exports-content" type="button" role="tab">
+                <i class="fas fa-archive me-2"></i>Available Exports
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="models-tab" data-bs-toggle="tab" data-bs-target="#models-content" type="button" role="tab">
+                <i class="fas fa-table me-2"></i>Models Overview
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="dataTabsContent">
+        <!-- Export Tab -->
+        <div class="tab-pane fade show active" id="export-content" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-upload me-2"></i>Export Data
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Export all your application data for backup or migration purposes.</p>
+                            
+                            <form id="exportForm" method="POST" action="{{ url_for('data_management.export_data_route') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="mb-3">
+                                    <label for="export_name" class="form-label">Export Name (Optional)</label>
+                                    <input type="text" class="form-control" id="export_name" name="export_name" 
+                                           placeholder="e.g., before_model_update">
+                                    <div class="form-text">Leave empty to use timestamp</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Export Format</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="export_format" id="format_json" value="json" checked>
+                                        <label class="form-check-label" for="format_json">
+                                            <span class="badge bg-warning"><i class="fas fa-code me-1"></i>JSON</span>
+                                            - Raw data format (recommended for backups)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="export_format" id="format_excel" value="excel">
+                                        <label class="form-check-label" for="format_excel">
+                                            <span class="badge bg-success"><i class="fas fa-file-excel me-1"></i>Excel</span>
+                                            - Human-readable format (good for viewing data)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="export_format" id="format_both" value="both">
+                                        <label class="form-check-label" for="format_both">
+                                            <span class="badge bg-warning"><i class="fas fa-code me-1"></i>JSON</span> +
+                                            <span class="badge bg-success"><i class="fas fa-file-excel me-1"></i>Excel</span>
+                                            - Both formats
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="include_metadata" name="include_metadata" checked>
+                                        <label class="form-check-label" for="include_metadata">
+                                            Include metadata and relationships
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg" id="exportBtn">
+                                        <i class="fas fa-download me-2"></i>Start Export
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Export Progress -->
+                            <div class="progress-container mt-3" id="exportProgress">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="text-center">
+                                    <small class="text-muted" id="exportStatus">Preparing export...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Export Section -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-bolt me-2"></i>Quick Excel Export
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Export specific tables directly to Excel for quick viewing.</p>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-grid">
+                                        <a href="{{ url_for('data_management.download_excel') }}" class="btn btn-success">
+                                            <i class="fas fa-file-excel me-2"></i>Export All Tables to Excel
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <select class="form-select" id="tableSelect">
+                                            <option value="">Select a table...</option>
+                                            {% for table_name in model_info.dependency_order %}
+                                                <option value="{{ table_name }}">{{ table_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button class="btn btn-outline-success" type="button" id="exportTableBtn">
+                                            <i class="fas fa-file-excel me-1"></i>Export
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Tab -->
+        <div class="tab-pane fade" id="import-content" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-download me-2"></i>Import Data
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Import data from previously exported files.</p>
+                            
+                            <!-- File Upload Section -->
+                            <div class="mb-4">
+                                <h6><i class="fas fa-file-upload me-2"></i>Upload Export File</h6>
+                                <form id="uploadForm" method="POST" action="{{ url_for('data_management.import_data_route') }}" enctype="multipart/form-data">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    
+                                    <div class="file-upload-container" id="dropZone">
+                                        <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
+                                        <h5>Drag & Drop Files Here</h5>
+                                        <p class="text-muted">or</p>
+                                        <button type="button" class="btn btn-outline-primary" id="browseBtn">
+                                            <i class="fas fa-folder-open me-2"></i>Browse Files
+                                        </button>
+                                        <input type="file" class="file-upload-input" id="importFile" name="import_file" accept=".zip">
+                                    </div>
+                                    
+                                    <div class="preview-container" id="filePreview">
+                                        <!-- File preview will be added here -->
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="clear_existing_upload" name="clear_existing">
+                                            <label class="form-check-label text-danger" for="clear_existing_upload">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Clear existing data before import
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="confirm_import_upload" required>
+                                            <label class="form-check-label" for="confirm_import_upload">
+                                                I understand this will modify the database
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-warning" id="uploadImportBtn" disabled>
+                                                <i class="fas fa-upload me-2"></i>Import Uploaded File
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Directory Import Section -->
+                            <div class="mt-4">
+                                <h6><i class="fas fa-folder me-2"></i>Import from Server Directory</h6>
+                                <form id="importForm" method="POST" action="{{ url_for('data_management.import_data_route') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="mb-3">
+                                        <label for="import_dir" class="form-label">Select Export to Import</label>
+                                        <select class="form-select" id="import_dir" name="import_dir" required>
+                                            <option value="">Choose an export...</option>
+                                            {% for export in exports %}
+                                                <option value="{{ export.path }}">
+                                                    {{ export.name }} 
+                                                    <small>({{ export.date }} - {{ export.records }} records)</small>
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="clear_existing" name="clear_existing">
+                                            <label class="form-check-label text-danger" for="clear_existing">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Clear existing data before import
+                                            </label>
+                                        </div>
+                                        <div class="form-text text-warning">
+                                            <strong>Warning:</strong> This will permanently delete all current data!
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="confirm_import" required>
+                                            <label class="form-check-label" for="confirm_import">
+                                                I understand this will modify the database
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-warning btn-lg" id="importBtn">
+                                            <i class="fas fa-upload me-2"></i>Start Import
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Import Progress -->
+                            <div class="progress-container mt-3" id="importProgress">
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="text-center">
+                                    <small class="text-muted" id="importStatus">Preparing import...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Exports Tab -->
+        <div class="tab-pane fade" id="exports-content" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-archive me-2"></i>Available Exports
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if exports %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Date</th>
+                                        <th>Records</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for export in exports %}
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-folder me-2 text-warning"></i>
+                                                {{ export.name }}
+                                            </td>
+                                            <td>{{ export.date }}</td>
+                                            <td>{{ export.records }}</td>
+                                            <td>{{ export.size }}</td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" 
+                                                            onclick="viewExportDetails('{{ export.path }}')">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-success" 
+                                                            onclick="downloadExport('{{ export.path }}')">
+                                                        <i class="fas fa-download"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" 
+                                                            onclick="deleteExport('{{ export.path }}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No exports available</h5>
+                            <p class="text-muted">Create your first export using the Export tab.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Models Overview Tab -->
+        <div class="tab-pane fade" id="models-content" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>Models Overview
+                    </h5>
+                    <button class="btn btn-sm btn-outline-light" onclick="toggleModelsView()">
+                        <i class="fas fa-eye me-1"></i>Toggle View
+                    </button>
+                </div>
+                <div class="card-body" id="modelsOverview">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Table Name</th>
+                                    <th>Model Class</th>
+                                    <th>Records</th>
+                                    <th>Columns</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for table_name in model_info.dependency_order %}
+                                    {% set model = model_info.models[table_name] %}
+                                    <tr>
+                                        <td>{{ table_name }}</td>
+                                        <td>{{ model.class_name }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ model.record_count }}</span>
+                                        </td>
+                                        <td>{{ model.columns|length }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" 
+                                                        onclick="showModelDetails('{{ table_name }}')">
+                                                    <i class="fas fa-info-circle"></i> Details
+                                                </button>
+                                                <a href="{{ url_for('data_management.download_excel', table=table_name) }}" 
+                                                   class="btn btn-outline-success">
+                                                    <i class="fas fa-file-excel"></i> Excel
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Processing Order:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for table in model_info.dependency_order %}
+                                <span class="badge bg-secondary">{{ loop.index }}. {{ table }}</span>
+                                {% if not loop.last %}
+                                    <i class="fas fa-arrow-right text-muted align-self-center"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operation Log -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Operation Log
+                    </h5>
+                    <button class="btn btn-sm btn-outline-light" onclick="clearLog()">
+                        <i class="fas fa-trash me-1"></i>Clear Log
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="log-container" id="operationLog">
+                        <div class="log-entry log-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <span class="timestamp">[{{ moment().format('YYYY-MM-DD HH:mm:ss') if moment else now() }}]</span>
+                            Enhanced data management interface loaded
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Model Details Modal -->
+<div class="modal fade" id="modelDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Model Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modelDetailsContent">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Details Modal -->
+<div class="modal fade" id="exportDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="exportDetailsContent">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmationContent">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .file-upload-container {
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        padding: 20px;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.3s;
+    }
+    .file-upload-container:hover {
+        border-color: #28a745;
+        background-color: #f0f8f0;
+    }
+    .file-upload-container.dragover {
+        border-color: #28a745;
+        background-color: #e8f5e9;
+    }
+    .file-upload-input {
+        display: none;
+    }
+    .preview-container {
+        margin-top: 15px;
+        display: none;
+    }
+    .preview-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    .preview-item .icon {
+        font-size: 24px;
+        margin-right: 15px;
+        color: #6c757d;
+    }
+    .preview-item .file-info {
+        flex-grow: 1;
+    }
+    .preview-item .remove-btn {
+        color: #dc3545;
+        cursor: pointer;
+    }
+    .log-container {
+        max-height: 300px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+    .log-entry {
+        padding: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+    }
+    .log-success { color: #28a745; }
+    .log-error { color: #dc3545; }
+    .log-warning { color: #ffc107; }
+    .log-info { color: #17a2b8; }
+    .progress-container {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // JavaScript functionality
+    let operationLog = [];
+
+    function addLogEntry(message, type = 'info') {
+        const timestamp = new Date().toLocaleString();
+        const entry = {
+            timestamp: timestamp,
+            message: message,
+            type: type
+        };
+        
+        operationLog.push(entry);
+        
+        const logContainer = document.getElementById('operationLog');
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${type}`;
+        
+        const icon = {
+            'info': 'fa-info-circle',
+            'success': 'fa-check-circle',
+            'warning': 'fa-exclamation-triangle',
+            'error': 'fa-times-circle'
+        }[type] || 'fa-info-circle';
+        
+        logEntry.innerHTML = `
+            <i class="fas ${icon} me-2"></i>
+            <span class="timestamp">[${timestamp}]</span>
+            ${message}
+        `;
+        
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function clearLog() {
+        operationLog = [];
+        document.getElementById('operationLog').innerHTML = '';
+        addLogEntry('Log cleared');
+    }
+
+    function refreshPage() {
+        addLogEntry('Refreshing page...', 'info');
+        location.reload();
+    }
+
+    // Export functionality
+    document.getElementById('exportForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const exportBtn = document.getElementById('exportBtn');
+        const progressContainer = document.getElementById('exportProgress');
+        
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+        progressContainer.style.display = 'block';
+        
+        addLogEntry('Starting data export...', 'info');
+        
+        // Simulate progress (replace with actual AJAX call)
+        simulateProgress('export', () => {
+            // Submit the form
+            this.submit();
+        });
+    });
+
+    // Import functionality
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        const clearExisting = document.getElementById('clear_existing').checked;
+        
+        if (clearExisting) {
+            e.preventDefault();
+            showConfirmation(
+                'Are you sure you want to clear all existing data?',
+                'This action cannot be undone. All current data will be permanently deleted.',
+                () => {
+                    addLogEntry('Starting data import with data clearing...', 'warning');
+                    this.submit();
+                }
+            );
+        } else {
+            addLogEntry('Starting data import...', 'info');
+        }
+    });
+
+    // Upload form handling
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        const clearExisting = document.getElementById('clear_existing_upload').checked;
+        const fileInput = document.getElementById('importFile');
+        
+        if (!fileInput.files.length) {
+            e.preventDefault();
+            addLogEntry('No file selected for upload', 'error');
+            return;
+        }
+        
+        if (clearExisting) {
+            e.preventDefault();
+            showConfirmation(
+                'Are you sure you want to clear all existing data?',
+                'This action cannot be undone. All current data will be permanently deleted.',
+                () => {
+                    addLogEntry('Starting data import with data clearing...', 'warning');
+                    this.submit();
+                }
+            );
+        } else {
+            addLogEntry('Starting data import from uploaded file...', 'info');
+        }
+    });
+
+    // File upload handling
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('importFile');
+    const browseBtn = document.getElementById('browseBtn');
+    const filePreview = document.getElementById('filePreview');
+    const uploadImportBtn = document.getElementById('uploadImportBtn');
+    const confirmImportUpload = document.getElementById('confirm_import_upload');
+
+    browseBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFilePreview();
+        }
+    });
+
+    fileInput.addEventListener('change', updateFilePreview);
+
+    confirmImportUpload.addEventListener('change', () => {
+        uploadImportBtn.disabled = !confirmImportUpload.checked || !fileInput.files.length;
+    });
+
+    function updateFilePreview() {
+        if (fileInput.files.length) {
+            const file = fileInput.files[0];
+            filePreview.innerHTML = '';
+            filePreview.style.display = 'block';
+            
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            
+            let iconClass = 'fa-file';
+            if (file.name.endsWith('.zip')) {
+                iconClass = 'fa-file-archive';
+            } else if (file.name.endsWith('.json')) {
+                iconClass = 'fa-file-code';
+            } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                iconClass = 'fa-file-excel';
+            }
+            
+            previewItem.innerHTML = `
+                <div class="icon">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="file-info">
+                    <strong>${file.name}</strong>
+                    <div><small class="text-muted">${formatFileSize(file.size)}</small></div>
+                </div>
+                <div class="remove-btn" onclick="clearFileInput()">
+                    <i class="fas fa-times"></i>
+                </div>
+            `;
+            
+            filePreview.appendChild(previewItem);
+            uploadImportBtn.disabled = !confirmImportUpload.checked;
+            addLogEntry(`File selected for upload: ${file.name}`, 'info');
+        } else {
+            filePreview.style.display = 'none';
+            uploadImportBtn.disabled = true;
+        }
+    }
+
+    function clearFileInput() {
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+        uploadImportBtn.disabled = true;
+        addLogEntry('File selection cleared', 'info');
+    }
+
+    function formatFileSize(size) {
+        if (size === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(size) / Math.log(1024));
+        return `${(size / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
+    }
+
+    // Quick Excel export
+    document.getElementById('exportTableBtn').addEventListener('click', function() {
+        const tableSelect = document.getElementById('tableSelect');
+        const selectedTable = tableSelect.value;
+        
+        if (selectedTable) {
+            window.location.href = `{{ url_for('data_management.download_excel') }}?table=${selectedTable}`;
+            addLogEntry(`Exporting table ${selectedTable} to Excel...`, 'info');
+        } else {
+            addLogEntry('Please select a table to export', 'warning');
+        }
+    });
+
+    function simulateProgress(type, callback) {
+        const progressBar = document.querySelector(`#${type}Progress .progress-bar`);
+        const statusElement = document.getElementById(`${type}Status`);
+        
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            
+            progressBar.style.width = progress + '%';
+            statusElement.textContent = `Processing... ${Math.round(progress)}%`;
+            
+            if (progress >= 90) {
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+                statusElement.textContent = 'Completing...';
+                setTimeout(callback, 1000);
+            }
+        }, 500);
+    }
+
+    function showModelDetails(tableName) {
+        addLogEntry(`Viewing details for model: ${tableName}`, 'info');
+        
+        const content = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading model details...</p>
+            </div>
+        `;
+        
+        document.getElementById('modelDetailsContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('modelDetailsModal'));
+        modal.show();
+        
+        // Fetch model details
+        fetch(`{{ url_for('data_management.model_details_api', table_name='') }}${tableName}`)
+            .then(response => response.json())
+            .then(model => {
+                let detailsHtml = `
+                    <h6>Table: ${tableName}</h6>
+                    <p><strong>Class:</strong> ${model.class_name}</p>
+                    <p><strong>Records:</strong> ${model.record_count}</p>
+                    
+                    <h6>Columns (${model.columns.length}):</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Nullable</th>
+                                    <th>Primary Key</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${model.columns.map(col => `
+                                    <tr>
+                                        <td>${col.name}</td>
+                                        <td><code>${col.type}</code></td>
+                                        <td>${col.nullable ? '✓' : '✗'}</td>
+                                        <td>${col.primary_key ? '✓' : '✗'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                if (model.foreign_keys.length > 0) {
+                    detailsHtml += `
+                        <h6>Foreign Keys (${model.foreign_keys.length}):</h6>
+                        <ul class="list-group">
+                            ${model.foreign_keys.map(fk => `
+                                <li class="list-group-item">
+                                    <code>${fk.column}</code> → <code>${fk.references}</code>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                } else {
+                    detailsHtml += '<p><em>No foreign keys</em></p>';
+                }
+                
+                if (model.sample_data && model.sample_data.length > 0) {
+                    detailsHtml += `
+                        <h6 class="mt-3">Sample Data (${model.sample_data.length} records):</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        ${Object.keys(model.sample_data[0]).map(key => `
+                                            <th>${key}</th>
+                                        `).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${model.sample_data.map(record => `
+                                        <tr>
+                                            ${Object.values(record).map(value => `
+                                                <td>${value !== null ? value : '<em>null</em>'}</td>
+                                            `).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    detailsHtml += '<p><em>No sample data available</em></p>';
+                }
+                
+                document.getElementById('modelDetailsContent').innerHTML = detailsHtml;
+            })
+            .catch(error => {
+                document.getElementById('modelDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading model details: ${error.message}
+                    </div>
+                `;
+            });
+    }
+
+    function viewExportDetails(exportPath) {
+        addLogEntry(`Viewing details for export: ${exportPath}`, 'info');
+        
+        const content = `
+            <h6>Export Path: ${exportPath}</h6>
+            <p>Loading export details...</p>
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('exportDetailsContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('exportDetailsModal')).show();
+        
+        // Fetch actual details
+        fetch(`{{ url_for('data_management.export_details', export_path='') }}${encodeURIComponent(exportPath)}`)
+            .then(response => response.json())
+            .then(data => {
+                let detailsHtml = `
+                    <h6>Export Details</h6>
+                    <p><strong>Path:</strong> ${exportPath}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-success">Complete</span></p>
+                `;
+                
+                if (data.metadata) {
+                    detailsHtml += `
+                        <p><strong>Created:</strong> ${new Date(data.metadata.export_timestamp).toLocaleString()}</p>
+                        <p><strong>Models Exported:</strong> ${data.metadata.total_models}</p>
+                        <p><strong>Format:</strong> ${data.metadata.format || 'JSON'}</p>
+                    `;
+                }
+                
+                if (data.files && data.files.length > 0) {
+                    detailsHtml += `
+                        <h6 class="mt-3">Files (${data.files.length})</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Size</th>
+                                        <th>Modified</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.files.map(file => {
+                                        let iconClass = 'fa-file';
+                                        let badgeClass = '';
+                                        
+                                        if (file.name.endsWith('.json')) {
+                                            iconClass = 'fa-file-code';
+                                            badgeClass = 'bg-warning';
+                                        } else if (file.name.endsWith('.xlsx')) {
+                                            iconClass = 'fa-file-excel';
+                                            badgeClass = 'bg-success';
+                                        } else if (file.name.endsWith('.zip')) {
+                                            iconClass = 'fa-file-archive';
+                                            badgeClass = 'bg-secondary';
+                                        }
+                                        
+                                        return `
+                                            <tr>
+                                                <td>
+                                                    <i class="fas ${iconClass} me-2"></i>
+                                                    ${file.name}
+                                                    ${badgeClass ? `<span class="badge ${badgeClass} ms-1">${file.name.split('.').pop().toUpperCase()}</span>` : ''}
+                                                </td>
+                                                <td>${file.size}</td>
+                                                <td>${file.modified}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                
+                if (data.summary) {
+                    const tables = Object.keys(data.summary).filter(key => 
+                        typeof data.summary[key] === 'object' && 
+                        data.summary[key] !== null &&
+                        key !== 'status' && 
+                        key !== 'timestamp'
+                    );
+                    
+                    if (tables.length > 0) {
+                        detailsHtml += `
+                            <h6 class="mt-3">Exported Tables</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Table</th>
+                                            <th>Records</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${tables.map(table => {
+                                            const tableData = data.summary[table];
+                                            const status = tableData.status;
+                                            const statusBadge = status === 'completed' ? 'bg-success' : 
+                                                                status === 'error' ? 'bg-danger' : 'bg-warning';
+                                            
+                                            return `
+                                                <tr>
+                                                    <td>${table}</td>
+                                                    <td>${tableData.records_exported || 0}</td>
+                                                    <td><span class="badge ${statusBadge}">${status}</span></td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                }
+                
+                detailsHtml += `
+                    <div class="mt-3">
+                        <a href="{{ url_for('data_management.download_export') }}?path=${encodeURIComponent(exportPath)}" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i>Download as ZIP
+                        </a>
+                    </div>
+                `;
+                
+                document.getElementById('exportDetailsContent').innerHTML = detailsHtml;
+            })
+            .catch(error => {
+                document.getElementById('exportDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading export details: ${error.message}
+                    </div>
+                `;
+            });
+    }
+
+    function downloadExport(exportPath) {
+        addLogEntry(`Downloading export: ${exportPath}`, 'info');
+        window.location.href = `{{ url_for('data_management.download_export') }}?path=${encodeURIComponent(exportPath)}`;
+    }
+
+    function deleteExport(exportPath) {
+        showConfirmation(
+            'Delete Export',
+            `Are you sure you want to delete the export: ${exportPath}?`,
+            () => {
+                addLogEntry(`Deleting export: ${exportPath}`, 'warning');
+                fetch('{{ url_for('data_management.delete_export') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    },
+                    body: JSON.stringify({path: exportPath})
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    addLogEntry(`Export deleted: ${exportPath}`, 'success');
+                    location.reload();
+                })
+                .catch(error => {
+                    addLogEntry(`Error deleting export: ${error.message}`, 'error');
+                });
+            }
+        );
+    }
+
+    function showConfirmation(title, message, callback) {
+        document.getElementById('confirmationContent').innerHTML = `
+            <h6>${title}</h6>
+            <p>${message}</p>
+        `;
+        
+        const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+        const confirmBtn = document.getElementById('confirmActionBtn');
+        
+        confirmBtn.onclick = () => {
+            modal.hide();
+            callback();
+        };
+        
+        modal.show();
+    }
+
+    function toggleModelsView() {
+        const overview = document.getElementById('modelsOverview');
+        overview.style.display = overview.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        addLogEntry('Enhanced data management interface initialized', 'success');
+    });
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

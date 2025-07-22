@@ -11,6 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block styles %}{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -213,7 +214,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">Your Profile</a></li>
                             {% if current_user.is_admin %}
                             <li><a class="dropdown-item" href="{{ url_for('auth.users') }}">User Management</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('main.data_management') }}">
+                            <li><a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
                                 <i class="fas fa-database me-2"></i>Data Management
                             </a></li>
                             {% endif %}
