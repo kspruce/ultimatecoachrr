@@ -107,14 +107,23 @@ def export_data_route():
 def import_data_route():
     """Import data via web interface."""
     import_type = request.form.get('import_type', '')
+    logger.info(f"Import request received. Type: {import_type}")
     
     if import_type == 'file_upload':
-        # File upload
-        if 'import_file' not in request.files or not request.files['import_file'].filename:
+        logger.info("Processing file upload")
+        # Check if file was uploaded
+        if 'import_file' not in request.files:
+            logger.error("No import_file in request.files")
             flash('❌ No file selected for upload', 'error')
             return redirect(url_for('data_management.data_management'))
             
         import_file = request.files['import_file']
+        if not import_file.filename:
+            logger.error("import_file has no filename")
+            flash('❌ No file selected for upload', 'error')
+            return redirect(url_for('data_management.data_management'))
+            
+        logger.info(f"File uploaded: {import_file.filename}")
         clear_existing = request.form.get('clear_existing') == 'on'
         
         try:
@@ -122,9 +131,12 @@ def import_data_route():
             temp_dir = tempfile.mkdtemp()
             temp_file = os.path.join(temp_dir, secure_filename(import_file.filename))
             import_file.save(temp_file)
+            logger.info(f"File saved to temporary location: {temp_file}")
             
             # Import from ZIP file
+            logger.info("Starting import_from_zip")
             summary = get_manager().import_from_zip(temp_file, clear_existing=clear_existing)
+            logger.info(f"Import completed with status: {summary['status']}")
             
             # Clean up
             shutil.rmtree(temp_dir)
@@ -151,10 +163,13 @@ def import_data_route():
                 flash(f'❌ Import failed: {summary.get("error", "Unknown error")}', 'error')
                 
         except Exception as e:
-            logger.error(f"Import failed: {e}")
+            logger.error(f"Import failed: {e}", exc_info=True)  # Add exc_info=True to get full traceback
             flash(f'❌ Import failed: {str(e)}', 'error')
         
         return redirect(url_for('data_management.data_management'))
+    
+    # Rest of the function remains the same...
+
             
     elif import_type == 'directory_import':
         # Directory import

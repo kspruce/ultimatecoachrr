@@ -228,75 +228,87 @@
         </div>
 
         <!-- Import Tab -->
-                                <div class="mb-4">
-                                    <h6><i class="fas fa-file-upload me-2"></i>Upload Export File</h6>
-                                    <form id="uploadForm" method="POST" action="{{ url_for('data_management.import_data_route') }}" enctype="multipart/form-data">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <!-- Add a hidden field to indicate this is a file upload -->
-                                        <input type="hidden" name="import_type" value="file_upload">
+        <div class="tab-pane fade" id="import-content" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-download me-2"></i>Import Data
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Import data from previously exported files.</p>
+                            
+                            <!-- File Upload Section -->
+                            <div class="mb-4">
+                                <h6><i class="fas fa-file-upload me-2"></i>Upload Export File</h6>
+                                <form id="uploadForm" method="POST" action="{{ url_for('data_management.import_data_route') }}" enctype="multipart/form-data">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <!-- Add a hidden field to indicate this is a file upload -->
+                                    <input type="hidden" name="import_type" value="file_upload">
+                                    
+                                    <div class="file-upload-container" id="dropZone">
+                                        <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
+                                        <h5>Drag & Drop Files Here</h5>
+                                        <p class="text-muted">or</p>
+                                        <button type="button" class="btn btn-outline-primary" id="browseBtn">
+                                            <i class="fas fa-folder-open me-2"></i>Browse Files
+                                        </button>
+                                        <input type="file" class="file-upload-input" id="importFile" name="import_file" accept=".zip">
+                                    </div>
+                                    
+                                    <div class="preview-container" id="filePreview">
+                                        <!-- File preview will be added here -->
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="clear_existing_upload" name="clear_existing">
+                                            <label class="form-check-label text-danger" for="clear_existing_upload">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Clear existing data before import
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="confirm_import_upload" required>
+                                            <label class="form-check-label" for="confirm_import_upload">
+                                                I understand this will modify the database
+                                            </label>
+                                        </div>
                                         
-                                        <div class="file-upload-container" id="dropZone">
-                                            <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
-                                            <h5>Drag & Drop Files Here</h5>
-                                            <p class="text-muted">or</p>
-                                            <button type="button" class="btn btn-outline-primary" id="browseBtn">
-                                                <i class="fas fa-folder-open me-2"></i>Browse Files
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-warning" id="uploadImportBtn" disabled>
+                                                <i class="fas fa-upload me-2"></i>Import Uploaded File
                                             </button>
-                                            <input type="file" class="file-upload-input" id="importFile" name="import_file" accept=".zip">
-                                        </div>
-                                        
-                                        <div class="preview-container" id="filePreview">
-                                            <!-- File preview will be added here -->
-                                        </div>
-                                        
-                                        <div class="mt-3">
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" id="clear_existing_upload" name="clear_existing">
-                                                <label class="form-check-label text-danger" for="clear_existing_upload">
-                                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                                    Clear existing data before import
-                                                </label>
-                                            </div>
-                                            <div class="form-check mb-3">
-                                                <input class="form-check-input" type="checkbox" id="confirm_import_upload" required>
-                                                <label class="form-check-label" for="confirm_import_upload">
-                                                    I understand this will modify the database
-                                                </label>
-                                            </div>
-                                            
-                                            <div class="d-grid">
-                                                <button type="submit" class="btn btn-warning" id="uploadImportBtn" disabled>
-                                                    <i class="fas fa-upload me-2"></i>Import Uploaded File
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                                
-                                <hr>
-                                
-                                <!-- Directory Import Section -->
-                                <div class="mt-4">
-                                    <h6><i class="fas fa-folder me-2"></i>Import from Server Directory</h6>
-                                    <form id="importForm" method="POST" action="{{ url_for('data_management.import_data_route') }}">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <!-- Add a hidden field to indicate this is a directory import -->
-                                        <input type="hidden" name="import_type" value="directory_import">
-                                        
-                                        <div class="mb-3">
-                                            <label for="import_dir" class="form-label">Select Export to Import</label>
-                                            <select class="form-select" id="import_dir" name="import_dir" required>
-                                                <option value="">Choose an export...</option>
-                                                {% for export in exports %}
-                                                    <option value="{{ export.path }}">
-                                                        {{ export.name }} 
-                                                        <small>({{ export.date }} - {{ export.records }} records)</small>
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
                                         </div>
                                     </div>
-
+                                </form>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Directory Import Section -->
+                            <div class="mt-4">
+                                <h6><i class="fas fa-folder me-2"></i>Import from Server Directory</h6>
+                                <form id="importForm" method="POST" action="{{ url_for('data_management.import_data_route') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <!-- Add a hidden field to indicate this is a directory import -->
+                                    <input type="hidden" name="import_type" value="directory_import">
+                                    
+                                    <div class="mb-3">
+                                        <label for="import_dir" class="form-label">Select Export to Import</label>
+                                        <select class="form-select" id="import_dir" name="import_dir" required>
+                                            <option value="">Choose an export...</option>
+                                            {% for export in exports %}
+                                                <option value="{{ export.path }}">
+                                                    {{ export.name }} 
+                                                    <small>({{ export.date }} - {{ export.records }} records)</small>
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+        
                                     <div class="mb-3">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="clear_existing" name="clear_existing">
@@ -309,7 +321,7 @@
                                             <strong>Warning:</strong> This will permanently delete all current data!
                                         </div>
                                     </div>
-
+        
                                     <div class="mb-3">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="confirm_import" required>
@@ -318,7 +330,7 @@
                                             </label>
                                         </div>
                                     </div>
-
+        
                                     <div class="d-grid">
                                         <button type="submit" class="btn btn-warning btn-lg" id="importBtn">
                                             <i class="fas fa-upload me-2"></i>Start Import
@@ -326,7 +338,7 @@
                                     </div>
                                 </form>
                             </div>
-
+        
                             <!-- Import Progress -->
                             <div class="progress-container mt-3" id="importProgress">
                                 <div class="progress mb-2">
