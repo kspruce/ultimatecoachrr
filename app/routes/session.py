@@ -627,7 +627,7 @@ def player_attendance(player_id):
     sessions = SessionPlan.query.filter(SessionPlan.date != None).order_by(SessionPlan.date).all()
     
     # Get attendance records for this player
-    attendances = Attendance.query.filter_by(player_id=player.id).all()
+    attendances = Attendance.query.filter_by(player_id=player_id).all()
     
     # Create a dictionary of attendance records by session ID
     attendance_by_session = {a.session_id: a for a in attendances}
@@ -654,6 +654,43 @@ def player_attendance(player_id):
             'status': status
         })
     
+    # NEW CODE: Get tournament attendance data
+    from app.models.tournament import Tournament
+    from app.models.tournament_rsvp import TournamentRSVP
+    from app.models.game import Game
+    from app.models.game_player import GamePlayer
+    
+    # Get tournaments where the player was selected
+    tournament_rsvps = TournamentRSVP.query.filter_by(
+        player_id=player_id
+    ).all()
+    
+    # Create a dictionary of tournament data
+    tournament_data = {}
+    
+    for rsvp in tournament_rsvps:
+        tournament = Tournament.query.get(rsvp.tournament_id)
+        if tournament:
+            # Get games where player was assigned
+            games = db.session.query(Game).join(
+                GamePlayer, Game.id == GamePlayer.game_id
+            ).filter(
+                Game.tournament_id == tournament.id,
+                GamePlayer.player_id == player_id
+            ).all()
+            
+            tournament_data[tournament.id] = {
+                'tournament': tournament,
+                'rsvp': rsvp,
+                'games': games
+            }
+    
+    # Calculate tournament attendance statistics
+    total_tournaments = len(tournament_data)
+    tournaments_attending = sum(1 for t in tournament_data.values() if t['rsvp'].status == 'attending')
+    tournaments_selected = sum(1 for t in tournament_data.values() if t['rsvp'].selected_by_admin)
+    total_games = sum(len(t['games']) for t in tournament_data.values())
+    
     return render_template(
         'session/player_attendance.html',
         player=player,
@@ -664,8 +701,15 @@ def player_attendance(player_id):
         absent_count=absent_count,
         excused_count=excused_count,
         attendance_rate=attendance_rate,
-        trend_data=json.dumps(trend_data)
+        trend_data=json.dumps(trend_data),
+        # Add tournament data to template context
+        tournament_data=tournament_data,
+        total_tournaments=total_tournaments,
+        tournaments_attending=tournaments_attending,
+        tournaments_selected=tournaments_selected,
+        total_games=total_games
     )
+
 
 
 # API Helper Functions
