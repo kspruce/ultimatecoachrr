@@ -408,3 +408,25 @@ def format_file_size(size_bytes):
     return f"{s} {size_names[i]}"
 
 
+@bp.route('/debug-import', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def debug_import():
+    """Debug route for import issues."""
+    if request.method == 'POST':
+        # Log all form data
+        logger.info("DEBUG - Form data:")
+        for key, value in request.form.items():
+            logger.info(f"  {key}: {value}")
+        
+        # Log all files
+        logger.info("DEBUG - Files:")
+        for key, file in request.files.items():
+            logger.info(f"  {key}: {file.filename}")
+        
+        return jsonify({
+            'form': {k: v for k, v in request.form.items()},
+            'files': {k: f.filename for k, f in request.files.items()}
+        })
+    
+    return render_template('admin/debug_import.html')
