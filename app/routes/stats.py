@@ -1223,6 +1223,69 @@ def player_stats(player_id):
         games = tournament.games.all() if tournament else []
     else:
         games = Game.query.all()
+        
+    # Calculate player stats
+    stats = get_player_base_stats(player, games)
+    
+    # Calculate team averages for radar charts
+    team_stats = calculate_team_radar_stats(games, player.team)
+    
+    # Calculate team averages for O-line and D-line metrics
+    team_avg = {
+        # O-line metrics
+        'o_line_clean_holds': 0,
+        'o_line_clean_holds_percentage': 0,
+        'o_line_turnovers': 0,
+        'o_line_turnovers_per_point': 0,
+        'o_line_got_it_back': 0,
+        'o_line_get_it_back_percentage': 0,
+        
+        # D-line metrics
+        'd_line_break_opportunities': 0,
+        'd_line_break_conversions': 0,
+        'd_line_break_conversion_rate': 0,
+        'd_line_break_opportunities_per_point': 0
+    }
+    
+    # Calculate team averages from active players
+    active_players = Player.query.filter_by(active=True, team=player.team).all()
+    players_with_stats = 0
+    
+    for p in active_players:
+        p_stats = get_player_base_stats(p, games)
+        if p_stats['points_played'] > 0:
+            players_with_stats += 1
+            
+            # Aggregate O-line stats
+            team_avg['o_line_clean_holds'] += p_stats.get('o_line_clean_holds', 0)
+            team_avg['o_line_turnovers'] += p_stats.get('o_line_turnovers', 0)
+            team_avg['o_line_got_it_back'] += p_stats.get('o_line_got_it_back', 0)
+            
+            # Aggregate D-line stats
+            team_avg['d_line_break_opportunities'] += p_stats.get('d_line_break_opportunities', 0)
+            team_avg['d_line_break_conversions'] += p_stats.get('d_line_break_conversions', 0)
+    
+    # Calculate averages if we have players with stats
+    if players_with_stats > 0:
+        team_avg['o_line_clean_holds'] /= players_with_stats
+        team_avg['o_line_turnovers'] /= players_with_stats
+        team_avg['o_line_got_it_back'] /= players_with_stats
+        team_avg['d_line_break_opportunities'] /= players_with_stats
+        team_avg['d_line_break_conversions'] /= players_with_stats
+        
+        # Calculate percentages
+        if team_avg['o_line_clean_holds'] > 0:
+            team_avg['o_line_clean_holds_percentage'] = (team_avg['o_line_clean_holds'] / team_avg.get('o_line_points_played', 1)) * 100
+        
+        if team_avg['o_line_turnovers'] > 0:
+            team_avg['o_line_turnovers_per_point'] = team_avg['o_line_turnovers'] / team_avg.get('o_line_points_played', 1)
+        
+        if team_avg['o_line_got_it_back'] > 0:
+            team_avg['o_line_get_it_back_percentage'] = (team_avg['o_line_got_it_back'] / team_avg['o_line_turnovers']) * 100 if team_avg['o_line_turnovers'] > 0 else 0
+        
+        if team_avg['d_line_break_opportunities'] > 0:
+            team_avg['d_line_break_conversion_rate'] = (team_avg['d_line_break_conversions'] / team_avg['d_line_break_opportunities']) * 100
+            team_avg['d_line_break_opportunities_per_point'] = team_avg['d_line_break_opportunities'] / team_avg.get('d_line_points_played', 1)
 
     # Get point IDs for filtering if games are selected
     point_ids = [p.id for g in games for p in g.points] if games else None
@@ -1494,6 +1557,7 @@ def player_stats(player_id):
         player=player,
         stats=stats,
         team_stats=team_stats,
+        team_avg=team_avg,
         player_games=player_games,
         tournaments=tournaments,
         selected_tournament=tournament_id,
@@ -1573,7 +1637,7 @@ def game_stats(game_id):
         calculate_impact_score=calculate_impact_score
     )
 
-@bp.route('/team')
+@bp.route('/team_stats')
 @login_required
 def team_stats():
     """
