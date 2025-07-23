@@ -20,6 +20,38 @@
             </div>
         </div>
     </div>
+    
+    <!-- Backup & Restore Guide -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle me-2"></i>Database Backup & Restore Guide</h5>
+                <p>This tool allows you to create backups of your database and restore them when needed.</p>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-download me-2"></i>Creating Backups:</h6>
+                        <ol>
+                            <li>Go to the <strong>Export Data</strong> tab</li>
+                            <li>Use <strong>Download All Tables (JSON Format)</strong> for backups you plan to restore later</li>
+                            <li>Use <strong>Download All Tables (Excel Format)</strong> for data you want to view or analyze</li>
+                            <li>The downloaded ZIP file contains all your database tables</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-upload me-2"></i>Restoring Backups:</h6>
+                        <ol>
+                            <li>Go to the <strong>Import Data</strong> tab</li>
+                            <li>Upload your <strong>JSON format</strong> backup ZIP file</li>
+                            <li>Check "Clear existing data" if you want to replace all current data</li>
+                            <li>Confirm and click "Import JSON Backup"</li>
+                            <li><strong>Note:</strong> Only JSON format backups can be imported</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -193,21 +225,52 @@
                     <div class="card mt-4">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                <i class="fas fa-bolt me-2"></i>Quick Excel Export
+                                <i class="fas fa-bolt me-2"></i>Quick Export Options
                             </h5>
                         </div>
                         <div class="card-body">
+                            <p class="text-muted">Export your data in different formats for backup or analysis.</p>
+                            
+                            <!-- Database Backup Downloads -->
+                            <div class="mb-4">
+                                <h6><i class="fas fa-database me-2"></i>Database Backup Downloads</h6>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <div class="d-grid">
+                                            <a href="{{ url_for('data_management.export_excel_zip_route') }}" class="btn btn-success">
+                                                <i class="fas fa-file-excel me-2"></i>Download All Tables (Excel Format)
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <div class="d-grid">
+                                            <a href="{{ url_for('data_management.export_json_zip_route') }}" class="btn btn-warning">
+                                                <i class="fas fa-file-code me-2"></i>Download All Tables (JSON Format)
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info mt-2">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Tip:</strong> Use JSON format for backups you plan to import later. Excel format is best for viewing and analysis.
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Single Table Export -->
+                            <h6><i class="fas fa-table me-2"></i>Single Table Export</h6>
                             <p class="text-muted">Export specific tables directly to Excel for quick viewing.</p>
                             
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-6 mb-2">
                                     <div class="d-grid">
-                                        <a href="{{ url_for('data_management.download_excel') }}" class="btn btn-success">
-                                            <i class="fas fa-file-excel me-2"></i>Export All Tables to Excel
+                                        <a href="{{ url_for('data_management.download_excel') }}" class="btn btn-outline-success">
+                                            <i class="fas fa-file-excel me-2"></i>Export All Tables to Single Excel File
                                         </a>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-6 mb-2">
                                     <div class="input-group">
                                         <select class="form-select" id="tableSelect">
                                             <option value="">Select a table...</option>
@@ -242,13 +305,17 @@
                             
                             <!-- File Upload Section -->
                             <div class="mb-4">
-                                <h6><i class="fas fa-file-upload me-2"></i>Upload Export File</h6>
+                                <h6><i class="fas fa-file-upload me-2"></i>Upload JSON Export File</h6>
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Important:</strong> Only JSON format exports can be imported. Use the "Download All Tables (JSON Format)" option from the Export tab to create compatible backups.
+                                </div>
                                 <form id="uploadForm" method="POST" action="{{ url_for('data_management.import_zip_file_route') }}" enctype="multipart/form-data">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     
                                     <div class="file-upload-container" id="dropZone">
                                         <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-muted"></i>
-                                        <h5>Drag & Drop Files Here</h5>
+                                        <h5>Drag & Drop JSON Backup Here</h5>
                                         <p class="text-muted">or</p>
                                         <button type="button" class="btn btn-outline-primary" id="browseBtn">
                                             <i class="fas fa-folder-open me-2"></i>Browse Files
@@ -277,7 +344,7 @@
                                         
                                         <div class="d-grid">
                                             <button type="submit" class="btn btn-warning" id="uploadImportBtn" disabled>
-                                                <i class="fas fa-upload me-2"></i>Import Uploaded File
+                                                <i class="fas fa-upload me-2"></i>Import JSON Backup
                                             </button>
                                         </div>
                                     </div>
@@ -793,12 +860,18 @@
             previewItem.className = 'preview-item';
             
             let iconClass = 'fa-file';
+            let isValidFormat = false;
+            let formatWarning = '';
+            
             if (file.name.endsWith('.zip')) {
                 iconClass = 'fa-file-archive';
+                isValidFormat = true;
             } else if (file.name.endsWith('.json')) {
                 iconClass = 'fa-file-code';
+                isValidFormat = true;
             } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
                 iconClass = 'fa-file-excel';
+                formatWarning = '<div class="text-danger mt-1"><i class="fas fa-exclamation-triangle"></i> Excel files cannot be imported. Please use JSON format.</div>';
             }
             
             previewItem.innerHTML = `
@@ -808,6 +881,7 @@
                 <div class="file-info">
                     <strong>${file.name}</strong>
                     <div><small class="text-muted">${formatFileSize(file.size)}</small></div>
+                    ${formatWarning}
                 </div>
                 <div class="remove-btn" onclick="clearFileInput()">
                     <i class="fas fa-times"></i>
@@ -815,8 +889,15 @@
             `;
             
             filePreview.appendChild(previewItem);
-            uploadImportBtn.disabled = !confirmImportUpload.checked;
-            addLogEntry(`File selected for upload: ${file.name}`, 'info');
+            
+            // Only enable the upload button if it's a valid format and the checkbox is checked
+            uploadImportBtn.disabled = !confirmImportUpload.checked || !isValidFormat;
+            
+            if (!isValidFormat) {
+                addLogEntry(`Warning: ${file.name} may not be a valid import format. Only JSON backups can be imported.`, 'warning');
+            } else {
+                addLogEntry(`File selected for upload: ${file.name}`, 'info');
+            }
         } else {
             filePreview.style.display = 'none';
             uploadImportBtn.disabled = true;

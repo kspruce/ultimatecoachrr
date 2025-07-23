@@ -98,6 +98,72 @@ def export_data_route():
         flash(f'❌ Export failed: {str(e)}', 'error')
         return redirect(url_for('data_management.data_management'))
 
+@bp.route('/export-excel-zip')
+@login_required
+@admin_required
+def export_excel_zip_route():
+    """Export all data to Excel files in a ZIP archive."""
+    try:
+        export_name = request.args.get('export_name', '').strip()
+        
+        # Generate custom name if provided
+        custom_name = None
+        if export_name:
+            safe_name = secure_filename(export_name)
+            custom_name = f"excel_export_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Generate in-memory export
+        memory_file, filename = get_manager().export_all_to_excel_zip(
+            timestamp=True if not custom_name else False,
+            custom_name=custom_name
+        )
+        
+        # Send file directly to browser
+        return send_file(
+            memory_file,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/zip'
+        )
+                
+    except Exception as e:
+        logger.error(f"Excel export failed: {e}")
+        flash(f'❌ Excel export failed: {str(e)}', 'error')
+        return redirect(url_for('data_management.data_management'))
+
+@bp.route('/export-json-zip')
+@login_required
+@admin_required
+def export_json_zip_route():
+    """Export all data to JSON files in a ZIP archive."""
+    try:
+        export_name = request.args.get('export_name', '').strip()
+        
+        # Generate custom name if provided
+        custom_name = None
+        if export_name:
+            safe_name = secure_filename(export_name)
+            custom_name = f"json_export_{safe_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Generate in-memory export
+        memory_file, filename = get_manager().export_all_to_json_zip(
+            timestamp=True if not custom_name else False,
+            custom_name=custom_name
+        )
+        
+        # Send file directly to browser
+        return send_file(
+            memory_file,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/zip'
+        )
+                
+    except Exception as e:
+        logger.error(f"JSON export failed: {e}")
+        flash(f'❌ JSON export failed: {str(e)}', 'error')
+        return redirect(url_for('data_management.data_management'))
+
 
 
 
@@ -482,6 +548,12 @@ def import_zip_file_route():
         logger.error("import_file has no filename")
         flash('❌ No file selected for upload', 'error')
         return redirect(url_for('data_management.data_management'))
+    
+    # Validate file format - only accept .zip files
+    if not import_file.filename.lower().endswith('.zip'):
+        logger.error(f"Invalid file format: {import_file.filename}")
+        flash('❌ Invalid file format. Only ZIP files are accepted for import.', 'error')
+        return redirect(url_for('data_management.data_management'))
         
     logger.info(f"File uploaded: {import_file.filename}")
     clear_existing = request.form.get('clear_existing') == 'on'
@@ -492,6 +564,24 @@ def import_zip_file_route():
         temp_file = os.path.join(temp_dir, secure_filename(import_file.filename))
         import_file.save(temp_file)
         logger.info(f"File saved to temporary location: {temp_file}")
+        
+        # Verify the ZIP contains JSON files (not Excel)
+        with zipfile.ZipFile(temp_file, 'r') as zipf:
+            file_list = zipf.namelist()
+            json_files = [f for f in file_list if f.endswith('.json')]
+            excel_files = [f for f in file_list if f.endswith('.xlsx') or f.endswith('.xls')]
+            
+            if not json_files:
+                logger.error("No JSON files found in the uploaded ZIP")
+                flash('❌ No JSON files found in the uploaded ZIP. Please upload a JSON format backup.', 'error')
+                shutil.rmtree(temp_dir)
+                return redirect(url_for('data_management.data_management'))
+            
+            if excel_files and not json_files:
+                logger.error("Excel files found but no JSON files - this appears to be an Excel export")
+                flash('❌ This appears to be an Excel format backup. Only JSON format backups can be imported.', 'error')
+                shutil.rmtree(temp_dir)
+                return redirect(url_for('data_management.data_management'))
         
         # Import from ZIP file
         logger.info("Starting import_from_zip")
@@ -522,8 +612,15 @@ def import_zip_file_route():
         else:
             flash(f'❌ Import failed: {summary.get("error", "Unknown error")}', 'error')
             
+    except zipfile.BadZipFile:
+        logger.error("Bad ZIP file uploaded")
+        flash('❌ The uploaded file is not a valid ZIP archive.', 'error')
+        shutil.rmtree(temp_dir)
     except Exception as e:
         logger.error(f"Import failed: {e}", exc_info=True)
         flash(f'❌ Import failed: {str(e)}', 'error')
+        # Clean up temp directory if it exists
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
     
     return redirect(url_for('data_management.data_management'))

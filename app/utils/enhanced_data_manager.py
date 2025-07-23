@@ -247,6 +247,249 @@ class EnhancedDataManager:
         
         memory_file.seek(0)
         return memory_file, f"{export_dir_name}.zip"
+        
+    def export_all_to_excel_zip(self, timestamp=True, custom_name=None):
+        """Export all data to Excel files and create a ZIP file"""
+        if custom_name:
+            export_dir_name = custom_name
+        elif timestamp:
+            export_dir_name = f"excel_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        else:
+            export_dir_name = "excel_export"
+        
+        # Create in-memory ZIP file
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add metadata
+            metadata = {
+                'export_timestamp': datetime.now().isoformat(),
+                'total_models': len(self.models),
+                'format': 'excel'
+            }
+            zipf.writestr('metadata.json', json.dumps(metadata, indent=2))
+            
+            # Export summary
+            export_summary = {
+                'status': 'in_progress',
+                'timestamp': datetime.now().isoformat(),
+                'format': 'excel'
+            }
+            
+            # Process each model in dependency order
+            for table_name in self.dependency_order:
+                if table_name in self.models:
+                    model = self.models[table_name]
+                    
+                    try:
+                        # Get all records
+                        records = model.query.all()
+                        
+                        # Convert to list of dictionaries
+                        data = []
+                        for record in records:
+                            record_dict = {}
+                            for column in model.__table__.columns:
+                                value = getattr(record, column.name)
+                                # Handle datetime objects
+                                if isinstance(value, datetime):
+                                    value = value.isoformat()
+                                record_dict[column.name] = value
+                            data.append(record_dict)
+                        
+                        # Create Excel file
+                        excel_buffer = io.BytesIO()
+                        self._save_as_excel(data, excel_buffer, table_name)
+                        excel_buffer.seek(0)
+                        zipf.writestr(f"{table_name}.xlsx", excel_buffer.getvalue())
+                        
+                        # Update summary
+                        export_summary[table_name] = {
+                            'status': 'completed',
+                            'records_exported': len(data)
+                        }
+                        
+                        logger.info(f"Exported {len(data)} records from {table_name} to Excel")
+                        
+                    except Exception as e:
+                        logger.error(f"Error exporting {table_name} to Excel: {e}")
+                        export_summary[table_name] = {
+                            'status': 'error',
+                            'error': str(e)
+                        }
+            
+            # Update and save summary
+            export_summary['status'] = 'completed'
+            export_summary['completed_timestamp'] = datetime.now().isoformat()
+            zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
+            
+            # Also create a single Excel file with all tables as sheets
+            try:
+                all_tables_excel = io.BytesIO()
+                with pd.ExcelWriter(all_tables_excel, engine='openpyxl') as writer:
+                    for table_name in self.dependency_order:
+                        if table_name in self.models:
+                            model = self.models[table_name]
+                            try:
+                                # Get all records
+                                records = model.query.all()
+                                
+                                # Convert to list of dictionaries
+                                data = []
+                                for record in records:
+                                    record_dict = {}
+                                    for column in model.__table__.columns:
+                                        value = getattr(record, column.name)
+                                        # Handle datetime objects
+                                        if isinstance(value, datetime):
+                                            value = value.isoformat()
+                                        record_dict[column.name] = value
+                                    data.append(record_dict)
+                                
+                                # Create DataFrame
+                                df = pd.DataFrame(data) if data else pd.DataFrame()
+                                
+                                # Save to sheet (limit sheet name to 31 chars - Excel limitation)
+                                sheet_name = table_name[:31]
+                                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                                
+                                # Format sheet
+                                worksheet = writer.sheets[sheet_name]
+                                
+                                # Format header row
+                                header_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
+                                header_font = Font(color='FFFFFF', bold=True)
+                                
+                                for cell in worksheet[1]:
+                                    cell.fill = header_fill
+                                    cell.font = header_font
+                                
+                                # Auto-adjust column widths
+                                for column in worksheet.columns:
+                                    max_length = 0
+                                    column_letter = column[0].column_letter
+                                    
+                                    for cell in column:
+                                        if cell.value:
+                                            max_length = max(max_length, len(str(cell.value)))
+                                    
+                                    adjusted_width = max_length + 2
+                                    worksheet.column_dimensions[column_letter].width = min(adjusted_width, 50)
+                            except Exception as e:
+                                logger.error(f"Error adding {table_name} to all-tables Excel: {e}")
+                
+                all_tables_excel.seek(0)
+                zipf.writestr('all_tables.xlsx', all_tables_excel.getvalue())
+                logger.info("Created all-tables Excel file")
+            except Exception as e:
+                logger.error(f"Error creating all-tables Excel file: {e}")
+        
+        memory_file.seek(0)
+        return memory_file, f"{export_dir_name}.zip"
+    
+    def export_all_to_json_zip(self, timestamp=True, custom_name=None):
+        """Export all data to JSON files and create a ZIP file"""
+        if custom_name:
+            export_dir_name = custom_name
+        elif timestamp:
+            export_dir_name = f"json_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        else:
+            export_dir_name = "json_export"
+        
+        # Create in-memory ZIP file
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add metadata
+            metadata = {
+                'export_timestamp': datetime.now().isoformat(),
+                'total_models': len(self.models),
+                'format': 'json'
+            }
+            zipf.writestr('metadata.json', json.dumps(metadata, indent=2))
+            
+            # Export summary
+            export_summary = {
+                'status': 'in_progress',
+                'timestamp': datetime.now().isoformat(),
+                'format': 'json'
+            }
+            
+            # Process each model in dependency order
+            for table_name in self.dependency_order:
+                if table_name in self.models:
+                    model = self.models[table_name]
+                    
+                    try:
+                        # Get all records
+                        records = model.query.all()
+                        
+                        # Convert to list of dictionaries
+                        data = []
+                        for record in records:
+                            record_dict = {}
+                            for column in model.__table__.columns:
+                                value = getattr(record, column.name)
+                                # Handle datetime objects
+                                if isinstance(value, datetime):
+                                    value = value.isoformat()
+                                record_dict[column.name] = value
+                            data.append(record_dict)
+                        
+                        # Add JSON to ZIP
+                        zipf.writestr(f"{table_name}.json", json.dumps(data, indent=2))
+                        
+                        # Update summary
+                        export_summary[table_name] = {
+                            'status': 'completed',
+                            'records_exported': len(data)
+                        }
+                        
+                        logger.info(f"Exported {len(data)} records from {table_name} to JSON")
+                        
+                    except Exception as e:
+                        logger.error(f"Error exporting {table_name} to JSON: {e}")
+                        export_summary[table_name] = {
+                            'status': 'error',
+                            'error': str(e)
+                        }
+            
+            # Update and save summary
+            export_summary['status'] = 'completed'
+            export_summary['completed_timestamp'] = datetime.now().isoformat()
+            zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
+            
+            # Also create a single JSON file with all tables
+            try:
+                all_data = {}
+                for table_name in self.dependency_order:
+                    if table_name in self.models:
+                        model = self.models[table_name]
+                        try:
+                            # Get all records
+                            records = model.query.all()
+                            
+                            # Convert to list of dictionaries
+                            data = []
+                            for record in records:
+                                record_dict = {}
+                                for column in model.__table__.columns:
+                                    value = getattr(record, column.name)
+                                    # Handle datetime objects
+                                    if isinstance(value, datetime):
+                                        value = value.isoformat()
+                                    record_dict[column.name] = value
+                                data.append(record_dict)
+                            
+                            all_data[table_name] = data
+                        except Exception as e:
+                            logger.error(f"Error adding {table_name} to all-tables JSON: {e}")
+                
+                zipf.writestr('all_tables.json', json.dumps(all_data, indent=2))
+                logger.info("Created all-tables JSON file")
+            except Exception as e:
+                logger.error(f"Error creating all-tables JSON file: {e}")
+        
+        memory_file.seek(0)
+        return memory_file, f"{export_dir_name}.zip"
 
 
     
