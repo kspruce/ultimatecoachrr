@@ -6,11 +6,6 @@
     .stat-card {
         text-align: center;
         padding: 15px;
-        transition: transform 0.3s;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
     }
     
     .stat-value {
@@ -22,7 +17,6 @@
         font-size: 0.9rem;
         color: #666;
     }
-    
     .chart-container {
         height: 400px;  /* Increase height to accommodate rotated labels */
         position: relative;
@@ -36,22 +30,8 @@
         }
     }
 
-    /* New statistics highlight */
-    .new-stat {
-        position: relative;
-    }
     
-    .new-stat::after {
-        content: "NEW";
-        position: absolute;
-        top: 0;
-        right: 0;
-        background-color: #28a745;
-        color: white;
-        font-size: 0.7rem;
-        padding: 2px 5px;
-        border-radius: 3px;
-    }
+    
 </style>
 {% endblock %}
 
@@ -73,40 +53,33 @@
                     <h5>Filter Statistics</h5>
                 </div>
                 <div class="card-body">
-                    <form id="statsFilterForm" method="GET">
+                    <form method="get" action="{{ url_for('stats_dashboard.team_stats') }}">
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="season">Season</label>
-                                <select class="form-select" id="season" name="season">
-                                    <option value="all" {% if request.args.get('season') == 'all' %}selected{% endif %}>All Seasons</option>
+                            <div class="col-md-4">
+                                <label for="season" class="form-label">Season</label>
+                                <select name="season" id="season" class="form-select">
+                                    <option value="">All Seasons</option>
                                     {% for season in seasons %}
-                                    <option value="{{ season.id }}" {% if request.args.get('season')|int == season.id %}selected{% endif %}>{{ season.name }}</option>
+                                    <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>
+                                        {{ season }}
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="tournament">Tournament</label>
-                                <select class="form-select" id="tournament" name="tournament">
-                                    <option value="all" {% if request.args.get('tournament') == 'all' %}selected{% endif %}>All Tournaments</option>
+                            <div class="col-md-4">
+                                <label for="tournament_id" class="form-label">Tournament</label>
+                                <select name="tournament_id" id="tournament_id" class="form-select">
+                                    <option value="">All Tournaments</option>
                                     {% for tournament in tournaments %}
-                                    <option value="{{ tournament.id }}" {% if request.args.get('tournament')|int == tournament.id %}selected{% endif %}>{{ tournament.name }}</option>
+                                    <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                                        {{ tournament.name }}
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="opponent">Opponent</label>
-                                <select class="form-select" id="opponent" name="opponent">
-                                    <option value="all" {% if request.args.get('opponent') == 'all' %}selected{% endif %}>All Opponents</option>
-                                    {% for opponent in opponents %}
-                                    <option value="{{ opponent.id }}" {% if request.args.get('opponent')|int == opponent.id %}selected{% endif %}>{{ opponent.name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12 text-end">
-                                <button type="submit" class="btn btn-primary">Apply Filters</button>
-                                <a href="{{ url_for('stats.team_stats') }}" class="btn btn-outline-secondary">Reset</a>
+                            <div class="col-md-4">
+                                <label class="form-label"> </label>
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
                             </div>
                         </div>
                     </form>
@@ -115,6 +88,33 @@
         </div>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.games_played }}</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.wins }}-{{ team_summary.losses }}{% if team_summary.ties > 0 %}-{{ team_summary.ties }}{% endif %}</div>
+                <div class="stat-label">Record</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.win_percentage|round(1) }}%</div>
+                <div class="stat-label">Win Percentage</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="stat-value">{{ team_summary.total_points }}</div>
+                <div class="stat-label">Total Points Played</div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
@@ -134,72 +134,6 @@
                                 <div class="stat-value">{{ team_summary.o_line_conversions }} / {{ team_summary.o_line_points }}</div>
                                 <div class="stat-label">O-Line Points Converted</div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- New O-line statistics -->
-                    <div class="row mt-4">
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ team_summary.o_line_clean_holds_percentage|default(0)|round(1) }}%</div>
-                                <div class="stat-label">Clean Holds</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ team_summary.o_line_turnovers_per_point|default(0)|round(2) }}</div>
-                                <div class="stat-label">Turnovers/Point</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ team_summary.o_line_get_it_back_percentage|default(0)|round(1) }}%</div>
-                                <div class="stat-label">Get It Back %</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Detailed O-line stats table -->
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Metric</th>
-                                        <th>Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Total O-line Points</td>
-                                        <td>{{ team_summary.o_line_points }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Clean Holds</td>
-                                        <td>{{ team_summary.o_line_clean_holds|default(0) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Clean Hold %</td>
-                                        <td>{{ team_summary.o_line_clean_holds_percentage|default(0)|round(1) }}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Total Turnovers</td>
-                                        <td>{{ team_summary.o_line_turnovers|default(0) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Turnovers Per Point</td>
-                                        <td>{{ team_summary.o_line_turnovers_per_point|default(0)|round(2) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Got It Back</td>
-                                        <td>{{ team_summary.o_line_got_it_back|default(0) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Get It Back %</td>
-                                        <td>{{ team_summary.o_line_get_it_back_percentage|default(0)|round(1) }}%</td>
-                                    </tr>
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -226,85 +160,59 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- New D-line statistics -->
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ team_summary.d_line_break_opportunities|default(0) }}</div>
-                                <div class="stat-label">Break Opportunities</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ team_summary.d_line_break_conversion_rate|default(0)|round(1) }}%</div>
-                                <div class="stat-label">Break Conversion %</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Detailed D-line stats table -->
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Metric</th>
-                                        <th>Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Total D-line Points</td>
-                                        <td>{{ team_summary.d_line_points }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Break Opportunities</td>
-                                        <td>{{ team_summary.d_line_break_opportunities|default(0) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Break Conversions</td>
-                                        <td>{{ team_summary.d_line_break_conversions|default(0) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Break Conversion %</td>
-                                        <td>{{ team_summary.d_line_break_conversion_rate|default(0)|round(1) }}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Break Opportunities Per Point</td>
-                                        <td>{{ team_summary.d_line_break_opportunities_per_point|default(0)|round(2) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Keep the rest of the original team_stats.html content below -->
+    
+    <!-- Add after the team summary section in team_stats.html -->
     <div class="row mb-4">
         <div class="col-md-6">
-            <div class="card">
+            <div class="card stat-card h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">Team Offensive Radar</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="offensiveRadarChart"></canvas>
+                    <div class="radar-container">
+                        <canvas id="teamOffensiveRadar"></canvas>
+                    </div>
+                    <div class="radar-legend mt-2">
+                        <small class="text-muted">
+                            <strong>Scaling:</strong> 100% represents excellent performance
+                            <ul class="mb-0 ps-3">
+                                <li>Completion Rate: 100%</li>
+                                <li>O-Line Conversion: 80%</li>
+                                <li>Goals Per Point: 1.0</li>
+                                <li>Assists Per Point: 1.0</li>
+                                <li>Throws Per Point: 10.0</li>
+                                <li>Hucks Per Point: 0.5</li>
+                            </ul>
+                        </small>
                     </div>
                 </div>
             </div>
         </div>
+        
         <div class="col-md-6">
-            <div class="card">
+            <div class="card stat-card h-100">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">Team Defensive Radar</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="defensiveRadarChart"></canvas>
+                    <div class="radar-container">
+                        <canvas id="teamDefensiveRadar"></canvas>
+                    </div>
+                    <div class="radar-legend mt-2">
+                        <small class="text-muted">
+                            <strong>Scaling:</strong> 100% represents excellent performance
+                            <ul class="mb-0 ps-3">
+                                <li>D-Line Conversion: 50%</li>
+                                <li>Blocks Per Point: 0.8</li>
+                                <li>Break Percentage: 40%</li>
+                                <li>Turnovers Forced: 1.0</li>
+                                <li>Defensive Efficiency: 80%</li>
+                            </ul>
+                        </small>
                     </div>
                 </div>
             </div>
@@ -324,34 +232,84 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    {% if o_line_players %}
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover">
+                        <table class="table table-sm">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Player</th>
-                                    <th>O-Line Efficiency</th>
-                                    <th>Clean Holds %</th>
-                                    <th>Get It Back %</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>Gender</th>
+                                    <th>Efficiency</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for player in optimal_o_line %}
-                                <tr>
-                                    <td>{{ player.jersey_number or '-' }}</td>
+                                {% if o_line_women %}
+                                <!-- Women section -->
+                                <tr class="gender-divider">
+                                    <td colspan="5">Women (Top {{ o_line_women|length }})</td>
+                                </tr>
+                                {% for player in o_line_women %}
+                                <tr class="player-card o-line female">
+                                    <td>{{ player.jersey_number }}</td>
                                     <td>
-                                        <a href="{{ url_for('player_stats.index', player_id=player.id) }}">
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.o_line_efficiency|round(1) }}%</td>
-                                    <td>{{ player.o_line_clean_holds_percentage|default(0)|round(1) }}%</td>
-                                    <td>{{ player.o_line_get_it_back_percentage|default(0)|round(1) }}%</td>
+                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td>F</td>
+                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
+                                {% endif %}
+                                
+                                {% if o_line_men %}
+                                <!-- Men section -->
+                                <tr class="gender-divider">
+                                    <td colspan="5">Men (Top {{ o_line_men|length }})</td>
+                                </tr>
+                                {% for player in o_line_men %}
+                                <tr class="player-card o-line male">
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td>M</td>
+                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
+                                </tr>
+                                {% endfor %}
+                                {% endif %}
+                                
+                                {% if not o_line_women and not o_line_men %}
+                                <!-- If no gender data, show all players -->
+                                <tr class="gender-divider">
+                                    <td colspan="5">Top Players (Gender data unavailable)</td>
+                                </tr>
+                                {% for player in o_line_players %}
+                                <tr class="player-card o-line">
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
+                                    <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
+                                </tr>
+                                {% endfor %}
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
+                    {% else %}
+                    <p class="text-center">Not enough data to generate optimal line.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -362,34 +320,192 @@
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0">Optimal D-Line
                         <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                           title="Suggested D-line based on D-point efficiency">
+                           title="Suggested D-line based on D point efficiency">
                         </i>
                     </h5>
                 </div>
                 <div class="card-body">
+                    {% if d_line_players %}
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover">
+                        <table class="table table-sm">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Player</th>
-                                    <th>D-Line Efficiency</th>
-                                    <th>Break Opportunities</th>
-                                    <th>Break Conversion %</th>
+                                    <th>Name</th>
+                                    <th>Position</th>
+                                    <th>Gender</th>
+                                    <th>Efficiency</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for player in optimal_d_line %}
-                                <tr>
-                                    <td>{{ player.jersey_number or '-' }}</td>
+                                {% if d_line_women %}
+                                <!-- Women section -->
+                                <tr class="gender-divider">
+                                    <td colspan="5">Women (Top {{ d_line_women|length }})</td>
+                                </tr>
+                                {% for player in d_line_women %}
+                                <tr class="player-card d-line female">
+                                    <td>{{ player.jersey_number }}</td>
                                     <td>
-                                        <a href="{{ url_for('player_stats.index', player_id=player.id) }}">
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
                                             {{ player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player.d_line_efficiency|round(1) }}%</td>
-                                    <td>{{ player.d_line_break_opportunities|default(0) }}</td>
-                                    <td>{{ player.d_line_break_conversion_rate|default(0)|round(1) }}%</td>
+                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td>F</td>
+                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
+                                </tr>
+                                {% endfor %}
+                                {% endif %}
+                                
+                                {% if d_line_men %}
+                                <!-- Men section -->
+                                <tr class="gender-divider">
+                                    <td colspan="5">Men (Top {{ d_line_men|length }})</td>
+                                </tr>
+                                {% for player in d_line_men %}
+                                <tr class="player-card d-line male">
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td>M</td>
+                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
+                                </tr>
+                                {% endfor %}
+                                {% endif %}
+                                
+                                {% if not d_line_women and not d_line_men %}
+                                <!-- If no gender data, show all players -->
+                                <tr class="gender-divider">
+                                    <td colspan="5">Top Players (Gender data unavailable)</td>
+                                </tr>
+                                {% for player in d_line_players %}
+                                <tr class="player-card d-line">
+                                    <td>{{ player.jersey_number }}</td>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
+                                    <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
+                                    <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
+                                </tr>
+                                {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">Not enough data to generate optimal line.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add before the player statistics table in team_stats.html -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Performance Trends
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
+                           title="Team performance trends over time">
+                        </i>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="performanceTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Improve filtering interface -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Filter Statistics</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Season</label>
+                    <select name="season" class="form-select">
+                        <option value="">All Seasons</option>
+                        {% for season in seasons %}
+                        <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>
+                            {{ season }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tournament</label>
+                    <select name="tournament_id" class="form-select">
+                        <option value="">All Tournaments</option>
+                        {% for tournament in tournaments %}
+                        <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
+                            {{ tournament.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="player-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th>Position</th>
+                                    <th>Points</th>
+                                    <th>Goals</th>
+                                    <th>Assists</th>
+                                    <th>Blocks</th>
+                                    <th>Comp %</th>
+                                    <th>Turnovers</th>
+                                    <th>+/-</th>
+                                    <th>PER</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in player_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=item.player.id) }}">
+                                            {{ item.player.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ item.player.position|capitalize }}</td>
+                                    <td>{{ item.stats.points_played }}</td>
+                                    <td>{{ item.stats.goals }}</td>
+                                    <td>{{ item.stats.assists }}</td>
+                                    <td>{{ item.stats.blocks }}</td>
+                                    <td>{{ item.stats.completion_rate|round(1) }}%</td>
+                                    <td>{{ item.stats.throwaways + item.stats.drops }}</td>
+                                    <td>{{ item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.throwaways - item.stats.drops }}</td>
+                                    <td>{{ item.stats.per|round(1) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -399,10 +515,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Keep the rest of the original team_stats.html content -->
-    <!-- ... -->
-
 </div>
 {% endblock %}
 
@@ -411,202 +523,386 @@
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-    $(document).ready(function() {
-        // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        });
-        
-        // Initialize DataTables
-        $('.datatable').DataTable({
-            "pageLength": 10,
-            "order": [],
-            "responsive": true
-        });
-        
-        // Offensive Radar Chart
-        const offensiveCtx = document.getElementById('offensiveRadarChart').getContext('2d');
-        
-        // Define the metrics and their max values
-        const offensiveMetrics = {
-            'O-Line Conversion': 100, // 100%
-            'Completion Rate': 100, // 100%
-            'Clean Holds': 100, // 100%
-            'Get It Back %': 100, // 100%
-            'Offensive Efficiency': 100 // 100%
-        };
-        
-        // Get raw values
-        const offensiveRawValues = [
-            {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
-            {{ team_summary.completion_rate|default(0)|round(1) }},
-            {{ team_summary.o_line_clean_holds_percentage|default(0)|round(1) }},
-            {{ team_summary.o_line_get_it_back_percentage|default(0)|round(1) }},
-            {{ team_summary.offensive_efficiency|default(0)|round(1) }}
-        ];
-        
-        // Get previous period raw values
-        const offensivePrevRawValues = [
-            {{ team_summary.prev_o_line_conversion_rate|default(0)|round(1) }},
-            {{ team_summary.prev_completion_rate|default(0)|round(1) }},
-            {{ team_summary.prev_o_line_clean_holds_percentage|default(0)|round(1) }},
-            {{ team_summary.prev_o_line_get_it_back_percentage|default(0)|round(1) }},
-            {{ team_summary.prev_offensive_efficiency|default(0)|round(1) }}
-        ];
-        
-        // Create the radar chart
-        const offensiveRadarChart = new Chart(offensiveCtx, {
-            type: 'radar',
-            data: {
-                labels: Object.keys(offensiveMetrics),
-                datasets: [
-                    {
-                        label: 'Current Period',
-                        data: offensiveRawValues,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                        pointRadius: 4
-                    },
-                    {
-                        label: 'Previous Period',
-                        data: offensivePrevRawValues,
-                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
-                        pointRadius: 4
-                    }
-                ]
-            },
-            options: {
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 100
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Defensive Radar Chart
-        const defensiveCtx = document.getElementById('defensiveRadarChart').getContext('2d');
-        
-        // Define the metrics and their max values
-        const defensiveMetrics = {
-            'D-Line Conversion': 100, // 100%
-            'Blocks Per Point': 3, // 3 blocks per point is excellent
-            'Break Conversion %': 100, // 100%
-            'Break Opportunities': 3, // 3 per point is excellent
-            'Defensive Efficiency': 100 // 100%
-        };
-        
-        // Get raw values
-        const defensiveRawValues = [
-            {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
-            {{ team_summary.blocks_per_point|default(0)|round(2) }},
-            {{ team_summary.d_line_break_conversion_rate|default(0)|round(1) }},
-            {{ team_summary.d_line_break_opportunities_per_point|default(0)|round(2) }},
-            {{ team_summary.defensive_efficiency|default(0)|round(1) }}
-        ];
-        
-        // Get previous period raw values
-        const defensivePrevRawValues = [
-            {{ team_summary.prev_d_line_conversion_rate|default(0)|round(1) }},
-            {{ team_summary.prev_blocks_per_point|default(0)|round(2) }},
-            {{ team_summary.prev_d_line_break_conversion_rate|default(0)|round(1) }},
-            {{ team_summary.prev_d_line_break_opportunities_per_point|default(0)|round(2) }},
-            {{ team_summary.prev_defensive_efficiency|default(0)|round(1) }}
-        ];
-        
-        // Create the radar chart
-        const defensiveRadarChart = new Chart(defensiveCtx, {
-            type: 'radar',
-            data: {
-                labels: Object.keys(defensiveMetrics),
-                datasets: [
-                    {
-                        label: 'Current Period',
-                        data: defensiveRawValues,
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                        pointRadius: 4
-                    },
-                    {
-                        label: 'Previous Period',
-                        data: defensivePrevRawValues,
-                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                        borderColor: 'rgba(255, 159, 64, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(255, 159, 64, 1)',
-                        pointRadius: 4
-                    }
-                ]
-            },
-            options: {
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 100,
-                        ticks: {
-                            callback: function(value, index, values) {
-                                // Normalize the values based on the max values for each metric
-                                const maxValues = Object.values(defensiveMetrics);
-                                const normalizedValue = (value / 100) * maxValues[index % maxValues.length];
-                                return normalizedValue.toFixed(1);
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const metricName = context.label;
-                                const rawValue = context.raw;
-                                
-                                // For percentage metrics
-                                if (metricName.includes('Conversion') || metricName.includes('Efficiency') || metricName.includes('%')) {
-                                    return context.dataset.label + ': ' + rawValue + '%';
-                                }
-                                // For non-percentage metrics
-                                else {
-                                    return context.dataset.label + ': ' + rawValue;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+        
+    // Wait for the DOM to be fully ready before initializing DataTables
+    // Wait for the DOM to be fully ready before initializing DataTables
+    setTimeout(function() {
+        // Check if the table exists before initializing
+        const tableElement = document.getElementById('player-stats-table');
+        if (tableElement) {
+            try {
+                // Check if there are rows in the table
+                const hasRows = tableElement.querySelector('tbody tr') !== null;
+                
+                if (!hasRows) {
+                    console.log("Table has no rows, skipping DataTable initialization");
+                    return;
+                }
+                
+                // Use a different approach to handle existing DataTable
+                try {
+                    // Instead of destroying, use retrieve option which is safer
+                    $('#player-stats-table').DataTable({
+                        retrieve: true, // This will get the existing instance if it exists
+                        "pageLength": 10,
+                        "order": [[9, "desc"]], // Sort by PER by default
+                        "responsive": true,
+                        "language": {
+                            "search": "Search players:",
+                            "lengthMenu": "Show _MENU_ players"
+                        }
+                    });
+                    console.log("DataTable initialized successfully");
+                } catch (e) {
+                    console.error("Error initializing DataTable:", e);
+                    // Try a simpler initialization as fallback
+                    try {
+                        $('#player-stats-table').DataTable({
+                            "paging": true,
+                            "searching": true,
+                            "ordering": false, // Disable sorting to avoid issues
+                            "info": true
+                        });
+                        console.log("Simple DataTable initialized as fallback");
+                    } catch (fallbackError) {
+                        console.error("Fallback initialization also failed:", fallbackError);
+                        console.log("Using standard HTML table as fallback");
+                    }
+                }
+            } catch (e) {
+                console.error("Error in DataTable setup:", e);
+            }
+        } else {
+            console.warn("player-stats-table element not found");
+        }
+    }, 500); // Increased delay to ensure DOM is fully ready
+
+
+    
+    // Initialize Chart.js visualizations
+    try {
+        // Team Offensive Radar Chart
+        const offensiveCtx = document.getElementById('teamOffensiveRadar');
+        if (offensiveCtx) {
+            // Define excellent performance values for normalization
+            const offensiveExcellentValues = {
+                'Completion Rate': 100, // 100%
+                'O-Line Conversion': 80, // 80%
+                'Goals Per Point': 1.0,
+                'Assists Per Point': 1.0,
+                'Throws Per Point': 10.0,
+                'Hucks Per Point': 0.5
+            };
+            
+            // Get raw values
+            const rawValues = [
+                {{ team_summary.completion_rate|default(0)|round(1) }},
+                {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.goals_per_point|default(0)|round(2) }},
+                {{ team_summary.assists_per_point|default(0)|round(2) }},
+                {{ team_summary.throws_per_point|default(0)|round(1) }},
+                {{ team_summary.hucks_per_point|default(0)|round(2) }}
+            ];
+            
+            // Get previous period raw values
+            const prevRawValues = [
+                {{ team_summary.prev_completion_rate|default(0)|round(1) }},
+                {{ team_summary.prev_o_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.prev_goals_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_assists_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_throws_per_point|default(0)|round(1) }},
+                {{ team_summary.prev_hucks_per_point|default(0)|round(2) }}
+            ];
+            
+            // Normalize values to 0-100 scale
+            const labels = Object.keys(offensiveExcellentValues);
+            const normalizedValues = rawValues.map((value, index) => 
+                Math.min(100, (value / offensiveExcellentValues[labels[index]]) * 100)
+            );
+            const normalizedPrevValues = prevRawValues.map((value, index) => 
+                Math.min(100, (value / offensiveExcellentValues[labels[index]]) * 100)
+            );
+            
+            new Chart(offensiveCtx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Team Stats',
+                            data: normalizedValues,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Previous Period',
+                            data: normalizedPrevValues,
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1,
+                            pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const datasetIndex = context.datasetIndex;
+                                    const rawValue = datasetIndex === 0 ? rawValues[index] : prevRawValues[index];
+                                    const normalizedValue = context.raw.toFixed(1);
+                                    return `${context.dataset.label}: ${rawValue} (${normalizedValue}% of target)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("Offensive radar chart initialized");
+        } else {
+            console.warn("teamOffensiveRadar element not found");
+        }
+        
+        // Team Defensive Radar Chart
+        const defensiveCtx = document.getElementById('teamDefensiveRadar');
+        if (defensiveCtx) {
+            // Define excellent performance values for normalization
+            const defensiveExcellentValues = {
+                'D-Line Conversion': 50, // 50%
+                'Blocks Per Point': 0.8,
+                'Break Percentage': 40, // 40%
+                'Turnovers Forced': 1.0,
+                'Defensive Efficiency': 80 // 80%
+            };
+            
+            // Get raw values
+            const rawValues = [
+                {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.blocks_per_point|default(0)|round(2) }},
+                {{ team_summary.break_percentage|default(0)|round(1) }},
+                {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }},
+                {{ team_summary.defensive_efficiency|default(0)|round(1) }}
+            ];
+            
+            // Get previous period raw values
+            const prevRawValues = [
+                {{ team_summary.prev_d_line_conversion_rate|default(0)|round(1) }},
+                {{ team_summary.prev_blocks_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_break_percentage|default(0)|round(1) }},
+                {{ team_summary.prev_turnovers_forced_per_point|default(0)|round(2) }},
+                {{ team_summary.prev_defensive_efficiency|default(0)|round(1) }}
+            ];
+            
+            // Normalize values to 0-100 scale
+            const labels = Object.keys(defensiveExcellentValues);
+            const normalizedValues = rawValues.map((value, index) => 
+                Math.min(100, (value / defensiveExcellentValues[labels[index]]) * 100)
+            );
+            const normalizedPrevValues = prevRawValues.map((value, index) => 
+                Math.min(100, (value / defensiveExcellentValues[labels[index]]) * 100)
+            );
+            
+            new Chart(defensiveCtx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Team Stats',
+                            data: normalizedValues,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Previous Period',
+                            data: normalizedPrevValues,
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1,
+                            pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const datasetIndex = context.datasetIndex;
+                                    const rawValue = datasetIndex === 0 ? rawValues[index] : prevRawValues[index];
+                                    const normalizedValue = context.raw.toFixed(1);
+                                    return `${context.dataset.label}: ${rawValue} (${normalizedValue}% of target)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("Defensive radar chart initialized");
+        } else {
+            console.warn("teamDefensiveRadar element not found");
+        }
+        
+
+        // Performance Trends Chart
+        const trendsCtx = document.getElementById('performanceTrendsChart');
+        if (trendsCtx) {
+            // Get the data from the backend
+            const dates = {{ performance_trends.dates|safe if performance_trends else '[]' }};
+            const labels = {{ performance_trends.labels|safe if performance_trends else '[]' }};
+            const oLineEfficiency = {{ performance_trends.o_line_efficiency|safe if performance_trends else '[]' }};
+            const dLineEfficiency = {{ performance_trends.d_line_efficiency|safe if performance_trends else '[]' }};
+            const breakPercentage = {{ performance_trends.break_percentage|safe if performance_trends else '[]' }};
+            
+            // Check if we have data to display
+            if (labels.length === 0) {
+                // No data available, show a message
+                const ctx = trendsCtx.getContext('2d');
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#666';
+                ctx.fillText('No game data available with sufficient points', trendsCtx.width / 2, trendsCtx.height / 2);
+            } else {
+                // We have data, create the chart
+                new Chart(trendsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'O-Line Efficiency',
+                                data: oLineEfficiency,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                tension: 0.1,
+                                fill: false,
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            },
+                        {
+                            label: 'D-Line Efficiency',
+                            data: dLineEfficiency,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Break Percentage',
+                            data: breakPercentage,
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Team Performance Trends'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    // Show both the opposition/tournament and the date
+                                    const index = context[0].dataIndex;
+                                    const label = labels[index];
+                                    const date = dates[index];
+                                    return `${label}\nDate: ${date}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Percentage (%)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Games'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+            console.log("Performance trends chart initialized with " + labels.length + " games");
+        }
+    } else {
+        console.warn("performanceTrendsChart element not found");
+    }
+
+    } catch (e) {
+        console.error("Error initializing charts:", e);
+    }
+});
 </script>
 {% endblock %}
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+
+

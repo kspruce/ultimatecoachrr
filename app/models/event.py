@@ -27,7 +27,7 @@ class Event(db.Model):
     
     # Define valid event types
     VALID_EVENT_TYPES = [
-        'pickup', 'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events
+        'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events
         'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on',  # defensive events
         'substitution'  # Add this
     ]

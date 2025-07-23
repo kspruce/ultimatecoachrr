@@ -7,11 +7,6 @@
     .stat-card {
         text-align: center;
         padding: 15px;
-        transition: transform 0.3s;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
     }
     
     .stat-value {
@@ -53,35 +48,20 @@
     }
     
     .center-line {
-        width: 2px;
-        height: 100%;
         left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .yard-line {
-        width: 1px;
         height: 100%;
+        width: 2px;
     }
     
-    /* New statistics highlight */
-    .new-stat {
-        position: relative;
-    }
-    
-    .new-stat::after {
-        content: "NEW";
-        position: absolute;
-        top: 0;
-        right: 0;
-        background-color: #28a745;
-        color: white;
-        font-size: 0.7rem;
-        padding: 2px 5px;
-        border-radius: 3px;
+    #player-connections {
+        width: 100%;
+        height: 400px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
     }
 </style>
 {% endblock %}
+
 
 {% block content %}
 <div class="container">
@@ -118,115 +98,24 @@
         </div>
         <div class="col-md-3">
             <div class="card stat-card">
-                <div class="stat-value">{{ game.total_points }}</div>
-                <div class="stat-label">Total Points</div>
+                <div class="stat-value">{{ team_stats.o_line_conversion_rate|round(1) }}%</div>
+                <div class="stat-label">O-Line Efficiency</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card stat-card">
-                <div class="stat-value">{{ game.completion_percentage|round(1) }}%</div>
-                <div class="stat-label">Completion %</div>
+                <div class="stat-value">{{ team_stats.d_line_conversion_rate|round(1) }}%</div>
+                <div class="stat-label">D-Line Efficiency</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card stat-card">
-                <div class="stat-value">{{ game.turnover_percentage|round(1) }}%</div>
-                <div class="stat-label">Turnover %</div>
+                <div class="stat-value">{{ team_stats.breaks }}</div>
+                <div class="stat-label">Breaks</div>
             </div>
         </div>
     </div>
-
-    <!-- New O-line and D-line Statistics Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5>O-line Efficiency</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ game.o_line_conversion_rate|round(1) }}%</div>
-                                <div class="stat-label">Conversion Rate</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ game.o_line_clean_holds_percentage|default(0)|round(1) }}%</div>
-                                <div class="stat-label">Clean Holds</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ game.o_line_get_it_back_percentage|default(0)|round(1) }}%</div>
-                                <div class="stat-label">Get It Back %</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ game.o_line_turnovers_per_point|default(0)|round(2) }}</div>
-                                <div class="stat-label">Turnovers/Point</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ game.o_line_points }}</div>
-                                <div class="stat-label">Total O-line Points</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h5>D-line Efficiency</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ game.d_line_conversion_rate|round(1) }}%</div>
-                                <div class="stat-label">Conversion Rate</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ game.d_line_break_opportunities|default(0) }}</div>
-                                <div class="stat-label">Break Opportunities</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ game.d_line_break_conversion_rate|default(0)|round(1) }}%</div>
-                                <div class="stat-label">Break Conversion %</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <div class="stat-card new-stat">
-                                <div class="stat-value">{{ game.d_line_break_opportunities_per_point|default(0)|round(2) }}</div>
-                                <div class="stat-label">Break Opps/Point</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="stat-card">
-                                <div class="stat-value">{{ game.d_line_points }}</div>
-                                <div class="stat-label">Total D-line Points</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
@@ -234,22 +123,23 @@
                     <h5>Game Flow</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="gameFlowChart"></canvas>
+                    <canvas id="game-flow-chart" height="250"></canvas>
                 </div>
             </div>
         </div>
+        
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5>Point Distribution</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="pointDistributionChart"></canvas>
+                    <canvas id="point-distribution-chart" height="250"></canvas>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
@@ -261,24 +151,25 @@
                         <div class="endzone endzone-left"></div>
                         <div class="endzone endzone-right"></div>
                         <div class="field-line center-line"></div>
-                        <!-- Add yard lines here -->
+                        <canvas id="heatmap-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
                     </div>
                 </div>
             </div>
         </div>
+        
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
                     <h5>Player Connections</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="playerConnectionsChart"></canvas>
+                    <div id="player-connections"></div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row mb-4">
+    
+    <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
@@ -286,42 +177,44 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover" id="playerStatsTable">
+                        <!-- Update player stats table -->
+                        <table class="table table-striped" id="player-stats-table">
                             <thead>
                                 <tr>
-                                    <th>#</th>
                                     <th>Player</th>
-                                    <th>Points Played</th>
+                                    <th>Points</th>
                                     <th>Goals</th>
                                     <th>Assists</th>
+                                    <th>Hockey Assists</th>
                                     <th>Blocks</th>
+                                    <th>Completions</th>
                                     <th>Turnovers</th>
                                     <th>+/-</th>
-                                    <th>O-line Clean Holds</th>
-                                    <th>O-line Get It Back</th>
-                                    <th>D-line Break Opps</th>
-                                    <th>D-line Break Conv</th>
+                                    <th>PER</th>
+                                    <th>Impact Score</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for player_stat in player_stats %}
+                                {% for item in player_stats %}
                                 <tr>
-                                    <td>{{ player_stat.player.jersey_number or '-' }}</td>
                                     <td>
-                                        <a href="{{ url_for('player_stats.index', player_id=player_stat.player.id) }}">
-                                            {{ player_stat.player.name }}
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=item.player.id, game_id=game.id) }}">
+                                            {{ item.player.name }}
                                         </a>
                                     </td>
-                                    <td>{{ player_stat.points_played }}</td>
-                                    <td>{{ player_stat.goals }}</td>
-                                    <td>{{ player_stat.assists }}</td>
-                                    <td>{{ player_stat.blocks }}</td>
-                                    <td>{{ player_stat.turnovers }}</td>
-                                    <td>{{ player_stat.plus_minus }}</td>
-                                    <td>{{ player_stat.o_line_clean_holds|default(0) }}</td>
-                                    <td>{{ player_stat.o_line_got_it_back|default(0) }}</td>
-                                    <td>{{ player_stat.d_line_break_opportunities|default(0) }}</td>
-                                    <td>{{ player_stat.d_line_break_conversions|default(0) }}</td>
+                                    <td>{{ item.stats.points_played }}</td>
+                                    <td>{{ item.stats.goals }}</td>
+                                    <td>{{ item.stats.assists }}</td>
+                                    <td>{{ item.stats.hockey_assists }}</td>
+                                    <td>{{ item.stats.blocks }}</td>
+                                    <td>
+                                        {{ item.stats.completions }}
+                                        <small class="text-muted">({{ item.stats.completion_rate|round(1) }}%)</small>
+                                    </td>
+                                    <td>{{ item.stats.turnovers }}</td>
+                                    <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
+                                    <td>{{ item.stats.per|round(1) }}</td>
+                                    <td>{{ calculate_impact_score(item.stats)|round(1) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -332,34 +225,69 @@
         </div>
     </div>
 </div>
+
+
+<!-- Improve heatmap controls -->
+<div class="heatmap-controls mb-3">
+    <div class="btn-group">
+        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
+        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
+        <button class="btn btn-outline-primary" data-filter="catches">Catches</button>
+        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
+    </div>
+    <div class="form-check form-switch ms-3">
+        <input class="form-check-input" type="checkbox" id="showTrajectories">
+        <label class="form-check-label" for="showTrajectories">Show Trajectories</label>
+    </div>
+</div>
+
+<!-- Add error states -->
+<script>
+function initializeHeatmap() {
+    try {
+        const heatmapData = {{ heatmap_data|safe }};
+        if (!heatmapData || !Array.isArray(heatmapData)) {
+            throw new Error("Invalid heatmap data");
+        }
+        
+        const heatmap = createHeatmap(heatmapData);
+        setupHeatmapFilters(heatmap);
+    } catch (e) {
+        console.error("Heatmap initialization error:", e);
+        document.getElementById('field-heatmap').innerHTML = `
+            <div class="alert alert-warning">
+                Unable to load heatmap visualization. Please try refreshing the page.
+            </div>
+        `;
+    }
+}
+</script>
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.4.4/dist/d3.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
-
 <script>
-    $(document).ready(function() {
-        // Initialize DataTable
-        $('#playerStatsTable').DataTable({
-            "pageLength": 10,
-            "order": [[7, "desc"]], // Sort by +/- by default
-            "responsive": true
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        // Game flow chart
+        const flowCtx = document.getElementById('game-flow-chart').getContext('2d');
+        const pointFlow = {{ team_stats.point_flow|tojson }};
         
-        // Game Flow Chart
-        const gameFlowCtx = document.getElementById('gameFlowChart').getContext('2d');
-        const gameFlowChart = new Chart(gameFlowCtx, {
+        const labels = pointFlow.map(p => p.point_number);
+        const ourScores = pointFlow.map(p => p.our_score_after);
+        const theirScores = pointFlow.map(p => p.their_score_after);
+        
+        const gameFlowChart = new Chart(flowCtx, {
             type: 'line',
             data: {
-                labels: {{ point_labels|safe }},
+                labels: labels,
                 datasets: [
                     {
                         label: 'Our Score',
-                        data: {{ our_score_progression|safe }},
+                        data: ourScores,
                         borderColor: 'rgba(75, 192, 192, 1)',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         tension: 0.1,
@@ -367,7 +295,7 @@
                     },
                     {
                         label: 'Their Score',
-                        data: {{ their_score_progression|safe }},
+                        data: theirScores,
                         borderColor: 'rgba(255, 99, 132, 1)',
                         backgroundColor: 'rgba(255, 99, 132, 0.2)',
                         tension: 0.1,
@@ -393,74 +321,57 @@
                     }
                 },
                 plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.dataset.label || '';
-                                const value = context.parsed.y;
-                                return `${label}: ${value}`;
-                            }
-                        }
+                    title: {
+                        display: true,
+                        text: 'Score Progression'
                     }
                 }
             }
         });
         
-        // Point Distribution Chart
-        const pointDistributionCtx = document.getElementById('pointDistributionChart').getContext('2d');
-        const pointDistributionChart = new Chart(pointDistributionCtx, {
-            type: 'bar',
+        // Point distribution chart
+        const distributionCtx = document.getElementById('point-distribution-chart').getContext('2d');
+        const distributionChart = new Chart(distributionCtx, {
+            type: 'pie',
             data: {
-                labels: ['O-line Scored', 'O-line Conceded', 'D-line Scored', 'D-line Conceded'],
+                labels: ['O-Line Scores', 'O-Line Conceded', 'D-Line Scores', 'D-Line Conceded'],
                 datasets: [{
-                    label: 'Points',
                     data: [
-                        {{ game.o_line_conversions }},
-                        {{ game.o_line_points - game.o_line_conversions }},
-                        {{ game.d_line_conversions }},
-                        {{ game.d_line_points - game.d_line_conversions }}
+                        {{ team_stats.o_line_conversions }},
+                        {{ team_stats.o_line_points - team_stats.o_line_conversions }},
+                        {{ team_stats.d_line_conversions }},
+                        {{ team_stats.d_line_points - team_stats.d_line_conversions }}
                     ],
                     backgroundColor: [
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(255, 159, 64, 0.6)'
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)'
                     ],
                     borderColor: [
                         'rgba(75, 192, 192, 1)',
                         'rgba(255, 99, 132, 1)',
                         'rgba(54, 162, 235, 1)',
-                        'rgba(255, 159, 64, 1)'
+                        'rgba(255, 206, 86, 1)'
                     ],
                     borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Points'
-                        }
-                    }
-                },
                 plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.dataset.label || '';
-                                const value = context.parsed.y;
-                                return `${label}: ${value}`;
-                            }
-                        }
+                    legend: {
+                        position: 'bottom',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Point Distribution'
                     }
                 }
             }
         });
         
-        // Initialize heatmap
+        // Field heatmap
         const heatmapContainer = document.getElementById('field-heatmap');
         const heatmapInstance = h337.create({
             container: heatmapContainer,
@@ -470,52 +381,122 @@
             blur: 0.75
         });
         
-        // Sample data - replace with actual data from your backend
-        const heatmapData = {
+        // Parse heatmap data
+        const heatmapData = {{ heatmap_data|safe }};
+        
+        // Convert field coordinates to pixel coordinates
+        const fieldWidth = heatmapContainer.offsetWidth;
+        const fieldHeight = heatmapContainer.offsetHeight;
+        const fieldLengthMeters = 100;  // Length in meters
+        const fieldWidthMeters = 37;    // Width in meters
+        
+        const pixelData = {
             max: 10,
-            data: {{ field_heatmap_data|default('[]')|safe }}
+            min: 0,
+            data: heatmapData.map(point => ({
+                x: (point.x / fieldLengthMeters) * fieldWidth,
+                y: (point.y / fieldWidthMeters) * fieldHeight,
+                value: point.value
+            }))
         };
         
-        heatmapInstance.setData(heatmapData);
+        heatmapInstance.setData(pixelData);
         
-        // Player Connections Chart
-        const playerConnectionsCtx = document.getElementById('playerConnectionsChart').getContext('2d');
-        const playerConnectionsChart = new Chart(playerConnectionsCtx, {
-            type: 'bubble',
-            data: {
-                datasets: {{ player_connections_data|default('[]')|safe }}
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Player Jersey Number (Thrower)'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Player Jersey Number (Receiver)'
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const thrower = context.parsed.x;
-                                const receiver = context.parsed.y;
-                                const connections = context.parsed.r;
-                                return `Thrower #${thrower} to Receiver #${receiver}: ${connections} connections`;
-                            }
-                        }
-                    }
-                }
+        // Player connections network
+        const connections = {{ connections|safe }};
+        
+        if (connections.nodes.length > 0) {
+            const width = document.getElementById('player-connections').offsetWidth;
+            const height = 400;
+            
+            const svg = d3.select('#player-connections')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // Create force simulation
+            const simulation = d3.forceSimulation(connections.nodes)
+                .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2));
+            
+            // Create links
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(connections.links)
+                .enter().append('line')
+                .attr('stroke-width', d => Math.sqrt(d.value))
+                .attr('stroke', '#999')
+                .attr('stroke-opacity', 0.6);
+            
+            // Create nodes
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(connections.nodes)
+                .enter().append('circle')
+                .attr('r', 10)
+                .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // Add labels
+            const label = svg.append('g')
+                .selectAll('text')
+                .data(connections.nodes)
+                .enter().append('text')
+                .text(d => d.jersey_number)
+                .attr('font-size', 10)
+                .attr('dx', -3)
+                .attr('dy', 3)
+                .attr('fill', 'white');
+            
+            // Update positions on tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                label
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+            
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
             }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        } else {
+            document.getElementById('player-connections').innerHTML = '<p class="text-center mt-5">Not enough data to generate player connections.</p>';
+        }
+        
+        // Initialize DataTable
+        $('#player-stats-table').DataTable({
+            "pageLength": 10,
+            "order": [[8, "desc"]]
         });
     });
 </script>
 {% endblock %}
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+
+
