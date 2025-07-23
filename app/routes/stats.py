@@ -17,6 +17,15 @@ from datetime import datetime, date
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
+def is_admin(user):
+    """Check if user has admin role"""
+    return user.role == 'admin' if hasattr(user, 'role') else False
+
+def is_coach(user):
+    """Check if user has coach role"""
+    return user.role == 'coach' if hasattr(user, 'role') else False
+
+
 # --- Core Statistical Calculation Functions ---
 def convert_booleans_for_js(obj):
     """Convert Python booleans to JavaScript-compatible strings"""
@@ -814,8 +823,10 @@ def index():
         'o_line_players': [],
         'd_line_players': [],
         'heatmap_data': [],
-        'connection_data': {'nodes': [], 'links': []}
+        'connection_data': {'nodes': [], 'links': []},
+        'team_avg_stats': {}  # Add this line
     }
+
 
     try:
         # Get team name from current user's player
@@ -974,6 +985,56 @@ def index():
         print(f"D-line women: {[p.name for p in d_line_women]}")
         print(f"D-line men: {[p.name for p in d_line_men]}")
         
+        # Calculate team averages
+        team_avg_stats = {
+            'games_played': 0,
+            'points_played': 0,
+            'o_line_points_played': 0,
+            'd_line_points_played': 0,
+            'goals': 0,
+            'assists': 0,
+            'hockey_assists': 0,
+            'break_throws': 0,
+            'blocks': 0,
+            'completions': 0,
+            'throwaways': 0,
+            'drops': 0,
+            'plus_minus': 0,
+            'per': 0
+        }
+        
+        # Count players with stats
+        player_count = len(player_stats)
+        
+        if player_count > 0:
+            # Sum all stats
+            for player_id, stats in player_stats.items():
+                team_avg_stats['games_played'] += stats.get('games_played', 0)
+                team_avg_stats['points_played'] += stats.get('points_played', 0)
+                team_avg_stats['o_line_points_played'] += stats.get('o_line_points_played', 0)
+                team_avg_stats['d_line_points_played'] += stats.get('d_line_points_played', 0)
+                team_avg_stats['goals'] += stats.get('goals', 0)
+                team_avg_stats['assists'] += stats.get('assists', 0)
+                team_avg_stats['hockey_assists'] += stats.get('hockey_assists', 0)
+                team_avg_stats['break_throws'] += stats.get('break_throws', 0)
+                team_avg_stats['blocks'] += stats.get('blocks', 0)
+                team_avg_stats['completions'] += stats.get('completions', 0)
+                team_avg_stats['throwaways'] += stats.get('throwaways', 0)
+                team_avg_stats['drops'] += stats.get('drops', 0)
+                team_avg_stats['plus_minus'] += (stats.get('goals', 0) + stats.get('assists', 0) + 
+                                                stats.get('blocks', 0) - stats.get('throwaways', 0) - 
+                                                stats.get('drops', 0))
+                team_avg_stats['per'] += stats.get('per', 0)
+            
+            # Calculate averages
+            for key in team_avg_stats:
+                team_avg_stats[key] /= player_count
+            
+            # Calculate completion rate separately
+            total_throws = sum((stats.get('completions', 0) + stats.get('throwaways', 0)) for stats in player_stats.values())
+            total_completions = sum(stats.get('completions', 0) for stats in player_stats.values())
+            team_avg_stats['completion_rate'] = (total_completions / total_throws * 100) if total_throws > 0 else 0
+
 
         # Generate heatmap data
         throws_query = Throw.query
@@ -1068,8 +1129,11 @@ def index():
             o_line_efficiency=dict(o_line_efficiency),
             d_line_efficiency=dict(d_line_efficiency),
             heatmap_data=json.dumps(heatmap_data),
-            connection_data=json.dumps(connection_data)
+            connection_data=json.dumps(connection_data),
+            team_avg_stats=team_avg_stats
         )
+
+
 
     except Exception as e:
         print(f"Error in index route: {str(e)}")
