@@ -64,7 +64,12 @@
                         
                         <div class="mb-3">
                             {{ form.youtube_link.label(class="form-label") }}
-                            {{ form.youtube_link(class="form-control") }}
+                            <div class="input-group">
+                                {{ form.youtube_link(class="form-control", id="youtube-link") }}
+                                <span class="input-group-text auto-populated-indicator d-none" id="link-auto-populated">
+                                    <i class="bi bi-link" title="Auto-populated from game"></i>
+                                </span>
+                            </div>
                             <div class="form-text">Enter a video URL from the selected platform</div>
                             {% for error in form.youtube_link.errors %}
                             <div class="text-danger">{{ error }}</div>
@@ -176,5 +181,42 @@
             $('#game-select').trigger('change');
         }
     });
+    // Add this to the existing script in clip_form.html
+    $('#game-select').change(function() {
+        const gameId = $(this).val();
+        if (gameId > 0) {
+            // Fetch points for the selected game
+            $.getJSON(`/clips/get_points/${gameId}`, function(data) {
+                const pointSelect = $('#point-select');
+                pointSelect.empty();
+                pointSelect.append(new Option('Select Point', 0));
+                
+                $.each(data, function(index, point) {
+                    pointSelect.append(new Option(point.name, point.id));
+                });
+            });
+            
+            // NEW CODE: Fetch game's YouTube link
+            $.getJSON(`/clips/get_game_link/${gameId}`, function(data) {
+                if (data.youtube_link) {
+                    $('#youtube-link').val(data.youtube_link);
+                }
+            });
+        } else {
+            // Reset point select if no game is selected
+            const pointSelect = $('#point-select');
+            pointSelect.empty();
+            pointSelect.append(new Option('Select Point', 0));
+        }
+    });
+    // Show indicator when link is auto-populated
+    $.getJSON(`/clips/get_game_link/${gameId}`, function(data) {
+        if (data.youtube_link) {
+            $('#youtube-link').val(data.youtube_link);
+            $('#link-auto-populated').removeClass('d-none');
+        }
+    });
+
+
 </script>
 {% endblock %}

@@ -390,3 +390,11 @@ def timestamp_to_seconds(timestamp):
             return int(parts[0])
     except (ValueError, IndexError):
         return None
+
+@bp.route('/get_game_link/<int:game_id>')
+@login_required
+def get_game_link(game_id):
+    game = Game.query.get_or_404(game_id)
+    return jsonify({
+        'youtube_link': game.youtube_link or ''
+    })
