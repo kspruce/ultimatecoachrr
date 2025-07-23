@@ -229,40 +229,59 @@ def record_events(point_id):
                         
 
             # Create regular throw if this is a catch
+            # Create regular throw if this is a catch
             elif event.event_type == 'catch' and previous_event:
-                # Check if all required coordinates are present
-                if (previous_event.field_position_x is not None and 
-                    previous_event.field_position_y is not None and
-                    event.field_position_x is not None and
-                    event.field_position_y is not None):
-                    
-                    # Calculate break_throw status
-                    try:
-                        is_break = is_break_throw(
-                            previous_event.field_position_x,
-                            previous_event.field_position_y,
-                            event.field_position_x,
-                            event.field_position_y
+                # Debug the previous event
+                print(f"Previous event: id={previous_event.id}, type={previous_event.event_type}, coords=({previous_event.field_position_x}, {previous_event.field_position_y})")
+                
+                # First check if previous event has valid coordinates
+                if previous_event.field_position_x is None or previous_event.field_position_y is None:
+                    print(f"Warning: Previous event (id={previous_event.id}) has missing coordinates. Cannot create throw.")
+                else:
+                    # Check if all required coordinates are present
+                    if (event.field_position_x is not None and event.field_position_y is not None):
+                        # Calculate break_throw status
+                        try:
+                            is_break = is_break_throw(
+                                previous_event.field_position_x,
+                                previous_event.field_position_y,
+                                event.field_position_x,
+                                event.field_position_y
+                            )
+                        except Exception as e:
+                            print(f"Error calculating break throw: {e}")
+                            is_break = False
+                            
+                        regular_throw = Throw(
+                            point_id=point_id,
+                            thrower_id=previous_event.player_id,
+                            receiver_id=event.player_id,
+                            throwing_event_id=previous_event.id,
+                            receiving_event_id=event.id,
+                            x_start=previous_event.field_position_x,
+                            y_start=previous_event.field_position_y,
+                            x_end=event.field_position_x,
+                            y_end=event.field_position_y,
+                            throw_type='regular',
+                            is_completion=True,
+                            break_throw=is_break
                         )
-                    except Exception as e:
-                        print(f"Error calculating break throw: {e}")
-                        is_break = False
-                        
-                    regular_throw = Throw(
-                        point_id=point_id,
-                        thrower_id=previous_event.player_id,
-                        receiver_id=event.player_id,
-                        throwing_event_id=previous_event.id,
-                        receiving_event_id=event.id,
-                        x_start=previous_event.field_position_x,
-                        y_start=previous_event.field_position_y,
-                        x_end=event.field_position_x,
-                        y_end=event.field_position_y,
-                        throw_type='regular',
-                        is_completion=True,
-                        break_throw=is_break
-                    )
-                    db.session.add(regular_throw)
+                        db.session.add(regular_throw)
+                    else:
+                        # Create throw without break_throw calculation if current event coordinates are missing
+                        print(f"Warning: Missing coordinates for current event. Creating throw without break_throw calculation.")
+                        regular_throw = Throw(
+                            point_id=point_id,
+                            thrower_id=previous_event.player_id,
+                            receiver_id=event.player_id,
+                            throwing_event_id=previous_event.id,
+                            receiving_event_id=event.id,
+                            throw_type='regular',
+                            is_completion=True,
+                            break_throw=False  # Default to False when we can't calculate
+                        )
+                        db.session.add(regular_throw)
+
                 else:
                     # Create throw without break_throw calculation if coordinates are missing
                     print(f"Warning: Missing coordinates for throw. Creating throw without break_throw calculation.")
