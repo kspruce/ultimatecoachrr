@@ -132,7 +132,7 @@
                                 {% for game in recent_games %}
                                     <li class="list-group-item">
                                         <a href="{{ url_for('game.detail', game_id=game.id) }}">
-                                            vs {{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') }})
+                                            vs {{ game.opponent }} ({{ game.date.strftime('%Y-%m-%d') if game.date else 'No date' }})
                                         </a>
                                     </li>
                                 {% endfor %}
