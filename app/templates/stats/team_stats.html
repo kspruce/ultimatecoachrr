@@ -141,21 +141,21 @@
                     <div class="row mt-3">
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ team_summary.clean_hold_percentage|round(1) }}%</div>
+                                <div class="stat-value">{{ (team_summary.clean_hold_percentage|default(0))|round(1) }}%</div>
                                 <div class="stat-label">Clean Hold %</div>
                                 <small class="text-muted">Scoring without turnovers</small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ team_summary.regain_offense_count }}</div>
+                                <div class="stat-value">{{ team_summary.regain_offense_count|default(0) }}</div>
                                 <div class="stat-label">Regained Possessions</div>
                                 <small class="text-muted">Scored after turnover</small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ team_summary.avg_o_turnovers_per_point|round(2) }}</div>
+                                <div class="stat-value">{{ (team_summary.avg_o_turnovers_per_point|default(0))|round(2) }}</div>
                                 <div class="stat-label">Avg Turnovers/Point</div>
                             </div>
                         </div>
@@ -190,21 +190,21 @@
                     <div class="row mt-3">
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ team_summary.clean_break_percentage|round(1) }}%</div>
+                                <div class="stat-value">{{ (team_summary.clean_break_percentage|default(0))|round(1) }}%</div>
                                 <div class="stat-label">Clean Break %</div>
                                 <small class="text-muted">Scoring after block without turnovers</small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ team_summary.goals_per_turnover_ratio|round(1) }}%</div>
+                                <div class="stat-value">{{ (team_summary.goals_per_turnover_ratio|default(0))|round(1) }}%</div>
                                 <div class="stat-label">Goals/Turnover</div>
                                 <small class="text-muted">Conversion efficiency</small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ team_summary.avg_d_turnovers_per_point|round(2) }}</div>
+                                <div class="stat-value">{{ (team_summary.avg_d_turnovers_per_point|default(0))|round(2) }}</div>
                                 <div class="stat-label">Avg Turnovers/Point</div>
                             </div>
                         </div>
