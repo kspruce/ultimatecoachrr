@@ -1,12 +1,11 @@
 from flask import Blueprint, jsonify, request, render_template, url_for
-from flask_login import login_required, current_user
+from flask_login import login_required
 from app import db
 from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.game import Game
 from app.models.stats import PlayerPointStats
 from app.models.throws import Throw
-from app.models.user import User
 from app.utils.stat_utils import determine_possession, is_point_ending_event
 import math
 
@@ -20,10 +19,6 @@ def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
     1. If force_direction is known, use that
     2. Otherwise, detect if throw crosses the middle of the field (y=18.5)
     """
-    # First check if all coordinates are valid
-    if x_start is None or y_start is None or x_end is None or y_end is None:
-        return False  # Cannot determine if it's a break throw without coordinates
-        
     if force_direction:
         # If we know the force direction, use that logic
         if force_direction == 'forehand':
@@ -42,7 +37,6 @@ def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
     
     return False
 
-
 @bp.route('/record/<int:point_id>', methods=['GET', 'POST'])
 @login_required
 def record_events(point_id):
@@ -53,7 +47,6 @@ def record_events(point_id):
     if request.method == 'POST':
         try:
             data = request.get_json()
-            print(f"Received data: {data}")  # Debug the incoming data
             point = Point.query.get_or_404(point_id)
             
             # Handle special player IDs
@@ -61,19 +54,13 @@ def record_events(point_id):
             is_unknown_player = data.get('is_unknown_player', False)
             is_opponent = data.get('is_opponent', False)
             
-            # Safely handle coordinates
-            field_position_x = data.get('field_position_x')
-            field_position_y = data.get('field_position_y')
-            
-            print(f"Coordinates: x={field_position_x}, y={field_position_y}")  # Debug coordinates
-            
-            # Create new event with safer coordinate handling
+            # Create new event
             event = Event(
                 point_id=point_id,
                 player_id=int(player_id),
                 event_type=data['event_type'],
-                field_position_x=float(field_position_x) if field_position_x is not None else 0.0,
-                field_position_y=float(field_position_y) if field_position_y is not None else 0.0,
+                field_position_x=float(data.get('field_position_x', 0)),
+                field_position_y=float(data.get('field_position_y', 0)),
                 is_offensive=bool(data.get('is_offensive', True)),
                 is_unknown_player=is_unknown_player,
                 is_opponent=is_opponent
@@ -88,13 +75,6 @@ def record_events(point_id):
                 Event.point_id == point_id,
                 Event.id < event.id
             ).order_by(Event.id.desc()).first()
-            
-            # Debug the previous event status
-            if previous_event:
-                print(f"Previous event found: id={previous_event.id}, type={previous_event.event_type}")
-            else:
-                print("No previous event found - this is likely the first event of the point")
-
 
             # Handle goal events and create associated throws
             if event.event_type == 'goal':
@@ -103,119 +83,60 @@ def record_events(point_id):
                     Event.point_id == point_id,
                     Event.id < event.id
                 ).order_by(Event.id.desc()).limit(2).all()
-            
+
                 if previous_events:
                     # Mark first previous event as assist
                     assist_event = previous_events[0]
                     assist_event.event_type = 'assist'
                     
-                    # Check if all required coordinates are present
-                    if (assist_event.field_position_x is not None and 
-                        assist_event.field_position_y is not None and
-                        event.field_position_x is not None and
-                        event.field_position_y is not None):
-                        
-                        # Calculate break_throw status safely
-                        try:
-                            is_break = is_break_throw(
-                                assist_event.field_position_x,
-                                assist_event.field_position_y,
-                                event.field_position_x,
-                                event.field_position_y
-                            )
-                        except Exception as e:
-                            print(f"Error calculating break throw for assist: {e}")
-                            is_break = False
-                            
-                        # Create throw for the assist
-                        assist_throw = Throw(
-                            point_id=point_id,
-                            thrower_id=assist_event.player_id,
-                            receiver_id=event.player_id,
-                            throwing_event_id=assist_event.id,
-                            receiving_event_id=event.id,
-                            x_start=assist_event.field_position_x,
-                            y_start=assist_event.field_position_y,
-                            x_end=event.field_position_x,
-                            y_end=event.field_position_y,
-                            throw_type='assist',
-                            is_completion=True,
-                            break_throw=is_break
+                    # Create throw for the assist
+                    assist_throw = Throw(
+                        point_id=point_id,
+                        thrower_id=assist_event.player_id,
+                        receiver_id=event.player_id,
+                        throwing_event_id=assist_event.id,
+                        receiving_event_id=event.id,
+                        x_start=assist_event.field_position_x,
+                        y_start=assist_event.field_position_y,
+                        x_end=event.field_position_x,
+                        y_end=event.field_position_y,
+                        throw_type='assist',
+                        is_completion=True,
+                        break_throw=is_break_throw(
+                            assist_event.field_position_x, 
+                            assist_event.field_position_y,
+                            event.field_position_x,
+                            event.field_position_y
                         )
-                    else:
-                        # Create throw without break_throw calculation if coordinates are missing
-                        assist_throw = Throw(
-                            point_id=point_id,
-                            thrower_id=assist_event.player_id,
-                            receiver_id=event.player_id,
-                            throwing_event_id=assist_event.id,
-                            receiving_event_id=event.id,
-                            throw_type='assist',
-                            is_completion=True,
-                            break_throw=False  # Default to False when we can't calculate
-                        )
-                    
+                    )
                     db.session.add(assist_throw)
-        
-
-
 
                     # If there's a second previous event, mark it as hockey assist
                     if len(previous_events) >= 2:
                         hockey_assist_event = previous_events[1]
                         hockey_assist_event.event_type = 'hockey_assist'
                         
-                        # Check if all required coordinates are present
-                        if (hockey_assist_event.field_position_x is not None and 
-                            hockey_assist_event.field_position_y is not None and
-                            assist_event.field_position_x is not None and
-                            assist_event.field_position_y is not None):
-                            
-                            # Calculate break_throw status safely
-                            try:
-                                is_break = is_break_throw(
-                                    hockey_assist_event.field_position_x,
-                                    hockey_assist_event.field_position_y,
-                                    assist_event.field_position_x,
-                                    assist_event.field_position_y
-                                )
-                            except Exception as e:
-                                print(f"Error calculating break throw for hockey assist: {e}")
-                                is_break = False
-                                
-                            hockey_throw = Throw(
-                                point_id=point_id,
-                                thrower_id=hockey_assist_event.player_id,
-                                receiver_id=assist_event.player_id,
-                                throwing_event_id=hockey_assist_event.id,
-                                receiving_event_id=assist_event.id,
-                                x_start=hockey_assist_event.field_position_x,
-                                y_start=hockey_assist_event.field_position_y,
-                                x_end=assist_event.field_position_x,
-                                y_end=assist_event.field_position_y,
-                                throw_type='hockey_assist',
-                                is_completion=True,
-                                break_throw=is_break
+                        # Create throw for the hockey assist
+                        hockey_throw = Throw(
+                            point_id=point_id,
+                            thrower_id=hockey_assist_event.player_id,
+                            receiver_id=assist_event.player_id,
+                            throwing_event_id=hockey_assist_event.id,
+                            receiving_event_id=assist_event.id,
+                            x_start=hockey_assist_event.field_position_x,
+                            y_start=hockey_assist_event.field_position_y,
+                            x_end=assist_event.field_position_x,
+                            y_end=assist_event.field_position_y,
+                            throw_type='hockey_assist',
+                            is_completion=True,
+                            break_throw=is_break_throw(
+                                hockey_assist_event.field_position_x,
+                                hockey_assist_event.field_position_y,
+                                assist_event.field_position_x,
+                                assist_event.field_position_y
                             )
-                        else:
-                            # Create throw without break_throw calculation if coordinates are missing
-                            print(f"Warning: Missing coordinates for hockey assist. Creating throw without break_throw calculation.")
-                            hockey_throw = Throw(
-                                point_id=point_id,
-                                thrower_id=hockey_assist_event.player_id,
-                                receiver_id=assist_event.player_id,
-                                throwing_event_id=hockey_assist_event.id,
-                                receiving_event_id=assist_event.id,
-                                x_start=hockey_assist_event.field_position_x,
-                                y_start=hockey_assist_event.field_position_y,
-                                x_end=assist_event.field_position_x,
-                                y_end=assist_event.field_position_y,
-                                throw_type='hockey_assist',
-                                is_completion=True,
-                                break_throw=False  # Default to False when we can't calculate
-                            )
+                        )
                         db.session.add(hockey_throw)
-
                         # Remove any regular throws that are now hockey assists
                         regular_throw = Throw.query.filter(
                             Throw.point_id == point_id,
@@ -230,113 +151,51 @@ def record_events(point_id):
 
                         
                         
-
-            # Handle catch events - potentially marking as pickup
-            elif event.event_type == 'catch':
-                # Check if this is the first catch of the point (no previous events or only pull events)
-                is_pickup = False
-                
-                if not previous_event:
-                    # No previous event, definitely a pickup
-                    is_pickup = True
-                    print("No previous event - marking catch as pickup")
-                else:
-                    # Check if previous events are only pulls or other non-catch events
-                    previous_catches = Event.query.filter(
-                        Event.point_id == point_id,
-                        Event.id < event.id,
-                        Event.event_type.in_(['catch', 'goal', 'pickup'])
-                    ).count()
-                    
-                    if previous_catches == 0:
-                        is_pickup = True
-                        print(f"First catch of the point - marking as pickup")
-                
-                # If this is a pickup, change the event type
-                if is_pickup:
-                    event.event_type = 'pickup'
-                    print(f"Changed event type from 'catch' to 'pickup'")
-                    # No throw is created for pickups
-                elif previous_event:
-                    # This is a regular catch, create a throw from previous event
-                    regular_throw = Throw(
-                        point_id=point_id,
-                        thrower_id=previous_event.player_id,
-                        receiver_id=event.player_id,
-                        throwing_event_id=previous_event.id,
-                        receiving_event_id=event.id,
-                        x_start=previous_event.field_position_x,
-                        y_start=previous_event.field_position_y,
-                        x_end=event.field_position_x,
-                        y_end=event.field_position_y,
-                        throw_type='regular',
-                        is_completion=True,
-                        break_throw=is_break_throw(
-                            previous_event.field_position_x,
-                            previous_event.field_position_y,
-                            event.field_position_x,
-                            event.field_position_y
-                        )
+            # Create regular throw if this is a catch
+            elif event.event_type == 'catch' and previous_event:
+                regular_throw = Throw(
+                    point_id=point_id,
+                    thrower_id=previous_event.player_id,
+                    receiver_id=event.player_id,
+                    throwing_event_id=previous_event.id,
+                    receiving_event_id=event.id,
+                    x_start=previous_event.field_position_x,
+                    y_start=previous_event.field_position_y,
+                    x_end=event.field_position_x,
+                    y_end=event.field_position_y,
+                    throw_type='regular',
+                    is_completion=True,
+                    break_throw=is_break_throw(
+                        previous_event.field_position_x,
+                        previous_event.field_position_y,
+                        event.field_position_x,
+                        event.field_position_y
                     )
-                    db.session.add(regular_throw)
-
-
-                
-
+                )
+                db.session.add(regular_throw)
 
             # Handle throwaway events
             elif event.event_type == 'throwaway' and previous_event:
-                # Check if all required coordinates are present
-                if (previous_event.field_position_x is not None and 
-                    previous_event.field_position_y is not None and
-                    event.field_position_x is not None and
-                    event.field_position_y is not None):
-                    
-                    # Calculate break_throw status safely
-                    try:
-                        is_break = is_break_throw(
-                            previous_event.field_position_x,
-                            previous_event.field_position_y,
-                            event.field_position_x,
-                            event.field_position_y
-                        )
-                    except Exception as e:
-                        print(f"Error calculating break throw for throwaway: {e}")
-                        is_break = False
-                        
-                    throwaway = Throw(
-                        point_id=point_id,
-                        thrower_id=event.player_id,
-                        receiver_id=None,
-                        throwing_event_id=previous_event.id,
-                        receiving_event_id=event.id,
-                        x_start=previous_event.field_position_x,
-                        y_start=previous_event.field_position_y,
-                        x_end=event.field_position_x,
-                        y_end=event.field_position_y,
-                        throw_type='throwaway',
-                        is_completion=False,
-                        break_throw=is_break
+                throwaway = Throw(
+                    point_id=point_id,
+                    thrower_id=event.player_id,
+                    receiver_id=None,
+                    throwing_event_id=previous_event.id,
+                    receiving_event_id=event.id,
+                    x_start=previous_event.field_position_x,
+                    y_start=previous_event.field_position_y,
+                    x_end=event.field_position_x,
+                    y_end=event.field_position_y,
+                    throw_type='throwaway',
+                    is_completion=False,
+                    break_throw=is_break_throw(
+                        previous_event.field_position_x,
+                        previous_event.field_position_y,
+                        event.field_position_x,
+                        event.field_position_y
                     )
-                else:
-                    # Create throw without break_throw calculation if coordinates are missing
-                    print(f"Warning: Missing coordinates for throwaway. Creating throw without break_throw calculation.")
-                    throwaway = Throw(
-                        point_id=point_id,
-                        thrower_id=event.player_id,
-                        receiver_id=None,
-                        throwing_event_id=previous_event.id,
-                        receiving_event_id=event.id,
-                        x_start=previous_event.field_position_x,
-                        y_start=previous_event.field_position_y,
-                        x_end=event.field_position_x,
-                        y_end=event.field_position_y,
-                        throw_type='throwaway',
-                        is_completion=False,
-                        break_throw=False  # Default to False when we can't calculate
-                    )
+                )
                 db.session.add(throwaway)
-
 
             # Update PlayerPointStats
             stats = PlayerPointStats.query.filter_by(
@@ -360,54 +219,23 @@ def record_events(point_id):
                 elif event.event_type in ['throwaway', 'drop']:
                     stats.o_line_plus_minus -= 1
             else:  # D-line
-                if event.event_type in ['block', 'forced_turnover', 'pickup']:
+                if event.event_type in ['block', 'forced_turnover']:
                     stats.d_line_plus_minus += 1
                 elif event.event_type == 'scored_on':
                     stats.d_line_plus_minus -= 1
-
-
 
             # Update point status for point-ending events
             if event.event_type in ['goal', 'callahan']:
                 point.point_outcome = 'scored'
                 point.our_score_after = point.our_score_before + 1
-                
-                # If O-line, check for clean hold
-                if point.our_line_type == 'O-line':
-                    # Check if there were any turnovers in this point
-                    turnover_events = Event.query.filter(
-                        Event.point_id == point_id,
-                        Event.event_type.in_(['throwaway', 'drop'])
-                    ).count()
-                    
-                    if turnover_events == 0:
-                        # This was a clean hold
-                        stats.o_line_clean_holds = True
-                
-                # If D-line and there was a break opportunity, mark as converted
-                elif point.our_line_type == 'D-line' and stats.d_line_break_opportunity:
-                    stats.d_line_break_conversion = True
-                    
             elif event.event_type == 'scored_on':
                 point.point_outcome = 'conceded'
                 point.their_score_after = point.their_score_before + 1
 
             # Calculate distances for throws
-            # Calculate distances for throws
             for throw in db.session.new:
                 if isinstance(throw, Throw):
-                    try:
-                        throw.distance = throw.calculate_distance()  # Use the model's method
-                    except Exception as e:
-                        print(f"Error calculating distance: {e}")
-                        throw.distance = 0  # Set a default value
-
-
-            # Check for O-line "got it back" scenario
-            if point.our_line_type == 'O-line' and stats.o_line_turnovers > 0:
-                # If we scored after having a turnover, we "got it back"
-                if event.event_type in ['goal', 'callahan']:
-                    stats.o_line_got_back = True
+                    throw.distance = throw.calculate_distance()  # Use the model's method
 
             db.session.commit()
             return jsonify(event.to_dict()), 201
@@ -469,30 +297,11 @@ def undo_event(point_id):
                         stats.o_line_plus_minus -= 1
                     elif last_event.event_type in ['throwaway', 'drop']:
                         stats.o_line_plus_minus += 1
-                        # Reverse O-line turnovers
-                        stats.o_line_turnovers -= 1
                 else:  # D-line
                     if last_event.event_type in ['block', 'forced_turnover']:
                         stats.d_line_plus_minus -= 1
-                        # If this was the only break opportunity, reset it
-                        if stats.d_line_break_opportunity:
-                            # Check if there are other break opportunities
-                            other_breaks = Event.query.filter(
-                                Event.point_id == point_id,
-                                Event.event_type.in_(['block', 'forced_turnover']),
-                                Event.id != last_event.id
-                            ).count()
-                            
-                            if other_breaks == 0:
-                                stats.d_line_break_opportunity = False
-                                stats.d_line_break_conversion = False
                     elif last_event.event_type == 'scored_on':
                         stats.d_line_plus_minus += 1
-                
-                # If undoing a goal, reset clean hold and got it back flags
-                if last_event.event_type == 'goal' and point.our_line_type == 'O-line':
-                    stats.o_line_clean_holds = False
-                    stats.o_line_got_back = False
                 
                 db.session.add(stats)
 
@@ -617,35 +426,6 @@ def finish_point(point_id):
                     point_id=point_id
                 )
                 db.session.add(stats)
-            
-            # Calculate O-line clean holds
-            if point.our_line_type == 'O-line' and point.point_outcome == 'scored':
-                # Check if there were any turnovers in this point
-                turnover_events = Event.query.filter(
-                    Event.point_id == point_id,
-                    Event.event_type.in_(['throwaway', 'drop'])
-                ).count()
-                
-                if turnover_events == 0:
-                    stats.o_line_clean_holds = True
-                elif turnover_events > 0 and point.point_outcome == 'scored':
-                    # If we had turnovers but still scored, we "got it back"
-                    stats.o_line_got_back = True
-            
-            # Calculate D-line break opportunities and conversions
-            elif point.our_line_type == 'D-line':
-                # Check if we generated any turnovers
-                break_opportunities = Event.query.filter(
-                    Event.point_id == point_id,
-                    Event.event_type.in_(['block', 'forced_turnover'])
-                ).count()
-                
-                if break_opportunities > 0:
-                    stats.d_line_break_opportunity = True
-                    
-                    # If we scored, it's a break conversion
-                    if point.point_outcome == 'scored':
-                        stats.d_line_break_conversion = True
 
         throws_without_distance = Throw.query.filter_by(point_id=point_id).filter(
             (Throw.distance.is_(None)) | (Throw.distance == 0)
@@ -653,16 +433,11 @@ def finish_point(point_id):
         
         for throw in throws_without_distance:
             if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-                try:
-                    throw.distance = math.sqrt(
-                        (throw.x_end - throw.x_start) ** 2 +
-                        (throw.y_end - throw.y_start) ** 2
-                    )
-                    print(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
-                except Exception as e:
-                    print(f"Error calculating distance for throw {throw.id}: {e}")
-                    throw.distance = 0  # Set a default value
-
+                throw.distance = math.sqrt(
+                    (throw.x_end - throw.x_start) ** 2 +
+                    (throw.y_end - throw.y_start) ** 2
+                )
+                print(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
 
         db.session.commit()
         
@@ -679,6 +454,7 @@ def finish_point(point_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
     
+
 
 
 def calculate_assists(point, goal_event):
@@ -719,26 +495,6 @@ def create_throw_from_events(previous_event, current_event):
     if (previous_event.event_type, current_event.event_type) not in valid_sequences:
         return None
     
-    # Check if all required coordinates are present
-    if (previous_event.field_position_x is not None and 
-        previous_event.field_position_y is not None and
-        current_event.field_position_x is not None and
-        current_event.field_position_y is not None):
-        
-        # Calculate break_throw status safely
-        try:
-            is_break = is_break_throw(
-                previous_event.field_position_x,
-                previous_event.field_position_y,
-                current_event.field_position_x,
-                current_event.field_position_y
-            )
-        except Exception as e:
-            print(f"Error calculating break throw in create_throw_from_events: {e}")
-            is_break = False
-    else:
-        is_break = False
-    
     throw = Throw(
         point_id=current_event.point_id,
         thrower_id=previous_event.player_id,
@@ -749,20 +505,19 @@ def create_throw_from_events(previous_event, current_event):
         y_start=previous_event.field_position_y,
         x_end=current_event.field_position_x,
         y_end=current_event.field_position_y,
-        break_throw=is_break
+        break_throw=is_break_throw(
+            previous_event.field_position_x,
+            previous_event.field_position_y,
+            current_event.field_position_x,
+            current_event.field_position_y
+        )
     )
     
-    # Calculate distance only if coordinates are valid
-    if (throw.x_start is not None and throw.y_start is not None and 
-        throw.x_end is not None and throw.y_end is not None):
-        try:
-            throw.distance = math.sqrt(
-                (throw.x_end - throw.x_start) ** 2 +
-                (throw.y_end - throw.y_start) ** 2
-            )
-        except Exception as e:
-            print(f"Error calculating distance in create_throw_from_events: {e}")
-            throw.distance = 0  # Set a default value
+    # Calculate distance
+    throw.distance = math.sqrt(
+        (throw.x_end - throw.x_start) ** 2 +
+        (throw.y_end - throw.y_start) ** 2
+    )
     
     # Determine throw type
     if current_event.event_type == 'goal':
@@ -773,7 +528,6 @@ def create_throw_from_events(previous_event, current_event):
         throw.throw_type = 'regular'
     
     return throw
-
 
 @bp.route('/admin/mark_break_throws')
 @login_required
@@ -837,21 +591,16 @@ def recalculate_throw_distances():
         throws = Throw.query.all()
         updated_count = 0
         
-
         for throw in throws:
             if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-                try:
-                    old_distance = throw.distance
-                    throw.distance = math.sqrt(
-                        (throw.x_end - throw.x_start) ** 2 +
-                        (throw.y_end - throw.y_start) ** 2
-                    )
-                    
-                    if old_distance != throw.distance:
-                        updated_count += 1
-                except Exception as e:
-                    print(f"Error recalculating distance for throw {throw.id}: {e}")
-
+                old_distance = throw.distance
+                throw.distance = math.sqrt(
+                    (throw.x_end - throw.x_start) ** 2 +
+                    (throw.y_end - throw.y_start) ** 2
+                )
+                
+                if old_distance != throw.distance:
+                    updated_count += 1
         
         db.session.commit()
         return jsonify({
@@ -981,120 +730,4 @@ def substitute_player(point_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# New route to get player stats with permission checking
-@bp.route('/player/<int:player_id>', methods=['GET'])
-@login_required
-def get_player_stats(player_id):
-    # Check if the current user is an admin or if they're viewing their own stats
-    is_admin = current_user.is_admin
-    is_own_stats = current_user.player and current_user.player.id == player_id
-    
-    if not (is_admin or is_own_stats):
-        return jsonify({'error': 'You do not have permission to view these stats'}), 403
-    
-    # If permissions are valid, proceed with getting the stats
-    from app.models.player import Player
-    player = Player.query.get_or_404(player_id)
-    
-    # Get the player's stats (implementation depends on your data structure)
-    # This is just a placeholder - you'll need to implement the actual stats retrieval
-    stats = {
-        'player': {
-            'id': player.id,
-            'name': player.name,
-            'jersey_number': player.jersey_number
-        },
-        'stats': {
-            # Add all the stats you want to return
-        }
-    }
-    
-    return jsonify(stats)
-
-# New route to get team average stats
-@bp.route('/team_average', methods=['GET'])
-@login_required
-def get_team_average_stats():
-    # Calculate team average stats
-    # This is a placeholder - you'll need to implement the actual calculation
-    team_avg_stats = {
-        'completion_rate': 0,
-        'o_line_clean_holds_rate': 0,
-        'o_line_turnovers_per_point': 0,
-        'o_line_get_it_back_rate': 0,
-        'd_line_break_opportunities_per_point': 0,
-        'd_line_break_conversion_rate': 0,
-        # Add other team average stats
-    }
-    
-    # Calculate the stats based on all players' data
-    from app.models.stats import PlayerPointStats
-    from app.models.point import Point
-    
-    # Get all points
-    points = Point.query.all()
-    
-    # Initialize counters
-    total_o_line_points = 0
-    total_d_line_points = 0
-    total_o_line_clean_holds = 0
-    total_o_line_turnovers = 0
-    total_o_line_got_back = 0
-    total_d_line_break_opportunities = 0
-    total_d_line_break_conversions = 0
-    
-    # Calculate stats from all points
-    for point in points:
-        if point.our_line_type == 'O-line':
-            total_o_line_points += 1
-            
-            # Get all player stats for this point
-            point_stats = PlayerPointStats.query.filter_by(point_id=point.id).all()
-            
-            # Count clean holds, turnovers, and got-it-back instances
-            has_clean_hold = any(stat.o_line_clean_holds for stat in point_stats)
-            if has_clean_hold:
-                total_o_line_clean_holds += 1
-            
-            point_turnovers = sum(stat.o_line_turnovers for stat in point_stats)
-            total_o_line_turnovers += point_turnovers
-            
-            got_back = any(stat.o_line_got_back for stat in point_stats)
-            if got_back:
-                total_o_line_got_back += 1
-                
-        elif point.our_line_type == 'D-line':
-            total_d_line_points += 1
-            
-            # Get all player stats for this point
-            point_stats = PlayerPointStats.query.filter_by(point_id=point.id).all()
-            
-            # Count break opportunities and conversions
-            has_break_opportunity = any(stat.d_line_break_opportunity for stat in point_stats)
-            if has_break_opportunity:
-                total_d_line_break_opportunities += 1
-                
-                has_break_conversion = any(stat.d_line_break_conversion for stat in point_stats)
-                if has_break_conversion:
-                    total_d_line_break_conversions += 1
-    
-    # Calculate rates
-    if total_o_line_points > 0:
-        team_avg_stats['o_line_clean_holds_rate'] = (total_o_line_clean_holds / total_o_line_points) * 100
-        team_avg_stats['o_line_turnovers_per_point'] = total_o_line_turnovers / total_o_line_points
-        
-        # Calculate get-it-back rate (only for points with turnovers)
-        points_with_turnovers = sum(1 for p in points if p.our_line_type == 'O-line' and 
-                                   any(s.o_line_turnovers > 0 for s in PlayerPointStats.query.filter_by(point_id=p.id).all()))
-        
-        if points_with_turnovers > 0:
-            team_avg_stats['o_line_get_it_back_rate'] = (total_o_line_got_back / points_with_turnovers) * 100
-    
-    if total_d_line_points > 0:
-        team_avg_stats['d_line_break_opportunities_per_point'] = total_d_line_break_opportunities / total_d_line_points
-        
-        if total_d_line_break_opportunities > 0:
-            team_avg_stats['d_line_break_conversion_rate'] = (total_d_line_break_conversions / total_d_line_break_opportunities) * 100
-    
-    return jsonify(team_avg_stats)
 
