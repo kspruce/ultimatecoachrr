@@ -134,6 +134,45 @@
         background-color: #007bff;
         color: white;
     }
+    
+    /* Permission denied message */
+    .permission-denied {
+        text-align: center;
+        padding: 50px 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    
+    .permission-denied i {
+        font-size: 48px;
+        color: #dc3545;
+        margin-bottom: 20px;
+    }
+    
+    /* Team average row highlight */
+    .team-average-row {
+        background-color: #f8f9fa !important;
+        font-weight: bold;
+    }
+    
+    /* New stats highlight */
+    .new-stat {
+        position: relative;
+    }
+    
+    .new-stat::after {
+        content: "NEW";
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #28a745;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
@@ -155,6 +194,7 @@
         </div>
     </div>
 
+    {% if current_user.is_admin or (current_user.player and current_user.player.id == player.id) %}
     <!-- Filters -->
     <div class="row mb-4">
         <div class="col-12">
@@ -328,6 +368,53 @@
                 </div>
             </div>
             
+            <!-- New Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">O-Line Efficiency</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 text-center mb-3 new-stat">
+                                    <div class="stat-value">{{ stats.o_line_clean_holds_percentage|default(0)|round(1) }}%</div>
+                                    <div class="stat-label">Clean Holds</div>
+                                </div>
+                                <div class="col-md-4 text-center mb-3 new-stat">
+                                    <div class="stat-value">{{ stats.o_line_turnovers_per_point|default(0)|round(2) }}</div>
+                                    <div class="stat-label">Turnovers/Point</div>
+                                </div>
+                                <div class="col-md-4 text-center mb-3 new-stat">
+                                    <div class="stat-value">{{ stats.o_line_get_it_back_percentage|default(0)|round(1) }}%</div>
+                                    <div class="stat-label">Get It Back %</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card stat-card h-100">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">D-Line Efficiency</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 text-center mb-3 new-stat">
+                                    <div class="stat-value">{{ stats.d_line_break_opportunities|default(0) }}</div>
+                                    <div class="stat-label">Break Opportunities</div>
+                                </div>
+                                <div class="col-md-6 text-center mb-3 new-stat">
+                                    <div class="stat-value">{{ stats.d_line_break_conversion_rate|default(0)|round(1) }}%</div>
+                                    <div class="stat-label">Break Conversion %</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Radar Charts -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -448,6 +535,47 @@
                                     </table>
                                 </div>
                             </div>
+                            
+                            <!-- New O-Line Stats -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5>O-Line Efficiency Metrics</h5>
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Clean Holds</th>
+                                                <th>Clean Hold %</th>
+                                                <th>Turnovers</th>
+                                                <th>Turnovers/Point</th>
+                                                <th>Got It Back</th>
+                                                <th>Get It Back %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>{{ stats.o_line_clean_holds|default(0) }}</td>
+                                                <td>{{ stats.o_line_clean_holds_percentage|default(0)|round(1) }}%</td>
+                                                <td>{{ stats.o_line_turnovers|default(0) }}</td>
+                                                <td>{{ stats.o_line_turnovers_per_point|default(0)|round(2) }}</td>
+                                                <td>{{ stats.o_line_got_it_back|default(0) }}</td>
+                                                <td>{{ stats.o_line_get_it_back_percentage|default(0)|round(1) }}%</td>
+                                            </tr>
+                                            <!-- Team Average Row -->
+                                            <tr class="team-average-row">
+                                                <td colspan="6" class="text-center">Team Average</td>
+                                            </tr>
+                                            <tr>
+                                                <td>{{ team_avg.o_line_clean_holds|default(0) }}</td>
+                                                <td>{{ team_avg.o_line_clean_holds_percentage|default(0)|round(1) }}%</td>
+                                                <td>{{ team_avg.o_line_turnovers|default(0) }}</td>
+                                                <td>{{ team_avg.o_line_turnovers_per_point|default(0)|round(2) }}</td>
+                                                <td>{{ team_avg.o_line_got_it_back|default(0) }}</td>
+                                                <td>{{ team_avg.o_line_get_it_back_percentage|default(0)|round(1) }}%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -503,6 +631,41 @@
                                             <th>Stalls</th>
                                             <td>{{ stats.stalls }}</td>
                                         </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- New D-Line Stats -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5>D-Line Break Metrics</h5>
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Break Opportunities</th>
+                                                <th>Break Conversions</th>
+                                                <th>Break Conversion %</th>
+                                                <th>Break Opportunities/Point</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>{{ stats.d_line_break_opportunities|default(0) }}</td>
+                                                <td>{{ stats.d_line_break_conversions|default(0) }}</td>
+                                                <td>{{ stats.d_line_break_conversion_rate|default(0)|round(1) }}%</td>
+                                                <td>{{ stats.d_line_break_opportunities_per_point|default(0)|round(2) }}</td>
+                                            </tr>
+                                            <!-- Team Average Row -->
+                                            <tr class="team-average-row">
+                                                <td colspan="4" class="text-center">Team Average</td>
+                                            </tr>
+                                            <tr>
+                                                <td>{{ team_avg.d_line_break_opportunities|default(0) }}</td>
+                                                <td>{{ team_avg.d_line_break_conversions|default(0) }}</td>
+                                                <td>{{ team_avg.d_line_break_conversion_rate|default(0)|round(1) }}%</td>
+                                                <td>{{ team_avg.d_line_break_opportunities_per_point|default(0)|round(2) }}</td>
+                                            </tr>
+                                        </tbody>
                                     </table>
                                 </div>
                             </div>
@@ -870,6 +1033,16 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <!-- Permission Denied Message -->
+    <div class="permission-denied">
+        <i class="bi bi-lock-fill"></i>
+        <h3>Permission Denied</h3>
+        <p>You do not have permission to view these statistics.</p>
+        <p>Players can only view their own statistics.</p>
+        <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-primary mt-3">Back to Stats Dashboard</a>
+    </div>
+    {% endif %}
 </div>
 
 {% endblock %}
@@ -1015,22 +1188,22 @@ function createRadarCharts() {
     // Get team average stats from the template
     const teamStats = {
         // Offensive stats
-        completion_rate: {{ team_stats.completion_rate|default(0) }},
-        catch_rate: {{ team_stats.catch_rate|default(0) }},
-        avg_throw_distance: {{ team_stats.avg_throw_distance|default(0) }},
-        assists_per_point: {{ team_stats.assists_per_point|default(0) }},
-        hockey_assists_per_point: {{ team_stats.hockey_assists_per_point|default(0) }},
-        goals_per_point: {{ team_stats.goals_per_point|default(0) }},
-        throws_per_point: {{ team_stats.throws_per_point|default(0) }},
-        catches_per_point: {{ team_stats.catches_per_point|default(0) }},
-        hucks_per_point: {{ team_stats.hucks_per_point|default(0) }},
+        completion_rate: {{ team_avg.completion_rate|default(0) }},
+        catch_rate: {{ team_avg.catch_rate|default(0) }},
+        avg_throw_distance: {{ team_avg.avg_throw_distance|default(0) }},
+        assists_per_point: {{ team_avg.assists_per_point|default(0) }},
+        hockey_assists_per_point: {{ team_avg.hockey_assists_per_point|default(0) }},
+        goals_per_point: {{ team_avg.goals_per_point|default(0) }},
+        throws_per_point: {{ team_avg.throws_per_point|default(0) }},
+        catches_per_point: {{ team_avg.catches_per_point|default(0) }},
+        hucks_per_point: {{ team_avg.hucks_per_point|default(0) }},
         
         // Defensive stats
-        blocks_per_point: {{ team_stats.blocks_per_point|default(0) }},
-        stalls_per_point: {{ team_stats.stalls_per_point|default(0) }},
-        shutdowns_per_point: {{ team_stats.shutdowns_per_point|default(0) }},
-        d_line_plus_minus_per_point: {{ team_stats.d_line_plus_minus_per_point|default(0) }},
-        turnovers_forced_per_point: {{ team_stats.turnovers_forced_per_point|default(0) }}
+        blocks_per_point: {{ team_avg.blocks_per_point|default(0) }},
+        stalls_per_point: {{ team_avg.stalls_per_point|default(0) }},
+        shutdowns_per_point: {{ team_avg.shutdowns_per_point|default(0) }},
+        d_line_plus_minus_per_point: {{ team_avg.d_line_plus_minus_per_point|default(0) }},
+        turnovers_forced_per_point: {{ team_avg.turnovers_forced_per_point|default(0) }}
     };
     
     // Define scaling factors for different stat types
@@ -1294,7 +1467,6 @@ function createRadarCharts() {
         console.error('Error creating radar charts:', error);
     }
 }
-
 
 
 
@@ -1986,7 +2158,6 @@ function createThrowDirectionRadar() {
 
 
 
-
 // Ensure radar charts are initialized
 setTimeout(function() {
     console.log('Delayed initialization of radar charts');
@@ -1997,3 +2168,4 @@ setTimeout(function() {
 }, 1000);
 </script>
 {% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

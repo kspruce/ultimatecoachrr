@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify, request, render_template, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app import db
 from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.game import Game
 from app.models.stats import PlayerPointStats
 from app.models.throws import Throw
+from app.models.user import User
 from app.utils.stat_utils import determine_possession, is_point_ending_event
 import math
 
@@ -218,9 +219,13 @@ def record_events(point_id):
                     stats.o_line_plus_minus += 1
                 elif event.event_type in ['throwaway', 'drop']:
                     stats.o_line_plus_minus -= 1
+                    # Track O-line turnovers
+                    stats.o_line_turnovers += 1
             else:  # D-line
                 if event.event_type in ['block', 'forced_turnover']:
                     stats.d_line_plus_minus += 1
+                    # Mark as a break opportunity
+                    stats.d_line_break_opportunity = True
                 elif event.event_type == 'scored_on':
                     stats.d_line_plus_minus -= 1
 
@@ -228,6 +233,23 @@ def record_events(point_id):
             if event.event_type in ['goal', 'callahan']:
                 point.point_outcome = 'scored'
                 point.our_score_after = point.our_score_before + 1
+                
+                # If O-line, check for clean hold
+                if point.our_line_type == 'O-line':
+                    # Check if there were any turnovers in this point
+                    turnover_events = Event.query.filter(
+                        Event.point_id == point_id,
+                        Event.event_type.in_(['throwaway', 'drop'])
+                    ).count()
+                    
+                    if turnover_events == 0:
+                        # This was a clean hold
+                        stats.o_line_clean_holds = True
+                
+                # If D-line and there was a break opportunity, mark as converted
+                elif point.our_line_type == 'D-line' and stats.d_line_break_opportunity:
+                    stats.d_line_break_conversion = True
+                    
             elif event.event_type == 'scored_on':
                 point.point_outcome = 'conceded'
                 point.their_score_after = point.their_score_before + 1
@@ -236,6 +258,12 @@ def record_events(point_id):
             for throw in db.session.new:
                 if isinstance(throw, Throw):
                     throw.distance = throw.calculate_distance()  # Use the model's method
+
+            # Check for O-line "got it back" scenario
+            if point.our_line_type == 'O-line' and stats.o_line_turnovers > 0:
+                # If we scored after having a turnover, we "got it back"
+                if event.event_type in ['goal', 'callahan']:
+                    stats.o_line_got_back = True
 
             db.session.commit()
             return jsonify(event.to_dict()), 201
@@ -297,11 +325,30 @@ def undo_event(point_id):
                         stats.o_line_plus_minus -= 1
                     elif last_event.event_type in ['throwaway', 'drop']:
                         stats.o_line_plus_minus += 1
+                        # Reverse O-line turnovers
+                        stats.o_line_turnovers -= 1
                 else:  # D-line
                     if last_event.event_type in ['block', 'forced_turnover']:
                         stats.d_line_plus_minus -= 1
+                        # If this was the only break opportunity, reset it
+                        if stats.d_line_break_opportunity:
+                            # Check if there are other break opportunities
+                            other_breaks = Event.query.filter(
+                                Event.point_id == point_id,
+                                Event.event_type.in_(['block', 'forced_turnover']),
+                                Event.id != last_event.id
+                            ).count()
+                            
+                            if other_breaks == 0:
+                                stats.d_line_break_opportunity = False
+                                stats.d_line_break_conversion = False
                     elif last_event.event_type == 'scored_on':
                         stats.d_line_plus_minus += 1
+                
+                # If undoing a goal, reset clean hold and got it back flags
+                if last_event.event_type == 'goal' and point.our_line_type == 'O-line':
+                    stats.o_line_clean_holds = False
+                    stats.o_line_got_back = False
                 
                 db.session.add(stats)
 
@@ -426,6 +473,35 @@ def finish_point(point_id):
                     point_id=point_id
                 )
                 db.session.add(stats)
+            
+            # Calculate O-line clean holds
+            if point.our_line_type == 'O-line' and point.point_outcome == 'scored':
+                # Check if there were any turnovers in this point
+                turnover_events = Event.query.filter(
+                    Event.point_id == point_id,
+                    Event.event_type.in_(['throwaway', 'drop'])
+                ).count()
+                
+                if turnover_events == 0:
+                    stats.o_line_clean_holds = True
+                elif turnover_events > 0 and point.point_outcome == 'scored':
+                    # If we had turnovers but still scored, we "got it back"
+                    stats.o_line_got_back = True
+            
+            # Calculate D-line break opportunities and conversions
+            elif point.our_line_type == 'D-line':
+                # Check if we generated any turnovers
+                break_opportunities = Event.query.filter(
+                    Event.point_id == point_id,
+                    Event.event_type.in_(['block', 'forced_turnover'])
+                ).count()
+                
+                if break_opportunities > 0:
+                    stats.d_line_break_opportunity = True
+                    
+                    # If we scored, it's a break conversion
+                    if point.point_outcome == 'scored':
+                        stats.d_line_break_conversion = True
 
         throws_without_distance = Throw.query.filter_by(point_id=point_id).filter(
             (Throw.distance.is_(None)) | (Throw.distance == 0)
@@ -454,7 +530,6 @@ def finish_point(point_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
     
-
 
 
 def calculate_assists(point, goal_event):
@@ -730,4 +805,119 @@ def substitute_player(point_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# New route to get player stats with permission checking
+@bp.route('/player/<int:player_id>', methods=['GET'])
+@login_required
+def get_player_stats(player_id):
+    # Check if the current user is an admin or if they're viewing their own stats
+    is_admin = current_user.is_admin
+    is_own_stats = current_user.player and current_user.player.id == player_id
+    
+    if not (is_admin or is_own_stats):
+        return jsonify({'error': 'You do not have permission to view these stats'}), 403
+    
+    # If permissions are valid, proceed with getting the stats
+    from app.models.player import Player
+    player = Player.query.get_or_404(player_id)
+    
+    # Get the player's stats (implementation depends on your data structure)
+    # This is just a placeholder - you'll need to implement the actual stats retrieval
+    stats = {
+        'player': {
+            'id': player.id,
+            'name': player.name,
+            'jersey_number': player.jersey_number
+        },
+        'stats': {
+            # Add all the stats you want to return
+        }
+    }
+    
+    return jsonify(stats)
 
+# New route to get team average stats
+@bp.route('/team_average', methods=['GET'])
+@login_required
+def get_team_average_stats():
+    # Calculate team average stats
+    # This is a placeholder - you'll need to implement the actual calculation
+    team_avg_stats = {
+        'completion_rate': 0,
+        'o_line_clean_holds_rate': 0,
+        'o_line_turnovers_per_point': 0,
+        'o_line_get_it_back_rate': 0,
+        'd_line_break_opportunities_per_point': 0,
+        'd_line_break_conversion_rate': 0,
+        # Add other team average stats
+    }
+    
+    # Calculate the stats based on all players' data
+    from app.models.stats import PlayerPointStats
+    from app.models.point import Point
+    
+    # Get all points
+    points = Point.query.all()
+    
+    # Initialize counters
+    total_o_line_points = 0
+    total_d_line_points = 0
+    total_o_line_clean_holds = 0
+    total_o_line_turnovers = 0
+    total_o_line_got_back = 0
+    total_d_line_break_opportunities = 0
+    total_d_line_break_conversions = 0
+    
+    # Calculate stats from all points
+    for point in points:
+        if point.our_line_type == 'O-line':
+            total_o_line_points += 1
+            
+            # Get all player stats for this point
+            point_stats = PlayerPointStats.query.filter_by(point_id=point.id).all()
+            
+            # Count clean holds, turnovers, and got-it-back instances
+            has_clean_hold = any(stat.o_line_clean_holds for stat in point_stats)
+            if has_clean_hold:
+                total_o_line_clean_holds += 1
+            
+            point_turnovers = sum(stat.o_line_turnovers for stat in point_stats)
+            total_o_line_turnovers += point_turnovers
+            
+            got_back = any(stat.o_line_got_back for stat in point_stats)
+            if got_back:
+                total_o_line_got_back += 1
+                
+        elif point.our_line_type == 'D-line':
+            total_d_line_points += 1
+            
+            # Get all player stats for this point
+            point_stats = PlayerPointStats.query.filter_by(point_id=point.id).all()
+            
+            # Count break opportunities and conversions
+            has_break_opportunity = any(stat.d_line_break_opportunity for stat in point_stats)
+            if has_break_opportunity:
+                total_d_line_break_opportunities += 1
+                
+                has_break_conversion = any(stat.d_line_break_conversion for stat in point_stats)
+                if has_break_conversion:
+                    total_d_line_break_conversions += 1
+    
+    # Calculate rates
+    if total_o_line_points > 0:
+        team_avg_stats['o_line_clean_holds_rate'] = (total_o_line_clean_holds / total_o_line_points) * 100
+        team_avg_stats['o_line_turnovers_per_point'] = total_o_line_turnovers / total_o_line_points
+        
+        # Calculate get-it-back rate (only for points with turnovers)
+        points_with_turnovers = sum(1 for p in points if p.our_line_type == 'O-line' and 
+                                   any(s.o_line_turnovers > 0 for s in PlayerPointStats.query.filter_by(point_id=p.id).all()))
+        
+        if points_with_turnovers > 0:
+            team_avg_stats['o_line_get_it_back_rate'] = (total_o_line_got_back / points_with_turnovers) * 100
+    
+    if total_d_line_points > 0:
+        team_avg_stats['d_line_break_opportunities_per_point'] = total_d_line_break_opportunities / total_d_line_points
+        
+        if total_d_line_break_opportunities > 0:
+            team_avg_stats['d_line_break_conversion_rate'] = (total_d_line_break_conversions / total_d_line_break_opportunities) * 100
+    
+    return jsonify(team_avg_stats)
