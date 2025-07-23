@@ -229,17 +229,40 @@ def record_events(point_id):
                         
 
             # Create regular throw if this is a catch
-            # Create regular throw if this is a catch
-            elif event.event_type == 'catch' and previous_event:
-                # Debug the previous event
-                print(f"Previous event: id={previous_event.id}, type={previous_event.event_type}, coords=({previous_event.field_position_x}, {previous_event.field_position_y})")
+            # Handle catch events - potentially marking as pickup
+            elif event.event_type == 'catch':
+                # Check if this is the first catch of the point (no previous events or only pull events)
+                is_pickup = False
                 
-                # First check if previous event has valid coordinates
-                if previous_event.field_position_x is None or previous_event.field_position_y is None:
-                    print(f"Warning: Previous event (id={previous_event.id}) has missing coordinates. Cannot create throw.")
+                if not previous_event:
+                    # No previous event, definitely a pickup
+                    is_pickup = True
+                    print("No previous event - marking catch as pickup")
                 else:
+                    # Check if previous events are only pulls or other non-catch events
+                    previous_catches = Event.query.filter(
+                        Event.point_id == point_id,
+                        Event.id < event.id,
+                        Event.event_type.in_(['catch', 'goal', 'pickup'])
+                    ).count()
+                    
+                    if previous_catches == 0:
+                        is_pickup = True
+                        print(f"First catch of the point - marking as pickup")
+                
+                # If this is a pickup, change the event type
+                if is_pickup:
+                    event.event_type = 'pickup'
+                    print(f"Changed event type from 'catch' to 'pickup'")
+                    # No throw is created for pickups
+                elif previous_event:
+                    # This is a regular catch, create a throw from previous event
                     # Check if all required coordinates are present
-                    if (event.field_position_x is not None and event.field_position_y is not None):
+                    if (previous_event.field_position_x is not None and 
+                        previous_event.field_position_y is not None and
+                        event.field_position_x is not None and
+                        event.field_position_y is not None):
+                        
                         # Calculate break_throw status
                         try:
                             is_break = is_break_throw(
@@ -268,8 +291,8 @@ def record_events(point_id):
                         )
                         db.session.add(regular_throw)
                     else:
-                        # Create throw without break_throw calculation if current event coordinates are missing
-                        print(f"Warning: Missing coordinates for current event. Creating throw without break_throw calculation.")
+                        # Create throw without break_throw calculation if coordinates are missing
+                        print(f"Warning: Missing coordinates for throw. Creating throw without break_throw calculation.")
                         regular_throw = Throw(
                             point_id=point_id,
                             thrower_id=previous_event.player_id,
@@ -282,20 +305,6 @@ def record_events(point_id):
                         )
                         db.session.add(regular_throw)
 
-                else:
-                    # Create throw without break_throw calculation if coordinates are missing
-                    print(f"Warning: Missing coordinates for throw. Creating throw without break_throw calculation.")
-                    regular_throw = Throw(
-                        point_id=point_id,
-                        thrower_id=previous_event.player_id,
-                        receiver_id=event.player_id,
-                        throwing_event_id=previous_event.id,
-                        receiving_event_id=event.id,
-                        throw_type='regular',
-                        is_completion=True,
-                        break_throw=False  # Default to False when we can't calculate
-                    )
-                    db.session.add(regular_throw)
                 
 
 
@@ -376,13 +385,15 @@ def record_events(point_id):
                     stats.o_line_plus_minus -= 1
                     # Track O-line turnovers
                     stats.o_line_turnovers += 1
+                # No need to update stats for pickup events
             else:  # D-line
-                if event.event_type in ['block', 'forced_turnover']:
+                if event.event_type in ['block', 'forced_turnover', 'pickup']:
                     stats.d_line_plus_minus += 1
                     # Mark as a break opportunity
                     stats.d_line_break_opportunity = True
                 elif event.event_type == 'scored_on':
                     stats.d_line_plus_minus -= 1
+
 
             # Update point status for point-ending events
             if event.event_type in ['goal', 'callahan']:
