@@ -179,8 +179,11 @@ def record_events(point_id):
                         event.field_position_x,
                         event.field_position_y
                     )
-                )
-                db.session.add(regular_throw)
+                    )
+                    db.session.add(regular_throw)
+                else:
+                    # Log warning about missing coordinates
+                    print(f"Warning: Missing coordinates for throw from event {previous_event.id} to {event.id}")
             
 
             # Handle throwaway events
