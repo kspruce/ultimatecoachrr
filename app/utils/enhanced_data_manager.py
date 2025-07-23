@@ -398,20 +398,23 @@ class EnhancedDataManager:
         # Create in-memory ZIP file
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add metadata
+            # Create a more detailed metadata similar to the server export
+            models_exported = []
+            for table_name in self.dependency_order:
+                if table_name in self.models:
+                    models_exported.append(table_name)
+            
             metadata = {
                 'export_timestamp': datetime.now().isoformat(),
+                'models_exported': models_exported,
+                'dependency_order': self.dependency_order,
                 'total_models': len(self.models),
                 'format': 'json'
             }
             zipf.writestr('metadata.json', json.dumps(metadata, indent=2))
             
-            # Export summary
-            export_summary = {
-                'status': 'in_progress',
-                'timestamp': datetime.now().isoformat(),
-                'format': 'json'
-            }
+            # Export summary in the same format as the server export
+            export_summary = {}
             
             # Process each model in dependency order
             for table_name in self.dependency_order:
@@ -437,10 +440,10 @@ class EnhancedDataManager:
                         # Add JSON to ZIP
                         zipf.writestr(f"{table_name}.json", json.dumps(data, indent=2))
                         
-                        # Update summary
+                        # Update summary in the same format as server export
                         export_summary[table_name] = {
-                            'status': 'completed',
-                            'records_exported': len(data)
+                            'records_exported': len(data),
+                            'file': f"{table_name}.json"
                         }
                         
                         logger.info(f"Exported {len(data)} records from {table_name} to JSON")
@@ -448,13 +451,11 @@ class EnhancedDataManager:
                     except Exception as e:
                         logger.error(f"Error exporting {table_name} to JSON: {e}")
                         export_summary[table_name] = {
-                            'status': 'error',
-                            'error': str(e)
+                            'error': str(e),
+                            'file': f"{table_name}.json"
                         }
             
-            # Update and save summary
-            export_summary['status'] = 'completed'
-            export_summary['completed_timestamp'] = datetime.now().isoformat()
+            # Save summary in the same format as server export
             zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
             
             # Also create a single JSON file with all tables
@@ -640,6 +641,26 @@ class EnhancedDataManager:
             import_dir = os.path.dirname(metadata_path)
             logger.info(f"Import directory determined as: {import_dir}")
             
+            # Check for all_tables.json which might contain all data in one file
+            all_tables_path = os.path.join(import_dir, 'all_tables.json')
+            if os.path.exists(all_tables_path):
+                logger.info("Found all_tables.json - extracting individual table files")
+                try:
+                    with open(all_tables_path, 'r') as f:
+                        all_tables_data = json.load(f)
+                    
+                    # Extract each table to its own file
+                    for table_name, data in all_tables_data.items():
+                        if table_name in self.models:
+                            table_path = os.path.join(import_dir, f"{table_name}.json")
+                            # Only write if the file doesn't exist or is empty
+                            if not os.path.exists(table_path) or os.path.getsize(table_path) <= 2:  # Empty JSON array is "[]"
+                                with open(table_path, 'w') as f:
+                                    json.dump(data, f, indent=2)
+                                logger.info(f"Extracted {len(data)} records for {table_name} from all_tables.json")
+                except Exception as e:
+                    logger.error(f"Error processing all_tables.json: {e}")
+            
             # Import data from the extracted directory
             return self.import_all_data(import_dir, clear_existing)
             
@@ -680,11 +701,17 @@ class EnhancedDataManager:
             'results': {}
         }
         
+        # Determine the dependency order to use
+        # If metadata contains a dependency_order, use that
+        # Otherwise use the default dependency order
+        dependency_order = metadata.get('dependency_order', self.dependency_order)
+        logger.info(f"Using dependency order from {'metadata' if 'dependency_order' in metadata else 'default'}")
+        
         # Process each model in dependency order
         # If clear_existing is True, delete all data in reverse dependency order
         if clear_existing:
             logger.info("Clearing existing data before import")
-            for table_name in reversed(self.dependency_order):
+            for table_name in reversed(dependency_order):
                 if table_name in self.models:
                     try:
                         model = self.models[table_name]
@@ -701,7 +728,7 @@ class EnhancedDataManager:
         
         # Import data in dependency order
         logger.info("Starting data import in dependency order")
-        for table_name in self.dependency_order:
+        for table_name in dependency_order:
             if table_name in self.models:
                 model = self.models[table_name]
                 json_path = os.path.join(import_dir, f"{table_name}.json")
@@ -720,6 +747,15 @@ class EnhancedDataManager:
                     with open(json_path, 'r') as f:
                         data = json.load(f)
                     
+                    # Skip if data is empty
+                    if not data:
+                        logger.warning(f"Skipping {table_name}: No data in file")
+                        import_summary['results'][table_name] = {
+                            'status': 'skipped',
+                            'reason': 'No data in file'
+                        }
+                        continue
+                    
                     logger.info(f"Loaded {len(data)} records from {json_path}")
                     
                     # Import records
@@ -733,10 +769,17 @@ class EnhancedDataManager:
                             
                             # Set attributes
                             for key, value in record_data.items():
+                                # Skip if the attribute doesn't exist on the model
+                                if not hasattr(record, key):
+                                    continue
+                                
                                 # Handle ISO format datetime strings
-                                if isinstance(value, str) and 'T' in value and value.endswith('Z'):
+                                if isinstance(value, str) and 'T' in value:
                                     try:
-                                        value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                                        if value.endswith('Z'):
+                                            value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                                        else:
+                                            value = datetime.fromisoformat(value)
                                     except ValueError:
                                         pass
                                 
