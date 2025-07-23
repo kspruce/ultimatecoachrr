@@ -2426,7 +2426,71 @@ def calculate_additional_team_metrics(games):
         d_conversions += sum(1 for p in d_points if p.we_scored)
     defensive_efficiency = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
     
-    return {
+    # Initialize new metrics
+    clean_hold_count = 0
+    total_o_points = 0
+    regain_offense_count = 0
+    o_line_turnovers = 0
+    
+    clean_break_count = 0
+    total_d_points = 0
+    d_line_goals_after_turnover = 0
+    d_line_turnovers = 0
+    
+    for game in games:
+        # Process O-line points
+        for point in game.o_line_points:
+            total_o_points += 1
+            
+            # Get events for this point
+            events = sorted(point.events, key=lambda e: e.timestamp or 0)
+            
+            # Count turnovers in this point
+            point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
+            o_line_turnovers += point_turnovers
+            
+            # Check if this is a clean hold (we scored with no turnovers)
+            if point.we_scored and point_turnovers == 0:
+                clean_hold_count += 1
+            
+            # Check if we regained possession after turnover
+            if point_turnovers > 0 and point.we_scored:
+                regain_offense_count += 1
+        
+        # Process D-line points
+        for point in game.d_line_points:
+            total_d_points += 1
+            
+            # Get events for this point
+            events = sorted(point.events, key=lambda e: e.timestamp or 0)
+            
+            # Count turnovers in this point
+            point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
+            d_line_turnovers += point_turnovers
+            
+            # Check if this is a clean break (we scored without losing possession)
+            if point.we_scored:
+                # Check if we had any turnovers after our first block
+                block_index = next((i for i, e in enumerate(events) if e.event_type == 'block'), -1)
+                if block_index >= 0:
+                    # Count turnovers after the block
+                    turnovers_after_block = sum(1 for e in events[block_index:] 
+                                               if e.event_type in ['throwaway', 'drop', 'stall'])
+                    if turnovers_after_block == 0:
+                        clean_break_count += 1
+                
+                # Count goals after turnover
+                if any(e.event_type == 'block' for e in events):
+                    d_line_goals_after_turnover += 1
+    
+    # Calculate percentages and averages
+    clean_hold_percentage = (clean_hold_count / total_o_points * 100) if total_o_points > 0 else 0
+    clean_break_percentage = (clean_break_count / total_d_points * 100) if total_d_points > 0 else 0
+    avg_o_turnovers_per_point = o_line_turnovers / total_o_points if total_o_points > 0 else 0
+    avg_d_turnovers_per_point = d_line_turnovers / total_d_points if total_d_points > 0 else 0
+    goals_per_turnover_ratio = (d_line_goals_after_turnover / d_line_turnovers * 100) if d_line_turnovers > 0 else 0    
+    
+    result = {
         'completion_rate': (completions / len(throws)) * 100 if throws else 0,
         'goals_per_point': goals / total_points,
         'assists_per_point': goals / total_points,  # Same as goals
@@ -2435,8 +2499,20 @@ def calculate_additional_team_metrics(games):
         'blocks_per_point': blocks / total_points,
         'turnovers_forced_per_point': turnovers_forced / total_points,
         'defensive_efficiency': defensive_efficiency,
-        'break_percentage': break_percentage
-    }
+        'break_percentage': break_percentage,
+        
+        # New offensive metrics
+        'clean_hold_percentage': clean_hold_percentage,
+        'regain_offense_count': regain_offense_count,
+        'avg_o_turnovers_per_point': avg_o_turnovers_per_point,
+        
+        # New defensive metrics
+        'clean_break_percentage': clean_break_percentage,
+        'goals_per_turnover_ratio': goals_per_turnover_ratio,
+        'avg_d_turnovers_per_point': avg_d_turnovers_per_point,        
+        }
+    
+    return result
 
 
 
