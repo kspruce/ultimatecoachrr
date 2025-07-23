@@ -15,11 +15,11 @@ bp = Blueprint('stat', __name__, url_prefix='/stats')
 def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
     """
     Determine if a throw is a break throw based on field position.
-    
-    A simple heuristic:
-    1. If force_direction is known, use that
-    2. Otherwise, detect if throw crosses the middle of the field (y=18.5)
     """
+    # First check if any coordinates are None
+    if x_start is None or y_start is None or x_end is None or y_end is None:
+        return False  # Default to not a break throw if coordinates are missing
+        
     if force_direction:
         # If we know the force direction, use that logic
         if force_direction == 'forehand':
@@ -37,6 +37,7 @@ def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
             return True
     
     return False
+
 
 @bp.route('/record/<int:point_id>', methods=['GET', 'POST'])
 @login_required
@@ -154,7 +155,13 @@ def record_events(point_id):
                         
             # Create regular throw if this is a catch
             elif event.event_type == 'catch' and previous_event:
-                regular_throw = Throw(
+                # Validate coordinates before creating throw
+                if (previous_event.field_position_x is not None and 
+                    previous_event.field_position_y is not None and
+                    event.field_position_x is not None and
+                    event.field_position_y is not None):
+                    
+                    regular_throw = Throw(
                     point_id=point_id,
                     thrower_id=previous_event.player_id,
                     receiver_id=event.player_id,
@@ -174,6 +181,7 @@ def record_events(point_id):
                     )
                 )
                 db.session.add(regular_throw)
+            
 
             # Handle throwaway events
             elif event.event_type == 'throwaway' and previous_event:
