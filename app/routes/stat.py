@@ -55,6 +55,7 @@ def record_events(point_id):
     if request.method == 'POST':
         try:
             data = request.get_json()
+            print(f"Received data: {data}")  # Debug the incoming data
             point = Point.query.get_or_404(point_id)
             
             # Handle special player IDs
@@ -62,13 +63,19 @@ def record_events(point_id):
             is_unknown_player = data.get('is_unknown_player', False)
             is_opponent = data.get('is_opponent', False)
             
-            # Create new event
+            # Safely handle coordinates
+            field_position_x = data.get('field_position_x')
+            field_position_y = data.get('field_position_y')
+            
+            print(f"Coordinates: x={field_position_x}, y={field_position_y}")  # Debug coordinates
+            
+            # Create new event with safer coordinate handling
             event = Event(
                 point_id=point_id,
                 player_id=int(player_id),
                 event_type=data['event_type'],
-                field_position_x=float(data.get('field_position_x', 0)),
-                field_position_y=float(data.get('field_position_y', 0)),
+                field_position_x=float(field_position_x) if field_position_x is not None else 0.0,
+                field_position_y=float(field_position_y) if field_position_y is not None else 0.0,
                 is_offensive=bool(data.get('is_offensive', True)),
                 is_unknown_player=is_unknown_player,
                 is_opponent=is_opponent
@@ -77,6 +84,8 @@ def record_events(point_id):
             # Add and flush the event to get its ID
             db.session.add(event)
             db.session.flush()
+            
+
 
             # Get previous event in this point
             previous_event = Event.query.filter(
@@ -382,9 +391,15 @@ def record_events(point_id):
                 point.their_score_after = point.their_score_before + 1
 
             # Calculate distances for throws
+            # Calculate distances for throws
             for throw in db.session.new:
                 if isinstance(throw, Throw):
-                    throw.distance = throw.calculate_distance()  # Use the model's method
+                    try:
+                        throw.distance = throw.calculate_distance()  # Use the model's method
+                    except Exception as e:
+                        print(f"Error calculating distance: {e}")
+                        throw.distance = 0  # Set a default value
+
 
             # Check for O-line "got it back" scenario
             if point.our_line_type == 'O-line' and stats.o_line_turnovers > 0:
@@ -1080,3 +1095,4 @@ def get_team_average_stats():
             team_avg_stats['d_line_break_conversion_rate'] = (total_d_line_break_conversions / total_d_line_break_opportunities) * 100
     
     return jsonify(team_avg_stats)
+
