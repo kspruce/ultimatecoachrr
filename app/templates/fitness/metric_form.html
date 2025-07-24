@@ -8,7 +8,7 @@
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('fitness.manage_metrics') }}" class="btn btn-secondary">
-                Back to Metrics
+                <i class="bi bi-arrow-left"></i> Back to Metrics
             </a>
         </div>
     </div>
@@ -16,8 +16,8 @@
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header">
-                    <h5>Metric Details</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-pencil"></i> Metric Details</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST">
@@ -75,5 +75,58 @@
             </div>
         </div>
     </div>
+    
+    {% if metric %}
+    <div class="row mt-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-info-circle"></i> Metric Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="card bg-light h-100">
+                                <div class="card-body">
+                                    <h6>Records</h6>
+                                    <h2>{{ metric.records.count() }}</h2>
+                                    <small class="text-muted">Total data points</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="card bg-light h-100">
+                                <div class="card-body">
+                                    <h6>Players</h6>
+                                    <h2>{{ player_count }}</h2>
+                                    <small class="text-muted">With recorded data</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="card bg-light h-100">
+                                <div class="card-body">
+                                    <h6>Team Average</h6>
+                                    <h2>{{ metric.team_average or 'N/A' }}</h2>
+                                    <small class="text-muted">{{ metric.unit }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if record_holder %}
+                        <div class="alert alert-success mt-3">
+                            <strong>Record Holder:</strong> 
+                            <a href="{{ url_for('team.player_detail', player_id=record_holder.player.id) }}">
+                                {{ record_holder.player.name }}
+                            </a>
+                            with {{ record_holder.value }} {{ metric.unit }} on {{ record_holder.date_recorded.strftime('%Y-%m-%d') }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

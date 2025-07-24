@@ -1,4 +1,3 @@
-<!-- app/templates/fitness/player_fitness.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -6,66 +5,375 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Fitness Profile: {{ player.name }}</h1>
+            {% if player.jersey_number %}
+                <h5 class="text-muted">#{{ player.jersey_number }}</h5>
+            {% endif %}
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-primary">Record New Fitness Data</a>
-            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-secondary">Back to Player Profile</a>
+            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Record New Data
+            </a>
+            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-secondary">
+                <i class="bi bi-person"></i> Player Profile
+            </a>
         </div>
     </div>
 
-    <div class="row">
-        {% for data in player_metrics %}
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>{{ data.metric.name }} ({{ data.metric.unit }})</h5>
-                    {% if data.latest %}
-                        <span class="badge bg-primary">Latest: {{ data.latest.value }} {{ data.metric.unit }}</span>
-                    {% endif %}
+    <!-- Fitness Overview Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="bi bi-graph-up"></i> Fitness Overview</h5>
                 </div>
                 <div class="card-body">
-                    <p>{{ data.metric.description }}</p>
-                    
-                    <div class="row mb-3">
+                    <div class="row">
                         <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body text-center">
-                                    <h6>Team Average</h6>
-                                    <h4>{{ data.team_average if data.team_average else 'No data' }}</h4>
-                                </div>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas id="fitnessRadarChart"></canvas>
                             </div>
+                            <p class="text-center text-muted mt-2">
+                                <small>Performance relative to team average (higher is better)</small>
+                            </p>
                         </div>
                         <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body text-center">
-                                    <h6>Record Holder</h6>
-                                    {% if data.record_holder %}
-                                        <h4>{{ data.record_holder.value }}</h4>
-                                        <small>
-                                            <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
-                                                {{ data.record_holder.player.name }}
-                                            </a>
-                                        </small>
-                                    {% else %}
-                                        <h4>No record</h4>
-                                    {% endif %}
-                                </div>
+                            <h5 class="mb-3">Top Performances</h5>
+                            <div class="row">
+                                {% if top_metrics %}
+                                    {% for metric in top_metrics %}
+                                    <div class="col-6 mb-3">
+                                        <div class="card bg-light h-100">
+                                            <div class="card-body text-center">
+                                                <h6>{{ metric.name }}</h6>
+                                                <h4>{{ metric.value }} {{ metric.unit }}</h4>
+                                                {% if metric.percentile > 0 %}
+                                                    <small class="text-success">
+                                                        <i class="bi bi-arrow-up"></i> {{ metric.percentile }}% above average
+                                                    </small>
+                                                {% else %}
+                                                    <small class="text-danger">
+                                                        <i class="bi bi-arrow-down"></i> {{ metric.percentile|abs }}% below average
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            No fitness data recorded yet. Record some metrics to see your top performances.
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                    
-                    {% if data.history %}
-                        <h6>History</h6>
-                        <div class="chart-container" style="position: relative; height:200px;">
-                            <canvas id="chart-{{ data.metric.id }}"></canvas>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No history recorded yet.</p>
-                    {% endif %}
                 </div>
             </div>
         </div>
-        {% endfor %}
+    </div>
+
+    <!-- Metric Categories -->
+    <ul class="nav nav-tabs mb-4" id="fitnessTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="sprinting-tab" data-bs-toggle="tab" data-bs-target="#sprinting" type="button" role="tab">
+                <i class="bi bi-lightning-charge"></i> Sprinting & Agility
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="endurance-tab" data-bs-toggle="tab" data-bs-target="#endurance" type="button" role="tab">
+                <i class="bi bi-heart-pulse"></i> Endurance
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="power-tab" data-bs-toggle="tab" data-bs-target="#power" type="button" role="tab">
+                <i class="bi bi-arrow-up-circle"></i> Power & Jumping
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="strength-tab" data-bs-toggle="tab" data-bs-target="#strength" type="button" role="tab">
+                <i class="bi bi-battery-charging"></i> Strength & Core
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills" type="button" role="tab">
+                <i class="bi bi-disc"></i> Ultimate Skills
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="fitnessTabContent">
+        <!-- Sprinting & Agility Tab -->
+        <div class="tab-pane fade show active" id="sprinting" role="tabpanel">
+            <div class="row">
+                {% if sprinting_metrics %}
+                    {% for data in sprinting_metrics %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>{{ data.metric.name }}</h5>
+                                {% if data.latest %}
+                                    <span class="badge bg-primary">{{ data.latest.value }} {{ data.metric.unit }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <p>{{ data.metric.description }}</p>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6>Team Average</h6>
+                                                <h4>{{ data.team_average if data.team_average else 'No data' }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6>Record Holder</h6>
+                                                {% if data.record_holder %}
+                                                    <h4>{{ data.record_holder.value }}</h4>
+                                                    <small>
+                                                        <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
+                                                            {{ data.record_holder.player.name }}
+                                                        </a>
+                                                    </small>
+                                                {% else %}
+                                                    <h4>No record</h4>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if data.history %}
+                                    <h6>Progress</h6>
+                                    <div class="chart-container" style="position: relative; height:150px;">
+                                        <canvas id="chart-{{ data.metric.id }}"></canvas>
+                                    </div>
+                                    <div class="text-end mt-2">
+                                        <a href="{{ url_for('fitness.player_metric_history', player_id=player.id, metric_id=data.metric.id) }}" class="btn btn-sm btn-outline-primary">
+                                            View Full History
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No history recorded yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            No sprinting & agility metrics recorded yet.
+                            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="alert-link">Record your first metric</a>.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Endurance Tab -->
+        <div class="tab-pane fade" id="endurance" role="tabpanel">
+            <div class="row">
+                {% if endurance_metrics %}
+                    {% for data in endurance_metrics %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>{{ data.metric.name }}</h5>
+                                {% if data.latest %}
+                                    <span class="badge bg-primary">{{ data.latest.value }} {{ data.metric.unit }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <p>{{ data.metric.description }}</p>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6>Team Average</h6>
+                                                <h4>{{ data.team_average if data.team_average else 'No data' }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6>Record Holder</h6>
+                                                {% if data.record_holder %}
+                                                    <h4>{{ data.record_holder.value }}</h4>
+                                                    <small>
+                                                        <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
+                                                            {{ data.record_holder.player.name }}
+                                                        </a>
+                                                    </small>
+                                                {% else %}
+                                                    <h4>No record</h4>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if data.history %}
+                                    <h6>Progress</h6>
+                                    <div class="chart-container" style="position: relative; height:150px;">
+                                        <canvas id="chart-{{ data.metric.id }}"></canvas>
+                                    </div>
+                                    <div class="text-end mt-2">
+                                        <a href="{{ url_for('fitness.player_metric_history', player_id=player.id, metric_id=data.metric.id) }}" class="btn btn-sm btn-outline-primary">
+                                            View Full History
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No history recorded yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            No endurance metrics recorded yet.
+                            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="alert-link">Record your first metric</a>.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Power & Jumping Tab -->
+        <div class="tab-pane fade" id="power" role="tabpanel">
+            <div class="row">
+                {% if power_metrics %}
+                    {% for data in power_metrics %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>{{ data.metric.name }}</h5>
+                                {% if data.latest %}
+                                    <span class="badge bg-primary">{{ data.latest.value }} {{ data.metric.unit }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <!-- Same structure as other tabs -->
+                                <p>{{ data.metric.description }}</p>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6>Team Average</h6>
+                                                <h4>{{ data.team_average if data.team_average else 'No data' }}</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6>Record Holder</h6>
+                                                {% if data.record_holder %}
+                                                    <h4>{{ data.record_holder.value }}</h4>
+                                                    <small>
+                                                        <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
+                                                            {{ data.record_holder.player.name }}
+                                                        </a>
+                                                    </small>
+                                                {% else %}
+                                                    <h4>No record</h4>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if data.history %}
+                                    <h6>Progress</h6>
+                                    <div class="chart-container" style="position: relative; height:150px;">
+                                        <canvas id="chart-{{ data.metric.id }}"></canvas>
+                                    </div>
+                                    <div class="text-end mt-2">
+                                        <a href="{{ url_for('fitness.player_metric_history', player_id=player.id, metric_id=data.metric.id) }}" class="btn btn-sm btn-outline-primary">
+                                            View Full History
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No history recorded yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            No ultimate skills metrics recorded yet.
+                            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="alert-link">Record your first metric</a>.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fitness Goals Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-flag"></i> Fitness Goals</h5>
+                </div>
+                <div class="card-body">
+                    {% if fitness_goals %}
+                        <div class="row">
+                            {% for goal in fitness_goals %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100 {% if goal.achieved %}bg-success text-white{% else %}bg-light{% endif %}">
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ goal.metric.name }}</h5>
+                                            <p class="card-text">
+                                                Target: {{ goal.target_value }} {{ goal.metric.unit }}
+                                                <br>
+                                                Current: {{ goal.current_value|default('Not recorded', true) }} {{ goal.metric.unit }}
+                                            </p>
+                                            <div class="progress mb-2">
+                                                <div class="progress-bar {% if goal.achieved %}bg-success{% endif %}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ goal.progress }}%;" 
+                                                     aria-valuenow="{{ goal.progress }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ goal.progress }}%
+                                                </div>
+                                            </div>
+                                            <p class="card-text">
+                                                <small {% if not goal.achieved %}class="text-muted"{% endif %}>
+                                                    Target date: {{ goal.target_date.strftime('%Y-%m-%d') }}
+                                                </small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No fitness goals set yet.</p>
+                    {% endif %}
+                    
+                    <div class="text-end mt-3">
+                        <a href="#" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-circle"></i> Set New Goal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -74,32 +382,91 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    {% for data in player_metrics %}
-        {% if data.history %}
-            var ctx{{ data.metric.id }} = document.getElementById('chart-{{ data.metric.id }}').getContext('2d');
-            var chart{{ data.metric.id }} = new Chart(ctx{{ data.metric.id }}, {
-                type: 'line',
-                data: {
-                    labels: [{% for record in data.history %}'{{ record.date_recorded.strftime("%Y-%m-%d") }}',{% endfor %}],
-                    datasets: [{
-                        label: '{{ data.metric.name }}',
-                        data: [{% for record in data.history %}{{ record.value }},{% endfor %}],
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.1
-                    }]
+    // Radar chart for overall fitness profile
+    const ctx = document.getElementById('fitnessRadarChart').getContext('2d');
+    const radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: {{ radar_labels|tojson }},
+            datasets: [
+                {
+                    label: 'Player',
+                    data: {{ player_radar_data|tojson }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    pointBackgroundColor: 'rgb(54, 162, 235)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(54, 162, 235)'
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: {% if data.metric.higher_is_better %}true{% else %}false{% endif %}
+                {
+                    label: 'Team Average',
+                    data: {{ team_radar_data|tojson }},
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgb(255, 99, 132)',
+                    pointBackgroundColor: 'rgb(255, 99, 132)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(255, 99, 132)'
+                }
+            ]
+        },
+        options: {
+            elements: {
+                line: {
+                    borderWidth: 3
+                }
+            },
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            }
+        }
+    });
+    
+    // Individual metric charts
+    {% for category in ['sprinting_metrics', 'endurance_metrics', 'power_metrics', 'strength_metrics', 'skills_metrics'] %}
+        {% for data in vars()[category]|default([]) %}
+            {% if data.history %}
+                const ctx{{ data.metric.id }} = document.getElementById('chart-{{ data.metric.id }}').getContext('2d');
+                const chart{{ data.metric.id }} = new Chart(ctx{{ data.metric.id }}, {
+                    type: 'line',
+                    data: {
+                        labels: [{% for record in data.history %}'{{ record.date_recorded.strftime("%Y-%m-%d") }}',{% endfor %}],
+                        datasets: [{
+                            label: '{{ data.metric.name }}',
+                            data: [{% for record in data.history %}{{ record.value }},{% endfor %}],
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: {% if data.metric.higher_is_better %}true{% else %}false{% endif %}
+                            },
+                            x: {
+                                display: false
+                            }
                         }
                     }
-                }
-            });
-        {% endif %}
+                });
+            {% endif %}
+        {% endfor %}
     {% endfor %}
 });
 </script>

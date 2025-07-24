@@ -1,4 +1,3 @@
-<!-- app/templates/fitness/record_form.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -9,15 +8,17 @@
             <h4>Player: {{ player.name }}</h4>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-secondary">Back to Fitness Profile</a>
+            <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Fitness Profile
+            </a>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header">
-                    <h5>New Fitness Record</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-plus-circle"></i> New Fitness Record</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST">
@@ -37,6 +38,7 @@
                             {% for error in form.value.errors %}
                                 <div class="text-danger">{{ error }}</div>
                             {% endfor %}
+                            <div id="metricDescription" class="form-text text-muted"></div>
                         </div>
                         
                         <div class="mb-3">
@@ -45,6 +47,7 @@
                             {% for error in form.notes.errors %}
                                 <div class="text-danger">{{ error }}</div>
                             {% endfor %}
+                            <small class="form-text text-muted">Optional: Add any relevant context about this measurement</small>
                         </div>
                         
                         <div class="d-grid">
@@ -55,5 +58,73 @@
             </div>
         </div>
     </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-clock-history"></i> Recent Records</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_records %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>Value</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in recent_records %}
+                                        <tr>
+                                            <td>{{ record.metric.name }}</td>
+                                            <td>{{ record.value }} {{ record.metric.unit }}</td>
+                                            <td>{{ record.date_recorded.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No recent records found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Metric descriptions for dynamic display
+    const metricDescriptions = {
+        {% for metric_id, description in metric_descriptions.items() %}
+            {{ metric_id }}: "{{ description }}",
+        {% endfor %}
+    };
+    
+    // Update description when metric changes
+    const metricSelect = document.getElementById('metric');
+    const descriptionDiv = document.getElementById('metricDescription');
+    
+    function updateDescription() {
+        const selectedMetricId = metricSelect.value;
+        if (selectedMetricId && metricDescriptions[selectedMetricId]) {
+            descriptionDiv.textContent = metricDescriptions[selectedMetricId];
+        } else {
+            descriptionDiv.textContent = '';
+        }
+    }
+    
+    if (metricSelect && descriptionDiv) {
+        metricSelect.addEventListener('change', updateDescription);
+        // Initialize with current selection
+        updateDescription();
+    }
+});
+</script>
 {% endblock %}

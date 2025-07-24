@@ -5,13 +5,14 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Manage Fitness Metrics</h1>
+            <p class="text-muted">Create, edit, and manage fitness metrics for your team</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('fitness.add_metric') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add New Metric
             </a>
             <a href="{{ url_for('fitness.index') }}" class="btn btn-secondary">
-                Back to Fitness Dashboard
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
             </a>
         </div>
     </div>
@@ -19,8 +20,8 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5>Fitness Metrics</h5>
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="bi bi-list-check"></i> Fitness Metrics</h5>
                 </div>
                 <div class="card-body">
                     {% if metrics %}
@@ -116,8 +117,8 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h5>Batch Operations</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-clipboard-data"></i> Batch Operations</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2 d-md-flex">
@@ -127,7 +128,50 @@
                         <a href="{{ url_for('fitness.team_leaderboard') }}" class="btn btn-success">
                             <i class="bi bi-trophy"></i> View Team Leaderboards
                         </a>
+                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#importExportModal">
+                            <i class="bi bi-arrow-down-up"></i> Import/Export Data
+                        </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Import/Export Modal -->
+    <div class="modal fade" id="importExportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import/Export Fitness Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6>Export Data</h6>
+                        <p>Download all fitness data as CSV file.</p>
+                        <a href="{{ url_for('fitness.export_data') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-download"></i> Export All Data
+                        </a>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div>
+                        <h6>Import Data</h6>
+                        <p>Upload CSV file with fitness data.</p>
+                        <form action="{{ url_for('fitness.import_data') }}" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="mb-3">
+                                <input type="file" class="form-control" name="csv_file" accept=".csv" required>
+                            </div>
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-upload"></i> Import Data
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

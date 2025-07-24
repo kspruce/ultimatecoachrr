@@ -59,52 +59,133 @@ def player_fitness(player_id):
     """View fitness data for a specific player"""
     player = Player.query.get_or_404(player_id)
     
-    # Check permissions - only the player, coaches, or admins can view detailed fitness data
+    # Check permissions
     if not (current_user.is_admin or 
             (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
         flash('You do not have permission to view this player\'s fitness data.', 'danger')
         return redirect(url_for('team.player_detail', player_id=player_id))
     
-    metrics = FitnessMetric.query.filter_by(active=True).all()
+    # Define metric categories
+    categories = {
+        'sprinting': ['20-Yard Sprint', '40-Yard Sprint', 'Flying 20', '5-10-5 Shuttle/Pro Agility', 'Change of Direction Speed'],
+        'endurance': ['Beep Test/Yo-Yo Test', '1-Mile Run', '300-Yard Shuttle', 'Ultimate-Specific Conditioning Test', 'Recovery Heart Rate'],
+        'power': ['Vertical Jump', 'Broad Jump', 'Box Jump'],
+        'strength': ['Plank Hold', 'Push-Ups', 'Pull-Ups', 'Squat Endurance'],
+        'skills': ['Maximum Pull Distance', 'Throwing Accuracy', 'Lateral Quickness Drill', 'Jump & Reach']
+    }
     
-    # Get player's records for each metric
-    player_metrics = []
-    for metric in metrics:
-        latest_record = FitnessRecord.query.filter_by(
-            player_id=player_id, 
-            metric_id=metric.id
-        ).order_by(FitnessRecord.date_recorded.desc()).first()
-        
-        # Get player's history for this metric
-        history = FitnessRecord.query.filter_by(
-            player_id=player_id, 
-            metric_id=metric.id
-        ).order_by(FitnessRecord.date_recorded).all()
-        
-        # Get team average
-        team_avg = metric.team_average
-        
-        # Get record holder
-        record_holder_entry = None
-        if metric.record_holder:
-            record_holder_entry = {
-                'player': metric.record_holder.player,
-                'value': metric.record_holder.value,
-                'date': metric.record_holder.date_recorded
-            }
-        
-        player_metrics.append({
-            'metric': metric,
-            'latest': latest_record,
-            'history': history,
-            'team_average': team_avg,
-            'record_holder': record_holder_entry
-        })
+    # Get all metrics
+    all_metrics = FitnessMetric.query.filter_by(active=True).all()
+    
+    # Organize metrics by category
+    categorized_metrics = {}
+    for category, metric_names in categories.items():
+        categorized_metrics[category] = []
+        for metric in all_metrics:
+            if metric.name in metric_names:
+                # Get player's data for this metric
+                latest_record = FitnessRecord.query.filter_by(
+                    player_id=player_id, 
+                    metric_id=metric.id
+                ).order_by(FitnessRecord.date_recorded.desc()).first()
+                
+                history = FitnessRecord.query.filter_by(
+                    player_id=player_id, 
+                    metric_id=metric.id
+                ).order_by(FitnessRecord.date_recorded).all()
+                
+                team_avg = metric.team_average
+                
+                record_holder = metric.record_holder
+                
+                categorized_metrics[category].append({
+                    'metric': metric,
+                    'latest': latest_record,
+                    'history': history,
+                    'team_average': team_avg,
+                    'record_holder': record_holder
+                })
+    
+    # Prepare radar chart data
+    radar_labels = []
+    player_radar_data = []
+    team_radar_data = []
+    
+    # Select one representative metric from each category for the radar chart
+    for category, metrics in categorized_metrics.items():
+        if metrics:
+            metric_data = metrics[0]
+            radar_labels.append(metric_data['metric'].name)
+            
+            # Calculate percentile score (0-100)
+            if metric_data['latest'] and metric_data['team_average']:
+                value = float(metric_data['latest'].value)
+                avg = float(metric_data['team_average'])
+                
+                # For metrics where lower is better, invert the calculation
+                if not metric_data['metric'].higher_is_better:
+                    if value > 0:  # Avoid division by zero
+                        score = min(100, (avg / value) * 50)  # Scale appropriately
+                    else:
+                        score = 0
+                else:
+                    if avg > 0:  # Avoid division by zero
+                        score = min(100, (value / avg) * 50)  # Scale appropriately
+                    else:
+                        score = 0
+                
+                player_radar_data.append(score)
+            else:
+                player_radar_data.append(0)
+            
+            team_radar_data.append(50)  # Team average is always at 50% on the radar
+    
+    # Find top metrics where player excels
+    top_metrics = []
+    all_player_metrics = []
+    
+    for category_metrics in categorized_metrics.values():
+        for metric_data in category_metrics:
+            if metric_data['latest'] and metric_data['team_average']:
+                value = float(metric_data['latest'].value)
+                avg = float(metric_data['team_average'])
+                
+                # Calculate how much better than average (as a percentage)
+                if metric_data['metric'].higher_is_better:
+                    if avg > 0:
+                        percentile = int((value / avg - 1) * 100)
+                    else:
+                        percentile = 0
+                else:
+                    if value > 0:
+                        percentile = int((avg / value - 1) * 100)
+                    else:
+                        percentile = 0
+                
+                all_player_metrics.append({
+                    'name': metric_data['metric'].name,
+                    'value': value,
+                    'unit': metric_data['metric'].unit,
+                    'percentile': percentile
+                })
+    
+    # Sort by percentile and get top 4
+    all_player_metrics.sort(key=lambda x: x['percentile'], reverse=True)
+    top_metrics = all_player_metrics[:4]
     
     return render_template('fitness/player_fitness.html',
                           player=player,
-                          player_metrics=player_metrics)
+                          sprinting_metrics=categorized_metrics['sprinting'],
+                          endurance_metrics=categorized_metrics['endurance'],
+                          power_metrics=categorized_metrics['power'],
+                          strength_metrics=categorized_metrics['strength'],
+                          skills_metrics=categorized_metrics['skills'],
+                          radar_labels=radar_labels,
+                          player_radar_data=player_radar_data,
+                          team_radar_data=team_radar_data,
+                          top_metrics=top_metrics)
+
 
 @bp.route('/record/<int:player_id>', methods=['GET', 'POST'])
 @login_required

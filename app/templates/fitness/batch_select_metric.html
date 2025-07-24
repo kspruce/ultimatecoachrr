@@ -5,10 +5,11 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Batch Record Fitness Data</h1>
+            <p class="text-muted">Record the same fitness metric for multiple players at once</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('fitness.index') }}" class="btn btn-secondary">
-                Back to Fitness Dashboard
+                <i class="bi bi-arrow-left"></i> Back to Fitness Dashboard
             </a>
         </div>
     </div>
@@ -16,34 +17,167 @@
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header">
-                    <h5>Select Metric to Record</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-list-check"></i> Select Metric to Record</h5>
                 </div>
                 <div class="card-body">
                     <p class="mb-4">
                         Choose a fitness metric to record data for multiple players at once.
+                        This is useful for recording data collected during team training sessions.
                     </p>
                     
                     {% if metrics %}
-                        <div class="list-group">
-                            {% for metric in metrics %}
-                                <a href="{{ url_for('fitness.batch_record', metric_id=metric.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h5 class="mb-1">{{ metric.name }}</h5>
-                                        <p class="mb-1 text-muted">{{ metric.description|truncate(100) }}</p>
-                                        <small>Unit: {{ metric.unit }}</small>
+                        <div class="accordion" id="metricAccordion">
+                            <!-- Speed & Agility -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="speedHeading">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#speedCollapse" aria-expanded="true" aria-controls="speedCollapse">
+                                        <i class="bi bi-lightning-charge me-2"></i> Speed & Agility Metrics
+                                    </button>
+                                </h2>
+                                <div id="speedCollapse" class="accordion-collapse collapse show" aria-labelledby="speedHeading">
+                                    <div class="accordion-body">
+                                        <div class="list-group">
+                                            {% for metric in metrics %}
+                                                {% if metric.name in ['20-Yard Sprint', '40-Yard Sprint', 'Flying 20', '5-10-5 Shuttle/Pro Agility', 'Change of Direction Speed'] %}
+                                                    <a href="{{ url_for('fitness.batch_record', metric_id=metric.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h5 class="mb-1">{{ metric.name }}</h5>
+                                                            <p class="mb-1 text-muted">{{ metric.description|truncate(100) }}</p>
+                                                            <small>Unit: {{ metric.unit }}</small>
+                                                        </div>
+                                                        <span class="badge {% if metric.higher_is_better %}bg-success{% else %}bg-info{% endif %} rounded-pill">
+                                                            {% if metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                                                        </span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
                                     </div>
-                                    <span class="badge {% if metric.higher_is_better %}bg-success{% else %}bg-info{% endif %} rounded-pill">
-                                        {% if metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
-                                    </span>
-                                </a>
-                            {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Endurance -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="enduranceHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#enduranceCollapse" aria-expanded="false" aria-controls="enduranceCollapse">
+                                        <i class="bi bi-heart-pulse me-2"></i> Endurance Metrics
+                                    </button>
+                                </h2>
+                                <div id="enduranceCollapse" class="accordion-collapse collapse" aria-labelledby="enduranceHeading">
+                                    <div class="accordion-body">
+                                        <div class="list-group">
+                                            {% for metric in metrics %}
+                                                {% if metric.name in ['Beep Test/Yo-Yo Test', '1-Mile Run', '300-Yard Shuttle', 'Ultimate-Specific Conditioning Test', 'Recovery Heart Rate'] %}
+                                                    <a href="{{ url_for('fitness.batch_record', metric_id=metric.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h5 class="mb-1">{{ metric.name }}</h5>
+                                                            <p class="mb-1 text-muted">{{ metric.description|truncate(100) }}</p>
+                                                            <small>Unit: {{ metric.unit }}</small>
+                                                        </div>
+                                                        <span class="badge {% if metric.higher_is_better %}bg-success{% else %}bg-info{% endif %} rounded-pill">
+                                                            {% if metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                                                        </span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Power & Jumping -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="powerHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#powerCollapse" aria-expanded="false" aria-controls="powerCollapse">
+                                        <i class="bi bi-arrow-up-circle me-2"></i> Power & Jumping Metrics
+                                    </button>
+                                </h2>
+                                <div id="powerCollapse" class="accordion-collapse collapse" aria-labelledby="powerHeading">
+                                    <div class="accordion-body">
+                                        <div class="list-group">
+                                            {% for metric in metrics %}
+                                                {% if metric.name in ['Vertical Jump', 'Broad Jump', 'Box Jump'] %}
+                                                    <a href="{{ url_for('fitness.batch_record', metric_id=metric.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h5 class="mb-1">{{ metric.name }}</h5>
+                                                            <p class="mb-1 text-muted">{{ metric.description|truncate(100) }}</p>
+                                                            <small>Unit: {{ metric.unit }}</small>
+                                                        </div>
+                                                        <span class="badge {% if metric.higher_is_better %}bg-success{% else %}bg-info{% endif %} rounded-pill">
+                                                            {% if metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                                                        </span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Strength & Core -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="strengthHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#strengthCollapse" aria-expanded="false" aria-controls="strengthCollapse">
+                                        <i class="bi bi-battery-charging me-2"></i> Strength & Core Metrics
+                                    </button>
+                                </h2>
+                                <div id="strengthCollapse" class="accordion-collapse collapse" aria-labelledby="strengthHeading">
+                                    <div class="accordion-body">
+                                        <div class="list-group">
+                                            {% for metric in metrics %}
+                                                {% if metric.name in ['Plank Hold', 'Push-Ups', 'Pull-Ups', 'Squat Endurance'] %}
+                                                    <a href="{{ url_for('fitness.batch_record', metric_id=metric.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h5 class="mb-1">{{ metric.name }}</h5>
+                                                            <p class="mb-1 text-muted">{{ metric.description|truncate(100) }}</p>
+                                                            <small>Unit: {{ metric.unit }}</small>
+                                                        </div>
+                                                        <span class="badge {% if metric.higher_is_better %}bg-success{% else %}bg-info{% endif %} rounded-pill">
+                                                            {% if metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                                                        </span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Ultimate Skills -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="skillsHeading">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#skillsCollapse" aria-expanded="false" aria-controls="skillsCollapse">
+                                        <i class="bi bi-disc me-2"></i> Ultimate Skills Metrics
+                                    </button>
+                                </h2>
+                                <div id="skillsCollapse" class="accordion-collapse collapse" aria-labelledby="skillsHeading">
+                                    <div class="accordion-body">
+                                        <div class="list-group">
+                                            {% for metric in metrics %}
+                                                {% if metric.name in ['Maximum Pull Distance', 'Throwing Accuracy', 'Lateral Quickness Drill', 'Jump & Reach'] %}
+                                                    <a href="{{ url_for('fitness.batch_record', metric_id=metric.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <h5 class="mb-1">{{ metric.name }}</h5>
+                                                            <p class="mb-1 text-muted">{{ metric.description|truncate(100) }}</p>
+                                                            <small>Unit: {{ metric.unit }}</small>
+                                                        </div>
+                                                        <span class="badge {% if metric.higher_is_better %}bg-success{% else %}bg-info{% endif %} rounded-pill">
+                                                            {% if metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                                                        </span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     {% else %}
                         <div class="alert alert-warning">
                             <p>No active fitness metrics found. Please create a metric first.</p>
                             <a href="{{ url_for('fitness.add_metric') }}" class="btn btn-primary mt-2">
-                                Create New Metric
+                                <i class="bi bi-plus-circle"></i> Create New Metric
                             </a>
                         </div>
                     {% endif %}
@@ -55,8 +189,8 @@
     <div class="row mt-4">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header">
-                    <h5>About Batch Recording</h5>
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-info-circle"></i> About Batch Recording</h5>
                 </div>
                 <div class="card-body">
                     <p>
@@ -70,6 +204,7 @@
                         <li>You can leave fields blank for players who didn't participate</li>
                         <li>All records will be timestamped with the current date and time</li>
                         <li>You can add optional notes for each player's record</li>
+                        <li>Use the "Fill with previous values" option to pre-populate fields with each player's most recent data</li>
                     </ul>
                 </div>
             </div>

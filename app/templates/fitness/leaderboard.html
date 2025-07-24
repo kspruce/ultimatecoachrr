@@ -5,71 +5,358 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Team Fitness Leaderboards</h1>
+            <p class="text-muted">See who's leading in each fitness category</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('fitness.index') }}" class="btn btn-secondary">
-                Back to Fitness Dashboard
+                <i class="bi bi-arrow-left"></i> Back to Fitness Dashboard
             </a>
         </div>
     </div>
 
-    <div class="row">
+    <!-- Category Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="btn-group w-100" role="group">
+                <a href="#speed-section" class="btn btn-outline-primary">Speed & Agility</a>
+                <a href="#endurance-section" class="btn btn-outline-danger">Endurance</a>
+                <a href="#power-section" class="btn btn-outline-success">Power & Jumping</a>
+                <a href="#strength-section" class="btn btn-outline-warning">Strength & Core</a>
+                <a href="#skills-section" class="btn btn-outline-info">Ultimate Skills</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed & Agility Section -->
+    <div id="speed-section" class="row mb-5">
+        <div class="col-12">
+            <h2 class="border-bottom pb-2 text-primary">
+                <i class="bi bi-lightning-charge"></i> Speed & Agility
+            </h2>
+        </div>
+        
         {% for board in leaderboards %}
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
-                        <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
-                            {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted">{{ board.metric.description }}</p>
-                        
-                        {% if board.records %}
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Rank</th>
-                                            <th>Player</th>
-                                            <th>Value</th>
-                                            <th>Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for record in board.records %}
-                                            <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
-                                                <td>
-                                                    {% if loop.index == 1 %}
-                                                        <i class="bi bi-trophy-fill text-warning"></i> 
-                                                    {% else %}
-                                                        {{ loop.index }}
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
-                                                        {{ record.player.name }}
-                                                    </a>
-                                                </td>
-                                                <td>{{ record.value }} {{ board.metric.unit }}</td>
-                                                <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+            {% if board.metric.name in ['20-Yard Sprint', '40-Yard Sprint', 'Flying 20', '5-10-5 Shuttle/Pro Agility', 'Change of Direction Speed'] %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
+                            <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
+                                {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">{{ board.metric.description }}</p>
+                            
+                            {% if board.records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Player</th>
+                                                <th>Value</th>
+                                                <th>Date</th>
                                             </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <div class="alert alert-info">
-                                No records yet for this metric.
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="card-footer text-end">
-                        <a href="#" class="btn btn-sm btn-outline-primary">View All Results</a>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in board.records %}
+                                                <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
+                                                    <td>
+                                                        {% if loop.index == 1 %}
+                                                            <i class="bi bi-trophy-fill text-warning"></i> 
+                                                        {% else %}
+                                                            {{ loop.index }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                                            {{ record.player.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ record.value }} {{ board.metric.unit }}</td>
+                                                    <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    No records yet for this metric.
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Endurance Section -->
+    <div id="endurance-section" class="row mb-5">
+        <div class="col-12">
+            <h2 class="border-bottom pb-2 text-danger">
+                <i class="bi bi-heart-pulse"></i> Endurance
+            </h2>
+        </div>
+        
+        {% for board in leaderboards %}
+            {% if board.metric.name in ['Beep Test/Yo-Yo Test', '1-Mile Run', '300-Yard Shuttle', 'Ultimate-Specific Conditioning Test', 'Recovery Heart Rate'] %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
+                            <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
+                                {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">{{ board.metric.description }}</p>
+                            
+                            {% if board.records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Player</th>
+                                                <th>Value</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in board.records %}
+                                                <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
+                                                    <td>
+                                                        {% if loop.index == 1 %}
+                                                            <i class="bi bi-trophy-fill text-warning"></i> 
+                                                        {% else %}
+                                                            {{ loop.index }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                                            {{ record.player.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ record.value }} {{ board.metric.unit }}</td>
+                                                    <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    No records yet for this metric.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Power & Jumping Section -->
+    <div id="power-section" class="row mb-5">
+        <div class="col-12">
+            <h2 class="border-bottom pb-2 text-success">
+                <i class="bi bi-arrow-up-circle"></i> Power & Jumping
+            </h2>
+        </div>
+        
+        {% for board in leaderboards %}
+            {% if board.metric.name in ['Vertical Jump', 'Broad Jump', 'Box Jump'] %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <!-- Same structure as previous sections -->
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
+                            <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
+                                {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">{{ board.metric.description }}</p>
+                            
+                            {% if board.records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Player</th>
+                                                <th>Value</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in board.records %}
+                                                <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
+                                                    <td>
+                                                        {% if loop.index == 1 %}
+                                                            <i class="bi bi-trophy-fill text-warning"></i> 
+                                                        {% else %}
+                                                            {{ loop.index }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                                            {{ record.player.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ record.value }} {{ board.metric.unit }}</td>
+                                                    <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    No records yet for this metric.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Strength & Core Section -->
+    <div id="strength-section" class="row mb-5">
+        <div class="col-12">
+            <h2 class="border-bottom pb-2 text-warning">
+                <i class="bi bi-battery-charging"></i> Strength & Core
+            </h2>
+        </div>
+        
+        {% for board in leaderboards %}
+            {% if board.metric.name in ['Plank Hold', 'Push-Ups', 'Pull-Ups', 'Squat Endurance'] %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <!-- Same structure as previous sections -->
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
+                            <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
+                                {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">{{ board.metric.description }}</p>
+                            
+                            {% if board.records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Player</th>
+                                                <th>Value</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in board.records %}
+                                                <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
+                                                    <td>
+                                                        {% if loop.index == 1 %}
+                                                            <i class="bi bi-trophy-fill text-warning"></i> 
+                                                        {% else %}
+                                                            {{ loop.index }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                                            {{ record.player.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ record.value }} {{ board.metric.unit }}</td>
+                                                    <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    No records yet for this metric.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Ultimate Skills Section -->
+    <div id="skills-section" class="row mb-5">
+        <div class="col-12">
+            <h2 class="border-bottom pb-2 text-info">
+                <i class="bi bi-disc"></i> Ultimate Skills
+            </h2>
+        </div>
+        
+        {% for board in leaderboards %}
+            {% if board.metric.name in ['Maximum Pull Distance', 'Throwing Accuracy', 'Lateral Quickness Drill', 'Jump & Reach'] %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <!-- Same structure as previous sections -->
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
+                            <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
+                                {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">{{ board.metric.description }}</p>
+                            
+                            {% if board.records %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Rank</th>
+                                                <th>Player</th>
+                                                <th>Value</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in board.records %}
+                                                <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
+                                                    <td>
+                                                        {% if loop.index == 1 %}
+                                                            <i class="bi bi-trophy-fill text-warning"></i> 
+                                                        {% else %}
+                                                            {{ loop.index }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                                            {{ record.player.name }}
+                                                        </a>
+                                                    </td>
+                                                    <td>{{ record.value }} {{ board.metric.unit }}</td>
+                                                    <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    No records yet for this metric.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
         {% endfor %}
     </div>
     

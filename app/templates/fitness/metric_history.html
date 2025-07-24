@@ -5,13 +5,14 @@
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>{{ player.name }}: {{ metric.name }} History</h1>
+            <p class="text-muted">{{ metric.description }}</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-primary">
-                Record New Data
+                <i class="bi bi-plus-circle"></i> Record New Data
             </a>
             <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-secondary">
-                Back to Fitness Profile
+                <i class="bi bi-arrow-left"></i> Back to Fitness Profile
             </a>
         </div>
     </div>
@@ -19,13 +20,20 @@
     <div class="row">
         <div class="col-md-8">
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Progress Chart</h5>
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-graph-up"></i> Progress Chart</h5>
                 </div>
                 <div class="card-body">
                     {% if records %}
                         <div class="chart-container" style="position: relative; height:300px;">
                             <canvas id="progressChart"></canvas>
+                        </div>
+                        <div class="text-center mt-3">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="viewAll">All Time</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="viewYear">Past Year</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="viewMonth">Past Month</button>
+                            </div>
                         </div>
                     {% else %}
                         <div class="alert alert-info">
@@ -36,8 +44,8 @@
             </div>
             
             <div class="card">
-                <div class="card-header">
-                    <h5>Record History</h5>
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="bi bi-list-ul"></i> Record History</h5>
                 </div>
                 <div class="card-body">
                     {% if records %}
@@ -55,7 +63,16 @@
                                     {% for record in records %}
                                         <tr>
                                             <td>{{ record.date_recorded.strftime('%Y-%m-%d %H:%M') }}</td>
-                                            <td>{{ record.value }} {{ metric.unit }}</td>
+                                            <td>
+                                                <strong>{{ record.value }} {{ metric.unit }}</strong>
+                                                {% if loop.index == 1 %}
+                                                    <span class="badge bg-primary">Latest</span>
+                                                {% endif %}
+                                                
+                                                {% if record.value == best_value %}
+                                                    <span class="badge bg-success">Best</span>
+                                                {% endif %}
+                                            </td>
                                             <td>{{ record.notes or '-' }}</td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" 
@@ -104,8 +121,8 @@
         
         <div class="col-md-4">
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Metric Information</h5>
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-info-circle"></i> Metric Information</h5>
                 </div>
                 <div class="card-body">
                     <p><strong>Name:</strong> {{ metric.name }}</p>
@@ -122,8 +139,8 @@
             </div>
             
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Statistics</h5>
+                <div class="card-header bg-success text-white">
+                    <h5><i class="bi bi-bar-chart"></i> Statistics</h5>
                 </div>
                 <div class="card-body">
                     {% if records %}
@@ -139,6 +156,7 @@
                                                 {{ records|map(attribute='value')|min }}
                                             {% endif %}
                                         </h4>
+                                        <small class="text-muted">{{ best_date.strftime('%Y-%m-%d') }}</small>
                                     </div>
                                 </div>
                             </div>
@@ -149,6 +167,7 @@
                                         <h4>
                                             {{ (records|map(attribute='value')|sum / records|length)|round(2) }}
                                         </h4>
+                                        <small class="text-muted">{{ records|length }} records</small>
                                     </div>
                                 </div>
                             </div>
@@ -157,14 +176,24 @@
                                     <div class="card-body">
                                         <h6>Team Avg</h6>
                                         <h4>{{ team_average or 'N/A' }}</h4>
+                                        <small class="text-muted">All active players</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="card bg-light">
                                     <div class="card-body">
-                                        <h6>Records</h6>
-                                        <h4>{{ records|length }}</h4>
+                                        <h6>Trend</h6>
+                                        <h4>
+                                            {% if trend > 0 %}
+                                                <span class="text-success"><i class="bi bi-arrow-up"></i> {{ trend|abs|round(1) }}%</span>
+                                            {% elif trend < 0 %}
+                                                <span class="text-danger"><i class="bi bi-arrow-down"></i> {{ trend|abs|round(1) }}%</span>
+                                            {% else %}
+                                                <span class="text-muted">No change</span>
+                                            {% endif %}
+                                        </h4>
+                                        <small class="text-muted">Last 3 records</small>
                                     </div>
                                 </div>
                             </div>
@@ -177,10 +206,12 @@
                                 <a href="{{ url_for('team.player_detail', player_id=record_holder.player.id) }}">
                                     {{ record_holder.player.name }}
                                 </a>
+                                <small class="d-block text-muted">{{ record_holder.date_recorded.strftime('%Y-%m-%d') }}</small>
                             </div>
                         {% elif record_holder and record_holder.player.id == player.id %}
                             <div class="alert alert-success mt-3">
-                                <strong>Congratulations!</strong> You hold the team record for this metric.
+                                <strong><i class="bi bi-trophy"></i> Congratulations!</strong> You hold the team record for this metric.
+                                <small class="d-block">{{ record_holder.value }} {{ metric.unit }} on {{ record_holder.date_recorded.strftime('%Y-%m-%d') }}</small>
                             </div>
                         {% endif %}
                     {% else %}
@@ -188,6 +219,31 @@
                             No data available to calculate statistics.
                         </div>
                     {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5><i class="bi bi-flag"></i> Set a Goal</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('fitness.set_goal', player_id=player.id, metric_id=metric.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label for="targetValue" class="form-label">Target Value ({{ metric.unit }})</label>
+                            <input type="number" class="form-control" id="targetValue" name="target_value" step="any" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="targetDate" class="form-label">Target Date</label>
+                            <input type="date" class="form-control" id="targetDate" name="target_date" required>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-warning">Set Goal</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -201,47 +257,89 @@
 document.addEventListener('DOMContentLoaded', function() {
     {% if records %}
         // Fetch data for the chart
-        fetch('{{ url_for("fitness.api_player_metric_chart_data", player_id=player.id, metric_id=metric.id) }}')
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById('progressChart').getContext('2d');
-                const chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: '{{ metric.name }}',
-                            data: data.values,
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            tension: 0.1,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: {% if metric.higher_is_better %}true{% else %}false{% endif %}
-                            }
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `${context.dataset.label}: ${context.parsed.y} {{ metric.unit }}`;
-                                    }
-                                }
+        const allData = {
+            labels: [{% for record in records %}'{{ record.date_recorded.strftime("%Y-%m-%d") }}',{% endfor %}],
+            values: [{% for record in records %}{{ record.value }},{% endfor %}]
+        };
+        
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        let progressChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: allData.labels,
+                datasets: [{
+                    label: '{{ metric.name }}',
+                    data: allData.values,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: {% if metric.higher_is_better %}true{% else %}false{% endif %}
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y} {{ metric.unit }}`;
                             }
                         }
                     }
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching chart data:', error);
-                document.querySelector('.chart-container').innerHTML = '<div class="alert alert-danger">Error loading chart data</div>';
-            });
+                }
+            }
+        });
+        
+        // Time filter buttons
+        document.getElementById('viewAll').addEventListener('click', function() {
+            updateChart(allData.labels, allData.values);
+        });
+        
+        document.getElementById('viewYear').addEventListener('click', function() {
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            
+            const filteredData = filterDataByDate(allData, oneYearAgo);
+            updateChart(filteredData.labels, filteredData.values);
+        });
+        
+        document.getElementById('viewMonth').addEventListener('click', function() {
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            
+            const filteredData = filterDataByDate(allData, oneMonthAgo);
+            updateChart(filteredData.labels, filteredData.values);
+        });
+        
+        function filterDataByDate(data, startDate) {
+            const filteredLabels = [];
+            const filteredValues = [];
+            
+            for (let i = 0; i < data.labels.length; i++) {
+                const recordDate = new Date(data.labels[i]);
+                if (recordDate >= startDate) {
+                    filteredLabels.push(data.labels[i]);
+                    filteredValues.push(data.values[i]);
+                }
+            }
+            
+            return {
+                labels: filteredLabels,
+                values: filteredValues
+            };
+        }
+        
+        function updateChart(labels, values) {
+            progressChart.data.labels = labels;
+            progressChart.data.datasets[0].data = values;
+            progressChart.update();
+        }
     {% endif %}
 });
 </script>

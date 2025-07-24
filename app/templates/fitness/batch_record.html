@@ -16,7 +16,7 @@
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('fitness.batch_record') }}" class="btn btn-secondary">
-                Choose Different Metric
+                <i class="bi bi-arrow-left"></i> Choose Different Metric
             </a>
         </div>
     </div>
@@ -24,12 +24,14 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Record Data for All Players</h5>
-                    <span class="badge bg-primary">{{ players|length }} Active Players</span>
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5><i class="bi bi-people"></i> Record Data for All Players</h5>
+                    <span class="badge bg-light text-dark">{{ players|length }} Active Players</span>
                 </div>
                 <div class="card-body">
-                    <p>{{ metric.description }}</p>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> <strong>Instructions:</strong> {{ metric.description }}
+                    </div>
                     
                     <form method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -53,6 +55,7 @@
                                                         <span class="badge bg-secondary">#{{ player.jersey_number }}</span>
                                                     {% endif %}
                                                 </label>
+                                                <input type="hidden" id="player_id_{{ player.id }}" value="{{ player.id }}">
                                             </td>
                                             <td>
                                                 <input type="number" 
@@ -79,16 +82,86 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="fillWithPrevious">
                                 <label class="form-check-label" for="fillWithPrevious">
-                                    Fill with previous values (where available)
+                                    <i class="bi bi-clock-history"></i> Fill with previous values (where available)
                                 </label>
                             </div>
                             
                             <div>
-                                <button type="reset" class="btn btn-outline-secondary me-2">Clear All</button>
-                                <button type="submit" class="btn btn-primary">Save All Records</button>
+                                <button type="reset" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-x-circle"></i> Clear All
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Save All Records
+                                </button>
                             </div>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="bi bi-trophy"></i> Current Records</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Current team records for this metric:</p>
+                    
+                    {% if top_records %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Player</th>
+                                        <th>Value</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in top_records %}
+                                        <tr>
+                                            <td>{{ record.player.name }}</td>
+                                            <td>{{ record.value }} {{ metric.unit }}</td>
+                                            <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p>No records yet for this metric.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Move to next player</span>
+                            <span class="badge bg-secondary">Enter</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Move to previous player</span>
+                            <span class="badge bg-secondary">Shift + Enter</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Move to notes field</span>
+                            <span class="badge bg-secondary">Tab</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Submit form</span>
+                            <span class="badge bg-secondary">Ctrl + Enter</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -104,25 +177,29 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fillCheckbox) {
         fillCheckbox.addEventListener('change', function() {
             if (this.checked) {
-                // This would typically make an AJAX call to get previous values
-                // For demonstration, we'll show an alert
-                alert('This would fetch the most recent values for each player. In a real implementation, this would make an AJAX call to your server.');
-                
-                // Example of how you might implement this:
-                /*
+                // Make an AJAX call to get previous values
                 fetch('/fitness/api/previous-values/{{ metric.id }}')
                     .then(response => response.json())
                     .then(data => {
                         // For each player with previous data
                         for (const playerId in data) {
                             const valueInput = document.getElementById(`value_${playerId}`);
+                            const notesInput = document.getElementById(`notes_${playerId}`);
+                            
                             if (valueInput && !valueInput.value) {
                                 valueInput.value = data[playerId].value;
                             }
+                            
+                            if (notesInput && !notesInput.value && data[playerId].notes) {
+                                notesInput.value = data[playerId].notes;
+                            }
                         }
                     })
-                    .catch(error => console.error('Error fetching previous values:', error));
-                */
+                    .catch(error => {
+                        console.error('Error fetching previous values:', error);
+                        alert('Failed to load previous values. Please try again.');
+                        this.checked = false;
+                    });
             }
         });
     }
@@ -142,24 +219,48 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Optional: Add keyboard navigation between rows
-    document.querySelectorAll('input').forEach(input => {
+    // Add keyboard navigation between rows
+    document.querySelectorAll('input[id^="value_"]').forEach(input => {
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 
-                // Find the next row's first input
+                // Find the current player ID
+                const currentPlayerId = this.id.split('_')[1];
+                
+                // Find the next row's value input
                 const currentRow = this.closest('tr');
                 const nextRow = currentRow.nextElementSibling;
                 
                 if (nextRow) {
-                    const nextInput = nextRow.querySelector('input');
+                    const nextInput = nextRow.querySelector('input[id^="value_"]');
                     if (nextInput) nextInput.focus();
+                } else if (e.ctrlKey) {
+                    // Ctrl+Enter submits the form
+                    this.form.submit();
+                }
+            } else if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                
+                // Find the previous row's value input
+                const currentRow = this.closest('tr');
+                const prevRow = currentRow.previousElementSibling;
+                
+                if (prevRow) {
+                    const prevInput = prevRow.querySelector('input[id^="value_"]');
+                    if (prevInput) prevInput.focus();
                 }
             }
         });
     });
+    
+    // Submit form with Ctrl+Enter from anywhere
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            document.querySelector('form').submit();
+        }
+    });
 });
 </script>
 {% endblock %}
-
