@@ -2436,6 +2436,7 @@ def calculate_additional_team_metrics(games):
     total_d_points = 0
     d_line_goals_after_turnover = 0
     d_line_turnovers = 0
+    total_d_line_possessions = 0
     
     for game in games:
         # Process O-line points
@@ -2468,6 +2469,10 @@ def calculate_additional_team_metrics(games):
             point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
             d_line_turnovers += point_turnovers
             
+            # Count possessions in this point
+            point_possessions = count_d_line_possessions(point)
+            total_d_line_possessions += point_possessions
+            
             # Check if this is a clean break (we scored without losing possession)
             if point.we_scored:
                 # Check if we had any turnovers after our first block
@@ -2488,7 +2493,7 @@ def calculate_additional_team_metrics(games):
     clean_break_percentage = (clean_break_count / total_d_points * 100) if total_d_points > 0 else 0
     avg_o_turnovers_per_point = o_line_turnovers / total_o_points if total_o_points > 0 else 0
     avg_d_turnovers_per_point = d_line_turnovers / total_d_points if total_d_points > 0 else 0
-    goals_per_turnover_ratio = (d_line_goals_after_turnover / d_line_turnovers * 100) if d_line_turnovers > 0 else 0    
+    possessions_per_goal = (d_line_turnovers / d_line_goals_after_turnover) if d_line_goals_after_turnover > 0 else 0   
     
     result = {
         'completion_rate': (completions / len(throws)) * 100 if throws else 0,
@@ -2508,13 +2513,35 @@ def calculate_additional_team_metrics(games):
         
         # New defensive metrics
         'clean_break_percentage': clean_break_percentage,
-        'goals_per_turnover_ratio': goals_per_turnover_ratio,
+        'possessions_per_goal': possessions_per_goal,
         'avg_d_turnovers_per_point': avg_d_turnovers_per_point,        
         }
     
     return result
 
-
+def count_d_line_possessions(point):
+    """Count number of D-line possessions in a point"""
+    possessions = 0
+    has_possession = False
+    
+    # Sort events by timestamp
+    events = sorted(point.events, key=lambda e: e.timestamp or 0)
+    
+    for event in events:
+        # D-line gains possession through a block
+        if event.event_type == 'block' and not has_possession:
+            has_possession = True
+            possessions += 1
+        
+        # D-line scores (end of possession)
+        elif event.event_type == 'goal' and has_possession:
+            has_possession = False
+        
+        # D-line turns it over (end of possession)
+        elif event.event_type in ['throwaway', 'drop', 'stall'] and has_possession:
+            has_possession = False
+    
+    return possessions
 
 def get_previous_period_games(season, tournament_id):
     """Get games from previous period for comparison"""

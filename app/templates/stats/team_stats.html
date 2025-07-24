@@ -196,9 +196,9 @@
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ (team_summary.goals_per_turnover_ratio|default(0))|round(1) }}%</div>
-                                <div class="stat-label">Goals/Turnover</div>
-                                <small class="text-muted">Conversion efficiency</small>
+                                <div class="stat-value">{{ (team_summary.possessions_per_goal|default(0))|round(1) }}</div>
+                                <div class="stat-label">Possessions/Goal</div>
+                                <small class="text-muted">Avg possessions needed to score</small>
                             </div>
                         </div>
                         <div class="col-md-4">
