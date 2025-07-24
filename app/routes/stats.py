@@ -2460,39 +2460,42 @@ def calculate_additional_team_metrics(games):
             if point_turnovers > 0 and point.we_scored:
                 regain_offense_count += 1
         
-        # Process D-line points
-        for point in game.d_line_points:
-            total_d_points += 1
-            
-            # Get events for this point
-            events = sorted(point.events, key=lambda e: e.timestamp or 0)
-            
-            # Count turnovers in this point
-            point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
-            d_line_turnovers += point_turnovers
-            
-            # Count possessions in this point
-            point_possessions = count_d_line_possessions(point)
-            total_d_line_possessions += point_possessions
-           
-            # Count blocks (possessions gained) in this point
-            point_blocks = sum(1 for e in events if e.event_type == 'block')
-            d_line_possessions_gained += point_blocks            
-           
-            # Check if this is a clean break (we scored without losing possession after block)
-            if point.we_scored:
-                # Find the first block
-                block_index = next((i for i, e in enumerate(events) if e.event_type == 'block'), -1)
+            # Process D-line points
+            for point in game.d_line_points:
+                total_d_points += 1
                 
-                # Count turnovers after the block
-                turnovers_after_block = sum(1 for e in events[block_index:] 
-                                          if e.event_type in ['throwaway', 'drop', 'stall'])
+                # Get events for this point
+                events = sorted(point.events, key=lambda e: e.timestamp or 0)
                 
-                if turnovers_after_block == 0:
-                    clean_break_count += 1
+                # Count turnovers in this point
+                point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
+                d_line_turnovers += point_turnovers
                 
-                # Count goals after block (possession gain)
-                d_line_goals_after_turnover += 1
+                # Count blocks (possessions gained) in this point
+                point_blocks = sum(1 for e in events if e.event_type == 'block')
+                d_line_possessions_gained += point_blocks
+                
+                # Check if we had at least one block in this point
+                had_block = point_blocks > 0
+                
+                if had_block:
+                    points_with_block += 1  # THIS IS THE KEY ADDITION
+                    
+                    # Check if this is a clean break (we scored without losing possession after block)
+                    if point.we_scored:
+                        # Find the first block
+                        block_index = next((i for i, e in enumerate(events) if e.event_type == 'block'), -1)
+                        
+                        # Count turnovers after the block
+                        turnovers_after_block = sum(1 for e in events[block_index:] 
+                                                  if e.event_type in ['throwaway', 'drop', 'stall'])
+                        
+                        if turnovers_after_block == 0:
+                            clean_break_count += 1
+                        
+                        # Count goals after block (possession gain)
+                        d_line_goals_after_turnover += 1
+
     
     # Calculate percentages and averages
     clean_hold_percentage = (clean_hold_count / total_o_points * 100) if total_o_points > 0 else 0

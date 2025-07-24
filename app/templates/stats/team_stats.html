@@ -154,9 +154,8 @@
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ (team_summary.avg_possessions_gained_per_point|default(0))|round(2) }}</div>
-                                <div class="stat-label">Possessions Gained/Point</div>
-                                <small class="text-muted">D-line turnover generation</small>
+                                <div class="stat-value">{{ (team_summary.avg_o_turnovers_per_point|default(0))|round(2) }}</div>
+                                <div class="stat-label">Avg Turnovers/Point</div>
                             </div>
                         </div>
                     </div>
@@ -204,8 +203,9 @@
                         </div>
                         <div class="col-md-4">
                             <div class="stat-card">
-                                <div class="stat-value">{{ (team_summary.avg_d_turnovers_per_point|default(0))|round(2) }}</div>
-                                <div class="stat-label">Avg Turnovers/Point</div>
+                                <div class="stat-value">{{ (team_summary.avg_possessions_gained_per_point|default(0))|round(2) }}</div>
+                                <div class="stat-label">Possessions Gained/Point</div>
+                                <small class="text-muted">D-line turnover generation</small>
                             </div>
                         </div>
                     </div>
