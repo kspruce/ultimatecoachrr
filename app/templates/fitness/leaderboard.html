@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Team Fitness Leaderboards</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('fitness.index') }}" class="btn btn-secondary">
+                Back to Fitness Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for board in leaderboards %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>{{ board.metric.name }} ({{ board.metric.unit }})</h5>
+                        <span class="badge {% if board.metric.higher_is_better %}bg-success{% else %}bg-info{% endif %}">
+                            {% if board.metric.higher_is_better %}Higher is better{% else %}Lower is better{% endif %}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">{{ board.metric.description }}</p>
+                        
+                        {% if board.records %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Player</th>
+                                            <th>Value</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in board.records %}
+                                            <tr {% if loop.index == 1 %}class="table-warning"{% endif %}>
+                                                <td>
+                                                    {% if loop.index == 1 %}
+                                                        <i class="bi bi-trophy-fill text-warning"></i> 
+                                                    {% else %}
+                                                        {{ loop.index }}
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                                        {{ record.player.name }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ record.value }} {{ board.metric.unit }}</td>
+                                                <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                No records yet for this metric.
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer text-end">
+                        <a href="#" class="btn btn-sm btn-outline-primary">View All Results</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>About Team Leaderboards</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        These leaderboards show the top 5 performers for each fitness metric. 
+                        Leaderboards are updated automatically when new fitness data is recorded.
+                    </p>
+                    <p>
+                        <strong>Note:</strong> Only active players are included in the leaderboards.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
