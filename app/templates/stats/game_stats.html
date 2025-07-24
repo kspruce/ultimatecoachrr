@@ -116,6 +116,31 @@
         </div>
     </div>
     
+    <!-- Add new row for additional efficiency stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="stat-value">{{ (team_stats.clean_hold_percentage|default(0))|round(1) }}%</div>
+                <div class="stat-label">Clean Hold %</div>
+                <small class="text-muted">Scoring without turnovers</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="stat-value">{{ (team_stats.clean_break_percentage|default(0))|round(1) }}%</div>
+                <div class="stat-label">Clean Break %</div>
+                <small class="text-muted">Scoring after block without turnovers</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <div class="stat-value">{{ (team_stats.avg_possessions_gained_per_point|default(0))|round(2) }}</div>
+                <div class="stat-label">Possessions Gained/Point</div>
+                <small class="text-muted">D-line turnover generation</small>
+            </div>
+        </div>
+    </div>
+    
     <div class="row mb-4">
         <div class="col-md-6">
             <div class="card">
@@ -144,7 +169,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>Field Heatmap</h5>
+                    <h5>Field Heatmap (WIP)</h5>
                 </div>
                 <div class="card-body">
                     <div id="field-heatmap">
@@ -160,7 +185,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>Player Connections</h5>
+                    <h5>Player Connections (WIP)</h5>
                 </div>
                 <div class="card-body">
                     <div id="player-connections"></div>
@@ -172,12 +197,16 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Player Statistics</h5>
+                    {% if is_admin(current_user) or is_coach(current_user) %}
+                    <span class="badge bg-info">Admin/Coach View: Showing all players</span>
+                    {% elif current_user.player %}
+                    <span class="badge bg-info">Showing your stats only</span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <!-- Update player stats table -->
                         <table class="table table-striped" id="player-stats-table">
                             <thead>
                                 <tr>
@@ -196,30 +225,37 @@
                             </thead>
                             <tbody>
                                 {% for item in player_stats %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=item.player.id, game_id=game.id) }}">
-                                            {{ item.player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ item.stats.points_played }}</td>
-                                    <td>{{ item.stats.goals }}</td>
-                                    <td>{{ item.stats.assists }}</td>
-                                    <td>{{ item.stats.hockey_assists }}</td>
-                                    <td>{{ item.stats.blocks }}</td>
-                                    <td>
-                                        {{ item.stats.completions }}
-                                        <small class="text-muted">({{ item.stats.completion_rate|round(1) }}%)</small>
-                                    </td>
-                                    <td>{{ item.stats.turnovers }}</td>
-                                    <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
-                                    <td>{{ item.stats.per|round(1) }}</td>
-                                    <td>{{ calculate_impact_score(item.stats)|round(1) }}</td>
-                                </tr>
+                                    {% if is_admin(current_user) or is_coach(current_user) or (current_user.player and current_user.player.id == item.player.id) %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('stats_dashboard.player_stats', player_id=item.player.id, game_id=game.id) }}">
+                                                {{ item.player.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ item.stats.points_played }}</td>
+                                        <td>{{ item.stats.goals }}</td>
+                                        <td>{{ item.stats.assists }}</td>
+                                        <td>{{ item.stats.hockey_assists }}</td>
+                                        <td>{{ item.stats.blocks }}</td>
+                                        <td>
+                                            {{ item.stats.completions }}
+                                            <small class="text-muted">({{ item.stats.completion_rate|round(1) }}%)</small>
+                                        </td>
+                                        <td>{{ item.stats.turnovers }}</td>
+                                        <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
+                                        <td>{{ item.stats.per|round(1) }}</td>
+                                        <td>{{ calculate_impact_score(item.stats)|round(1) }}</td>
+                                    </tr>
+                                    {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    {% if not is_admin(current_user) and not is_coach(current_user) and not current_user.player %}
+                    <div class="alert alert-info mt-3">
+                        You need to be linked to a player account to see individual stats.
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -493,8 +529,13 @@ function initializeHeatmap() {
         // Initialize DataTable
         $('#player-stats-table').DataTable({
             "pageLength": 10,
-            "order": [[8, "desc"]]
+            "order": [[8, "desc"]],
+            "language": {
+                "emptyTable": "No player statistics available"
+            },
+            "responsive": true
         });
+
     });
 </script>
 {% endblock %}

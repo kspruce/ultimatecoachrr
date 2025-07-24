@@ -1627,6 +1627,9 @@ def game_stats(game_id):
     heatmap_data = process_heatmap_data(team_name=team_name)
     connection_data = generate_player_connections(team_name=team_name)
     
+    # Add additional team metrics
+    team_stats.update(calculate_additional_team_metrics([game]))
+    
     return render_template(
         'stats/game_stats.html',
         game=game,
@@ -1634,8 +1637,11 @@ def game_stats(game_id):
         player_stats=player_stats,
         heatmap_data=json.dumps(heatmap_data),
         connections=json.dumps(connection_data),
-        calculate_impact_score=calculate_impact_score
+        calculate_impact_score=calculate_impact_score,
+        is_admin=is_admin,
+        is_coach=is_coach
     )
+
 
 @bp.route('/team')
 @login_required

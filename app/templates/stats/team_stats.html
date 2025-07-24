@@ -514,56 +514,6 @@
             </form>
         </div>
     </div>
-    
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Player Statistics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="player-stats-table">
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Position</th>
-                                    <th>Points</th>
-                                    <th>Goals</th>
-                                    <th>Assists</th>
-                                    <th>Blocks</th>
-                                    <th>Comp %</th>
-                                    <th>Turnovers</th>
-                                    <th>+/-</th>
-                                    <th>PER</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in player_stats %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=item.player.id) }}">
-                                            {{ item.player.name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ item.player.position|capitalize }}</td>
-                                    <td>{{ item.stats.points_played }}</td>
-                                    <td>{{ item.stats.goals }}</td>
-                                    <td>{{ item.stats.assists }}</td>
-                                    <td>{{ item.stats.blocks }}</td>
-                                    <td>{{ item.stats.completion_rate|round(1) }}%</td>
-                                    <td>{{ item.stats.throwaways + item.stats.drops }}</td>
-                                    <td>{{ item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.throwaways - item.stats.drops }}</td>
-                                    <td>{{ item.stats.per|round(1) }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}
 
