@@ -301,9 +301,9 @@
                     </div>
                     <div class="col-md-4">
                         <!-- Next event or quick stat for the player -->
-                        <div class="card-body">
-                            <h5 class="mb-3">Upcoming Events</h5>
-                            <div class="upcoming-events-container" style="max-height: 250px; overflow-y: auto; padding-right: 5px;">
+                        <div class="mt-0 pt-0">
+                            <h5 class="mb-2">Upcoming Events</h5>
+                            <div class="upcoming-events-container" style="max-height: 200px; overflow-y: auto; padding-right: 5px;">
                                 {% if upcoming_events %}
                                     {% for event in upcoming_events %}
                                     <div class="upcoming-event {{ event.type }}">
