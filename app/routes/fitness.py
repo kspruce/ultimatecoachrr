@@ -59,7 +59,7 @@ def player_fitness(player_id):
     """View fitness data for a specific player"""
     player = Player.query.get_or_404(player_id)
     
-    # Check permissions
+    # Check permissions - only the player, coaches, or admins can view detailed fitness data
     if not (current_user.is_admin or 
             (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
@@ -106,6 +106,15 @@ def player_fitness(player_id):
                     'team_average': team_avg,
                     'record_holder': record_holder
                 })
+    
+    # Create a dictionary of all metric categories for the template
+    all_metrics = {
+        'sprinting_metrics': categorized_metrics['sprinting'],
+        'endurance_metrics': categorized_metrics['endurance'],
+        'power_metrics': categorized_metrics['power'],
+        'strength_metrics': categorized_metrics['strength'],
+        'skills_metrics': categorized_metrics['skills']
+    }
     
     # Prepare radar chart data
     radar_labels = []
@@ -174,6 +183,14 @@ def player_fitness(player_id):
     all_player_metrics.sort(key=lambda x: x['percentile'], reverse=True)
     top_metrics = all_player_metrics[:4]
     
+    # Get fitness goals if implemented
+    fitness_goals = []  # This would be populated if you implement goals functionality
+    
+    # Get recent records for this player
+    recent_records = FitnessRecord.query.filter_by(player_id=player_id).order_by(
+        FitnessRecord.date_recorded.desc()
+    ).limit(5).all()
+    
     return render_template('fitness/player_fitness.html',
                           player=player,
                           sprinting_metrics=categorized_metrics['sprinting'],
@@ -181,10 +198,14 @@ def player_fitness(player_id):
                           power_metrics=categorized_metrics['power'],
                           strength_metrics=categorized_metrics['strength'],
                           skills_metrics=categorized_metrics['skills'],
+                          all_metrics=all_metrics,  # This is the key addition for fixing the template error
                           radar_labels=radar_labels,
                           player_radar_data=player_radar_data,
                           team_radar_data=team_radar_data,
-                          top_metrics=top_metrics)
+                          top_metrics=top_metrics,
+                          fitness_goals=fitness_goals,
+                          recent_records=recent_records)
+
 
 
 @bp.route('/record/<int:player_id>', methods=['GET', 'POST'])

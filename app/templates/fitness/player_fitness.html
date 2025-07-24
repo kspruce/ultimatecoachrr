@@ -430,10 +430,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Individual metric charts
-    {% for category in ['sprinting_metrics', 'endurance_metrics', 'power_metrics', 'strength_metrics', 'skills_metrics'] %}
-        {% for data in vars()[category]|default([]) %}
-            {% if data.history %}
-                const ctx{{ data.metric.id }} = document.getElementById('chart-{{ data.metric.id }}').getContext('2d');
+{% for category_name, metrics in all_metrics.items() %}
+    {% for data in metrics %}
+        {% if data.history %}
+            const ctx{{ data.metric.id }} = document.getElementById('chart-{{ data.metric.id }}').getContext('2d');
                 const chart{{ data.metric.id }} = new Chart(ctx{{ data.metric.id }}, {
                     type: 'line',
                     data: {
