@@ -302,6 +302,7 @@
                     <div class="col-md-4">
                         <!-- Next event or quick stat for the player -->
                         <div class="card-body">
+                            <h5 class="mb-3">Upcoming Events</h5>
                             {% if upcoming_events %}
                                 {% for event in upcoming_events %}
                                 <div class="upcoming-event {{ event.type }}">
@@ -510,8 +511,8 @@
 
 {% if current_user.is_authenticated %}
 <div class="row mt-4">
-    <!-- Left Column: Recent Activity and Quick Stats -->
-    <div class="col-md-8">
+    <!-- Full Width Column: Recent Activity and Quick Stats -->
+    <div class="col-md-12">
         <!-- Recent Activity -->
         <div class="card mb-4">
             <div class="card-header">
