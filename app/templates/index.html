@@ -258,10 +258,10 @@
     <h1 class="display-4 mb-3">Welcome to Ultimate Coach</h1>
     <p class="lead">Your all-in-one solution for Ultimate Frisbee team management, game analysis, and coaching.</p>
     <hr class="my-4">
-    <p class="mb-4">Manage your team, track game statistics, analyze performance, and develop training sessions all in one place.</p>
+    <p class="mb-4">Manage your team, track game statistics, analyse performance, and develop training sessions all in one place.</p>
     
-    <h2 class="section-heading">Organization</h2>
-    <!-- Organization Section -->
+    <h2 class="section-heading">Organisation</h2>
+    <!-- Organisation Section -->
     <div class="row">
         <div class="col-md-4">
             <div class="card feature-card mb-4">
@@ -281,13 +281,18 @@
             <div class="card feature-card mb-4">
                 <div class="card-body">
                     <div class="card-icon">
-                        <i class="bi bi-flag-fill"></i>
+                        <i class="bi bi-controller"></i>
                     </div>
-                    <h5 class="card-title">Tournaments</h5>
-                    <p class="card-text">Manage tournament schedules, results, and team participation.</p>
-                    <a href="{{ url_for('tournament.index') }}" class="btn btn-primary">
-                        View Tournaments
-                    </a>
+                    <h5 class="card-title">Games & Tournaments</h5>
+                    <p class="card-text">Manage games, tournaments, results, and team participation.</p>
+                    <div class="btn-group">
+                        <a href="{{ url_for('game.index') }}" class="btn btn-primary">
+                            Games
+                        </a>
+                        <a href="{{ url_for('tournament.index') }}" class="btn btn-primary">
+                            Tournaments
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -295,12 +300,12 @@
             <div class="card feature-card mb-4">
                 <div class="card-body">
                     <div class="card-icon">
-                        <i class="bi bi-trophy-fill"></i>
+                        <i class="bi bi-heart-pulse"></i>
                     </div>
-                    <h5 class="card-title">Game Management</h5>
-                    <p class="card-text">Track game results, record detailed statistics, and analyze performance.</p>
-                    <a href="{{ url_for('game.index') }}" class="btn btn-primary">
-                        View Games
+                    <h5 class="card-title">Fitness Tracking</h5>
+                    <p class="card-text">Track, analyse, and improve player fitness metrics and performance.</p>
+                    <a href="{{ url_for('fitness.index') }}" class="btn btn-primary">
+                        Fitness Dashboard
                     </a>
                 </div>
             </div>
@@ -331,7 +336,7 @@
                         <i class="bi bi-book-fill"></i>
                     </div>
                     <h5 class="card-title">Playbook</h5>
-                    <p class="card-text">Create, organize and review team plays and formations.</p>
+                    <p class="card-text">Create, organise and review team plays and formations.</p>
                     <a href="{{ url_for('playbook.index') }}" class="btn btn-primary">
                         View Playbook
                     </a>
@@ -364,7 +369,7 @@
                         <i class="bi bi-graph-up"></i>
                     </div>
                     <h5 class="card-title">Statistics Analysis</h5>
-                    <p class="card-text">Visualize player and team performance with detailed analytics.</p>
+                    <p class="card-text">Visualise player and team performance with detailed analytics.</p>
                     <div class="stats-dropdown-wrapper">
                         <div class="btn-group">
                             <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-primary">
@@ -406,7 +411,7 @@
                         <i class="bi bi-camera-video-fill"></i>
                     </div>
                     <h5 class="card-title">Clip Library</h5>
-                    <p class="card-text">Store and organize video clips of games and plays for review.</p>
+                    <p class="card-text">Store and organise video clips of games and plays for review.</p>
                     <a href="{{ url_for('clip.index') }}" class="btn btn-primary">
                         Browse Clips
                     </a>

@@ -27,24 +27,42 @@
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Return to homepage"><i class="bi bi-house-fill"></i> Home</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('team.index') }}"
-                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                           title="Manage team roster"><i class="bi bi-people-fill"></i> Team</a>
-                    </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="gamesDropdown" 
+                        <a class="nav-link dropdown-toggle" href="#" id="clubDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                           title="Manage games and tournaments">
-                            <i class="bi bi-controller"></i> Games
+                           title="Manage club, team, games and tournaments">
+                            <i class="bi bi-people-fill"></i> Club Management
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="gamesDropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('game.index') }}"><i class="bi bi-list-ul"></i> All Games</a></li>
+                        <ul class="dropdown-menu" aria-labelledby="clubDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('team.index') }}"><i class="bi bi-people"></i> Team Roster</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('game.index') }}"><i class="bi bi-controller"></i> Games</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('tournament.index') }}"><i class="bi bi-trophy"></i> Tournaments</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('game.add') }}"><i class="bi bi-plus-circle"></i> Add Game</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('tournament.add') }}"><i class="bi bi-plus-circle"></i> Add Tournament</a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- Add this new Fitness dropdown after the Club Management dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="fitnessDropdown" 
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                           title="Track and analyze fitness metrics">
+                            <i class="bi bi-heart-pulse"></i> Fitness
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="fitnessDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('fitness.index') }}"><i class="bi bi-speedometer2"></i> Fitness Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('fitness.team_leaderboard') }}"><i class="bi bi-trophy"></i> Leaderboards</a></li>
+                            {% if current_user.is_authenticated and current_user.player %}
+                            <li><a class="dropdown-item" href="{{ url_for('fitness.player_fitness', player_id=current_user.player.id) }}"><i class="bi bi-person"></i> Your Fitness Profile</a></li>
+                            {% endif %}
+                            {% if current_user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('fitness.manage_metrics') }}"><i class="bi bi-gear"></i> Manage Metrics</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('fitness.batch_record') }}"><i class="bi bi-clipboard-data"></i> Batch Record Data</a></li>
+                            {% endif %}
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
