@@ -140,8 +140,10 @@
                 </div>
                 <div class="collapse" id="playerListCollapse">
                     <div class="card-body">
+                        <!-- Players tagged in this clip -->
                         {% if clip.players %}
-                        <ul class="list-group">
+                        <h6>Tagged in Clip</h6>
+                        <ul class="list-group mb-3">
                             {% for player in clip.players %}
                             <li class="list-group-item">
                                 <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
@@ -150,13 +152,38 @@
                             </li>
                             {% endfor %}
                         </ul>
-                        {% else %}
-                        <p>No players tagged in this clip.</p>
+                        {% endif %}
+                        
+                        <!-- Players assigned to the game -->
+                        {% if game_players %}
+                        <h6>Game Roster</h6>
+                        <ul class="list-group">
+                            {% for player in game_players %}
+                            <li class="list-group-item">
+                                <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
+                                    {{ player.name }} (#{{ player.jersey_number }})
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% elif tournament_players and clip.game and clip.game.tournament_id %}
+                        <h6>Tournament Roster</h6>
+                        <ul class="list-group">
+                            {% for player in tournament_players %}
+                            <li class="list-group-item">
+                                <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
+                                    {{ player.name }} (#{{ player.jersey_number }})
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% elif not clip.players %}
+                        <p>No players tagged in this clip or assigned to the game.</p>
                         {% endif %}
                     </div>
                 </div>
             </div>
-        </div>
+        </div>    
     </div>
     
     <div class="row">

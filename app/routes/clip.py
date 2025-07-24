@@ -188,11 +188,44 @@ def view_clip(clip_id):
     # Make sure we're explicitly querying for annotations
     annotations = ClipAnnotation.query.filter_by(clip_id=clip.id).order_by(ClipAnnotation.timestamp).all()
     
+    # Get players assigned to the game through GamePlayer model
+    game_players = []
+    tournament_players = []
+    
+    if clip.game:
+        # Get players assigned to the game through GamePlayer model
+        from app.models.game_player import GamePlayer
+        from app.models.player import Player
+        from app.models.tournament_rsvp import TournamentRSVP
+        from sqlalchemy import and_
+        
+        game_player_records = GamePlayer.query.filter_by(game_id=clip.game.id).all()
+        
+        if game_player_records:
+            # Get the actual Player objects
+            player_ids = [gp.player_id for gp in game_player_records]
+            game_players = Player.query.filter(Player.id.in_(player_ids)).all()
+        
+        # Get all players assigned to the tournament (if this game belongs to a tournament)
+        if clip.game.tournament_id:
+            tournament_players = Player.query.join(TournamentRSVP).filter(
+                and_(
+                    TournamentRSVP.tournament_id == clip.game.tournament_id,
+                    TournamentRSVP.selected_by_admin == True
+                )
+            ).all()
+    
     # Print for debugging
     print(f"Found {len(annotations)} annotations for clip {clip_id}")
     
     form = AnnotationForm()
-    return render_template('clip/view_clip.html', clip=clip, annotations=annotations, form=form)
+    return render_template('clip/view_clip.html', 
+                          clip=clip, 
+                          annotations=annotations, 
+                          form=form,
+                          game_players=game_players,
+                          tournament_players=tournament_players)
+
 
 
 @bp.route('/add_annotation/<int:clip_id>', methods=['POST'])
