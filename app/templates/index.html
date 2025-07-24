@@ -303,28 +303,30 @@
                         <!-- Next event or quick stat for the player -->
                         <div class="card-body">
                             <h5 class="mb-3">Upcoming Events</h5>
-                            {% if upcoming_events %}
-                                {% for event in upcoming_events %}
-                                <div class="upcoming-event {{ event.type }}">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">{{ event.title }}</h6>
-                                        <span class="badge bg-{{ event.badge_color }}">{{ event.type|title }}</span>
+                            <div class="upcoming-events-container" style="max-height: 250px; overflow-y: auto; padding-right: 5px;">
+                                {% if upcoming_events %}
+                                    {% for event in upcoming_events %}
+                                    <div class="upcoming-event {{ event.type }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">{{ event.title }}</h6>
+                                            <span class="badge bg-{{ event.badge_color }}">{{ event.type|title }}</span>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ event.date_time }}
+                                        </small>
+                                        {% if event.location %}
+                                        <div class="small">
+                                            <i class="bi bi-geo-alt me-1"></i>
+                                            {{ event.location }}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    <small class="text-muted">
-                                        <i class="bi bi-clock me-1"></i>
-                                        {{ event.date_time }}
-                                    </small>
-                                    {% if event.location %}
-                                    <div class="small">
-                                        <i class="bi bi-geo-alt me-1"></i>
-                                        {{ event.location }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <p class="text-muted text-center mb-0">No upcoming events scheduled.</p>
-                            {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted text-center mb-0">No upcoming events scheduled.</p>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
