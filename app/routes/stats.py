@@ -2477,15 +2477,25 @@ def calculate_additional_team_metrics(games):
                 point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
                 d_line_turnovers += point_turnovers
                 
-                # Count blocks (possessions gained) in this point
-                point_blocks = sum(1 for e in events if e.event_type == 'block')
-                d_line_possessions_gained += point_blocks
+                # Count all possessions gained in this point
+                point_possessions_gained = 0
+                
+                # Count blocks
+                point_possessions_gained += sum(1 for e in events if e.event_type == 'block')
+                
+                # Count forced turnovers
+                point_possessions_gained += sum(1 for e in events if e.event_type == 'forced_turnover')
+                
+                # Count opponent unforced turnovers
+                point_possessions_gained += sum(1 for e in events if e.event_type == 'unforced_turnover' and e.is_opponent)
+                
+                d_line_possessions_gained += point_possessions_gained
                 
                 # Check if we had at least one block in this point
-                had_block = point_blocks > 0
+                had_block = any(e.event_type == 'block' for e in events)
                 
                 if had_block:
-                    points_with_block += 1  # THIS IS THE KEY ADDITION
+                    points_with_block += 1
                     
                     # Check if this is a clean break (we scored without losing possession after block)
                     if point.we_scored:
@@ -2501,7 +2511,6 @@ def calculate_additional_team_metrics(games):
                         
                         # Count goals after block (possession gain)
                         d_line_goals_after_turnover += 1
-
     
     # Calculate percentages and averages
     clean_hold_percentage = (clean_hold_count / total_o_points * 100) if total_o_points > 0 else 0
