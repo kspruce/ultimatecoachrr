@@ -2437,6 +2437,7 @@ def calculate_additional_team_metrics(games):
     d_line_goals_after_turnover = 0
     d_line_turnovers = 0
     total_d_line_possessions = 0
+    d_line_possessions_gained = 0 
     
     for game in games:
         # Process O-line points
@@ -2472,7 +2473,11 @@ def calculate_additional_team_metrics(games):
             # Count possessions in this point
             point_possessions = count_d_line_possessions(point)
             total_d_line_possessions += point_possessions
-            
+           
+            # Count blocks (possessions gained) in this point
+            point_blocks = sum(1 for e in events if e.event_type == 'block')
+            d_line_possessions_gained += point_blocks            
+           
             # Check if this is a clean break (we scored without losing possession)
             if point.we_scored:
                 # Check if we had any turnovers after our first block
@@ -2494,6 +2499,7 @@ def calculate_additional_team_metrics(games):
     avg_o_turnovers_per_point = o_line_turnovers / total_o_points if total_o_points > 0 else 0
     avg_d_turnovers_per_point = d_line_turnovers / total_d_points if total_d_points > 0 else 0
     possessions_per_goal = (d_line_turnovers / d_line_goals_after_turnover) if d_line_goals_after_turnover > 0 else 0   
+    avg_possessions_gained_per_point = (d_line_possessions_gained / total_d_points) if total_d_points > 0 else 0
     
     result = {
         'completion_rate': (completions / len(throws)) * 100 if throws else 0,
@@ -2514,7 +2520,8 @@ def calculate_additional_team_metrics(games):
         # New defensive metrics
         'clean_break_percentage': clean_break_percentage,
         'possessions_per_goal': possessions_per_goal,
-        'avg_d_turnovers_per_point': avg_d_turnovers_per_point,        
+        'avg_d_turnovers_per_point': avg_d_turnovers_per_point,
+        'avg_possessions_gained_per_point': avg_possessions_gained_per_point,        
         }
     
     return result
