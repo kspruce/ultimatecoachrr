@@ -222,7 +222,13 @@ def record_fitness(player_id):
         return redirect(url_for('team.player_detail', player_id=player_id))
     
     form = FitnessRecordForm()
-    form.metric.choices = [(m.id, f"{m.name} ({m.unit})") for m in FitnessMetric.query.filter_by(active=True).all()]
+    
+    # Get all active metrics for the form dropdown
+    active_metrics = FitnessMetric.query.filter_by(active=True).all()
+    form.metric.choices = [(m.id, f"{m.name} ({m.unit})") for m in active_metrics]
+    
+    # Create a dictionary of metric descriptions for the JavaScript
+    metric_descriptions = {m.id: m.description for m in active_metrics}
     
     if form.validate_on_submit():
         try:
@@ -241,9 +247,17 @@ def record_fitness(player_id):
             db.session.rollback()
             flash(f'Error recording fitness data: {str(e)}', 'danger')
     
+    # Get recent records for this player
+    recent_records = FitnessRecord.query.filter_by(player_id=player_id).order_by(
+        FitnessRecord.date_recorded.desc()
+    ).limit(5).all()
+    
     return render_template('fitness/record_form.html', 
                           form=form, 
-                          player=player)
+                          player=player,
+                          metric_descriptions=metric_descriptions,  # Add this line
+                          recent_records=recent_records)
+
 
 @bp.route('/metrics')
 @login_required
