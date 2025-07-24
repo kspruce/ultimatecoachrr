@@ -482,6 +482,7 @@
                     </thead>
                     <tbody>
                         {% for player in players %}
+                        {% if player.id in player_stats %}
                         <tr>
                             <td>
                                 <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
@@ -509,6 +510,7 @@
                                    player_stats[player.id].drops)|round(1) }}</td>
                             <td>{{ player_stats[player.id].per|round(1) }}</td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                         <!-- Team Average Row -->
                         {% if team_avg_stats %}
