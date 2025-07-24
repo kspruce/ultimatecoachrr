@@ -220,7 +220,7 @@
                                     <th>Turnovers</th>
                                     <th>+/-</th>
                                     <th>PER</th>
-                                    <th>Impact Score</th>
+                                    <!-- <th>Impact Score</th> -->
                                 </tr>
                             </thead>
                             <tbody>
@@ -244,7 +244,7 @@
                                         <td>{{ item.stats.turnovers }}</td>
                                         <td>{{ (item.stats.goals + item.stats.assists + item.stats.blocks - item.stats.turnovers)|round(1) }}</td>
                                         <td>{{ item.stats.per|round(1) }}</td>
-                                        <td>{{ calculate_impact_score(item.stats)|round(1) }}</td>
+                                       <!-- <td>{{ calculate_impact_score(item.stats)|round(1) }}</td> -->
                                     </tr>
                                     {% endif %}
                                 {% endfor %}
