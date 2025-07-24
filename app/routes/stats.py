@@ -2433,6 +2433,7 @@ def calculate_additional_team_metrics(games):
     o_line_turnovers = 0
     
     clean_break_count = 0
+    points_with_block = 0 
     total_d_points = 0
     d_line_goals_after_turnover = 0
     d_line_turnovers = 0
@@ -2478,24 +2479,24 @@ def calculate_additional_team_metrics(games):
             point_blocks = sum(1 for e in events if e.event_type == 'block')
             d_line_possessions_gained += point_blocks            
            
-            # Check if this is a clean break (we scored without losing possession)
+            # Check if this is a clean break (we scored without losing possession after block)
             if point.we_scored:
-                # Check if we had any turnovers after our first block
+                # Find the first block
                 block_index = next((i for i, e in enumerate(events) if e.event_type == 'block'), -1)
-                if block_index >= 0:
-                    # Count turnovers after the block
-                    turnovers_after_block = sum(1 for e in events[block_index:] 
-                                               if e.event_type in ['throwaway', 'drop', 'stall'])
-                    if turnovers_after_block == 0:
-                        clean_break_count += 1
                 
-                # Count goals after turnover
-                if any(e.event_type == 'block' for e in events):
-                    d_line_goals_after_turnover += 1
+                # Count turnovers after the block
+                turnovers_after_block = sum(1 for e in events[block_index:] 
+                                          if e.event_type in ['throwaway', 'drop', 'stall'])
+                
+                if turnovers_after_block == 0:
+                    clean_break_count += 1
+                
+                # Count goals after block (possession gain)
+                d_line_goals_after_turnover += 1
     
     # Calculate percentages and averages
     clean_hold_percentage = (clean_hold_count / total_o_points * 100) if total_o_points > 0 else 0
-    clean_break_percentage = (clean_break_count / total_d_points * 100) if total_d_points > 0 else 0
+    clean_break_percentage = (clean_break_count / points_with_block * 100) if points_with_block > 0 else 0
     avg_o_turnovers_per_point = o_line_turnovers / total_o_points if total_o_points > 0 else 0
     avg_d_turnovers_per_point = d_line_turnovers / total_d_points if total_d_points > 0 else 0
     possessions_per_goal = (d_line_turnovers / d_line_goals_after_turnover) if d_line_goals_after_turnover > 0 else 0   
