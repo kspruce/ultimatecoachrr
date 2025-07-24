@@ -127,7 +127,7 @@
                 <div class="card-body">
                     <div class="row">
                         <!-- Show a few key metrics if available -->
-                        {% if player.fitness_records.count() > 0 %}
+                        {% if player.fitness_records|length > 0 %}
                             <!-- Display some key metrics here -->
                             <div class="col-12 text-center mb-3">
                                 <p>Fitness data available</p>
