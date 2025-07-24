@@ -113,7 +113,19 @@ def create_app(config_class=Config):
         # Return as safe HTML
         return Markup(md_html)
 
-    
+    def ensure_default_metrics_exist(app):
+        with app.app_context():
+            from app.models.fitness import FitnessMetric, DEFAULT_METRICS
+            
+            # Check if we have any metrics
+            if db.session.query(FitnessMetric).count() == 0:
+                # Add default metrics
+                for metric_data in DEFAULT_METRICS:
+                    metric = FitnessMetric(**metric_data)
+                    db.session.add(metric)
+                db.session.commit()
+                print(f"Added {len(DEFAULT_METRICS)} default fitness metrics")
+            
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -180,7 +192,8 @@ def create_app(config_class=Config):
        SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
        FitnessMetric, FitnessRecord  # Add these new models
     )
-    
+
+
     # Create upload directory in /tmp
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
