@@ -12,6 +12,8 @@ from app.models.event import Event, Pull
 from app.utils.utils import admin_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
+from sqlalchemy import and_
+
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -68,10 +70,15 @@ def detail(game_id):
     delete_form = FlaskForm()  # Add CSRF form here too
 
     # Get players assigned to the game through GamePlayer model
-    game_players = [gp.player for gp in game.assigned_players.all()]
+    game_player_records = GamePlayer.query.filter_by(game_id=game_id).all()
+    game_players = []
     
+    if game_player_records:
+        # Get the actual Player objects
+        player_ids = [gp.player_id for gp in game_player_records]
+        game_players = Player.query.filter(Player.id.in_(player_ids)).all()
     # If no players are assigned through GamePlayer, fall back to lineup players
-    if not game_players and game.points.count() > 0:
+    elif game.points.count() > 0:
         first_point = game.points.first()
         game_players = [lineup.player for lineup in first_point.lineups]
 
@@ -80,6 +87,7 @@ def detail(game_id):
                          all_players=all_players, 
                          game_players=game_players,
                          delete_form=delete_form)
+
 
 
 @bp.route('/add', methods=['GET', 'POST'])
@@ -240,7 +248,7 @@ def delete(game_id):
 
 @bp.route('/<int:game_id>/update_players', methods=['POST'])
 @login_required
-@admin_required  # Add admin_required decorator
+@admin_required
 def update_players(game_id):
     game = Game.query.get_or_404(game_id)
     player_ids = request.form.getlist('player_ids', type=int)
@@ -256,17 +264,10 @@ def update_players(game_id):
         )
         db.session.add(game_player)
 
-    # Also update the lineup for the first point if it exists
-    point = Point.query.filter_by(game_id=game.id).first()
-    if point:
-        LineUp.query.filter_by(point_id=point.id).delete()
-        for player_id in player_ids:
-            lineup = LineUp(player_id=player_id, point_id=point.id)
-            db.session.add(lineup)
-
     db.session.commit()
     flash('Players updated successfully!', 'success')
     return redirect(url_for('game.detail', game_id=game_id))
+
 
 
 @bp.route('/add_multiple', methods=['GET', 'POST'])
