@@ -27,6 +27,7 @@
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Return to homepage"><i class="bi bi-house-fill"></i> Home</a>
                     </li>
+                    <!--  Manage club dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="clubDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
@@ -43,8 +44,27 @@
                             <li><a class="dropdown-item" href="{{ url_for('tournament.add') }}"><i class="bi bi-plus-circle"></i> Add Tournament</a></li>
                         </ul>
                     </li>
-                    
-                    <!-- Add this new Fitness dropdown after the Club Management dropdown -->
+                    <!-- New Calendar Nav Item -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('calendar.index') }}"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                           title="View team calendar and schedule">
+                            <i class="bi bi-calendar3"></i> Calendar
+                        </a>
+                    </li>                    
+                    <!--  Session Plans dropdown -->                                                               
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-clipboard-check"></i> Session Plans
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('session.index') }}"><i class="bi bi-list-check"></i> Session Plans</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('session.drills') }}"><i class="bi bi-collection"></i> Drill Library</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('session.add_drill') }}"><i class="bi bi-plus-circle"></i> Add Basic Drill</a></li>
+                            <li><hr class="dropdown-divider"></li>                          
+                        </ul>
+                    </li>
+                    <!--  Fitness dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="fitnessDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
@@ -65,38 +85,8 @@
                             {% endif %}
                         </ul>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="statsDropdown" 
-                           role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                           title="View comprehensive statistics and analytics">
-                            <i class="bi bi-graph-up"></i> Stats
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="statsDropdown">
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}"
-                                   data-bs-toggle="tooltip" data-bs-placement="right" 
-                                   title="Overview of team and player statistics">
-                                    <i class="bi bi-speedometer2"></i> Stats Dashboard
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}"
-                                   data-bs-toggle="tooltip" data-bs-placement="right" 
-                                   title="Detailed team performance metrics">
-                                    <i class="bi bi-people"></i> Team Statistics
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('game.index') }}"
-                                   data-bs-toggle="tooltip" data-bs-placement="right" 
-                                   title="View game statistics">
-                                    <i class="bi bi-controller"></i> Game Statistics
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
+
+                    <!--  strategy dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="strategyDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
@@ -139,6 +129,7 @@
                             </li>
                         </ul>
                     </li>
+                    <!--  Theory dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
@@ -193,31 +184,47 @@
                             </li>
                             {% endif %}
                         </ul>
-                    </li>                                                                  
+                    </li>   
+                    <!--  stats dropdown -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-clipboard-check"></i> Session Plans
+                        <a class="nav-link dropdown-toggle" href="#" id="statsDropdown" 
+                           role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                           title="View comprehensive statistics and analytics">
+                            <i class="bi bi-graph-up"></i> Stats
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('session.index') }}"><i class="bi bi-list-check"></i> Session Plans</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('session.drills') }}"><i class="bi bi-collection"></i> Drill Library</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('session.add_drill') }}"><i class="bi bi-plus-circle"></i> Add Basic Drill</a></li>
-                            <li><hr class="dropdown-divider"></li>                          
+                        <ul class="dropdown-menu" aria-labelledby="statsDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="Overview of team and player statistics">
+                                    <i class="bi bi-speedometer2"></i> Stats Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="Detailed team performance metrics">
+                                    <i class="bi bi-people"></i> Team Statistics
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('game.index') }}"
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
+                                   title="View game statistics">
+                                    <i class="bi bi-controller"></i> Game Statistics
+                                </a>
+                            </li>
                         </ul>
                     </li>
-                    <!-- New Calendar Nav Item -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('calendar.index') }}"
-                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                           title="View team calendar and schedule">
-                            <i class="bi bi-calendar3"></i> Calendar
-                        </a>
-                    </li>
+                    <!--  Clips-->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('clip.index') }}"
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Manage video clips"><i class="bi bi-camera-video"></i> Clips</a>
                     </li>
+                    <!--  Help section -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.how_to_use') }}"
                            data-bs-toggle="tooltip" data-bs-placement="bottom" 
