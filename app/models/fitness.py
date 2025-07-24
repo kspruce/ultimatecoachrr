@@ -3,16 +3,17 @@ from app import db
 from datetime import datetime
 
 class FitnessMetric(db.Model):
-    """Model for defining fitness metrics/benchmarks"""
+    __tablename__ = 'fitness_metric'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    unit = db.Column(db.String(20), nullable=False)  # e.g., "seconds", "meters", "count"
-    higher_is_better = db.Column(db.Boolean, default=True)  # True for metrics where higher values are better
+    unit = db.Column(db.String(20), nullable=False)
+    higher_is_better = db.Column(db.Boolean, default=True)
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationships
+    # Use string reference for the relationship
     records = db.relationship('FitnessRecord', back_populates='metric', lazy='dynamic')
     
     def __repr__(self):
@@ -36,7 +37,8 @@ class FitnessMetric(db.Model):
 
 
 class FitnessRecord(db.Model):
-    """Model for storing player fitness records"""
+    __tablename__ = 'fitness_record'
+    
     id = db.Column(db.Integer, primary_key=True)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metric.id'), nullable=False)
@@ -44,9 +46,9 @@ class FitnessRecord(db.Model):
     date_recorded = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
     
-    # Relationships
+    # Use string references for the relationships
     player = db.relationship('Player', back_populates='fitness_records')
     metric = db.relationship('FitnessMetric', back_populates='records')
     
     def __repr__(self):
-        return f'<FitnessRecord {self.player.name} - {self.metric.name}: {self.value}>'
+        return f'<FitnessRecord {self.id}: {self.value}>'

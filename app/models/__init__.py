@@ -20,6 +20,7 @@ from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
 from app.models.throws import Throw 
 from app.models.game_player import GamePlayer
+from app.models.fitness import FitnessMetric, FitnessRecord
 
 # Video and Analysis models
 from app.models.clip import Clip, ClipTag
@@ -37,7 +38,8 @@ __all__ = [
     'Play', 'Formation', 'PlayTag',
     'TheorySection', 'TheoryTopic', 'TheoryVideo',
     'Tournament', 'Game', 'Point', 'LineUp',
-    'Event', 'Pull',
+    'Event', 'Pull', 'Throw', 'GamePlayer',
     'Clip', 'ClipTag', 'ClipAnnotation', 'ScoutingReport',
-    'PlayerPointStats', 'ExportLog', 'CuttingSkill'
+    'PlayerPointStats', 'ExportLog', 'CuttingSkill',
+    'FitnessMetric', 'FitnessRecord'
 ]
