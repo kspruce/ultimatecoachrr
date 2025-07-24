@@ -113,6 +113,7 @@ def create_app(config_class=Config):
         # Return as safe HTML
         return Markup(md_html)
 
+
     def ensure_default_metrics_exist(app):
         with app.app_context():
             from app.models.fitness import FitnessMetric, DEFAULT_METRICS
@@ -125,7 +126,7 @@ def create_app(config_class=Config):
                     db.session.add(metric)
                 db.session.commit()
                 print(f"Added {len(DEFAULT_METRICS)} default fitness metrics")
-            
+   
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -213,5 +214,6 @@ def create_app(config_class=Config):
     # Create database tables
     with app.app_context():
         db.create_all()
+        ensure_default_metrics_exist(app)
     
     return app
