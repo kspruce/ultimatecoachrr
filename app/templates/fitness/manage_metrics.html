@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Manage Fitness Metrics</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('fitness.add_metric') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add New Metric
+            </a>
+            <a href="{{ url_for('fitness.index') }}" class="btn btn-secondary">
+                Back to Fitness Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Fitness Metrics</h5>
+                </div>
+                <div class="card-body">
+                    {% if metrics %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Unit</th>
+                                        <th>Description</th>
+                                        <th>Scoring</th>
+                                        <th>Status</th>
+                                        <th>Records</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for metric in metrics %}
+                                        <tr>
+                                            <td>{{ metric.name }}</td>
+                                            <td>{{ metric.unit }}</td>
+                                            <td>{{ metric.description|truncate(50) }}</td>
+                                            <td>
+                                                {% if metric.higher_is_better %}
+                                                    <span class="badge bg-success">Higher is better</span>
+                                                {% else %}
+                                                    <span class="badge bg-info">Lower is better</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if metric.active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ metric.records.count() }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('fitness.edit_metric', metric_id=metric.id) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#deleteMetricModal{{ metric.id }}">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Delete Modal -->
+                                                <div class="modal fade" id="deleteMetricModal{{ metric.id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Confirm Delete</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete the metric "{{ metric.name }}"?</p>
+                                                                {% if metric.records.count() > 0 %}
+                                                                    <div class="alert alert-warning">
+                                                                        <strong>Warning:</strong> This metric has {{ metric.records.count() }} records. 
+                                                                        Deleting it will mark it as inactive rather than removing it completely.
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <form action="{{ url_for('fitness.delete_metric', metric_id=metric.id) }}" method="POST">
+                                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>No fitness metrics have been created yet. Click "Add New Metric" to get started.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Batch Operations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2 d-md-flex">
+                        <a href="{{ url_for('fitness.batch_record') }}" class="btn btn-primary">
+                            <i class="bi bi-clipboard-data"></i> Batch Record Fitness Data
+                        </a>
+                        <a href="{{ url_for('fitness.team_leaderboard') }}" class="btn btn-success">
+                            <i class="bi bi-trophy"></i> View Team Leaderboards
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

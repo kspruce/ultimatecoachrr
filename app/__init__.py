@@ -169,10 +169,7 @@ def create_app(config_class=Config):
     
     from app.routes.data_management_routes import bp as data_management_bp
     app.register_blueprint(data_management_bp)
-    
-    #from app.routes.fitness import bp as fitness_bp
-    #app.register_blueprint(fitness_bp)
-    
+   
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ player.name }}: {{ metric.name }} History</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-primary">
+                Record New Data
+            </a>
+            <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-secondary">
+                Back to Fitness Profile
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Progress Chart</h5>
+                </div>
+                <div class="card-body">
+                    {% if records %}
+                        <div class="chart-container" style="position: relative; height:300px;">
+                            <canvas id="progressChart"></canvas>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No data available to display.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Record History</h5>
+                </div>
+                <div class="card-body">
+                    {% if records %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Value</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in records %}
+                                        <tr>
+                                            <td>{{ record.date_recorded.strftime('%Y-%m-%d %H:%M') }}</td>
+                                            <td>{{ record.value }} {{ metric.unit }}</td>
+                                            <td>{{ record.notes or '-' }}</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteRecordModal{{ record.id }}">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                
+                                                <!-- Delete Modal -->
+                                                <div class="modal fade" id="deleteRecordModal{{ record.id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Confirm Delete</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete this record?</p>
+                                                                <p><strong>Date:</strong> {{ record.date_recorded.strftime('%Y-%m-%d %H:%M') }}</p>
+                                                                <p><strong>Value:</strong> {{ record.value }} {{ metric.unit }}</p>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <form action="{{ url_for('fitness.delete_record', record_id=record.id) }}" method="POST">
+                                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No records found for this metric.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Metric Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ metric.name }}</p>
+                    <p><strong>Unit:</strong> {{ metric.unit }}</p>
+                    <p><strong>Description:</strong> {{ metric.description }}</p>
+                    <p><strong>Scoring:</strong> 
+                        {% if metric.higher_is_better %}
+                            <span class="badge bg-success">Higher is better</span>
+                        {% else %}
+                            <span class="badge bg-info">Lower is better</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Statistics</h5>
+                </div>
+                <div class="card-body">
+                    {% if records %}
+                        <div class="row text-center">
+                            <div class="col-6 mb-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Best</h6>
+                                        <h4>
+                                            {% if metric.higher_is_better %}
+                                                {{ records|map(attribute='value')|max }}
+                                            {% else %}
+                                                {{ records|map(attribute='value')|min }}
+                                            {% endif %}
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Average</h6>
+                                        <h4>
+                                            {{ (records|map(attribute='value')|sum / records|length)|round(2) }}
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Team Avg</h6>
+                                        <h4>{{ team_average or 'N/A' }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Records</h6>
+                                        <h4>{{ records|length }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if record_holder and record_holder.player.id != player.id %}
+                            <div class="alert alert-info mt-3">
+                                <strong>Team Record:</strong> 
+                                {{ record_holder.value }} {{ metric.unit }} by 
+                                <a href="{{ url_for('team.player_detail', player_id=record_holder.player.id) }}">
+                                    {{ record_holder.player.name }}
+                                </a>
+                            </div>
+                        {% elif record_holder and record_holder.player.id == player.id %}
+                            <div class="alert alert-success mt-3">
+                                <strong>Congratulations!</strong> You hold the team record for this metric.
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No data available to calculate statistics.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if records %}
+        // Fetch data for the chart
+        fetch('{{ url_for("fitness.api_player_metric_chart_data", player_id=player.id, metric_id=metric.id) }}')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('progressChart').getContext('2d');
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: '{{ metric.name }}',
+                            data: data.values,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: {% if metric.higher_is_better %}true{% else %}false{% endif %}
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y} {{ metric.unit }}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching chart data:', error);
+                document.querySelector('.chart-container').innerHTML = '<div class="alert alert-danger">Error loading chart data</div>';
+            });
+    {% endif %}
+});
+</script>
+{% endblock %}

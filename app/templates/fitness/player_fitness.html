@@ -1,0 +1,106 @@
+<!-- app/templates/fitness/player_fitness.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Fitness Profile: {{ player.name }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-primary">Record New Fitness Data</a>
+            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-secondary">Back to Player Profile</a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for data in player_metrics %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>{{ data.metric.name }} ({{ data.metric.unit }})</h5>
+                    {% if data.latest %}
+                        <span class="badge bg-primary">Latest: {{ data.latest.value }} {{ data.metric.unit }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <p>{{ data.metric.description }}</p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6>Team Average</h6>
+                                    <h4>{{ data.team_average if data.team_average else 'No data' }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6>Record Holder</h6>
+                                    {% if data.record_holder %}
+                                        <h4>{{ data.record_holder.value }}</h4>
+                                        <small>
+                                            <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
+                                                {{ data.record_holder.player.name }}
+                                            </a>
+                                        </small>
+                                    {% else %}
+                                        <h4>No record</h4>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if data.history %}
+                        <h6>History</h6>
+                        <div class="chart-container" style="position: relative; height:200px;">
+                            <canvas id="chart-{{ data.metric.id }}"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No history recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% for data in player_metrics %}
+        {% if data.history %}
+            var ctx{{ data.metric.id }} = document.getElementById('chart-{{ data.metric.id }}').getContext('2d');
+            var chart{{ data.metric.id }} = new Chart(ctx{{ data.metric.id }}, {
+                type: 'line',
+                data: {
+                    labels: [{% for record in data.history %}'{{ record.date_recorded.strftime("%Y-%m-%d") }}',{% endfor %}],
+                    datasets: [{
+                        label: '{{ data.metric.name }}',
+                        data: [{% for record in data.history %}{{ record.value }},{% endfor %}],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: {% if data.metric.higher_is_better %}true{% else %}false{% endif %}
+                        }
+                    }
+                }
+            });
+        {% endif %}
+    {% endfor %}
+});
+</script>
+{% endblock %}

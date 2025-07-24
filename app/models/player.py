@@ -54,6 +54,7 @@ class Player(db.Model):
                                     foreign_keys='Throw.receiver_id',
                                     back_populates='receiver',
                                     lazy='dynamic')
+    fitness_records = db.relationship('FitnessRecord', back_populates='player', lazy='dynamic')
     
     def __repr__(self):
         return f'<Player {self.name}>'
