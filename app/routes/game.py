@@ -11,6 +11,7 @@ from app.models.player import Player
 from app.models.event import Event, Pull
 from app.utils.utils import admin_required
 from datetime import datetime
+from app.models.game_player import GamePlayer
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -66,9 +67,11 @@ def detail(game_id):
     all_players = Player.query.filter_by(active=True).all()
     delete_form = FlaskForm()  # Add CSRF form here too
 
-    # Get players already assigned to the game through LineUp
-    game_players = []
-    if game.points.count() > 0:
+    # Get players assigned to the game through GamePlayer model
+    game_players = [gp.player for gp in game.assigned_players.all()]
+    
+    # If no players are assigned through GamePlayer, fall back to lineup players
+    if not game_players and game.points.count() > 0:
         first_point = game.points.first()
         game_players = [lineup.player for lineup in first_point.lineups]
 
@@ -77,6 +80,7 @@ def detail(game_id):
                          all_players=all_players, 
                          game_players=game_players,
                          delete_form=delete_form)
+
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -236,35 +240,34 @@ def delete(game_id):
 
 @bp.route('/<int:game_id>/update_players', methods=['POST'])
 @login_required
+@admin_required  # Add admin_required decorator
 def update_players(game_id):
     game = Game.query.get_or_404(game_id)
     player_ids = request.form.getlist('player_ids', type=int)
 
-    point = Point.query.filter_by(game_id=game.id).first()
-    if not point:
-        point = Point(
-            game_id=game.id,
-            point_number=1,
-            our_line_type='O-Line',
-            our_score_before=0,
-            their_score_before=0,
-            starting_position='offense',
-            point_outcome='scored',
-            our_score_after=1,
-            their_score_after=0
-        )
-        db.session.add(point)
-        db.session.flush()
-
-    LineUp.query.filter_by(point_id=point.id).delete()
-
+    # Delete existing GamePlayer records
+    GamePlayer.query.filter_by(game_id=game_id).delete()
+    
+    # Add new GamePlayer records
     for player_id in player_ids:
-        lineup = LineUp(player_id=player_id, point_id=point.id)
-        db.session.add(lineup)
+        game_player = GamePlayer(
+            game_id=game_id,
+            player_id=player_id
+        )
+        db.session.add(game_player)
+
+    # Also update the lineup for the first point if it exists
+    point = Point.query.filter_by(game_id=game.id).first()
+    if point:
+        LineUp.query.filter_by(point_id=point.id).delete()
+        for player_id in player_ids:
+            lineup = LineUp(player_id=player_id, point_id=point.id)
+            db.session.add(lineup)
 
     db.session.commit()
     flash('Players updated successfully!', 'success')
     return redirect(url_for('game.detail', game_id=game_id))
+
 
 @bp.route('/add_multiple', methods=['GET', 'POST'])
 @login_required
