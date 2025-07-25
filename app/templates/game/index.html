@@ -7,8 +7,10 @@
             <h1>Games</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('game.add') }}" class="btn btn-outline-primary me-2">Add Game</a>
-            <a href="{{ url_for('game.add_multiple') }}" class="btn btn-primary">Add Multiple Games</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('game.add') }}" class="btn btn-outline-primary me-2">Add Game</a>
+                <a href="{{ url_for('game.add_multiple') }}" class="btn btn-primary">Add Multiple Games</a>
+            {% endif %}
         </div>
     </div>
 
@@ -104,9 +106,8 @@
                             <td>
                                 <div class="btn-group">
                                     <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                    <a href="{{ url_for('game.edit', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                    
                                     {% if current_user.is_admin %}
+                                        <a href="{{ url_for('game.edit', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ game.id }}">Delete</button>
                                         
                                         <!-- Delete Confirmation Modal -->
