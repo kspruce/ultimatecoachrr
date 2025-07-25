@@ -7,7 +7,9 @@
             <h1>Tournaments</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('tournament.add') }}" class="btn btn-primary">Add Tournament</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('tournament.add') }}" class="btn btn-primary">Add Tournament</a>
+            {% endif %}
         </div>
     </div>
 
@@ -74,10 +76,9 @@
                             <td>{{ tournament.win_count }}-{{ tournament.loss_count }}</td>
                             <td>
                                 <div class="btn-group">
-                                    <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                     {% if current_user.is_admin %}
+                                        <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tournament.id }}">Delete</button>
-                                        
                                         <!-- Delete Confirmation Modal -->
                                         <div class="modal fade" id="deleteModal{{ tournament.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tournament.id }}" aria-hidden="true">
                                             <div class="modal-dialog">
