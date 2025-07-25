@@ -2,7 +2,7 @@ from app import db
 from datetime import datetime
 
 class TournamentRSVP(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     status = db.Column(db.String(20), nullable=False)  # 'attending', 'maybe', 'not_attending'
