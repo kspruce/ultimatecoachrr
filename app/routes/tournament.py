@@ -70,18 +70,30 @@ def detail(tournament_id):
 def add():
     form = TournamentForm()
     if form.validate_on_submit():
+        # Find the highest existing tournament ID and add 1
+        highest_id = db.session.query(db.func.max(Tournament.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         tournament = Tournament(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             start_date=form.start_date.data,
             end_date=form.end_date.data,
             location=form.location.data,
             season=form.season.data
         )
-        db.session.add(tournament)
-        db.session.commit()
-        flash(f'Tournament {tournament.name} has been added!', 'success')
-        return redirect(url_for('tournament.index'))
+        
+        try:
+            db.session.add(tournament)
+            db.session.commit()
+            flash(f'Tournament {tournament.name} has been added!', 'success')
+            return redirect(url_for('tournament.index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding tournament: {str(e)}', 'danger')
+    
     return render_template('tournament/form.html', form=form, title='Add Tournament')
+
 
 @bp.route('/edit/<int:tournament_id>', methods=['GET', 'POST'])
 @login_required
