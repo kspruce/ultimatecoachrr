@@ -993,8 +993,8 @@ class EnhancedDataManager:
         from sqlalchemy import text, inspect, MetaData
         
         results = {}
-        inspector = inspect(self.db.engine)
-        dialect = self.db.engine.dialect.name
+        inspector = inspect(db.engine)
+        dialect = db.engine.dialect.name
         
         # Get all models from the registry
         for table_name, model in self.models.items():
@@ -1014,7 +1014,7 @@ class EnhancedDataManager:
                 
                 # Get the max ID value
                 max_id_query = text(f"SELECT COALESCE(MAX({pk_column}), 0) FROM {table_name}")
-                max_id = self.db.session.execute(max_id_query).scalar() or 0
+                max_id = db.session.execute(max_id_query).scalar() or 0
                 next_id = max_id + 1
                 
                 # Different SQL for different database types
@@ -1026,11 +1026,11 @@ class EnhancedDataManager:
                     seq_exists_query = text(
                         "SELECT EXISTS(SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = :seq_name)"
                     )
-                    seq_exists = self.db.session.execute(seq_exists_query, {"seq_name": seq_name}).scalar()
+                    seq_exists = db.session.execute(seq_exists_query, {"seq_name": seq_name}).scalar()
                     
                     if seq_exists:
                         # Set the sequence to max_id + 1
-                        self.db.session.execute(
+                        db.session.execute(
                             text(f"SELECT setval('{seq_name}', {next_id}, false)")
                         )
                         results[table_name] = f"Reset to {next_id}"
@@ -1040,10 +1040,10 @@ class EnhancedDataManager:
                         seq_exists_query = text(
                             "SELECT EXISTS(SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = :seq_name)"
                         )
-                        seq_exists = self.db.session.execute(seq_exists_query, {"seq_name": alt_seq_name}).scalar()
+                        seq_exists = db.session.execute(seq_exists_query, {"seq_name": alt_seq_name}).scalar()
                         
                         if seq_exists:
-                            self.db.session.execute(
+                            db.session.execute(
                                 text(f"SELECT setval('{alt_seq_name}', {next_id}, false)")
                             )
                             results[table_name] = f"Reset to {next_id} (using {alt_seq_name})"
@@ -1054,22 +1054,22 @@ class EnhancedDataManager:
                     # For SQLite, we need to update the sqlite_sequence table
                     # First check if the table exists in sqlite_sequence
                     check_query = text("SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_sequence'")
-                    has_seq_table = self.db.session.execute(check_query).scalar() is not None
+                    has_seq_table = db.session.execute(check_query).scalar() is not None
                     
                     if has_seq_table:
                         # Check if our table is in sqlite_sequence
                         check_table_query = text("SELECT name FROM sqlite_sequence WHERE name = :table_name")
-                        table_in_seq = self.db.session.execute(check_table_query, {"table_name": table_name}).scalar() is not None
+                        table_in_seq = db.session.execute(check_table_query, {"table_name": table_name}).scalar() is not None
                         
                         if table_in_seq:
                             # Update existing entry
-                            self.db.session.execute(
+                            db.session.execute(
                                 text("UPDATE sqlite_sequence SET seq = :next_id WHERE name = :table_name"),
                                 {"next_id": max_id, "table_name": table_name}
                             )
                         else:
                             # Insert new entry
-                            self.db.session.execute(
+                            db.session.execute(
                                 text("INSERT INTO sqlite_sequence (name, seq) VALUES (:table_name, :next_id)"),
                                 {"table_name": table_name, "next_id": max_id}
                             )
@@ -1080,7 +1080,7 @@ class EnhancedDataManager:
                     
                 elif dialect == 'mysql':
                     # For MySQL/MariaDB
-                    self.db.session.execute(
+                    db.session.execute(
                         text(f"ALTER TABLE {table_name} AUTO_INCREMENT = {next_id}")
                     )
                     results[table_name] = f"Reset to {next_id}"
@@ -1092,5 +1092,6 @@ class EnhancedDataManager:
                 results[table_name] = f"Error: {str(e)}"
         
         # Commit the changes
-        self.db.session.commit()
+        db.session.commit()
         return results
+
