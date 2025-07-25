@@ -480,38 +480,40 @@
                     </thead>
                     <tbody>
                         {% if current_user.is_admin or current_user.is_coach or not current_user.player %}
+                            <!-- Show all players for admins, coaches, or users without player accounts -->
                             {% for player in players %}
-                            {% if player.id in player_stats %}
-                            <tr>
-                                <td>
-                                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                        {{ player.name }}
-                                        <small class="text-muted">#{{ player.jersey_number }}</small>
-                                    </a>
-                                </td>
-                                <td>{{ player_stats[player.id].games_played }}</td>
-                                <td>{{ player_stats[player.id].points_played }}</td>
-                                <td>{{ player_stats[player.id].o_line_points_played }}</td>
-                                <td>{{ player_stats[player.id].d_line_points_played }}</td>
-                                <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
-                                <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
-                                <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
-                                <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
-                                <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
-                                <td class="offensive-stat">
-                                    {{ player_stats[player.id].completions }}
-                                    <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
-                                </td>
-                                <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
-                                <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
-                                <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                   player_stats[player.id].blocks - player_stats[player.id].throwaways - 
-                                   player_stats[player.id].drops)|round(1) }}</td>
-                                <td>{{ player_stats[player.id].per|round(1) }}</td>
-                            </tr>
-                            {% endif %}
+                                {% if player.id in player_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
+                                            {{ player.name }}
+                                            <small class="text-muted">#{{ player.jersey_number }}</small>
+                                        </a>
+                                    </td>
+                                    <td>{{ player_stats[player.id].games_played }}</td>
+                                    <td>{{ player_stats[player.id].points_played }}</td>
+                                    <td>{{ player_stats[player.id].o_line_points_played }}</td>
+                                    <td>{{ player_stats[player.id].d_line_points_played }}</td>
+                                    <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
+                                    <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
+                                    <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
+                                    <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
+                                    <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
+                                    <td class="offensive-stat">
+                                        {{ player_stats[player.id].completions }}
+                                        <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
+                                    </td>
+                                    <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
+                                    <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
+                                    <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
+                                       player_stats[player.id].blocks - player_stats[player.id].throwaways - 
+                                       player_stats[player.id].drops)|round(1) }}</td>
+                                    <td>{{ player_stats[player.id].per|round(1) }}</td>
+                                </tr>
+                                {% endif %}
                             {% endfor %}
                         {% else %}
+                            <!-- Show only current user's player stats -->
                             {% if current_user.player and current_user.player.id in player_stats %}
                             <tr>
                                 <td>
@@ -573,6 +575,7 @@
             {% endif %}
         </div>
     </div>
+
 
 </div>
 {% endblock %}

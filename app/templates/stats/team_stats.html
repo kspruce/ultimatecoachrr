@@ -269,6 +269,7 @@
     </div>
 
     <!-- Replace the existing optimal lines section in team_stats.html -->
+    {% if current_user.is_admin or current_user.is_coach %}
     <div class="row mb-4">
         <!-- O-Line card -->
         <div class="col-md-6">
@@ -456,6 +457,8 @@
             </div>
         </div>
     </div>
+    {% endif %}
+
 
     <!-- Add before the player statistics table in team_stats.html -->
     <div class="row mb-4">
