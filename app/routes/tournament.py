@@ -233,7 +233,12 @@ def rsvp(tournament_id):
                 existing_rsvp.status = status
                 existing_rsvp.notes = notes
             else:
+                # Find the highest existing RSVP ID and add 1
+                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
+                next_id = highest_id + 1
+                
                 new_rsvp = TournamentRSVP(
+                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player.id,
                     status=status,
@@ -249,21 +254,33 @@ def rsvp(tournament_id):
     # Handle standard HTML form submission
     form = RSVPForm(obj=existing_rsvp)
     if form.validate_on_submit():
-        if existing_rsvp:
-            existing_rsvp.status = form.status.data
-            existing_rsvp.notes = form.notes.data
-        else:
-            new_rsvp = TournamentRSVP(
-                tournament_id=tournament_id,
-                player_id=player.id,
-                status=form.status.data,
-                notes=form.notes.data
-            )
-            db.session.add(new_rsvp)
-        
-        db.session.commit()
-        flash('Your RSVP has been submitted!', 'success')
-        return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+        try:
+            if existing_rsvp:
+                existing_rsvp.status = form.status.data
+                existing_rsvp.notes = form.notes.data
+            else:
+                # Find the highest existing RSVP ID and add 1
+                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
+                next_id = highest_id + 1
+                
+                new_rsvp = TournamentRSVP(
+                    id=next_id,  # Explicitly set the ID
+                    tournament_id=tournament_id,
+                    player_id=player.id,
+                    status=form.status.data,
+                    notes=form.notes.data
+                )
+                db.session.add(new_rsvp)
+            
+            db.session.commit()
+            flash('Your RSVP has been submitted!', 'success')
+            return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error submitting RSVP: {str(e)}', 'danger')
+            # Log the error
+            import logging
+            logging.error(f"Failed to submit RSVP: {str(e)}")
 
     # Render the RSVP page for GET requests
     return render_template('calendar/tournament_rsvp.html', form=form, tournament=tournament, existing_rsvp=existing_rsvp)
