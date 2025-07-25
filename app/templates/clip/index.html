@@ -8,8 +8,10 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">Add Clip</a>
-                <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-primary">Manage Tags</a>
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">Add Clip</a>
+                    <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-primary">Manage Tags</a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -91,8 +93,8 @@
                     <div class="card-footer">
                         <div class="btn-group w-100">
                             <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                             {% if current_user.is_admin %}
+                                <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">Delete</button>
                             {% endif %}
                         </div>
@@ -132,7 +134,12 @@
         {% else %}
         <div class="col-12">
             <div class="alert alert-info">
-                No clips found. <a href="{{ url_for('clip.add_clip') }}">Add a clip</a> to get started.
+                No clips found. 
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('clip.add_clip') }}">Add a clip</a> to get started.
+                {% else %}
+                    Contact an administrator to add clips.
+                {% endif %}
             </div>
         </div>
         {% endif %}

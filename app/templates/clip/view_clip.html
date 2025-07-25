@@ -44,7 +44,9 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">Edit Clip</a>
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">Edit Clip</a>
+                {% endif %}
                 <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">Back to Clips</a>
             </div>
         </div>
@@ -191,10 +193,13 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Annotations</h5>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAnnotationModal">
-                        Add Annotation
-                    </button>
+                    {% if current_user.is_admin %}
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAnnotationModal">
+                            Add Annotation
+                        </button>
+                    {% endif %}
                 </div>
+
                 <div class="card-body">
                     <div class="annotation-list">
                         {% if annotations %}
@@ -203,14 +208,16 @@
                             <div class="list-group-item annotation-item" data-timestamp="{{ annotation.timestamp }}" onclick="seekToTimestamp({{ annotation.timestamp }})">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="annotation-timestamp">{{ annotation.formatted_timestamp }}</span>
-                                    <div>
-                                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editAnnotationModal{{ annotation.id }}">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAnnotationModal{{ annotation.id }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
+                                    {% if current_user.is_admin %}
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editAnnotationModal{{ annotation.id }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAnnotationModal{{ annotation.id }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div>
                                     <span class="annotation-event">{{ annotation.event_type|replace('_', ' ')|title }}</span>
