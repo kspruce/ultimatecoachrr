@@ -40,8 +40,11 @@
                             <li><a class="dropdown-item" href="{{ url_for('game.index') }}"><i class="bi bi-controller"></i> Games</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('tournament.index') }}"><i class="bi bi-trophy"></i> Tournaments</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            {% if current_user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('game.add') }}"><i class="bi bi-plus-circle"></i> Add Game</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('tournament.add') }}"><i class="bi bi-plus-circle"></i> Add Tournament</a></li>
+                            {% endif %}
                         </ul>
                     </li>
                     <!-- New Calendar Nav Item -->
@@ -60,8 +63,9 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ url_for('session.index') }}"><i class="bi bi-list-check"></i> Session Plans</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('session.drills') }}"><i class="bi bi-collection"></i> Drill Library</a></li>
+                            {% if current_user.is_admin %}
                             <li><a class="dropdown-item" href="{{ url_for('session.add_drill') }}"><i class="bi bi-plus-circle"></i> Add Basic Drill</a></li>
-                            <li><hr class="dropdown-divider"></li>                          
+                            {% endif %}                     
                         </ul>
                     </li>
                     <!--  Fitness dropdown -->
@@ -103,6 +107,7 @@
                                     <i class="bi bi-book"></i> Playbook
                                 </a>
                             </li>
+                            {% if current_user.is_admin %}
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('playbook.add_play') }}"
                                    data-bs-toggle="tooltip" data-bs-placement="right" 
@@ -117,6 +122,7 @@
                                     <i class="bi bi-diagram-3"></i> New Formation
                                 </a>
                             </li>
+                            {% endif %}
                             
                             <!-- Divider before other strategy items -->
                             <li><hr class="dropdown-divider"></li>  
