@@ -1,54 +1,148 @@
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<link href="{{ url_for('static', filename='css/calendar.css') }}" rel="stylesheet">
+<style>
+    .session-header {
+        background-color: #f8f9fa;
+        border-left: 4px solid #3788d8;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .session-header h1 {
+        margin-bottom: 5px;
+        font-size: 1.8rem;
+    }
+    
+    .session-header .lead {
+        color: #6c757d;
+    }
+    
+    .session-details {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+    }
+    
+    .session-details .card-header {
+        background-color: #3788d8;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .detail-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .detail-item i {
+        width: 20px;
+        margin-right: 10px;
+        color: #3788d8;
+    }
+    
+    .rsvp-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .rsvp-card .card-header {
+        background-color: #3788d8;
+        color: white;
+        font-weight: 600;
+    }
+    
+    @media (max-width: 767px) {
+        .session-header {
+            padding: 10px;
+        }
+        
+        .session-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .back-button {
+            margin-top: 10px;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>RSVP for Session</h1>
-            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
+    <div class="session-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h1>RSVP for Session</h1>
+                <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary back-button">
+                    <i class="fas fa-arrow-left"></i> Back to Session
+                </a>
+            </div>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <div class="card">
+            <div class="card session-details">
                 <div class="card-header">
-                    <h5>Session Details</h5>
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Session Details</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-3">
+                    <div class="row">
                         <div class="col-md-4">
-                            <p><strong>Date:</strong> {{ session.formatted_date }}</p>
+                            <div class="detail-item">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span><strong>Date:</strong> {{ session.formatted_date }}</span>
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Time:</strong> {{ session.formatted_time }}</p>
+                            <div class="detail-item">
+                                <i class="fas fa-clock"></i>
+                                <span><strong>Time:</strong> {{ session.formatted_time }}</span>
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <p><strong>Location:</strong> {{ session.location or 'TBD' }}</p>
+                            <div class="detail-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span><strong>Location:</strong> {{ session.location or 'TBD' }}</span>
+                            </div>
                         </div>
                     </div>
                     
                     {% if session.focus_area %}
-                    <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
+                    <div class="detail-item mt-2">
+                        <i class="fas fa-bullseye"></i>
+                        <span><strong>Focus Area:</strong> {{ session.focus_area }}</span>
+                    </div>
                     {% endif %}
                     
                     {% if session.notes %}
-                    <p><strong>Notes:</strong> {{ session.notes }}</p>
+                    <div class="detail-item mt-2">
+                        <i class="fas fa-sticky-note"></i>
+                        <span><strong>Notes:</strong> {{ session.notes }}</span>
+                    </div>
                     {% endif %}
                 </div>
             </div>
             
-            <div class="card mt-4">
+            <div class="card rsvp-card mt-4">
                 <div class="card-header">
-                    <h5>Your RSVP</h5>
+                    <h5 class="mb-0"><i class="fas fa-reply"></i> Your RSVP</h5>
                 </div>
                 <div class="card-body">
                     {% if existing_rsvp %}
                     <div class="alert alert-info">
-                        You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
+                        <i class="fas fa-info-circle"></i> You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
                     </div>
                     {% endif %}
                     
@@ -65,8 +159,10 @@
                         
                         <div class="mb-3">
                             {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows=2) }}
-                            <div class="form-text">Optional notes about your attendance (e.g., arriving late, leaving early)</div>
+                            {{ form.notes(class="form-control", rows=3) }}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle"></i> Optional notes about your attendance (e.g., arriving late, leaving early)
+                            </div>
                             {% for error in form.notes.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
@@ -82,3 +178,9 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

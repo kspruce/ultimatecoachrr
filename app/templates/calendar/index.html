@@ -3,80 +3,8 @@
 {% block styles %}
 {{ super() }}
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css' rel='stylesheet' />
-<style>
-    .fc-event {
-        cursor: pointer;
-    }
-    
-    .fc-event-title {
-        font-weight: 500;
-    }
-    
-    .fc-event-time {
-        font-weight: 400;
-        font-size: 0.9em;
-    }
-    
-    .event-session {
-        background-color: #3788d8;
-        border-color: #2c6db2;
-    }
-    
-    .event-tournament {
-        background-color: #28a745;
-        border-color: #1e7e34;
-    }
-    
-    .event-rsvp-yes {
-        border-left: 5px solid #28a745;
-    }
-    
-    .event-rsvp-maybe {
-        border-left: 5px solid #ffc107;
-    }
-    
-    .event-rsvp-no {
-        border-left: 5px solid #dc3545;
-    }
-    
-    .event-selected {
-        border-left: 5px solid #6f42c1;
-    }
-    
-    .calendar-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        margin-bottom: 15px;
-    }
-    
-    .legend-item {
-        display: flex;
-        align-items: center;
-        font-size: 0.9rem;
-    }
-    
-    .legend-color {
-        width: 15px;
-        height: 15px;
-        margin-right: 5px;
-        border-radius: 3px;
-    }
-    
-    .modal-body .event-details {
-        margin-bottom: 20px;
-    }
-    
-    .modal-body .event-details p {
-        margin-bottom: 5px;
-    }
-    
-    .rsvp-buttons {
-        display: flex;
-        gap: 10px;
-        margin-top: 15px;
-    }
-</style>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css' rel='stylesheet' />
+<link href="{{ url_for('static', filename='css/calendar.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -127,7 +55,7 @@
 
     <div class="row">
         <div class="col-12">
-            <div class="card">
+            <div class="card calendar-container">
                 <div class="card-body">
                     <div id="calendar"></div>
                 </div>
@@ -137,7 +65,7 @@
 </div>
 
 <!-- Event Details Modal -->
-<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+<div class="modal fade event-modal" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -147,11 +75,11 @@
             <div class="modal-body">
                 <div class="event-details">
                     <h4 id="event-title"></h4>
-                    <p id="event-date"></p>
-                    <p id="event-time"></p>
-                    <p id="event-location"></p>
-                    <p id="event-focus"></p>
-                    <div id="event-notes" class="mt-3"></div>
+                    <p id="event-date"><i class="fas fa-calendar-alt"></i> <span></span></p>
+                    <p id="event-time"><i class="fas fa-clock"></i> <span></span></p>
+                    <p id="event-location"><i class="fas fa-map-marker-alt"></i> <span></span></p>
+                    <p id="event-focus" class="d-none"><i class="fas fa-bullseye"></i> <span></span></p>
+                    <div id="event-notes" class="event-notes d-none"></div>
                 </div>
                 
                 <div id="rsvp-status" class="alert d-none"></div>
@@ -159,9 +87,9 @@
                 <div id="rsvp-section">
                     <h5>Your RSVP</h5>
                     <div class="rsvp-buttons">
-                        <button id="rsvp-yes" class="btn btn-success">Attending</button>
-                        <button id="rsvp-maybe" class="btn btn-warning">Maybe</button>
-                        <button id="rsvp-no" class="btn btn-danger">Not Attending</button>
+                        <button id="rsvp-yes" class="btn btn-success"><i class="fas fa-check"></i> Attending</button>
+                        <button id="rsvp-maybe" class="btn btn-warning"><i class="fas fa-question"></i> Maybe</button>
+                        <button id="rsvp-no" class="btn btn-danger"><i class="fas fa-times"></i> Not Attending</button>
                     </div>
                     <div class="mt-3">
                         <label for="rsvp-notes" class="form-label">Notes (optional)</label>
@@ -169,10 +97,10 @@
                     </div>
                 </div>
                 
-                <div id="admin-section" class="mt-4 d-none">
+                <div id="admin-section" class="admin-section d-none">
                     <h5>Admin Actions</h5>
-                    <a id="manage-link" href="#" class="btn btn-primary">Manage RSVPs</a>
-                    <a id="edit-link" href="#" class="btn btn-secondary">Edit Event</a>
+                    <a id="manage-link" href="#" class="btn btn-primary"><i class="fas fa-users"></i> Manage RSVPs</a>
+                    <a id="edit-link" href="#" class="btn btn-secondary"><i class="fas fa-edit"></i> Edit Event</a>
                 </div>
             </div>
             <div class="modal-footer">
@@ -204,12 +132,28 @@
             },
             eventClassNames: function(arg) {
                 const classes = [];
+                
+                // Add event type class
                 if (arg.event.extendedProps.type === 'session') {
                     classes.push('event-session');
                 } else if (arg.event.extendedProps.type === 'tournament') {
                     classes.push('event-tournament');
+                    
+                    // Add multi-day class if event spans multiple days
+                    if (arg.event.end && arg.event.start) {
+                        const startDate = new Date(arg.event.start);
+                        const endDate = new Date(arg.event.end);
+                        
+                        // Check if event spans multiple days
+                        if (endDate.getDate() !== startDate.getDate() || 
+                            endDate.getMonth() !== startDate.getMonth() || 
+                            endDate.getFullYear() !== startDate.getFullYear()) {
+                            classes.push('fc-event-multi-day');
+                        }
+                    }
                 }
                 
+                // Add RSVP status class
                 if (arg.event.extendedProps.rsvp_status === 'attending') {
                     classes.push('event-rsvp-yes');
                 } else if (arg.event.extendedProps.rsvp_status === 'maybe') {
@@ -218,23 +162,41 @@
                     classes.push('event-rsvp-no');
                 }
                 
+                // Add selected class
                 if (arg.event.extendedProps.selected_by_admin) {
                     classes.push('event-selected');
                 }
                 
                 return classes;
-            }
+            },
+            // Improve mobile responsiveness
+            windowResize: function(view) {
+                if (window.innerWidth < 768) {
+                    calendar.changeView('listMonth');
+                }
+            },
+            // Handle multi-day events properly
+            displayEventEnd: true,
+            eventDisplay: 'block',
+            // Improve touch device interaction
+            longPressDelay: 100
         });
         calendar.render();
+        
+        // Check initial screen size
+        if (window.innerWidth < 768) {
+            calendar.changeView('listMonth');
+        }
         
         // Event modal functionality
         function showEventDetails(event) {
             const modal = document.getElementById('eventModal');
             const title = document.getElementById('event-title');
-            const date = document.getElementById('event-date');
-            const time = document.getElementById('event-time');
-            const location = document.getElementById('event-location');
+            const date = document.getElementById('event-date').querySelector('span');
+            const time = document.getElementById('event-time').querySelector('span');
+            const location = document.getElementById('event-location').querySelector('span');
             const focus = document.getElementById('event-focus');
+            const focusText = focus.querySelector('span');
             const notes = document.getElementById('event-notes');
             const rsvpStatus = document.getElementById('rsvp-status');
             const adminSection = document.getElementById('admin-section');
@@ -244,19 +206,26 @@
             
             // Set event details
             title.textContent = event.title;
-            date.textContent = `Date: ${event.extendedProps.formatted_date}`;
-            time.textContent = `Time: ${event.extendedProps.formatted_time || 'All day'}`;
-            location.textContent = `Location: ${event.extendedProps.location || 'TBD'}`;
+            date.textContent = event.extendedProps.formatted_date;
+            time.textContent = event.extendedProps.formatted_time || 'All day';
+            location.textContent = event.extendedProps.location || 'TBD';
+            
+            // Update modal header based on event type
+            if (event.extendedProps.type === 'tournament') {
+                modal.classList.add('tournament-event');
+            } else {
+                modal.classList.remove('tournament-event');
+            }
             
             if (event.extendedProps.focus_area) {
-                focus.textContent = `Focus: ${event.extendedProps.focus_area}`;
+                focusText.textContent = event.extendedProps.focus_area;
                 focus.classList.remove('d-none');
             } else {
                 focus.classList.add('d-none');
             }
             
             if (event.extendedProps.notes) {
-                notes.innerHTML = `<strong>Notes:</strong><br>${event.extendedProps.notes}`;
+                notes.innerHTML = `<strong><i class="fas fa-sticky-note"></i> Notes:</strong><br>${event.extendedProps.notes}`;
                 notes.classList.remove('d-none');
             } else {
                 notes.classList.add('d-none');
@@ -283,7 +252,6 @@
             }
             
             // Set up RSVP buttons
-            // *** FIX IS HERE: Use event.id instead of event.extendedProps.id ***
             document.getElementById('rsvp-yes').onclick = function() {
                 submitRSVP(event.id, event.extendedProps.type, 'attending');
             };
@@ -308,7 +276,6 @@
             }
             
             // Set view details link
-            // Use the URL generated by the backend
             viewDetailsLink.href = event.extendedProps.details_url;
             
             // Show modal
@@ -319,15 +286,17 @@
         // Function to submit RSVP
         function submitRSVP(id, type, status) {
             const notes = document.getElementById('rsvp-notes').value;
-            const url = type === 'session' ? `/sessions/${id}/rsvp` : `/tournaments/${id}/rsvp`;
             
-            fetch(url, {
+            // Use the API endpoint for both session and tournament RSVPs
+            fetch('/api/rsvp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({
+                    id: id,
+                    type: type,
                     status: status,
                     notes: notes
                 })

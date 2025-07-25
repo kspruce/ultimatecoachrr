@@ -1,109 +1,319 @@
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<link href="{{ url_for('static', filename='css/calendar.css') }}" rel="stylesheet">
+<style>
+    .rsvp-header {
+        background-color: #f8f9fa;
+        border-left: 4px solid #3788d8;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    
+    .rsvp-header h1 {
+        margin-bottom: 5px;
+        font-size: 1.8rem;
+    }
+    
+    .rsvp-header .lead {
+        color: #6c757d;
+    }
+    
+    .rsvp-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        flex: 1;
+        min-width: 150px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .stat-card .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .stat-attending .stat-number {
+        color: #28a745;
+    }
+    
+    .stat-maybe .stat-number {
+        color: #ffc107;
+    }
+    
+    .stat-not-attending .stat-number {
+        color: #dc3545;
+    }
+    
+    .rsvp-list {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+    }
+    
+    .rsvp-list .card-header {
+        color: white;
+        font-weight: 600;
+    }
+    
+    .attending-header {
+        background-color: #28a745;
+    }
+    
+    .maybe-header {
+        background-color: #ffc107;
+        color: #212529 !important;
+    }
+    
+    .not-attending-header {
+        background-color: #dc3545;
+    }
+    
+    .player-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .player-item:last-child {
+        border-bottom: none;
+    }
+    
+    .player-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .player-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .player-name {
+        font-weight: 500;
+    }
+    
+    .player-notes {
+        margin-top: 5px;
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .empty-list {
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    @media (max-width: 767px) {
+        .rsvp-header {
+            padding: 10px;
+        }
+        
+        .rsvp-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .back-button {
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .stat-card {
+            min-width: 100px;
+        }
+        
+        .stat-card .stat-number {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>RSVPs for Session</h1>
-            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
+    <div class="rsvp-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h1>RSVPs for Session</h1>
+                <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary back-button">
+                    <i class="fas fa-arrow-left"></i> Back to Session
+                </a>
+            </div>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
+    </div>
+
+    <div class="rsvp-stats">
+        <div class="stat-card stat-attending">
+            <div class="stat-number">{{ attending|length }}</div>
+            <div class="stat-label">Attending</div>
+        </div>
+        <div class="stat-card stat-maybe">
+            <div class="stat-number">{{ maybe|length }}</div>
+            <div class="stat-label">Maybe</div>
+        </div>
+        <div class="stat-card stat-not-attending">
+            <div class="stat-number">{{ not_attending|length }}</div>
+            <div class="stat-label">Not Attending</div>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Attending ({{ attending|length }})</h5>
+            <div class="card rsvp-list">
+                <div class="card-header attending-header">
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Attending ({{ attending|length }})</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     {% if attending %}
-                    <ul class="list-group">
+                    <div class="list-group list-group-flush">
                         {% for rsvp in attending %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ rsvp.player.name }}</strong>
-                                    {% if rsvp.player.jersey_number %}
-                                    <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
-                                    {% endif %}
+                        <div class="player-item">
+                            <div>
+                                <div class="player-info">
+                                    <div class="player-avatar">
+                                        {{ rsvp.player.name[0] }}
+                                    </div>
+                                    <div>
+                                        <div class="player-name">
+                                            {{ rsvp.player.name }}
+                                            {% if rsvp.player.jersey_number %}
+                                            <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if rsvp.notes %}
+                                        <div class="player-notes">
+                                            "{{ rsvp.notes }}"
+                                        </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <span class="badge bg-success">Attending</span>
                             </div>
-                            {% if rsvp.notes %}
-                            <small class="text-muted">{{ rsvp.notes }}</small>
-                            {% endif %}
-                        </li>
+                            <span class="badge bg-success">Attending</span>
+                        </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                     {% else %}
-                    <p class="text-center">No players have confirmed attendance yet.</p>
+                    <div class="empty-list">
+                        <i class="fas fa-info-circle"></i> No players have confirmed attendance yet.
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
         
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Maybe ({{ maybe|length }})</h5>
+            <div class="card rsvp-list">
+                <div class="card-header maybe-header">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Maybe ({{ maybe|length }})</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     {% if maybe %}
-                    <ul class="list-group">
+                    <div class="list-group list-group-flush">
                         {% for rsvp in maybe %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ rsvp.player.name }}</strong>
-                                    {% if rsvp.player.jersey_number %}
-                                    <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
-                                    {% endif %}
+                        <div class="player-item">
+                            <div>
+                                <div class="player-info">
+                                    <div class="player-avatar">
+                                        {{ rsvp.player.name[0] }}
+                                    </div>
+                                    <div>
+                                        <div class="player-name">
+                                            {{ rsvp.player.name }}
+                                            {% if rsvp.player.jersey_number %}
+                                            <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if rsvp.notes %}
+                                        <div class="player-notes">
+                                            "{{ rsvp.notes }}"
+                                        </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <span class="badge bg-warning text-dark">Maybe</span>
                             </div>
-                            {% if rsvp.notes %}
-                            <small class="text-muted">{{ rsvp.notes }}</small>
-                            {% endif %}
-                        </li>
+                            <span class="badge bg-warning text-dark">Maybe</span>
+                        </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                     {% else %}
-                    <p class="text-center">No players have responded with "maybe" yet.</p>
+                    <div class="empty-list">
+                        <i class="fas fa-info-circle"></i> No players have responded with "maybe" yet.
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
         
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Not Attending ({{ not_attending|length }})</h5>
+            <div class="card rsvp-list">
+                <div class="card-header not-attending-header">
+                    <h5 class="mb-0"><i class="fas fa-times-circle"></i> Not Attending ({{ not_attending|length }})</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     {% if not_attending %}
-                    <ul class="list-group">
+                    <div class="list-group list-group-flush">
                         {% for rsvp in not_attending %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ rsvp.player.name }}</strong>
-                                    {% if rsvp.player.jersey_number %}
-                                    <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
-                                    {% endif %}
+                        <div class="player-item">
+                            <div>
+                                <div class="player-info">
+                                    <div class="player-avatar">
+                                        {{ rsvp.player.name[0] }}
+                                    </div>
+                                    <div>
+                                        <div class="player-name">
+                                            {{ rsvp.player.name }}
+                                            {% if rsvp.player.jersey_number %}
+                                            <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if rsvp.notes %}
+                                        <div class="player-notes">
+                                            "{{ rsvp.notes }}"
+                                        </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <span class="badge bg-danger">Not Attending</span>
                             </div>
-                            {% if rsvp.notes %}
-                            <small class="text-muted">{{ rsvp.notes }}</small>
-                            {% endif %}
-                        </li>
+                            <span class="badge bg-danger">Not Attending</span>
+                        </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                     {% else %}
-                    <p class="text-center">No players have declined yet.</p>
+                    <div class="empty-list">
+                        <i class="fas fa-info-circle"></i> No players have declined yet.
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -111,3 +321,9 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

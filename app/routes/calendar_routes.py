@@ -27,32 +27,36 @@ def index():
     events = []
     
     # Add session events
-    for session_plan in upcoming_sessions:  # Changed variable name from 'session' to 'session_plan'
+    for session_plan in upcoming_sessions:
         # Check if user has RSVP'd
         rsvp_status = None
+        rsvp_notes = None
         if current_user.player:
             rsvp = SessionRSVP.query.filter_by(
-                session_id=session_plan.id,  # Changed from session.id
+                session_id=session_plan.id,
                 player_id=current_user.player.id
             ).first()
             if rsvp:
                 rsvp_status = rsvp.status
+                rsvp_notes = rsvp.notes
         
         event = {
-            'id': session_plan.id,  # Changed from session.id
-            'title': session_plan.title,  # Changed from session.title
-            'start': session_plan.date.strftime('%Y-%m-%d'),  # Changed from session.date
+            'id': session_plan.id,
+            'title': session_plan.title,
+            'start': session_plan.date.strftime('%Y-%m-%d'),
+            'allDay': True,  # Set sessions as all-day events
             'type': 'session',
-            'formatted_date': session_plan.formatted_date,  # Changed from session.formatted_date
-            'formatted_time': session_plan.formatted_time,  # Changed from session.formatted_time
-            'location': session_plan.location,  # Changed from session.location
-            'focus_area': session_plan.focus_area,  # Changed from session.focus_area
-            'notes': session_plan.notes,  # Changed from session.notes
+            'formatted_date': session_plan.formatted_date,
+            'formatted_time': session_plan.formatted_time,
+            'location': session_plan.location,
+            'focus_area': session_plan.focus_area,
+            'notes': session_plan.notes,
             'rsvp_status': rsvp_status,
+            'rsvp_notes': rsvp_notes,
             # Add these URLs
-            'details_url': url_for('session.detail', session_id=session_plan.id),  # Changed from session.id
-            'edit_url': url_for('session.edit_session', session_id=session_plan.id),  # Changed from session.id
-            'manage_url': url_for('session.rsvps', session_id=session_plan.id)  # Changed from session.id
+            'details_url': url_for('session.detail', session_id=session_plan.id),
+            'edit_url': url_for('session.edit_session', session_id=session_plan.id),
+            'manage_url': url_for('session.rsvps', session_id=session_plan.id)
         }
         events.append(event)
     
@@ -60,6 +64,7 @@ def index():
     for tournament in upcoming_tournaments:
         # Check if user has RSVP'd
         rsvp_status = None
+        rsvp_notes = None
         selected_by_admin = False
         if current_user.player:
             rsvp = TournamentRSVP.query.filter_by(
@@ -68,30 +73,42 @@ def index():
             ).first()
             if rsvp:
                 rsvp_status = rsvp.status
+                rsvp_notes = rsvp.notes
                 selected_by_admin = rsvp.selected_by_admin
         
         # Format date range
         formatted_date = tournament.formatted_date_range
         
+        # Create event with proper end date handling for multi-day events
         event = {
             'id': tournament.id,
             'title': tournament.name,
             'start': tournament.start_date.strftime('%Y-%m-%d'),
-            'end': tournament.end_date.strftime('%Y-%m-%d') if tournament.end_date else None,
             'type': 'tournament',
             'formatted_date': formatted_date,
             'location': tournament.location,
             'notes': '',
             'rsvp_status': rsvp_status,
+            'rsvp_notes': rsvp_notes,
             'selected_by_admin': selected_by_admin,
             # Add these URLs
             'details_url': url_for('tournament.detail', tournament_id=tournament.id),
             'edit_url': url_for('tournament.edit', tournament_id=tournament.id),
-            'manage_url': url_for('tournament.rsvps', tournament_id=tournament.id)
+            'manage_url': url_for('tournament.rsvps', tournament_id=tournament.id),
+            'allDay': True  # Set tournaments as all-day events
         }
+        
+        # Critical fix: Add end date for multi-day events
+        # For FullCalendar, the end date should be exclusive (the day after the last day)
+        if tournament.end_date:
+            # Add 1 day to make the end date exclusive as required by FullCalendar
+            end_date = tournament.end_date + timedelta(days=1)
+            event['end'] = end_date.strftime('%Y-%m-%d')
+        
         events.append(event)
     
-    return render_template('calendar/index.html', events=json.dumps(events))
+    # Use the improved template
+    return render_template('calendar/index_improved.html', events=json.dumps(events))
 
 @calendar_bp.route('/sessions/<int:session_id>/rsvp', methods=['GET', 'POST'])
 @login_required

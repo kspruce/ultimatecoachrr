@@ -1,0 +1,239 @@
+/* Calendar Styles */
+
+/* Calendar Container */
+.calendar-container {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+/* Calendar Header */
+.fc .fc-toolbar {
+    flex-wrap: wrap;
+    padding: 15px;
+    gap: 10px;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Mobile optimizations for toolbar */
+@media (max-width: 767px) {
+    .fc .fc-toolbar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.2rem;
+        margin: 8px 0;
+        text-align: center;
+    }
+    
+    .fc .fc-button-group {
+        margin-bottom: 8px;
+    }
+}
+
+/* Calendar Events */
+.fc-event {
+    border-radius: 4px;
+    padding: 2px;
+    margin: 1px 0;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+}
+
+.fc-event-title {
+    font-weight: 500;
+    padding: 2px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-event-time {
+    font-weight: 400;
+    font-size: 0.85em;
+    padding: 0 4px;
+}
+
+/* Event Types */
+.event-session {
+    background-color: #3788d8;
+    border-color: #2c6db2;
+}
+
+.event-tournament {
+    background-color: #28a745;
+    border-color: #1e7e34;
+}
+
+/* RSVP Status Indicators */
+.event-rsvp-yes {
+    border-left: 5px solid #28a745;
+}
+
+.event-rsvp-maybe {
+    border-left: 5px solid #ffc107;
+}
+
+.event-rsvp-no {
+    border-left: 5px solid #dc3545;
+}
+
+.event-selected {
+    border-left: 5px solid #6f42c1;
+}
+
+/* Calendar Legend */
+.calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    margin-right: 5px;
+    border-radius: 3px;
+}
+
+/* Mobile optimizations for legend */
+@media (max-width: 767px) {
+    .calendar-legend {
+        justify-content: center;
+        padding: 10px 5px;
+    }
+    
+    .legend-item {
+        font-size: 0.75rem;
+        margin-right: 8px;
+    }
+}
+
+/* Event Modal */
+.event-modal .modal-header {
+    border-bottom: 3px solid #3788d8;
+    padding: 15px 20px;
+}
+
+.event-modal.tournament-event .modal-header {
+    border-bottom-color: #28a745;
+}
+
+.event-modal .modal-title {
+    font-weight: 600;
+}
+
+.event-modal .event-details {
+    margin-bottom: 20px;
+}
+
+.event-modal .event-details h4 {
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.event-modal .event-details p {
+    margin-bottom: 8px;
+    display: flex;
+}
+
+.event-modal .event-details p i {
+    width: 20px;
+    margin-right: 8px;
+    color: #6c757d;
+}
+
+.event-modal .event-notes {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+/* RSVP Section */
+.rsvp-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+@media (max-width: 767px) {
+    .rsvp-buttons {
+        flex-direction: column;
+    }
+    
+    .rsvp-buttons button {
+        margin-bottom: 8px;
+    }
+}
+
+/* Admin Section */
+.admin-section {
+    border-top: 1px solid #dee2e6;
+    padding-top: 15px;
+    margin-top: 20px;
+}
+
+.admin-section .btn {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+/* Multi-day event styling */
+.fc-event.fc-event-multi-day {
+    background-color: #28a745;
+    border-color: #1e7e34;
+}
+
+/* Responsive adjustments for small screens */
+@media (max-width: 767px) {
+    .fc .fc-view-harness {
+        height: auto !important;
+        min-height: 400px;
+    }
+    
+    .fc .fc-toolbar.fc-header-toolbar {
+        margin-bottom: 0.5em;
+    }
+    
+    .fc .fc-daygrid-day-number {
+        font-size: 0.85rem;
+        padding: 4px;
+    }
+    
+    .fc .fc-daygrid-day-events {
+        min-height: auto;
+    }
+    
+    .fc-direction-ltr .fc-daygrid-event.fc-event-end, 
+    .fc-direction-rtl .fc-daygrid-event.fc-event-start {
+        margin-right: 0;
+    }
+    
+    .fc-event-title {
+        font-size: 0.75rem;
+    }
+}
