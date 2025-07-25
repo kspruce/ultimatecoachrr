@@ -8,7 +8,9 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('session.add_session') }}" class="btn btn-primary">Add Session</a>
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('session.add_session') }}" class="btn btn-primary">Add Session</a>
+                {% endif %}
                 <a href="{{ url_for('session.drills') }}" class="btn btn-outline-primary">Drill Library</a>
                 <a href="{{ url_for('session.attendance_analytics') }}" class="btn btn-outline-info">Attendance Analytics</a>
             </div>
@@ -59,8 +61,8 @@
                                     <td>
                                         <div class="btn-group">
                                             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                            <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                             {% if current_user.is_admin %}
+                                                <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                                         data-bs-toggle="modal" 
                                                         data-bs-target="#deleteModal{{ session.id }}">
@@ -112,7 +114,13 @@
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-center">No sessions found. <a href="{{ url_for('session.add_session') }}">Add a session</a> to get started.</p>
+                    <p class="text-center">No sessions found. 
+                        {% if current_user.is_admin %}
+                            <a href="{{ url_for('session.add_session') }}">Add a session</a> to get started.
+                        {% else %}
+                            Contact an administrator to add sessions.
+                        {% endif %}
+                    </p>
                     {% endif %}
                 </div>
             </div>

@@ -49,9 +49,11 @@
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 <a href="https://www.ultiplays.com/" class="btn btn-success" target="_blank">Ultiplays</a>  
-                <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add New Drill
-                </a>
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Drill
+                    </a>
+                {% endif %}
                 <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
             </div>
         </div>
@@ -137,8 +139,10 @@
                     <div class="btn-group w-100">
                         <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
                            class="btn btn-sm btn-outline-primary">View</a>
-                        <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" 
-                           class="btn btn-sm btn-outline-secondary">Edit</a>
+                        {% if current_user.is_admin %}
+                            <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" 
+                               class="btn btn-sm btn-outline-secondary">Edit</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -146,7 +150,12 @@
         {% else %}
         <div class="col-12">
             <div class="alert alert-info">
-                No drills found. <a href="{{ url_for('session.add_drill') }}">Add your first drill</a>
+                No drills found. 
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('session.add_drill') }}">Add your first drill</a>
+                {% else %}
+                    Contact an administrator to add drills.
+                {% endif %}
             </div>
         </div>
         {% endfor %}
