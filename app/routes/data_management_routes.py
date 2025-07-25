@@ -623,4 +623,55 @@ def import_zip_file_route():
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
     
+    # Add this to the end of your import_zip_file_route function
+    if summary['status'] == 'completed':
+        try:
+            logger.info("Automatically resetting sequences after successful import...")
+            sequence_results = get_manager().reset_sequences()
+            logger.info(f"Auto-reset sequences after import: {sequence_results}")
+            
+            # Count successful resets
+            success_count = sum(1 for result in sequence_results.values() 
+                               if not result.startswith("Error") and not result.startswith("Skipped"))
+            
+            flash(f"✅ Database sequences automatically reset for {success_count} tables.", 'success')
+        except Exception as e:
+            logger.warning(f"Failed to auto-reset sequences: {e}")
+            flash(f"⚠️ Import successful, but failed to reset sequences: {str(e)}. Use the 'Reset Database Sequences' button.", 'warning')
+    
+        
     return redirect(url_for('data_management.data_management'))
+
+
+@bp.route('/reset-sequences', methods=['POST'])
+@login_required
+@admin_required
+def reset_sequences():
+    """Reset database sequences for all models after an import."""
+    try:
+        manager = get_manager()
+        results = manager.reset_sequences()
+        
+        # Count successful resets
+        success_count = sum(1 for result in results.values() if not result.startswith("Error") and not result.startswith("Skipped"))
+        
+        # Log the results
+        logger.info(f"Sequence reset results: {results}")
+        
+        # Create a success message
+        message = f"✅ Database sequences reset successfully for {success_count} tables."
+        flash(message, 'success')
+        
+        # Add detailed log entry
+        addLogEntry = request.form.get('addLogEntry', 'true') == 'true'
+        if addLogEntry:
+            for table, result in results.items():
+                if result.startswith("Error"):
+                    flash(f"❌ Failed to reset sequence for {table}: {result}", 'error')
+        
+    except Exception as e:
+        logger.error(f"Failed to reset sequences: {e}", exc_info=True)
+        flash(f'❌ Failed to reset sequences: {str(e)}', 'error')
+    
+    return redirect(url_for('data_management.data_management'))
+

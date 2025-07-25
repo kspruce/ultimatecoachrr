@@ -132,6 +132,36 @@
                 <i class="fas fa-table me-2"></i>Models Overview
             </button>
         </li>
+        <!-- Reset Sequences Button -->
+        <div class="card mt-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-sync me-2"></i>Reset Database Sequences
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Database ID Conflict Fix:</strong> If you're getting errors about duplicate IDs or "record already exists" after importing data, use this button to fix the database counters.
+                </div>
+                
+                <p>This tool resets the auto-increment counters for all tables in your database to ensure new records get correct IDs that don't conflict with imported data.</p>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>When to use:</strong> After importing data from a backup, if you encounter errors when creating new records.
+                </div>
+                
+                <form method="POST" action="{{ url_for('data_management.reset_sequences') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sync me-2"></i>Reset All Database Sequences
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </ul>
 
     <div class="tab-content" id="dataTabsContent">
@@ -300,6 +330,37 @@
                                 <i class="fas fa-download me-2"></i>Import Data
                             </h5>
                         </div>
+                        <!-- Reset Sequences Button -->
+                        <div class="card mt-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-sync me-2"></i>Reset Database Sequences
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Database ID Conflict Fix:</strong> If you're getting errors about duplicate IDs or "record already exists" after importing data, use this button to fix the database counters.
+                                </div>
+                                
+                                <p>This tool resets the auto-increment counters for all tables in your database to ensure new records get correct IDs that don't conflict with imported data.</p>
+                                
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>When to use:</strong> After importing data from a backup, if you encounter errors when creating new records.
+                                </div>
+                                
+                                <form method="POST" action="{{ url_for('data_management.reset_sequences') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-sync me-2"></i>Reset All Database Sequences
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                         <div class="card-body">
                             <p class="text-muted">Import data from previously exported files.</p>
                             

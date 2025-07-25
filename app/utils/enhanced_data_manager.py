@@ -984,3 +984,113 @@ class EnhancedDataManager:
         p = math.pow(1024, i)
         s = round(size_bytes / p, 2)
         return f"{s} {size_names[i]}"
+    
+    def reset_sequences(self):
+        """
+        Reset all database sequences to max(id) + 1 for each table.
+        Works with PostgreSQL, SQLite, and MySQL databases.
+        """
+        from sqlalchemy import text, inspect, MetaData
+        
+        results = {}
+        inspector = inspect(self.db.engine)
+        dialect = self.db.engine.dialect.name
+        
+        # Get all models from the registry
+        for table_name, model in self.models.items():
+            try:
+                # Find primary key column(s) that are auto-incrementing
+                pk_columns = []
+                for column in model.__table__.columns:
+                    if column.primary_key and column.autoincrement:
+                        pk_columns.append(column.name)
+                
+                if not pk_columns:
+                    results[table_name] = "Skipped (no auto-increment PK)"
+                    continue
+                
+                # For simplicity, use the first auto-incrementing PK column
+                pk_column = pk_columns[0]
+                
+                # Get the max ID value
+                max_id_query = text(f"SELECT COALESCE(MAX({pk_column}), 0) FROM {table_name}")
+                max_id = self.db.session.execute(max_id_query).scalar() or 0
+                next_id = max_id + 1
+                
+                # Different SQL for different database types
+                if dialect == 'postgresql':
+                    # PostgreSQL sequence naming convention
+                    seq_name = f"{table_name}_{pk_column}_seq"
+                    
+                    # Check if the sequence exists
+                    seq_exists_query = text(
+                        "SELECT EXISTS(SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = :seq_name)"
+                    )
+                    seq_exists = self.db.session.execute(seq_exists_query, {"seq_name": seq_name}).scalar()
+                    
+                    if seq_exists:
+                        # Set the sequence to max_id + 1
+                        self.db.session.execute(
+                            text(f"SELECT setval('{seq_name}', {next_id}, false)")
+                        )
+                        results[table_name] = f"Reset to {next_id}"
+                    else:
+                        # Try alternative sequence naming conventions
+                        alt_seq_name = f"{table_name}_id_seq"
+                        seq_exists_query = text(
+                            "SELECT EXISTS(SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = :seq_name)"
+                        )
+                        seq_exists = self.db.session.execute(seq_exists_query, {"seq_name": alt_seq_name}).scalar()
+                        
+                        if seq_exists:
+                            self.db.session.execute(
+                                text(f"SELECT setval('{alt_seq_name}', {next_id}, false)")
+                            )
+                            results[table_name] = f"Reset to {next_id} (using {alt_seq_name})"
+                        else:
+                            results[table_name] = "Skipped (sequence not found)"
+                    
+                elif dialect == 'sqlite':
+                    # For SQLite, we need to update the sqlite_sequence table
+                    # First check if the table exists in sqlite_sequence
+                    check_query = text("SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_sequence'")
+                    has_seq_table = self.db.session.execute(check_query).scalar() is not None
+                    
+                    if has_seq_table:
+                        # Check if our table is in sqlite_sequence
+                        check_table_query = text("SELECT name FROM sqlite_sequence WHERE name = :table_name")
+                        table_in_seq = self.db.session.execute(check_table_query, {"table_name": table_name}).scalar() is not None
+                        
+                        if table_in_seq:
+                            # Update existing entry
+                            self.db.session.execute(
+                                text("UPDATE sqlite_sequence SET seq = :next_id WHERE name = :table_name"),
+                                {"next_id": max_id, "table_name": table_name}
+                            )
+                        else:
+                            # Insert new entry
+                            self.db.session.execute(
+                                text("INSERT INTO sqlite_sequence (name, seq) VALUES (:table_name, :next_id)"),
+                                {"table_name": table_name, "next_id": max_id}
+                            )
+                        
+                        results[table_name] = f"Reset to {next_id}"
+                    else:
+                        results[table_name] = "Skipped (sqlite_sequence table not found)"
+                    
+                elif dialect == 'mysql':
+                    # For MySQL/MariaDB
+                    self.db.session.execute(
+                        text(f"ALTER TABLE {table_name} AUTO_INCREMENT = {next_id}")
+                    )
+                    results[table_name] = f"Reset to {next_id}"
+                    
+                else:
+                    results[table_name] = f"Unsupported dialect: {dialect}"
+                    
+            except Exception as e:
+                results[table_name] = f"Error: {str(e)}"
+        
+        # Commit the changes
+        self.db.session.commit()
+        return results
