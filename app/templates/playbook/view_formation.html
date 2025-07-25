@@ -282,11 +282,11 @@
                     </span>
                 </div>
                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                    <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
-                       class="btn btn-light me-2">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
                     {% if current_user.is_admin %}
+                        <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+                           class="btn btn-light me-2">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
                         <button type="button" class="btn btn-outline-light"
                                 data-bs-toggle="modal" data-bs-target="#deleteConceptModal">
                             <i class="fas fa-trash"></i> Delete
@@ -396,14 +396,16 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
-                           class="btn btn-outline-primary">
-                            <i class="fas fa-edit me-2"></i> Edit Concept
-                        </a>
-                        <a href="{{ url_for('playbook.add_play') }}" 
-                           class="btn btn-outline-success">
-                            <i class="fas fa-plus me-2"></i> Create Play Using This Concept
-                        </a>
+                        {% if current_user.is_admin %}
+                            <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-2"></i> Edit Concept
+                            </a>
+                            <a href="{{ url_for('playbook.add_play') }}" 
+                               class="btn btn-outline-success">
+                                <i class="fas fa-plus me-2"></i> Create Play Using This Concept
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

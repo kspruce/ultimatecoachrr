@@ -48,10 +48,12 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                   class="btn btn-outline-primary">
-                    <i class="bi bi-pencil"></i> Edit Play
-                </a>
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Edit Play
+                    </a>
+                {% endif %}
                 <a href="{{ url_for('playbook.index') }}" 
                    class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Playbook
@@ -232,12 +234,14 @@
             <div class="card">
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <button type="button" 
-                                class="btn btn-outline-danger"
-                                data-bs-toggle="modal" 
-                                data-bs-target="#deletePlayModal">
-                            <i class="bi bi-trash"></i> Delete Play
-                        </button>
+                        {% if current_user.is_admin %}
+                            <button type="button" 
+                                    class="btn btn-outline-danger"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#deletePlayModal">
+                                <i class="bi bi-trash"></i> Delete Play
+                            </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>

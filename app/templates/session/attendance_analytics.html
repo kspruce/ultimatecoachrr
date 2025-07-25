@@ -109,7 +109,13 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5>Player Attendance Statistics</h5>
+                    <h5>
+                        {% if current_user.is_admin %}
+                            Player Attendance Statistics
+                        {% else %}
+                            Your Attendance Statistics
+                        {% endif %}
+                    </h5>
                 </div>
                 <div class="card-body">
                     {% if players|length > 0 %}
@@ -128,30 +134,37 @@
                                 </thead>
                                 <tbody>
                                     {% for stat in player_stats %}
-                                    <tr>
-                                        <td>
-                                            <a href="{{ url_for('session.player_attendance', player_id=stat.player.id) }}">
-                                                {{ stat.player.name }}
-                                            </a>
-                                        </td>
-                                        <td>{{ stat.present }}</td>
-                                        <td>{{ stat.late }}</td>
-                                        <td>{{ stat.absent }}</td>
-                                        <td>{{ stat.excused }}</td>
-                                        <td>{{ stat.total_attended }} / {{ sessions|length }}</td>
-                                        <td>
-                                            <span class="
-                                                {% if stat.attendance_rate >= 80 %}attendance-rate-high
-                                                {% elif stat.attendance_rate >= 60 %}attendance-rate-medium
-                                                {% else %}attendance-rate-low{% endif %}">
-                                                {{ stat.attendance_rate|round(1) }}%
-                                            </span>
-                                        </td>
-                                    </tr>
+                                        {% if current_user.is_admin or (current_user.player and current_user.player.id == stat.player.id) %}
+                                        <tr>
+                                            <td>
+                                                <a href="{{ url_for('session.player_attendance', player_id=stat.player.id) }}">
+                                                    {{ stat.player.name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ stat.present }}</td>
+                                            <td>{{ stat.late }}</td>
+                                            <td>{{ stat.absent }}</td>
+                                            <td>{{ stat.excused }}</td>
+                                            <td>{{ stat.total_attended }} / {{ sessions|length }}</td>
+                                            <td>
+                                                <span class="
+                                                    {% if stat.attendance_rate >= 80 %}attendance-rate-high
+                                                    {% elif stat.attendance_rate >= 60 %}attendance-rate-medium
+                                                    {% else %}attendance-rate-low{% endif %}">
+                                                    {{ stat.attendance_rate|round(1) }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
+                        {% if not current_user.is_admin and not current_user.player %}
+                            <div class="alert alert-warning">
+                                You don't have a player profile linked to your account. Please contact an administrator to link your account to a player.
+                            </div>
+                        {% endif %}
                     {% else %}
                         <div class="alert alert-info">
                             No active players found. Please add players to track attendance.
@@ -161,6 +174,7 @@
             </div>
         </div>
     </div>
+
     
     {% if selected_player %}
     <div class="row mt-4">
