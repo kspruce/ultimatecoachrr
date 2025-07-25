@@ -343,34 +343,47 @@ def update_selections(tournament_id):
     # Get selected player IDs from form
     selected_player_ids = request.form.getlist('selected_players')
     
-    # Update all RSVPs for this tournament
-    all_rsvps = TournamentRSVP.query.filter_by(tournament_id=tournament_id).all()
+    try:
+        # Update all RSVPs for this tournament
+        all_rsvps = TournamentRSVP.query.filter_by(tournament_id=tournament_id).all()
+        
+        # Create a set of player IDs with RSVPs
+        rsvp_player_ids = {rsvp.player_id for rsvp in all_rsvps}
+        
+        # Update existing RSVPs
+        for rsvp in all_rsvps:
+            rsvp.selected_by_admin = str(rsvp.player_id) in selected_player_ids
+        
+        # Create new RSVPs for players who didn't have one but were selected
+        for player_id in selected_player_ids:
+            player_id = int(player_id)
+            if player_id not in rsvp_player_ids:
+                # Find the highest existing RSVP ID and add 1
+                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
+                next_id = highest_id + 1
+                
+                # Create a new RSVP with admin selection
+                new_rsvp = TournamentRSVP(
+                    id=next_id,  # Explicitly set the ID
+                    tournament_id=tournament_id,
+                    player_id=player_id,
+                    status='attending',  # Default status
+                    selected_by_admin=True,
+                    notes='Added by admin'
+                )
+                db.session.add(new_rsvp)
+        
+        db.session.commit()
+        flash(f'{len(selected_player_ids)} players selected for {tournament.name}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating selections: {str(e)}', 'danger')
+        # Log the error
+        import logging
+        logging.error(f"Failed to update selections: {str(e)}")
     
-    # Create a set of player IDs with RSVPs
-    rsvp_player_ids = {rsvp.player_id for rsvp in all_rsvps}
-    
-    # Update existing RSVPs
-    for rsvp in all_rsvps:
-        rsvp.selected_by_admin = str(rsvp.player_id) in selected_player_ids
-    
-    # Create new RSVPs for players who didn't have one but were selected
-    for player_id in selected_player_ids:
-        player_id = int(player_id)
-        if player_id not in rsvp_player_ids:
-            # Create a new RSVP with admin selection
-            new_rsvp = TournamentRSVP(
-                tournament_id=tournament_id,
-                player_id=player_id,
-                status='attending',  # Default status
-                selected_by_admin=True,
-                notes='Added by admin'
-            )
-            db.session.add(new_rsvp)
-    
-    db.session.commit()
-    
-    flash(f'{len(selected_player_ids)} players selected for {tournament.name}', 'success')
     return redirect(url_for('tournament.rsvps', tournament_id=tournament_id))
+
 
 @bp.route('/<int:tournament_id>/assign_players')
 @login_required
