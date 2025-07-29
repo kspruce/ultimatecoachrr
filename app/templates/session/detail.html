@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% extends "base.html" %}
+
 {% block styles %}
 {{ super() }}
 <style>
@@ -145,7 +147,7 @@
                 </div>
             </div>
         </div>
-
+        
         <!-- Session Components -->
         <div class="col-md-8">
             <div class="card">
@@ -177,7 +179,7 @@
                                 {% if component.description %}
                                 <p class="mt-2">{{ component.description }}</p>
                                 {% endif %}
-
+        
                                 {% if component.saved_drill %}
                                 <div class="drill-details">
                                     <h6>Drill: {{ component.saved_drill.title }}</h6>
@@ -193,7 +195,7 @@
                                        class="btn btn-sm btn-outline-primary">View Full Drill Details</a>
                                 </div>
                                 {% endif %}
-
+        
                                 {% if component.notes %}
                                 <div class="mt-2">
                                     <strong>Notes:</strong> {{ component.notes }}
