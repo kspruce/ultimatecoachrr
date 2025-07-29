@@ -175,9 +175,9 @@
                                 {% endif %}
                                 
                                 {% if component.description %}
-                                <p class="mt-2">{{ component.description }}</p>
+                                <div class="mt-2 markdown-content">{{ component.description|markdown|safe }}</div>
                                 {% endif %}
-        
+                            
                                 {% if component.saved_drill %}
                                 <div class="drill-details">
                                     <h6>Drill: {{ component.saved_drill.title }}</h6>
@@ -187,16 +187,17 @@
                                     </div>
                                     {% endif %}
                                     {% if component.saved_drill.description %}
-                                    <p>{{ component.saved_drill.description }}</p>
+                                    <div class="markdown-content">{{ component.saved_drill.description|markdown|safe }}</div>
                                     {% endif %}
                                     <a href="{{ url_for('session.drill_detail', drill_id=component.saved_drill.id) }}" 
                                        class="btn btn-sm btn-outline-primary">View Full Drill Details</a>
                                 </div>
                                 {% endif %}
-        
+                            
                                 {% if component.notes %}
                                 <div class="mt-2">
-                                    <strong>Notes:</strong> {{ component.notes }}
+                                    <strong>Notes:</strong> 
+                                    <div class="markdown-content">{{ component.notes|markdown|safe }}</div>
                                 </div>
                                 {% endif %}
                                 

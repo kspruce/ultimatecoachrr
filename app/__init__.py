@@ -55,13 +55,6 @@ def create_app(config_class=Config):
     from commands import register_commands
     register_commands(app)    
     
-    # Template filters
-    def markdown_filter(text):
-        if text:
-            return markdown.markdown(text, extensions=['fenced_code', 'tables'])
-        return ''
-    
-    app.jinja_env.filters['markdown'] = markdown_filter
     
     @app.template_filter('initials')
     def initials_filter(name):
