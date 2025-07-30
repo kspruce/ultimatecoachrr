@@ -304,54 +304,7 @@
                         <div class="mt-0 pt-0">
                             <h5 class="mb-2">Upcoming Events</h5>
                             <div class="upcoming-events-container" style="max-height: 200px; overflow-y: auto; padding-right: 5px;">
-                                <!-- Debug info for upcoming events -->
-                                {% if current_user.is_authenticated and current_user.is_admin %}
-                                <div class="card mb-4">
-                                    <div class="card-header bg-info text-white">
-                                        <h5 class="mb-0">
-                                            <i class="bi bi-bug-fill me-2"></i>
-                                            Debug Information (Admin Only)
-                                        </h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <h6>Upcoming Events Data:</h6>
-                                        <p>Number of upcoming events: <strong>{{ upcoming_events|length }}</strong></p>
-                                        
-                                        {% if upcoming_events %}
-                                            <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>#</th>
-                                                            <th>Title</th>
-                                                            <th>Type</th>
-                                                            <th>Date/Time</th>
-                                                            <th>Location</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for event in upcoming_events %}
-                                                        <tr>
-                                                            <td>{{ loop.index }}</td>
-                                                            <td>{{ event.title }}</td>
-                                                            <td><span class="badge bg-{{ event.badge_color }}">{{ event.type }}</span></td>
-                                                            <td>{{ event.date_time }}</td>
-                                                            <td>{{ event.location or 'N/A' }}</td>
-                                                        </tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        {% else %}
-                                            <div class="alert alert-danger">
-                                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                                No upcoming events found in the data!
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% endif %}
-
+                                
                                 {% if upcoming_events %}
                                     {% for event in upcoming_events %}
                                     <div class="upcoming-event {{ event.type }}">
