@@ -883,24 +883,47 @@ def calculate_game_stats(game):
     """
     Calculate comprehensive game statistics
     """
+    # Safely get points
+    try:
+        if hasattr(game.points, 'all'):
+            all_points = game.points.all()
+        else:
+            all_points = game.points
+            
+        if hasattr(game.o_line_points, 'all'):
+            o_points = game.o_line_points.all()
+        else:
+            o_points = game.o_line_points
+            
+        if hasattr(game.d_line_points, 'all'):
+            d_points = game.d_line_points.all()
+        else:
+            d_points = game.d_line_points
+    except Exception as e:
+        print(f"Error getting points for game {game.id}: {str(e)}")
+        all_points = []
+        o_points = []
+        d_points = []
+    
     stats = {
-        'o_line_points': len(game.o_line_points),
-        'o_line_conversions': sum(1 for p in game.o_line_points if p.we_scored),
-        'd_line_points': len(game.d_line_points),
-        'd_line_conversions': sum(1 for p in game.d_line_points if p.we_scored),
-        'breaks': sum(1 for p in game.points if p.is_break),
-        'holds': sum(1 for p in game.points if p.is_hold),
+        'o_line_points': len(o_points),
+        'o_line_conversions': sum(1 for p in o_points if p.we_scored),
+        'd_line_points': len(d_points),
+        'd_line_conversions': sum(1 for p in d_points if p.we_scored),
+        'breaks': sum(1 for p in all_points if p.is_break),
+        'holds': sum(1 for p in all_points if p.is_hold),
         'turnovers': 0,
         'possessions': 0,
         'point_flow': []
     }
+
     
     # Calculate conversion rates
     stats['o_line_conversion_rate'] = (stats['o_line_conversions'] / stats['o_line_points'] * 100) if stats['o_line_points'] > 0 else 0
     stats['d_line_conversion_rate'] = (stats['d_line_conversions'] / stats['d_line_points'] * 100) if stats['d_line_points'] > 0 else 0
     
     # Calculate point flow data
-    for point in sorted(game.points, key=lambda p: p.point_number):
+    for point in sorted(all_points, key=lambda p: p.point_number):
         stats['point_flow'].append({
             'point_number': point.point_number,
             'our_score_before': point.our_score_before,
@@ -976,11 +999,17 @@ def index():
             return render_template('stats/index.html', **default_context)
 
 
-        # Get recent games with eager loading
+        # Get recent games with eager loading for tournament only
         recent_games = Game.query.options(
-            db.subqueryload(Game.points).joinedload(Point.lineups),
             db.joinedload(Game.tournament)
         ).order_by(Game.date.desc()).all()
+        
+        # For each game, explicitly load points to handle dynamic relationship
+        for game in recent_games:
+            # Force loading of points
+            if hasattr(game.points, 'all'):
+                _ = game.points.all()
+
 
         
         if not recent_games:
@@ -1497,14 +1526,21 @@ def team_stats():
         games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
     
     # Use eager loading for related data
+    # Use eager loading for tournament only
     games_query = games_query.options(
-        db.subqueryload(Game.points).joinedload(Point.lineups),
         db.joinedload(Game.tournament)
     )
-
     
     games = games_query.order_by(Game.date).all()
     
+    # For each game, explicitly load points to handle dynamic relationship
+    for game in games:
+        # Force loading of points
+        if hasattr(game.points, 'all'):
+            _ = game.points.all()
+
+    
+  
     # Calculate team summary stats
     team_summary = calculate_team_summary(games)
     
@@ -1776,7 +1812,7 @@ def calculate_team_summary(games):
         'wins': sum(1 for g in games if g.is_win),
         'losses': sum(1 for g in games if g.is_loss),
         'ties': sum(1 for g in games if g.is_tie),
-        'total_points': sum(len(g.points.all()) for g in games),
+        'total_points': 0,
         'o_line_points': 0,
         'o_line_conversions': 0,
         'd_line_points': 0,
@@ -1784,6 +1820,18 @@ def calculate_team_summary(games):
         'breaks': 0,
         'holds': 0
     }
+    
+    # Safely count total points
+    for game in games:
+        try:
+            if hasattr(game.points, 'all'):
+                points = game.points.all()
+            else:
+                points = game.points
+            summary['total_points'] += len(points)
+        except Exception as e:
+            print(f"Error counting points for game {game.id}: {str(e)}")
+
 
     for game in games:
         o_points = game.o_line_points
@@ -1942,23 +1990,18 @@ def debug_stats(player_id):
 
 def calculate_hucks(player, games=None):
     """Calculate number of hucks (throws over 20m)"""
-    query = Throw.query.filter_by(thrower_id=player.id)
-    
-    if games:
-        if isinstance(games, list):
-            point_ids = [p.id for g in games for p in g.points]
-        else:
-            point_ids = [p.id for p in games.points]
-        query = query.filter(Throw.point_id.in_(point_ids))
-    
-    # Count throws with distance > 20m
-    hucks = 0
-    for throw in query.all():
-        distance = throw.calculate_distance()
-        if distance and distance > 20:
-            hucks += 1
-    
-    return hucks
+    # We can use the throw vectors from the player stats
+    if not games:
+        return 0
+        
+    # Use the throw vectors from player stats
+    player_stats_dict = get_players_base_stats([player], games)
+    if player.id not in player_stats_dict:
+        return 0
+        
+    stats = player_stats_dict[player.id]
+    return sum(1 for t in stats['throw_vectors'] if t['distance'] > 20)
+
 
 
 @bp.route('/debug/players')
@@ -2458,6 +2501,8 @@ def get_previous_period_games(season, tournament_id):
     
     # Default: return empty list if no previous period found
     return []
+
+
 
 def calculate_line_efficiency(players, games, is_offensive=True):
     """Calculate line efficiency with gender separation"""
@@ -3214,3 +3259,4 @@ def get_point_ids_from_games(games):
             print(f"Error getting points for game {game.id}: {str(e)}")
             
     return point_ids
+
