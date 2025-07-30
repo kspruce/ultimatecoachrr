@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from sqlalchemy.orm import subqueryload
 from flask_login import login_required, current_user
 from app import db
 from app.models.player import Player
@@ -974,11 +975,13 @@ def index():
             flash("No active players found", "warning")
             return render_template('stats/index.html', **default_context)
 
+
         # Get recent games with eager loading
         recent_games = Game.query.options(
-            db.joinedload(Game.points).joinedload(Point.lineups),
+            db.subqueryload(Game.points).joinedload(Point.lineups),
             db.joinedload(Game.tournament)
         ).order_by(Game.date.desc()).all()
+
         
         if not recent_games:
             return render_template('stats/index.html', **default_context)
@@ -1257,33 +1260,9 @@ def player_stats(player_id):
     else:
         games = Game.query.all()
     
-    # Get point IDs for filtering if games are selected
-    point_ids = None
-    if games:
-        if isinstance(games, list):
-            point_ids = []
-            for g in games:
-                try:
-                    if hasattr(g.points, 'all'):
-                        points = g.points.all()
-                    else:
-                        points = g.points
-                    point_ids.extend([p.id for p in points])
-                except Exception as e:
-                    print(f"Error getting points for game {g.id}: {str(e)}")
-        else:
-            try:
-                if hasattr(games.points, 'all'):
-                    points = games.points.all()
-                else:
-                    points = games.points
-                point_ids = [p.id for p in points]
-            except Exception as e:
-                print(f"Error getting points for game: {str(e)}")
-    
-    # Use cached player stats
-    game_ids_tuple = games_to_tuple(games)
-    stats = get_cached_player_base_stats(player.id, game_ids_tuple)
+    # Use the new batch function for a single player to ensure consistency
+    player_stats_dict = get_players_base_stats([player], games)
+    stats = player_stats_dict[player.id]
     
     # Calculate team averages specifically for these games
     team_avgs = get_cached_team_averages(games)
@@ -1294,6 +1273,10 @@ def player_stats(player_id):
     # Add hucks to player stats
     stats['hucks'] = sum(1 for t in stats['throw_vectors'] if t['distance'] > 20)
     
+    # Get point IDs for filtering if games are selected
+    point_ids = get_point_ids_from_games(games)
+
+
     # Get cutting skills data
     cutting_skills_query = CuttingSkill.query.filter_by(player_id=player_id)
     if point_ids:
@@ -1374,13 +1357,14 @@ def player_stats(player_id):
         )
         
         if lineup_query.count() > 0:
-            game_stats = get_cached_player_base_stats(player.id, (game.id,))
+            # Use the batch function for consistency, even for a single player
+            game_stats_dict = get_players_base_stats([player], [game])
+            game_stats = game_stats_dict[player.id]
+            
             # Calculate game-specific team averages
             game_team_avgs = get_cached_team_averages([game])
-            game_stats['per'] = calculate_per(
-                player, [game], 
-                game_team_avgs
-            )
+            game_stats['per'] = calculate_per(player, [game], game_team_avgs)
+            
             player_games.append({
                 'game': game,
                 'stats': game_stats
@@ -1414,6 +1398,8 @@ def player_stats(player_id):
         cutting_data=cutting_data,
         cutting_stats=cutting_stats
     )
+
+
 
 
 
@@ -1478,9 +1464,10 @@ def game_stats(game_id):
         heatmap_data=json.dumps(heatmap_data),
         connections=json.dumps(connection_data),
         calculate_impact_score=calculate_impact_score,
-        is_admin=is_admin,
-        is_coach=is_coach
+        is_admin=current_user.is_admin if hasattr(current_user, 'is_admin') else False,
+        is_coach=current_user.is_coach if hasattr(current_user, 'is_coach') else False
     )
+
 
 def calculate_impact_score(stats):
     """Calculate impact score for a player"""
@@ -1511,9 +1498,10 @@ def team_stats():
     
     # Use eager loading for related data
     games_query = games_query.options(
-        db.joinedload(Game.points).joinedload(Point.lineups),
+        db.subqueryload(Game.points).joinedload(Point.lineups),
         db.joinedload(Game.tournament)
     )
+
     
     games = games_query.order_by(Game.date).all()
     
@@ -3202,3 +3190,27 @@ def api_player_stats():
                 })
     
     return jsonify(result)
+
+def get_point_ids_from_games(games):
+    """Safely extract point IDs from games, handling both lists and single games"""
+    point_ids = []
+    
+    if not games:
+        return point_ids
+        
+    if not isinstance(games, list):
+        games = [games]
+        
+    for game in games:
+        try:
+            # Handle dynamic relationship
+            if hasattr(game.points, 'all'):
+                points = game.points.all()
+            else:
+                points = game.points
+                
+            point_ids.extend([p.id for p in points])
+        except Exception as e:
+            print(f"Error getting points for game {game.id}: {str(e)}")
+            
+    return point_ids
