@@ -18,6 +18,9 @@ from werkzeug.utils import secure_filename
 import logging
 import math
 from sqlalchemy import inspect as sqlalchemy_inspect
+import logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 bp = Blueprint('main', __name__)
@@ -38,9 +41,17 @@ def index():
 
     if current_user.is_authenticated:
         try:
+            logger.debug("Starting to gather dashboard data")
             # Calculate Quick Stats
             # Active Players Count
             stats['active_players_count'] = Player.query.filter_by(active=True).count()
+
+            # Check if we have any future events in the database
+            future_games_count = Game.query.filter(Game.date >= datetime.now()).count()
+            future_sessions_count = SessionPlan.query.filter(SessionPlan.date >= datetime.now().date()).count()
+            future_tournaments_count = Tournament.query.filter(Tournament.start_date >= datetime.now().date()).count()
+            
+            logger.debug(f"Database counts - Games: {future_games_count}, Sessions: {future_sessions_count}, Tournaments: {future_tournaments_count}")
 
             # Games Statistics
             current_year = datetime.now().year
@@ -86,6 +97,7 @@ def index():
             future_games = Game.query.filter(Game.date >= datetime.now()).order_by(Game.date.asc()).limit(3).all()
             print(f"Found {len(future_games)} future games")
             for game in future_games:
+                logger.debug(f"Processing game: {game.opponent} on {game.date}")
                 upcoming_events.append({
                     'type': 'game',
                     'title': f'vs {game.opponent}',
