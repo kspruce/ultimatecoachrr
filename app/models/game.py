@@ -23,6 +23,11 @@ class Game(db.Model):
     # Add relationship with GamePlayer
     assigned_players = db.relationship('GamePlayer', back_populates='game', cascade='all, delete-orphan', lazy='dynamic')
     
+    __table_args__ = (
+        db.Index('idx_game_tournament', 'tournament_id'),
+        db.Index('idx_game_date', 'date'),
+    )    
+    
     def __repr__(self):
         return f'<Game vs {self.opponent}>'
     

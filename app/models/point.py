@@ -29,6 +29,12 @@ class Point(db.Model):
     throws = db.relationship('Throw', back_populates='point')  # Add this line
     cutting_skills = db.relationship('CuttingSkill', back_populates='point', cascade='all, delete-orphan')
 
+    __table_args__ = (
+        db.Index('idx_point_game', 'game_id'),
+        db.Index('idx_point_line_type', 'our_line_type'),
+        db.Index('idx_point_outcome', 'point_outcome'),
+    )
+
     def __repr__(self):
         return f'<Point {self.point_number} in Game {self.game_id}>'
 
@@ -76,6 +82,10 @@ class LineUp(db.Model):
     # Relationships
     point = db.relationship('Point', back_populates='lineups')
     player = db.relationship('Player', back_populates='lineups')
+
+    __table_args__ = (
+        db.Index('idx_lineup_player_point', 'player_id', 'point_id'),
+    )
 
     def __repr__(self):
         return f'<LineUp: Player {self.player_id} in Point {self.point_id}>'

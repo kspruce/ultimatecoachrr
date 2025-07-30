@@ -48,6 +48,14 @@ class Throw(db.Model):
     throwing_event = db.relationship('Event', foreign_keys=[throwing_event_id])
     receiving_event = db.relationship('Event', foreign_keys=[receiving_event_id])
     
+    __table_args__ = (
+        db.Index('idx_throw_thrower', 'thrower_id'),
+        db.Index('idx_throw_receiver', 'receiver_id'),
+        db.Index('idx_throw_point', 'point_id'),
+        db.Index('idx_throw_type', 'throw_type'),
+        db.Index('idx_throw_completion', 'is_completion'),
+    )    
+    
     def calculate_distance(self):
         """Calculate the distance of the throw in meters"""
         if self.x_start is not None and self.y_start is not None and self.x_end is not None and self.y_end is not None:

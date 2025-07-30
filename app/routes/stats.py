@@ -14,6 +14,9 @@ import json
 import math
 from app.utils.utils import admin_required
 from datetime import datetime, date
+from functools import lru_cache
+from datetime import datetime, timedelta
+
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
@@ -24,6 +27,84 @@ def is_admin(user):
 def is_coach(user):
     """Check if user has coach role"""
     return user.role == 'coach' if hasattr(user, 'role') else False
+
+# Cache for team averages that rarely change
+_team_avg_cache = {}
+_team_avg_timestamp = {}
+
+def get_cached_team_averages(games=None, max_age_minutes=15):
+    """Get team averages with caching"""
+    # Create a cache key based on game IDs
+    if games:
+        if isinstance(games, list):
+            cache_key = tuple(sorted([g.id for g in games]))
+        else:
+            cache_key = (games.id,)
+    else:
+        cache_key = 'all_games'
+    
+    now = datetime.now()
+    if (cache_key in _team_avg_cache and 
+        cache_key in _team_avg_timestamp and
+        now - _team_avg_timestamp[cache_key] < timedelta(minutes=max_age_minutes)):
+        print(f"Using cached team averages for {cache_key}")
+        return _team_avg_cache[cache_key]
+    
+    # Calculate if not in cache or expired
+    print(f"Calculating team averages for {cache_key}")
+    result = calculate_team_averages(games)
+    _team_avg_cache[cache_key] = result
+    _team_avg_timestamp[cache_key] = now
+    return result
+
+# Use LRU cache for player stats that don't change often
+@lru_cache(maxsize=128)
+def get_cached_player_base_stats(player_id, game_ids_tuple=None):
+    """Cached version of player stats"""
+    player = Player.query.get(player_id)
+    if game_ids_tuple:
+        games = [Game.query.get(gid) for gid in game_ids_tuple]
+    else:
+        games = None
+    return get_player_base_stats(player, games)
+
+# Helper function to convert games to a tuple of IDs for caching
+def games_to_tuple(games):
+    """Convert games to a tuple of IDs for use as cache key"""
+    if not games:
+        return None
+    if isinstance(games, list):
+        return tuple(sorted([g.id for g in games]))
+    return (games.id,)
+
+def invalidate_stats_cache(player_id=None, game_id=None):
+    """Invalidate stats cache when data changes"""
+    global _team_avg_cache, _team_avg_timestamp
+    
+    # If a specific player's stats changed
+    if player_id:
+        # Clear LRU cache for this player
+        get_cached_player_base_stats.cache_clear()
+        
+        # We could be more selective here, but for simplicity, clear all team averages
+        _team_avg_cache = {}
+        _team_avg_timestamp = {}
+        print(f"Cleared cache for player {player_id} and team averages")
+    
+    # If a game's data changed
+    elif game_id:
+        # Clear all caches since game data affects multiple players and team averages
+        get_cached_player_base_stats.cache_clear()
+        _team_avg_cache = {}
+        _team_avg_timestamp = {}
+        print(f"Cleared all stats caches due to game {game_id} update")
+    
+    # If no specific entity changed, clear everything
+    else:
+        get_cached_player_base_stats.cache_clear()
+        _team_avg_cache = {}
+        _team_avg_timestamp = {}
+        print("Cleared all stats caches")
 
 
 # --- Core Statistical Calculation Functions ---
@@ -307,30 +388,33 @@ def default_team_stats():
         'turnovers_forced_per_point': 0
     }
 
+PER_WEIGHTS = {
+    'scoring': 0.5,
+    'assist': 0.5,
+    'turnover': -0.75,
+    'defense': 0.75,
+    'throw': 0.05,
+    'plus_minus': 0.1
+}
 
 def calculate_per(player, games=None, team_avgs=None):
     """
-    Standardized PER calculation following the Bruin Sports Analytics formula
+    Standardized PER calculation with optimizations
     """
-    stats = get_player_base_stats(player, games)
+    # Use cached stats if possible
+    game_ids_tuple = games_to_tuple(games)
+    stats = get_cached_player_base_stats(player.id, game_ids_tuple)
     
     if stats['points_played'] == 0:
         return 0
     
-    # If team_avgs is not provided, calculate it
+    # If team_avgs is not provided, get from cache
     if team_avgs is None:
-        team_avgs = calculate_team_averages(games)
-        
-    # Define weights
-    WEIGHTS = {
-        'scoring': 0.5,
-        'assist': 0.5,
-        'turnover': -0.75,
-        'defense': 0.75,
-        'throw': 0.05,
-        'plus_minus': 0.1
-    }
-
+        team_avgs = get_cached_team_averages(games)
+    
+    # Define weights - moved outside the function to avoid recreating each time
+    WEIGHTS = PER_WEIGHTS
+    
     # Box score component calculations
     goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
     assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
@@ -623,8 +707,8 @@ def get_player_base_stats(player, games=None):
 
 
 
-def process_heatmap_data(team_name=None, player_id=None, opposition_team=None):
-    """Process throw data for heatmap visualization"""
+def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, limit=None):
+    """Process throw data for heatmap visualization with limit"""
     query = Throw.query
     
     if player_id:
@@ -633,6 +717,10 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None):
         query = query.filter(Throw.opposition_team == opposition_team)
     if team_name:
         query = query.join(Throw.thrower).filter(Player.team == team_name)
+    
+    # Add limit to query if specified
+    if limit:
+        query = query.limit(limit)
     
     throws = query.all()
     heatmap_data = []
@@ -647,12 +735,16 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None):
                 'type': 'throw_start'
             })
     
-    # For throwaways, still use Events model
+    # For throwaways, still use Events model but with a limit
     throwaway_query = Event.query.filter_by(event_type='throwaway')
     if player_id:
         throwaway_query = throwaway_query.filter_by(player_id=player_id)
     if team_name:
         throwaway_query = throwaway_query.join(Event.player).filter(Player.team == team_name)
+    
+    # Add limit to throwaway query if specified
+    if limit:
+        throwaway_query = throwaway_query.limit(limit)
     
     for event in throwaway_query.all():
         if event.field_position_x is not None and event.field_position_y is not None:
@@ -665,8 +757,8 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None):
     
     return heatmap_data
 
-def generate_player_connections(team_name=None, opposition_team=None):
-    """Generate player connection data using Throws model"""
+def generate_player_connections(team_name=None, opposition_team=None, min_connections=1):
+    """Generate player connection data using Throws model with minimum connection threshold"""
     query = Throw.query.filter(Throw.receiver_id.isnot(None))
     
     if team_name:
@@ -694,9 +786,18 @@ def generate_player_connections(team_name=None, opposition_team=None):
                 'value': 1
             }
     
-    # Create nodes list
+    # Filter connections by minimum threshold
+    if min_connections > 1:
+        connections = {k: v for k, v in connections.items() if v['value'] >= min_connections}
+    
+    # Create nodes list - only include players that have connections after filtering
+    player_ids_in_connections = set()
+    for conn in connections.values():
+        player_ids_in_connections.add(conn['source'])
+        player_ids_in_connections.add(conn['target'])
+    
     nodes = []
-    for player_id in players:
+    for player_id in player_ids_in_connections:
         player = Player.query.get(player_id)
         if player:
             nodes.append({
@@ -713,13 +814,17 @@ def generate_player_connections(team_name=None, opposition_team=None):
 
 
 
+
 # --- Additional Helper Functions ---
 
 def calculate_team_averages(games=None):
     """
-    Calculate team averages for PER normalization
+    Calculate team averages for PER normalization with optimizations
     """
     players = Player.query.filter_by(active=True).all()
+    
+    # Use batch loading for player stats
+    player_stats = get_players_base_stats(players, games)
     
     totals = {
         'o_line_plus_minus': 0,
@@ -730,21 +835,47 @@ def calculate_team_averages(games=None):
         'player_count': 0
     }
 
-    for player in players:
-        stats = get_player_base_stats(player, games)
+    for player_id, stats in player_stats.items():
         if stats['points_played'] > 0:
             totals['player_count'] += 1
             totals['o_line_plus_minus'] += stats.get('o_line_plus_minus', 0)
             totals['o_line_points'] += stats.get('o_line_points_played', 0)
             totals['d_line_plus_minus'] += stats.get('d_line_plus_minus', 0)
             totals['d_line_points'] += stats.get('d_line_points_played', 0)
-            totals['uper_total'] += calculate_unadjusted_per(stats)
+            
+            # Calculate unadjusted PER directly here instead of calling another function
+            if stats['points_played'] > 0:
+                # Define weights
+                WEIGHTS = PER_WEIGHTS
+                
+                # Box score component calculations
+                goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
+                assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
+                hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
+                turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
+                blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
+                stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
+                callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
+                
+                box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
+                
+                # Passing component calculations
+                completion_factor = (stats['completion_rate']/100) ** 3.0
+                catch_factor = (stats['catch_rate']/100) ** 3.0
+                completions_component = (stats['completions'] ** 0.75) * completion_factor
+                catches_component = (stats['catches'] ** 0.75) * catch_factor
+                passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
+                
+                # Calculate raw unadjusted PER
+                raw_uper = (1 / stats['points_played']) * (box_component + passing_component)
+                totals['uper_total'] += raw_uper
 
     return {
         'avg_o_line_plus_minus_per_point': (totals['o_line_plus_minus'] / totals['o_line_points']) if totals['o_line_points'] > 0 else 0,
         'avg_d_line_plus_minus_per_point': (totals['d_line_plus_minus'] / totals['d_line_points']) if totals['d_line_points'] > 0 else 0,
         'avg_uper': totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
     }
+
 
 
 def calculate_game_stats(game):
@@ -824,9 +955,8 @@ def index():
         'd_line_players': [],
         'heatmap_data': [],
         'connection_data': {'nodes': [], 'links': []},
-        'team_avg_stats': {}  # Add this line
+        'team_avg_stats': {}
     }
-
 
     try:
         # Get team name from current user's player
@@ -834,210 +964,96 @@ def index():
         if hasattr(current_user, 'player') and current_user.player:
             team_name = current_user.player.team
 
-
-        # Get active players
-        players = Player.query.filter_by(active=True)
+        # Get active players with eager loading
+        players_query = Player.query.filter_by(active=True)
         if team_name:
-            players = players.filter_by(team=team_name)
-        players = players.all()
+            players_query = players_query.filter_by(team=team_name)
+        players = players_query.all()
 
-        
         if not players:
             flash("No active players found", "warning")
             return render_template('stats/index.html', **default_context)
 
-        # Calculate team summary and stats
-        recent_games = Game.query.order_by(Game.date.desc()).all()
-        if recent_games:
-            # Calculate team summary stats - SAME AS TEAM_STATS ROUTE
-            team_summary = calculate_team_summary(recent_games)
-            
-            # Add additional metrics for radar charts - SAME AS TEAM_STATS ROUTE
-            team_summary.update(calculate_additional_team_metrics(recent_games))
-            
-            # Calculate previous period stats for comparison - SAME AS TEAM_STATS ROUTE
-            # For index, we don't have filters, so we'll get previous games based on dates
-            prev_games = recent_games[1:] if len(recent_games) > 1 else []
-            prev_summary = calculate_team_summary(prev_games)
-            prev_metrics = calculate_additional_team_metrics(prev_games)
-            
-            # Add previous metrics with 'prev_' prefix - SAME AS TEAM_STATS ROUTE
-            for key, value in prev_metrics.items():
+        # Get recent games with eager loading
+        recent_games = Game.query.options(
+            db.joinedload(Game.points).joinedload(Point.lineups),
+            db.joinedload(Game.tournament)
+        ).order_by(Game.date.desc()).all()
+        
+        if not recent_games:
+            return render_template('stats/index.html', **default_context)
+
+        # Start timing the expensive operations
+        import time
+        start_time = time.time()
+        
+        # Calculate team summary stats - SAME AS TEAM_STATS ROUTE
+        team_summary = calculate_team_summary(recent_games)
+        
+        # Add additional metrics for radar charts - SAME AS TEAM_STATS ROUTE
+        team_summary.update(calculate_additional_team_metrics(recent_games))
+        
+        # Calculate previous period stats for comparison - SAME AS TEAM_STATS ROUTE
+        # For index, we don't have filters, so we'll get previous games based on dates
+        prev_games = recent_games[1:] if len(recent_games) > 1 else []
+        prev_summary = calculate_team_summary(prev_games)
+        prev_metrics = calculate_additional_team_metrics(prev_games)
+        
+        # Add previous metrics with 'prev_' prefix - SAME AS TEAM_STATS ROUTE
+        for key, value in prev_metrics.items():
+            team_summary[f'prev_{key}'] = value
+        for key, value in prev_summary.items():
+            if key not in team_summary:
                 team_summary[f'prev_{key}'] = value
-            for key, value in prev_summary.items():
-                if key not in team_summary:
-                    team_summary[f'prev_{key}'] = value
-            
-            # Calculate game stats
-            team_stats = []
-            for game in recent_games:
-                try:
-                    stats = calculate_game_stats(game)
-                    team_stats.append({'stats': stats})
-                except Exception as e:
-                    print(f"Error calculating stats for game {game.id}: {str(e)}")
-                    continue
-        else:
-            team_summary = default_context['team_summary']
-            team_stats = []
-
-
-
-        # Calculate team averages once for all players
-        team_avgs = calculate_team_averages(recent_games)
         
-        # Calculate player stats
-        # Calculate player stats with debugging for Annie Ford
-        player_stats = {}
-        print("\n--- Starting player stats calculation ---")
-        print(f"Total players to process: {len(players)}")
-        annie_found = False
-        
-        for player in players:
+        # Calculate game stats
+        team_stats = []
+        for game in recent_games[:5]:  # Limit to most recent 5 games for performance
             try:
-                # Check if this is Annie Ford
-                is_annie = (player.id == 29)
-                if is_annie:
-                    annie_found = True
-                    print(f"\n*** Processing Annie Ford (ID 29) ***")
-                    print(f"Annie's name: {player.name}")
-                    print(f"Annie's jersey: {player.jersey_number}")
-                    print(f"Annie's team: {player.team}")
-                    print(f"Annie's active status: {player.active}")
-                
-                # Get base stats
-                stats = get_player_base_stats(player)
-                
-                if is_annie:
-                    print(f"Annie's points_played: {stats['points_played']}")
-                    print(f"Annie's stats keys: {list(stats.keys())}")
-                    print(f"Annie's goals: {stats.get('goals', 'N/A')}")
-                    print(f"Annie's assists: {stats.get('assists', 'N/A')}")
-                    print(f"Annie's blocks: {stats.get('blocks', 'N/A')}")
-                    print(f"Annie's completions: {stats.get('completions', 'N/A')}")
-                
-                # Check if player has points played
-                if stats['points_played'] > 0:
-                    # Pass the team_avgs to calculate_per
-                    stats['per'] = calculate_per(player, team_avgs=team_avgs)
-                    player_stats[player.id] = stats
-                    
-                    if is_annie:
-                        print(f"✅ Annie Ford added to player_stats with PER: {stats['per']}")
-                else:
-                    if is_annie:
-                        print(f"❌ Annie Ford has 0 points_played, not adding to player_stats")
-                        
-                        # Try to find any lineups for Annie
-                        annie_lineups = LineUp.query.filter_by(player_id=29).count()
-                        print(f"Direct DB query - Annie's lineups count: {annie_lineups}")
-                        
-                        # Special case: Add Annie anyway for debugging
-                        print("🔧 Adding Annie Ford to player_stats despite 0 points")
-                        stats['per'] = 5.4  # Use the value you provided
-                        player_stats[player.id] = stats
-                        print("✅ Annie Ford manually added to player_stats")
+                stats = calculate_game_stats(game)
+                team_stats.append({'stats': stats})
             except Exception as e:
-                print(f"Error calculating stats for player {player.id}: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                
-                # Special handling for Annie if there was an error
-                if player.id == 29:
-                    print("🔧 Error with Annie Ford, adding manually")
-                    # Create basic stats for Annie based on what you provided
-                    annie_stats = {
-                        'games_played': 9,
-                        'points_played': 1,
-                        'o_line_points_played': 0,
-                        'd_line_points_played': 1,
-                        'goals': 0,
-                        'assists': 1,
-                        'hockey_assists': 0,
-                        'blocks': 0,
-                        'completions': 2,
-                        'completion_rate': 100.0,
-                        'throwaways': 0,
-                        'drops': 1,
-                        'per': 5.4,
-                        # Add other required fields with default values
-                        'break_throws': 0,
-                        'catches': 0,
-                        'catch_rate': 0
-                    }
-                    player_stats[29] = annie_stats
-                    print("✅ Annie Ford manually added to player_stats after error")
+                print(f"Error calculating stats for game {game.id}: {str(e)}")
                 continue
+                
+        # Calculate team averages once for all players
+        print("Calculating team averages...")
+        team_avgs = get_cached_team_averages(recent_games)
         
-        # After processing all players, check if Annie is in the final dictionary
-        print("\n--- Final check for Annie Ford ---")
-        print(f"Total players in player_stats: {len(player_stats)}")
-        print(f"Is Annie Ford (ID 29) in player_stats? {29 in player_stats}")
-        if not annie_found:
-            print("⚠️ Annie Ford was not found in the players list!")
-        if 29 not in player_stats:
-            print("⚠️ Annie Ford is not in the final player_stats dictionary!")
-        else:
-            print("✅ Annie Ford is in the final player_stats dictionary")
-            
-        # Print all player IDs in player_stats for verification
-        print(f"All player IDs in player_stats: {sorted(player_stats.keys())}")
-
-
+        # Calculate player stats in batch
+        print("Calculating player stats in batch...")
+        player_stats = get_players_base_stats(players, recent_games)
+        
+        # Calculate PER for each player
+        print("Calculating PER for each player...")
+        for player_id, stats in player_stats.items():
+            if stats['points_played'] > 0:
+                player = next((p for p in players if p.id == player_id), None)
+                if player:
+                    stats['per'] = calculate_per(player, recent_games, team_avgs)
+        
+        print(f"Stats calculation took {time.time() - start_time:.2f} seconds")
+        
         # Determine O-line and D-line players based on point participation
+        # This part is already optimized by using the preloaded player stats
         o_line_candidates = []
         d_line_candidates = []
 
         for player in players:
-            # Get all points where player was in lineup
-            lineup_query = LineUp.query.join(Point).filter(LineUp.player_id == player.id)
-            
-            # Count O-line and D-line points
-            o_line_points = lineup_query.filter(Point.our_line_type == 'O-line').count()
-            d_line_points = lineup_query.filter(Point.our_line_type == 'D-line').count()
-
-            print(f"Player {player.name}: O-line points = {o_line_points}, D-line points = {d_line_points}")
-
-            # Add player to respective lists based on participation
-            if o_line_points > 0:
-                o_line_candidates.append(player)
-            if d_line_points > 0:
-                d_line_candidates.append(player)
-
-        print(f"Found {len(o_line_candidates)} O-line candidates")
-        print(f"Found {len(d_line_candidates)} D-line candidates")
-
-        # Calculate efficiency for each line
-        def calculate_line_efficiency(players, is_offensive=True):
-            """Calculate line efficiency with gender separation"""
-            player_efficiency = {}
-            for player in players:
-                # Get points where player was in lineup
-                lineup_query = LineUp.query.join(Point).filter(
-                    LineUp.player_id == player.id,
-                    Point.our_line_type == ('O-line' if is_offensive else 'D-line')
-                )
+            if player.id in player_stats:
+                stats = player_stats[player.id]
+                o_line_points = stats.get('o_line_points_played', 0)
+                d_line_points = stats.get('d_line_points_played', 0)
                 
-                points = lineup_query.all()
-                points_played = len(points)
-                
-                if points_played > 0:
-                    # Count points where we scored using the Point.we_scored property
-                    points_scored = sum(1 for lineup in points if lineup.point.we_scored)
-                    
-                    # Calculate efficiency as scoring percentage
-                    efficiency = points_scored / points_played
-        
-                    player_efficiency[player] = efficiency
-        
-                    print(f"{'O' if is_offensive else 'D'}-line efficiency for {player.name}: "
-                          f"{efficiency:.2f} ({points_scored}/{points_played} points scored)")
-        
-            return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
-        
-        # Calculate efficiencies and get top players
-        o_line_efficiency = calculate_line_efficiency(o_line_candidates, is_offensive=True)
-        d_line_efficiency = calculate_line_efficiency(d_line_candidates, is_offensive=False)
+                if o_line_points > 0:
+                    o_line_candidates.append(player)
+                if d_line_points > 0:
+                    d_line_candidates.append(player)
+
+        # Calculate line efficiency with gender separation
+        # This function should be optimized to use the preloaded player stats
+        o_line_efficiency = calculate_optimized_line_efficiency(o_line_candidates, player_stats, is_offensive=True)
+        d_line_efficiency = calculate_optimized_line_efficiency(d_line_candidates, player_stats, is_offensive=False)
         
         # Separate players by gender with fallback
         o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
@@ -1047,156 +1063,22 @@ def index():
         
         # If we don't have enough players with gender data, fall back to the original method
         if not o_line_women and not o_line_men:
-            print("Warning: No players with gender data found for O-line, using top players regardless of gender")
             o_line_players = [player for player, _ in o_line_efficiency][:7]
         else:
             o_line_players = o_line_women + o_line_men
         
         if not d_line_women and not d_line_men:
-            print("Warning: No players with gender data found for D-line, using top players regardless of gender")
             d_line_players = [player for player, _ in d_line_efficiency][:7]
         else:
             d_line_players = d_line_women + d_line_men
         
-                
-        # Create combined lists for template
-        o_line_players = o_line_women + o_line_men
-        d_line_players = d_line_women + d_line_men
-
-
-        # After calculating o_line_women, o_line_men, d_line_women, d_line_men
-        print(f"O-line women: {[p.name for p in o_line_women]}")
-        print(f"O-line men: {[p.name for p in o_line_men]}")
-        print(f"D-line women: {[p.name for p in d_line_women]}")
-        print(f"D-line men: {[p.name for p in d_line_men]}")
+        # Calculate team average stats
+        team_avg_stats = calculate_team_avg_stats(player_stats)
         
-        # Calculate team averages
-        team_avg_stats = {
-            'games_played': 0,
-            'points_played': 0,
-            'o_line_points_played': 0,
-            'd_line_points_played': 0,
-            'goals': 0,
-            'assists': 0,
-            'hockey_assists': 0,
-            'break_throws': 0,
-            'blocks': 0,
-            'completions': 0,
-            'throwaways': 0,
-            'drops': 0,
-            'plus_minus': 0,
-            'per': 0
-        }
-        
-        # Count players with stats
-        player_count = len(player_stats)
-        
-        if player_count > 0:
-            # Sum all stats
-            for player_id, stats in player_stats.items():
-                team_avg_stats['games_played'] += stats.get('games_played', 0)
-                team_avg_stats['points_played'] += stats.get('points_played', 0)
-                team_avg_stats['o_line_points_played'] += stats.get('o_line_points_played', 0)
-                team_avg_stats['d_line_points_played'] += stats.get('d_line_points_played', 0)
-                team_avg_stats['goals'] += stats.get('goals', 0)
-                team_avg_stats['assists'] += stats.get('assists', 0)
-                team_avg_stats['hockey_assists'] += stats.get('hockey_assists', 0)
-                team_avg_stats['break_throws'] += stats.get('break_throws', 0)
-                team_avg_stats['blocks'] += stats.get('blocks', 0)
-                team_avg_stats['completions'] += stats.get('completions', 0)
-                team_avg_stats['throwaways'] += stats.get('throwaways', 0)
-                team_avg_stats['drops'] += stats.get('drops', 0)
-                team_avg_stats['plus_minus'] += (stats.get('goals', 0) + stats.get('assists', 0) + 
-                                                stats.get('blocks', 0) - stats.get('throwaways', 0) - 
-                                                stats.get('drops', 0))
-                team_avg_stats['per'] += stats.get('per', 0)
-            
-            # Calculate averages
-            for key in team_avg_stats:
-                team_avg_stats[key] /= player_count
-            
-            # Calculate completion rate separately
-            total_throws = sum((stats.get('completions', 0) + stats.get('throwaways', 0)) for stats in player_stats.values())
-            total_completions = sum(stats.get('completions', 0) for stats in player_stats.values())
-            team_avg_stats['completion_rate'] = (total_completions / total_throws * 100) if total_throws > 0 else 0
-
-
-        # Generate heatmap data
-        throws_query = Throw.query
-        if team_name:
-            throws_query = throws_query.join(Throw.thrower).filter(Player.team == team_name)
-        
-        throws = throws_query.all()
-        heatmap_data = []
-        
-        # Process throws for heatmap
-        for throw in throws:
-            if throw.x_start is not None and throw.y_start is not None:
-                throw_type = 'throwaway' if throw.throw_type == 'throwaway' else 'throw_start'
-                heatmap_data.append({
-                    'x': throw.x_start,
-                    'y': throw.y_start,
-                    'value': 1,
-                    'type': throw_type
-                })
-                
-                if throw.throw_type == 'assist' and throw.x_end is not None and throw.y_end is not None:
-                    heatmap_data.append({
-                        'x': throw.x_end,
-                        'y': throw.y_end,
-                        'value': 1,
-                        'type': 'goal'
-                    })
-
-        # Add scored-on events
-        scored_on_query = Event.query.filter_by(event_type='scored_on')
-        if team_name:
-            scored_on_query = scored_on_query.join(Event.player).filter(Player.team == team_name)
-        
-        for event in scored_on_query.all():
-            if event.field_position_x is not None and event.field_position_y is not None:
-                heatmap_data.append({
-                    'x': event.field_position_x,
-                    'y': event.field_position_y,
-                    'value': 1,
-                    'type': 'scored_on'
-                })
-
-        # Generate connection data
-        connection_data = {
-            'nodes': [],
-            'links': []
-        }
-        
-        players_in_connections = set()
-        connections = {}
-        
-        for throw in throws:
-            if throw.receiver_id:
-                players_in_connections.add(throw.thrower_id)
-                players_in_connections.add(throw.receiver_id)
-                
-                key = f"{throw.thrower_id}-{throw.receiver_id}"
-                if key in connections:
-                    connections[key]['value'] += 1
-                else:
-                    connections[key] = {
-                        'source': throw.thrower_id,
-                        'target': throw.receiver_id,
-                        'value': 1
-                    }
-        
-        for player_id in players_in_connections:
-            player = Player.query.get(player_id)
-            if player:
-                connection_data['nodes'].append({
-                    'id': player.id,
-                    'name': player.name,
-                    'jersey_number': player.jersey_number,
-                    'position': player.position
-                })
-        
-        connection_data['links'] = list(connections.values())
+        # Generate heatmap and connection data
+        # Consider limiting the amount of data processed here
+        heatmap_data = process_heatmap_data(team_name=team_name, limit=1000)  # Limit to 1000 data points
+        connection_data = generate_player_connections(team_name=team_name, min_connections=2)  # Only include connections with at least 2 throws
 
         return render_template(
             'stats/index.html',
@@ -1218,12 +1100,13 @@ def index():
             team_avg_stats=team_avg_stats
         )
 
-
-
     except Exception as e:
         print(f"Error in index route: {str(e)}")
+        import traceback
+        traceback.print_exc()
         flash(f"An error occurred: {str(e)}", "danger")
         return render_template('stats/index.html', **default_context)
+
 
 
 
@@ -1356,13 +1239,14 @@ def calculate_performance_trends(games):
 def player_stats(player_id):
     player = Player.query.get_or_404(player_id)
     
+    # Check if user has permission to view this player's stats
+    if not (current_user.is_admin or current_user.is_coach or (current_user.player and current_user.player.id == player.id)):
+        flash("You don't have permission to view this player's statistics", "danger")
+        return redirect(url_for('stats_dashboard.index'))
+    
     # Get filter parameters
     tournament_id = request.args.get('tournament_id', type=int)
     game_id = request.args.get('game_id', type=int)
-
-    # Get filter parameters from request
-    selected_game = request.args.get('game_id', type=int)
-    selected_tournament = request.args.get('tournament_id', type=int)
 
     # Determine which games to analyze
     if game_id:
@@ -1372,95 +1256,49 @@ def player_stats(player_id):
         games = tournament.games.all() if tournament else []
     else:
         games = Game.query.all()
-
+    
     # Get point IDs for filtering if games are selected
-    point_ids = [p.id for g in games for p in g.points] if games else None
-
-    # Query throws
-    throws_query = Throw.query.filter_by(thrower_id=player_id)
-    if point_ids:
-        throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+    point_ids = None
+    if games:
+        if isinstance(games, list):
+            point_ids = []
+            for g in games:
+                try:
+                    if hasattr(g.points, 'all'):
+                        points = g.points.all()
+                    else:
+                        points = g.points
+                    point_ids.extend([p.id for p in points])
+                except Exception as e:
+                    print(f"Error getting points for game {g.id}: {str(e)}")
+        else:
+            try:
+                if hasattr(games.points, 'all'):
+                    points = games.points.all()
+                else:
+                    points = games.points
+                point_ids = [p.id for p in points]
+            except Exception as e:
+                print(f"Error getting points for game: {str(e)}")
     
-    throws = throws_query.order_by(Throw.created_at).all()
-    print(f"Found {len(throws)} throws for player")
-
-    # Generate throw vectors
-    throw_vectors = []
-    normalized_vectors = []
-    for throw in throws:
-        if (throw.x_start is not None and throw.y_start is not None and 
-            throw.x_end is not None and throw.y_end is not None):
-            
-            # Regular vector
-            vector = {
-                'start_x': throw.x_start,
-                'start_y': throw.y_start,
-                'end_x': throw.x_end,
-                'end_y': throw.y_end,
-                'type': throw.throw_type,
-                'distance': throw.calculate_distance(),
-                'is_completion': "true" if throw.is_completion else "false"  # Convert to string
-            }
-            throw_vectors.append(vector)
-
-            # Normalized vector (centered on field)
-            center_x, center_y = 50, 18.5  # Center of field
-            dx = throw.x_end - throw.x_start
-            dy = throw.y_end - throw.y_start
-            distance = throw.calculate_distance()
-            if distance:
-                scale = 20 / distance  # Standardize to 20 meters length
-                normalized_vector = {
-                    'start_x': center_x,
-                    'start_y': center_y,
-                    'end_x': center_x + (dx * scale),
-                    'end_y': center_y + (dy * scale),
-                    'type': throw.throw_type,
-                    'distance': distance,
-                    'is_completion': throw.is_completion
-                }
-                normalized_vectors.append(normalized_vector)
-
-    print(f"Generated {len(throw_vectors)} throw vectors")
-    print("Sample vector:", throw_vectors[0] if throw_vectors else "No vectors")
-
-    # Get throwaway locations
-    throwaway_throws = throws_query.filter_by(throw_type='throwaway').all()
-    throwaway_locations = []
-    
-    for throw in throwaway_throws:
-        if throw.x_start is not None and throw.y_start is not None:
-            location = {
-                'x': throw.x_end,  # For throwaways, reception position is where the throw ended
-                'y': throw.y_end,
-                'prev_x': throw.x_start,  # Throw position is where it started
-                'prev_y': throw.y_start
-            }
-            throwaway_locations.append(location)
-
-    print(f"Generated {len(throwaway_locations)} throwaway locations")
-    print("Sample throwaway:", throwaway_locations[0] if throwaway_locations else "No throwaways")
-
-    # Calculate regular stats
-    stats = get_player_base_stats(player, games)
+    # Use cached player stats
+    game_ids_tuple = games_to_tuple(games)
+    stats = get_cached_player_base_stats(player.id, game_ids_tuple)
     
     # Calculate team averages specifically for these games
-    team_avgs = calculate_team_averages(games)
+    team_avgs = get_cached_team_averages(games)
     
     if stats['points_played'] > 0:
-        stats['per'] = calculate_per(player, team_avgs=team_avgs)
+        stats['per'] = calculate_per(player, games, team_avgs)
     
     # Add hucks to player stats
-    stats['hucks'] = calculate_hucks(player, games)
-    
-    # Add shutdowns calculation (if not already included)
-    stats['shutdowns'] = count_events(
-        Event.query.filter_by(player_id=player.id),
-        ['shutdown']
-    )
+    stats['hucks'] = sum(1 for t in stats['throw_vectors'] if t['distance'] > 20)
     
     # Get cutting skills data
-    cutting_skills = CuttingSkill.query.filter_by(player_id=player_id).all()
+    cutting_skills_query = CuttingSkill.query.filter_by(player_id=player_id)
+    if point_ids:
+        cutting_skills_query = cutting_skills_query.filter(CuttingSkill.point_id.in_(point_ids))
+    cutting_skills = cutting_skills_query.all()
     
     # Process cutting skills data for frontend
     cutting_data = [skill.to_dict() for skill in cutting_skills]
@@ -1517,34 +1355,7 @@ def player_stats(player_id):
         if cutting_stats['by_type'].get(preferred_cut_type, {}).get('total', 0) > 0:
             cutting_stats['preferred_cut'] = preferred_cut_type.replace('_', ' ').title()
     
-    # Filter cutting data based on selected game/tournament if applicable
-    if selected_game:
-        # Get points from the selected game
-        game_points = Point.query.filter_by(game_id=selected_game).all()
-        game_point_ids = [p.id for p in game_points]
-        
-        # Filter cutting skills to only include those from the selected game
-        cutting_skills = [s for s in cutting_skills if s.point_id in game_point_ids]
-        cutting_data = [skill.to_dict() for skill in cutting_skills]
-        
-        # Recalculate stats for the filtered data
-        # (You could refactor the above stats calculation into a function to avoid code duplication)
-    
-    elif selected_tournament:
-        # Get games from the selected tournament
-        tournament_games = Game.query.filter_by(tournament_id=selected_tournament).all()
-        tournament_game_ids = [g.id for g in tournament_games]
-        
-        # Get points from those games
-        tournament_points = Point.query.filter(Point.game_id.in_(tournament_game_ids)).all()
-        tournament_point_ids = [p.id for p in tournament_points]
-        
-        # Filter cutting skills to only include those from the selected tournament
-        cutting_skills = [s for s in cutting_skills if s.point_id in tournament_point_ids]
-        cutting_data = [skill.to_dict() for skill in cutting_skills]
-    
-    
-    # Calculate team averages for radar charts
+    # Calculate team radar stats
     team_stats = calculate_team_radar_stats(games, player.team)
     
     # Get player's game history
@@ -1556,13 +1367,18 @@ def player_stats(player_id):
         games_query = games_query.filter_by(id=game_id)
     
     for game in games_query.order_by(Game.date.desc()).all():
-        if any(player.id in [lineup.player_id for lineup in point.lineups] 
-              for point in game.points):
-            game_stats = get_player_base_stats(player, game)
+        # Check if player participated in this game
+        lineup_query = LineUp.query.join(Point).filter(
+            LineUp.player_id == player.id,
+            Point.game_id == game.id
+        )
+        
+        if lineup_query.count() > 0:
+            game_stats = get_cached_player_base_stats(player.id, (game.id,))
             # Calculate game-specific team averages
-            game_team_avgs = calculate_team_averages([game])
+            game_team_avgs = get_cached_team_averages([game])
             game_stats['per'] = calculate_per(
-                player, game, 
+                player, [game], 
                 game_team_avgs
             )
             player_games.append({
@@ -1573,71 +1389,6 @@ def player_stats(player_id):
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
 
-    # Calculate throw statistics
-    throw_stats = {
-        'total_throws': len(throws),
-        'completions': len([t for t in throws if t.is_completion]),
-        'assists': len([t for t in throws if t.throw_type == 'assist']),
-        'hockey_assists': len([t for t in throws if t.throw_type == 'hockey_assist']),
-        'average_distance': (sum(t.calculate_distance() or 0 for t in throws) / 
-                           len(throws) if throws else 0)
-    }
-
-    total_distance = sum(vector['distance'] for vector in throw_vectors)
-    avg_distance = total_distance / len(throw_vectors) if throw_vectors else 0
-
-    # Get throw directions from player stats
-    throw_directions = stats.get('throw_directions', {
-        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
-        'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0, 
-        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 
-        'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
-    })
-    
-    # Get completion by direction from player stats
-    completion_by_direction = stats.get('completion_by_direction', {
-        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
-        'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0, 
-        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 
-        'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
-    })
-
-    
-    # Process throw vectors to get directional completion data
-    for throw in throws:
-        if (throw.x_start is not None and throw.y_start is not None and 
-            throw.x_end is not None and throw.y_end is not None and 
-            throw.is_completion):
-            
-            # Calculate angle
-            dx = throw.x_end - throw.x_start
-            dy = throw.y_end - throw.y_start
-            angle = math.atan2(dy, dx)
-
-            # Convert to degrees, adjust for clockwise from North, normalize
-            degrees = (90 - math.degrees(angle)) % 360
-                
-            # Map angle to direction
-            direction = None
-            if degrees >= 337.5 or degrees < 22.5:
-                direction = 'N'
-            elif degrees >= 22.5 and degrees < 67.5:
-                direction = 'NE'
-            elif degrees >= 67.5 and degrees < 112.5:
-                direction = 'E'
-            elif degrees >= 112.5 and degrees < 157.5:
-                direction = 'SE'
-            elif degrees >= 157.5 and degrees < 202.5:
-                direction = 'S'
-            elif degrees >= 202.5 and degrees < 247.5:
-                direction = 'SW'
-            elif degrees >= 247.5 and degrees < 292.5:
-                direction = 'W'
-            else:
-                direction = 'NW'
-                
-            completion_by_direction[direction] += 1
-
     return render_template(
         'stats/player_stats.html',
         player=player,
@@ -1647,17 +1398,23 @@ def player_stats(player_id):
         tournaments=tournaments,
         selected_tournament=tournament_id,
         selected_game=game_id,
-        throw_vectors=throw_vectors,
-        normalized_vectors=normalized_vectors,
-        throwaway_locations=throwaway_locations,
-        throw_stats=throw_stats,
-        total_throw_distance=total_distance,
-        avg_throw_distance=avg_distance,
-        throw_directions=throw_directions,
-        completion_by_direction=completion_by_direction,
+        throw_vectors=stats['throw_vectors'],
+        throwaway_locations=[],  # This would need to be calculated separately if needed
+        throw_stats={
+            'total_throws': stats['throws'],
+            'completions': stats['completions'],
+            'assists': stats['assists'],
+            'hockey_assists': stats['hockey_assists'],
+            'average_distance': stats['avg_throw_distance']
+        },
+        total_throw_distance=stats['total_throw_distance'],
+        avg_throw_distance=stats['avg_throw_distance'],
+        throw_directions=stats['throw_directions'],
+        completion_by_direction=stats['completion_by_direction'],
         cutting_data=cutting_data,
         cutting_stats=cutting_stats
     )
+
 
 
 
@@ -1675,42 +1432,40 @@ def game_stats(game_id):
     # Calculate team statistics
     team_stats = calculate_game_stats(game)
     
-    # Calculate player statistics for this game
+    # Get all players who participated in this game
+    player_ids = db.session.query(LineUp.player_id).join(Point).filter(Point.game_id == game_id).distinct().all()
+    player_ids = [pid[0] for pid in player_ids]
+    players = Player.query.filter(Player.id.in_(player_ids)).all()
+    
+    # Calculate team averages for this game
+    team_avgs = get_cached_team_averages([game])
+    
+    # Get player stats in batch
+    player_stats_dict = get_players_base_stats(players, [game])
+    
+    # Format player stats for template
     player_stats = []
-    players_in_game = set()
-    
-    for point in game.points:
-        for lineup in point.lineups:
-            players_in_game.add(lineup.player)
-    
-    team_avgs = calculate_team_averages([game])
-    
-    for player in players_in_game:
-        stats = get_player_base_stats(player, game)
-        stats['per'] = calculate_per(player, game, team_avgs)
-        player_stats.append({
-            'player': player,
-            'stats': stats
-        })
+    for player in players:
+        if player.id in player_stats_dict:
+            stats = player_stats_dict[player.id]
+            stats['per'] = calculate_per(player, [game], team_avgs)
+            player_stats.append({
+                'player': player,
+                'stats': stats
+            })
     
     # Sort by points played
     player_stats.sort(key=lambda x: x['stats']['points_played'], reverse=True)
     
     # Get team name from the first player (assuming all players are on the same team)
     team_name = None
-    if players_in_game:
-        first_player = next(iter(players_in_game))
+    if players:
+        first_player = players[0]
         team_name = first_player.team
     
-    def calculate_impact_score(stats):
-        # Your impact score calculation logic here
-        # For example:
-        return (stats['goals'] * 2 + stats['assists'] * 1.5 + 
-                stats['blocks'] * 1.5 - stats['turnovers'])
-    
     # Generate visualization data
-    heatmap_data = process_heatmap_data(team_name=team_name)
-    connection_data = generate_player_connections(team_name=team_name)
+    heatmap_data = process_heatmap_data(team_name=team_name, limit=1000)
+    connection_data = generate_player_connections(team_name=team_name, min_connections=2)
     
     # Add additional team metrics
     team_stats.update(calculate_additional_team_metrics([game]))
@@ -1726,6 +1481,14 @@ def game_stats(game_id):
         is_admin=is_admin,
         is_coach=is_coach
     )
+
+def calculate_impact_score(stats):
+    """Calculate impact score for a player"""
+    # Your impact score calculation logic here
+    # For example:
+    return (stats['goals'] * 2 + stats['assists'] * 1.5 + 
+            stats['blocks'] * 1.5 - stats['turnovers'])
+
 
 
 @bp.route('/team')
@@ -1745,6 +1508,12 @@ def team_stats():
     elif season:
         tournament_ids = [t.id for t in Tournament.query.filter_by(season=season).all()]
         games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
+    
+    # Use eager loading for related data
+    games_query = games_query.options(
+        db.joinedload(Game.points).joinedload(Point.lineups),
+        db.joinedload(Game.tournament)
+    )
     
     games = games_query.order_by(Game.date).all()
     
@@ -1767,26 +1536,44 @@ def team_stats():
         if key not in team_summary:
             team_summary[f'prev_{key}'] = value
     
-    # Calculate player statistics
-    players = Player.query.filter_by(active=True).all()
-    team_avgs = calculate_team_averages(games)
+    # Get team name from current user's player
+    team_name = None
+    if hasattr(current_user, 'player') and current_user.player:
+        team_name = current_user.player.team
     
+    # Calculate player statistics
+    players_query = Player.query.filter_by(active=True)
+    if team_name:
+        players_query = players_query.filter_by(team=team_name)
+    players = players_query.all()
+    
+    # Get cached team averages
+    team_avgs = get_cached_team_averages(games)
+    
+    # Get player stats in batch
+    player_stats_dict = get_players_base_stats(players, games)
+    
+    # Format player stats for template
     player_stats = []
     for player in players:
-        stats = get_player_base_stats(player, games)
-        if stats['points_played'] > 0:
-            stats['per'] = calculate_per(player, games, team_avgs)
-            player_stats.append({
-                'player': player,
-                'stats': stats
-            })
+        if player.id in player_stats_dict:
+            stats = player_stats_dict[player.id]
+            if stats['points_played'] > 0:
+                stats['per'] = calculate_per(player, games, team_avgs)
+                player_stats.append({
+                    'player': player,
+                    'stats': stats
+                })
     
     # Sort by PER
     player_stats.sort(key=lambda x: x['stats']['per'], reverse=True)
     
     # Calculate line efficiency with gender separation
-    o_line_efficiency = calculate_line_efficiency(players, games, is_offensive=True)
-    d_line_efficiency = calculate_line_efficiency(players, games, is_offensive=False)
+    o_line_candidates = [p for p in players if player_stats_dict.get(p.id, {}).get('o_line_points_played', 0) > 0]
+    d_line_candidates = [p for p in players if player_stats_dict.get(p.id, {}).get('d_line_points_played', 0) > 0]
+    
+    o_line_efficiency = calculate_optimized_line_efficiency(o_line_candidates, player_stats_dict, is_offensive=True)
+    d_line_efficiency = calculate_optimized_line_efficiency(d_line_candidates, player_stats_dict, is_offensive=False)
     
     # Separate players by gender
     o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
@@ -1831,6 +1618,7 @@ def team_stats():
         d_line_efficiency=dict(d_line_efficiency),
         performance_trends=performance_trends
     )
+
 
 
 # --- Helper functions for visualization data ---
@@ -2886,3 +2674,531 @@ def debug_line_plus_minus(player_id):
         games=games
     )
 
+def get_players_base_stats(players, games=None):
+    """Get stats for multiple players in a single batch of queries"""
+    print(f"Batch loading stats for {len(players)} players")
+    player_ids = [p.id for p in players]
+    
+    # Determine point IDs if games are specified
+    point_ids = None
+    if games:
+        if isinstance(games, list):
+            point_ids = []
+            for g in games:
+                # Handle both regular attribute access and query objects
+                try:
+                    if hasattr(g.points, 'all'):
+                        points = g.points.all()
+                    else:
+                        points = g.points
+                    point_ids.extend([p.id for p in points])
+                except Exception as e:
+                    print(f"Error getting points for game {g.id}: {str(e)}")
+        else:
+            try:
+                if hasattr(games.points, 'all'):
+                    points = games.points.all()
+                else:
+                    points = games.points
+                point_ids = [p.id for p in points]
+            except Exception as e:
+                print(f"Error getting points for game: {str(e)}")
+    
+    # 1. Preload all lineups for these players in one query
+    lineup_query = LineUp.query.filter(LineUp.player_id.in_(player_ids))
+    if point_ids:
+        lineup_query = lineup_query.filter(LineUp.point_id.in_(point_ids))
+    
+    # Eager load related point data for line type determination
+    lineup_query = lineup_query.options(db.joinedload(LineUp.point))
+    
+    # Group lineups by player_id
+    lineups_by_player = {}
+    for lineup in lineup_query.all():
+        if lineup.player_id not in lineups_by_player:
+            lineups_by_player[lineup.player_id] = []
+        lineups_by_player[lineup.player_id].append(lineup)
+    
+    # 2. Preload all throws by these players in one query
+    throws_query = Throw.query.filter(
+        (Throw.thrower_id.in_(player_ids)) | 
+        (Throw.receiver_id.in_(player_ids))
+    )
+    if point_ids:
+        throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+    
+    # Group throws by thrower_id and receiver_id
+    throws_by_thrower = {}
+    throws_by_receiver = {}
+    for throw in throws_query.all():
+        if throw.thrower_id in player_ids:
+            if throw.thrower_id not in throws_by_thrower:
+                throws_by_thrower[throw.thrower_id] = []
+            throws_by_thrower[throw.thrower_id].append(throw)
+        
+        if throw.receiver_id and throw.receiver_id in player_ids:
+            if throw.receiver_id not in throws_by_receiver:
+                throws_by_receiver[throw.receiver_id] = []
+            throws_by_receiver[throw.receiver_id].append(throw)
+    
+    # 3. Preload all events for these players in one query
+    events_query = Event.query.filter(Event.player_id.in_(player_ids))
+    if point_ids:
+        events_query = events_query.filter(Event.point_id.in_(point_ids))
+    
+    # Group events by player_id
+    events_by_player = {}
+    for event in events_query.all():
+        if event.player_id not in events_by_player:
+            events_by_player[event.player_id] = []
+        events_by_player[event.player_id].append(event)
+    
+    # 4. Process the preloaded data for each player
+    player_stats = {}
+    for player in players:
+        player_stats[player.id] = process_player_stats(
+            player, 
+            lineups_by_player.get(player.id, []),
+            throws_by_thrower.get(player.id, []),
+            throws_by_receiver.get(player.id, []),
+            events_by_player.get(player.id, []),
+            games
+        )
+    
+    return player_stats
+
+def process_player_stats(player, lineups, throws_by_player, throws_to_player, events, games=None):
+    """Process preloaded data for a single player"""
+    # Start with default values for ALL possible stats
+    stats = {
+        # Basic stats
+        'points_played': len(lineups),
+        'games_played': 0,
+        'goals': 0,
+        'assists': 0,
+        'hockey_assists': 0,
+        'blocks': 0,
+        'catches': 0,
+        'throws': 0,
+        'completions': 0,
+        'throwaways': 0,
+        'drops': 0,
+        'turnovers': 0,
+        
+        # Calculated rates
+        'completion_rate': 0,
+        'catch_rate': 0,
+        
+        # O/D line stats
+        'o_line_points_played': 0,
+        'd_line_points_played': 0,
+        'o_line_plus_minus': 0,
+        'd_line_plus_minus': 0,
+        'o_line_plus_minus_per_point': 0,
+        'd_line_plus_minus_per_point': 0,
+        
+        # Throw statistics
+        'total_throw_distance': 0,
+        'avg_throw_distance': 0,
+        'throw_vectors': [],
+        'break_throws': 0,
+        'break_throw_percentage': 0,
+        
+        # Efficiency metrics
+        'per': 0,
+        'plus_minus': 0,
+        
+        # Additional stats
+        'callahans': 0,
+        'stalls': 0,
+        'offensive_points_played': 0,
+        'defensive_points_played': 0,
+        'offensive_conversion_rate': 0,
+        'defensive_conversion_rate': 0,
+        
+        # Clip statistics
+        'clips': 0,
+        'highlight_plays': 0,
+        
+        # Direction stats
+        'throw_directions': {
+            'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
+            'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0, 
+            'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 
+            'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
+        },
+        'completion_by_direction': {
+            'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 
+            'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0, 
+            'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 
+            'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
+        }
+    }
+    
+    if stats['points_played'] == 0:
+        return stats
+
+    # Calculate games played
+    if games:
+        stats['games_played'] = len(games) if isinstance(games, list) else 1
+    else:
+        game_ids = set()
+        for lineup in lineups:
+            if hasattr(lineup.point, 'game_id'):
+                game_ids.add(lineup.point.game_id)
+        stats['games_played'] = len(game_ids)
+
+    # Process throws
+    stats['throws'] = len(throws_by_player)
+    stats['completions'] = sum(1 for t in throws_by_player if t.is_completion)
+    stats['assists'] = sum(1 for t in throws_by_player if t.throw_type == 'assist')
+    stats['hockey_assists'] = sum(1 for t in throws_by_player if t.throw_type == 'hockey_assist')
+    stats['throwaways'] = sum(1 for t in throws_by_player if t.throw_type == 'throwaway')
+    stats['break_throws'] = sum(1 for t in throws_by_player if t.break_throw)
+    
+    # Calculate throw distances
+    distances = [t.calculate_distance() for t in throws_by_player if t.calculate_distance()]
+    stats['total_throw_distance'] = sum(distances) if distances else 0
+    stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws'] if stats['throws'] > 0 else 0
+    
+    # Store throw vectors for visualization
+    stats['throw_vectors'] = [
+        {
+            'start_x': t.x_start,
+            'start_y': t.y_start,
+            'end_x': t.x_end,
+            'end_y': t.y_end,
+            'type': t.throw_type,
+            'distance': t.calculate_distance() or 0
+        }
+        for t in throws_by_player if t.x_start is not None and t.y_start is not None and 
+                                    t.x_end is not None and t.y_end is not None
+    ]
+    
+    # Process throw directions
+    for throw in throws_by_player:
+        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+            # Calculate angle
+            dx = throw.x_end - throw.x_start
+            dy = throw.y_end - throw.y_start
+            angle = math.atan2(dy, dx)
+            
+            # Convert to degrees and normalize to 0-360
+            degrees = (angle * 180 / math.pi)
+            if degrees < 0:
+                degrees += 360
+                
+            # Map angle to 16-point direction (each direction covers 22.5 degrees)
+            if degrees >= 348.75 or degrees < 11.25:
+                direction = 'E'  # Right/East (0°) = Forward
+            elif degrees >= 11.25 and degrees < 33.75:
+                direction = 'ENE'
+            elif degrees >= 33.75 and degrees < 56.25:
+                direction = 'NE'
+            elif degrees >= 56.25 and degrees < 78.75:
+                direction = 'NNE'
+            elif degrees >= 78.75 and degrees < 101.25:
+                direction = 'N'  # Up/North (90°) = Right
+            elif degrees >= 101.25 and degrees < 123.75:
+                direction = 'NNW'
+            elif degrees >= 123.75 and degrees < 146.25:
+                direction = 'NW'
+            elif degrees >= 146.25 and degrees < 168.75:
+                direction = 'WNW'
+            elif degrees >= 168.75 and degrees < 191.25:
+                direction = 'W'  # Left/West (180°) = Back
+            elif degrees >= 191.25 and degrees < 213.75:
+                direction = 'WSW'
+            elif degrees >= 213.75 and degrees < 236.25:
+                direction = 'SW'
+            elif degrees >= 236.25 and degrees < 258.75:
+                direction = 'SSW'
+            elif degrees >= 258.75 and degrees < 281.25:
+                direction = 'S'  # Down/South (270°) = Left
+            elif degrees >= 281.25 and degrees < 303.75:
+                direction = 'SSE'
+            elif degrees >= 303.75 and degrees < 326.25:
+                direction = 'SE'
+            else:
+                direction = 'ESE'
+                    
+            stats['throw_directions'][direction] += 1
+            
+            # If it's a completion, also increment completion count
+            if throw.is_completion:
+                stats['completion_by_direction'][direction] += 1
+    
+    # Process catches
+    stats['catches'] = len(throws_to_player)
+    
+    # Process events
+    for event in events:
+        if event.event_type == 'goal':
+            stats['goals'] += 1
+        elif event.event_type == 'block':
+            stats['blocks'] += 1
+        elif event.event_type == 'drop':
+            stats['drops'] += 1
+        elif event.event_type == 'stall':
+            stats['stalls'] += 1
+        elif event.event_type == 'callahan':
+            stats['callahans'] += 1
+    
+    # Calculate derived stats
+    stats['turnovers'] = stats['throwaways'] + stats['drops']
+    
+    # Calculate rates
+    if stats['throws'] > 0:
+        stats['completion_rate'] = (stats['completions'] / stats['throws']) * 100
+    if stats['catches'] + stats['drops'] > 0:
+        stats['catch_rate'] = (stats['catches'] / (stats['catches'] + stats['drops'])) * 100
+    
+    # Calculate plus/minus
+    stats['plus_minus'] = (
+        stats['goals'] + 
+        stats['assists'] + 
+        stats['blocks'] - 
+        stats['turnovers']
+    )
+    
+    # Calculate O-line and D-line stats
+    o_line_points = [l for l in lineups if l.point.our_line_type == 'O-line']
+    d_line_points = [l for l in lineups if l.point.our_line_type == 'D-line']
+    
+    stats['o_line_points_played'] = len(o_line_points)
+    stats['d_line_points_played'] = len(d_line_points)
+    
+    # Calculate O-line and D-line plus/minus
+    o_line_plus_minus = 0
+    d_line_plus_minus = 0
+    
+    # Group events by point_id for more efficient processing
+    events_by_point = {}
+    for event in events:
+        if event.point_id not in events_by_point:
+            events_by_point[event.point_id] = []
+        events_by_point[event.point_id].append(event)
+    
+    # Process each lineup to determine line type and calculate plus/minus
+    for lineup in lineups:
+        point = lineup.point
+        is_o_line = point.our_line_type == 'O-line'
+        
+        # Get events for this point
+        point_events = events_by_point.get(point.id, [])
+        
+        # Calculate plus/minus for this point
+        point_plus_minus = 0
+        for event in point_events:
+            if event.event_type in ['goal', 'assist', 'block']:
+                point_plus_minus += 1
+            elif event.event_type in ['throwaway', 'drop', 'stall']:
+                point_plus_minus -= 1
+        
+        # Add to the appropriate line's plus/minus
+        if is_o_line:
+            o_line_plus_minus += point_plus_minus
+        else:
+            d_line_plus_minus += point_plus_minus
+    
+    stats['o_line_plus_minus'] = o_line_plus_minus
+    stats['d_line_plus_minus'] = d_line_plus_minus
+    
+    # Calculate per point stats
+    if stats['o_line_points_played'] > 0:
+        stats['o_line_plus_minus_per_point'] = stats['o_line_plus_minus'] / stats['o_line_points_played']
+    if stats['d_line_points_played'] > 0:
+        stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['d_line_points_played']
+    
+    # Calculate break throw percentage
+    if stats['throws'] > 0:
+        stats['break_throw_percentage'] = (stats['break_throws'] / stats['throws']) * 100
+    
+    return stats
+
+def calculate_optimized_line_efficiency(players, player_stats, is_offensive=True):
+    """Calculate line efficiency with gender separation using preloaded stats"""
+    player_efficiency = {}
+    
+    for player in players:
+        if player.id not in player_stats:
+            continue
+            
+        stats = player_stats[player.id]
+        points_played = stats['o_line_points_played'] if is_offensive else stats['d_line_points_played']
+        
+        if points_played > 0:
+            # For O-line, use o_line_plus_minus as a proxy for scoring efficiency
+            # For D-line, use d_line_plus_minus as a proxy for defensive efficiency
+            plus_minus = stats['o_line_plus_minus'] if is_offensive else stats['d_line_plus_minus']
+            
+            # Calculate efficiency as plus/minus per point
+            efficiency = plus_minus / points_played
+            
+            player_efficiency[player] = efficiency
+    
+    return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
+
+def calculate_team_avg_stats(player_stats):
+    """Calculate team average stats from preloaded player stats"""
+    team_avg_stats = {
+        'games_played': 0,
+        'points_played': 0,
+        'o_line_points_played': 0,
+        'd_line_points_played': 0,
+        'goals': 0,
+        'assists': 0,
+        'hockey_assists': 0,
+        'break_throws': 0,
+        'blocks': 0,
+        'completions': 0,
+        'throwaways': 0,
+        'drops': 0,
+        'plus_minus': 0,
+        'per': 0,
+        'completion_rate': 0
+    }
+    
+    # Count players with stats
+    player_count = len(player_stats)
+    
+    if player_count > 0:
+        # Sum all stats
+        for player_id, stats in player_stats.items():
+            team_avg_stats['games_played'] += stats.get('games_played', 0)
+            team_avg_stats['points_played'] += stats.get('points_played', 0)
+            team_avg_stats['o_line_points_played'] += stats.get('o_line_points_played', 0)
+            team_avg_stats['d_line_points_played'] += stats.get('d_line_points_played', 0)
+            team_avg_stats['goals'] += stats.get('goals', 0)
+            team_avg_stats['assists'] += stats.get('assists', 0)
+            team_avg_stats['hockey_assists'] += stats.get('hockey_assists', 0)
+            team_avg_stats['break_throws'] += stats.get('break_throws', 0)
+            team_avg_stats['blocks'] += stats.get('blocks', 0)
+            team_avg_stats['completions'] += stats.get('completions', 0)
+            team_avg_stats['throwaways'] += stats.get('throwaways', 0)
+            team_avg_stats['drops'] += stats.get('drops', 0)
+            team_avg_stats['plus_minus'] += (stats.get('goals', 0) + stats.get('assists', 0) + 
+                                           stats.get('blocks', 0) - stats.get('throwaways', 0) - 
+                                           stats.get('drops', 0))
+            team_avg_stats['per'] += stats.get('per', 0)
+        
+        # Calculate averages
+        for key in team_avg_stats:
+            team_avg_stats[key] /= player_count
+        
+        # Calculate completion rate separately
+        total_throws = sum((stats.get('completions', 0) + stats.get('throwaways', 0)) for stats in player_stats.values())
+        total_completions = sum(stats.get('completions', 0) for stats in player_stats.values())
+        team_avg_stats['completion_rate'] = (total_completions / total_throws * 100) if total_throws > 0 else 0
+    
+    return team_avg_stats
+
+@bp.route('/api/heatmap-data')
+@login_required
+def api_heatmap_data():
+    """API endpoint for heatmap data"""
+    team_name = None
+    if hasattr(current_user, 'player') and current_user.player:
+        team_name = current_user.player.team
+    
+    # Get filter parameters
+    player_id = request.args.get('player_id', type=int)
+    opposition_team = request.args.get('opposition_team')
+    
+    # Limit to 1000 data points for performance
+    heatmap_data = process_heatmap_data(
+        team_name=team_name, 
+        player_id=player_id,
+        opposition_team=opposition_team,
+        limit=1000
+    )
+    return jsonify(heatmap_data)
+
+@bp.route('/api/connection-data')
+@login_required
+def api_connection_data():
+    """API endpoint for player connection data"""
+    team_name = None
+    if hasattr(current_user, 'player') and current_user.player:
+        team_name = current_user.player.team
+    
+    # Get filter parameters
+    opposition_team = request.args.get('opposition_team')
+    min_connections = request.args.get('min_connections', 2, type=int)
+    
+    # Only include connections with at least min_connections throws
+    connection_data = generate_player_connections(
+        team_name=team_name, 
+        opposition_team=opposition_team,
+        min_connections=min_connections
+    )
+    return jsonify(connection_data)
+
+@bp.route('/api/player-stats')
+@login_required
+def api_player_stats():
+    """API endpoint for player stats table data"""
+    # Get filter parameters
+    tournament_id = request.args.get('tournament_id', type=int)
+    game_id = request.args.get('game_id', type=int)
+    
+    # Determine which games to analyze
+    if game_id:
+        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+    elif tournament_id:
+        tournament = Tournament.query.get(tournament_id)
+        games = tournament.games.all() if tournament else []
+    else:
+        games = Game.query.all()
+    
+    # Get team name from current user's player
+    team_name = None
+    if hasattr(current_user, 'player') and current_user.player:
+        team_name = current_user.player.team
+    
+    # Get active players
+    players_query = Player.query.filter_by(active=True)
+    if team_name:
+        players_query = players_query.filter_by(team=team_name)
+    players = players_query.all()
+    
+    # Get cached team averages
+    team_avgs = get_cached_team_averages(games)
+    
+    # Get player stats in batch
+    player_stats = get_players_base_stats(players, games)
+    
+    # Calculate PER for each player
+    for player_id, stats in player_stats.items():
+        if stats['points_played'] > 0:
+            player = next((p for p in players if p.id == player_id), None)
+            if player:
+                stats['per'] = calculate_per(player, games, team_avgs)
+    
+    # Format data for DataTables
+    result = []
+    for player in players:
+        if player.id in player_stats:
+            stats = player_stats[player.id]
+            if stats['points_played'] > 0:
+                result.append({
+                    'id': player.id,
+                    'name': player.name,
+                    'jersey_number': player.jersey_number,
+                    'position': player.position,
+                    'points_played': stats['points_played'],
+                    'o_line_points': stats['o_line_points_played'],
+                    'd_line_points': stats['d_line_points_played'],
+                    'goals': stats['goals'],
+                    'assists': stats['assists'],
+                    'hockey_assists': stats['hockey_assists'],
+                    'blocks': stats['blocks'],
+                    'completions': stats['completions'],
+                    'completion_rate': stats['completion_rate'],
+                    'throwaways': stats['throwaways'],
+                    'drops': stats['drops'],
+                    'plus_minus': stats['plus_minus'],
+                    'per': stats['per']
+                })
+    
+    return jsonify(result)

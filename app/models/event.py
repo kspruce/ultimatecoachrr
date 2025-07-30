@@ -43,6 +43,13 @@ class Event(db.Model):
         foreign_keys=[receiver_id],
         back_populates='receiver_events'
     )
+
+    __table_args__ = (
+        db.Index('idx_event_player', 'player_id'),
+        db.Index('idx_event_point', 'point_id'),
+        db.Index('idx_event_type', 'event_type'),
+        db.Index('idx_event_offensive', 'is_offensive'),
+    )
     
     @validates('event_type')
     def validate_event_type(self, key, event_type):
