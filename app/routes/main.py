@@ -84,25 +84,33 @@ def index():
             # Upcoming Events
             # Future Games
             future_games = Game.query.filter(Game.date >= datetime.now()).order_by(Game.date.asc()).limit(3).all()
+            print(f"Found {len(future_games)} future games")
             for game in future_games:
                 upcoming_events.append({
                     'type': 'game',
                     'title': f'vs {game.opponent}',
                     'date_time': game.date.strftime('%b %d, %Y - %I:%M %p'),
-                    'sort_date': game.date,  # Add sort key
+                    'sort_date': game.date,  # Already a datetime object
                     'location': game.location if hasattr(game, 'location') else None,
                     'badge_color': 'danger',
                     'link': url_for('game.detail', game_id=game.id)
                 })
-
+            
             # Future Practice Sessions
             future_sessions = SessionPlan.query.filter(SessionPlan.date >= datetime.now().date()).order_by(SessionPlan.date.asc()).limit(3).all()
+            print(f"Found {len(future_sessions)} future sessions")
             for session in future_sessions:
+                # Ensure we have a proper datetime for sorting
+                if session.start_time:
+                    sort_datetime = datetime.combine(session.date, session.start_time)
+                else:
+                    sort_datetime = datetime.combine(session.date, datetime.min.time())
+                    
                 upcoming_events.append({
                     'type': 'practice',
                     'title': session.title,
                     'date_time': f"{session.date.strftime('%b %d, %Y')} - {session.formatted_time}",
-                    'sort_date': datetime.combine(session.date, session.start_time if session.start_time else datetime.min.time()), # Add sort key
+                    'sort_date': sort_datetime,  # Consistent datetime object
                     'location': session.location,
                     'badge_color': 'success',
                     'link': url_for('session.detail', session_id=session.id)
@@ -110,20 +118,33 @@ def index():
                 
             # Future Tournaments
             future_tournaments = Tournament.query.filter(Tournament.start_date >= datetime.now().date()).order_by(Tournament.start_date.asc()).limit(2).all()
+            print(f"Found {len(future_tournaments)} future tournaments")
             for tournament in future_tournaments:
                 upcoming_events.append({
                     'type': 'tournament',
                     'title': tournament.name,
                     'date_time': tournament.formatted_date_range,
-                    'sort_date': tournament.start_date, # Add sort key
+                    'sort_date': datetime.combine(tournament.start_date, datetime.min.time()),  # Convert date to datetime
                     'location': tournament.location,
                     'badge_color': 'warning',
                     'link': url_for('tournament.detail', tournament_id=tournament.id)
                 })
-
+            
+            print(f"Total upcoming events before sorting: {len(upcoming_events)}")
+            
             # Sort upcoming events by the actual date object, not a string
-            upcoming_events.sort(key=lambda x: x['sort_date'])
+            try:
+                upcoming_events.sort(key=lambda x: x['sort_date'])
+                print("Events sorted successfully")
+            except Exception as e:
+                print(f"Error sorting events: {str(e)}")
+                # Fallback sorting if there's an error
+                upcoming_events.sort(key=lambda x: str(x['sort_date']))
+            
             upcoming_events = upcoming_events[:5]
+            print(f"Final upcoming events count: {len(upcoming_events)}")
+
+
 
         except Exception as e:
             # Log any errors but don't crash the application
