@@ -42,6 +42,29 @@ def index():
     if current_user.is_authenticated:
         try:
             logger.debug("Starting to gather dashboard data")
+
+            # Debug database records
+            logger.debug("Debugging database records:")
+            
+            # Check for games with NULL dates
+            null_date_games = db.session.query(Game).filter(Game.date.is_(None)).all()
+            logger.debug(f"Found {len(null_date_games)} games with NULL dates")
+            for game in null_date_games:
+                logger.debug(f"Game ID {game.id} vs {game.opponent} has NULL date")
+            
+            # Check for sessions with NULL dates
+            null_date_sessions = db.session.query(SessionPlan).filter(SessionPlan.date.is_(None)).all()
+            logger.debug(f"Found {len(null_date_sessions)} sessions with NULL dates")
+            for session in null_date_sessions:
+                logger.debug(f"Session ID {session.id}: {session.title} has NULL date")
+            
+            # Check for tournaments with NULL dates
+            null_date_tournaments = db.session.query(Tournament).filter(Tournament.start_date.is_(None)).all()
+            logger.debug(f"Found {len(null_date_tournaments)} tournaments with NULL dates")
+            for tournament in null_date_tournaments:
+                logger.debug(f"Tournament ID {tournament.id}: {tournament.name} has NULL start_date")
+
+
             # Calculate Quick Stats
             # Active Players Count
             stats['active_players_count'] = Player.query.filter_by(active=True).count()
@@ -95,72 +118,118 @@ def index():
             # Upcoming Events
             # Future Games
             future_games = Game.query.filter(Game.date >= datetime.now()).order_by(Game.date.asc()).limit(3).all()
-            print(f"Found {len(future_games)} future games")
+            logger.debug(f"Found {len(future_games)} future games")
             for game in future_games:
-                logger.debug(f"Processing game: {game.opponent} on {game.date}")
-                upcoming_events.append({
-                    'type': 'game',
-                    'title': f'vs {game.opponent}',
-                    'date_time': game.date.strftime('%b %d, %Y - %I:%M %p'),
-                    'sort_date': game.date,  # Already a datetime object
-                    'location': game.location if hasattr(game, 'location') else None,
-                    'badge_color': 'danger',
-                    'link': url_for('game.detail', game_id=game.id)
-                })
+                try:
+                    # Check if game.date is None before using strftime
+                    if game.date is None:
+                        logger.warning(f"Game ID {game.id} vs {game.opponent} has NULL date, skipping")
+                        continue
+                        
+                    logger.debug(f"Processing game: {game.opponent} on {game.date}")
+                    upcoming_events.append({
+                        'type': 'game',
+                        'title': f'vs {game.opponent}',
+                        'date_time': game.date.strftime('%b %d, %Y - %I:%M %p'),
+                        'sort_date': game.date,
+                        'location': game.location if hasattr(game, 'location') and game.location else "No location",
+                        'badge_color': 'danger',
+                        'link': url_for('game.detail', game_id=game.id)
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing game {game.id}: {str(e)}")
             
             # Future Practice Sessions
             future_sessions = SessionPlan.query.filter(SessionPlan.date >= datetime.now().date()).order_by(SessionPlan.date.asc()).limit(3).all()
-            print(f"Found {len(future_sessions)} future sessions")
+            logger.debug(f"Found {len(future_sessions)} future sessions")
             for session in future_sessions:
-                # Ensure we have a proper datetime for sorting
-                if session.start_time:
-                    sort_datetime = datetime.combine(session.date, session.start_time)
-                else:
-                    sort_datetime = datetime.combine(session.date, datetime.min.time())
+                try:
+                    # Check if session.date is None
+                    if session.date is None:
+                        logger.warning(f"Session ID {session.id}: {session.title} has NULL date, skipping")
+                        continue
+                        
+                    # Create a safe sort_datetime
+                    if session.start_time:
+                        sort_datetime = datetime.combine(session.date, session.start_time)
+                    else:
+                        sort_datetime = datetime.combine(session.date, datetime.min.time())
                     
-                upcoming_events.append({
-                    'type': 'practice',
-                    'title': session.title,
-                    'date_time': f"{session.date.strftime('%b %d, %Y')} - {session.formatted_time}",
-                    'sort_date': sort_datetime,  # Consistent datetime object
-                    'location': session.location,
-                    'badge_color': 'success',
-                    'link': url_for('session.detail', session_id=session.id)
-                })
+                    # Create a safe formatted_time
+                    formatted_time = session.formatted_time if hasattr(session, 'formatted_time') else "No time specified"
+                    
+                    logger.debug(f"Processing session: {session.title} on {session.date}, sort_datetime: {sort_datetime}")
+                    
+                    upcoming_events.append({
+                        'type': 'practice',
+                        'title': session.title,
+                        'date_time': f"{session.date.strftime('%b %d, %Y')} - {formatted_time}",
+                        'sort_date': sort_datetime,
+                        'location': session.location if session.location else "No location",
+                        'badge_color': 'success',
+                        'link': url_for('session.detail', session_id=session.id)
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing session {session.id}: {str(e)}")
                 
             # Future Tournaments
             future_tournaments = Tournament.query.filter(Tournament.start_date >= datetime.now().date()).order_by(Tournament.start_date.asc()).limit(2).all()
-            print(f"Found {len(future_tournaments)} future tournaments")
+            logger.debug(f"Found {len(future_tournaments)} future tournaments")
             for tournament in future_tournaments:
-                upcoming_events.append({
-                    'type': 'tournament',
-                    'title': tournament.name,
-                    'date_time': tournament.formatted_date_range,
-                    'sort_date': datetime.combine(tournament.start_date, datetime.min.time()),  # Convert date to datetime
-                    'location': tournament.location,
-                    'badge_color': 'warning',
-                    'link': url_for('tournament.detail', tournament_id=tournament.id)
-                })
+                try:
+                    # Check if tournament.start_date is None
+                    if tournament.start_date is None:
+                        logger.warning(f"Tournament ID {tournament.id}: {tournament.name} has NULL start_date, skipping")
+                        continue
+                        
+                    sort_datetime = datetime.combine(tournament.start_date, datetime.min.time())
+                    
+                    # Check if formatted_date_range exists and is not None
+                    formatted_date = tournament.formatted_date_range if hasattr(tournament, 'formatted_date_range') and tournament.formatted_date_range else tournament.start_date.strftime('%b %d, %Y')
+                    
+                    logger.debug(f"Processing tournament: {tournament.name} on {tournament.start_date}, sort_datetime: {sort_datetime}")
+                    
+                    upcoming_events.append({
+                        'type': 'tournament',
+                        'title': tournament.name,
+                        'date_time': formatted_date,
+                        'sort_date': sort_datetime,
+                        'location': tournament.location if tournament.location else "No location",
+                        'badge_color': 'warning',
+                        'link': url_for('tournament.detail', tournament_id=tournament.id)
+                    })
+                except Exception as e:
+                    logger.error(f"Error processing tournament {tournament.id}: {str(e)}")
             
-            print(f"Total upcoming events before sorting: {len(upcoming_events)}")
+            logger.debug(f"Total upcoming events before sorting: {len(upcoming_events)}")
             
-            # Sort upcoming events by the actual date object, not a string
-            try:
-                upcoming_events.sort(key=lambda x: x['sort_date'])
-                print("Events sorted successfully")
-            except Exception as e:
-                print(f"Error sorting events: {str(e)}")
-                # Fallback sorting if there's an error
-                upcoming_events.sort(key=lambda x: str(x['sort_date']))
+            # Only try to sort if we have events
+            if upcoming_events:
+                # Debug each event's sort_date before sorting
+                for i, event in enumerate(upcoming_events):
+                    logger.debug(f"Event {i}: {event['title']} - sort_date: {event['sort_date']} - type: {type(event['sort_date'])}")
+                
+                # Sort upcoming events by the actual date object, not a string
+                try:
+                    upcoming_events.sort(key=lambda x: x['sort_date'])
+                    logger.debug("Events sorted successfully")
+                except Exception as e:
+                    logger.error(f"Error sorting events: {str(e)}")
+                    # Don't empty the list on error, just leave it unsorted
+                
+                upcoming_events = upcoming_events[:5]
+                logger.debug(f"Final upcoming events count: {len(upcoming_events)}")
+            else:
+                logger.warning("No upcoming events to sort")
             
-            upcoming_events = upcoming_events[:5]
-            print(f"Final upcoming events count: {len(upcoming_events)}")
 
 
 
         except Exception as e:
             # Log any errors but don't crash the application
-            print(f"Error generating dashboard data: {str(e)}")
+            logger.exception(f"Error generating dashboard data: {str(e)}")
+            # Don't empty the upcoming_events list here
+
 
     return render_template('index.html',
                          title='Home',
