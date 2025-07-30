@@ -58,6 +58,16 @@ def get_cached_team_averages(games=None, max_age_minutes=15):
     _team_avg_timestamp[cache_key] = now
     return result
 
+def safe_date_format(date_obj, format_str='%Y-%m-%d'):
+    """Safely format a date object, handling None values"""
+    if date_obj and hasattr(date_obj, 'strftime'):
+        return date_obj.strftime(format_str)
+    elif date_obj:
+        return str(date_obj)
+    else:
+        return "Unknown"
+
+
 # Use LRU cache for player stats that don't change often
 @lru_cache(maxsize=128)
 def get_cached_player_base_stats(player_id, game_ids_tuple=None):
@@ -1129,7 +1139,9 @@ def index():
             d_line_efficiency=dict(d_line_efficiency),
             heatmap_data=json.dumps(heatmap_data),
             connection_data=json.dumps(connection_data),
-            team_avg_stats=team_avg_stats
+            team_avg_stats=team_avg_stats,
+            is_admin=is_admin(current_user),
+            is_coach=is_coach(current_user)
         )
 
     except Exception as e:
@@ -1272,7 +1284,8 @@ def player_stats(player_id):
     player = Player.query.get_or_404(player_id)
     
     # Check if user has permission to view this player's stats
-    if not (current_user.is_admin or current_user.is_coach or (current_user.player and current_user.player.id == player.id)):
+    if not (is_admin(current_user) or is_coach(current_user) or (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player.id)):
+
         flash("You don't have permission to view this player's statistics", "danger")
         return redirect(url_for('stats_dashboard.index'))
     
@@ -1493,8 +1506,8 @@ def game_stats(game_id):
         heatmap_data=json.dumps(heatmap_data),
         connections=json.dumps(connection_data),
         calculate_impact_score=calculate_impact_score,
-        is_admin=current_user.is_admin if hasattr(current_user, 'is_admin') else False,
-        is_coach=current_user.is_coach if hasattr(current_user, 'is_coach') else False
+        is_admin=is_admin(current_user),
+        is_coach=is_coach(current_user)
     )
 
 
