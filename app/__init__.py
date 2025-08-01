@@ -180,9 +180,7 @@ def create_app(config_class=Config):
     app.register_blueprint(fitness_bp)
    
     # Add this import
-    from app.routes import ml_routes
-    app.register_blueprint(ml_routes.bp)
-    
+   
     from app.routes.ml_routes import bp as ml_bp
     app.register_blueprint(ml_bp)
     
