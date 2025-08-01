@@ -6,7 +6,7 @@ from app.ml.player_prediction import PlayerPerformancePredictor
 from app.ml.line_optimizer import LineOptimizer
 from app.models.player import Player
 from app.models.game import Game
-from date import datetime
+from datetime import datetime
 
 bp = Blueprint('ml', __name__, url_prefix='/ml')
 
