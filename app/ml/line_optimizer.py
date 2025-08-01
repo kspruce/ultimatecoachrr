@@ -9,7 +9,7 @@ import os
 from itertools import combinations
 from app.ml.data_processor import DataProcessor
 from app.models.player import Player
-from app.models.stats import Stats
+from app.models.point import Point
 from app.models.game import Game
 from flask import current_app
 
@@ -22,92 +22,90 @@ class LineOptimizer:
         # Load model if it exists
         if os.path.exists(self.model_path):
             try:
-                self.model = joblib.load(self.model_path)
+                saved_data = joblib.load(self.model_path)
+                self.model = saved_data['kmeans']
+                self.scaler = saved_data['scaler']
                 self.trained = True
             except:
                 self.model = KMeans(n_clusters=3, random_state=42)
+                self.scaler = StandardScaler()
                 self.trained = False
         else:
             self.model = KMeans(n_clusters=3, random_state=42)
+            self.scaler = StandardScaler()
             self.trained = False
             
-        self.scaler = StandardScaler()
-            
-    def _get_player_vectors(self, team_id):
+    def _get_player_vectors(self, team_name):
         """
         Generate feature vectors for each player on the team
         
         Args:
-            team_id: ID of the team
+            team_name: Name of the team
             
         Returns:
             DataFrame with player IDs and feature vectors
         """
         # Get all players on the team
-        players = Player.query.filter_by(team_id=team_id).all()
+        players = Player.query.filter_by(team=team_name).all()
         
         if not players:
             return None
             
         player_vectors = []
         for player in players:
-            # Get player's average stats
-            avg_stats = Stats.query.filter_by(player_id=player.id)\
-                .join(Game, Stats.game_id == Game.id)\
-                .order_by(Game.date.desc())\
-                .limit(10).all()
-                
-            if not avg_stats:
+            # Get player's historical data
+            player_data = DataProcessor.get_player_historical_data(player.id)
+            
+            if player_data is None or len(player_data) < 3:
                 continue
                 
             # Calculate average stats
-            goals = np.mean([s.goals if hasattr(s, 'goals') else 0 for s in avg_stats])
-            assists = np.mean([s.assists if hasattr(s, 'assists') else 0 for s in avg_stats])
-            completions = np.mean([s.completions if hasattr(s, 'completions') else 0 for s in avg_stats])
-            throwaways = np.mean([s.throwaways if hasattr(s, 'throwaways') else 0 for s in avg_stats])
-            blocks = np.mean([s.blocks if hasattr(s, 'blocks') else 0 for s in avg_stats])
-            points_played = np.mean([s.points_played if hasattr(s, 'points_played') else 0 for s in avg_stats])
+            avg_goals = player_data['goals'].mean()
+            avg_assists = player_data['assists'].mean()
+            avg_completions = player_data['completions'].mean()
+            avg_throwaways = player_data['throwaways'].mean()
+            avg_blocks = player_data['blocks'].mean()
+            avg_points_played = player_data['points_played'].mean()
+            avg_per = player_data['per'].mean()
             
-            # Calculate derived metrics
-            completion_pct = completions / (completions + throwaways) if (completions + throwaways) > 0 else 0
-            points_per_game = goals + assists
+            # Calculate completion percentage
+            total_throws = avg_completions + avg_throwaways
+            completion_pct = (avg_completions / total_throws * 100) if total_throws > 0 else 0
+            
+            # Calculate points per game
+            points_per_game = avg_goals + avg_assists
             
             # Create player vector
             player_vector = {
                 'player_id': player.id,
-                'name': f"{player.first_name} {player.last_name}",
-                'goals': goals,
-                'assists': assists,
-                'blocks': blocks,
+                'name': player.name,
+                'goals': avg_goals,
+                'assists': avg_assists,
+                'blocks': avg_blocks,
                 'completion_pct': completion_pct,
                 'points_per_game': points_per_game,
-                'points_played': points_played
+                'points_played': avg_points_played,
+                'per': avg_per
             }
             
             player_vectors.append(player_vector)
             
         return pd.DataFrame(player_vectors)
         
-    def train(self, team_id):
+    def train(self, team_name):
         """
         Train the model using team lineup data
         
         Args:
-            team_id: ID of the team
+            team_name: Name of the team
             
         Returns:
             True if training was successful, False otherwise
         """
-        # Get team lineup data
-        lineup_data = DataProcessor.get_team_lineup_data(team_id)
-        
-        if lineup_data is None or len(lineup_data) < 10:  # Need minimum data
-            return False
-            
         # Get player vectors
-        player_vectors = self._get_player_vectors(team_id)
+        player_vectors = self._get_player_vectors(team_name)
         
-        if player_vectors is None:
+        if player_vectors is None or len(player_vectors) < 7:  # Need minimum players for a line
             return False
             
         # Scale the features
@@ -144,20 +142,22 @@ class LineOptimizer:
             
         # Extract relevant stats based on situation
         if situation == 'offense':
-            # For offense, prioritize goals, assists, completion percentage
+            # For offense, prioritize goals, assists, completion percentage, PER
             total_goals = sum(p['goals'] for p in line_players)
             total_assists = sum(p['assists'] for p in line_players)
             avg_completion = np.mean([p['completion_pct'] for p in line_players])
+            avg_per = np.mean([p['per'] for p in line_players])
             
             # Calculate offensive score
-            score = (total_goals * 0.3) + (total_assists * 0.3) + (avg_completion * 0.4)
+            score = (total_goals * 0.25) + (total_assists * 0.25) + (avg_completion * 0.25) + (avg_per * 0.25)
             
         else:  # defense
-            # For defense, prioritize blocks and athletic metrics
+            # For defense, prioritize blocks, PER, and athletic metrics
             total_blocks = sum(p['blocks'] for p in line_players)
+            avg_per = np.mean([p['per'] for p in line_players])
             
             # Calculate defensive score
-            score = total_blocks
+            score = (total_blocks * 0.5) + (avg_per * 0.5)
             
         # Bonus for balanced line (players from different clusters)
         player_ids = [p['player_id'] for p in line_players]
@@ -178,12 +178,12 @@ class LineOptimizer:
         
         return score * (1 + cluster_bonus * 0.2)  # 20% bonus for perfect diversity
         
-    def suggest_lines(self, team_id, num_lines=3, players_per_line=7, situation='offense'):
+    def suggest_lines(self, team_name, num_lines=3, players_per_line=7, situation='offense'):
         """
         Suggest optimal lines for a given situation
         
         Args:
-            team_id: ID of the team
+            team_name: Name of the team
             num_lines: Number of lines to suggest
             players_per_line: Number of players per line
             situation: 'offense' or 'defense'
@@ -192,12 +192,12 @@ class LineOptimizer:
             List of suggested lines with player IDs and names
         """
         if not self.trained:
-            success = self.train(team_id)
+            success = self.train(team_name)
             if not success:
                 return []
                 
         # Get player vectors
-        player_vectors_df = self._get_player_vectors(team_id)
+        player_vectors_df = self._get_player_vectors(team_name)
         
         if player_vectors_df is None:
             return []

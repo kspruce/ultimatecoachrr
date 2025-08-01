@@ -6,7 +6,7 @@ from app.ml.player_prediction import PlayerPerformancePredictor
 from app.ml.line_optimizer import LineOptimizer
 from app.models.player import Player
 from app.models.game import Game
-from app.models.team import Team
+from date import datetime
 
 bp = Blueprint('ml', __name__, url_prefix='/ml')
 
@@ -36,7 +36,7 @@ def player_prediction(player_id):
     # Get player details
     player_details = {
         'id': player.id,
-        'name': f"{player.first_name} {player.last_name}",
+        'name': player.name,
     }
     
     # Get game details if provided
@@ -57,14 +57,15 @@ def player_prediction(player_id):
         'predictions': predictions
     })
 
-@bp.route('/line-optimizer/<int:team_id>', methods=['GET'])
+@bp.route('/line-optimizer/<team_name>', methods=['GET'])
 @login_required
-def line_optimizer(team_id):
+def line_optimizer(team_name):
     """
     Get suggested lines for a team
     """
-    # Check if team exists
-    team = Team.query.get_or_404(team_id)
+    # Validate team name
+    if not team_name:
+        return jsonify({'error': 'Team name is required'}), 400
     
     # Get parameters
     num_lines = request.args.get('num_lines', 3, type=int)
@@ -76,7 +77,7 @@ def line_optimizer(team_id):
     
     # Get suggested lines
     suggested_lines = optimizer.suggest_lines(
-        team_id, 
+        team_name, 
         num_lines=num_lines,
         players_per_line=players_per_line,
         situation=situation
@@ -89,10 +90,7 @@ def line_optimizer(team_id):
         
     # Return suggested lines
     return jsonify({
-        'team': {
-            'id': team.id,
-            'name': team.name
-        },
+        'team': team_name,
         'situation': situation,
         'suggested_lines': suggested_lines
     })
@@ -107,18 +105,45 @@ def train_models():
     if not current_user.is_admin:
         return jsonify({'error': 'Permission denied'}), 403
         
-    # Get team ID if provided
-    team_id = request.json.get('team_id')
+    # Get team name if provided
+    team_name = request.json.get('team_name')
     
     # Train player prediction model
     player_predictor = PlayerPerformancePredictor()
-    player_success = player_predictor.train(team_id)
+    player_success = player_predictor.train(team_name)
     
     # Train line optimizer model
     line_optimizer = LineOptimizer()
-    line_success = line_optimizer.train(team_id)
+    line_success = line_optimizer.train(team_name)
     
     return jsonify({
         'player_prediction_trained': player_success,
         'line_optimizer_trained': line_success
     })
+
+@bp.route('/player-predictions', methods=['GET'])
+@login_required
+def player_predictions_view():
+    """
+    Display the player predictions page
+    """
+    # Get all players for the current user's team
+    players = Player.query.filter_by(team=current_user.team).all()
+    
+    # Get upcoming games
+    upcoming_games = Game.query.filter(
+        Game.team == current_user.team,
+        Game.date >= datetime.now()
+    ).order_by(Game.date).all()
+    
+    return render_template('ml/player_prediction.html', 
+                          players=players, 
+                          upcoming_games=upcoming_games)
+
+@bp.route('/line-optimizer', methods=['GET'])
+@login_required
+def line_optimizer_view():
+    """
+    Display the line optimizer page
+    """
+    return render_template('ml/line_optimizer.html')

@@ -18,7 +18,7 @@
                             <select class="form-control" id="playerSelect" required>
                                 <option value="">Select a player</option>
                                 {% for player in players %}
-                                <option value="{{ player.id }}">{{ player.first_name }} {{ player.last_name }}</option>
+                                <option value="{{ player.id }}">{{ player.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -67,6 +67,10 @@
                                 <tr>
                                     <th>Points Per Game</th>
                                     <td id="predPointsPerGame"></td>
+                                </tr>
+                                <tr>
+                                    <th>PER</th>
+                                    <td id="predPER"></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -126,6 +130,7 @@ document.getElementById('predictionForm').addEventListener('submit', function(e)
             document.getElementById('predAssists').textContent = data.predictions.assists;
             document.getElementById('predBlocks').textContent = data.predictions.blocks;
             document.getElementById('predPointsPerGame').textContent = data.predictions.points_per_game;
+            document.getElementById('predPER').textContent = data.predictions.per;
             
             // Show results
             document.getElementById('predictionResults').style.display = 'block';

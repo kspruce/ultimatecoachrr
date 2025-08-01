@@ -3,10 +3,11 @@
 import pandas as pd
 import numpy as np
 from app.models.player import Player
-from app.models.stats import Stats
+from app.models.player_point_stats import PlayerPointStats  # Assuming this is the correct import
 from app.models.game import Game
 from app.models.point import Point
 from app.models.session import Session
+from app.models.attendance import Attendance  # Assuming this exists
 from sqlalchemy import func
 from flask import current_app
 from datetime import datetime, timedelta
@@ -24,36 +25,74 @@ class DataProcessor:
         Returns:
             DataFrame with player stats and features
         """
-        # Get player's recent game stats
-        recent_stats = Stats.query.filter_by(player_id=player_id)\
-            .join(Game, Stats.game_id == Game.id)\
-            .order_by(Game.date.desc())\
-            .limit(lookback_games).all()
+        # Get player
+        player = Player.query.get(player_id)
+        if not player:
+            return None
             
-        if not recent_stats:
+        # Get player's recent games through points
+        recent_games = Game.query.join(Point).join(
+            PlayerPointStats, Point.id == PlayerPointStats.point_id
+        ).filter(
+            PlayerPointStats.player_id == player_id
+        ).order_by(Game.date.desc()).limit(lookback_games).all()
+            
+        if not recent_games:
             return None
             
         # Extract features from stats
         data = []
-        for stat in recent_stats:
-            game = Game.query.get(stat.game_id)
+        for game in recent_games:
+            # Get points for this game
+            points = Point.query.filter_by(game_id=game.id).all()
+            point_ids = [p.id for p in points]
+            
+            # Get player stats for these points
+            player_stats = PlayerPointStats.query.filter(
+                PlayerPointStats.player_id == player_id,
+                PlayerPointStats.point_id.in_(point_ids)
+            ).all()
+            
+            if not player_stats:
+                continue
+                
+            # Get throws for this player in this game
+            throws_made = player.throws_made.join(Point).filter(Point.game_id == game.id).all()
+            completions = sum(1 for t in throws_made if t.is_completion)
+            throwaways = sum(1 for t in throws_made if not t.is_completion)
+            assists = sum(1 for t in throws_made if t.throw_type == 'assist')
+            
+            # Get receptions for this player in this game
+            receptions = player.throws_received.join(Point).filter(Point.game_id == game.id).all()
+            goals = sum(1 for r in receptions if r.throw_type == 'assist')
+            
+            # Calculate blocks (this depends on your data model)
+            # For now, we'll use a placeholder
+            blocks = 0  # Replace with actual calculation if you track blocks
+            
+            # Count points played
+            points_played = len(player_stats)
+            
+            # Calculate PER metrics
+            avg_per = sum(ps.calculated_per for ps in player_stats) / len(player_stats) if player_stats else 0
             
             # Basic game context
             game_data = {
                 'game_id': game.id,
                 'game_date': game.date,
                 'opponent': game.opponent,
-                'is_home': game.is_home if hasattr(game, 'is_home') else True,
-                'tournament_game': game.tournament_id is not None,
+                'is_home': getattr(game, 'is_home', True),
+                'tournament_game': getattr(game, 'tournament_id', None) is not None,
                 
-                # Player stats - adjust these based on your actual Stats model
-                'points_played': stat.points_played if hasattr(stat, 'points_played') else 0,
-                'goals': stat.goals if hasattr(stat, 'goals') else 0,
-                'assists': stat.assists if hasattr(stat, 'assists') else 0,
-                'completions': stat.completions if hasattr(stat, 'completions') else 0,
-                'throwaways': stat.throwaways if hasattr(stat, 'throwaways') else 0,
-                'drops': stat.drops if hasattr(stat, 'drops') else 0,
-                'blocks': stat.blocks if hasattr(stat, 'blocks') else 0,
+                # Player stats
+                'points_played': points_played,
+                'goals': goals,
+                'assists': assists,
+                'completions': completions,
+                'throwaways': throwaways,
+                'drops': 0,  # Replace with actual calculation if you track drops
+                'blocks': blocks,
+                'per': avg_per,
             }
             
             # Add player attendance for recent practices
@@ -61,38 +100,32 @@ class DataProcessor:
             month_before = game_date - timedelta(days=30)
             
             # Get practice attendance in the month before the game
-            attendance = Session.query.filter(
-                Session.date.between(month_before, game_date)
-            ).join(
-                # This join will depend on how you track attendance
-                # This is a placeholder - adjust based on your actual model relationships
-                "attendance_table", 
-                Session.id == "attendance_table.session_id"
-            ).filter(
-                "attendance_table.player_id" == player_id,
-                "attendance_table.attended" == True
+            attendance_count = Attendance.query.join(Session).filter(
+                Session.date.between(month_before, game_date),
+                Attendance.player_id == player_id,
+                Attendance.attended == True
             ).count()
             
-            game_data['recent_practices_attended'] = attendance
+            game_data['recent_practices_attended'] = attendance_count
             
             data.append(game_data)
             
         return pd.DataFrame(data)
     
     @staticmethod
-    def get_team_lineup_data(team_id, lookback_games=10):
+    def get_team_lineup_data(team_name, lookback_games=10):
         """
         Extract data about different line combinations and their effectiveness
         
         Args:
-            team_id: ID of the team
+            team_name: Name of the team
             lookback_games: Number of past games to consider
             
         Returns:
             DataFrame with line combinations and performance metrics
         """
-        # Get recent games
-        recent_games = Game.query.filter_by(team_id=team_id)\
+        # Get recent games for the team
+        recent_games = Game.query.filter_by(team=team_name)\
             .order_by(Game.date.desc())\
             .limit(lookback_games).all()
             
@@ -105,15 +138,15 @@ class DataProcessor:
             points = Point.query.filter_by(game_id=game.id).all()
             
             for point in points:
-                # This will depend on how you store lineups in your database
-                # Assuming there's a relationship between Point and Player through a lineup table
-                lineup = point.players if hasattr(point, 'players') else []
+                # Get players in this point through lineups
+                lineups = point.lineups.all()
+                players = [lineup.player for lineup in lineups if lineup.player]
                 
-                if not lineup:
+                if not players:
                     continue
                     
                 # Create a sorted tuple of player IDs to represent this line
-                line_key = tuple(sorted([player.id for player in lineup]))
+                line_key = tuple(sorted([player.id for player in players]))
                 
                 # Get point outcome
                 point_data = {
@@ -124,7 +157,7 @@ class DataProcessor:
                     'offense': point.line_type == 'offense' if hasattr(point, 'line_type') else None,
                     'point_scored': point.scored if hasattr(point, 'scored') else None,
                     'opponent': game.opponent,
-                    'tournament_game': game.tournament_id is not None,
+                    'tournament_game': hasattr(game, 'tournament_id') and game.tournament_id is not None,
                 }
                 
                 line_data.append(point_data)

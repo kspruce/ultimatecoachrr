@@ -54,7 +54,7 @@ class PlayerPerformancePredictor:
         player_data = player_data.sort_values('game_date')
         
         # Add rolling averages for key stats (last 3 games)
-        for stat in ['goals', 'assists', 'completions', 'throwaways', 'blocks']:
+        for stat in ['goals', 'assists', 'completions', 'throwaways', 'blocks', 'per']:
             player_data[f'{stat}_rolling_avg'] = player_data[stat].rolling(window=3, min_periods=1).mean()
             
         # Calculate completion percentage
@@ -80,24 +80,25 @@ class PlayerPerformancePredictor:
             'goals': player_data['goals'],
             'assists': player_data['assists'],
             'blocks': player_data['blocks'],
-            'points_per_game': player_data['points_per_game']
+            'points_per_game': player_data['points_per_game'],
+            'per': player_data['per']
         }
         
         return X, y
         
-    def train(self, team_id=None):
+    def train(self, team_name=None):
         """
         Train the model using historical player data
         
         Args:
-            team_id: Optional team ID to filter players
+            team_name: Optional team name to filter players
             
         Returns:
             True if training was successful, False otherwise
         """
         # Get all players (optionally filtered by team)
-        if team_id:
-            players = Player.query.filter_by(team_id=team_id).all()
+        if team_name:
+            players = Player.query.filter_by(team=team_name).all()
         else:
             players = Player.query.all()
             
@@ -175,7 +176,7 @@ class PlayerPerformancePredictor:
             if upcoming_game:
                 latest_data['opponent'] = upcoming_game.opponent
                 latest_data['is_home'] = upcoming_game.is_home if hasattr(upcoming_game, 'is_home') else True
-                latest_data['tournament_game'] = upcoming_game.tournament_id is not None
+                latest_data['tournament_game'] = upcoming_game.tournament_id is not None if hasattr(upcoming_game, 'tournament_id') else False
                 
         # Prepare features
         X, _ = self._prepare_features(player_data)
