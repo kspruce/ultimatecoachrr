@@ -79,8 +79,8 @@ document.getElementById('lineOptimizerForm').addEventListener('submit', function
     }
     
     // Build URL
-    let url = `/ml/line-optimizer/${teamId}?situation=${situation}&num_lines=${numLines}&players_per_line=${playersPerLine}`;
-    
+    let url = `/ml/line-optimizer/${document.getElementById('teamSelect').options[document.getElementById('teamSelect').selectedIndex].text}?situation=${situation}&num_lines=${numLines}&players_per_line=${playersPerLine}`;
+
     // Show loading
     document.getElementById('lineResults').style.display = 'none';
     

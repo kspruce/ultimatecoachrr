@@ -146,4 +146,6 @@ def line_optimizer_view():
     """
     Display the line optimizer page
     """
-    return render_template('ml/line_optimizer.html')
+    # Get the current user's team
+    team = {"id": current_user.team_id, "name": current_user.team}
+    return render_template('ml/line_optimizer.html', team=team)

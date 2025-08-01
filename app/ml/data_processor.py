@@ -99,8 +99,8 @@ class DataProcessor:
             month_before = game_date - timedelta(days=30)
             
             # Get practice attendance in the month before the game
-            attendance_count = Attendance.query.join(Session).filter(
-                Session.date.between(month_before, game_date),
+            attendance_count = Attendance.query.join(SessionPlan).filter(
+                SessionPlan.date.between(month_before, game_date),
                 Attendance.player_id == player_id,
                 Attendance.attended == True
             ).count()
