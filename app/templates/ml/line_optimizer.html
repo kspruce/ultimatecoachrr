@@ -1,0 +1,144 @@
+<!-- app/templates/ml/line_optimizer.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Line Optimizer</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Line Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="lineOptimizerForm">
+                        <div class="form-group mb-3">
+                            <label for="teamSelect">Team</label>
+                            <select class="form-control" id="teamSelect" required>
+                                <option value="{{ team.id }}" selected>{{ team.name }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="situationSelect">Situation</label>
+                            <select class="form-control" id="situationSelect">
+                                <option value="offense" selected>Offense</option>
+                                <option value="defense">Defense</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="numLines">Number of Lines</label>
+                            <input type="number" class="form-control" id="numLines" min="1" max="5" value="3">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="playersPerLine">Players Per Line</label>
+                            <input type="number" class="form-control" id="playersPerLine" min="7" max="8" value="7">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Generate Lines</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card" id="lineResults" style="display: none;">
+                <div class="card-header">
+                    <h5>Suggested Lines</h5>
+                    <span class="badge bg-primary" id="situationBadge">Offense</span>
+                </div>
+                <div class="card-body">
+                    <div id="linesContainer">
+                        <!-- Lines will be inserted here -->
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <small>Lines are optimized based on historical performance data and player complementarity.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('lineOptimizerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const teamId = document.getElementById('teamSelect').value;
+    const situation = document.getElementById('situationSelect').value;
+    const numLines = document.getElementById('numLines').value;
+    const playersPerLine = document.getElementById('playersPerLine').value;
+    
+    if (!teamId) {
+        alert('Please select a team');
+        return;
+    }
+    
+    // Build URL
+    let url = `/ml/line-optimizer/${teamId}?situation=${situation}&num_lines=${numLines}&players_per_line=${playersPerLine}`;
+    
+    // Show loading
+    document.getElementById('lineResults').style.display = 'none';
+    
+    // Fetch suggested lines
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            // Update situation badge
+            document.getElementById('situationBadge').textContent = 
+                data.situation.charAt(0).toUpperCase() + data.situation.slice(1);
+            
+            // Clear previous lines
+            const linesContainer = document.getElementById('linesContainer');
+            linesContainer.innerHTML = '';
+            
+            // Display lines
+            data.suggested_lines.forEach((line, index) => {
+                const lineCard = document.createElement('div');
+                lineCard.className = 'card mb-3';
+                
+                const lineHeader = document.createElement('div');
+                lineHeader.className = 'card-header d-flex justify-content-between align-items-center';
+                lineHeader.innerHTML = `
+                    <h6 class="mb-0">Line ${index + 1}</h6>
+                    <span class="badge bg-success">Score: ${line.score}</span>
+                `;
+                
+                const lineBody = document.createElement('div');
+                lineBody.className = 'card-body';
+                
+                const playerList = document.createElement('ul');
+                playerList.className = 'list-group';
+                
+                line.players.forEach(player => {
+                    const playerItem = document.createElement('li');
+                    playerItem.className = 'list-group-item';
+                    playerItem.textContent = player.name;
+                    playerList.appendChild(playerItem);
+                });
+                
+                lineBody.appendChild(playerList);
+                lineCard.appendChild(lineHeader);
+                lineCard.appendChild(lineBody);
+                linesContainer.appendChild(lineCard);
+            });
+            
+            // Show results
+            document.getElementById('lineResults').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while fetching suggested lines');
+        });
+});
+</script>
+{% endblock %}
