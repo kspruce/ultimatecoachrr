@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 from app.models.player import Player
-from app.models.player_point_stats import PlayerPointStats  # Assuming this is the correct import
+from app.models.stats import PlayerPointStats  # Assuming this is the correct import
 from app.models.game import Game
 from app.models.point import Point
 from app.models.session import Session
