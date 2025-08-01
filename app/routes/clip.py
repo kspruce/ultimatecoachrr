@@ -227,7 +227,9 @@ def view_clip(clip_id):
                           annotations=annotations, 
                           form=form,
                           game_players=game_players,
-                          tournament_players=tournament_players)
+                          tournament_players=tournament_players,
+                          seconds_to_timestamp=seconds_to_timestamp)  # Pass the function to the template
+
 
 
 
@@ -526,3 +528,4 @@ def seconds_to_timestamp(seconds):
     minutes = (int(seconds) % 3600) // 60
     secs = int(seconds) % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
