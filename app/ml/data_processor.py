@@ -6,8 +6,7 @@ from app.models.player import Player
 from app.models.stats import PlayerPointStats  # Assuming this is the correct import
 from app.models.game import Game
 from app.models.point import Point
-from app.models.session import Session
-from app.models.attendance import Attendance  # Assuming this exists
+from app.models.session import SessionPlan, Attendance
 from sqlalchemy import func
 from flask import current_app
 from datetime import datetime, timedelta
