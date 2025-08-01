@@ -183,6 +183,9 @@ def create_app(config_class=Config):
     from app.routes import ml_routes
     app.register_blueprint(ml_routes.bp)
     
+    from app.routes.ml_routes import bp as ml_bp
+    app.register_blueprint(ml_bp)
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,

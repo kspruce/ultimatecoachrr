@@ -68,19 +68,19 @@
 document.getElementById('lineOptimizerForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const teamId = document.getElementById('teamSelect').value;
+    const teamName = document.getElementById('teamSelect').options[document.getElementById('teamSelect').selectedIndex].text;
     const situation = document.getElementById('situationSelect').value;
     const numLines = document.getElementById('numLines').value;
     const playersPerLine = document.getElementById('playersPerLine').value;
     
-    if (!teamId) {
+    if (!teamName) {
         alert('Please select a team');
         return;
     }
     
-    // Build URL
-    let url = `/ml/line-optimizer/${document.getElementById('teamSelect').options[document.getElementById('teamSelect').selectedIndex].text}?situation=${situation}&num_lines=${numLines}&players_per_line=${playersPerLine}`;
-
+    // Build URL for the API endpoint (not the view)
+    let url = `/ml/line-optimizer/${teamName}?situation=${situation}&num_lines=${numLines}&players_per_line=${playersPerLine}`;
+    
     // Show loading
     document.getElementById('lineResults').style.display = 'none';
     
