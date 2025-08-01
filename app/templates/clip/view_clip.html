@@ -2,36 +2,126 @@
 
 {% block styles %}
 <style>
+    /* Existing styles */
     .annotation-list {
         max-height: 400px;
         overflow-y: auto;
     }
     
+    /* Enhanced styles */
     .annotation-item {
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.2s;
+        border-left: 4px solid #e9ecef;
+        margin-bottom: 8px;
+        border-radius: 4px;
     }
     
     .annotation-item:hover {
         background-color: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
+    
+    /* Color coding by event type */
+    .event-goal { border-left: 4px solid #28a745; }
+    .event-turnover { border-left: 4px solid #dc3545; }
+    .event-block { border-left: 4px solid #fd7e14; }
+    .event-timeout { border-left: 4px solid #6c757d; }
+    .event-catch { border-left: 4px solid #17a2b8; }
+    .event-throw { border-left: 4px solid #6610f2; }
+    .event-defense { border-left: 4px solid #20c997; }
     
     .annotation-timestamp {
         font-weight: bold;
         color: #007bff;
+        min-width: 70px;
+        display: inline-block;
     }
     
     .annotation-event {
         font-weight: bold;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        background-color: #e9ecef;
     }
     
     .annotation-score {
         font-weight: bold;
+        margin-left: 8px;
     }
     
     .annotation-notes {
         font-style: italic;
         color: #6c757d;
+        margin-top: 5px;
+        padding-left: 5px;
+        border-left: 2px solid #e9ecef;
+    }
+    
+    /* Timeline visualization */
+    .annotation-timeline {
+        position: relative;
+        height: 30px;
+        margin: 20px 0;
+    }
+    
+    .timeline-track {
+        position: relative;
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background-color: #007bff;
+        border-radius: 50%;
+        top: -2px;
+        transform: translateX(-50%);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .timeline-marker:hover {
+        transform: translateX(-50%) scale(1.5);
+        z-index: 10;
+    }
+    
+    .timeline-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 5px;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .details-toggle {
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+    }
+    
+    .details-toggle:hover {
+        color: #007bff;
+    }
+    
+    .annotation-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 5px;
+    }
+    
+    .meta-item {
+        font-size: 0.85rem;
+        padding: 2px 8px;
+        background-color: #f8f9fa;
+        border-radius: 12px;
     }
 </style>
 {% endblock %}
@@ -193,11 +283,37 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5>Annotations</h5>
-                    {% if current_user.is_admin %}
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAnnotationModal">
-                            Add Annotation
-                        </button>
-                    {% endif %}
+                    <div>
+                        <a href="{{ url_for('clip.export_annotations_csv', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary me-2">
+                            <i class="bi bi-file-earmark-text"></i> Export CSV
+                        </a>
+                        {% if current_user.is_admin %}
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAnnotationModal">
+                                Add Annotation
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+
+                <div class="annotation-timeline mb-4">
+                    <div class="timeline-track">
+                        {% for annotation in annotations %}
+                            {% set position = (annotation.timestamp / (clip.end_time or 600)) * 100 %}
+                            {% if position > 100 %}{% set position = 100 %}{% endif %}
+                            <div class="timeline-marker" 
+                                 style="left: {{ position }}%" 
+                                 data-timestamp="{{ annotation.timestamp }}" 
+                                 data-bs-toggle="tooltip" 
+                                 title="{{ annotation.event_type|replace('_', ' ')|title }} ({{ annotation.formatted_timestamp }})"
+                                 onclick="seekToTimestamp({{ annotation.timestamp }})">
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="timeline-labels">
+                        <span class="timeline-start">0:00</span>
+                        <span class="timeline-end">{{ seconds_to_timestamp(clip.end_time or 600) }}</span>
+                    </div>
                 </div>
 
                 <div class="card-body">
@@ -205,66 +321,86 @@
                         {% if annotations %}
                         <div class="list-group">
                             {% for annotation in annotations %}
-                            <div class="list-group-item annotation-item" data-timestamp="{{ annotation.timestamp }}" onclick="seekToTimestamp({{ annotation.timestamp }})">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="annotation-timestamp">{{ annotation.formatted_timestamp }}</span>
-                                    {% if current_user.is_admin %}
-                                        <div>
-                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editAnnotationModal{{ annotation.id }}">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAnnotationModal{{ annotation.id }}">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    <span class="annotation-event">{{ annotation.event_type|replace('_', ' ')|title }}</span>
-                                    {% if annotation.our_score is not none and annotation.their_score is not none %}
-                                    <span class="annotation-score">
-                                        ({{ annotation.our_score }}-{{ annotation.their_score }})
-                                    </span>
-                                    {% endif %}
-                                </div>
-                                {% if annotation.offense or annotation.defense %}
-                                <div>
-                                    {% if annotation.offense %}
-                                    <span>Offense: 
-                                        {% if annotation.offense == 'horo' %}
-                                            Horizontal
-                                        {% elif annotation.offense == 'vert' %}
-                                            Vertical
-                                        {% elif annotation.offense == 'flow' %}
-                                            Flow
-                                        {% else %}
-                                            {{ annotation.offense|title }}
+                            <div class="list-group-item annotation-item event-{{ annotation.event_type }}" 
+                                 data-timestamp="{{ annotation.timestamp }}">
+                                <div class="d-flex justify-content-between align-items-center" 
+                                     onclick="seekToTimestamp({{ annotation.timestamp }})">
+                                    <div>
+                                        <span class="annotation-timestamp">{{ annotation.formatted_timestamp }}</span>
+                                        <span class="annotation-event">{{ annotation.event_type|replace('_', ' ')|title }}</span>
+                                        {% if annotation.our_score is not none and annotation.their_score is not none %}
+                                        <span class="annotation-score badge bg-secondary">
+                                            {{ annotation.our_score }}-{{ annotation.their_score }}
+                                        </span>
                                         {% endif %}
-                                    </span>
+                                    </div>
+                                    <div>
+                                        <button class="details-toggle" type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#details{{ annotation.id }}"
+                                                onclick="event.stopPropagation();">
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        {% if current_user.is_admin %}
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editAnnotationModal{{ annotation.id }}"
+                                                onclick="event.stopPropagation();">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteAnnotationModal{{ annotation.id }}"
+                                                onclick="event.stopPropagation();">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="collapse mt-2" id="details{{ annotation.id }}">
+                                    {% if annotation.offense or annotation.defense %}
+                                    <div class="annotation-meta">
+                                        {% if annotation.offense %}
+                                        <span class="meta-item">
+                                            <strong>Offense:</strong> 
+                                            {% if annotation.offense == 'horo' %}
+                                                Horizontal
+                                            {% elif annotation.offense == 'vert' %}
+                                                Vertical
+                                            {% elif annotation.offense == 'flow' %}
+                                                Flow
+                                            {% else %}
+                                                {{ annotation.offense|title }}
+                                            {% endif %}
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if annotation.defense %}
+                                        <span class="meta-item">
+                                            <strong>Defense:</strong> 
+                                            {% if annotation.defense == 'match_flick' %}
+                                                Match Flick
+                                            {% elif annotation.defense == 'match_backhand' %}
+                                                Match Backhand
+                                            {% elif annotation.defense == 'match_middle' %}
+                                                Match Middle
+                                            {% elif annotation.defense == 'zone' %}
+                                                Zone
+                                            {% else %}
+                                                {{ annotation.defense|title }}
+                                            {% endif %}
+                                        </span>
+                                        {% endif %}
+                                    </div>
                                     {% endif %}
                                     
-                                    {% if annotation.defense %}
-                                    <span>Defense: 
-                                        {% if annotation.defense == 'match_flick' %}
-                                            Match Flick
-                                        {% elif annotation.defense == 'match_backhand' %}
-                                            Match Backhand
-                                        {% elif annotation.defense == 'match_middle' %}
-                                            Match Middle
-                                        {% elif annotation.defense == 'zone' %}
-                                            Zone
-                                        {% else %}
-                                            {{ annotation.defense|title }}
-                                        {% endif %}
-                                    </span>
+                                    {% if annotation.notes %}
+                                    <div class="annotation-notes">{{ annotation.notes }}</div>
                                     {% endif %}
                                 </div>
-                                {% endif %}
-                                {% if annotation.notes %}
-                                <div class="annotation-notes">{{ annotation.notes }}</div>
-                                {% endif %}
                             </div>
-                            
+   
                             <!-- Edit Annotation Modal -->
                             <div class="modal fade" id="editAnnotationModal{{ annotation.id }}" tabindex="-1" aria-labelledby="editAnnotationModalLabel{{ annotation.id }}" aria-hidden="true">
                                 <div class="modal-dialog">
@@ -446,8 +582,17 @@
 </div>
 {% endblock %}
 
+
 {% block scripts %}
 <script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+    
     // Simple function to seek to a timestamp in the YouTube video
     function seekToTimestamp(timestamp) {
         // Get the iframe

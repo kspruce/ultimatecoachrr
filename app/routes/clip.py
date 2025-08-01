@@ -11,6 +11,9 @@ from app.forms.annotation import AnnotationForm
 from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
 import re
 from app.utils.utils import admin_required
+import csv
+import io
+from flask import send_file
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
@@ -431,3 +434,87 @@ def get_game_link(game_id):
     return jsonify({
         'youtube_link': game.youtube_link or ''
     })
+
+@bp.route('/export_annotations_csv/<int:clip_id>')
+@login_required
+def export_annotations_csv(clip_id):
+    clip = Clip.query.get_or_404(clip_id)
+    annotations = ClipAnnotation.query.filter_by(clip_id=clip.id).order_by(ClipAnnotation.timestamp).all()
+    
+    # Create a file-like buffer
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    
+    # Write header with clip information
+    writer.writerow(['Clip Information'])
+    writer.writerow(['Title', clip.title])
+    
+    if clip.game:
+        writer.writerow(['Game', f'vs {clip.game.opponent}'])
+        if clip.game.date:
+            writer.writerow(['Date', clip.game.date.strftime('%Y-%m-%d')])
+    
+    if clip.point:
+        writer.writerow(['Point', clip.point.point_number])
+    
+    writer.writerow(['Video Link', clip.youtube_link])
+    writer.writerow([])  # Empty row as separator
+    
+    # Write annotations header
+    writer.writerow(['Timestamp', 'Event Type', 'Our Score', 'Their Score', 'Offense', 'Defense', 'Notes'])
+    
+    # Write annotation data
+    for annotation in annotations:
+        # Format offense for display
+        offense_display = ""
+        if annotation.offense == 'horo':
+            offense_display = "Horizontal"
+        elif annotation.offense == 'vert':
+            offense_display = "Vertical"
+        elif annotation.offense == 'flow':
+            offense_display = "Flow"
+        else:
+            offense_display = annotation.offense or ""
+            
+        # Format defense for display
+        defense_display = ""
+        if annotation.defense == 'match_flick':
+            defense_display = "Match Flick"
+        elif annotation.defense == 'match_backhand':
+            defense_display = "Match Backhand"
+        elif annotation.defense == 'match_middle':
+            defense_display = "Match Middle"
+        elif annotation.defense == 'zone':
+            defense_display = "Zone"
+        else:
+            defense_display = annotation.defense or ""
+        
+        writer.writerow([
+            seconds_to_timestamp(annotation.timestamp),
+            annotation.event_type.replace('_', ' ').title(),
+            annotation.our_score,
+            annotation.their_score,
+            offense_display,
+            defense_display,
+            annotation.notes or ""
+        ])
+    
+    # Move to beginning of file
+    buffer.seek(0)
+    
+    # Create filename with clip title (sanitized) and date
+    from datetime import datetime
+    import re
+    
+    # Sanitize the clip title for use in filename
+    safe_title = re.sub(r'[^\w\s-]', '', clip.title).strip().replace(' ', '_')
+    date_str = datetime.now().strftime('%Y%m%d')
+    filename = f"{safe_title}_{date_str}_annotations.csv"
+    
+    return send_file(
+        io.BytesIO(buffer.getvalue().encode()),
+        as_attachment=True,
+        download_name=filename,
+        mimetype='text/csv'
+    )
+
