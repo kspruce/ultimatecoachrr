@@ -518,3 +518,11 @@ def export_annotations_csv(clip_id):
         mimetype='text/csv'
     )
 
+def seconds_to_timestamp(seconds):
+    """Convert seconds to HH:MM:SS format"""
+    if seconds is None:
+        return "00:00:00"
+    hours = int(seconds) // 3600
+    minutes = (int(seconds) % 3600) // 60
+    secs = int(seconds) % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
