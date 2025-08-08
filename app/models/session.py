@@ -62,6 +62,28 @@ class SessionPlan(db.Model):
             return f"{self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')}"
         return 'No time set'
 
+    # Add session_type field with choices
+    session_type = db.Column(db.String(20), default='invited_training')
+    
+    # Define constants for session types
+    SESSION_TYPE_INVITED = 'invited_training'
+    SESSION_TYPE_OPEN = 'open_training'
+    SESSION_TYPE_POD = 'pod_training'
+    
+    # Add session type choices for form selection
+    SESSION_TYPE_CHOICES = [
+        (SESSION_TYPE_INVITED, 'Invited Training'),
+        (SESSION_TYPE_OPEN, 'Open Training'),
+        (SESSION_TYPE_POD, 'Pod Training')
+    ]
+    
+    @property
+    def session_type_display(self):
+        """Return the display name for the session type"""
+        for value, display in self.SESSION_TYPE_CHOICES:
+            if value == self.session_type:
+                return display
+        return 'Unknown'
 
 
 

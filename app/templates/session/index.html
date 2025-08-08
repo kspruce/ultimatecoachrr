@@ -17,22 +17,106 @@
         </div>
     </div>
 
-    <!-- Filter and Upcoming Sessions sections remain unchanged -->
+    <!-- Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Filter Sessions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('session.index') }}" class="row g-3">
+                        <!-- Focus Area Filter -->
+                        <div class="col-md-3">
+                            {{ form.focus_area.label(class="form-label") }}
+                            {{ form.focus_area(class="form-select") }}
+                        </div>
+                        
+                        <!-- Date Range Filter -->
+                        <div class="col-md-3">
+                            {{ form.date_range.label(class="form-label") }}
+                            {{ form.date_range(class="form-select") }}
+                        </div>
+                        
+                        <!-- Session Type Filter -->
+                        <div class="col-md-3">
+                            {{ form.session_type.label(class="form-label") }}
+                            {{ form.session_type(class="form-select") }}
+                        </div>
+                        
+                        <!-- Filter Button -->
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-filter"></i> Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Sessions Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Upcoming Sessions</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_sessions %}
+                    <div class="row">
+                        {% for session in upcoming_sessions %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-{% if session.session_type == 'invited_training' %}primary{% elif session.session_type == 'open_training' %}success{% else %}info{% endif %}">
+                                <div class="card-header">
+                                    <span class="badge bg-{% if session.session_type == 'invited_training' %}primary{% elif session.session_type == 'open_training' %}success{% else %}info{% endif %} float-end">
+                                        {{ session.session_type_display }}
+                                    </span>
+                                    <h5 class="card-title mb-0">{{ session.title }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        <strong>Date:</strong> {{ session.date.strftime('%Y-%m-%d') }}<br>
+                                        <strong>Time:</strong> {{ session.formatted_time }}<br>
+                                        <strong>Location:</strong> {{ session.location }}<br>
+                                        <strong>Focus:</strong> {{ session.focus_area }}
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                    {% if current_user.player %}
+                                    <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-sm btn-outline-success">RSVP</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center">No upcoming sessions scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
     
+    <!-- All Sessions Section -->
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>All Sessions</h5>
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">All Sessions</h5>
                 </div>
                 <div class="card-body">
                     {% if sessions %}
                     <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
                                 <tr>
                                     <th>Date</th>
                                     <th>Title</th>
+                                    <th>Type</th>
                                     <th>Focus Area</th>
                                     <th>Location</th>
                                     <th>Time</th>
@@ -53,6 +137,11 @@
                                         <span class="badge bg-info">{{ session.recurrence_pattern }}</span>
                                         {% endif %}
                                     </td>
+                                    <td>
+                                        <span class="badge bg-{% if session.session_type == 'invited_training' %}primary{% elif session.session_type == 'open_training' %}success{% else %}info{% endif %}">
+                                            {{ session.session_type_display }}
+                                        </span>
+                                    </td>
                                     <td>{{ session.focus_area }}</td>
                                     <td>{{ session.location }}</td>
                                     <td>{{ session.formatted_time }}</td>
@@ -66,7 +155,7 @@
                                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                                         data-bs-toggle="modal" 
                                                         data-bs-target="#deleteModal{{ session.id }}">
-                                                    <i class="bi bi-trash"></i> Delete
+                                                    <i class="bi bi-trash"></i>
                                                 </button>
                                             {% endif %}
                                         </div>
@@ -141,3 +230,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

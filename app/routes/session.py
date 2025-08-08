@@ -41,18 +41,24 @@ def index():
     # Get filter parameters
     focus_area = request.args.get('focus_area', '')
     date_range = request.args.get('date_range', 'all')
+    session_type = request.args.get('session_type', '')
     
     # Set form values from query parameters
     if focus_area:
         form.focus_area.data = focus_area
     if date_range:
         form.date_range.data = date_range
+    if session_type:
+        form.session_type.data = session_type
     
     # Build query based on filters
     query = SessionPlan.query
     
     if focus_area:
         query = query.filter(SessionPlan.focus_area == focus_area)
+    
+    if session_type:
+        query = query.filter(SessionPlan.session_type == session_type)
     
     if date_range != 'all':
         today = datetime.now().date()
@@ -96,7 +102,8 @@ def add_session():
             focus_area=form.focus_area.data,
             notes=form.notes.data,
             is_recurring=form.is_recurring.data,
-            recurrence_pattern=form.recurrence_pattern.data if form.is_recurring.data else None
+            recurrence_pattern=form.recurrence_pattern.data if form.is_recurring.data else None,
+            session_type=form.session_type.data
         )
         
         db.session.add(session)
@@ -844,6 +851,7 @@ def edit_session(session_id):
         session.notes = form.notes.data
         session.is_recurring = form.is_recurring.data
         session.recurrence_pattern = form.recurrence_pattern.data if form.is_recurring.data else None
+        session.session_type = form.session_type.data
         
         db.session.commit()
         

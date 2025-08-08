@@ -26,6 +26,17 @@ class SessionPlanForm(FlaskForm):
         ('biweekly', 'Bi-weekly'),
         ('monthly', 'Monthly')
     ], validators=[Optional()])
+    # Add session type field with choices
+    session_type = SelectField(
+        'Session Type',
+        choices=[
+            ('invited_training', 'Invited Training'),
+            ('open_training', 'Open Training'),
+            ('pod_training', 'Pod Training')
+        ],
+        default='invited_training',
+        validators=[DataRequired()]
+    )
     submit = SubmitField('Save Session Plan')
 
 class DrillForm(FlaskForm):
@@ -113,6 +124,18 @@ class SessionFilterForm(FlaskForm):
         ('past_year', 'Past Year')
     ], validators=[Optional()])
     submit = SubmitField('Filter')
+    # Add session type filter field
+    session_type = SelectField(
+        'Session Type',
+        choices=[
+            ('', 'All Types'),
+            ('invited_training', 'Invited Training'),
+            ('open_training', 'Open Training'),
+            ('pod_training', 'Pod Training')
+        ],
+        default='',
+        validators=[]
+    )
     
     def __init__(self, *args, **kwargs):
         super(SessionFilterForm, self).__init__(*args, **kwargs)

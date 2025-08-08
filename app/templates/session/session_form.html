@@ -13,7 +13,7 @@
 
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-body">
                     <form method="post" novalidate>
                         {{ form.hidden_tag() }}
@@ -24,6 +24,22 @@
                             {% for error in form.title.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
+                        </div>
+                        
+                        <!-- New Session Type Field -->
+                        <div class="mb-3">
+                            {{ form.session_type.label(class="form-label") }}
+                            {{ form.session_type(class="form-select") }}
+                            {% for error in form.session_type.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">
+                                <small>
+                                    <strong>Invited Training:</strong> For selected players only<br>
+                                    <strong>Open Training:</strong> Open to all players<br>
+                                    <strong>Pod Training:</strong> For specific training pods
+                                </small>
+                            </div>
                         </div>
                         
                         <div class="row mb-3">
@@ -127,3 +143,4 @@
     });
 </script>
 {% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/session_styles.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block styles %}{% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
@@ -308,6 +309,7 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script src="{{ url_for('static', filename='js/session_scripts.js') }}"></script>
     
     {% block scripts %}
     <script>
