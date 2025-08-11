@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ session.title }} - Printable Session Plan</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+            background-color: white;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .session-info {
+            margin-bottom: 20px;
+        }
+        .session-info p {
+            margin: 5px 0;
+        }
+        .component {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .component-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        .component-title {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .component-type {
+            background-color: #3498db;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .warmup {
+            background-color: #f39c12;
+        }
+        .drill {
+            background-color: #3498db;
+        }
+        .scrimmage {
+            background-color: #2ecc71;
+        }
+        .other {
+            background-color: #95a5a6;
+        }
+        .component-details {
+            font-size: 14px;
+            color: #555;
+        }
+        .attendance-summary {
+            margin-top: 30px;
+            border-top: 2px solid #3498db;
+            padding-top: 10px;
+        }
+        .attendance-group {
+            margin-bottom: 15px;
+        }
+        .attendance-group h3 {
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .attendance-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .attendance-list li {
+            padding: 3px 0;
+        }
+        .page-break {
+            page-break-after: always;
+        }
+        .print-controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .print-controls button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .print-controls button:hover {
+            background-color: #2980b9;
+        }
+        .back-link {
+            display: inline-block;
+            margin-right: 10px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        @media print {
+            .print-controls {
+                display: none;
+            }
+            body {
+                margin: 0;
+                padding: 15px;
+            }
+            a {
+                text-decoration: none;
+                color: #333;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-controls">
+        <a href="{{ url_for('session.detail', session_id=session.id) }}" class="back-link">← Back to Session</a>
+        <button onclick="window.print()">Print this page</button>
+    </div>
+
+    <h1>{{ session.title }}</h1>
+    
+    <div class="session-info">
+        <p><strong>Date:</strong> {{ session.date.strftime('%Y-%m-%d') if session.date else 'No date' }}</p>
+        <p><strong>Time:</strong> {{ session.formatted_time }}</p>
+        <p><strong>Location:</strong> {{ session.location }}</p>
+        <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
+        <p><strong>Session Type:</strong> {{ session.session_type_display }}</p>
+        {% if session.notes %}
+        <p><strong>Notes:</strong> {{ session.notes }}</p>
+        {% endif %}
+    </div>
+    
+    <h2>Session Components</h2>
+    {% if components %}
+        {% for component in components %}
+        <div class="component">
+            <div class="component-header">
+                <div class="component-title">{{ component.title }}</div>
+                <div class="component-type {{ component.component_type }}">{{ component.component_type|capitalize }}</div>
+            </div>
+            {% if component.description %}
+            <p>{{ component.description }}</p>
+            {% endif %}
+            <div class="component-details">
+                <p>Duration: {{ component.duration_minutes }} minutes</p>
+                {% if component.focus_area %}
+                <p>Focus: {{ component.focus_area }}</p>
+                {% endif %}
+                {% if component.notes %}
+                <p>Notes: {{ component.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No components added to this session.</p>
+    {% endif %}
+    
+    <div class="attendance-summary">
+        <h2>Attendance Summary</h2>
+        
+        <div class="attendance-group">
+            <h3>Present ({{ attendance_by_status.present|length }})</h3>
+            <ul class="attendance-list">
+                {% for attendance in attendance_by_status.present %}
+                <li>{{ attendance.player.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="attendance-group">
+            <h3>Late ({{ attendance_by_status.late|length }})</h3>
+            <ul class="attendance-list">
+                {% for attendance in attendance_by_status.late %}
+                <li>{{ attendance.player.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="attendance-group">
+            <h3>Absent ({{ attendance_by_status.absent|length }})</h3>
+            <ul class="attendance-list">
+                {% for attendance in attendance_by_status.absent %}
+                <li>{{ attendance.player.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="attendance-group">
+            <h3>Excused ({{ attendance_by_status.excused|length }})</h3>
+            <ul class="attendance-list">
+                {% for attendance in attendance_by_status.excused %}
+                <li>{{ attendance.player.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <div class="print-controls">
+        <button onclick="window.print()">Print this page</button>
+    </div>
+
+
+</body>
+</html>

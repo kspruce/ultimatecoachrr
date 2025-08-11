@@ -1137,3 +1137,30 @@ def export_pdf(session_id):
             flash(f"Could not generate PDF: {str(e)}", "error")
             return redirect(url_for('session.detail', session_id=session_id))
 
+@bp.route('/<int:session_id>/printable')
+@login_required
+def printable_view(session_id):
+    """Show printable view of session plan"""
+    session = SessionPlan.query.get_or_404(session_id)
+    components = session.components.order_by(SessionComponent.order).all()
+    attendances = session.attendances.all()
+    
+    # Group attendances by status
+    attendance_by_status = {
+        'present': [],
+        'absent': [],
+        'late': [],
+        'excused': []
+    }
+    
+    for attendance in attendances:
+        if attendance.status in attendance_by_status:
+            attendance_by_status[attendance.status].append(attendance)
+    
+    return render_template(
+        'session/printable.html',
+        session=session,
+        components=components,
+        attendance_by_status=attendance_by_status
+    )
+
