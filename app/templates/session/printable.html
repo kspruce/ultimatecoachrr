@@ -169,45 +169,7 @@
         <p>No components added to this session.</p>
     {% endif %}
     
-    <div class="attendance-summary">
-        <h2>Attendance Summary</h2>
-        
-        <div class="attendance-group">
-            <h3>Present ({{ attendance_by_status.present|length }})</h3>
-            <ul class="attendance-list">
-                {% for attendance in attendance_by_status.present %}
-                <li>{{ attendance.player.name }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        
-        <div class="attendance-group">
-            <h3>Late ({{ attendance_by_status.late|length }})</h3>
-            <ul class="attendance-list">
-                {% for attendance in attendance_by_status.late %}
-                <li>{{ attendance.player.name }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        
-        <div class="attendance-group">
-            <h3>Absent ({{ attendance_by_status.absent|length }})</h3>
-            <ul class="attendance-list">
-                {% for attendance in attendance_by_status.absent %}
-                <li>{{ attendance.player.name }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        
-        <div class="attendance-group">
-            <h3>Excused ({{ attendance_by_status.excused|length }})</h3>
-            <ul class="attendance-list">
-                {% for attendance in attendance_by_status.excused %}
-                <li>{{ attendance.player.name }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
+
     
     <div class="print-controls">
         <button onclick="window.print()">Print this page</button>
