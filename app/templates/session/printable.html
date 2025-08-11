@@ -139,7 +139,7 @@
         <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
         <p><strong>Session Type:</strong> {{ session.session_type_display }}</p>
         {% if session.notes %}
-        <p><strong>Notes:</strong> {{ session.notes }}</p>
+        <p><strong>Notes:</strong> {{ session.notes|markdown }}</p>
         {% endif %}
     </div>
     
@@ -152,7 +152,7 @@
                 <div class="component-type {{ component.component_type }}">{{ component.component_type|capitalize }}</div>
             </div>
             {% if component.description %}
-            <p>{{ component.description }}</p>
+            <div>{{ component.description|markdown }}</div>
             {% endif %}
             <div class="component-details">
                 <p>Duration: {{ component.duration_minutes }} minutes</p>

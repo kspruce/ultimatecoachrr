@@ -70,10 +70,11 @@
                     <h5 class="mb-0">Notes</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text">{{ session.notes }}</p>
+                    <div class="card-text">{{ session.notes|markdown }}</div>
                 </div>
             </div>
             {% endif %}
+
 
             <!-- Quick Actions -->
             <div class="card shadow-sm mb-4">
@@ -133,8 +134,9 @@
                                 </div>
                                 <div class="card-body">
                                     {% if component.description %}
-                                    <p>{{ component.description }}</p>
+                                    <div>{{ component.description|markdown }}</div>
                                     {% endif %}
+
                                     
                                     <div class="d-flex justify-content-between">
                                         <div>
