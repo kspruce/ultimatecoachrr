@@ -86,6 +86,7 @@
                         <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-success">
                             <i class="bi bi-check-circle"></i> RSVP for this Session
                         </a>
+
                         {% endif %}
                         <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-outline-info">
                             <i class="bi bi-people"></i> View RSVPs
@@ -101,6 +102,9 @@
                             <i class="bi bi-plus-circle"></i> Add Component
                         </a>
                         {% endif %}
+                        <a href="{{ url_for('session.export_pdf', session_id=session.id) }}" class="btn btn-outline-danger">
+                            <i class="bi bi-file-pdf"></i> Export as PDF
+                        </a>
                     </div>
                 </div>
             </div>

@@ -1054,3 +1054,44 @@ def before_request():
     """Log request information"""
     if 'static' in request.path:
         current_app.logger.debug(f"Static file request: {request.path}")
+
+@bp.route('/<int:session_id>/export_pdf')
+@login_required
+def export_pdf(session_id):
+    """Export session plan as PDF"""
+    from weasyprint import HTML
+    from flask import make_response
+    
+    session = SessionPlan.query.get_or_404(session_id)
+    components = session.components.order_by(SessionComponent.order).all()
+    attendances = session.attendances.all()
+    
+    # Group attendances by status
+    attendance_by_status = {
+        'present': [],
+        'absent': [],
+        'late': [],
+        'excused': []
+    }
+    
+    for attendance in attendances:
+        if attendance.status in attendance_by_status:
+            attendance_by_status[attendance.status].append(attendance)
+    
+    # Render the template to HTML
+    html = render_template(
+        'session/pdf_export.html',
+        session=session,
+        components=components,
+        attendance_by_status=attendance_by_status
+    )
+    
+    # Generate PDF from HTML
+    pdf = HTML(string=html).write_pdf()
+    
+    # Create response with PDF
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session.title.replace(" ", "_")}.pdf'
+    
+    return response
