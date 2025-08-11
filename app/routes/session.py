@@ -1059,39 +1059,81 @@ def before_request():
 @login_required
 def export_pdf(session_id):
     """Export session plan as PDF"""
-    from weasyprint import HTML
-    from flask import make_response
-    
-    session = SessionPlan.query.get_or_404(session_id)
-    components = session.components.order_by(SessionComponent.order).all()
-    attendances = session.attendances.all()
-    
-    # Group attendances by status
-    attendance_by_status = {
-        'present': [],
-        'absent': [],
-        'late': [],
-        'excused': []
-    }
-    
-    for attendance in attendances:
-        if attendance.status in attendance_by_status:
-            attendance_by_status[attendance.status].append(attendance)
-    
-    # Render the template to HTML
-    html = render_template(
-        'session/pdf_export.html',
-        session=session,
-        components=components,
-        attendance_by_status=attendance_by_status
-    )
-    
-    # Generate PDF from HTML
-    pdf = HTML(string=html).write_pdf()
-    
-    # Create response with PDF
-    response = make_response(pdf)
-    response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session.title.replace(" ", "_")}.pdf'
-    
-    return response
+    try:
+        import pdfkit
+        from flask import make_response
+        
+        session = SessionPlan.query.get_or_404(session_id)
+        components = session.components.order_by(SessionComponent.order).all()
+        attendances = session.attendances.all()
+        
+        # Group attendances by status
+        attendance_by_status = {
+            'present': [],
+            'absent': [],
+            'late': [],
+            'excused': []
+        }
+        
+        for attendance in attendances:
+            if attendance.status in attendance_by_status:
+                attendance_by_status[attendance.status].append(attendance)
+        
+        # Render the template to HTML
+        html = render_template(
+            'session/pdf_export.html',
+            session=session,
+            components=components,
+            attendance_by_status=attendance_by_status
+        )
+        
+        # PDF options
+        options = {
+            'page-size': 'A4',
+            'margin-top': '0.75in',
+            'margin-right': '0.75in',
+            'margin-bottom': '0.75in',
+            'margin-left': '0.75in',
+            'encoding': "UTF-8",
+        }
+        
+        # Generate PDF from HTML
+        try:
+            pdf = pdfkit.from_string(html, False, options=options)
+        except Exception as e:
+            current_app.logger.error(f"PDF generation error: {str(e)}")
+            # Fallback to simpler options
+            pdf = pdfkit.from_string(html, False)
+        
+        # Create response with PDF
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session.title.replace(" ", "_")}.pdf'
+        
+        return response
+        
+    except ImportError:
+        # If pdfkit is not available, try WeasyPrint
+        try:
+            from weasyprint import HTML
+            
+            html = render_template(
+                'session/pdf_export.html',
+                session=session,
+                components=components,
+                attendance_by_status=attendance_by_status
+            )
+            
+            pdf = HTML(string=html).write_pdf()
+            
+            response = make_response(pdf)
+            response.headers['Content-Type'] = 'application/pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session.title.replace(" ", "_")}.pdf'
+            
+            return response
+            
+        except Exception as e:
+            current_app.logger.error(f"PDF generation error: {str(e)}")
+            flash(f"Could not generate PDF: {str(e)}", "error")
+            return redirect(url_for('session.detail', session_id=session_id))
+
