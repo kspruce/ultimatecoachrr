@@ -2143,11 +2143,11 @@ function drawFieldDiagram() {
     
     // Define zones (same as in calculate_most_common_throwaway_location)
     const xZones = [
-        { start: 0, end: 0.2, name: "Own Endzone Area" },
+        { start: 0, end: 0.2, name: "Own Endzone" },
         { start: 0.2, end: 0.4, name: "Defensive Third" },
         { start: 0.4, end: 0.6, name: "Midfield" },
         { start: 0.6, end: 0.8, name: "Attacking Third" },
-        { start: 0.8, end: 1.0, name: "Opponent Endzone Area" }
+        { start: 0.8, end: 1.0, name: "Opponent Endzone" }
     ];
     
     const yZones = [
@@ -2272,66 +2272,9 @@ function drawFieldDiagram() {
             }
         }
     }
-    
-    // Add arrow indicating play direction
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.moveTo(fieldWidth * 0.1, fieldHeight * 0.9);
-    ctx.lineTo(fieldWidth * 0.9, fieldHeight * 0.9);
-    ctx.lineTo(fieldWidth * 0.85, fieldHeight * 0.85);
-    ctx.moveTo(fieldWidth * 0.9, fieldHeight * 0.9);
-    ctx.lineTo(fieldWidth * 0.85, fieldHeight * 0.95);
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // Add "Play Direction" text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '12px Arial';
-    ctx.fillText("Play Direction", fieldWidth * 0.5, fieldHeight * 0.9 - 10);
-    
-    // Add a compass rose for orientation
-    drawCompassRose(ctx, fieldWidth * 0.15, fieldHeight * 0.15, fieldWidth * 0.08);
 }
 
-// Function to draw a compass rose for field orientation
-function drawCompassRose(ctx, x, y, size) {
-    // Draw the compass circle
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // Draw the compass points
-    ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#000';
-    
-    // Draw the main directions
-    ctx.fillText('U', x + size * 0.7, y); // Upfield (East)
-    ctx.fillText('D', x - size * 0.7, y); // Downfield (West)
-    ctx.fillText('R', x, y - size * 0.7); // Right (North)
-    ctx.fillText('L', x, y + size * 0.7); // Left (South)
-    
-    // Draw the compass lines
-    ctx.beginPath();
-    // Horizontal line
-    ctx.moveTo(x - size * 0.6, y);
-    ctx.lineTo(x + size * 0.6, y);
-    // Vertical line
-    ctx.moveTo(x, y - size * 0.6);
-    ctx.lineTo(x, y + size * 0.6);
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // Add a small label explaining the compass
-    ctx.font = '8px Arial';
-    ctx.fillText('Field Orientation', x, y + size + 10);
-}
+
 
 function createThrowawayDirectionChart() {
     const chartContainer = document.getElementById('throwaway-direction-chart');
