@@ -2102,11 +2102,22 @@ setTimeout(function() {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Create throwaway direction visualization
-    createThrowawayDirectionChart();
+    // Wait for Chart.js to be available before creating charts
+    function initializeCharts() {
+        if (typeof Chart !== 'undefined') {
+            // Create throwaway direction visualization
+            createThrowawayDirectionChart();
+            
+            // Draw the field diagram
+            drawFieldDiagram();
+        } else {
+            // If Chart.js isn't loaded yet, wait and try again
+            setTimeout(initializeCharts, 100);
+        }
+    }
     
-    // Draw the field diagram
-    drawFieldDiagram();
+    // Start the initialization process
+    initializeCharts();
 });
 
 function drawFieldDiagram() {
@@ -2227,35 +2238,38 @@ function drawFieldDiagram() {
     
     // Parse the location string to get the zones
     if (mostCommonLocation && mostCommonLocation !== "N/A") {
-        const [yZoneName, xZoneName] = mostCommonLocation.split(", ");
-        
-        // Find the corresponding zones
-        const xZone = xZones.find(zone => zone.name === xZoneName);
-        const yZone = yZones.find(zone => zone.name === yZoneName);
-        
-        if (xZone && yZone) {
-            // Highlight the zone
-            ctx.fillStyle = highlightColor;
-            ctx.fillRect(
-                fieldWidth * xZone.start,
-                fieldHeight * yZone.start,
-                fieldWidth * (xZone.end - xZone.start),
-                fieldHeight * (yZone.end - yZone.start)
-            );
+        const parts = mostCommonLocation.split(", ");
+        if (parts.length === 2) {
+            const [yZoneName, xZoneName] = parts;
             
-            // Add a label in the highlighted zone
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 12px Arial';
-            ctx.fillText(
-                "Most Common",
-                fieldWidth * (xZone.start + xZone.end) / 2,
-                fieldHeight * (yZone.start + yZone.end) / 2 - 10
-            );
-            ctx.fillText(
-                "Throwaway Zone",
-                fieldWidth * (xZone.start + xZone.end) / 2,
-                fieldHeight * (yZone.start + yZone.end) / 2 + 10
-            );
+            // Find the corresponding zones
+            const xZone = xZones.find(zone => zone.name === xZoneName);
+            const yZone = yZones.find(zone => zone.name === yZoneName);
+            
+            if (xZone && yZone) {
+                // Highlight the zone
+                ctx.fillStyle = highlightColor;
+                ctx.fillRect(
+                    fieldWidth * xZone.start,
+                    fieldHeight * yZone.start,
+                    fieldWidth * (xZone.end - xZone.start),
+                    fieldHeight * (yZone.end - yZone.start)
+                );
+                
+                // Add a label in the highlighted zone
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(
+                    "Most Common",
+                    fieldWidth * (xZone.start + xZone.end) / 2,
+                    fieldHeight * (yZone.start + yZone.end) / 2 - 10
+                );
+                ctx.fillText(
+                    "Throwaway Zone",
+                    fieldWidth * (xZone.start + xZone.end) / 2,
+                    fieldHeight * (yZone.start + yZone.end) / 2 + 10
+                );
+            }
         }
     }
     
@@ -2349,87 +2363,94 @@ function createThrowawayDirectionChart() {
     ctx.height = 200;
     chartContainer.appendChild(ctx);
     
-    new Chart(ctx, {
-        type: 'polarArea',
-        data: {
-            labels: directions.map(d => fieldLabels[d] || ''),
-            datasets: [{
-                data: directions.map(d => directionData[d] || 0),
-                backgroundColor: directions.map(d => {
-                    // Highlight the most common direction
-                    const value = directionData[d] || 0;
-                    const max = Math.max(...Object.values(directionData));
-                    
-                    if (value === max && value > 0) {
-                        return 'rgba(220, 53, 69, 0.8)'; // Bootstrap danger color
-                    } else {
-                        return 'rgba(108, 117, 125, 0.5)'; // Bootstrap secondary color
-                    }
-                })
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const direction = directions[context.dataIndex];
-                            const count = directionData[direction] || 0;
-                            const total = Object.values(directionData).reduce((a, b) => a + b, 0);
-                            const percentage = ((count / total) * 100).toFixed(1);
-                            
-                            // Get field-relative direction
-                            const fieldDirectionMapping = {
-                                'E': "Directly Upfield",
-                                'ENE': "Slightly Right Upfield",
-                                'NE': "Upfield Right",
-                                'NNE': "Far Right Upfield",
-                                'N': "Directly Right",
-                                'NNW': "Far Right Downfield",
-                                'NW': "Downfield Right",
-                                'WNW': "Slightly Right Downfield",
-                                'W': "Directly Downfield",
-                                'WSW': "Slightly Left Downfield",
-                                'SW': "Downfield Left",
-                                'SSW': "Far Left Downfield",
-                                'S': "Directly Left",
-                                'SSE': "Far Left Upfield",
-                                'SE': "Upfield Left",
-                                'ESE': "Slightly Left Upfield"
-                            };
-                            
-                            return `${fieldDirectionMapping[direction]}: ${count} (${percentage}%)`;
+    try {
+        new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: directions.map(d => fieldLabels[d] || ''),
+                datasets: [{
+                    data: directions.map(d => directionData[d] || 0),
+                    backgroundColor: directions.map(d => {
+                        // Highlight the most common direction
+                        const value = directionData[d] || 0;
+                        const max = Math.max(...Object.values(directionData));
+                        
+                        if (value === max && value > 0) {
+                            return 'rgba(220, 53, 69, 0.8)'; // Bootstrap danger color
+                        } else {
+                            return 'rgba(108, 117, 125, 0.5)'; // Bootstrap secondary color
                         }
-                    }
-                }
+                    })
+                }]
             },
-            scales: {
-                r: {
-                    ticks: {
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
                         display: false
                     },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    },
-                    pointLabels: {
-                        display: true,
-                        font: {
-                            size: 10
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const direction = directions[context.dataIndex];
+                                const count = directionData[direction] || 0;
+                                const total = Object.values(directionData).reduce((a, b) => a + b, 0);
+                                const percentage = ((count / total) * 100).toFixed(1);
+                                
+                                // Get field-relative direction
+                                const fieldDirectionMapping = {
+                                    'E': "Directly Upfield",
+                                    'ENE': "Slightly Right Upfield",
+                                    'NE': "Upfield Right",
+                                    'NNE': "Far Right Upfield",
+                                    'N': "Directly Right",
+                                    'NNW': "Far Right Downfield",
+                                    'NW': "Downfield Right",
+                                    'WNW': "Slightly Right Downfield",
+                                    'W': "Directly Downfield",
+                                    'WSW': "Slightly Left Downfield",
+                                    'SW': "Downfield Left",
+                                    'SSW': "Far Left Downfield",
+                                    'S': "Directly Left",
+                                    'SSE': "Far Left Upfield",
+                                    'SE': "Upfield Left",
+                                    'ESE': "Slightly Left Upfield"
+                                };
+                                
+                                return `${fieldDirectionMapping[direction]}: ${count} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    r: {
+                        ticks: {
+                            display: false
                         },
-                        callback: function(label, index) {
-                            // Only show the main compass points
-                            return ['Upfield', '', '', '', 'Right', '', '', '', 'Downfield', '', '', '', 'Left', '', '', ''][index];
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        pointLabels: {
+                            display: true,
+                            font: {
+                                size: 10
+                            },
+                            callback: function(label, index) {
+                                // Only show the main compass points
+                                return ['Upfield', '', '', '', 'Right', '', '', '', 'Downfield', '', '', '', 'Left', '', '', ''][index];
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error creating throwaway direction chart:', error);
+        chartContainer.innerHTML = '<div class="text-center text-muted pt-5">Error creating chart</div>';
+    }
 }
+
+
 </script>
 {% endblock %}
