@@ -1415,15 +1415,16 @@ def player_stats(player_id):
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
 
+
     # Calculate per-point metrics for radar charts
-    if stats['o_line_points_played'] > 0:
-        o_line_points = stats['o_line_points_played']
-        stats['goals_per_point'] = stats['goals'] / o_line_points
-        stats['assists_per_point'] = stats['assists'] / o_line_points
-        stats['hockey_assists_per_point'] = stats['hockey_assists'] / o_line_points
-        stats['throws_per_point'] = stats['throws'] / o_line_points
-        stats['catches_per_point'] = stats['catches'] / o_line_points
-        stats['hucks_per_point'] = stats['hucks'] / o_line_points
+    if stats['points_played'] > 0:
+        total_points = stats['points_played']
+        stats['goals_per_point'] = stats['goals'] / total_points
+        stats['assists_per_point'] = stats['assists'] / total_points
+        stats['hockey_assists_per_point'] = stats['hockey_assists'] / total_points
+        stats['throws_per_point'] = stats['throws'] / total_points
+        stats['catches_per_point'] = stats['catches'] / total_points
+        stats['hucks_per_point'] = stats['hucks'] / total_points
     else:
         stats['goals_per_point'] = 0
         stats['assists_per_point'] = 0
@@ -1431,6 +1432,7 @@ def player_stats(player_id):
         stats['throws_per_point'] = 0
         stats['catches_per_point'] = 0
         stats['hucks_per_point'] = 0
+
     
     # Calculate defensive per-point metrics
     if stats['d_line_points_played'] > 0:

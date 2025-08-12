@@ -1102,6 +1102,7 @@ function createRadarCharts() {
             throws: {{ stats.throws_per_point|default(0) }},
             catches: {{ stats.catches_per_point|default(0) }}
         };
+
         
         // Use pre-calculated per-point statistics from Python
         const perPointDefensive = {
@@ -1153,7 +1154,9 @@ function createRadarCharts() {
                             normalizeValue(perPointOffensive.hucks, 'hucks'),
                             normalizeValue(perPointOffensive.throws, 'throws'),
                             stats.catch_rate // Catch rate is already a percentage
-                        ],
+                        ],  
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 2,
@@ -1214,6 +1217,7 @@ function createRadarCharts() {
                                         perPointOffensive.throws.toFixed(1) + ' throws/point',
                                         stats.catch_rate.toFixed(1) + '%'
                                     ];
+
                         
                                     return datasetLabel + ': ' + originalValues[context.dataIndex];
                                 } else {
