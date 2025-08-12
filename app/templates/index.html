@@ -275,7 +275,7 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h5 class="mb-1">{{ current_user.player.name }}</h5>
-                        <p class="text-muted mb-0">{{ current_user.player.position or 'No position set' }}</p>
+                        <p class="text-muted mb-0">{{ player.position|capitalize if player.position else 'No position' }}</p>
                     </div>
                 </div>
                 <div class="row">
