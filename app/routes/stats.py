@@ -720,24 +720,28 @@ def get_player_base_stats(player, games=None):
 
 def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, limit=None):
     """Process throw data for heatmap visualization with limit"""
-    query = Throw.query
-    
-    if player_id:
-        query = query.filter(Throw.thrower_id == player_id)
-    if opposition_team:
-        query = query.filter(Throw.opposition_team == opposition_team)
-    if team_name:
-        query = query.join(Throw.thrower).filter(Player.team == team_name)
-    
-    # Add limit to query if specified
-    if limit:
-        query = query.limit(limit)
-    
-    throws = query.all()
     heatmap_data = []
     
-    # Add throw start positions
-    for throw in throws:
+    # Helper function to add events to heatmap_data
+    def add_events_to_heatmap(query, event_type):
+        for event in query.all():
+            if event.field_position_x is not None and event.field_position_y is not None:
+                heatmap_data.append({
+                    'x': event.field_position_x,
+                    'y': event.field_position_y,
+                    'value': 1,
+                    'type': event_type
+                })
+
+    # 1. Get Throw Start Locations
+    throw_query = Throw.query
+    if player_id:
+        throw_query = throw_query.filter(Throw.thrower_id == player_id)
+    if team_name:
+        throw_query = throw_query.join(Throw.thrower).filter(Player.team == team_name)
+    if limit:
+        throw_query = throw_query.limit(limit)
+    for throw in throw_query.all():
         if throw.x_start is not None and throw.y_start is not None:
             heatmap_data.append({
                 'x': throw.x_start,
@@ -745,28 +749,22 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
                 'value': 1,
                 'type': 'throw_start'
             })
-    
-    # For throwaways, still use Events model but with a limit
-    throwaway_query = Event.query.filter_by(event_type='throwaway')
-    if player_id:
-        throwaway_query = throwaway_query.filter_by(player_id=player_id)
-    if team_name:
-        throwaway_query = throwaway_query.join(Event.player).filter(Player.team == team_name)
-    
-    # Add limit to throwaway query if specified
-    if limit:
-        throwaway_query = throwaway_query.limit(limit)
-    
-    for event in throwaway_query.all():
-        if event.field_position_x is not None and event.field_position_y is not None:
-            heatmap_data.append({
-                'x': event.field_position_x,
-                'y': event.field_position_y,
-                'value': 1,
-                'type': 'throwaway'
-            })
-    
+
+    # 2. Get Goal, Throwaway, and Scored On Locations from Events
+    event_types_to_query = ['goal', 'throwaway', 'scored_on']
+    for event_type in event_types_to_query:
+        event_query = Event.query.filter_by(event_type=event_type)
+        if player_id:
+            event_query = event_query.filter_by(player_id=player_id)
+        if team_name:
+            event_query = event_query.join(Event.player).filter(Player.team == team_name)
+        if limit:
+            event_query = event_query.limit(limit)
+        
+        add_events_to_heatmap(event_query, event_type)
+
     return heatmap_data
+
 
 def generate_player_connections(team_name=None, opposition_team=None, min_connections=1):
     """Generate player connection data using Throws model with minimum connection threshold"""

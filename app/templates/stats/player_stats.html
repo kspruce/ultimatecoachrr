@@ -1524,32 +1524,45 @@ function initializeCuttingSkillsVisualizations() {
                 filteredData = filteredData.filter(point => point.cutting_type === cutType);
             }
             
-            // Use different gradients based on the filter
-            if (filter === 'unsuccessful') {
+            // Use different, high-contrast gradients based on the filter
+            if (filter === 'turnovers') {
+                // A cool-toned gradient for negative events: Blue -> Magenta
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#ff9999',
-                        '.8': '#ff0000'
+                        '.4': 'blue',
+                        '.7': 'fuchsia',
+                        '.95': 'white'
                     }
                 });
-            } else if (filter === 'successful') {
+            } else if (filter === 'goals') {
+                // A bright, warm gradient for positive events: Yellow -> Orange -> White
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#90EE90',
-                        '.8': '#006400'
+                        '.4': 'yellow',
+                        '.8': 'orange',
+                        '.98': 'white'
+                    }
+                });
+            } else if (filter === 'scored_on') {
+                // A distinct and alarming gradient for opponent scores: Purple -> Pink
+                heatmapInstance.configure({
+                    gradient: {
+                        '.4': 'purple',
+                        '.7': 'magenta',
+                        '.95': 'pink'
                     }
                 });
             } else {
+                // A default vibrant gradient for 'All' and 'Throws': Yellow -> Red
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': 'blue',
-                        '.4': 'cyan',
-                        '.6': 'lime',
-                        '.8': 'yellow',
+                        '.4': 'yellow',
+                        '.7': 'orange',
                         '.95': 'red'
                     }
                 });
             }
+
             
             const pixelData = {
                 max: Math.max(1, filteredData.length / 10),
