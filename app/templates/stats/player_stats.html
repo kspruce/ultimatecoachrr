@@ -392,21 +392,36 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-4">
-                                        <h6 class="text-muted text-uppercase">Most Common Throwaway Location</h6>
-                                        <p class="display-6 fw-bold text-danger">{{ most_common_throwaway_location }}</p>
-                                        <small class="text-muted">Based on {{ stats.throwaways }} throwaways</small>
+                                    <div class="col-md-6">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6 class="text-muted text-uppercase">Most Common Throwaway Location</h6>
+                                                <p class="h4 fw-bold text-danger">{{ most_common_throwaway_location }}</p>
+                                                <small class="text-muted">Based on {{ stats.throwaways }} throwaways</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="text-muted text-uppercase">Most Common Throwaway Direction</h6>
+                                                <p class="h4 fw-bold text-danger">{{ throwaway_direction_data.field_relative }}</p>
+                                                <small class="text-muted">
+                                                    {{ throwaway_direction_data.count }} of {{ throwaway_direction_data.total }} throwaways 
+                                                    ({{ ((throwaway_direction_data.count / throwaway_direction_data.total) * 100)|round(1) }}%)
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <div id="throwaway-direction-chart" style="height: 200px; width: 100%;"></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-muted text-uppercase">Most Common Throwaway Direction</h6>
-                                        <p class="display-6 fw-bold text-danger">{{ throwaway_direction_data.field_relative }}</p>
-                                        <small class="text-muted">
-                                            {{ throwaway_direction_data.count }} of {{ throwaway_direction_data.total }} throwaways 
-                                            ({{ ((throwaway_direction_data.count / throwaway_direction_data.total) * 100)|round(1) }}%)
-                                        </small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div id="throwaway-direction-chart" style="height: 200px; width: 100%;"></div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted text-uppercase mb-2">Field Zone Analysis</h6>
+                                        <div id="field-diagram-container" style="position: relative; height: 250px; width: 100%;">
+                                            <canvas id="field-diagram" style="width: 100%; height: 100%;"></canvas>
+                                        </div>
+                                        <div class="text-center mt-2">
+                                            <small class="text-muted">The highlighted area shows the most common throwaway location</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2085,13 +2100,223 @@ setTimeout(function() {
     }
 }, 1000);
 </script>
-<script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ... (your existing code) ...
-    
     // Create throwaway direction visualization
     createThrowawayDirectionChart();
+    
+    // Draw the field diagram
+    drawFieldDiagram();
 });
+
+function drawFieldDiagram() {
+    const canvas = document.getElementById('field-diagram');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    
+    // Set canvas resolution to match display size
+    canvas.width = width * window.devicePixelRatio;
+    canvas.height = height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    // Define field dimensions and zones
+    const fieldWidth = width;
+    const fieldHeight = height;
+    const fieldColor = '#4CAF50';  // Green
+    const lineColor = '#FFFFFF';   // White
+    const textColor = '#000000';   // Black
+    const highlightColor = 'rgba(220, 53, 69, 0.5)';  // Semi-transparent red
+    
+    // Define zones (same as in calculate_most_common_throwaway_location)
+    const xZones = [
+        { start: 0, end: 0.2, name: "Own Endzone Area" },
+        { start: 0.2, end: 0.4, name: "Defensive Third" },
+        { start: 0.4, end: 0.6, name: "Midfield" },
+        { start: 0.6, end: 0.8, name: "Attacking Third" },
+        { start: 0.8, end: 1.0, name: "Opponent Endzone Area" }
+    ];
+    
+    const yZones = [
+        { start: 0, end: 0.33, name: "Left Sideline" },
+        { start: 0.33, end: 0.67, name: "Center of Field" },
+        { start: 0.67, end: 1.0, name: "Right Sideline" }
+    ];
+    
+    // Draw field background
+    ctx.fillStyle = fieldColor;
+    ctx.fillRect(0, 0, fieldWidth, fieldHeight);
+    
+    // Draw endzones
+    ctx.fillStyle = '#388E3C';  // Darker green
+    ctx.fillRect(0, 0, fieldWidth * 0.2, fieldHeight);  // Own endzone
+    ctx.fillRect(fieldWidth * 0.8, 0, fieldWidth * 0.2, fieldHeight);  // Opponent endzone
+    
+    // Draw vertical zone lines
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 3]);  // Dashed line
+    
+    xZones.forEach(zone => {
+        if (zone.start > 0 && zone.start < 1) {
+            ctx.beginPath();
+            ctx.moveTo(fieldWidth * zone.start, 0);
+            ctx.lineTo(fieldWidth * zone.start, fieldHeight);
+            ctx.stroke();
+        }
+    });
+    
+    // Draw horizontal zone lines
+    yZones.forEach(zone => {
+        if (zone.start > 0 && zone.start < 1) {
+            ctx.beginPath();
+            ctx.moveTo(0, fieldHeight * zone.start);
+            ctx.lineTo(fieldWidth, fieldHeight * zone.start);
+            ctx.stroke();
+        }
+    });
+    
+    // Draw field outline
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);  // Solid line
+    ctx.strokeRect(0, 0, fieldWidth, fieldHeight);
+    
+    // Draw midfield line
+    ctx.beginPath();
+    ctx.moveTo(fieldWidth * 0.5, 0);
+    ctx.lineTo(fieldWidth * 0.5, fieldHeight);
+    ctx.stroke();
+    
+    // Draw endzone lines
+    ctx.beginPath();
+    ctx.moveTo(fieldWidth * 0.2, 0);
+    ctx.lineTo(fieldWidth * 0.2, fieldHeight);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(fieldWidth * 0.8, 0);
+    ctx.lineTo(fieldWidth * 0.8, fieldHeight);
+    ctx.stroke();
+    
+    // Add zone labels
+    ctx.font = '10px Arial';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // X zone labels
+    xZones.forEach(zone => {
+        const centerX = fieldWidth * (zone.start + zone.end) / 2;
+        ctx.fillText(zone.name, centerX, fieldHeight - 10);
+    });
+    
+    // Y zone labels (rotated)
+    ctx.save();
+    ctx.translate(10, fieldHeight / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Left Sideline", 0, -fieldWidth * 0.17);
+    ctx.fillText("Center", 0, 0);
+    ctx.fillText("Right Sideline", 0, fieldWidth * 0.17);
+    ctx.restore();
+    
+    // Parse the most common throwaway location
+    const mostCommonLocation = "{{ most_common_throwaway_location }}";
+    
+    // Parse the location string to get the zones
+    if (mostCommonLocation && mostCommonLocation !== "N/A") {
+        const [yZoneName, xZoneName] = mostCommonLocation.split(", ");
+        
+        // Find the corresponding zones
+        const xZone = xZones.find(zone => zone.name === xZoneName);
+        const yZone = yZones.find(zone => zone.name === yZoneName);
+        
+        if (xZone && yZone) {
+            // Highlight the zone
+            ctx.fillStyle = highlightColor;
+            ctx.fillRect(
+                fieldWidth * xZone.start,
+                fieldHeight * yZone.start,
+                fieldWidth * (xZone.end - xZone.start),
+                fieldHeight * (yZone.end - yZone.start)
+            );
+            
+            // Add a label in the highlighted zone
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(
+                "Most Common",
+                fieldWidth * (xZone.start + xZone.end) / 2,
+                fieldHeight * (yZone.start + yZone.end) / 2 - 10
+            );
+            ctx.fillText(
+                "Throwaway Zone",
+                fieldWidth * (xZone.start + xZone.end) / 2,
+                fieldHeight * (yZone.start + yZone.end) / 2 + 10
+            );
+        }
+    }
+    
+    // Add arrow indicating play direction
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(fieldWidth * 0.1, fieldHeight * 0.9);
+    ctx.lineTo(fieldWidth * 0.9, fieldHeight * 0.9);
+    ctx.lineTo(fieldWidth * 0.85, fieldHeight * 0.85);
+    ctx.moveTo(fieldWidth * 0.9, fieldHeight * 0.9);
+    ctx.lineTo(fieldWidth * 0.85, fieldHeight * 0.95);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Add "Play Direction" text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '12px Arial';
+    ctx.fillText("Play Direction", fieldWidth * 0.5, fieldHeight * 0.9 - 10);
+    
+    // Add a compass rose for orientation
+    drawCompassRose(ctx, fieldWidth * 0.15, fieldHeight * 0.15, fieldWidth * 0.08);
+}
+
+// Function to draw a compass rose for field orientation
+function drawCompassRose(ctx, x, y, size) {
+    // Draw the compass circle
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Draw the compass points
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#000';
+    
+    // Draw the main directions
+    ctx.fillText('U', x + size * 0.7, y); // Upfield (East)
+    ctx.fillText('D', x - size * 0.7, y); // Downfield (West)
+    ctx.fillText('R', x, y - size * 0.7); // Right (North)
+    ctx.fillText('L', x, y + size * 0.7); // Left (South)
+    
+    // Draw the compass lines
+    ctx.beginPath();
+    // Horizontal line
+    ctx.moveTo(x - size * 0.6, y);
+    ctx.lineTo(x + size * 0.6, y);
+    // Vertical line
+    ctx.moveTo(x, y - size * 0.6);
+    ctx.lineTo(x, y + size * 0.6);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Add a small label explaining the compass
+    ctx.font = '8px Arial';
+    ctx.fillText('Field Orientation', x, y + size + 10);
+}
 
 function createThrowawayDirectionChart() {
     const chartContainer = document.getElementById('throwaway-direction-chart');
@@ -2205,5 +2430,5 @@ function createThrowawayDirectionChart() {
         }
     });
 }
-</script>
+
 {% endblock %}
