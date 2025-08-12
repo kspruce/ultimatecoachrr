@@ -1409,7 +1409,10 @@ def player_stats(player_id):
                 'game': game,
                 'stats': game_stats
             })
-
+    
+    most_common_throwaway_location = calculate_most_common_throwaway_location(player, games)
+    most_common_throwaway_direction = calculate_most_common_throwaway_direction(player, games)
+    
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
 
@@ -1472,7 +1475,9 @@ def player_stats(player_id):
         throw_directions=stats['throw_directions'],
         completion_by_direction=stats['completion_by_direction'],
         cutting_data=cutting_data,
-        cutting_stats=cutting_stats
+        cutting_stats=cutting_stats,
+        most_common_throwaway_location=most_common_throwaway_location,
+        most_common_throwaway_direction=most_common_throwaway_direction
     )
 
 
@@ -3307,3 +3312,99 @@ def get_point_ids_from_games(games):
             
     return point_ids
 
+def calculate_most_common_throwaway_location(player, games=None):
+    """Analyzes throwaway events to find the most common field zone."""
+    point_ids = get_point_ids_from_games(games)
+    
+    query = Event.query.filter_by(player_id=player.id, event_type='throwaway')
+    if point_ids:
+        query = query.filter(Event.point_id.in_(point_ids))
+        
+    throwaways = query.all()
+    
+    if not throwaways:
+        return "N/A"
+
+    # Define field zones
+    x_zones = {
+        (0, 20): "Own Endzone Area",
+        (20, 40): "Defensive Third",
+        (40, 60): "Midfield",
+        (60, 80): "Attacking Third",
+        (80, 100): "Opponent Endzone Area"
+    }
+    y_zones = {
+        (0, 12): "Left Sideline",
+        (12, 25): "Center of Field",
+        (25, 37): "Right Sideline"
+    }
+    
+    zone_counts = {}
+
+    for event in throwaways:
+        if event.field_position_x is not None and event.field_position_y is not None:
+            x_pos, y_pos = event.field_position_x, event.field_position_y
+            
+            x_zone_name = next((name for (start, end), name in x_zones.items() if start <= x_pos < end), "Unknown X")
+            y_zone_name = next((name for (start, end), name in y_zones.items() if start <= y_pos < end), "Unknown Y")
+            
+            zone_key = f"{y_zone_name}, {x_zone_name}"
+            zone_counts[zone_key] = zone_counts.get(zone_key, 0) + 1
+            
+    if not zone_counts:
+        return "N/A"
+        
+    # Find the most common zone
+    most_common_zone = max(zone_counts, key=zone_counts.get)
+    return most_common_zone
+
+def calculate_most_common_throwaway_direction(player, games=None):
+    """Analyzes throwaway throws to find the most common direction."""
+    point_ids = get_point_ids_from_games(games)
+
+    query = Throw.query.filter_by(thrower_id=player.id, throw_type='throwaway')
+    if point_ids:
+        query = query.filter(Throw.point_id.in_(point_ids))
+        
+    throwaways = query.all()
+
+    if not throwaways:
+        return "N/A"
+
+    direction_counts = {
+        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0,
+        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
+    }
+    
+    for throw in throwaways:
+        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+            dx = throw.x_end - throw.x_start
+            dy = throw.y_end - throw.y_start
+            angle = math.atan2(dy, dx)
+            degrees = (angle * 180 / math.pi + 360) % 360
+
+            # Map angle to 16-point direction
+            if degrees >= 348.75 or degrees < 11.25: direction = 'E'
+            elif degrees >= 11.25 and degrees < 33.75: direction = 'ENE'
+            elif degrees >= 33.75 and degrees < 56.25: direction = 'NE'
+            elif degrees >= 56.25 and degrees < 78.75: direction = 'NNE'
+            elif degrees >= 78.75 and degrees < 101.25: direction = 'N'
+            elif degrees >= 101.25 and degrees < 123.75: direction = 'NNW'
+            elif degrees >= 123.75 and degrees < 146.25: direction = 'NW'
+            elif degrees >= 146.25 and degrees < 168.75: direction = 'WNW'
+            elif degrees >= 168.75 and degrees < 191.25: direction = 'W'
+            elif degrees >= 191.25 and degrees < 213.75: direction = 'WSW'
+            elif degrees >= 213.75 and degrees < 236.25: direction = 'SW'
+            elif degrees >= 236.25 and degrees < 258.75: direction = 'SSW'
+            elif degrees >= 258.75 and degrees < 281.25: direction = 'S'
+            elif degrees >= 281.25 and degrees < 303.75: direction = 'SSE'
+            elif degrees >= 303.75 and degrees < 326.25: direction = 'SE'
+            else: direction = 'ESE'
+            
+            direction_counts[direction] += 1
+
+    if not any(direction_counts.values()):
+        return "N/A"
+
+    most_common_direction = max(direction_counts, key=direction_counts.get)
+    return most_common_direction

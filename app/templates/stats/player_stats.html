@@ -380,8 +380,32 @@
                                 </small>
                             </div>
                         </div>
-                    </div>
+                    </div>                                        
                 </div>
+                
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card stat-card h-100">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0">Turnover Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted text-uppercase">Most Common Throwaway Location</h6>
+                                        <p class="display-6 fw-bold text-danger">{{ most_common_throwaway_location }}</p>
+                                        <small class="text-muted">Based on {{ stats.throwaways }} throwaways</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted text-uppercase">Most Common Throwaway Direction</h6>
+                                        <p class="display-6 fw-bold text-danger">{{ most_common_throwaway_direction }}</p>
+                                        <small class="text-muted">Direction relative to field orientation (E = Forward)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>                
             </div>
         </div>
         
