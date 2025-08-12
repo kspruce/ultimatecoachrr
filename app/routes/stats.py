@@ -1221,7 +1221,6 @@ def player_stats(player_id):
     
     # Check if user has permission to view this player's stats
     if not (is_admin(current_user) or is_coach(current_user) or (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player.id)):
-
         flash("You don't have permission to view this player's statistics", "danger")
         return redirect(url_for('stats_dashboard.index'))
     
@@ -1246,14 +1245,14 @@ def player_stats(player_id):
     team_avgs = get_cached_team_averages(games)
     
     if stats['points_played'] > 0:
-        stats['per'] = calculate_per(player, games, team_avgs)
+        # Use the optimized calculate_per_from_stats function for consistent PER calculation
+        stats['per'] = calculate_per_from_stats(stats, team_avgs)
     
     # Add hucks to player stats
     stats['hucks'] = sum(1 for t in stats['throw_vectors'] if t['distance'] > 20)
     
     # Get point IDs for filtering if games are selected
     point_ids = get_point_ids_from_games(games)
-
 
     # Get cutting skills data
     cutting_skills_query = CuttingSkill.query.filter_by(player_id=player_id)
@@ -1341,7 +1340,8 @@ def player_stats(player_id):
             
             # Calculate game-specific team averages
             game_team_avgs = get_cached_team_averages([game])
-            game_stats['per'] = calculate_per(player, [game], game_team_avgs)
+            # Use the optimized calculate_per_from_stats function
+            game_stats['per'] = calculate_per_from_stats(game_stats, game_team_avgs)
             
             player_games.append({
                 'game': game,
@@ -1349,11 +1349,16 @@ def player_stats(player_id):
             })
     
     most_common_throwaway_location = calculate_most_common_throwaway_location(player, games)
-    throwaway_direction_data = calculate_most_common_throwaway_direction(player, games)    
+    throwaway_direction_data = calculate_most_common_throwaway_direction(player, games)
+    
+    # Fix for zero division error in template
+    if throwaway_direction_data and throwaway_direction_data.get('total', 0) == 0:
+        throwaway_direction_data['percentage'] = 0
+    elif throwaway_direction_data:
+        throwaway_direction_data['percentage'] = (throwaway_direction_data['count'] / throwaway_direction_data['total']) * 100
     
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
-
 
     # Calculate per-point metrics for radar charts
     if stats['points_played'] > 0:
@@ -1372,7 +1377,6 @@ def player_stats(player_id):
         stats['catches_per_point'] = 0
         stats['hucks_per_point'] = 0
 
-    
     # Calculate defensive per-point metrics
     if stats['d_line_points_played'] > 0:
         d_line_points = stats['d_line_points_played']
@@ -1387,8 +1391,6 @@ def player_stats(player_id):
         stats['shutdowns_per_point'] = 0
         stats['turnovers_forced_per_point'] = 0
         stats['d_line_plus_minus_per_point'] = 0
-
-
 
     return render_template(
         'stats/player_stats.html',
@@ -1417,6 +1419,7 @@ def player_stats(player_id):
         most_common_throwaway_location=most_common_throwaway_location,
         throwaway_direction_data=throwaway_direction_data
     )
+
 
 
 

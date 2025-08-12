@@ -404,7 +404,7 @@
                                                 <p class="h4 fw-bold text-danger">{{ throwaway_direction_data.field_relative }}</p>
                                                 <small class="text-muted">
                                                     {{ throwaway_direction_data.count }} of {{ throwaway_direction_data.total }} throwaways 
-                                                    ({{ ((throwaway_direction_data.count / throwaway_direction_data.total) * 100)|round(1) }}%)
+                                                    ({{ throwaway_direction_data.percentage|round(1) }}%)
                                                 </small>
                                             </div>
                                         </div>
