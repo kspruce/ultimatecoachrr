@@ -416,60 +416,10 @@ def calculate_per(player, games=None, team_avgs=None):
     game_ids_tuple = games_to_tuple(games)
     stats = get_cached_player_base_stats(player.id, game_ids_tuple)
     
-    if stats['points_played'] == 0:
-        return 0
-    
-    # If team_avgs is not provided, get from cache
-    if team_avgs is None:
-        team_avgs = get_cached_team_averages(games)
-    
-    # Define weights - moved outside the function to avoid recreating each time
-    WEIGHTS = PER_WEIGHTS
-    
-    # Box score component calculations
-    goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
-    assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
-    hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
-    turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
-    blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
-    stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
-    callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
-    
-    box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
-    
-    # Passing component calculations - corrected to use power instead of multiplication
-    completion_factor = (stats['completion_rate']/100) ** 3.0
-    catch_factor = (stats['catch_rate']/100) ** 3.0
-    completions_component = (stats['completions'] ** 0.75) * completion_factor
-    catches_component = (stats['catches'] ** 0.75) * catch_factor
-    passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
-    
-    # Get number of points played in each line
-    o_line_points = stats.get('o_line_points_played', 0)
-    d_line_points = stats.get('d_line_points_played', 0)
-    total_points = o_line_points + d_line_points
-    
-    # Calculate weighted plus-minus component
-    plus_minus_component = 0
-    if total_points > 0:
-        o_line_weight = o_line_points / total_points if o_line_points > 0 else 0
-        d_line_weight = d_line_points / total_points if d_line_points > 0 else 0
-        
-        o_line_component = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
-        d_line_component = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
-        
-        plus_minus_component = WEIGHTS['plus_minus'] * (o_line_component + d_line_component)
-    
-    # Calculate raw unadjusted PER
-    raw_uper = (1 / stats['points_played']) * (box_component + passing_component + plus_minus_component)
-    
-    # Scale to league average of 15
-    avg_uper = team_avgs.get('avg_uper', 1)
-    if avg_uper <= 0:
-        avg_uper = 1
-    
-    # Return the scaled PER
-    return raw_uper * (15 / avg_uper)
+    # Use the optimized function that works with pre-loaded stats
+    return calculate_per_from_stats(stats, team_avgs)
+
+
 
 
 
@@ -844,6 +794,7 @@ def calculate_team_averages(games=None):
         'player_count': 0
     }
 
+    # First pass to calculate basic averages
     for player_id, stats in player_stats.items():
         if stats['points_played'] > 0:
             totals['player_count'] += 1
@@ -851,39 +802,27 @@ def calculate_team_averages(games=None):
             totals['o_line_points'] += stats.get('o_line_points_played', 0)
             totals['d_line_plus_minus'] += stats.get('d_line_plus_minus', 0)
             totals['d_line_points'] += stats.get('d_line_points_played', 0)
-            
-            # Calculate unadjusted PER directly here instead of calling another function
-            if stats['points_played'] > 0:
-                # Define weights
-                WEIGHTS = PER_WEIGHTS
-                
-                # Box score component calculations
-                goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
-                assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
-                hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
-                turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
-                blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
-                stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
-                callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
-                
-                box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
-                
-                # Passing component calculations
-                completion_factor = (stats['completion_rate']/100) ** 3.0
-                catch_factor = (stats['catch_rate']/100) ** 3.0
-                completions_component = (stats['completions'] ** 0.75) * completion_factor
-                catches_component = (stats['catches'] ** 0.75) * catch_factor
-                passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
-                
-                # Calculate raw unadjusted PER
-                raw_uper = (1 / stats['points_played']) * (box_component + passing_component)
-                totals['uper_total'] += raw_uper
-
-    return {
+    
+    # Calculate initial averages
+    initial_avgs = {
         'avg_o_line_plus_minus_per_point': (totals['o_line_plus_minus'] / totals['o_line_points']) if totals['o_line_points'] > 0 else 0,
         'avg_d_line_plus_minus_per_point': (totals['d_line_plus_minus'] / totals['d_line_points']) if totals['d_line_points'] > 0 else 0,
-        'avg_uper': totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
+        'avg_uper': 1  # Initial placeholder
     }
+    
+    # Second pass to calculate uPER using the initial averages
+    for player_id, stats in player_stats.items():
+        if stats['points_played'] > 0:
+            # Calculate unadjusted PER without the plus-minus component
+            # since we don't have the final team averages yet
+            raw_uper = calculate_unadjusted_per(stats)
+            totals['uper_total'] += raw_uper
+    
+    # Update with final avg_uper
+    initial_avgs['avg_uper'] = totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
+    
+    return initial_avgs
+
 
 
 
@@ -1064,13 +1003,12 @@ def index():
         print("Calculating player stats in batch...")
         player_stats = get_players_base_stats(players, recent_games)
         
-        # Calculate PER for each player
+        # Calculate PER for each player using the preloaded stats
         print("Calculating PER for each player...")
         for player_id, stats in player_stats.items():
             if stats['points_played'] > 0:
-                player = next((p for p in players if p.id == player_id), None)
-                if player:
-                    stats['per'] = calculate_per(player, recent_games, team_avgs)
+                stats['per'] = calculate_per_from_stats(stats, team_avgs)
+
         
         print(f"Stats calculation took {time.time() - start_time:.2f} seconds")
         
@@ -1912,40 +1850,36 @@ def calculate_team_summary(games):
     return summary
 
 def calculate_unadjusted_per(stats):
-    """
-    Calculate raw unadjusted PER without normalization
-    """
+    """Calculate raw unadjusted PER without team average adjustments"""
     if stats['points_played'] == 0:
         return 0
-        
-    # Define weights
-    WEIGHTS = {
-        'scoring': 0.5,
-        'assist': 0.5,
-        'turnover': -0.75,
-        'defense': 0.75,
-        'throw': 0.05,
-        'plus_minus': 0.1
-    }
-
-    # Calculate raw PER
-    uper = (1 / stats['points_played']) * (
-        (WEIGHTS['scoring'] * (stats['goals'] * 0.75)) +
-        (WEIGHTS['assist'] * (stats['assists'] * 0.75)) +
-        (WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] * 0.75)) +
-        (WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) * 0.75)) +
-        (WEIGHTS['defense'] * (stats['blocks'] * 0.75)) +
-        (WEIGHTS['throw'] * (
-            (stats['completions'] * 0.75) * ((stats['completion_rate']/100) * 3.0) +
-            (stats['catches'] * 0.75) * ((stats['catch_rate']/100) * 3.0)
-        )) +
-        (WEIGHTS['plus_minus'] * (
-            stats.get('o_line_plus_minus_per_point', 0) + 
-            stats.get('d_line_plus_minus_per_point', 0)
-        ))
-    )
     
-    return uper
+    # Define weights
+    WEIGHTS = PER_WEIGHTS
+    
+    # Box score component calculations
+    goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
+    assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
+    hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
+    turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
+    blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
+    stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
+    callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
+    
+    box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
+    
+    # Passing component calculations
+    completion_factor = (stats['completion_rate']/100) ** 3.0
+    catch_factor = (stats['catch_rate']/100) ** 3.0
+    completions_component = (stats['completions'] ** 0.75) * completion_factor
+    catches_component = (stats['catches'] ** 0.75) * catch_factor
+    passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
+    
+    # Calculate raw unadjusted PER (without plus-minus component)
+    raw_uper = (1 / stats['points_played']) * (box_component + passing_component)
+    
+    return raw_uper
+
 
 
 def normalize_per(value):
@@ -3436,3 +3370,55 @@ def calculate_most_common_throwaway_location(player, games=None):
     # Find the most common zone
     most_common_zone = max(zone_counts, key=zone_counts.get)
     return most_common_zone
+
+def calculate_per_from_stats(stats, team_avgs):
+    """Calculate PER using pre-loaded stats without additional database queries"""
+    if stats['points_played'] == 0:
+        return 0
+    
+    # Define weights
+    WEIGHTS = PER_WEIGHTS
+    
+    # Box score component calculations
+    goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
+    assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
+    hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
+    turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
+    blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
+    stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
+    callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
+    
+    box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
+    
+    # Passing component calculations
+    completion_factor = (stats['completion_rate']/100) ** 3.0
+    catch_factor = (stats['catch_rate']/100) ** 3.0
+    completions_component = (stats['completions'] ** 0.75) * completion_factor
+    catches_component = (stats['catches'] ** 0.75) * catch_factor
+    passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
+    
+    # Get number of points played in each line
+    o_line_points = stats.get('o_line_points_played', 0)
+    d_line_points = stats.get('d_line_points_played', 0)
+    total_points = o_line_points + d_line_points
+    
+    # Calculate weighted plus-minus component
+    plus_minus_component = 0
+    if total_points > 0:
+        o_line_weight = o_line_points / total_points if o_line_points > 0 else 0
+        d_line_weight = d_line_points / total_points if d_line_points > 0 else 0
+        
+        o_line_component = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
+        d_line_component = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
+        
+        plus_minus_component = WEIGHTS['plus_minus'] * (o_line_component + d_line_component)
+    
+    # Calculate raw unadjusted PER
+    raw_uper = (1 / stats['points_played']) * (box_component + passing_component + plus_minus_component)
+    
+    # Scale to league average of 15
+    avg_uper = team_avgs.get('avg_uper', 1)
+    if avg_uper <= 0:
+        avg_uper = 1
+    
+    return raw_uper * (15 / avg_uper)
