@@ -410,7 +410,7 @@ PER_WEIGHTS = {
 
 def calculate_per(player, games=None, team_avgs=None):
     """
-    Standardized PER calculation with optimizations
+    Standardized PER calculation that matches the debug_per calculation
     """
     # Use cached stats if possible
     game_ids_tuple = games_to_tuple(games)
@@ -437,7 +437,7 @@ def calculate_per(player, games=None, team_avgs=None):
     
     box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
     
-    # Passing component calculations - corrected to use power instead of multiplication
+    # Passing component calculations - using power instead of multiplication
     completion_factor = (stats['completion_rate']/100) ** 3.0
     catch_factor = (stats['catch_rate']/100) ** 3.0
     completions_component = (stats['completions'] ** 0.75) * completion_factor
@@ -468,8 +468,25 @@ def calculate_per(player, games=None, team_avgs=None):
     if avg_uper <= 0:
         avg_uper = 1
     
-    # Return the scaled PER
-    return raw_uper * (15 / avg_uper)
+    scaled_per = raw_uper * (15 / avg_uper)
+    
+    # Find max PER value for normalization to 0-100 scale
+    # This part might need to be optimized if performance is an issue
+    all_players = Player.query.filter_by(active=True).all()
+    raw_per_values = {}
+    
+    for p in all_players:
+        p_stats = get_player_base_stats(p, games)
+        if p_stats['points_played'] > 0:
+            p_raw_uper = calculate_unadjusted_per(p_stats)
+            p_scaled_per = p_raw_uper * (15 / avg_uper)
+            raw_per_values[p.id] = p_scaled_per
+    
+    max_per = max(raw_per_values.values()) if raw_per_values else 30
+    
+    # Return the normalized PER (0-100 scale)
+    return (scaled_per / max_per) * 100
+
 
 
 
