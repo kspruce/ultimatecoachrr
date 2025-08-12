@@ -383,6 +383,7 @@
                     </div>                                        
                 </div>
                 
+                <!-- NEW: Turnover Analysis Card -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card stat-card h-100">
@@ -390,22 +391,28 @@
                                 <h5 class="mb-0">Turnover Analysis</h5>
                             </div>
                             <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-4">
                                         <h6 class="text-muted text-uppercase">Most Common Throwaway Location</h6>
                                         <p class="display-6 fw-bold text-danger">{{ most_common_throwaway_location }}</p>
                                         <small class="text-muted">Based on {{ stats.throwaways }} throwaways</small>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <h6 class="text-muted text-uppercase">Most Common Throwaway Direction</h6>
-                                        <p class="display-6 fw-bold text-danger">{{ most_common_throwaway_direction }}</p>
-                                        <small class="text-muted">Direction relative to field orientation (E = Forward)</small>
+                                        <p class="display-6 fw-bold text-danger">{{ throwaway_direction_data.field_relative }}</p>
+                                        <small class="text-muted">
+                                            {{ throwaway_direction_data.count }} of {{ throwaway_direction_data.total }} throwaways 
+                                            ({{ ((throwaway_direction_data.count / throwaway_direction_data.total) * 100)|round(1) }}%)
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div id="throwaway-direction-chart" style="height: 200px; width: 100%;"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>                
+                </div>             
             </div>
         </div>
         
@@ -2077,5 +2084,126 @@ setTimeout(function() {
         initializeRadarCharts();
     }
 }, 1000);
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ... (your existing code) ...
+    
+    // Create throwaway direction visualization
+    createThrowawayDirectionChart();
+});
+
+function createThrowawayDirectionChart() {
+    const chartContainer = document.getElementById('throwaway-direction-chart');
+    if (!chartContainer) return;
+    
+    // Get direction data from template
+    const directionData = {{ throwaway_direction_data.direction_data|tojson|safe }};
+    if (!directionData || Object.keys(directionData).length === 0) {
+        chartContainer.innerHTML = '<div class="text-center text-muted pt-5">No throwaway direction data available</div>';
+        return;
+    }
+    
+    // Define field directions in order (clockwise from East)
+    const directions = [
+        'E', 'ENE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'WNW',
+        'W', 'WSW', 'SW', 'SSW', 'S', 'SSE', 'SE', 'ESE'
+    ];
+    
+    // Field-friendly labels
+    const fieldLabels = {
+        'E': 'Upfield',
+        'N': 'Right',
+        'W': 'Downfield',
+        'S': 'Left'
+    };
+    
+    // Create the chart
+    const ctx = document.createElement('canvas');
+    ctx.height = 200;
+    chartContainer.appendChild(ctx);
+    
+    new Chart(ctx, {
+        type: 'polarArea',
+        data: {
+            labels: directions.map(d => fieldLabels[d] || ''),
+            datasets: [{
+                data: directions.map(d => directionData[d] || 0),
+                backgroundColor: directions.map(d => {
+                    // Highlight the most common direction
+                    const value = directionData[d] || 0;
+                    const max = Math.max(...Object.values(directionData));
+                    
+                    if (value === max && value > 0) {
+                        return 'rgba(220, 53, 69, 0.8)'; // Bootstrap danger color
+                    } else {
+                        return 'rgba(108, 117, 125, 0.5)'; // Bootstrap secondary color
+                    }
+                })
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const direction = directions[context.dataIndex];
+                            const count = directionData[direction] || 0;
+                            const total = Object.values(directionData).reduce((a, b) => a + b, 0);
+                            const percentage = ((count / total) * 100).toFixed(1);
+                            
+                            // Get field-relative direction
+                            const fieldDirectionMapping = {
+                                'E': "Directly Upfield",
+                                'ENE': "Slightly Right Upfield",
+                                'NE': "Upfield Right",
+                                'NNE': "Far Right Upfield",
+                                'N': "Directly Right",
+                                'NNW': "Far Right Downfield",
+                                'NW': "Downfield Right",
+                                'WNW': "Slightly Right Downfield",
+                                'W': "Directly Downfield",
+                                'WSW': "Slightly Left Downfield",
+                                'SW': "Downfield Left",
+                                'SSW': "Far Left Downfield",
+                                'S': "Directly Left",
+                                'SSE': "Far Left Upfield",
+                                'SE': "Upfield Left",
+                                'ESE': "Slightly Left Upfield"
+                            };
+                            
+                            return `${fieldDirectionMapping[direction]}: ${count} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                r: {
+                    ticks: {
+                        display: false
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    pointLabels: {
+                        display: true,
+                        font: {
+                            size: 10
+                        },
+                        callback: function(label, index) {
+                            // Only show the main compass points
+                            return ['Upfield', '', '', '', 'Right', '', '', '', 'Downfield', '', '', '', 'Left', '', '', ''][index];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 </script>
 {% endblock %}

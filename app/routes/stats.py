@@ -1411,7 +1411,7 @@ def player_stats(player_id):
             })
     
     most_common_throwaway_location = calculate_most_common_throwaway_location(player, games)
-    most_common_throwaway_direction = calculate_most_common_throwaway_direction(player, games)
+    throwaway_direction_data = calculate_most_common_throwaway_direction(player, games)    
     
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
@@ -1477,7 +1477,7 @@ def player_stats(player_id):
         cutting_data=cutting_data,
         cutting_stats=cutting_stats,
         most_common_throwaway_location=most_common_throwaway_location,
-        most_common_throwaway_direction=most_common_throwaway_direction
+        throwaway_direction_data=throwaway_direction_data
     )
 
 
@@ -3312,6 +3312,85 @@ def get_point_ids_from_games(games):
             
     return point_ids
 
+def calculate_most_common_throwaway_direction(player, games=None):
+    """Analyzes throwaway throws to find the most common direction."""
+    point_ids = get_point_ids_from_games(games)
+
+    query = Throw.query.filter_by(thrower_id=player.id, throw_type='throwaway')
+    if point_ids:
+        query = query.filter(Throw.point_id.in_(point_ids))
+        
+    throwaways = query.all()
+
+    if not throwaways:
+        return {"compass": "N/A", "field_relative": "N/A", "count": 0, "total": 0, "direction_data": {}}
+
+    direction_counts = {
+        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0,
+        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
+    }
+    
+    # Define mapping from compass to field-relative directions
+    field_direction_mapping = {
+        'E': "Directly Upfield",
+        'ENE': "Slightly Right Upfield",
+        'NE': "Upfield Right",
+        'NNE': "Far Right Upfield",
+        'N': "Directly Right",
+        'NNW': "Far Right Downfield",
+        'NW': "Downfield Right",
+        'WNW': "Slightly Right Downfield",
+        'W': "Directly Downfield",
+        'WSW': "Slightly Left Downfield",
+        'SW': "Downfield Left",
+        'SSW': "Far Left Downfield",
+        'S': "Directly Left",
+        'SSE': "Far Left Upfield",
+        'SE': "Upfield Left",
+        'ESE': "Slightly Left Upfield"
+    }
+    
+    for throw in throwaways:
+        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
+            dx = throw.x_end - throw.x_start
+            dy = throw.y_end - throw.y_start
+            angle = math.atan2(dy, dx)
+            degrees = (angle * 180 / math.pi + 360) % 360
+
+            # Map angle to 16-point direction
+            if degrees >= 348.75 or degrees < 11.25: direction = 'E'
+            elif degrees >= 11.25 and degrees < 33.75: direction = 'ENE'
+            elif degrees >= 33.75 and degrees < 56.25: direction = 'NE'
+            elif degrees >= 56.25 and degrees < 78.75: direction = 'NNE'
+            elif degrees >= 78.75 and degrees < 101.25: direction = 'N'
+            elif degrees >= 101.25 and degrees < 123.75: direction = 'NNW'
+            elif degrees >= 123.75 and degrees < 146.25: direction = 'NW'
+            elif degrees >= 146.25 and degrees < 168.75: direction = 'WNW'
+            elif degrees >= 168.75 and degrees < 191.25: direction = 'W'
+            elif degrees >= 191.25 and degrees < 213.75: direction = 'WSW'
+            elif degrees >= 213.75 and degrees < 236.25: direction = 'SW'
+            elif degrees >= 236.25 and degrees < 258.75: direction = 'SSW'
+            elif degrees >= 258.75 and degrees < 281.25: direction = 'S'
+            elif degrees >= 281.25 and degrees < 303.75: direction = 'SSE'
+            elif degrees >= 303.75 and degrees < 326.25: direction = 'SE'
+            else: direction = 'ESE'
+            
+            direction_counts[direction] += 1
+
+    if not any(direction_counts.values()):
+        return {"compass": "N/A", "field_relative": "N/A", "count": 0, "total": 0, "direction_data": {}}
+
+    most_common_direction = max(direction_counts, key=direction_counts.get)
+    total_throwaways = sum(direction_counts.values())
+    
+    return {
+        "compass": most_common_direction,
+        "field_relative": field_direction_mapping[most_common_direction],
+        "count": direction_counts[most_common_direction],
+        "total": total_throwaways,
+        "direction_data": direction_counts
+    }
+
 def calculate_most_common_throwaway_location(player, games=None):
     """Analyzes throwaway events to find the most common field zone."""
     point_ids = get_point_ids_from_games(games)
@@ -3357,54 +3436,3 @@ def calculate_most_common_throwaway_location(player, games=None):
     # Find the most common zone
     most_common_zone = max(zone_counts, key=zone_counts.get)
     return most_common_zone
-
-def calculate_most_common_throwaway_direction(player, games=None):
-    """Analyzes throwaway throws to find the most common direction."""
-    point_ids = get_point_ids_from_games(games)
-
-    query = Throw.query.filter_by(thrower_id=player.id, throw_type='throwaway')
-    if point_ids:
-        query = query.filter(Throw.point_id.in_(point_ids))
-        
-    throwaways = query.all()
-
-    if not throwaways:
-        return "N/A"
-
-    direction_counts = {
-        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0,
-        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
-    }
-    
-    for throw in throwaways:
-        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-            dx = throw.x_end - throw.x_start
-            dy = throw.y_end - throw.y_start
-            angle = math.atan2(dy, dx)
-            degrees = (angle * 180 / math.pi + 360) % 360
-
-            # Map angle to 16-point direction
-            if degrees >= 348.75 or degrees < 11.25: direction = 'E'
-            elif degrees >= 11.25 and degrees < 33.75: direction = 'ENE'
-            elif degrees >= 33.75 and degrees < 56.25: direction = 'NE'
-            elif degrees >= 56.25 and degrees < 78.75: direction = 'NNE'
-            elif degrees >= 78.75 and degrees < 101.25: direction = 'N'
-            elif degrees >= 101.25 and degrees < 123.75: direction = 'NNW'
-            elif degrees >= 123.75 and degrees < 146.25: direction = 'NW'
-            elif degrees >= 146.25 and degrees < 168.75: direction = 'WNW'
-            elif degrees >= 168.75 and degrees < 191.25: direction = 'W'
-            elif degrees >= 191.25 and degrees < 213.75: direction = 'WSW'
-            elif degrees >= 213.75 and degrees < 236.25: direction = 'SW'
-            elif degrees >= 236.25 and degrees < 258.75: direction = 'SSW'
-            elif degrees >= 258.75 and degrees < 281.25: direction = 'S'
-            elif degrees >= 281.25 and degrees < 303.75: direction = 'SSE'
-            elif degrees >= 303.75 and degrees < 326.25: direction = 'SE'
-            else: direction = 'ESE'
-            
-            direction_counts[direction] += 1
-
-    if not any(direction_counts.values()):
-        return "N/A"
-
-    most_common_direction = max(direction_counts, key=direction_counts.get)
-    return most_common_direction
