@@ -462,7 +462,6 @@
                     <thead>
                         <tr>
                             <th>Player</th>
-                            <th data-toggle="tooltip" title="Games Played">Games</th>
                             <th data-toggle="tooltip" title="Points Played">Points</th>
                             <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
                             <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
@@ -490,7 +489,6 @@
                                             <small class="text-muted">#{{ player.jersey_number }}</small>
                                         </a>
                                     </td>
-                                    <td>{{ player_stats[player.id].games_played }}</td>
                                     <td>{{ player_stats[player.id].points_played }}</td>
                                     <td>{{ player_stats[player.id].o_line_points_played }}</td>
                                     <td>{{ player_stats[player.id].d_line_points_played }}</td>
@@ -522,7 +520,6 @@
                                         <small class="text-muted">#{{ current_user.player.jersey_number }}</small>
                                     </a>
                                 </td>
-                                <td>{{ player_stats[current_user.player.id].games_played }}</td>
                                 <td>{{ player_stats[current_user.player.id].points_played }}</td>
                                 <td>{{ player_stats[current_user.player.id].o_line_points_played }}</td>
                                 <td>{{ player_stats[current_user.player.id].d_line_points_played }}</td>
@@ -549,7 +546,6 @@
                         {% if team_avg_stats %}
                         <tr class="table-secondary">
                             <td><strong>Team Average</strong></td>
-                            <td>{{ team_avg_stats.games_played|round(1) }}</td>
                             <td>{{ team_avg_stats.points_played|round(1) }}</td>
                             <td>{{ team_avg_stats.o_line_points_played|round(1) }}</td>
                             <td>{{ team_avg_stats.d_line_points_played|round(1) }}</td>
