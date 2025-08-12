@@ -589,9 +589,402 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- HELPER FUNCTIONS ---
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
 
-    // Debounce function to limit how often a function can run
+    // Initialize DataTable with improved configuration
+    const playerStatsTable = $('#player-stats-table').DataTable({
+        pageLength: 25,
+        order: [[14, "desc"]], // Sort by PER by default (column 14)
+        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+             "<'row'<'col-sm-12'tr>>" +
+             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        language: {
+            search: "Search players:",
+            lengthMenu: "Show _MENU_ players"
+        },
+        scrollX: true,
+        scrollY: "500px",
+        scrollCollapse: true,
+        paging: true, // Enable paging
+        fixedColumns: {
+            leftColumns: 1 // Fix Player column
+        },
+        columnDefs: [
+            { targets: [10], // Completion percentage column
+                render: function(data, type, row) {
+                    if (type === 'sort') {
+                        const match = data.match(/\((.*?)%\)/);
+                        return match ? parseFloat(match[1]) : 0;
+                    }
+                    return data;
+                }
+            }
+        ],
+        responsive: true
+    });
+
+    // Add responsive behavior
+    $(window).on('resize', function() {
+        playerStatsTable.columns.adjust().draw();
+    });
+    
+    // Add filtering functionality for the player stats table
+    document.querySelectorAll('[data-view]').forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const view = this.dataset.view;
+            const table = $('#player-stats-table').DataTable();
+            
+            // Clear any existing search
+            table.search('').columns().search('');
+            
+            if (view === 'offense') {
+                // Custom filtering function for offensive stats
+                $.fn.dataTable.ext.search.push(
+                    function(settings, data, dataIndex) {
+                        // Check goals, assists, hockey assists, or completions
+                        const goals = parseInt(data[5]) || 0;
+                        const assists = parseInt(data[6]) || 0;
+                        const hockey = parseInt(data[7]) || 0;
+                        const completions = parseInt(data[10].split('(')[0].trim()) || 0;
+                        
+                        return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
+                    }
+                );
+            } else if (view === 'defense') {
+                // Custom filtering function for defensive stats
+                $.fn.dataTable.ext.search.push(
+                    function(settings, data, dataIndex) {
+                        // Check blocks
+                        const blocks = parseInt(data[9]) || 0;
+                        return blocks > 0;
+                    }
+                );
+            } else {
+                // Remove any custom filtering for 'all' view
+                $.fn.dataTable.ext.search.pop();
+            }
+            
+            // Redraw the table with the new filter
+            table.draw();
+            
+            // Clear the custom filter after drawing
+            if (view !== 'all') {
+                $.fn.dataTable.ext.search.pop();
+            }
+        });
+    });
+
+
+    // Initialize Heatmap
+    if (document.getElementById('field-heatmap')) {
+        const heatmapContainer = document.getElementById('field-heatmap');
+        const heatmapInstance = h337.create({
+            container: heatmapContainer,
+            radius: 15,
+            maxOpacity: 0.6,
+            minOpacity: 0.1,
+            blur: 0.75,
+            gradient: {
+                '.5': 'blue',
+                '.8': 'red',
+                '.95': 'white'
+            }
+        });
+
+        {% if heatmap_data %}
+        const heatmapData = {{ heatmap_data|safe }};
+        
+        // Convert field coordinates to pixel coordinates
+        const fieldWidth = heatmapContainer.offsetWidth;
+        const fieldHeight = heatmapContainer.offsetHeight;
+        const fieldLengthMeters = 100;  // Length in meters
+        const fieldWidthMeters = 37;    // Width in meters
+        
+        function updateHeatmap(filter = 'all') {
+            let filteredData = heatmapData;
+            if (filter !== 'all') {
+                filteredData = heatmapData.filter(point => {
+                    switch(filter) {
+                        case 'throws':
+                            return point.type === 'throw_start';  // Only show throw start positions
+                        case 'goals':
+                            return point.type === 'goal';  // Only show goal locations
+                        case 'turnovers':
+                            return point.type === 'throwaway';  // Only show throwaways
+                        case 'scored_on':
+                            return point.type === 'scored_on';  // Only show scored-on events
+                        default:
+                            return true;
+                    }
+                });
+            }
+        
+            // Use different gradients based on the filter
+            if (filter === 'turnovers') {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': '#ff9999',
+                        '.8': '#ff0000'
+                    }
+                });
+            } else if (filter === 'goals') {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': '#90EE90',
+                        '.8': '#006400'
+                    }
+                });
+            } else if (filter === 'scored_on') {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': '#FFB6C1',
+                        '.8': '#8B0000'
+                    }
+                });
+            } else {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.2': 'blue',
+                        '.4': 'cyan',
+                        '.6': 'lime',
+                        '.8': 'yellow',
+                        '.95': 'red'
+                    }
+                });
+            }
+        
+            const pixelData = {
+                max: Math.max(1, filteredData.length / 10),
+                min: 0,
+                data: filteredData.map(point => ({
+                    x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
+                    y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
+                    value: 1
+                }))
+            };
+        
+            heatmapInstance.setData(pixelData);
+        }
+
+
+        // Initialize with all data
+        updateHeatmap();
+
+        // Add event listeners to heatmap filter buttons
+        document.querySelectorAll('[data-filter]').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                updateHeatmap(this.dataset.filter);
+            });
+        });
+        {% endif %}
+    }
+
+    // Enhanced Player Connections Network
+    if (document.getElementById('player-connections')) {
+        {% if connection_data %}
+        const connections = {{ connection_data|safe }};
+        const width = document.getElementById('player-connections').offsetWidth;
+        const height = 400;
+    
+        const svg = d3.select('#player-connections')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .call(d3.zoom().on("zoom", function(event) {
+                g.attr("transform", event.transform);
+            }));
+    
+        // Create a group for all elements to enable zooming
+        const g = svg.append("g");
+    
+        // Create force simulation
+        const simulation = d3.forceSimulation(connections.nodes)
+            .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-400)) // repusion strength
+            .force('center', d3.forceCenter(width / 2, height / 2));
+    
+        // Draw links
+        const link = g.append('g')
+            .selectAll('line')
+            .data(connections.links)
+            .enter().append('line')
+            .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
+            .attr('stroke', '#999')
+            .attr('stroke-opacity', 0.6);
+    
+        // Draw nodes
+        const node = g.append('g')
+            .selectAll('circle')
+            .data(connections.nodes)
+            .enter().append('circle')
+            .attr('r', 25)  // increase size here
+            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
+                             (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+        
+        // Create custom tooltips instead of using the default title attribute
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "d3-tooltip")
+            .style("position", "absolute")
+            .style("background", "rgba(0,0,0,0.7)")
+            .style("color", "white")
+            .style("padding", "8px")
+            .style("border-radius", "4px")
+            .style("font-size", "12px")
+            .style("pointer-events", "none")
+            .style("opacity", 0)
+            .style("z-index", 1000);
+        
+        // Add tooltip behavior
+        node.on("mouseover", function(event, d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+        
+        // Add tooltips for links to show connection strength
+        link.on("mouseover", function(event, d) {
+                const source = connections.nodes.find(n => n.id === d.source.id);
+                const target = connections.nodes.find(n => n.id === d.target.id);
+                
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+        
+        // Add labels - use jersey numbers instead of initials
+        const label = g.append('g')
+            .selectAll('text')
+            .data(connections.nodes)
+            .enter().append('text')
+            .text(d => d.jersey_number || '?')  // Use jersey number as the label
+            .attr('font-size', 14)  // node font size
+            .attr('text-anchor', 'middle')  // Center the text
+            .attr('dy', 4)  // Slight vertical adjustment
+            .attr('fill', 'white');
+
+
+        // Update positions on tick
+        simulation.on('tick', () => {
+            link
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+        
+            node
+                .attr('cx', d => d.x)
+                .attr('cy', d => d.y);
+        
+            label
+                .attr('x', d => d.x)  // Center the text horizontally
+                .attr('y', d => d.y); // Center the text vertically
+        });
+
+
+        // Add reset zoom button
+        svg.append("rect")
+            .attr("x", 10)
+            .attr("y", 10)
+            .attr("width", 80)
+            .attr("height", 30)
+            .attr("rx", 5)
+            .attr("fill", "rgba(255,255,255,0.7)")
+            .attr("stroke", "#999");
+            
+        svg.append("text")
+            .attr("x", 50)
+            .attr("y", 30)
+            .attr("text-anchor", "middle")
+            .text("Reset Zoom")
+            .style("font-size", "12px")
+            .style("cursor", "pointer")
+            .on("click", function() {
+                svg.transition().duration(750).call(
+                    d3.zoom().transform,
+                    d3.zoomIdentity
+                );
+            });
+    
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+    
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+    
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    
+        // Add connection strength filter functionality
+        document.querySelectorAll('[data-strength]').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                const strength = this.dataset.strength;
+                
+                link.style('display', d => {
+                    if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
+                    if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
+                    return 'block';
+                });
+            });
+        });
+        {% endif %}
+    }
+
+
+    // Add window resize handler
+    window.addEventListener('resize', debounce(function() {
+        // Redraw visualizations on window resize
+        if (typeof heatmapInstance !== 'undefined') {
+            updateHeatmap();
+        }
+        if (typeof simulation !== 'undefined') {
+            const width = document.getElementById('player-connections').offsetWidth;
+            simulation.force('center', d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.3).restart();
+        }
+    }, 250));
+
+    // Debounce function
     function debounce(func, wait) {
         let timeout;
         return function() {
@@ -602,253 +995,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }, wait);
         };
     }
-
-    // --- ASYNCHRONOUS DATA LOADING FUNCTIONS ---
-
-    // Load heatmap data asynchronously
-    function loadHeatmapData() {
-        const heatmapContainer = document.getElementById('field-heatmap');
-        if (!heatmapContainer) return;
-
-        // Show loading indicator
-        heatmapContainer.innerHTML = '<div class="loading-overlay"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-
-        fetch("{{ url_for('stats_dashboard.api_heatmap_data') }}")
-            .then(response => response.json())
-            .then(data => {
-                // Clear loading indicator
-                heatmapContainer.innerHTML = '';
-                
-                // Add endzone elements back
-                const endzoneLeft = document.createElement('div');
-                endzoneLeft.className = 'endzone endzone-left';
-                heatmapContainer.appendChild(endzoneLeft);
-                
-                const endzoneRight = document.createElement('div');
-                endzoneRight.className = 'endzone endzone-right';
-                heatmapContainer.appendChild(endzoneRight);
-
-                if (!data || data.length === 0) {
-                    heatmapContainer.innerHTML += '<div class="alert alert-info m-3">No heatmap data available.</div>';
-                    return;
-                }
-
-                // Initialize heatmap
-                const heatmapInstance = h337.create({
-                    container: heatmapContainer,
-                    radius: 15,
-                    maxOpacity: 0.6,
-                    minOpacity: 0.1,
-                    blur: 0.75
-                });
-
-                // Convert field coordinates to pixel coordinates
-                const fieldWidth = heatmapContainer.offsetWidth;
-                const fieldHeight = heatmapContainer.offsetHeight;
-                const fieldLengthMeters = 100;
-                const fieldWidthMeters = 37;
-
-                function updateHeatmap(filter = 'all') {
-                    let filteredData = data;
-                    if (filter !== 'all') {
-                        filteredData = data.filter(point => point.type === filter);
-                    }
-
-                    const pixelData = {
-                        max: Math.max(1, filteredData.length / 10),
-                        min: 0,
-                        data: filteredData.map(point => ({
-                            x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
-                            y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                            value: 1
-                        }))
-                    };
-                    heatmapInstance.setData(pixelData);
-                }
-
-                // Initialize with all data
-                updateHeatmap();
-
-                // Add event listeners to heatmap filter buttons
-                document.querySelectorAll('#field-heatmap [data-filter]').forEach(button => {
-                    button.addEventListener('click', function() {
-                        document.querySelectorAll('#field-heatmap [data-filter]').forEach(btn => btn.classList.remove('active'));
-                        this.classList.add('active');
-                        updateHeatmap(this.dataset.filter);
-                    });
-                });
-            })
-            .catch(error => {
-                console.error('Error loading heatmap data:', error);
-                heatmapContainer.innerHTML = '<div class="alert alert-warning m-3">Failed to load heatmap data.</div>';
-            });
-    }
-
-    // Load connection data asynchronously
-    function loadConnectionData() {
-        const connectionContainer = document.getElementById('player-connections');
-        if (!connectionContainer) return;
-
-        // Show loading indicator
-        connectionContainer.innerHTML = '<div class="loading-overlay"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-
-        fetch("{{ url_for('stats_dashboard.api_connection_data') }}")
-            .then(response => response.json())
-            .then(data => {
-                // Clear loading indicator
-                connectionContainer.innerHTML = '';
-
-                if (!data || data.nodes.length === 0) {
-                    connectionContainer.innerHTML = '<div class="alert alert-info m-3">No connection data available.</div>';
-                    return;
-                }
-
-                // Initialize D3 network visualization
-                const width = connectionContainer.offsetWidth;
-                const height = 400;
-
-                const svg = d3.select('#player-connections')
-                    .append('svg')
-                    .attr('width', width)
-                    .attr('height', height)
-                    .call(d3.zoom().on("zoom", event => g.attr("transform", event.transform)));
-
-                const g = svg.append("g");
-
-                const simulation = d3.forceSimulation(data.nodes)
-                    .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
-                    .force('charge', d3.forceManyBody().strength(-400))
-                    .force('center', d3.forceCenter(width / 2, height / 2));
-
-                const link = g.append('g')
-                    .selectAll('line')
-                    .data(data.links)
-                    .enter().append('line')
-                    .attr('stroke-width', d => Math.sqrt(d.value) * 2)
-                    .attr('stroke', '#999')
-                    .attr('stroke-opacity', 0.6);
-
-                const node = g.append('g')
-                    .selectAll('circle')
-                    .data(data.nodes)
-                    .enter().append('circle')
-                    .attr('r', 25)
-                    .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
-                    .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
-
-                const label = g.append('g')
-                    .selectAll('text')
-                    .data(data.nodes)
-                    .enter().append('text')
-                    .text(d => d.jersey_number || '?')
-                    .attr('font-size', 14)
-                    .attr('text-anchor', 'middle')
-                    .attr('dy', 4)
-                    .attr('fill', 'white');
-
-                simulation.on('tick', () => {
-                    link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-                        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-                    node.attr('cx', d => d.x).attr('cy', d => d.y);
-                    label.attr('x', d => d.x).attr('y', d => d.y);
-                });
-
-                function dragstarted(event, d) {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    d.fx = d.x; d.fy = d.y;
-                }
-                function dragged(event, d) {
-                    d.fx = event.x; d.fy = event.y;
-                }
-                function dragended(event, d) {
-                    if (!event.active) simulation.alphaTarget(0);
-                    d.fx = null; d.fy = null;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading connection data:', error);
-                connectionContainer.innerHTML = '<div class="alert alert-warning m-3">Failed to load connection data.</div>';
-            });
-    }
-
-    // --- INITIALIZATION ---
-
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Initialize DataTable
-    const playerStatsTable = $('#player-stats-table').DataTable({
-        pageLength: 25,
-        order: [[14, "desc"]], // Sort by PER by default
-        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-             "<'row'<'col-sm-12'tr>>" +
-             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-        language: { search: "Search players:", lengthMenu: "Show _MENU_ players" },
-        scrollX: true,
-        scrollY: "500px",
-        scrollCollapse: true,
-        paging: true,
-        fixedColumns: { left: 1 },
-        columnDefs: [{
-            targets: [10], // Completion rate column
-            render: function(data, type, row) {
-                if (type === 'sort') {
-                    const match = data.match(/\((.*?)%\)/);
-                    return match ? parseFloat(match[1]) : 0;
-                }
-                return data;
-            }
-        }],
-        responsive: true
-    });
-
-    // Add responsive behavior for DataTable
-    $(window).on('resize', debounce(() => playerStatsTable.columns.adjust().draw(), 150));
-
-    // Add filtering functionality for the player stats table
-    document.querySelectorAll('.stats-filter-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            document.querySelectorAll('.stats-filter-btn').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            const view = this.dataset.view;
-            const table = $('#player-stats-table').DataTable();
-            
-            // Clear any existing custom search functions
-            $.fn.dataTable.ext.search.pop();
-            
-            if (view === 'offense') {
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        const goals = parseInt(data[5]) || 0;
-                        const assists = parseInt(data[6]) || 0;
-                        const hockey = parseInt(data[7]) || 0;
-                        const completions = parseInt(data[10].split('(')[0].trim()) || 0;
-                        return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
-                    }
-                );
-            } else if (view === 'defense') {
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        const blocks = parseInt(data[9]) || 0;
-                        return blocks > 0;
-                    }
-                );
-            }
-            
-            table.draw();
-        });
-    });
-
-    // Load data asynchronously after a short delay to improve perceived performance
-    setTimeout(() => {
-        loadHeatmapData();
-        loadConnectionData();
-    }, 200);
 });
+
 </script>
 {% endblock %}
 
