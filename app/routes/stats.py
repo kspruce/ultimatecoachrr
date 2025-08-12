@@ -1415,6 +1415,40 @@ def player_stats(player_id):
     # Get tournaments for filter
     tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
 
+    # Calculate per-point metrics for radar charts
+    if stats['o_line_points_played'] > 0:
+        o_line_points = stats['o_line_points_played']
+        stats['goals_per_point'] = stats['goals'] / o_line_points
+        stats['assists_per_point'] = stats['assists'] / o_line_points
+        stats['hockey_assists_per_point'] = stats['hockey_assists'] / o_line_points
+        stats['throws_per_point'] = stats['throws'] / o_line_points
+        stats['catches_per_point'] = stats['catches'] / o_line_points
+        stats['hucks_per_point'] = stats['hucks'] / o_line_points
+    else:
+        stats['goals_per_point'] = 0
+        stats['assists_per_point'] = 0
+        stats['hockey_assists_per_point'] = 0
+        stats['throws_per_point'] = 0
+        stats['catches_per_point'] = 0
+        stats['hucks_per_point'] = 0
+    
+    # Calculate defensive per-point metrics
+    if stats['d_line_points_played'] > 0:
+        d_line_points = stats['d_line_points_played']
+        stats['blocks_per_point'] = stats['blocks'] / d_line_points
+        stats['stalls_per_point'] = stats.get('stalls', 0) / d_line_points
+        stats['shutdowns_per_point'] = stats.get('shutdowns', 0) / d_line_points
+        stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / d_line_points
+        stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / d_line_points
+    else:
+        stats['blocks_per_point'] = 0
+        stats['stalls_per_point'] = 0
+        stats['shutdowns_per_point'] = 0
+        stats['turnovers_forced_per_point'] = 0
+        stats['d_line_plus_minus_per_point'] = 0
+
+
+
     return render_template(
         'stats/player_stats.html',
         player=player,

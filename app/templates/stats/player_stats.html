@@ -1076,28 +1076,25 @@ function createRadarCharts() {
     };
     
     try {
-        // Calculate derived metrics
-        const oLinePoints = Math.max(1, stats.o_line_points_played); // Avoid division by zero
-        const dLinePoints = Math.max(1, stats.d_line_points_played); // Avoid division by zero
-        
-        // Calculate per-point statistics for offensive stats
+        // Use pre-calculated per-point statistics from Python
         const perPointOffensive = {
-            assists: stats.assists / oLinePoints,
-            hockey_assists: stats.hockey_assists / oLinePoints,
-            goals: stats.goals / oLinePoints,
-            hucks: stats.hucks / oLinePoints,
-            throws: stats.throws / oLinePoints,
-            catches: stats.catches / oLinePoints
+            assists: {{ stats.assists_per_point|default(0) }},
+            hockey_assists: {{ stats.hockey_assists_per_point|default(0) }},
+            goals: {{ stats.goals_per_point|default(0) }},
+            hucks: {{ stats.hucks_per_point|default(0) }},
+            throws: {{ stats.throws_per_point|default(0) }},
+            catches: {{ stats.catches_per_point|default(0) }}
         };
         
-        // Calculate per-point statistics for defensive stats
+        // Use pre-calculated per-point statistics from Python
         const perPointDefensive = {
-            blocks: stats.blocks / dLinePoints,
-            stalls: stats.stalls / dLinePoints,
-            shutdowns: stats.shutdowns / dLinePoints,
-            turnovers_forced: (stats.blocks + stats.stalls) / dLinePoints,
-            plus_minus: (stats.d_line_plus_minus + 10) / dLinePoints // Adjust for negative values
+            blocks: {{ stats.blocks_per_point|default(0) }},
+            stalls: {{ stats.stalls_per_point|default(0) }},
+            shutdowns: {{ stats.shutdowns_per_point|default(0) }},
+            turnovers_forced: {{ stats.turnovers_forced_per_point|default(0) }},
+            plus_minus: {{ stats.d_line_plus_minus_per_point|default(0) }}
         };
+
         
         console.log('Per-point offensive stats:', perPointOffensive);
         console.log('Per-point defensive stats:', perPointDefensive);
@@ -1189,14 +1186,15 @@ function createRadarCharts() {
                                 if (datasetLabel === 'Player Stats') {
                                     const originalValues = [
                                         stats.completion_rate.toFixed(1) + '%',
-                                        perPointOffensive.assists.toFixed(2) + ' assists/point',
-                                        perPointOffensive.hockey_assists.toFixed(2) + ' hockey assists/point',
-                                        perPointOffensive.goals.toFixed(2) + ' goals/point',
+                                        '{{ stats.assists_per_point|default(0)|round(2) }}' + ' assists/point',
+                                        '{{ stats.hockey_assists_per_point|default(0)|round(2) }}' + ' hockey assists/point',
+                                        '{{ stats.goals_per_point|default(0)|round(2) }}' + ' goals/point',
                                         stats.avg_throw_distance.toFixed(1) + 'm (max 70m)',
-                                        perPointOffensive.hucks.toFixed(2) + ' hucks/point',
-                                        perPointOffensive.throws.toFixed(1) + ' throws/point',
+                                        '{{ stats.hucks_per_point|default(0)|round(2) }}' + ' hucks/point',
+                                        '{{ stats.throws_per_point|default(0)|round(1) }}' + ' throws/point',
                                         stats.catch_rate.toFixed(1) + '%'
                                     ];
+
                                     return datasetLabel + ': ' + originalValues[context.dataIndex];
                                 } else {
                                     const teamValues = [
@@ -1288,11 +1286,11 @@ function createRadarCharts() {
                                 
                                 if (datasetLabel === 'Player Stats') {
                                     const originalValues = [
-                                        perPointDefensive.blocks.toFixed(2) + ' blocks/point',
-                                        perPointDefensive.plus_minus.toFixed(2) + ' +/-/point',
-                                        perPointDefensive.stalls.toFixed(2) + ' stalls/point',
-                                        perPointDefensive.shutdowns.toFixed(2) + ' shutdowns/point',
-                                        perPointDefensive.turnovers_forced.toFixed(2) + ' turnovers forced/point'
+                                        '{{ stats.blocks_per_point|default(0)|round(2) }}' + ' blocks/point',
+                                        '{{ stats.d_line_plus_minus_per_point|default(0)|round(2) }}' + ' +/-/point',
+                                        '{{ stats.stalls_per_point|default(0)|round(2) }}' + ' stalls/point',
+                                        '{{ stats.shutdowns_per_point|default(0)|round(2) }}' + ' shutdowns/point',
+                                        '{{ stats.turnovers_forced_per_point|default(0)|round(2) }}' + ' turnovers forced/point'
                                     ];
                                     return datasetLabel + ': ' + originalValues[context.dataIndex];
                                 } else {
