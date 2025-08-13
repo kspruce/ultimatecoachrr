@@ -1,24 +1,5 @@
 {% extends "base.html" %}
-{% block styles %}
-{{ super() }}
-<style>
-    /* Control markdown image sizing */
-    .card-body img, 
-    .card-text img {
-        max-width: 100%;
-        height: auto;
-        display: block;
-        margin: 1rem auto;
-    }
-    
-    /* Optional: Add a subtle border to images */
-    .card-body img, 
-    .card-text img {
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-</style>
-{% endblock %}
+
 {% block title %}{{ session.title }} - Session Details{% endblock %}
 
 {% block content %}
@@ -308,6 +289,21 @@
     .card-header {
         background-color: rgba(0, 0, 0, 0.03);
         border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    /* Control markdown image sizing */
+    .card-body img, 
+    .card-text img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1rem auto;
+    }
+    
+    /* Optional: Add a subtle border to images */
+    .card-body img, 
+    .card-text img {
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
     /* Mobile responsiveness */
