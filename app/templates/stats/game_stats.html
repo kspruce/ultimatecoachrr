@@ -410,36 +410,109 @@ function initializeHeatmap() {
             }
         });
         
-        // Field heatmap
-        const heatmapContainer = document.getElementById('field-heatmap');
-        const heatmapInstance = h337.create({
-            container: heatmapContainer,
-            radius: 20,
-            maxOpacity: 0.8,
-            minOpacity: 0.1,
-            blur: 0.75
-        });
-        
-        // Parse heatmap data
-        const heatmapData = {{ heatmap_data|safe }};
-        
-        // Convert field coordinates to pixel coordinates
-        const fieldWidth = heatmapContainer.offsetWidth;
-        const fieldHeight = heatmapContainer.offsetHeight;
-        const fieldLengthMeters = 100;  // Length in meters
-        const fieldWidthMeters = 37;    // Width in meters
-        
-        const pixelData = {
-            max: 10,
-            min: 0,
-            data: heatmapData.map(point => ({
-                x: (point.x / fieldLengthMeters) * fieldWidth,
-                y: (point.y / fieldWidthMeters) * fieldHeight,
-                value: point.value
-            }))
-        };
-        
-        heatmapInstance.setData(pixelData);
+        // Add these functions for heatmap filtering
+        function createHeatmap(data) {
+            const heatmapContainer = document.getElementById('field-heatmap');
+            const heatmapInstance = h337.create({
+                container: heatmapContainer,
+                radius: 20,
+                maxOpacity: 0.8,
+                minOpacity: 0.1,
+                blur: 0.75
+            });
+            
+            // Store the original data for filtering
+            heatmapInstance.originalData = data;
+            
+            // Convert field coordinates to pixel coordinates
+            const fieldWidth = heatmapContainer.offsetWidth;
+            const fieldHeight = heatmapContainer.offsetHeight;
+            const fieldLengthMeters = 100;  // Length in meters
+            const fieldWidthMeters = 37;    // Width in meters
+            
+            const pixelData = {
+                max: 10,
+                min: 0,
+                data: data.map(point => ({
+                    x: (point.x / fieldLengthMeters) * fieldWidth,
+                    y: (point.y / fieldWidthMeters) * fieldHeight,
+                    value: point.value,
+                    type: point.type  // Keep the type for filtering
+                }))
+            };
+            
+            heatmapInstance.setData(pixelData);
+            return heatmapInstance;
+        }
+
+        function setupHeatmapFilters(heatmap) {
+            const filterButtons = document.querySelectorAll('[data-filter]');
+            const showTrajectoriesCheckbox = document.getElementById('showTrajectories');
+            
+            // Add click event listeners to filter buttons
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    const filterType = this.getAttribute('data-filter');
+                    filterHeatmapData(heatmap, filterType);
+                });
+            });
+            
+            // Add change event listener to trajectories checkbox
+            if (showTrajectoriesCheckbox) {
+                showTrajectoriesCheckbox.addEventListener('change', function() {
+                    toggleTrajectories(this.checked);
+                });
+            }
+        }
+
+        function filterHeatmapData(heatmap, filterType) {
+            const fieldWidth = heatmap.container.offsetWidth;
+            const fieldHeight = heatmap.container.offsetHeight;
+            const fieldLengthMeters = 100;
+            const fieldWidthMeters = 37;
+            
+            // Filter the original data based on the selected filter
+            let filteredData;
+            if (filterType === 'all') {
+                filteredData = heatmap.originalData;
+            } else {
+                filteredData = heatmap.originalData.filter(point => {
+                    if (filterType === 'throws') return point.type === 'throw_start';
+                    if (filterType === 'catches') return point.type === 'catch';
+                    if (filterType === 'turnovers') return point.type === 'throwaway' || point.type === 'drop';
+                    return true;
+                });
+            }
+            
+            // Convert to pixel coordinates
+            const pixelData = {
+                max: 10,
+                min: 0,
+                data: filteredData.map(point => ({
+                    x: (point.x / fieldLengthMeters) * fieldWidth,
+                    y: (point.y / fieldWidthMeters) * fieldHeight,
+                    value: point.value,
+                    type: point.type
+                }))
+            };
+            
+            // Update the heatmap
+            heatmap.setData(pixelData);
+        }
+
+        function toggleTrajectories(show) {
+            // Placeholder for trajectory visualization
+            console.log('Toggle trajectories:', show);
+            // This would need to be implemented based on your data structure
+        }
+
+        // Call initializeHeatmap when the page loads
+        initializeHeatmap();
         
         // Player connections network
         const connections = {{ connections|safe }};
@@ -540,6 +613,9 @@ function initializeHeatmap() {
         });
 
     });
+
+
+
 </script>
 {% endblock %}
 
