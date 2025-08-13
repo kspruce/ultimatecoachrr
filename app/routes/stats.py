@@ -1486,8 +1486,8 @@ def game_stats(game_id):
         heatmap_data=json.dumps(heatmap_data),
         connections=json.dumps(connection_data),
         calculate_impact_score=calculate_impact_score,
-        is_admin=is_admin(current_user),
-        is_coach=is_coach(current_user)
+        is_admin=is_admin,
+        is_coach=is_coach
     )
 
 
