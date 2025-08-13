@@ -169,8 +169,23 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>Field Heatmap (WIP)</h5>
+                    <h5>Field Heatmap</h5>
                 </div>
+                
+                <!-- Improve heatmap controls -->
+                <div class="heatmap-controls mb-3">
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
+                        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
+                        <button class="btn btn-outline-primary" data-filter="catches">Catches</button>
+                        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
+                    </div>
+                    <div class="form-check form-switch ms-3">
+                        <input class="form-check-input" type="checkbox" id="showTrajectories">
+                        <label class="form-check-label" for="showTrajectories">Show Trajectories</label>
+                    </div>
+                </div>
+                
                 <div class="card-body">
                     <div id="field-heatmap">
                         <div class="endzone endzone-left"></div>
@@ -185,7 +200,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5>Player Connections (WIP)</h5>
+                    <h5>Player Connections</h5>
                 </div>
                 <div class="card-body">
                     <div id="player-connections"></div>
@@ -263,19 +278,7 @@
 </div>
 
 
-<!-- Improve heatmap controls -->
-<div class="heatmap-controls mb-3">
-    <div class="btn-group">
-        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
-        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
-        <button class="btn btn-outline-primary" data-filter="catches">Catches</button>
-        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
-    </div>
-    <div class="form-check form-switch ms-3">
-        <input class="form-check-input" type="checkbox" id="showTrajectories">
-        <label class="form-check-label" for="showTrajectories">Show Trajectories</label>
-    </div>
-</div>
+
 
 <!-- Add error states -->
 <script>
