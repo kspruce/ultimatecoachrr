@@ -49,13 +49,320 @@ class UltimateCoachBot:
             # Start background tasks
             if not self.sync_task or not self.sync_task.is_running():
                 self.sync_calendar.start()
+
         
+                
+        @self.bot.event
+        async def on_reaction_add(reaction, user):
+            """Handle reactions to event messages for RSVPs"""
+            # Ignore bot's own reactions
+            if user.bot:
+                return
+            
+            # Check if this is a reaction to an event message
+            if not hasattr(self, 'event_messages') or reaction.message.id not in self.event_messages:
+                return
+            
+            # Get the event info
+            event_info = self.event_messages[reaction.message.id]
+            event_type = event_info['type']
+            event_id = event_info['id']
+            
+            # Map emoji to RSVP status
+            emoji_to_status = {
+                "✅": "yes",
+                "❌": "no",
+                "❓": "maybe"
+            }
+            
+            # Check if this is a valid RSVP emoji
+            emoji = str(reaction.emoji)
+            if emoji not in emoji_to_status:
+                return
+            
+            status = emoji_to_status[emoji]
+            
+            # Process the RSVP
+            try:
+                with self.app.app_context():
+                    from app.models.user import User
+                    from app.models.session import SessionPlan, SessionRSVP
+                    from app.models.tournament import Tournament, TournamentRSVP
+                    from app import db
+                    
+                    # Find the Discord user's linked account
+                    discord_id = str(user.id)
+                    db_user = User.query.filter_by(discord_id=discord_id).first()
+                    
+                    if not db_user:
+                        # Send a DM to the user if their account isn't linked
+                        try:
+                            await user.send("Your Discord account is not linked to an Ultimate Coach account. "
+                                           f"Please use `!uc link your@email.com` to link your account.")
+                        except:
+                            # If DM fails, just continue
+                            pass
+                        return
+                    
+                    if not db_user.player:
+                        # Send a DM if they don't have a player profile
+                        try:
+                            await user.send("Your account is not linked to a player profile. "
+                                           "Please link your account to a player profile in the Ultimate Coach app.")
+                        except:
+                            pass
+                        return
+                    
+                    # Process the RSVP based on event type
+                    if event_type == 'session':
+                        event = SessionPlan.query.get(event_id)
+                        if not event:
+                            return
+                        
+                        # Check if RSVP already exists
+                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=db_user.player.id).first()
+                        
+                        if rsvp:
+                            rsvp.status = status
+                            db.session.commit()
+                            response_msg = f"Updated your RSVP for {event.title} to '{status}'."
+                        else:
+                            new_rsvp = SessionRSVP(
+                                session_id=event_id,
+                                player_id=db_user.player.id,
+                                status=status
+                            )
+                            db.session.add(new_rsvp)
+                            db.session.commit()
+                            response_msg = f"You've RSVP'd '{status}' to {event.title}."
+                    
+                    elif event_type == 'tournament':
+                        event = Tournament.query.get(event_id)
+                        if not event:
+                            return
+                        
+                        # Check if RSVP already exists
+                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=db_user.player.id).first()
+                        
+                        if rsvp:
+                            rsvp.status = status
+                            db.session.commit()
+                            response_msg = f"Updated your RSVP for {event.name} to '{status}'."
+                        else:
+                            new_rsvp = TournamentRSVP(
+                                tournament_id=event_id,
+                                player_id=db_user.player.id,
+                                status=status
+                            )
+                            db.session.add(new_rsvp)
+                            db.session.commit()
+                            response_msg = f"You've RSVP'd '{status}' to {event.name}."
+                    
+                    else:
+                        # Handle other event types if needed
+                        return
+                    
+                    # Send a confirmation DM to the user
+                    try:
+                        await user.send(response_msg)
+                    except:
+                        # If DM fails, just continue
+                        pass
+            
+            except Exception as e:
+                logger.error(f"Error processing reaction RSVP: {str(e)}")
+                # Try to notify the user of the error
+                try:
+                    await user.send("An error occurred while processing your RSVP. Please try again later.")
+                except:
+                    pass
+
+        @self.bot.event
+        async def on_reaction_remove(reaction, user):
+            """Handle reaction removals to cancel RSVPs"""
+            # Ignore bot's own reactions
+            if user.bot:
+                return
+            
+            # Check if this is a reaction to an event message
+            if not hasattr(self, 'event_messages') or reaction.message.id not in self.event_messages:
+                return
+            
+            # Get the event info
+            event_info = self.event_messages[reaction.message.id]
+            event_type = event_info['type']
+            event_id = event_info['id']
+            
+            # Map emoji to RSVP status
+            emoji_to_status = {
+                "✅": "yes",
+                "❌": "no",
+                "❓": "maybe"
+            }
+            
+            # Check if this is a valid RSVP emoji
+            emoji = str(reaction.emoji)
+            if emoji not in emoji_to_status:
+                return
+            
+            # Process the RSVP removal
+            try:
+                with self.app.app_context():
+                    from app.models.user import User
+                    from app.models.session import SessionPlan, SessionRSVP
+                    from app.models.tournament import Tournament, TournamentRSVP
+                    from app import db
+                    
+                    # Find the Discord user's linked account
+                    discord_id = str(user.id)
+                    db_user = User.query.filter_by(discord_id=discord_id).first()
+                    
+                    if not db_user or not db_user.player:
+                        return  # User not properly linked, nothing to cancel
+                    
+                    # Check if the user has other reactions on this message
+                    # If they do, we don't want to cancel their RSVP, they're just changing their response
+                    for react_emoji in emoji_to_status.keys():
+                        if react_emoji == emoji:
+                            continue  # Skip the emoji that was just removed
+                        
+                        # Check if user has this reaction on the message
+                        for reaction_check in reaction.message.reactions:
+                            if str(reaction_check.emoji) == react_emoji:
+                                async for reaction_user in reaction_check.users():
+                                    if reaction_user.id == user.id:
+                                        return  # User has another reaction, they're just changing their response
+                    
+                    # If we get here, the user has removed all their reactions, so cancel their RSVP
+                    if event_type == 'session':
+                        event = SessionPlan.query.get(event_id)
+                        if not event:
+                            return
+                        
+                        # Find and delete the RSVP
+                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=db_user.player.id).first()
+                        if rsvp:
+                            db.session.delete(rsvp)
+                            db.session.commit()
+                            response_msg = f"Your RSVP for {event.title} has been cancelled."
+                            
+                            # Send a confirmation DM to the user
+                            try:
+                                await user.send(response_msg)
+                            except:
+                                # If DM fails, just continue
+                                pass
+                    
+                    elif event_type == 'tournament':
+                        event = Tournament.query.get(event_id)
+                        if not event:
+                            return
+                        
+                        # Find and delete the RSVP
+                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=db_user.player.id).first()
+                        if rsvp:
+                            db.session.delete(rsvp)
+                            db.session.commit()
+                            response_msg = f"Your RSVP for {event.name} has been cancelled."
+                            
+                            # Send a confirmation DM to the user
+                            try:
+                                await user.send(response_msg)
+                            except:
+                                # If DM fails, just continue
+                                pass
+                    
+                    # Handle other event types if needed
+            
+            except Exception as e:
+                logger.error(f"Error processing reaction removal: {str(e)}")
+                # Try to notify the user of the error
+                try:
+                    await user.send("An error occurred while processing your RSVP cancellation. Please try again later.")
+                except:
+                    pass
+
+
+        @self.bot.command(name='attendees')
+        async def show_attendees(ctx, event_type, event_id: int):
+            """Show who's attending an event"""
+            with self.app.app_context():
+                try:
+                    if event_type.lower() == 'session':
+                        from app.models.session import SessionPlan, SessionRSVP
+                        from app.models.player import Player
+                        
+                        event = SessionPlan.query.get(event_id)
+                        if not event:
+                            await ctx.send(f"Session with ID {event_id} not found.")
+                            return
+                        
+                        # Get RSVPs
+                        rsvps = SessionRSVP.query.filter_by(session_id=event_id).all()
+                        
+                        # Create embed
+                        embed = discord.Embed(
+                            title=f"Attendees for {event.title}",
+                            color=discord.Color.blue()
+                        )
+                        
+                        # Group by status
+                        yes_list = []
+                        no_list = []
+                        maybe_list = []
+                        
+                        for rsvp in rsvps:
+                            player = Player.query.get(rsvp.player_id)
+                            if not player:
+                                continue
+                            
+                            name = player.name
+                            
+                            if rsvp.status == 'yes':
+                                yes_list.append(name)
+                            elif rsvp.status == 'no':
+                                no_list.append(name)
+                            elif rsvp.status == 'maybe':
+                                maybe_list.append(name)
+                        
+                        # Add fields
+                        embed.add_field(
+                            name=f"✅ Yes ({len(yes_list)})",
+                            value="\n".join(yes_list) if yes_list else "None",
+                            inline=False
+                        )
+                        
+                        embed.add_field(
+                            name=f"❓ Maybe ({len(maybe_list)})",
+                            value="\n".join(maybe_list) if maybe_list else "None",
+                            inline=False
+                        )
+                        
+                        embed.add_field(
+                            name=f"❌ No ({len(no_list)})",
+                            value="\n".join(no_list) if no_list else "None",
+                            inline=False
+                        )
+                        
+                        await ctx.send(embed=embed)
+                    
+                    elif event_type.lower() == 'tournament':
+                        # Similar implementation for tournaments
+                        pass
+                    
+                    else:
+                        await ctx.send(f"Invalid event type: {event_type}. Valid types are: session, tournament")
+                
+                except Exception as e:
+                    logger.error(f"Error showing attendees: {str(e)}")
+                    await ctx.send("An error occurred while retrieving attendees. Please try again later.")
+
+
         # Register commands
         @self.bot.command(name='upcoming')
         async def upcoming_events(ctx):
             """Show upcoming events"""
             with self.app.app_context():
-                from app.models.event import Event
                 from app.models.session import SessionPlan, SessionRSVP
                 from app.models.tournament import Tournament
                 from app.models.game import Game
@@ -74,46 +381,125 @@ class UltimateCoachBot:
                     await ctx.send("No upcoming events in the next 7 days.")
                     return
                 
-                embed = discord.Embed(
+                # Create embeds for each event type to allow individual reactions
+                all_events = []
+                
+                # Process sessions
+                for session in sessions:
+                    embed = discord.Embed(
+                        title=f"Training: {session.title}",
+                        description="React to RSVP:\n✅ Yes | ❌ No | ❓ Maybe",
+                        color=discord.Color.blue()
+                    )
+                    
+                    # Format date and time
+                    date_str = session.date.strftime('%Y-%m-%d')
+                    time_str = ""
+                    if hasattr(session, 'start_time') and session.start_time:
+                        time_str = f" at {session.start_time.strftime('%H:%M')}"
+                    
+                    # Add session details
+                    embed.add_field(name="Date", value=f"{date_str}{time_str}", inline=True)
+                    if session.location:
+                        embed.add_field(name="Location", value=session.location, inline=True)
+                    
+                    # Add session type if available
+                    if hasattr(session, 'session_type_display') and session.session_type_display:
+                        embed.add_field(name="Type", value=session.session_type_display, inline=True)
+                    
+                    # Add footer with event ID for the reaction handler
+                    embed.set_footer(text=f"Session ID: {session.id} | Type !uc help for more commands")
+                    
+                    # Store the event info for later
+                    all_events.append({
+                        'type': 'session',
+                        'id': session.id,
+                        'embed': embed
+                    })
+                
+                # Process tournaments
+                for tournament in tournaments:
+                    embed = discord.Embed(
+                        title=f"Tournament: {tournament.name}",
+                        description="React to RSVP:\n✅ Yes | ❌ No | ❓ Maybe",
+                        color=discord.Color.gold()
+                    )
+                    
+                    # Format date range
+                    date_str = tournament.start_date.strftime('%Y-%m-%d')
+                    if tournament.end_date and tournament.end_date != tournament.start_date:
+                        date_str += f" to {tournament.end_date.strftime('%Y-%m-%d')}"
+                    
+                    # Add tournament details
+                    embed.add_field(name="Date", value=date_str, inline=True)
+                    if tournament.location:
+                        embed.add_field(name="Location", value=tournament.location, inline=True)
+                    
+                    # Add footer with event ID for the reaction handler
+                    embed.set_footer(text=f"Tournament ID: {tournament.id} | Type !uc help for more commands")
+                    
+                    # Store the event info for later
+                    all_events.append({
+                        'type': 'tournament',
+                        'id': tournament.id,
+                        'embed': embed
+                    })
+                
+                # Process games (optional, if you want to allow RSVPs for games)
+                for game in games:
+                    opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
+                    
+                    embed = discord.Embed(
+                        title=f"Game: vs {opponent}",
+                        description="React to RSVP:\n✅ Yes | ❌ No | ❓ Maybe",
+                        color=discord.Color.red()
+                    )
+                    
+                    # Format date and time
+                    date_str = game.date.strftime('%Y-%m-%d %H:%M')
+                    
+                    # Add game details
+                    embed.add_field(name="Date", value=date_str, inline=True)
+                    if game.location:
+                        embed.add_field(name="Location", value=game.location, inline=True)
+                    
+                    # Add footer with event ID for the reaction handler
+                    embed.set_footer(text=f"Game ID: {game.id} | Type !uc help for more commands")
+                    
+                    # Store the event info for later
+                    all_events.append({
+                        'type': 'game',
+                        'id': game.id,
+                        'embed': embed
+                    })
+                
+                # Send a summary message first
+                summary = discord.Embed(
                     title="Upcoming Events (Next 7 Days)",
+                    description=f"Found {len(all_events)} upcoming events. Check below for details and react to RSVP.",
                     color=discord.Color.blue()
                 )
+                await ctx.send(embed=summary)
                 
-                # Add sessions
-                if sessions:
-                    session_text = ""
-                    for session in sessions:
-                        session_text += f"**{session.title}** - {session.date.strftime('%Y-%m-%d %H:%M')}\n"
-                        if session.location:
-                            session_text += f"📍 {session.location}\n"
-                    embed.add_field(name="Training Sessions", value=session_text or "None", inline=False)
-                
-                # Add tournaments
-                if tournaments:
-                    tournament_text = ""
-                    for tournament in tournaments:
-                        tournament_text += f"**{tournament.name}** - {tournament.start_date.strftime('%Y-%m-%d')}"
-                        if tournament.end_date and tournament.end_date != tournament.start_date:
-                            tournament_text += f" to {tournament.end_date.strftime('%Y-%m-%d')}\n"
-                        else:
-                            tournament_text += "\n"
-                        if tournament.location:
-                            tournament_text += f"📍 {tournament.location}\n"
-                        tournament_text += "\n"
-                    embed.add_field(name="Tournaments", value=tournament_text or "None", inline=False)
-                
-                # Add games
-                if games:
-                    game_text = ""
-                    for game in games:
-                        opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
-                        game_text += f"**vs {opponent}** - {game.date.strftime('%Y-%m-%d %H:%M')}\n"
-                        if game.location:
-                            game_text += f"📍 {game.location}\n"
-                        game_text += "\n"
-                    embed.add_field(name="Games", value=game_text or "None", inline=False)
-                
-                await ctx.send(embed=embed)
+                # Send each event as a separate message with reactions
+                for event in all_events:
+                    message = await ctx.send(embed=event['embed'])
+                    
+                    # Add reaction emojis
+                    await message.add_reaction("✅")  # Yes
+                    await message.add_reaction("❌")  # No
+                    await message.add_reaction("❓")  # Maybe
+                    
+                    # Store the message ID and event info in the bot's cache
+                    # This will be used by the reaction handler
+                    if not hasattr(self, 'event_messages'):
+                        self.event_messages = {}
+                    
+                    self.event_messages[message.id] = {
+                        'type': event['type'],
+                        'id': event['id']
+                    }
+
         
         @self.bot.command(name='rsvp')
         async def rsvp_command(ctx, event_type, event_id: int, response: str):
