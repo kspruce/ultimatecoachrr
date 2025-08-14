@@ -55,16 +55,35 @@ class DiscordWebhook:
             payload["avatar_url"] = avatar_url
         
         try:
+            # Add rate limiting - wait between requests
+            import time
+            time.sleep(1)  # Wait 1 second between webhook requests
+            
             response = requests.post(
                 self.webhook_url,
                 data=json.dumps(payload),
                 headers={"Content-Type": "application/json"}
             )
+            
+            if response.status_code == 429:
+                # If rate limited, get retry_after from response and wait
+                retry_after = response.json().get('retry_after', 5)
+                logger.warning(f"Rate limited by Discord, waiting {retry_after} seconds")
+                time.sleep(retry_after)
+                
+                # Try again after waiting
+                response = requests.post(
+                    self.webhook_url,
+                    data=json.dumps(payload),
+                    headers={"Content-Type": "application/json"}
+                )
+            
             response.raise_for_status()
             return True
         except Exception as e:
             logger.error(f"Error sending Discord webhook: {str(e)}")
             return False
+
     
     def notify_new_game(self, game):
         """Send notification about a new game

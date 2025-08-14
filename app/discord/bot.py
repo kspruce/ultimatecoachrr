@@ -785,7 +785,8 @@ class UltimateCoachBot:
                                 start_time=start_time,
                                 end_time=end_time,
                                 location=location,
-                                entity_type=discord.EntityType.external
+                                entity_type=discord.EntityType.external,
+                                privacy_level=discord.PrivacyLevel.guild_only
                             )
                             logger.info(f"Created Discord event for session: {session.title}")
                         except Exception as e:
@@ -829,7 +830,8 @@ class UltimateCoachBot:
                                 start_time=start_time,
                                 end_time=end_time,
                                 location=location,
-                                entity_type=discord.EntityType.external
+                                entity_type=discord.EntityType.external,
+                                privacy_level=discord.PrivacyLevel.guild_only
                             )
                             logger.info(f"Created Discord event for tournament: {tournament.name}")
                         except Exception as e:
@@ -871,7 +873,8 @@ class UltimateCoachBot:
                                 start_time=start_time,
                                 end_time=end_time,
                                 location=location,
-                                entity_type=discord.EntityType.external
+                                entity_type=discord.EntityType.external,
+                                privacy_level=discord.PrivacyLevel.guild_only
                             )
                             logger.info(f"Created Discord event for game vs {opponent}")
                         except Exception as e:

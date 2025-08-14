@@ -52,9 +52,10 @@ def init_discord(app):
     from app.discord.notifications import notification_service
     notification_service.init_app(app)
     
-    # Register event listeners
+    # Register event listeners (only once)
     from app.discord.events import register_event_listeners
-    register_event_listeners(app)
+    with app.app_context():
+        register_event_listeners(app)
     
     # Start Discord bot
     if app.config.get('DISCORD_BOT_TOKEN'):
