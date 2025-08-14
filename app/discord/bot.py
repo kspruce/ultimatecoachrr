@@ -92,7 +92,8 @@ class UltimateCoachBot:
                 with self.app.app_context():
                     from app.models.user import User
                     from app.models.session import SessionPlan, SessionRSVP
-                    from app.models.tournament import Tournament, TournamentRSVP
+                    from app.models.tournament import Tournament
+                    from app.models.tournament_rsvp import TournamentRSVP
                     from app import db
                     
                     # Find the Discord user's linked account
@@ -223,13 +224,13 @@ class UltimateCoachBot:
                 return
 
 
-            
             # Process the RSVP removal
             try:
                 with self.app.app_context():
                     from app.models.user import User
                     from app.models.session import SessionPlan, SessionRSVP
-                    from app.models.tournament import Tournament, TournamentRSVP
+                    from app.models.tournament import Tournament
+                    from app.models.tournament_rsvp import TournamentRSVP
                     from app import db
                     
                     # Find the Discord user's linked account
@@ -241,7 +242,7 @@ class UltimateCoachBot:
                     
                     # Check if the user has other reactions on this message
                     # If they do, we don't want to cancel their RSVP, they're just changing their response
-                    for react_emoji in emoji_to_status.keys():
+                    for react_emoji in emoji_to_session_status.keys():  # Both maps have the same keys
                         if react_emoji == emoji:
                             continue  # Skip the emoji that was just removed
                         
@@ -295,11 +296,13 @@ class UltimateCoachBot:
             
             except Exception as e:
                 logger.error(f"Error processing reaction removal: {str(e)}")
+                logger.exception(e)  # This will print the full stack trace
                 # Try to notify the user of the error
                 try:
-                    await user.send("An error occurred while processing your RSVP cancellation. Please try again later.")
+                    await user.send(f"An error occurred while processing your RSVP cancellation: {str(e)}")
                 except:
                     pass
+
 
 
         @self.bot.command(name='attendees')
@@ -541,7 +544,8 @@ class UltimateCoachBot:
             with self.app.app_context():
                 from app.models.user import User
                 from app.models.session import SessionPlan, SessionRSVP
-                from app.models.tournament import Tournament, TournamentRSVP
+                from app.models.tournament import Tournament
+                from app.models.tournament_rsvp import TournamentRSVP
                 from flask_login import current_user
                 from app import db
                 
@@ -739,7 +743,8 @@ class UltimateCoachBot:
                                 description=description,
                                 start_time=start_time,
                                 end_time=end_time,
-                                location=location
+                                location=location,
+                                entity_type=discord.EntityType.external
                             )
                             logger.info(f"Created Discord event for session: {session.title}")
                         except Exception as e:
@@ -782,7 +787,8 @@ class UltimateCoachBot:
                                 description=description,
                                 start_time=start_time,
                                 end_time=end_time,
-                                location=location
+                                location=location,
+                                entity_type=discord.EntityType.external
                             )
                             logger.info(f"Created Discord event for tournament: {tournament.name}")
                         except Exception as e:
@@ -823,7 +829,8 @@ class UltimateCoachBot:
                                 description=description,
                                 start_time=start_time,
                                 end_time=end_time,
-                                location=location
+                                location=location,
+                                entity_type=discord.EntityType.external
                             )
                             logger.info(f"Created Discord event for game vs {opponent}")
                         except Exception as e:
