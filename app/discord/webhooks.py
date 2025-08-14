@@ -85,6 +85,7 @@ class DiscordWebhook:
             return False
 
     
+
     def notify_new_game(self, game):
         """Send notification about a new game
         
@@ -119,11 +120,21 @@ class DiscordWebhook:
             "timestamp": datetime.utcnow().isoformat()
         }
         
+        # Add link to view the game
+        base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+        game_url = f"{base_url}/games/{game.id}/detail"
+        embed["fields"].append({
+            "name": "View Game",
+            "value": f"[Click here for details]({game_url})",
+            "inline": False
+        })
+        
         return self.send_message(
             content="@everyone A new game has been added to the calendar!",
             embeds=[embed],
             username="Ultimate Coach"
         )
+
     
     def notify_upcoming_game(self, game, days_until):
         """Send notification about an upcoming game
@@ -177,45 +188,56 @@ class DiscordWebhook:
             username="Ultimate Coach"
         )
     
-    def notify_new_session(self, session):
-        """Send notification about a new training session
-        
-        Parameters:
-        -----------
-        session: Session
-            The session object
-        """
-        session_date = session.date.strftime("%Y-%m-%d %H:%M") if hasattr(session, 'date') else "TBD"
-        location = session.location if hasattr(session, 'location') else "TBD"
-        
-        embed = {
-            "title": f"New Training Session: {session.title}",
-            "description": f"A new training session has been added to the calendar!",
-            "color": 3066993,  # Green color
-            "fields": [
-                {
-                    "name": "Date",
-                    "value": session_date,
-                    "inline": True
+        def notify_new_session(self, session):
+            """Send notification about a new training session
+            
+            Parameters:
+            -----------
+            session: Session
+                The session object
+            """
+            session_date = session.date.strftime("%Y-%m-%d %H:%M") if hasattr(session, 'date') else "TBD"
+            location = session.location if hasattr(session, 'location') else "TBD"
+            
+            embed = {
+                "title": f"New Training Session: {session.title}",
+                "description": f"A new training session has been added to the calendar!",
+                "color": 3066993,  # Green color
+                "fields": [
+                    {
+                        "name": "Date",
+                        "value": session_date,
+                        "inline": True
+                    },
+                    {
+                        "name": "Location",
+                        "value": location,
+                        "inline": True
+                    }
+                ],
+                "footer": {
+                    "text": f"Session ID: {session.id}"
                 },
-                {
-                    "name": "Location",
-                    "value": location,
-                    "inline": True
-                }
-            ],
-            "footer": {
-                "text": f"Session ID: {session.id}"
-            },
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        return self.send_message(
-            content="A new training session has been added to the calendar!",
-            embeds=[embed],
-            username="Ultimate Coach"
-        )
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            # Add link to view the session
+            base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+            session_url = f"{base_url}/sessions/{session.id}/detail"
+            embed["fields"].append({
+                "name": "View Session",
+                "value": f"[Click here for details]({session_url})",
+                "inline": False
+            })
+            
+            return self.send_message(
+                content="A new training session has been added to the calendar!",
+                embeds=[embed],
+                username="Ultimate Coach"
+            )
+
     
+
     def notify_upcoming_session(self, session, days_until):
         """Send notification about an upcoming training session
         
@@ -268,12 +290,23 @@ class DiscordWebhook:
             "inline": False
         })
         
+        # Add link to view the session
+        base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+        session_url = f"{base_url}/sessions/{session.id}/detail"
+        embed["fields"].append({
+            "name": "View Session",
+            "value": f"[Click here for details]({session_url})",
+            "inline": False
+        })
+        
         return self.send_message(
             content=content,
             embeds=[embed],
             username="Ultimate Coach"
         )
+
     
+
     def notify_new_tournament(self, tournament):
         """Send notification about a new tournament
         
@@ -312,11 +345,21 @@ class DiscordWebhook:
             "timestamp": datetime.utcnow().isoformat()
         }
         
+        # Add link to view the tournament
+        base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+        tournament_url = f"{base_url}/tournaments/{tournament.id}/detail"
+        embed["fields"].append({
+            "name": "View Tournament",
+            "value": f"[Click here for details]({tournament_url})",
+            "inline": False
+        })
+        
         return self.send_message(
             content="@everyone A new tournament has been added to the calendar!",
             embeds=[embed],
             username="Ultimate Coach"
         )
+
     
     def notify_upcoming_tournament(self, tournament, days_until):
         """Send notification about an upcoming tournament
@@ -415,7 +458,7 @@ class DiscordWebhook:
         
         # Add link to view the clip
         base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
-        clip_url = f"{base_url}/clip/view/{clip.id}"
+        clip_url = f"{base_url}/clips/view/{clip.id}"  # Changed from /clip/ to /clips/
         embed["fields"].append({
             "name": "View Clip",
             "value": f"[Click here to view]({clip_url})",
