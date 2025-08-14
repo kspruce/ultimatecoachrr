@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Discord Integration Settings</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-discord me-2"></i>
+                Discord Configuration
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('discord.settings') }}">
+                {{ form.csrf_token }}
+                
+                <div class="mb-4">
+                    <h5>General Settings</h5>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="discord_enabled" name="discord_enabled" {% if discord_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="discord_enabled">Enable Discord Integration</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="discord_sync_calendar" name="discord_sync_calendar" {% if discord_sync_calendar %}checked{% endif %}>
+                        <label class="form-check-label" for="discord_sync_calendar">Sync Calendar Events to Discord</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="discord_notify_new_events" name="discord_notify_new_events" {% if discord_notify_new_events %}checked{% endif %}>
+                        <label class="form-check-label" for="discord_notify_new_events">Send Notifications for New Events</label>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="discord_notify_upcoming_events" name="discord_notify_upcoming_events" {% if discord_notify_upcoming_events %}checked{% endif %}>
+                        <label class="form-check-label" for="discord_notify_upcoming_events">Send Notifications for Upcoming Events</label>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h5>Discord Bot Settings</h5>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        You need to create a Discord bot and add it to your server. See the <a href="#" data-bs-toggle="modal" data-bs-target="#botSetupModal">setup guide</a> for instructions.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discord_bot_token" class="form-label">Bot Token</label>
+                        <input type="password" class="form-control" id="discord_bot_token" name="discord_bot_token" value="{{ discord_bot_token }}">
+                        <div class="form-text">The token for your Discord bot.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discord_guild_id" class="form-label">Guild ID</label>
+                        <input type="text" class="form-control" id="discord_guild_id" name="discord_guild_id" value="{{ discord_guild_id }}">
+                        <div class="form-text">The ID of your Discord server (guild).</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discord_calendar_channel_id" class="form-label">Calendar Channel ID</label>
+                        <input type="text" class="form-control" id="discord_calendar_channel_id" name="discord_calendar_channel_id" value="{{ discord_calendar_channel_id }}">
+                        <div class="form-text">The ID of the channel where calendar events will be posted.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discord_notification_channel_id" class="form-label">Notification Channel ID</label>
+                        <input type="text" class="form-control" id="discord_notification_channel_id" name="discord_notification_channel_id" value="{{ discord_notification_channel_id }}">
+                        <div class="form-text">The ID of the channel where notifications will be sent.</div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h5>Discord Webhook Settings</h5>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        You can use a webhook instead of or in addition to a bot. See the <a href="#" data-bs-toggle="modal" data-bs-target="#webhookSetupModal">setup guide</a> for instructions.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="discord_webhook_url" class="form-label">Webhook URL</label>
+                        <input type="password" class="form-control" id="discord_webhook_url" name="discord_webhook_url" value="{{ discord_webhook_url }}">
+                        <div class="form-text">The URL of your Discord webhook.</div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>
+                            Save Settings
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-primary me-2" id="testWebhookBtn">
+                            <i class="bi bi-send me-2"></i>
+                            Test Webhook
+                        </button>
+                        <button type="button" class="btn btn-outline-primary me-2" id="testBotBtn">
+                            <i class="bi bi-robot me-2"></i>
+                            Test Bot
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="syncCalendarBtn">
+                            <i class="bi bi-calendar-sync me-2"></i>
+                            Sync Calendar Now
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                Discord Bot Commands
+            </h5>
+        </div>
+        <div class="card-body">
+            <p>Your team members can use the following commands in Discord:</p>
+            
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>!uc upcoming</code></td>
+                        <td>Shows upcoming events for the next 7 days</td>
+                    </tr>
+                    <tr>
+                        <td><code>!uc rsvp [event_type] [event_id] [response]</code></td>
+                        <td>RSVP to an event (session, tournament)<br>Responses: yes, no, maybe<br>Example: <code>!uc rsvp session 5 yes</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>!uc link [email]</code></td>
+                        <td>Link Discord account to Ultimate Coach account<br>Example: <code>!uc link player@example.com</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>!uc help</code></td>
+                        <td>Show available commands</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bot Setup Modal -->
+<div class="modal fade" id="botSetupModal" tabindex="-1" aria-labelledby="botSetupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="botSetupModalLabel">Discord Bot Setup Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Step 1: Create a Discord Application</h5>
+                <ol>
+                    <li>Go to the <a href="https://discord.com/developers/applications" target="_blank">Discord Developer Portal</a></li>
+                    <li>Click "New Application" and give it a name (e.g., "Ultimate Coach")</li>
+                    <li>Go to the "Bot" tab and click "Add Bot"</li>
+                    <li>Under the "Privileged Gateway Intents" section, enable:
+                        <ul>
+                            <li>Presence Intent</li>
+                            <li>Server Members Intent</li>
+                            <li>Message Content Intent</li>
+                        </ul>
+                    </li>
+                    <li>Click "Reset Token" and copy the token (this is your Bot Token)</li>
+                </ol>
+                
+                <h5>Step 2: Add Bot to Your Server</h5>
+                <ol>
+                    <li>Go to the "OAuth2" tab, then "URL Generator"</li>
+                    <li>Under "Scopes", select "bot" and "applications.commands"</li>
+                    <li>Under "Bot Permissions", select:
+                        <ul>
+                            <li>Send Messages</li>
+                            <li>Embed Links</li>
+                            <li>Attach Files</li>
+                            <li>Read Message History</li>
+                            <li>Add Reactions</li>
+                            <li>Manage Events</li>
+                        </ul>
+                    </li>
+                    <li>Copy the generated URL and open it in your browser</li>
+                    <li>Select your server and authorize the bot</li>
+                </ol>
+                
+                <h5>Step 3: Get Server and Channel IDs</h5>
+                <ol>
+                    <li>In Discord, go to User Settings > Advanced and enable "Developer Mode"</li>
+                    <li>Right-click on your server icon and select "Copy ID" to get the Guild ID</li>
+                    <li>Right-click on the channels you want to use for calendar events and notifications and select "Copy ID" to get the Channel IDs</li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Webhook Setup Modal -->
+<div class="modal fade" id="webhookSetupModal" tabindex="-1" aria-labelledby="webhookSetupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="webhookSetupModalLabel">Discord Webhook Setup Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Creating a Discord Webhook</h5>
+                <ol>
+                    <li>Open Discord and go to the server where you want to add the webhook</li>
+                    <li>Go to Server Settings > Integrations > Webhooks</li>
+                    <li>Click "New Webhook"</li>
+                    <li>Give it a name (e.g., "Ultimate Coach Notifications")</li>
+                    <li>Select the channel where you want notifications to be sent</li>
+                    <li>Click "Copy Webhook URL" and paste it in the Webhook URL field above</li>
+                    <li>Click "Save Changes" in Discord</li>
+                </ol>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Webhooks are simpler to set up than bots but have fewer capabilities. They can only send messages to a specific channel and cannot respond to commands.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Test webhook button
+        document.getElementById('testWebhookBtn').addEventListener('click', function() {
+            fetch('{{ url_for("discord.test_notification") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: 'type=webhook'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Success: ' + data.message);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+            });
+        });
+        
+        // Test bot button
+        document.getElementById('testBotBtn').addEventListener('click', function() {
+            fetch('{{ url_for("discord.test_notification") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: 'type=bot'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Success: ' + data.message);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+            });
+        });
+        
+        // Sync calendar button
+        document.getElementById('syncCalendarBtn').addEventListener('click', function() {
+            fetch('{{ url_for("discord.sync_calendar") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Success: ' + data.message);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+            });
+        });
+    });
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

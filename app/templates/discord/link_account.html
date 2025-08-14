@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Link Discord Account</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-discord me-2"></i>
+                Link Your Discord Account
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Linking your Discord account allows you to use Discord commands for RSVPs and receive notifications.
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Option 1: Link via Discord Bot (Recommended)</h5>
+                    <p>Use the Discord bot command to link your account:</p>
+                    <div class="bg-light p-3 rounded mb-3">
+                        <code>!uc link {{ current_user.email }}</code>
+                    </div>
+                    <p>Send this command in any channel where the Ultimate Coach bot is present.</p>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Option 2: Enter Your Discord ID Manually</h5>
+                    <p>You can find your Discord ID by enabling Developer Mode in Discord settings, then right-clicking on your username and selecting "Copy ID".</p>
+                    
+                    <form method="POST" action="{{ url_for('discord.link_account') }}">
+                        {{ form.csrf_token }}
+                        <div class="mb-3">
+                            <label for="discord_id" class="form-label">Your Discord ID</label>
+                            <input type="text" class="form-control" id="discord_id" name="discord_id" value="{{ current_user.discord_id or '' }}" required>
+                            <div class="form-text">Enter your Discord user ID (e.g., 123456789012345678)</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-link-45deg me-2"></i>
+                            Link Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                Discord Bot Commands
+            </h5>
+        </div>
+        <div class="card-body">
+            <p>Once your account is linked, you can use these commands in Discord:</p>
+            
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>!uc upcoming</code></td>
+                        <td>Shows upcoming events for the next 7 days</td>
+                    </tr>
+                    <tr>
+                        <td><code>!uc rsvp [event_type] [event_id] [response]</code></td>
+                        <td>RSVP to an event (session, tournament)<br>Responses: yes, no, maybe<br>Example: <code>!uc rsvp session 5 yes</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>!uc help</code></td>
+                        <td>Show available commands</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

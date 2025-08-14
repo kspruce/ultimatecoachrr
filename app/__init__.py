@@ -9,6 +9,7 @@ from flask_wtf.csrf import CSRFError
 import json
 import markdown
 from flask_moment import Moment
+from app.discord_integration import init_discord_integration
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -209,4 +210,7 @@ def create_app(config_class=Config):
         db.create_all()
         ensure_default_metrics_exist(app)
     
+    init_discord_integration(app)
+    
     return app
+
