@@ -136,105 +136,106 @@ class DiscordWebhook:
         )
 
     
-    def notify_upcoming_game(self, game, days_until):
-        """Send notification about an upcoming game
-        
-        Parameters:
-        -----------
-        game: Game
-            The game object
-        days_until: int
-            Number of days until the game
-        """
-        opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
-        game_date = game.date.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'date') else "TBD"
-        location = game.location if hasattr(game, 'location') else "TBD"
-        
-        if days_until == 0:
-            title = f"Game Today: vs {opponent}"
-            content = "@everyone We have a game today!"
-        elif days_until == 1:
-            title = f"Game Tomorrow: vs {opponent}"
-            content = "@everyone We have a game tomorrow!"
-        else:
-            title = f"Upcoming Game: vs {opponent}"
-            content = f"@everyone We have a game in {days_until} days!"
-        
-        embed = {
-            "title": title,
-            "description": f"Get ready for our upcoming game!",
-            "color": 15105570,  # Orange color
-            "fields": [
-                {
-                    "name": "Date",
-                    "value": game_date,
-                    "inline": True
-                },
-                {
-                    "name": "Location",
-                    "value": location,
-                    "inline": True
-                }
-            ],
-            "footer": {
-                "text": f"Game ID: {game.id}"
-            },
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        return self.send_message(
-            content=content,
-            embeds=[embed],
-            username="Ultimate Coach"
-        )
+def notify_upcoming_game(self, game, days_until):
+    """Send notification about an upcoming game
     
-        def notify_new_session(self, session):
-            """Send notification about a new training session
-            
-            Parameters:
-            -----------
-            session: Session
-                The session object
-            """
-            session_date = session.date.strftime("%Y-%m-%d %H:%M") if hasattr(session, 'date') else "TBD"
-            location = session.location if hasattr(session, 'location') else "TBD"
-            
-            embed = {
-                "title": f"New Training Session: {session.title}",
-                "description": f"A new training session has been added to the calendar!",
-                "color": 3066993,  # Green color
-                "fields": [
-                    {
-                        "name": "Date",
-                        "value": session_date,
-                        "inline": True
-                    },
-                    {
-                        "name": "Location",
-                        "value": location,
-                        "inline": True
-                    }
-                ],
-                "footer": {
-                    "text": f"Session ID: {session.id}"
-                },
-                "timestamp": datetime.utcnow().isoformat()
+    Parameters:
+    -----------
+    game: Game
+        The game object
+    days_until: int
+        Number of days until the game
+    """
+    opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
+    game_date = game.date.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'date') else "TBD"
+    location = game.location if hasattr(game, 'location') else "TBD"
+    
+    if days_until == 0:
+        title = f"Game Today: vs {opponent}"
+        content = "@everyone We have a game today!"
+    elif days_until == 1:
+        title = f"Game Tomorrow: vs {opponent}"
+        content = "@everyone We have a game tomorrow!"
+    else:
+        title = f"Upcoming Game: vs {opponent}"
+        content = f"@everyone We have a game in {days_until} days!"
+    
+    embed = {
+        "title": title,
+        "description": f"Get ready for our upcoming game!",
+        "color": 15105570,  # Orange color
+        "fields": [
+            {
+                "name": "Date",
+                "value": game_date,
+                "inline": True
+            },
+            {
+                "name": "Location",
+                "value": location,
+                "inline": True
             }
-            
-            # Add link to view the session
-            base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
-            session_url = f"{base_url}/sessions/{session.id}/detail"
-            embed["fields"].append({
-                "name": "View Session",
-                "value": f"[Click here for details]({session_url})",
-                "inline": False
-            })
-            
-            return self.send_message(
-                content="A new training session has been added to the calendar!",
-                embeds=[embed],
-                username="Ultimate Coach"
-            )
+        ],
+        "footer": {
+            "text": f"Game ID: {game.id}"
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    return self.send_message(
+        content=content,
+        embeds=[embed],
+        username="Ultimate Coach"
+    )
+
+def notify_new_session(self, session):
+    """Send notification about a new training session
+    
+    Parameters:
+    -----------
+    session: Session
+        The session object
+    """
+    session_date = session.date.strftime("%Y-%m-%d %H:%M") if hasattr(session, 'date') else "TBD"
+    location = session.location if hasattr(session, 'location') else "TBD"
+    
+    embed = {
+        "title": f"New Training Session: {session.title}",
+        "description": f"A new training session has been added to the calendar!",
+        "color": 3066993,  # Green color
+        "fields": [
+            {
+                "name": "Date",
+                "value": session_date,
+                "inline": True
+            },
+            {
+                "name": "Location",
+                "value": location,
+                "inline": True
+            }
+        ],
+        "footer": {
+            "text": f"Session ID: {session.id}"
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    # Add link to view the session
+    base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+    session_url = f"{base_url}/sessions/{session.id}/detail"
+    embed["fields"].append({
+        "name": "View Session",
+        "value": f"[Click here for details]({session_url})",
+        "inline": False
+    })
+    
+    return self.send_message(
+        content="A new training session has been added to the calendar!",
+        embeds=[embed],
+        username="Ultimate Coach"
+    )
+
 
     
 
