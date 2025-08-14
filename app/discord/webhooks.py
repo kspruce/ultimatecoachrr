@@ -378,13 +378,7 @@ class DiscordWebhook:
             "title": f"New Clip Added: {title}",
             "description": f"A new video clip has been added to the library{game_info}!",
             "color": 10181046,  # Purple color
-            "fields": [
-                {
-                    "name": "Added By",
-                    "value": clip.user.username if hasattr(clip, 'user') and clip.user else "Unknown",
-                    "inline": True
-                }
-            ],
+            "fields": [],
             "footer": {
                 "text": f"Clip ID: {clip.id}"
             },
@@ -414,6 +408,7 @@ class DiscordWebhook:
             embeds=[embed],
             username="Ultimate Coach"
         )
+
     
     def notify_new_theory(self, theory_item):
         """Send notification about new theory content
