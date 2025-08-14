@@ -25,7 +25,7 @@ def init_discord_integration(app: Flask):
         
         # Add Discord ID field to User model
         from app.models.discord_user import add_discord_fields_to_user
-        add_discord_fields_to_user()
+        add_discord_fields_to_user(app)
         
         logger.info("Discord integration initialized successfully")
         
