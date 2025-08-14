@@ -69,18 +69,23 @@ class UltimateCoachBot:
             event_id = event_info['id']
             
             # Map emoji to RSVP status
-            emoji_to_status = {
+            emoji_to_session_status = {
                 "✅": "yes",
                 "❌": "no",
                 "❓": "maybe"
             }
             
+            # Map emoji to tournament RSVP status
+            emoji_to_tournament_status = {
+                "✅": "attending",
+                "❌": "not_attending",
+                "❓": "maybe"
+            }
+            
             # Check if this is a valid RSVP emoji
             emoji = str(reaction.emoji)
-            if emoji not in emoji_to_status:
+            if emoji not in emoji_to_session_status:  # Both maps have the same keys
                 return
-            
-            status = emoji_to_status[emoji]
             
             # Process the RSVP
             try:
@@ -119,6 +124,8 @@ class UltimateCoachBot:
                         if not event:
                             return
                         
+                        status = emoji_to_session_status[emoji]
+                        
                         # Check if RSVP already exists
                         rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=db_user.player.id).first()
                         
@@ -141,6 +148,8 @@ class UltimateCoachBot:
                         if not event:
                             return
                         
+                        status = emoji_to_tournament_status[emoji]
+                        
                         # Check if RSVP already exists
                         rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=db_user.player.id).first()
                         
@@ -157,6 +166,7 @@ class UltimateCoachBot:
                             db.session.add(new_rsvp)
                             db.session.commit()
                             response_msg = f"You've RSVP'd '{status}' to {event.name}."
+
                     
                     else:
                         # Handle other event types if needed
@@ -194,16 +204,25 @@ class UltimateCoachBot:
             event_id = event_info['id']
             
             # Map emoji to RSVP status
-            emoji_to_status = {
+            emoji_to_session_status = {
                 "✅": "yes",
                 "❌": "no",
                 "❓": "maybe"
             }
             
+            # Map emoji to tournament RSVP status
+            emoji_to_tournament_status = {
+                "✅": "attending",
+                "❌": "not_attending",
+                "❓": "maybe"
+            }
+            
             # Check if this is a valid RSVP emoji
             emoji = str(reaction.emoji)
-            if emoji not in emoji_to_status:
+            if emoji not in emoji_to_session_status:  # Both maps have the same keys
                 return
+
+
             
             # Process the RSVP removal
             try:
@@ -558,9 +577,11 @@ class UltimateCoachBot:
                                 player_id=user.player.id,
                                 status=response.lower()
                             )
-                            db.SessionPlan.add(new_rsvp)
+                            db.session.add(new_rsvp)
                             db.session.commit()
                             await ctx.send(f"You've RSVP'd '{response}' to {event.title}.")
+
+
                     
                     elif event_type.lower() == 'tournament':
                         event = Tournament.query.get(event_id)
@@ -581,9 +602,10 @@ class UltimateCoachBot:
                                 player_id=user.player.id,
                                 status=response.lower()
                             )
-                            db.SessionPlan.add(new_rsvp)
+                            db.session.add(new_rsvp)
                             db.session.commit()
                             await ctx.send(f"You've RSVP'd '{response}' to {event.name}.")
+
                     
                     else:
                         await ctx.send(f"Invalid event type: {event_type}. Valid types are: session, tournament")
@@ -702,17 +724,27 @@ class UltimateCoachBot:
                         description += f"RSVP in the app or use the command:\n!uc rsvp session {session.id} [yes/no/maybe]"
                         
                         try:
-                            end_time = SessionPlan.date + timedelta(hours=2)  # Assume 2 hours duration
+                            # Convert date to datetime with timezone
+                            from datetime import timezone
+                            if isinstance(session.date, datetime):
+                                start_time = session.date.replace(tzinfo=timezone.utc)
+                            else:
+                                # If it's just a date, convert to datetime
+                                start_time = datetime.combine(session.date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                            
+                            end_time = start_time + timedelta(hours=2)  # Assume 2 hours duration
+                            
                             await guild.create_scheduled_event(
                                 name=event_name,
                                 description=description,
-                                start_time=SessionPlan.date,
+                                start_time=start_time,
                                 end_time=end_time,
                                 location=location
                             )
-                            logger.info(f"Created Discord event for session: {SessionPlan.title}")
+                            logger.info(f"Created Discord event for session: {session.title}")
                         except Exception as e:
-                            logger.error(f"Error creating Discord event for session {SessionPlan.id}: {str(e)}")
+                            logger.error(f"Error creating Discord event for session {session.id}: {str(e)}")
+
                 
                 # Sync tournaments
                 for tournament in tournaments:
@@ -727,9 +759,9 @@ class UltimateCoachBot:
                         # Create new event
                         location = tournament.location or "TBD"
                         description = f"Tournament: {tournament.name}\n\n"
-                        if tournament.description:
+                        if hasattr(tournament, 'description') and tournament.description:
                             description += f"{tournament.description}\n\n"
-                        description += f"RSVP in the app or use the command:\n!uc rsvp tournament {tournament.id} [yes/no/maybe]"
+                        description += f"RSVP in the app or use the command:\n!uc rsvp tournament {tournament.id} [attending/not_attending/maybe]"
                         
                         try:
                             # Use end_date if available, otherwise assume 1 day
@@ -739,6 +771,11 @@ class UltimateCoachBot:
                                 end_time = datetime.combine(tournament.start_date, datetime.max.time())
                             
                             start_time = datetime.combine(tournament.start_date, datetime.min.time())
+                            
+                            # Add timezone info
+                            from datetime import timezone
+                            start_time = start_time.replace(tzinfo=timezone.utc)
+                            end_time = end_time.replace(tzinfo=timezone.utc)
                             
                             await guild.create_scheduled_event(
                                 name=event_name,
@@ -750,6 +787,8 @@ class UltimateCoachBot:
                             logger.info(f"Created Discord event for tournament: {tournament.name}")
                         except Exception as e:
                             logger.error(f"Error creating Discord event for tournament {tournament.id}: {str(e)}")
+
+
                 
                 # Sync games
                 for game in games:
@@ -769,17 +808,27 @@ class UltimateCoachBot:
                             description += f"{game.description}\n\n"
                         
                         try:
-                            end_time = game.date + timedelta(hours=2)  # Assume 2 hours duration
+                            # Add timezone info to game date
+                            from datetime import timezone
+                            if isinstance(game.date, datetime):
+                                start_time = game.date.replace(tzinfo=timezone.utc)
+                            else:
+                                # If it's just a date, convert to datetime
+                                start_time = datetime.combine(game.date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                                
+                            end_time = start_time + timedelta(hours=2)  # Assume 2 hours duration
+                            
                             await guild.create_scheduled_event(
                                 name=event_name,
                                 description=description,
-                                start_time=game.date,
+                                start_time=start_time,
                                 end_time=end_time,
                                 location=location
                             )
                             logger.info(f"Created Discord event for game vs {opponent}")
                         except Exception as e:
                             logger.error(f"Error creating Discord event for game {game.id}: {str(e)}")
+
                 
                 logger.info("Calendar sync completed")
         
