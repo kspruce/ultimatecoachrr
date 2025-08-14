@@ -180,6 +180,9 @@ def create_app(config_class=Config):
     from app.routes.fitness import bp as fitness_bp
     app.register_blueprint(fitness_bp)
    
+    from app.discord.routes import discord_bp as discord_bp
+    app.register_discord(discord_bp)
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,
