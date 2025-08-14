@@ -181,7 +181,7 @@ def create_app(config_class=Config):
     app.register_blueprint(fitness_bp)
    
     from app.discord.routes import discord_bp as discord_bp
-    app.register_discord(discord_bp)
+    app.register_blueprint(discord_bp)
     
     # Import models
     from app.models import (
