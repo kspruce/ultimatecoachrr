@@ -8,6 +8,15 @@
 │   ├── __pycache__
 │   │   ├── __init__.cpython-312.pyc
 │   │   └── __init__.cpython-39.pyc
+│   ├── discord
+│   │   ├── __init__.py
+│   │   ├── bot.py
+│   │   ├── config.py
+│   │   ├── events.py
+│   │   ├── notifications.py
+│   │   ├── routes.py
+│   │   └── webhooks.py
+│   ├── discord_integration.py
 │   ├── forms
 │   │   ├── __pycache__
 │   │   │   ├── annotation.cpython-39.pyc
@@ -58,9 +67,11 @@
 │   │   ├── annotation.py
 │   │   ├── clip.py
 │   │   ├── cutting_skill.py
+│   │   ├── discord_user.py
 │   │   ├── drill.py
 │   │   ├── event.py
 │   │   ├── export.py
+│   │   ├── fitness.py
 │   │   ├── game.py
 │   │   ├── game_player.py
 │   │   ├── playbook.py
@@ -98,6 +109,7 @@
 │   │   ├── cutting_skill.py
 │   │   ├── data_management_routes.py
 │   │   ├── drill_routes.py
+│   │   ├── fitness.py
 │   │   ├── game.py
 │   │   ├── main.py
 │   │   ├── playbook.py
@@ -112,9 +124,11 @@
 │   │   └── tournament.py
 │   ├── static
 │   │   ├── css
+│   │   │   ├── calendar.css
 │   │   │   ├── drill_editor.css
 │   │   │   ├── drill_viewer.css
-│   │   │   └── main.css
+│   │   │   ├── main.css
+│   │   │   └── session_styles.css
 │   │   ├── images
 │   │   │   ├── drills
 │   │   │   └── theory
@@ -123,7 +137,8 @@
 │   │   │   ├── drill_viewer.js
 │   │   │   ├── main.js
 │   │   │   ├── playbook.js
-│   │   │   └── session.js
+│   │   │   ├── session.js
+│   │   │   └── session_scripts.js
 │   │   └── uploads
 │   │       └── drills
 │   ├── templates
@@ -153,15 +168,26 @@
 │   │   │   ├── tag_form.html
 │   │   │   ├── tags.html
 │   │   │   └── view_clip.html
+│   │   ├── discord
+│   │   │   ├── link_account.html
+│   │   │   └── settings.html
 │   │   ├── drills
 │   │   │   └── view.html
+│   │   ├── fitness
+│   │   │   ├── batch_record.html
+│   │   │   ├── batch_select_metric.html
+│   │   │   ├── index.html
+│   │   │   ├── leaderboard.html
+│   │   │   ├── manage_metrics.html
+│   │   │   ├── metric_form.html
+│   │   │   ├── metric_history.html
+│   │   │   ├── player_fitness.html
+│   │   │   └── record_form.html
 │   │   ├── game
 │   │   │   ├── add_multiple.html
 │   │   │   ├── detail.html
 │   │   │   ├── form.html
-│   │   │   ├── index.html
-│   │   │   ├── list.html
-│   │   │   └── stats_input.html
+│   │   │   └── index.html
 │   │   ├── how_to_use.html
 │   │   ├── index.html
 │   │   ├── partials
@@ -197,7 +223,9 @@
 │   │   │   ├── drills
 │   │   │   ├── drills.html
 │   │   │   ├── index.html
+│   │   │   ├── pdf_export.html
 │   │   │   ├── player_attendance.html
+│   │   │   ├── printable.html
 │   │   │   ├── rsvp.html
 │   │   │   ├── rsvps.html
 │   │   │   └── session_form.html
@@ -283,4 +311,5 @@
 ├── requirements.txt
 ├── reset_database.sql
 ├── reset_db.py
-└── run.py
+├── run.py
+└── structure.txt

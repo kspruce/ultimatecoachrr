@@ -249,10 +249,16 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person"></i> Your Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('discord.link_account') }}">
+                                <i class="bi bi-discord"></i> Link Discord Account
+                            </a></li>
                             {% if current_user.is_admin %}
                             <li><a class="dropdown-item" href="{{ url_for('auth.users') }}"><i class="bi bi-people"></i> User Management</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
                                 <i class="fas fa-database me-2"></i>Data Management
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('discord.settings') }}">
+                                <i class="bi bi-discord"></i> Discord Settings
                             </a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
