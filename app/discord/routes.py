@@ -24,6 +24,7 @@ def settings():
         current_app.config['DISCORD_SYNC_CALENDAR'] = 'discord_sync_calendar' in request.form
         current_app.config['DISCORD_NOTIFY_NEW_EVENTS'] = 'discord_notify_new_events' in request.form
         current_app.config['DISCORD_NOTIFY_UPCOMING_EVENTS'] = 'discord_notify_upcoming_events' in request.form
+        current_app.config['DISCORD_NOTIFY_NEW_ITEMS'] = 'discord_notify_new_items' in request.form
         
         # Update Discord bot settings
         current_app.config['DISCORD_BOT_TOKEN'] = request.form.get('discord_bot_token', '')
@@ -51,6 +52,7 @@ def settings():
         discord_sync_calendar=current_app.config.get('DISCORD_SYNC_CALENDAR', True),
         discord_notify_new_events=current_app.config.get('DISCORD_NOTIFY_NEW_EVENTS', True),
         discord_notify_upcoming_events=current_app.config.get('DISCORD_NOTIFY_UPCOMING_EVENTS', True),
+        discord_notify_new_items=current_app.config.get('DISCORD_NOTIFY_NEW_ITEMS', True),
         discord_bot_token=current_app.config.get('DISCORD_BOT_TOKEN', ''),
         discord_guild_id=current_app.config.get('DISCORD_GUILD_ID', ''),
         discord_calendar_channel_id=current_app.config.get('DISCORD_CALENDAR_CHANNEL_ID', ''),
@@ -58,6 +60,8 @@ def settings():
         discord_webhook_url=current_app.config.get('DISCORD_WEBHOOK_URL', '')
     )
 
+
+    
 @discord_bp.route('/link', methods=['GET', 'POST'])
 @login_required
 def link_account():

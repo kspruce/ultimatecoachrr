@@ -21,6 +21,8 @@ class DiscordConfig:
     DISCORD_SYNC_CALENDAR = os.environ.get('DISCORD_SYNC_CALENDAR', 'True').lower() == 'true'
     DISCORD_NOTIFY_NEW_EVENTS = os.environ.get('DISCORD_NOTIFY_NEW_EVENTS', 'True').lower() == 'true'
     DISCORD_NOTIFY_UPCOMING_EVENTS = os.environ.get('DISCORD_NOTIFY_UPCOMING_EVENTS', 'True').lower() == 'true'
+    DISCORD_NOTIFY_NEW_ITEMS = os.environ.get('DISCORD_NOTIFY_NEW_ITEMS', 'True').lower() == 'true'
+
 
 def init_discord(app):
     """Initialize Discord integration

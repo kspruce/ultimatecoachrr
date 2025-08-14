@@ -361,6 +361,119 @@ class DiscordWebhook:
             embeds=[embed],
             username="Ultimate Coach"
         )
+    
+    
+    def notify_new_clip(self, clip):
+        """Send notification about a new clip
+        
+        Parameters:
+        -----------
+        clip: Clip
+            The clip object
+        """
+        title = clip.title if hasattr(clip, 'title') else f"Clip #{clip.id}"
+        game_info = f" from game vs {clip.game.opponent}" if hasattr(clip, 'game') and hasattr(clip.game, 'opponent') else ""
+        
+        embed = {
+            "title": f"New Clip Added: {title}",
+            "description": f"A new video clip has been added to the library{game_info}!",
+            "color": 10181046,  # Purple color
+            "fields": [
+                {
+                    "name": "Added By",
+                    "value": clip.user.username if hasattr(clip, 'user') and clip.user else "Unknown",
+                    "inline": True
+                }
+            ],
+            "footer": {
+                "text": f"Clip ID: {clip.id}"
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Add tags if available
+        if hasattr(clip, 'tags') and clip.tags:
+            tags_text = ", ".join([tag.name for tag in clip.tags])
+            embed["fields"].append({
+                "name": "Tags",
+                "value": tags_text,
+                "inline": True
+            })
+        
+        # Add link to view the clip
+        base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+        clip_url = f"{base_url}/clip/view/{clip.id}"
+        embed["fields"].append({
+            "name": "View Clip",
+            "value": f"[Click here to view]({clip_url})",
+            "inline": False
+        })
+        
+        return self.send_message(
+            content="A new video clip has been added to the library!",
+            embeds=[embed],
+            username="Ultimate Coach"
+        )
+    
+    def notify_new_theory(self, theory_item):
+        """Send notification about new theory content
+        
+        Parameters:
+        -----------
+        theory_item: TheoryTopic or TheorySection
+            The theory content object
+        """
+        # Determine if it's a topic or section
+        is_topic = hasattr(theory_item, 'section_id')
+        
+        if is_topic:
+            title = f"New Theory Topic: {theory_item.title}"
+            section_name = theory_item.section.title if hasattr(theory_item, 'section') and theory_item.section else "Unknown Section"
+            description = f"A new theory topic has been added to the {section_name} section!"
+        else:
+            title = f"New Theory Section: {theory_item.title}"
+            description = "A new theory section has been added to the knowledge base!"
+        
+        embed = {
+            "title": title,
+            "description": description,
+            "color": 3447003,  # Blue color
+            "fields": [],
+            "footer": {
+                "text": f"Theory {'Topic' if is_topic else 'Section'} ID: {theory_item.id}"
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Add a brief excerpt if available
+        if hasattr(theory_item, 'content') and theory_item.content:
+            # Truncate content if it's too long
+            content_preview = theory_item.content[:150] + "..." if len(theory_item.content) > 150 else theory_item.content
+            embed["fields"].append({
+                "name": "Preview",
+                "value": content_preview,
+                "inline": False
+            })
+        
+        # Add link to view the theory content
+        base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+        if is_topic:
+            theory_url = f"{base_url}/theory/topic/{theory_item.id}"
+        else:
+            theory_url = f"{base_url}/theory/section/{theory_item.id}"
+        
+        embed["fields"].append({
+            "name": "Read More",
+            "value": f"[Click here to read]({theory_url})",
+            "inline": False
+        })
+        
+        return self.send_message(
+            content=f"New theory {'topic' if is_topic else 'section'} added: **{theory_item.title}**",
+            embeds=[embed],
+            username="Ultimate Coach"
+        )
+
 
 # Create a global instance
 discord_webhook = DiscordWebhook()

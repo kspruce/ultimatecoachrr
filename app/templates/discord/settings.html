@@ -36,8 +36,14 @@
                         <input class="form-check-input" type="checkbox" id="discord_notify_upcoming_events" name="discord_notify_upcoming_events" {% if discord_notify_upcoming_events %}checked{% endif %}>
                         <label class="form-check-label" for="discord_notify_upcoming_events">Send Notifications for Upcoming Events</label>
                     </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="discord_notify_new_items" name="discord_notify_new_items" {% if discord_notify_new_items %}checked{% endif %}>
+                        <label class="form-check-label" for="discord_notify_new_items">Send Notifications for New Database Items (Tournaments, Sessions, Clips, Theory)</label>
+                    </div>
                 </div>
-                
+ 
+
                 <div class="mb-4">
                     <h5>Discord Bot Settings</h5>
                     <div class="alert alert-info">

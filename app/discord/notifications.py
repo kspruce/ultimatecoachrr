@@ -147,6 +147,10 @@ class NotificationService:
             The event object
         """
         from app.discord.webhooks import discord_webhook
+        from flask import current_app
+        
+        if not current_app.config.get('DISCORD_NOTIFY_NEW_EVENTS', True):
+            return
         
         if event_type == 'session':
             discord_webhook.notify_new_session(event)
@@ -156,6 +160,34 @@ class NotificationService:
             discord_webhook.notify_new_game(event)
         else:
             logger.error(f"Unknown event type: {event_type}")
+    
+    def notify_new_database_item(self, item_type, item):
+        """Send notification about a new database item
+        
+        Parameters:
+        -----------
+        item_type: str
+            The type of item ('tournament', 'session', 'clip', 'theory')
+        item: object
+            The database item object
+        """
+        from app.discord.webhooks import discord_webhook
+        from flask import current_app
+        
+        if not current_app.config.get('DISCORD_NOTIFY_NEW_ITEMS', True):
+            return
+        
+        if item_type == 'tournament':
+            discord_webhook.notify_new_tournament(item)
+        elif item_type == 'session':
+            discord_webhook.notify_new_session(item)
+        elif item_type == 'clip':
+            discord_webhook.notify_new_clip(item)
+        elif item_type == 'theory':
+            discord_webhook.notify_new_theory(item)
+        else:
+            logger.warning(f"Unknown item type for notification: {item_type}")
+
 
 # Create a global instance
 notification_service = NotificationService()
