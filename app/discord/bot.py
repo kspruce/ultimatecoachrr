@@ -408,10 +408,17 @@ class UltimateCoachBot:
                 
                 # Process sessions
                 for session in sessions:
+                    
+                    base_url = self.app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+
+                    # Create the session detail URL
+                    session_url = f"{base_url}/session/detail/{session.id}"
+                    
                     embed = discord.Embed(
                         title=f"Training: {session.title}",
                         description="React to RSVP:\n✅ Yes | ❌ No | ❓ Maybe",
-                        color=discord.Color.blue()
+                        color=discord.Color.blue(),
+                        url=session_url
                     )
                     
                     # Format date and time
@@ -429,6 +436,13 @@ class UltimateCoachBot:
                     if hasattr(session, 'session_type_display') and session.session_type_display:
                         embed.add_field(name="Type", value=session.session_type_display, inline=True)
                     
+                    # Add a field with a direct link
+                    embed.add_field(
+                        name="More Details",
+                        value=f"[View Session Details]({session_url})",
+                        inline=False
+                    )
+                    
                     # Add footer with event ID for the reaction handler
                     embed.set_footer(text=f"Session ID: {session.id} | Type !uc help for more commands")
                     
@@ -441,10 +455,16 @@ class UltimateCoachBot:
                 
                 # Process tournaments
                 for tournament in tournaments:
+                    base_url = self.app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+
+                    # Create the tournament detail URL
+                    tournament_url = f"{base_url}/tournament/detail/{tournament.id}"
+                    
                     embed = discord.Embed(
                         title=f"Tournament: {tournament.name}",
                         description="React to RSVP:\n✅ Yes | ❌ No | ❓ Maybe",
-                        color=discord.Color.gold()
+                        color=discord.Color.gold(),
+                        url=tournament_url
                     )
                     
                     # Format date range
@@ -456,6 +476,13 @@ class UltimateCoachBot:
                     embed.add_field(name="Date", value=date_str, inline=True)
                     if tournament.location:
                         embed.add_field(name="Location", value=tournament.location, inline=True)
+                    
+                    # Add a field with a direct link
+                    embed.add_field(
+                        name="More Details",
+                        value=f"[View Tournament Details]({tournament_url})",
+                        inline=False
+                    )
                     
                     # Add footer with event ID for the reaction handler
                     embed.set_footer(text=f"Tournament ID: {tournament.id} | Type !uc help for more commands")
@@ -471,10 +498,17 @@ class UltimateCoachBot:
                 for game in games:
                     opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
                     
+                    # Get base URL from config
+                    base_url = self.app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+                    
+                    # Create the game detail URL
+                    game_url = f"{base_url}/game/detail/{game.id}"
+                    
                     embed = discord.Embed(
                         title=f"Game: vs {opponent}",
                         description="React to RSVP:\n✅ Yes | ❌ No | ❓ Maybe",
-                        color=discord.Color.red()
+                        color=discord.Color.red(),
+                        url=game_url  
                     )
                     
                     # Format date and time
@@ -484,6 +518,13 @@ class UltimateCoachBot:
                     embed.add_field(name="Date", value=date_str, inline=True)
                     if game.location:
                         embed.add_field(name="Location", value=game.location, inline=True)
+                    
+                    # Add a field with a direct link
+                    embed.add_field(
+                        name="More Details",
+                        value=f"[View Game Details]({game_url})",
+                        inline=False
+                    )
                     
                     # Add footer with event ID for the reaction handler
                     embed.set_footer(text=f"Game ID: {game.id} | Type !uc help for more commands")

@@ -23,6 +23,9 @@ class Config:
     # Debug configuration
     DEBUG = os.environ.get('FLASK_DEBUG', '0') == '1'
     
+    # Application URL
+    BASE_URL = os.environ.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+    
     # S3 Configuration
     AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
     AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
