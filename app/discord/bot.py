@@ -40,6 +40,7 @@ class UltimateCoachBot:
         intents.guild_scheduled_events = True
         
         self.bot = commands.Bot(command_prefix='!uc ', intents=intents)
+        self.bot.remove_command('help')
         
         # Register event handlers
         @self.bot.event
