@@ -83,10 +83,9 @@ class UltimateCoachBot:
                 if sessions:
                     session_text = ""
                     for session in sessions:
-                        session_text += f"**{SessionPlan.title}** - {SessionPlan.date.strftime('%Y-%m-%d %H:%M')}\n"
-                        if SessionPlan.location:
-                            session_text += f"📍 {SessionPlan.location}\n"
-                        session_text += "\n"
+                        session_text += f"**{session.title}** - {session.date.strftime('%Y-%m-%d %H:%M')}\n"
+                        if session.location:
+                            session_text += f"📍 {session.location}\n"
                     embed.add_field(name="Training Sessions", value=session_text or "None", inline=False)
                 
                 # Add tournaments
@@ -165,7 +164,7 @@ class UltimateCoachBot:
                         
                         if rsvp:
                             rsvp.status = response.lower()
-                            db.SessionPlan.commit()
+                            db.session.commit()
                             await ctx.send(f"Updated your RSVP for {event.title} to '{response}'.")
                         else:
                             new_rsvp = SessionRSVP(
@@ -174,7 +173,7 @@ class UltimateCoachBot:
                                 status=response.lower()
                             )
                             db.SessionPlan.add(new_rsvp)
-                            db.SessionPlan.commit()
+                            db.session.commit()
                             await ctx.send(f"You've RSVP'd '{response}' to {event.title}.")
                     
                     elif event_type.lower() == 'tournament':
@@ -188,7 +187,7 @@ class UltimateCoachBot:
                         
                         if rsvp:
                             rsvp.status = response.lower()
-                            db.SessionPlan.commit()
+                            db.session.commit()
                             await ctx.send(f"Updated your RSVP for {event.name} to '{response}'.")
                         else:
                             new_rsvp = TournamentRSVP(
@@ -197,7 +196,7 @@ class UltimateCoachBot:
                                 status=response.lower()
                             )
                             db.SessionPlan.add(new_rsvp)
-                            db.SessionPlan.commit()
+                            db.session.commit()
                             await ctx.send(f"You've RSVP'd '{response}' to {event.name}.")
                     
                     else:
@@ -228,7 +227,7 @@ class UltimateCoachBot:
                 
                 # Link Discord ID to user account
                 user.discord_id = str(ctx.author.id)
-                db.SessionPlan.commit()
+                db.session.commit()
                 
                 await ctx.send(f"Your Discord account has been linked to {user.username}!")
                 
@@ -301,7 +300,7 @@ class UltimateCoachBot:
                 
                 # Sync sessions
                 for session in sessions:
-                    event_name = f"Training: {SessionPlan.title}"
+                    event_name = f"Training: {session.title}"
                     
                     # Check if event already exists
                     if event_name in discord_event_names:
@@ -310,11 +309,11 @@ class UltimateCoachBot:
                         # TODO: Update event if details changed
                     else:
                         # Create new event
-                        location = SessionPlan.location or "TBD"
-                        description = f"Training session: {SessionPlan.title}\n\n"
-                        if SessionPlan.description:
-                            description += f"{SessionPlan.description}\n\n"
-                        description += f"RSVP in the app or use the command:\n!uc rsvp session {SessionPlan.id} [yes/no/maybe]"
+                        location = session.location or "TBD"
+                        description = f"Training session: {session.title}\n\n"
+                        if hasattr(session, 'notes') and session.notes:
+                            description += f"{session.notes}\n\n"
+                        description += f"RSVP in the app or use the command:\n!uc rsvp session {session.id} [yes/no/maybe]"
                         
                         try:
                             end_time = SessionPlan.date + timedelta(hours=2)  # Assume 2 hours duration

@@ -33,9 +33,9 @@ class NotificationService:
     
     def shutdown(self, exception=None):
         """Shutdown the scheduler"""
-        if self.scheduler:
+        if self.scheduler and self.scheduler.running:
             self.scheduler.shutdown()
-    
+        
     def schedule_jobs(self):
         """Schedule all notification jobs"""
         # Check for upcoming events daily at 9 AM

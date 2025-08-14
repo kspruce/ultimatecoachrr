@@ -20,7 +20,7 @@ def register_event_listeners(app):
     def setup_session_listeners():
         """Set up session event listeners"""
         try:
-            from app.models.session import Session
+            from app.models.session import SessionPlan as Session
             from sqlalchemy import event
             
             @event.listens_for(Session, 'after_insert')
