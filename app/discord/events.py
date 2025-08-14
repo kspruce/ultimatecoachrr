@@ -37,7 +37,7 @@ def register_event_listeners(app):
         def session_after_insert(mapper, connection, target):
             """Listen for new session creation"""
             logger.info(f"New session created: {target.title}")
-            notification_service.notify_new_event('session', target)
+            #notification_service.notify_new_event('session', target)
             notification_service.notify_new_database_item('session', target)
         
         logger.info("Session listeners registered")
@@ -52,7 +52,7 @@ def register_event_listeners(app):
         def tournament_after_insert(mapper, connection, target):
             """Listen for new tournament creation"""
             logger.info(f"New tournament created: {target.name}")
-            notification_service.notify_new_event('tournament', target)
+            #notification_service.notify_new_event('tournament', target)
             notification_service.notify_new_database_item('tournament', target)
         
         logger.info("Tournament listeners registered")
