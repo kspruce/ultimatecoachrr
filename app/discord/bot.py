@@ -56,7 +56,7 @@ class UltimateCoachBot:
             """Show upcoming events"""
             with self.app.app_context():
                 from app.models.event import Event
-                from app.models.session import Session
+                from app.models.session import SessionPlan, SessionRSVP
                 from app.models.tournament import Tournament
                 from app.models.game import Game
                 from datetime import datetime, timedelta
@@ -66,7 +66,7 @@ class UltimateCoachBot:
                 next_week = now + timedelta(days=7)
                 
                 # Get all types of events
-                sessions = Session.query.filter(Session.date >= now, Session.date <= next_week).all()
+                sessions = SessionPlan.query.filter(SessionPlan.date >= now, SessionPlan.date <= next_week).all()
                 tournaments = Tournament.query.filter(Tournament.start_date >= now, Tournament.start_date <= next_week).all()
                 games = Game.query.filter(Game.date >= now, Game.date <= next_week).all()
                 
@@ -83,9 +83,9 @@ class UltimateCoachBot:
                 if sessions:
                     session_text = ""
                     for session in sessions:
-                        session_text += f"**{session.title}** - {session.date.strftime('%Y-%m-%d %H:%M')}\n"
-                        if session.location:
-                            session_text += f"📍 {session.location}\n"
+                        session_text += f"**{SessionPlan.title}** - {SessionPlan.date.strftime('%Y-%m-%d %H:%M')}\n"
+                        if SessionPlan.location:
+                            session_text += f"📍 {SessionPlan.location}\n"
                         session_text += "\n"
                     embed.add_field(name="Training Sessions", value=session_text or "None", inline=False)
                 
@@ -136,7 +136,7 @@ class UltimateCoachBot:
             
             with self.app.app_context():
                 from app.models.user import User
-                from app.models.session import Session, SessionRSVP
+                from app.models.session import SessionPlan, SessionRSVP
                 from app.models.tournament import Tournament, TournamentRSVP
                 from flask_login import current_user
                 from app import db
@@ -155,7 +155,7 @@ class UltimateCoachBot:
                 
                 try:
                     if event_type.lower() == 'session':
-                        event = Session.query.get(event_id)
+                        event = SessionPlan.query.get(event_id)
                         if not event:
                             await ctx.send(f"Session with ID {event_id} not found.")
                             return
@@ -165,7 +165,7 @@ class UltimateCoachBot:
                         
                         if rsvp:
                             rsvp.status = response.lower()
-                            db.session.commit()
+                            db.SessionPlan.commit()
                             await ctx.send(f"Updated your RSVP for {event.title} to '{response}'.")
                         else:
                             new_rsvp = SessionRSVP(
@@ -173,8 +173,8 @@ class UltimateCoachBot:
                                 player_id=user.player.id,
                                 status=response.lower()
                             )
-                            db.session.add(new_rsvp)
-                            db.session.commit()
+                            db.SessionPlan.add(new_rsvp)
+                            db.SessionPlan.commit()
                             await ctx.send(f"You've RSVP'd '{response}' to {event.title}.")
                     
                     elif event_type.lower() == 'tournament':
@@ -188,7 +188,7 @@ class UltimateCoachBot:
                         
                         if rsvp:
                             rsvp.status = response.lower()
-                            db.session.commit()
+                            db.SessionPlan.commit()
                             await ctx.send(f"Updated your RSVP for {event.name} to '{response}'.")
                         else:
                             new_rsvp = TournamentRSVP(
@@ -196,8 +196,8 @@ class UltimateCoachBot:
                                 player_id=user.player.id,
                                 status=response.lower()
                             )
-                            db.session.add(new_rsvp)
-                            db.session.commit()
+                            db.SessionPlan.add(new_rsvp)
+                            db.SessionPlan.commit()
                             await ctx.send(f"You've RSVP'd '{response}' to {event.name}.")
                     
                     else:
@@ -228,7 +228,7 @@ class UltimateCoachBot:
                 
                 # Link Discord ID to user account
                 user.discord_id = str(ctx.author.id)
-                db.session.commit()
+                db.SessionPlan.commit()
                 
                 await ctx.send(f"Your Discord account has been linked to {user.username}!")
                 
@@ -275,7 +275,7 @@ class UltimateCoachBot:
         
         try:
             with self.app.app_context():
-                from app.models.session import Session
+                from app.models.session import SessionPlan
                 from app.models.tournament import Tournament
                 from app.models.game import Game
                 from datetime import datetime, timedelta
@@ -291,7 +291,7 @@ class UltimateCoachBot:
                 next_month = now + timedelta(days=30)
                 
                 # Get all types of events
-                sessions = Session.query.filter(Session.date >= now, Session.date <= next_month).all()
+                sessions = SessionPlan.query.filter(SessionPlan.date >= now, SessionPlan.date <= next_month).all()
                 tournaments = Tournament.query.filter(Tournament.start_date >= now, Tournament.start_date <= next_month).all()
                 games = Game.query.filter(Game.date >= now, Game.date <= next_month).all()
                 
@@ -301,7 +301,7 @@ class UltimateCoachBot:
                 
                 # Sync sessions
                 for session in sessions:
-                    event_name = f"Training: {session.title}"
+                    event_name = f"Training: {SessionPlan.title}"
                     
                     # Check if event already exists
                     if event_name in discord_event_names:
@@ -310,24 +310,24 @@ class UltimateCoachBot:
                         # TODO: Update event if details changed
                     else:
                         # Create new event
-                        location = session.location or "TBD"
-                        description = f"Training session: {session.title}\n\n"
-                        if session.description:
-                            description += f"{session.description}\n\n"
-                        description += f"RSVP in the app or use the command:\n!uc rsvp session {session.id} [yes/no/maybe]"
+                        location = SessionPlan.location or "TBD"
+                        description = f"Training session: {SessionPlan.title}\n\n"
+                        if SessionPlan.description:
+                            description += f"{SessionPlan.description}\n\n"
+                        description += f"RSVP in the app or use the command:\n!uc rsvp session {SessionPlan.id} [yes/no/maybe]"
                         
                         try:
-                            end_time = session.date + timedelta(hours=2)  # Assume 2 hours duration
+                            end_time = SessionPlan.date + timedelta(hours=2)  # Assume 2 hours duration
                             await guild.create_scheduled_event(
                                 name=event_name,
                                 description=description,
-                                start_time=session.date,
+                                start_time=SessionPlan.date,
                                 end_time=end_time,
                                 location=location
                             )
-                            logger.info(f"Created Discord event for session: {session.title}")
+                            logger.info(f"Created Discord event for session: {SessionPlan.title}")
                         except Exception as e:
-                            logger.error(f"Error creating Discord event for session {session.id}: {str(e)}")
+                            logger.error(f"Error creating Discord event for session {SessionPlan.id}: {str(e)}")
                 
                 # Sync tournaments
                 for tournament in tournaments:
