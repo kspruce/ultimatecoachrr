@@ -13,7 +13,7 @@
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('discord.settings') }}">
-                {{ form.csrf_token }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
                 <div class="mb-4">
                     <h5>General Settings</h5>

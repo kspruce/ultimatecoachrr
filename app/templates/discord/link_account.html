@@ -32,7 +32,7 @@
                     <p>You can find your Discord ID by enabling Developer Mode in Discord settings, then right-clicking on your username and selecting "Copy ID".</p>
                     
                     <form method="POST" action="{{ url_for('discord.link_account') }}">
-                        {{ form.csrf_token }}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="discord_id" class="form-label">Your Discord ID</label>
                             <input type="text" class="form-control" id="discord_id" name="discord_id" value="{{ current_user.discord_id or '' }}" required>
