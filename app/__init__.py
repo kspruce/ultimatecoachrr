@@ -59,10 +59,7 @@ def create_app(config_class=Config):
     from commands import register_commands
     register_commands(app)    
     
-    @app.before_first_request
-    def start_background_tasks():
-        from app.tasks import start_task_processor
-        start_task_processor(app)
+
         
     @app.template_filter('initials')
     def initials_filter(name):
