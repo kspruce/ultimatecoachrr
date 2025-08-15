@@ -3154,22 +3154,15 @@ def generate_player_sankey_data(player_id, point_ids=None):
     
     # Create a node for the current player
     player_node = {
-        "id": f"player_{player.id}",
+        "id": f"player_{player.id}",  # This is the node ID format
         "name": player.name,
         "jersey_number": player.jersey_number,
         "type": "current"
     }
     sankey_data["nodes"].append(player_node)
     
-    # Query for throws TO the player (incoming)
-    incoming_query = Throw.query.filter_by(receiver_id=player.id)
-    if point_ids:
-        incoming_query = incoming_query.filter(Throw.point_id.in_(point_ids))
-    
-    # Query for throws FROM the player (outgoing)
-    outgoing_query = Throw.query.filter_by(thrower_id=player.id)
-    if point_ids:
-        outgoing_query = outgoing_query.filter(Throw.point_id.in_(point_ids))
+    # Track which nodes have been added to avoid duplicates
+    added_node_ids = {f"player_{player.id}"}
     
     # Process incoming throws
     thrower_counts = {}
@@ -3195,12 +3188,16 @@ def generate_player_sankey_data(player_id, point_ids=None):
         if thrower:
             # Add thrower node
             node_id = f"thrower_{thrower.id}"
-            sankey_data["nodes"].append({
-                "id": node_id,
-                "name": thrower.name,
-                "jersey_number": thrower.jersey_number,
-                "type": "thrower"
-            })
+            
+            # Only add the node if it hasn't been added yet
+            if node_id not in added_node_ids:
+                sankey_data["nodes"].append({
+                    "id": node_id,
+                    "name": thrower.name,
+                    "jersey_number": thrower.jersey_number,
+                    "type": "thrower"
+                })
+                added_node_ids.add(node_id)
             
             # Add link from thrower to player
             sankey_data["links"].append({
@@ -3215,12 +3212,16 @@ def generate_player_sankey_data(player_id, point_ids=None):
         if receiver:
             # Add receiver node
             node_id = f"receiver_{receiver.id}"
-            sankey_data["nodes"].append({
-                "id": node_id,
-                "name": receiver.name,
-                "jersey_number": receiver.jersey_number,
-                "type": "receiver"
-            })
+            
+            # Only add the node if it hasn't been added yet
+            if node_id not in added_node_ids:
+                sankey_data["nodes"].append({
+                    "id": node_id,
+                    "name": receiver.name,
+                    "jersey_number": receiver.jersey_number,
+                    "type": "receiver"
+                })
+                added_node_ids.add(node_id)
             
             # Add link from player to receiver
             sankey_data["links"].append({
@@ -3230,6 +3231,7 @@ def generate_player_sankey_data(player_id, point_ids=None):
             })
     
     return sankey_data
+
 
 
 @bp.route('/api/player-connections-sankey')

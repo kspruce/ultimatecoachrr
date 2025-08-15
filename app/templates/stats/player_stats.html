@@ -2461,12 +2461,42 @@ function initializeSankeyDiagram() {
     if (gameId) params.push(`game_id=${gameId}`);
     if (params.length > 0) apiUrl += '?' + params.join('&');
     
+    // Show loading indicator
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading connection data...</p></div>';
+    
     // Fetch data from API
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
+            console.log('Sankey data received:', data);
+            
+            // Check if we have valid data
             if (!data.nodes || data.nodes.length === 0 || !data.links || data.links.length === 0) {
                 container.innerHTML = '<div class="alert alert-info">No connection data available.</div>';
+                return;
+            }
+            
+            // Debug: Log all node IDs and link sources/targets
+            console.log('Node IDs:', data.nodes.map(n => n.id));
+            console.log('Link sources:', data.links.map(l => l.source));
+            console.log('Link targets:', data.links.map(l => l.target));
+            
+            // Check for missing nodes in links
+            const nodeIds = new Set(data.nodes.map(n => n.id));
+            const missingNodes = [];
+            
+            data.links.forEach(link => {
+                if (!nodeIds.has(link.source)) {
+                    missingNodes.push(`source: ${link.source}`);
+                }
+                if (!nodeIds.has(link.target)) {
+                    missingNodes.push(`target: ${link.target}`);
+                }
+            });
+            
+            if (missingNodes.length > 0) {
+                console.error('Missing nodes referenced in links:', missingNodes);
+                container.innerHTML = `<div class="alert alert-warning">Data inconsistency detected: Some connections reference missing players.</div>`;
                 return;
             }
             
@@ -2474,9 +2504,10 @@ function initializeSankeyDiagram() {
         })
         .catch(error => {
             console.error('Error fetching Sankey data:', error);
-            container.innerHTML = '<div class="alert alert-danger">Error loading connection data.</div>';
+            container.innerHTML = `<div class="alert alert-danger">Error loading connection data: ${error.message}</div>`;
         });
 }
+
 
 function createSankeyDiagram(container, data) {
     // Set dimensions
@@ -2494,63 +2525,90 @@ function createSankeyDiagram(container, data) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
     
-    // Create Sankey generator
-    const sankey = d3.sankey()
-        .nodeWidth(15)
-        .nodePadding(10)
-        .extent([[0, 0], [width, height]]);
-    
-    // Format data for D3 Sankey
-    const graph = sankey({
-        nodes: data.nodes.map(d => Object.assign({}, d)),
-        links: data.links.map(d => Object.assign({}, d))
-    });
-    
-    // Define color scale based on node type
-    const colorScale = d3.scaleOrdinal()
-        .domain(['thrower', 'current', 'receiver'])
-        .range(['#6c757d', '#007bff', '#28a745']);
-    
-    // Add links
-    svg.append("g")
-        .selectAll("path")
-        .data(graph.links)
-        .join("path")
-        .attr("d", d3.sankeyLinkHorizontal())
-        .attr("stroke", d => d3.color(colorScale(d.source.type)).darker(0.5))
-        .attr("stroke-width", d => Math.max(1, d.width))
-        .attr("fill", "none")
-        .attr("opacity", 0.5)
-        .append("title")
-        .text(d => `${d.source.name} → ${d.target.name}: ${d.value} throws`);
-    
-    // Add nodes
-    const node = svg.append("g")
-        .selectAll("rect")
-        .data(graph.nodes)
-        .join("rect")
-        .attr("x", d => d.x0)
-        .attr("y", d => d.y0)
-        .attr("height", d => d.y1 - d.y0)
-        .attr("width", d => d.x1 - d.x0)
-        .attr("fill", d => colorScale(d.type))
-        .attr("stroke", d => d3.color(colorScale(d.type)).darker(0.5))
-        .append("title")
-        .text(d => `${d.name}${d.jersey_number ? ` #${d.jersey_number}` : ''}`);
-    
-    // Add node labels
-    svg.append("g")
-        .selectAll("text")
-        .data(graph.nodes)
-        .join("text")
-        .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-        .attr("y", d => (d.y1 + d.y0) / 2)
-        .attr("dy", "0.35em")
-        .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-        .text(d => `${d.name}${d.jersey_number ? ` #${d.jersey_number}` : ''}`)
-        .style("font-size", "10px")
-        .style("font-weight", d => d.type === 'current' ? 'bold' : 'normal');
+    try {
+        // Validate data - ensure all sources and targets exist in nodes
+        const nodeIds = new Set(data.nodes.map(node => node.id));
+        
+        // Filter out links with missing sources or targets
+        const validLinks = data.links.filter(link => {
+            if (!nodeIds.has(link.source) || !nodeIds.has(link.target)) {
+                console.warn(`Skipping invalid link: ${link.source} -> ${link.target}`);
+                return false;
+            }
+            return true;
+        });
+        
+        // If we have no valid links after filtering, show a message
+        if (validLinks.length === 0) {
+            container.innerHTML = '<div class="alert alert-warning">No valid connections found in the data.</div>';
+            return;
+        }
+        
+        // Create a new data object with only valid links
+        const validData = {
+            nodes: data.nodes,
+            links: validLinks
+        };
+        
+        // Create Sankey generator
+        const sankey = d3.sankey()
+            .nodeWidth(15)
+            .nodePadding(10)
+            .extent([[0, 0], [width, height]]);
+        
+        // Format data for D3 Sankey
+        const graph = sankey(validData);
+        
+        // Define color scale based on node type
+        const colorScale = d3.scaleOrdinal()
+            .domain(['thrower', 'current', 'receiver'])
+            .range(['#6c757d', '#007bff', '#28a745']);
+        
+        // Add links
+        svg.append("g")
+            .selectAll("path")
+            .data(graph.links)
+            .join("path")
+            .attr("d", d3.sankeyLinkHorizontal())
+            .attr("stroke", d => d3.color(colorScale(d.source.type)).darker(0.5))
+            .attr("stroke-width", d => Math.max(1, d.width))
+            .attr("fill", "none")
+            .attr("opacity", 0.5)
+            .append("title")
+            .text(d => `${d.source.name} → ${d.target.name}: ${d.value} throws`);
+        
+        // Add nodes
+        const node = svg.append("g")
+            .selectAll("rect")
+            .data(graph.nodes)
+            .join("rect")
+            .attr("x", d => d.x0)
+            .attr("y", d => d.y0)
+            .attr("height", d => d.y1 - d.y0)
+            .attr("width", d => d.x1 - d.x0)
+            .attr("fill", d => colorScale(d.type))
+            .attr("stroke", d => d3.color(colorScale(d.type)).darker(0.5))
+            .append("title")
+            .text(d => `${d.name}${d.jersey_number ? ` #${d.jersey_number}` : ''}`);
+        
+        // Add node labels
+        svg.append("g")
+            .selectAll("text")
+            .data(graph.nodes)
+            .join("text")
+            .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+            .attr("y", d => (d.y1 + d.y0) / 2)
+            .attr("dy", "0.35em")
+            .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+            .text(d => `${d.name}${d.jersey_number ? ` #${d.jersey_number}` : ''}`)
+            .style("font-size", "10px")
+            .style("font-weight", d => d.type === 'current' ? 'bold' : 'normal');
+    } catch (error) {
+        console.error('Error creating Sankey diagram:', error);
+        container.innerHTML = `<div class="alert alert-danger">Error creating diagram: ${error.message}</div>`;
+    }
 }
+
 
 </script>
 {% endblock %}
