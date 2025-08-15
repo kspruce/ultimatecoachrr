@@ -195,7 +195,7 @@ def create_app(config_class=Config):
        User, Player, Tournament, Game, Point, LineUp,
        Event, Pull, Clip, ClipTag, ClipAnnotation,
        SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-       FitnessMetric, FitnessRecord, TaskQueue  # Add these new models
+       FitnessMetric, FitnessRecord  # Add these new models
     )
 
 
