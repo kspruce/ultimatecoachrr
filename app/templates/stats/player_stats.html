@@ -1821,32 +1821,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
     
 
-    
-    // Load dependencies if needed
-    if (typeof d3 === 'undefined') {
-        console.log('Loading D3.js dynamically...');
-        const script = document.createElement('script');
-        script.src = 'https://d3js.org/d3.v7.min.js';
-        script.onload = function() {
-            console.log('D3.js loaded successfully');
-            initializeAll();
-        };
-        script.onerror = function() {
-            console.error('Failed to load D3.js');
-        };
-        document.head.appendChild(script);
-    } else {
-        console.log('D3.js already loaded');
-        initializeAll();
-    }
-    
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-});
-
 
 
 
