@@ -2486,8 +2486,64 @@ function initializeSankeyDiagram() {
     // Show loading indicator
     container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading connection data...</p></div>';
     
-    // Rest of the function remains the same...
-
+    // Fetch data from API
+    fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Authentication required. Please refresh the page and log in again.');
+                } else if (response.status === 500) {
+                    throw new Error('Server error. Please try again later or contact support.');
+                } else {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received Sankey data:', data);
+            
+            // Check if we have valid data
+            if (!data.nodes || data.nodes.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No player connection data available.</div>';
+                return;
+            }
+            
+            if (!data.links || data.links.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No throw connections found for this player.</div>';
+                return;
+            }
+            
+            // Validate data structure
+            let isValid = true;
+            const nodeIds = new Set(data.nodes.map(n => n.id));
+            
+            // Check for missing nodes in links
+            const missingNodes = [];
+            data.links.forEach(link => {
+                if (!nodeIds.has(link.source)) {
+                    missingNodes.push(`source: ${link.source}`);
+                    isValid = false;
+                }
+                if (!nodeIds.has(link.target)) {
+                    missingNodes.push(`target: ${link.target}`);
+                    isValid = false;
+                }
+            });
+            
+            if (!isValid) {
+                console.error('Invalid Sankey data structure:', missingNodes);
+                container.innerHTML = '<div class="alert alert-warning">The connection data contains inconsistencies. Please try again later.</div>';
+                return;
+            }
+            
+            createSankeyDiagram(container, data);
+        })
+        .catch(error => {
+            console.error('Error fetching Sankey data:', error);
+            container.innerHTML = `<div class="alert alert-danger">Error loading connection data: ${error.message}</div>`;
+        });
+}
 
 
 
