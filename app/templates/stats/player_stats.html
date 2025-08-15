@@ -1770,6 +1770,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error initializing cutting skills visualizations:', error);
             }
             
+
             // Initialize Sankey diagram if element exists
             if (document.getElementById('sankey-diagram')) {
                 try {
@@ -1779,7 +1780,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log('Loading D3 Sankey plugin...');
                             const script = document.createElement('script');
                             script.src = 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js';
-                            script.onload = initializeSankeyDiagram;
+                            script.onload = function() {
+                                console.log('D3 Sankey plugin loaded successfully');
+                                // Wait a moment to ensure the plugin is fully initialized
+                                setTimeout(function() {
+                                    initializeSankeyDiagram();
+                                }, 100);
+                            };
+                            script.onerror = function(e) {
+                                console.error('Failed to load D3 Sankey plugin:', e);
+                                document.getElementById('sankey-diagram').innerHTML = '<div class="alert alert-danger">Failed to load Sankey diagram plugin</div>';
+                            };
                             document.head.appendChild(script);
                         } else {
                             console.log('D3 Sankey plugin already loaded');
@@ -1787,9 +1798,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     } else {
                         console.error('D3.js is required for the Sankey diagram but is not loaded');
+                        document.getElementById('sankey-diagram').innerHTML = '<div class="alert alert-danger">D3.js is required for the Sankey diagram</div>';
                     }
                 } catch (error) {
                     console.error('Error initializing Sankey diagram:', error);
+                    document.getElementById('sankey-diagram').innerHTML = `<div class="alert alert-danger">Error initializing Sankey diagram: ${error.message}</div>`;
                 }
             }
         });
@@ -2449,10 +2462,12 @@ function initializeSankeyDiagram() {
     const container = document.getElementById('sankey-diagram');
     if (!container) return;
     
-    // Ensure the container has sufficient height
-    if (container.style.height === '' || parseInt(container.style.height) < 500) {
-        container.style.height = '500px';
-    }
+    console.log("Initializing Sankey diagram");
+    
+    // Ensure the container has sufficient height and is visible
+    container.style.height = '500px';
+    container.style.width = '100%';
+    container.style.display = 'block';
     
     // Get current URL parameters for filtering
     const urlParams = new URLSearchParams(window.location.search);
@@ -2466,77 +2481,28 @@ function initializeSankeyDiagram() {
     if (gameId) params.push(`game_id=${gameId}`);
     if (params.length > 0) apiUrl += '?' + params.join('&');
     
+    console.log("Fetching Sankey data from:", apiUrl);
+    
     // Show loading indicator
     container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading connection data...</p></div>';
     
-    // Fetch data from API
-    fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    throw new Error('Authentication required. Please refresh the page and log in again.');
-                } else if (response.status === 500) {
-                    throw new Error('Server error. Please try again later or contact support.');
-                } else {
-                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-                }
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Check if we have valid data
-            if (!data.nodes || data.nodes.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No player connection data available.</div>';
-                return;
-            }
-            
-            if (!data.links || data.links.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No throw connections found for this player.</div>';
-                return;
-            }
-            
-            // Validate data structure
-            let isValid = true;
-            const nodeIds = new Set(data.nodes.map(n => n.id));
-            
-            // Check for missing nodes in links
-            const missingNodes = [];
-            data.links.forEach(link => {
-                if (!nodeIds.has(link.source)) {
-                    missingNodes.push(`source: ${link.source}`);
-                    isValid = false;
-                }
-                if (!nodeIds.has(link.target)) {
-                    missingNodes.push(`target: ${link.target}`);
-                    isValid = false;
-                }
-            });
-            
-            if (!isValid) {
-                console.error('Invalid Sankey data structure:', missingNodes);
-                container.innerHTML = '<div class="alert alert-warning">The connection data contains inconsistencies. Please try again later.</div>';
-                return;
-            }
-            
-            createSankeyDiagram(container, data);
-        })
-        .catch(error => {
-            console.error('Error fetching Sankey data:', error);
-            container.innerHTML = `<div class="alert alert-danger">Error loading connection data: ${error.message}</div>`;
-        });
-}
+    // Rest of the function remains the same...
 
 
 
 
 
 function createSankeyDiagram(container, data) {
+    console.log("Creating Sankey diagram with", data.nodes.length, "nodes and", data.links.length, "links");
+    
     // Set dimensions - increase minimum height to avoid negative node heights
     const margin = {top: 20, right: 20, bottom: 20, left: 20};
     const width = container.clientWidth - margin.left - margin.right;
     // Ensure minimum height based on number of nodes
     const minHeight = data.nodes.length * 15; // At least 15px per node
     const height = Math.max(container.clientHeight - margin.top - margin.bottom, minHeight);
+    
+    console.log(`Container dimensions: ${container.clientWidth}x${container.clientHeight}, Using: ${width}x${height}`);
     
     // Clear container
     container.innerHTML = '';
@@ -2565,6 +2531,8 @@ function createSankeyDiagram(container, data) {
             nodeMap[node.id] = index;
         });
         
+        console.log("Node mapping created for", Object.keys(nodeMap).length, "nodes");
+        
         // Process links - convert source/target from IDs to indices
         data.links.forEach(link => {
             const sourceIndex = nodeMap[link.source];
@@ -2582,9 +2550,18 @@ function createSankeyDiagram(container, data) {
             }
         });
         
+        console.log("Formatted data created with", formattedData.nodes.length, "nodes and", formattedData.links.length, "links");
+        
         // If we have no valid links after filtering, show a message
         if (formattedData.links.length === 0) {
             container.innerHTML = '<div class="alert alert-warning">No valid connections found in the data.</div>';
+            return;
+        }
+        
+        // Check if d3.sankey is available
+        if (typeof d3.sankey !== 'function') {
+            console.error("d3.sankey is not a function. Plugin may not be loaded correctly.");
+            container.innerHTML = '<div class="alert alert-danger">Sankey diagram plugin not loaded correctly.</div>';
             return;
         }
         
@@ -2595,14 +2572,20 @@ function createSankeyDiagram(container, data) {
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
         
+        console.log("SVG created with dimensions", width + margin.left + margin.right, "x", height + margin.top + margin.bottom);
+        
         // Create Sankey generator with reduced node padding
         const sankey = d3.sankey()
             .nodeWidth(15)
             .nodePadding(5) // Reduced padding to avoid negative heights
             .extent([[0, 0], [width, height]]);
         
+        console.log("Sankey generator created");
+        
         // Generate the Sankey diagram
         const graph = sankey(formattedData);
+        
+        console.log("Sankey layout calculated");
         
         // Define color scale based on node type
         const colorScale = d3.scaleOrdinal()
@@ -2626,6 +2609,8 @@ function createSankeyDiagram(container, data) {
                 return `${sourceName} → ${targetName}: ${d.value} throws`;
             });
         
+        console.log("Links added to diagram");
+        
         // Add nodes with height validation
         svg.append("g")
             .selectAll("rect")
@@ -2641,6 +2626,8 @@ function createSankeyDiagram(container, data) {
             .append("title")
             .text(d => d.name + (d.jersey_number ? ` #${d.jersey_number}` : ''));
         
+        console.log("Nodes added to diagram");
+        
         // Add node labels
         svg.append("g")
             .selectAll("text")
@@ -2653,12 +2640,38 @@ function createSankeyDiagram(container, data) {
             .text(d => d.name + (d.jersey_number ? ` #${d.jersey_number}` : ''))
             .style("font-size", "10px")
             .style("font-weight", d => d.type === 'current' ? 'bold' : 'normal');
+        
+        console.log("Node labels added to diagram");
+        console.log("Sankey diagram created successfully");
     } catch (error) {
         console.error('Error creating Sankey diagram:', error);
         container.innerHTML = `<div class="alert alert-danger">Error creating diagram: ${error.message}</div>`;
     }
 }
 
+
+// Add this at the end of your script section
+document.addEventListener('DOMContentLoaded', function() {
+    // Fallback initialization for Sankey diagram
+    setTimeout(function() {
+        const sankeyContainer = document.getElementById('sankey-diagram');
+        if (sankeyContainer && sankeyContainer.innerHTML === '') {
+            console.log("Fallback initialization for Sankey diagram");
+            if (typeof d3 !== 'undefined' && typeof d3.sankey === 'function') {
+                initializeSankeyDiagram();
+            } else if (typeof d3 !== 'undefined') {
+                console.log('Loading D3 Sankey plugin (fallback)...');
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js';
+                script.onload = function() {
+                    console.log('D3 Sankey plugin loaded successfully (fallback)');
+                    setTimeout(initializeSankeyDiagram, 100);
+                };
+                document.head.appendChild(script);
+            }
+        }
+    }, 2000); // Wait 2 seconds before trying fallback
+});
 
 
 
