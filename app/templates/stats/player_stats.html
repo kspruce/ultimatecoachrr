@@ -328,30 +328,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Add this new card for Advanced Stats -->
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Advanced Analytics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="stat-card text-center">
-                                <h3 class="fw-bold">{{ stats.total_aec|default(0)|round(2) }}</h3>
-                                <div class="text-muted">Adjusted Expected Contribution (aEC)</div>
-                                <small class="form-text text-muted">Measures impact on scoring probability.</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="stat-card text-center">
-                                <h3 class="fw-bold">{{ stats.num_throws|default(0) }}</h3>
-                                <div class="text-muted">Throws Analyzed</div>
-                                <small class="form-text text-muted">Number of throws included in aEC calculation.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>            
+            
             <!-- Radar Charts -->
             <div class="row mb-4">
                 <div class="col-md-6">

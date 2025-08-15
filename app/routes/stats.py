@@ -17,7 +17,6 @@ from app.utils.utils import admin_required
 from datetime import datetime, date
 from functools import lru_cache
 from datetime import datetime, timedelta
-from app import cache
 
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
@@ -67,47 +66,7 @@ def safe_date_format(date_obj, format_str='%Y-%m-%d'):
         return str(date_obj)
     else:
         return "Unknown"
-    
-@cache.memoize(timeout=300)  # Cache for 5 minutes
-def calculate_player_advanced_stats(player_id, game_ids=None):
-    """Calculate advanced statistics for a player"""
-    from app.models.player import Player
-    from app.models.throws import Throw
-    from app.models.game import Game
-    
-    player = Player.query.get(player_id)
-    if not player:
-        return {}
-    
-    # Build query for throws
-    throws_query = Throw.query.filter_by(thrower_id=player_id)
-    
-    # Filter by games if provided
-    if game_ids:
-        if isinstance(game_ids, (list, tuple)):
-            # Get all points for these games
-            from app.models.point import Point
-            point_ids = db.session.query(Point.id).filter(Point.game_id.in_(game_ids)).all()
-            point_ids = [p[0] for p in point_ids]
-            throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
-        else:
-            # Single game ID
-            from app.models.point import Point
-            point_ids = db.session.query(Point.id).filter_by(game_id=game_ids).all()
-            point_ids = [p[0] for p in point_ids]
-            throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
-    
-    # Get all throws
-    throws = throws_query.all()
-    
-    # Calculate Adjusted Expected Contribution
-    total_aec = sum(t.adjusted_expected_contribution for t in throws if t.adjusted_expected_contribution is not None)
-    
-    # Return advanced stats
-    return {
-        'total_aec': total_aec,
-        'num_throws': len(throws)
-    }
+
 
 # Use LRU cache for player stats that don't change often
 @lru_cache(maxsize=128)
@@ -1281,15 +1240,6 @@ def player_stats(player_id):
     # Use the new batch function for a single player to ensure consistency
     player_stats_dict = get_players_base_stats([player], games)
     stats = player_stats_dict[player.id]
-    
-    # Convert games list to a tuple of IDs for the cache key
-    game_ids_tuple = games_to_tuple(games)
-
-    # Get advanced stats (this will use the cache if available)
-    advanced_stats = calculate_player_advanced_stats(player.id, game_ids_tuple)
-    
-    # Add the new stats to the main stats dictionary
-    stats.update(advanced_stats)    
     
     # Calculate team averages specifically for these games
     team_avgs = get_cached_team_averages(games)

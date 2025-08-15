@@ -376,10 +376,6 @@ def add_point(game_id):
             
             db.session.commit()
             
-            # Queue background task for stats processing
-            from app.tasks import queue_task
-            queue_task('process_point_stats', point_id=point.id)
-            
             flash(f'Point {point.point_number} has been added!', 'success')
             return redirect(url_for('stat.record_events', point_id=point.id))
             

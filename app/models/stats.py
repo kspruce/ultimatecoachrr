@@ -1,6 +1,6 @@
-# app/models/stats.py - Update PlayerPointStats model
 from app import db
 from datetime import datetime
+
 
 class PlayerPointStats(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -9,10 +9,6 @@ class PlayerPointStats(db.Model):
     o_line_plus_minus = db.Column(db.Float, default=0.0)
     d_line_plus_minus = db.Column(db.Float, default=0.0)
     calculated_per = db.Column(db.Float, default=0.0)
-    
-    # Add new fields for advanced stats
-    adjusted_expected_contribution = db.Column(db.Float, default=0.0)
-    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

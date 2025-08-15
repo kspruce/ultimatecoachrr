@@ -59,8 +59,7 @@ def create_app(config_class=Config):
     from commands import register_commands
     register_commands(app)    
     
-
-        
+    
     @app.template_filter('initials')
     def initials_filter(name):
         """Convert a name to initials."""
@@ -186,9 +185,6 @@ def create_app(config_class=Config):
    
     from app.discord.routes import discord_bp as discord_bp
     app.register_blueprint(discord_bp)
-    
-    from app.routes.tasks import bp as tasks_bp
-    app.register_blueprint(tasks_bp)
     
     # Import models
     from app.models import (
