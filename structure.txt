@@ -1,0 +1,312 @@
+├── Procfile
+├── __pycache__
+│   ├── config.cpython-39.pyc
+│   └── run.cpython-39.pyc
+├── app
+│   ├── __init__ (backup).py
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-312.pyc
+│   │   └── __init__.cpython-39.pyc
+│   ├── discord
+│   │   ├── __init__.py
+│   │   ├── bot.py
+│   │   ├── config.py
+│   │   ├── events.py
+│   │   ├── notifications.py
+│   │   ├── routes.py
+│   │   └── webhooks.py
+│   ├── discord_integration.py
+│   ├── forms
+│   │   ├── __pycache__
+│   │   │   ├── annotation.cpython-39.pyc
+│   │   │   ├── auth.cpython-39.pyc
+│   │   │   ├── clip.cpython-39.pyc
+│   │   │   ├── game.cpython-39.pyc
+│   │   │   ├── playbook.cpython-39.pyc
+│   │   │   ├── point.cpython-39.pyc
+│   │   │   ├── scouting.cpython-39.pyc
+│   │   │   ├── session.cpython-39.pyc
+│   │   │   ├── stat.cpython-39.pyc
+│   │   │   ├── team.cpython-39.pyc
+│   │   │   ├── theory.cpython-39.pyc
+│   │   │   └── tournament.cpython-39.pyc
+│   │   ├── annotation.py
+│   │   ├── auth.py
+│   │   ├── clip.py
+│   │   ├── game.py
+│   │   ├── playbook.py
+│   │   ├── point.py
+│   │   ├── rsvp_form.py
+│   │   ├── scouting.py
+│   │   ├── session.py
+│   │   ├── stat.py
+│   │   ├── team.py
+│   │   ├── theory.py
+│   │   └── tournament.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-39.pyc
+│   │   │   ├── annotation.cpython-39.pyc
+│   │   │   ├── clip.cpython-39.pyc
+│   │   │   ├── drill.cpython-39.pyc
+│   │   │   ├── event.cpython-39.pyc
+│   │   │   ├── export.cpython-39.pyc
+│   │   │   ├── game.cpython-39.pyc
+│   │   │   ├── playbook.cpython-39.pyc
+│   │   │   ├── player.cpython-39.pyc
+│   │   │   ├── point.cpython-39.pyc
+│   │   │   ├── scouting.cpython-39.pyc
+│   │   │   ├── session.cpython-39.pyc
+│   │   │   ├── stats.cpython-39.pyc
+│   │   │   ├── theory.cpython-39.pyc
+│   │   │   ├── throws.cpython-39.pyc
+│   │   │   ├── tournament.cpython-39.pyc
+│   │   │   └── user.cpython-39.pyc
+│   │   ├── annotation.py
+│   │   ├── clip.py
+│   │   ├── cutting_skill.py
+│   │   ├── discord_user.py
+│   │   ├── drill.py
+│   │   ├── event.py
+│   │   ├── export.py
+│   │   ├── fitness.py
+│   │   ├── game.py
+│   │   ├── game_player.py
+│   │   ├── playbook.py
+│   │   ├── player.py
+│   │   ├── point.py
+│   │   ├── scouting.py
+│   │   ├── session.py
+│   │   ├── stats.py
+│   │   ├── theory.py
+│   │   ├── throws.py
+│   │   ├── tournament.py
+│   │   ├── tournament_rsvp.py
+│   │   └── user.py
+│   ├── routes
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-39.pyc
+│   │   │   ├── auth.cpython-39.pyc
+│   │   │   ├── clip.cpython-39.pyc
+│   │   │   ├── drill_routes.cpython-39.pyc
+│   │   │   ├── game.cpython-39.pyc
+│   │   │   ├── main.cpython-39.pyc
+│   │   │   ├── playbook.cpython-39.pyc
+│   │   │   ├── point.cpython-39.pyc
+│   │   │   ├── scouting.cpython-39.pyc
+│   │   │   ├── session.cpython-39.pyc
+│   │   │   ├── stat.cpython-39.pyc
+│   │   │   ├── stats.cpython-39.pyc
+│   │   │   ├── team.cpython-39.pyc
+│   │   │   ├── theory.cpython-39.pyc
+│   │   │   └── tournament.cpython-39.pyc
+│   │   ├── auth.py
+│   │   ├── calendar_routes.py
+│   │   ├── clip.py
+│   │   ├── cutting_skill.py
+│   │   ├── data_management_routes.py
+│   │   ├── drill_routes.py
+│   │   ├── fitness.py
+│   │   ├── game.py
+│   │   ├── main.py
+│   │   ├── playbook.py
+│   │   ├── point.py
+│   │   ├── scouting.py
+│   │   ├── session.py
+│   │   ├── stat.py
+│   │   ├── stats(backup).py
+│   │   ├── stats.py
+│   │   ├── team.py
+│   │   ├── theory.py
+│   │   └── tournament.py
+│   ├── static
+│   │   ├── css
+│   │   │   ├── calendar.css
+│   │   │   ├── drill_editor.css
+│   │   │   ├── drill_viewer.css
+│   │   │   ├── main.css
+│   │   │   └── session_styles.css
+│   │   ├── images
+│   │   │   ├── drills
+│   │   │   └── theory
+│   │   ├── js
+│   │   │   ├── drill_editor.js
+│   │   │   ├── drill_viewer.js
+│   │   │   ├── main.js
+│   │   │   ├── playbook.js
+│   │   │   ├── session.js
+│   │   │   └── session_scripts.js
+│   │   └── uploads
+│   │       └── drills
+│   ├── templates
+│   │   ├── about.html
+│   │   ├── admin
+│   │   │   ├── data_management.html
+│   │   │   └── enhanced_data_management.html
+│   │   ├── auth
+│   │   │   ├── link_player.html
+│   │   │   ├── login.html
+│   │   │   ├── profile.html
+│   │   │   ├── register.html
+│   │   │   ├── user_form.html
+│   │   │   └── users.html
+│   │   ├── base.html
+│   │   ├── calendar
+│   │   │   ├── index.html
+│   │   │   ├── rsvp.html
+│   │   │   ├── rsvps.html
+│   │   │   └── tournament_rsvp.html
+│   │   ├── clip
+│   │   │   ├── clip_form.html
+│   │   │   ├── edit_annotation.html
+│   │   │   ├── game_clips.html
+│   │   │   ├── index.html
+│   │   │   ├── point_clips.html
+│   │   │   ├── tag_form.html
+│   │   │   ├── tags.html
+│   │   │   └── view_clip.html
+│   │   ├── discord
+│   │   │   ├── link_account.html
+│   │   │   └── settings.html
+│   │   ├── drills
+│   │   │   └── view.html
+│   │   ├── fitness
+│   │   │   ├── batch_record.html
+│   │   │   ├── batch_select_metric.html
+│   │   │   ├── index.html
+│   │   │   ├── leaderboard.html
+│   │   │   ├── manage_metrics.html
+│   │   │   ├── metric_form.html
+│   │   │   ├── metric_history.html
+│   │   │   ├── player_fitness.html
+│   │   │   └── record_form.html
+│   │   ├── game
+│   │   │   ├── add_multiple.html
+│   │   │   ├── detail.html
+│   │   │   ├── form.html
+│   │   │   └── index.html
+│   │   ├── how_to_use.html
+│   │   ├── index.html
+│   │   ├── partials
+│   │   │   └── breadcrumbs.html
+│   │   ├── playbook
+│   │   │   ├── assignments.html
+│   │   │   ├── formation_form.html
+│   │   │   ├── index.html
+│   │   │   ├── play_detail.html
+│   │   │   ├── play_form.html
+│   │   │   └── view_formation.html
+│   │   ├── point
+│   │   │   ├── fix_lineups.html
+│   │   │   ├── game_points.html
+│   │   │   ├── point_detail.html
+│   │   │   ├── point_form.html
+│   │   │   └── pull_form.html
+│   │   ├── scouting
+│   │   │   ├── clip_form.html
+│   │   │   ├── clips.html
+│   │   │   ├── detail.html
+│   │   │   ├── index.html
+│   │   │   ├── player_form.html
+│   │   │   ├── players.html
+│   │   │   ├── report_form.html
+│   │   │   └── view_clip.html
+│   │   ├── session
+│   │   │   ├── attendance.html
+│   │   │   ├── attendance_analytics.html
+│   │   │   ├── component_form.html
+│   │   │   ├── components.html
+│   │   │   ├── detail.html
+│   │   │   ├── drills
+│   │   │   ├── drills.html
+│   │   │   ├── index.html
+│   │   │   ├── pdf_export.html
+│   │   │   ├── player_attendance.html
+│   │   │   ├── printable.html
+│   │   │   ├── rsvp.html
+│   │   │   ├── rsvps.html
+│   │   │   └── session_form.html
+│   │   ├── stats
+│   │   │   ├── debug_line_plus_minus.html
+│   │   │   ├── debug_per.html
+│   │   │   ├── debug_throws.html
+│   │   │   ├── game_stats.html
+│   │   │   ├── index.html
+│   │   │   ├── no_stats.html
+│   │   │   ├── overview.html
+│   │   │   ├── player_stats.html
+│   │   │   ├── record(backup).html
+│   │   │   ├── record.html
+│   │   │   └── team_stats.html
+│   │   ├── stats (backup)
+│   │   │   ├── debug_per.html
+│   │   │   ├── debug_throws.html
+│   │   │   ├── game_stats.html
+│   │   │   ├── index.html
+│   │   │   ├── no_stats.html
+│   │   │   ├── overview.html
+│   │   │   ├── player_stats.html
+│   │   │   ├── record.html
+│   │   │   └── team_stats.html
+│   │   ├── team
+│   │   │   ├── debug.html
+│   │   │   ├── index.html
+│   │   │   ├── player_detail.html
+│   │   │   ├── player_form.html
+│   │   │   └── roster.html
+│   │   ├── theory
+│   │   │   ├── index.html
+│   │   │   ├── section.html
+│   │   │   ├── section_form.html
+│   │   │   ├── topic.html
+│   │   │   └── topic_form.html
+│   │   └── tournament
+│   │       ├── assign_players.html
+│   │       ├── detail.html
+│   │       ├── form.html
+│   │       ├── index.html
+│   │       └── tournament_rsvps.html
+│   └── utils
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-39.pyc
+│       │   ├── s3_utils.cpython-39.pyc
+│       │   ├── stat_utils.cpython-39.pyc
+│       │   ├── stats.cpython-39.pyc
+│       │   ├── storage.cpython-39.pyc
+│       │   └── utils.cpython-39.pyc
+│       ├── data_manager.py
+│       ├── enhanced_data_manager.py
+│       ├── per_calculator.py
+│       ├── s3_utils.py
+│       ├── stat_utils.py
+│       ├── storage.py
+│       └── utils.py
+├── app.db
+├── app.db.bak
+├── app.json
+├── commands.py
+├── config.py
+├── create_admin.py
+├── db_manager.py
+├── file_structure.py
+├── generate_mock_data.py
+├── init_db.py
+├── instance
+│   └── app.db
+├── migrations
+│   ├── README
+│   ├── __pycache__
+│   │   └── env.cpython-39.pyc
+│   ├── alembic.ini
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions
+│       ├── 443f4ea75519_add_video_source_field_to_clips.py
+│       └── __pycache__
+│           └── 443f4ea75519_add_video_source_field_to_clips.cpython-39.pyc
+├── requirements.txt
+└── reset_database.sql
