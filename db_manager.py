@@ -1,4 +1,5 @@
 from app import create_app, db
+# Import models directly from app.models
 from app.models.user import User
 from app.models.player import Player
 from app.models.tournament import Tournament
@@ -7,17 +8,13 @@ from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
 from app.models.clip import Clip, ClipTag
 from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
+# Import the CuttingSkill model - make sure this file exists in app/models/
 from app.models.cutting_skill import CuttingSkill
 from datetime import datetime
 import sys
 from sqlalchemy import text
 
-# Create a custom config class that disables Discord integration
-class DisabledDiscordConfig:
-    DISCORD_ENABLED = False
-
-# Create app with Discord disabled
-app = create_app(DisabledDiscordConfig)
+app = create_app()
 
 def print_status(message):
     """Helper function to print status messages"""
@@ -39,6 +36,7 @@ def reset_database():
             db.create_all()
             print_status("Created all tables")
             
+            # The rest of your function remains the same...
             # Create admin user
             admin = User(username='admin', email='admin@example.com', is_admin=True)
             admin.set_password('password')
