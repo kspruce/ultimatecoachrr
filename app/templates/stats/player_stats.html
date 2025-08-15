@@ -2479,9 +2479,39 @@ function initializeSankeyDiagram() {
             return response.json();
         })
         .then(data => {
+            console.log('Received Sankey data:', data);
+            
             // Check if we have valid data
-            if (!data.nodes || data.nodes.length === 0 || !data.links || data.links.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No connection data available.</div>';
+            if (!data.nodes || data.nodes.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No player connection data available.</div>';
+                return;
+            }
+            
+            if (!data.links || data.links.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No throw connections found for this player.</div>';
+                return;
+            }
+            
+            // Validate data structure
+            let isValid = true;
+            const nodeIds = new Set(data.nodes.map(n => n.id));
+            
+            // Check for missing nodes in links
+            const missingNodes = [];
+            data.links.forEach(link => {
+                if (!nodeIds.has(link.source)) {
+                    missingNodes.push(`source: ${link.source}`);
+                    isValid = false;
+                }
+                if (!nodeIds.has(link.target)) {
+                    missingNodes.push(`target: ${link.target}`);
+                    isValid = false;
+                }
+            });
+            
+            if (!isValid) {
+                console.error('Invalid Sankey data structure:', missingNodes);
+                container.innerHTML = '<div class="alert alert-warning">The connection data contains inconsistencies. Please try again later.</div>';
                 return;
             }
             
@@ -2495,6 +2525,7 @@ function initializeSankeyDiagram() {
 
 
 
+
 function createSankeyDiagram(container, data) {
     // Set dimensions
     const margin = {top: 10, right: 10, bottom: 10, left: 10};
@@ -2504,6 +2535,59 @@ function createSankeyDiagram(container, data) {
     // Clear container
     container.innerHTML = '';
     
+    console.log("Original data:", JSON.stringify(data));
+    
+    // D3 Sankey requires nodes to be an array of objects and links to reference nodes by index
+    // First, create a mapping of node IDs to indices
+    const nodeMap = {};
+    
+    // Create a new formatted data structure
+    const formattedData = {
+        nodes: [],
+        links: []
+    };
+    
+    // Process nodes and create the mapping
+    data.nodes.forEach((node, index) => {
+        // Add node to the formatted data
+        formattedData.nodes.push({
+            name: node.name,
+            jersey_number: node.jersey_number,
+            type: node.type
+        });
+        
+        // Create mapping from original ID to index
+        nodeMap[node.id] = index;
+    });
+    
+    console.log("Node mapping:", nodeMap);
+    
+    // Process links - convert source/target from IDs to indices
+    data.links.forEach(link => {
+        const sourceIndex = nodeMap[link.source];
+        const targetIndex = nodeMap[link.target];
+        
+        // Only add the link if both source and target exist in our nodes
+        if (sourceIndex !== undefined && targetIndex !== undefined) {
+            formattedData.links.push({
+                source: sourceIndex,
+                target: targetIndex,
+                value: link.value
+            });
+        } else {
+            console.warn(`Skipping link with invalid source/target: ${link.source} -> ${link.target}`);
+            console.warn(`Source index: ${sourceIndex}, Target index: ${targetIndex}`);
+        }
+    });
+    
+    console.log("Formatted data:", formattedData);
+    
+    // If we have no valid links after filtering, show a message
+    if (formattedData.links.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">No valid connections found in the data.</div>';
+        return;
+    }
+    
     // Create SVG
     const svg = d3.select(container).append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -2511,89 +2595,65 @@ function createSankeyDiagram(container, data) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
     
-    try {
-        // Validate data - ensure all sources and targets exist in nodes
-        const nodeIds = new Set(data.nodes.map(node => node.id));
-        
-        // Filter out links with missing sources or targets
-        const validLinks = data.links.filter(link => {
-            if (!nodeIds.has(link.source) || !nodeIds.has(link.target)) {
-                console.warn(`Skipping invalid link: ${link.source} -> ${link.target}`);
-                return false;
-            }
-            return true;
+    // Create Sankey generator
+    const sankey = d3.sankey()
+        .nodeWidth(15)
+        .nodePadding(10)
+        .extent([[0, 0], [width, height]]);
+    
+    // Generate the Sankey diagram
+    const graph = sankey(formattedData);
+    
+    // Define color scale based on node type
+    const colorScale = d3.scaleOrdinal()
+        .domain(['thrower', 'current', 'receiver'])
+        .range(['#6c757d', '#007bff', '#28a745']);
+    
+    // Add links
+    svg.append("g")
+        .selectAll("path")
+        .data(graph.links)
+        .join("path")
+        .attr("d", d3.sankeyLinkHorizontal())
+        .attr("stroke", d => d3.color(colorScale(d.source.type)).darker(0.5))
+        .attr("stroke-width", d => Math.max(1, d.width))
+        .attr("fill", "none")
+        .attr("opacity", 0.5)
+        .append("title")
+        .text(d => {
+            const sourceName = d.source.name + (d.source.jersey_number ? ` #${d.source.jersey_number}` : '');
+            const targetName = d.target.name + (d.target.jersey_number ? ` #${d.target.jersey_number}` : '');
+            return `${sourceName} → ${targetName}: ${d.value} throws`;
         });
-        
-        // If we have no valid links after filtering, show a message
-        if (validLinks.length === 0) {
-            container.innerHTML = '<div class="alert alert-warning">No valid connections found in the data.</div>';
-            return;
-        }
-        
-        // Create a new data object with only valid links
-        const validData = {
-            nodes: data.nodes,
-            links: validLinks
-        };
-        
-        // Create Sankey generator
-        const sankey = d3.sankey()
-            .nodeWidth(15)
-            .nodePadding(10)
-            .extent([[0, 0], [width, height]]);
-        
-        // Format data for D3 Sankey
-        const graph = sankey(validData);
-        
-        // Define color scale based on node type
-        const colorScale = d3.scaleOrdinal()
-            .domain(['thrower', 'current', 'receiver'])
-            .range(['#6c757d', '#007bff', '#28a745']);
-        
-        // Add links
-        svg.append("g")
-            .selectAll("path")
-            .data(graph.links)
-            .join("path")
-            .attr("d", d3.sankeyLinkHorizontal())
-            .attr("stroke", d => d3.color(colorScale(d.source.type)).darker(0.5))
-            .attr("stroke-width", d => Math.max(1, d.width))
-            .attr("fill", "none")
-            .attr("opacity", 0.5)
-            .append("title")
-            .text(d => `${d.source.name} → ${d.target.name}: ${d.value} throws`);
-        
-        // Add nodes
-        const node = svg.append("g")
-            .selectAll("rect")
-            .data(graph.nodes)
-            .join("rect")
-            .attr("x", d => d.x0)
-            .attr("y", d => d.y0)
-            .attr("height", d => d.y1 - d.y0)
-            .attr("width", d => d.x1 - d.x0)
-            .attr("fill", d => colorScale(d.type))
-            .attr("stroke", d => d3.color(colorScale(d.type)).darker(0.5))
-            .append("title")
-            .text(d => `${d.name}${d.jersey_number ? ` #${d.jersey_number}` : ''}`);
-        
-        // Add node labels
-        svg.append("g")
-            .selectAll("text")
-            .data(graph.nodes)
-            .join("text")
-            .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
-            .attr("y", d => (d.y1 + d.y0) / 2)
-            .attr("dy", "0.35em")
-            .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
-            .text(d => `${d.name}${d.jersey_number ? ` #${d.jersey_number}` : ''}`)
-            .style("font-size", "10px")
-            .style("font-weight", d => d.type === 'current' ? 'bold' : 'normal');
-    } catch (error) {
-        console.error('Error creating Sankey diagram:', error);
-        container.innerHTML = `<div class="alert alert-danger">Error creating diagram: ${error.message}</div>`;
-    }
+    
+    // Add nodes
+    svg.append("g")
+        .selectAll("rect")
+        .data(graph.nodes)
+        .join("rect")
+        .attr("x", d => d.x0)
+        .attr("y", d => d.y0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("width", d => d.x1 - d.x0)
+        .attr("fill", d => colorScale(d.type))
+        .attr("stroke", d => d3.color(colorScale(d.type)).darker(0.5))
+        .append("title")
+        .text(d => d.name + (d.jersey_number ? ` #${d.jersey_number}` : ''));
+    
+    // Add node labels
+    svg.append("g")
+        .selectAll("text")
+        .data(graph.nodes)
+        .join("text")
+        .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+        .attr("y", d => (d.y1 + d.y0) / 2)
+        .attr("dy", "0.35em")
+        .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+        .text(d => d.name + (d.jersey_number ? ` #${d.jersey_number}` : ''))
+        .style("font-size", "10px")
+        .style("font-weight", d => d.type === 'current' ? 'bold' : 'normal');
 }
+
 
 
 </script>
