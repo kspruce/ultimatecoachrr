@@ -3154,7 +3154,7 @@ def generate_player_sankey_data(player_id, point_ids=None):
     
     # Create a node for the current player
     player_node = {
-        "id": f"player_{player.id}",  # This is the node ID format
+        "id": f"player_{player.id}",
         "name": player.name,
         "jersey_number": player.jersey_number,
         "type": "current"
@@ -3163,6 +3163,16 @@ def generate_player_sankey_data(player_id, point_ids=None):
     
     # Track which nodes have been added to avoid duplicates
     added_node_ids = {f"player_{player.id}"}
+    
+    # Query for throws TO the player (incoming)
+    incoming_query = Throw.query.filter_by(receiver_id=player.id)
+    if point_ids:
+        incoming_query = incoming_query.filter(Throw.point_id.in_(point_ids))
+    
+    # Query for throws FROM the player (outgoing)
+    outgoing_query = Throw.query.filter_by(thrower_id=player.id)
+    if point_ids:
+        outgoing_query = outgoing_query.filter(Throw.point_id.in_(point_ids))
     
     # Process incoming throws
     thrower_counts = {}
@@ -3234,6 +3244,7 @@ def generate_player_sankey_data(player_id, point_ids=None):
 
 
 
+
 @bp.route('/api/player-connections-sankey')
 @login_required
 def api_player_connections_sankey():
@@ -3266,7 +3277,6 @@ def api_player_connections_sankey():
     # Generate Sankey data
     sankey_data = generate_player_sankey_data(current_player_id, point_ids)
     return jsonify(sankey_data)
-
 
 @bp.route('/api/connection-data')
 @login_required
