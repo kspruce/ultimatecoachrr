@@ -3118,23 +3118,153 @@ def calculate_team_avg_stats(player_stats):
 @bp.route('/api/heatmap-data')
 @login_required
 def api_heatmap_data():
-    """API endpoint for heatmap data"""
-    team_name = None
+    """API endpoint for heatmap data filtered for the current user"""
+    # Get the current user's player ID
+    current_player_id = None
     if hasattr(current_user, 'player') and current_user.player:
-        team_name = current_user.player.team
+        current_player_id = current_user.player.id
+    
+    # If no player profile is associated with the user, return empty data
+    if not current_player_id:
+        return jsonify([])
     
     # Get filter parameters
-    player_id = request.args.get('player_id', type=int)
     opposition_team = request.args.get('opposition_team')
     
-    # Limit to 1000 data points for performance
+    # Process heatmap data specifically for the current player
     heatmap_data = process_heatmap_data(
-        team_name=team_name, 
-        player_id=player_id,
+        player_id=current_player_id,
         opposition_team=opposition_team,
         limit=1000
     )
     return jsonify(heatmap_data)
+
+def generate_player_sankey_data(player_id, point_ids=None):
+    """Generate Sankey diagram data for a specific player"""
+    # Initialize data structure
+    sankey_data = {
+        "nodes": [],
+        "links": []
+    }
+    
+    # Get the player
+    player = Player.query.get(player_id)
+    if not player:
+        return sankey_data
+    
+    # Create a node for the current player
+    player_node = {
+        "id": f"player_{player.id}",
+        "name": player.name,
+        "jersey_number": player.jersey_number,
+        "type": "current"
+    }
+    sankey_data["nodes"].append(player_node)
+    
+    # Query for throws TO the player (incoming)
+    incoming_query = Throw.query.filter_by(receiver_id=player.id)
+    if point_ids:
+        incoming_query = incoming_query.filter(Throw.point_id.in_(point_ids))
+    
+    # Query for throws FROM the player (outgoing)
+    outgoing_query = Throw.query.filter_by(thrower_id=player.id)
+    if point_ids:
+        outgoing_query = outgoing_query.filter(Throw.point_id.in_(point_ids))
+    
+    # Process incoming throws
+    thrower_counts = {}
+    for throw in incoming_query.all():
+        if throw.thrower_id:
+            thrower_id = throw.thrower_id
+            if thrower_id not in thrower_counts:
+                thrower_counts[thrower_id] = 0
+            thrower_counts[thrower_id] += 1
+    
+    # Process outgoing throws
+    receiver_counts = {}
+    for throw in outgoing_query.all():
+        if throw.receiver_id:
+            receiver_id = throw.receiver_id
+            if receiver_id not in receiver_counts:
+                receiver_counts[receiver_id] = 0
+            receiver_counts[receiver_id] += 1
+    
+    # Add thrower nodes and links
+    for thrower_id, count in thrower_counts.items():
+        thrower = Player.query.get(thrower_id)
+        if thrower:
+            # Add thrower node
+            node_id = f"thrower_{thrower.id}"
+            sankey_data["nodes"].append({
+                "id": node_id,
+                "name": thrower.name,
+                "jersey_number": thrower.jersey_number,
+                "type": "thrower"
+            })
+            
+            # Add link from thrower to player
+            sankey_data["links"].append({
+                "source": node_id,
+                "target": f"player_{player.id}",
+                "value": count
+            })
+    
+    # Add receiver nodes and links
+    for receiver_id, count in receiver_counts.items():
+        receiver = Player.query.get(receiver_id)
+        if receiver:
+            # Add receiver node
+            node_id = f"receiver_{receiver.id}"
+            sankey_data["nodes"].append({
+                "id": node_id,
+                "name": receiver.name,
+                "jersey_number": receiver.jersey_number,
+                "type": "receiver"
+            })
+            
+            # Add link from player to receiver
+            sankey_data["links"].append({
+                "source": f"player_{player.id}",
+                "target": node_id,
+                "value": count
+            })
+    
+    return sankey_data
+
+
+@bp.route('/api/player-connections-sankey')
+@login_required
+def api_player_connections_sankey():
+    """API endpoint for Sankey diagram showing player throw connections"""
+    # Get the current user's player ID
+    current_player_id = None
+    if hasattr(current_user, 'player') and current_user.player:
+        current_player_id = current_user.player.id
+    
+    # If no player profile is associated with the user, return empty data
+    if not current_player_id:
+        return jsonify({"nodes": [], "links": []})
+    
+    # Get filter parameters
+    tournament_id = request.args.get('tournament_id', type=int)
+    game_id = request.args.get('game_id', type=int)
+    
+    # Determine which games to analyze
+    if game_id:
+        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+    elif tournament_id:
+        tournament = Tournament.query.get(tournament_id)
+        games = tournament.games.all() if tournament else []
+    else:
+        games = Game.query.all()
+    
+    # Get point IDs for filtering
+    point_ids = get_point_ids_from_games(games)
+    
+    # Generate Sankey data
+    sankey_data = generate_player_sankey_data(current_player_id, point_ids)
+    return jsonify(sankey_data)
+
 
 @bp.route('/api/connection-data')
 @login_required
