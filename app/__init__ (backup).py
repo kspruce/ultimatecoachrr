@@ -8,6 +8,8 @@ import os
 from flask_wtf.csrf import CSRFError
 import json
 import markdown
+from flask_moment import Moment
+from app.discord_integration import init_discord_integration
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -15,6 +17,8 @@ login = LoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
+moment = Moment()
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -25,6 +29,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login.init_app(app)
     csrf.init_app(app)
+    moment.init_app(app)
 
     # Ensure the SECRET_KEY is set
     if not app.config.get('SECRET_KEY'):
@@ -47,13 +52,10 @@ def create_app(config_class=Config):
     app.static_folder = 'static'
     app.static_url_path = '/static'
     
-    # Template filters
-    def markdown_filter(text):
-        if text:
-            return markdown.markdown(text, extensions=['fenced_code', 'tables'])
-        return ''
+    # Register custom commands
+    from commands import register_commands
+    register_commands(app)    
     
-    app.jinja_env.filters['markdown'] = markdown_filter
     
     @app.template_filter('initials')
     def initials_filter(name):
@@ -66,8 +68,11 @@ def create_app(config_class=Config):
         if s is None:
             return ''
         return s.replace('\n', '<br>')
-    
-    # Error handlers
+    @app.template_filter('tojsonfilter')
+    def tojsonfilter(obj):
+        return json.dumps(obj)
+        # Error handlers
+        
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
         return jsonify({
@@ -82,9 +87,47 @@ def create_app(config_class=Config):
             'message': f'File too large. Maximum size is {app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)}MB'
         }), 413
     
+    import markdown
+    from markupsafe import Markup
+    
+    @app.template_filter('markdown')
+    def markdown_filter(text):
+        if text is None:
+            return ''
+        # Convert markdown to HTML with extensions
+        md_html = markdown.markdown(
+            text,
+            extensions=[
+                'markdown.extensions.fenced_code',
+                'markdown.extensions.tables',
+                'markdown.extensions.nl2br',
+                'markdown.extensions.sane_lists'
+            ]
+        )
+        # Return as safe HTML
+        return Markup(md_html)
+
+
+    def ensure_default_metrics_exist(app):
+        with app.app_context():
+            from app.models.fitness import FitnessMetric, DEFAULT_METRICS
+            
+            # Check if we have any metrics
+            if db.session.query(FitnessMetric).count() == 0:
+                # Add default metrics
+                for metric_data in DEFAULT_METRICS:
+                    metric = FitnessMetric(**metric_data)
+                    db.session.add(metric)
+                db.session.commit()
+                print(f"Added {len(DEFAULT_METRICS)} default fitness metrics")
+   
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
+    
+    from app.routes.calendar_routes import calendar_bp
+    app.register_blueprint(calendar_bp)
+
     
     from app.routes.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -94,6 +137,9 @@ def create_app(config_class=Config):
     
     from app.routes.tournament import bp as tournament_bp
     app.register_blueprint(tournament_bp)
+    
+    #from app.routes.tournament_routes import bp as tournament_calendar_bp
+    #app.register_blueprint(tournament_calendar_bp)
     
     from app.routes.game import bp as game_bp
     app.register_blueprint(game_bp)
@@ -125,23 +171,34 @@ def create_app(config_class=Config):
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
     
+    from app.routes.cutting_skill import bp as cutting_skill_bp
+    app.register_blueprint(cutting_skill_bp)
+    
+    from app.routes.data_management_routes import bp as data_management_bp
+    app.register_blueprint(data_management_bp)
+    
+    from app.routes.fitness import bp as fitness_bp
+    app.register_blueprint(fitness_bp)
    
+    from app.discord.routes import discord_bp as discord_bp
+    app.register_blueprint(discord_bp)
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,
        Event, Pull, Clip, ClipTag, ClipAnnotation,
-       SessionPlan, SessionComponent, SavedDrill, Attendance
-   )
-    
-        # Create upload directory in /tmp
+       SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
+       FitnessMetric, FitnessRecord  # Add these new models
+    )
+
+
+    # Create upload directory in /tmp
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         # Create subdirectories
         for subdir in ['drills', 'playbook', 'theory', 'temp']:
             os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], subdir), exist_ok=True)
-    except Exception as e:
-        app.logger.warning(f"Could not create upload directories: {e}")
-            
+        
         # Test write permissions
         test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
         with open(test_file, 'w') as f:
@@ -154,5 +211,9 @@ def create_app(config_class=Config):
     # Create database tables
     with app.app_context():
         db.create_all()
+        ensure_default_metrics_exist(app)
+    
+    init_discord_integration(app)
     
     return app
+

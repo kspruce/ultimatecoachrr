@@ -32,6 +32,14 @@ class Config:
     AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
     AWS_BUCKET_NAME = os.environ.get('AWS_BUCKET_NAME')
     
+    # Flask-Caching configuration
+    CACHE_TYPE = "SimpleCache"  # In-memory cache
+    CACHE_DEFAULT_TIMEOUT = 300  # 5 minutes
+    
+    # Celery configuration using SQLAlchemy as broker
+    CELERY_BROKER_URL = f"sqla+{os.environ.get('DATABASE_URL', 'sqlite:///app.db')}"
+    CELERY_RESULT_BACKEND = f"db+{os.environ.get('DATABASE_URL', 'sqlite:///app.db')}"
+    
     # File Upload Settings
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS = {

@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_caching import Cache
 from config import Config
 from flask_wtf.csrf import CSRFProtect
 import os
@@ -14,6 +15,7 @@ from app.discord_integration import init_discord_integration
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
+cache = Cache()
 login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
@@ -28,6 +30,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+    cache.init_app(app)
     csrf.init_app(app)
     moment.init_app(app)
 
@@ -56,7 +59,11 @@ def create_app(config_class=Config):
     from commands import register_commands
     register_commands(app)    
     
-    
+    @app.before_first_request
+    def start_background_tasks():
+        from app.tasks import start_task_processor
+        start_task_processor(app)
+        
     @app.template_filter('initials')
     def initials_filter(name):
         """Convert a name to initials."""
@@ -183,12 +190,15 @@ def create_app(config_class=Config):
     from app.discord.routes import discord_bp as discord_bp
     app.register_blueprint(discord_bp)
     
+    from app.routes.tasks import bp as tasks_bp
+    app.register_blueprint(tasks_bp)
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,
        Event, Pull, Clip, ClipTag, ClipAnnotation,
        SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-       FitnessMetric, FitnessRecord  # Add these new models
+       FitnessMetric, FitnessRecord, TaskQueue  # Add these new models
     )
 
 

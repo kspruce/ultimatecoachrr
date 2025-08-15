@@ -9,6 +9,7 @@ class Throw(db.Model):
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
     thrower_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
+    adjusted_expected_contribution = db.Column(db.Float)
     
     # Keep team relationships but make them work with Player.team string
     team = db.Column(db.String(50))  # Match Player.team string field
