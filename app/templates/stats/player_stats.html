@@ -2545,20 +2545,34 @@ function initializeSankeyDiagram() {
         });
 }
 
-
-
-
 function createSankeyDiagram(container, data) {
     console.log("Creating Sankey diagram with", data.nodes.length, "nodes and", data.links.length, "links");
     
+    // Force the container to have a specific width if it's not already set
+    if (container.clientWidth <= 0) {
+        console.log("Container has zero width, setting explicit width");
+        container.style.width = '100%';
+        // Force a reflow to apply the width
+        container.getBoundingClientRect();
+    }
+    
     // Set dimensions - increase minimum height to avoid negative node heights
     const margin = {top: 20, right: 20, bottom: 20, left: 20};
-    const width = container.clientWidth - margin.left - margin.right;
+    let width = Math.max(container.clientWidth - margin.left - margin.right, 600); // Ensure minimum width of 600px
     // Ensure minimum height based on number of nodes
     const minHeight = data.nodes.length * 15; // At least 15px per node
     const height = Math.max(container.clientHeight - margin.top - margin.bottom, minHeight);
     
     console.log(`Container dimensions: ${container.clientWidth}x${container.clientHeight}, Using: ${width}x${height}`);
+    
+    // If width is still 0, use a fixed width
+    if (width <= margin.left + margin.right) {
+        console.warn("Container width is still too small, using fixed width");
+        // Use parent container width or a reasonable default
+        const parentWidth = container.parentElement ? container.parentElement.clientWidth : 800;
+        width = Math.max(parentWidth - margin.left - margin.right, 600);
+        console.log(`Using fixed width: ${width}`);
+    }
     
     // Clear container
     container.innerHTML = '';
@@ -2705,29 +2719,27 @@ function createSankeyDiagram(container, data) {
     }
 }
 
-
-// Add this at the end of your script section
+// Add this code to handle tab activation
 document.addEventListener('DOMContentLoaded', function() {
-    // Fallback initialization for Sankey diagram
-    setTimeout(function() {
-        const sankeyContainer = document.getElementById('sankey-diagram');
-        if (sankeyContainer && sankeyContainer.innerHTML === '') {
-            console.log("Fallback initialization for Sankey diagram");
-            if (typeof d3 !== 'undefined' && typeof d3.sankey === 'function') {
-                initializeSankeyDiagram();
-            } else if (typeof d3 !== 'undefined') {
-                console.log('Loading D3 Sankey plugin (fallback)...');
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js';
-                script.onload = function() {
-                    console.log('D3 Sankey plugin loaded successfully (fallback)');
-                    setTimeout(initializeSankeyDiagram, 100);
-                };
-                document.head.appendChild(script);
+    // Get the throws tab button
+    const throwsTabButton = document.getElementById('throws-tab');
+    if (throwsTabButton) {
+        throwsTabButton.addEventListener('shown.bs.tab', function (event) {
+            console.log("Throws tab activated, checking Sankey diagram");
+            const sankeyContainer = document.getElementById('sankey-diagram');
+            if (sankeyContainer) {
+                // Check if the diagram is empty or has zero width
+                const svg = sankeyContainer.querySelector('svg');
+                if (!svg || parseInt(svg.getAttribute('width')) <= 0) {
+                    console.log("Sankey diagram needs to be redrawn");
+                    // Reinitialize the Sankey diagram
+                    initializeSankeyDiagram();
+                }
             }
-        }
-    }, 2000); // Wait 2 seconds before trying fallback
+        });
+    }
 });
+
 
 
 
