@@ -134,6 +134,49 @@
         background-color: #007bff;
         color: white;
     }
+    
+   
+    /* Mobile Responsiveness Improvements */
+    @media (max-width: 768px) {
+        .radar-container {
+            height: 250px;  /* Smaller height on mobile */
+        }
+        
+        .stat-card {
+            margin-bottom: 15px;
+        }
+        
+        #perValue {
+            font-size: 2.5rem;  /* Smaller font on mobile */
+        }
+        
+        .cutting-grid {
+            grid-template-columns: 1fr;  /* Stack in single column on mobile */
+            grid-template-rows: repeat(4, 1fr);
+        }
+        
+        .table-responsive {
+            font-size: 0.85rem;  /* Slightly smaller font for tables */
+        }
+        
+        /* Adjust tab navigation for mobile */
+        .nav-tabs .nav-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        /* Better spacing for mobile forms */
+        form .row > div {
+            margin-bottom: 10px;
+        }
+    }
+    
+    /* Improve Sankey diagram responsiveness */
+    #sankey-diagram {
+        overflow-x: auto;
+        min-height: 400px;
+    }
+
 </style>
 {% endblock %}
 
@@ -152,6 +195,9 @@
             <div class="btn-group">
                 <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
                 <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
+                <button id="printReportBtn" class="btn btn-primary">
+                    <i class="bi bi-printer"></i> Print Report
+                </button>
             </div>
         </div>
     </div>
@@ -615,6 +661,39 @@
                 </div>
             </div>
 
+            <!-- Add this to the Throws Tab section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Throw Success Rate by Field Zone</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="field-container" id="throw-success-field" style="height: 400px; position: relative;">
+                                <div class="endzone endzone-left"></div>
+                                <div class="endzone endzone-right"></div>
+                                <canvas id="throw-success-canvas" style="width: 100%; height: 100%;"></canvas>
+                            </div>
+                            <div class="text-center mt-2">
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <div class="d-flex align-items-center me-4">
+                                        <div style="width: 20px; height: 20px; background-color: rgba(40, 167, 69, 0.7); margin-right: 5px;"></div>
+                                        <span>High Success (90%+)</span>
+                                    </div>
+                                    <div class="d-flex align-items-center me-4">
+                                        <div style="width: 20px; height: 20px; background-color: rgba(255, 193, 7, 0.7); margin-right: 5px;"></div>
+                                        <span>Medium Success (70-90%)</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div style="width: 20px; height: 20px; background-color: rgba(220, 53, 69, 0.7); margin-right: 5px;"></div>
+                                        <span>Low Success (<70%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Cutting Skills Tab -->
@@ -890,6 +969,28 @@
         <!-- Game History Tab -->
         <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
             <!-- Game History Content -->
+            <!-- Performance Trend Chart (Add this new section) -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Performance Trends</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas id="performanceTrendChart"></canvas>
+                            </div>
+                            <div class="mt-3">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-primary active" data-metric="per">PER</button>
+                                    <button type="button" class="btn btn-outline-primary" data-metric="plus_minus">Plus/Minus</button>
+                                    <button type="button" class="btn btn-outline-primary" data-metric="completion_rate">Completion Rate</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card">
@@ -1749,6 +1850,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize basic visualizations (PER gauge)
         initializeVisualizations();
         
+        const throwsTab = document.getElementById('throws-tab');
+        if (throwsTab) {
+            throwsTab.addEventListener('shown.bs.tab', function() {
+                createThrowSuccessZoneVisualization();
+            });
+        }
+        
+        const historyTab = document.getElementById('history-tab');
+        if (historyTab) {
+            historyTab.addEventListener('shown.bs.tab', function() {
+                if (!window.performanceTrendChart) {
+                    window.performanceTrendChart = initializePerformanceTrendChart();
+                }
+            });
+        }
+        
         // Load Chart.js and dependencies, then initialize radar charts
         loadChartJsWithDependencies(function() {
             console.log('Chart.js and dependencies loaded, initializing radar charts');
@@ -1769,6 +1886,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error initializing cutting skills visualizations:', error);
             }
+            
             
 
             // Initialize Sankey diagram if element exists
@@ -2769,6 +2887,497 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Printable Player Report Feature
+function generatePrintableReport() {
+    // Create a new window for the printable report
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    // Get player data
+    const playerName = "{{ player.name }}";
+    const jerseyNumber = "{{ player.jersey_number }}";
+    const position = "{{ player.position|capitalize if player.position else 'No position' }}";
+    const perValue = "{{ stats.per|round(1) }}";
+    
+    // Create the HTML content for the printable report
+    const reportContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Player Report - ${playerName}</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    padding-bottom: 10px;
+                    border-bottom: 2px solid #007bff;
+                }
+                .player-info {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 20px;
+                }
+                .stats-section {
+                    margin-bottom: 30px;
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 15px;
+                }
+                .stat-box {
+                    border: 1px solid #ddd;
+                    padding: 10px;
+                    text-align: center;
+                }
+                .stat-value {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #007bff;
+                }
+                .stat-label {
+                    font-size: 14px;
+                    color: #666;
+                }
+                h2 {
+                    color: #007bff;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 5px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                table, th, td {
+                    border: 1px solid #ddd;
+                }
+                th, td {
+                    padding: 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f2f2f2;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                }
+                @media print {
+                    body {
+                        print-color-adjust: exact;
+                        -webkit-print-color-adjust: exact;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Player Statistics Report</h1>
+                <p>Generated on ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            <div class="player-info">
+                <div>
+                    <h2>${playerName} ${jerseyNumber ? '#' + jerseyNumber : ''}</h2>
+                    <p>${position}</p>
+                </div>
+                <div>
+                    <div class="stat-value" style="color: ${getPerColor(parseFloat(perValue))}">
+                        ${perValue}
+                    </div>
+                    <div class="stat-label">Player Efficiency Rating</div>
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h2>Key Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.games_played }}</div>
+                        <div class="stat-label">Games Played</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.points_played }}</div>
+                        <div class="stat-label">Points Played</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.goals }}</div>
+                        <div class="stat-label">Goals</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.assists }}</div>
+                        <div class="stat-label">Assists</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.blocks }}</div>
+                        <div class="stat-label">Blocks</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ stats.completion_rate|round(1) }}%</div>
+                        <div class="stat-label">Completion Rate</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h2>Offensive Statistics</h2>
+                <table>
+                    <tr>
+                        <th>Throws</th>
+                        <td>{{ stats.throws }}</td>
+                        <th>Completions</th>
+                        <td>{{ stats.completions }}</td>
+                    </tr>
+                    <tr>
+                        <th>Catches</th>
+                        <td>{{ stats.catches }}</td>
+                        <th>Hockey Assists</th>
+                        <td>{{ stats.hockey_assists }}</td>
+                    </tr>
+                    <tr>
+                        <th>Break Throws</th>
+                        <td>{{ stats.break_throws }}</td>
+                        <th>Avg Throw Distance</th>
+                        <td>{{ avg_throw_distance|round(1) }} m</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="stats-section">
+                <h2>Defensive Statistics</h2>
+                <table>
+                    <tr>
+                        <th>Blocks</th>
+                        <td>{{ stats.blocks }}</td>
+                        <th>Shutdowns</th>
+                        <td>{{ stats.shutdowns }}</td>
+                    </tr>
+                    <tr>
+                        <th>Forced Turnovers</th>
+                        <td>{{ stats.blocks + stats.stalls }}</td>
+                        <th>D-Line Points</th>
+                        <td>{{ stats.d_line_points_played }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="stats-section">
+                <h2>Efficiency Metrics</h2>
+                <table>
+                    <tr>
+                        <th>O-Line +/-</th>
+                        <td>{{ stats.o_line_plus_minus|default(0)|round(2) }}</td>
+                        <th>D-Line +/-</th>
+                        <td>{{ stats.d_line_plus_minus|default(0)|round(2) }}</td>
+                    </tr>
+                    <tr>
+                        <th>Turnovers</th>
+                        <td>{{ stats.throwaways + stats.drops }}</td>
+                        <th>Plus/Minus</th>
+                        <td>{{ (stats.goals + stats.assists + stats.blocks - stats.throwaways - stats.drops)|round(2) }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="footer">
+                <p>Generated by Ultimate Coach | © ${new Date().getFullYear()}</p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    // Write the content to the new window and print it
+    printWindow.document.open();
+    printWindow.document.write(reportContent);
+    printWindow.document.close();
+    
+    // Wait for content to load before printing
+    printWindow.onload = function() {
+        setTimeout(function() {
+            printWindow.print();
+        }, 500);
+    };
+}
+
+// Add event listener to the print button
+document.getElementById('printReportBtn').addEventListener('click', generatePrintableReport);
+
+// Performance Trend Chart
+function initializePerformanceTrendChart() {
+    const ctx = document.getElementById('performanceTrendChart');
+    if (!ctx) return;
+    
+    // Extract performance data from player_games
+    const performanceData = [
+        {% for game_data in player_games %}
+        {
+            date: "{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else 'No date' }}",
+            opponent: "{{ game_data.game.opponent }}",
+            per: {{ game_data.stats.per|round(2) }},
+            plus_minus: {{ (game_data.stats.goals + game_data.stats.assists + game_data.stats.blocks - game_data.stats.throwaways)|round(2) }},
+            completion_rate: {{ (game_data.stats.completions / game_data.stats.throws * 100) if game_data.stats.throws > 0 else 0 |round(1) }},
+            points_played: {{ game_data.stats.points_played }}
+        },
+        {% endfor %}
+    ];
+    
+    // Sort by date
+    performanceData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Create the chart
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: performanceData.map(d => `${d.date} vs ${d.opponent}`),
+            datasets: [{
+                label: 'PER',
+                data: performanceData.map(d => d.per),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+                pointRadius: 4,
+                pointBackgroundColor: '#007bff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'PER'
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const dataPoint = performanceData[context.dataIndex];
+                            const metric = context.dataset.label;
+                            return `${metric}: ${context.raw.toFixed(2)} (${dataPoint.points_played} points played)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Add event listeners to metric buttons
+    document.querySelectorAll('[data-metric]').forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            document.querySelectorAll('[data-metric]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Get selected metric
+            const metric = this.dataset.metric;
+            
+            // Update chart data and options
+            chart.data.datasets[0].label = metric === 'per' ? 'PER' : 
+                                          metric === 'plus_minus' ? 'Plus/Minus' : 
+                                          'Completion Rate';
+            chart.data.datasets[0].data = performanceData.map(d => d[metric]);
+            
+            // Update y-axis title
+            chart.options.scales.y.title.text = metric === 'per' ? 'PER' : 
+                                              metric === 'plus_minus' ? 'Plus/Minus' : 
+                                              'Completion Rate (%)';
+            
+            // Update colors based on metric
+            if (metric === 'per') {
+                chart.data.datasets[0].borderColor = '#007bff';
+                chart.data.datasets[0].pointBackgroundColor = '#007bff';
+                chart.data.datasets[0].backgroundColor = 'rgba(0, 123, 255, 0.1)';
+            } else if (metric === 'plus_minus') {
+                chart.data.datasets[0].borderColor = '#28a745';
+                chart.data.datasets[0].pointBackgroundColor = '#28a745';
+                chart.data.datasets[0].backgroundColor = 'rgba(40, 167, 69, 0.1)';
+            } else {
+                chart.data.datasets[0].borderColor = '#fd7e14';
+                chart.data.datasets[0].pointBackgroundColor = '#fd7e14';
+                chart.data.datasets[0].backgroundColor = 'rgba(253, 126, 20, 0.1)';
+            }
+            
+            chart.update();
+        });
+    });
+    
+    return chart;
+}
+
+
+// Throw Success Rate by Field Zone Visualization
+function createThrowSuccessZoneVisualization() {
+    const canvas = document.getElementById('throw-success-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    
+    // Set canvas resolution to match display size
+    canvas.width = width * window.devicePixelRatio;
+    canvas.height = height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    // Define field dimensions
+    const fieldWidth = width;
+    const fieldHeight = height;
+    const fieldColor = '#4CAF50';  // Green
+    const lineColor = '#FFFFFF';   // White
+    const textColor = '#000000';   // Black
+    
+    // Define field zones (5x3 grid)
+    const xZones = 5;
+    const yZones = 3;
+    const zoneWidth = fieldWidth / xZones;
+    const zoneHeight = fieldHeight / yZones;
+    
+    // Calculate throw success rates by zone from throw vectors
+    const zoneStats = calculateZoneStats(vizData.throwVectors, xZones, yZones);
+    
+    // Draw field background
+    ctx.fillStyle = fieldColor;
+    ctx.fillRect(0, 0, fieldWidth, fieldHeight);
+    
+    // Draw endzones
+    ctx.fillStyle = '#388E3C';  // Darker green
+    ctx.fillRect(0, 0, fieldWidth / xZones, fieldHeight);  // Own endzone
+    ctx.fillRect(fieldWidth - fieldWidth / xZones, 0, fieldWidth / xZones, fieldHeight);  // Opponent endzone
+    
+    // Draw zone grid
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 3]);  // Dashed line
+    
+    // Draw vertical lines
+    for (let i = 1; i < xZones; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * zoneWidth, 0);
+        ctx.lineTo(i * zoneWidth, fieldHeight);
+        ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let i = 1; i < yZones; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * zoneHeight);
+        ctx.lineTo(fieldWidth, i * zoneHeight);
+        ctx.stroke();
+    }
+    
+    // Draw field outline
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);  // Solid line
+    ctx.strokeRect(0, 0, fieldWidth, fieldHeight);
+    
+    // Color zones based on success rate
+    for (let x = 0; x < xZones; x++) {
+        for (let y = 0; y < yZones; y++) {
+            const zoneKey = `${x}-${y}`;
+            const zoneData = zoneStats[zoneKey];
+            
+            if (zoneData && zoneData.total > 0) {
+                const successRate = (zoneData.completions / zoneData.total) * 100;
+                
+                // Determine color based on success rate
+                let color;
+                if (successRate >= 90) {
+                    color = 'rgba(40, 167, 69, 0.7)';  // Green for high success
+                } else if (successRate >= 70) {
+                    color = 'rgba(255, 193, 7, 0.7)';  // Yellow for medium success
+                } else {
+                    color = 'rgba(220, 53, 69, 0.7)';  // Red for low success
+                }
+                
+                // Fill zone with color
+                ctx.fillStyle = color;
+                ctx.fillRect(x * zoneWidth, y * zoneHeight, zoneWidth, zoneHeight);
+                
+                // Add text showing success rate and throw count
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                    `${successRate.toFixed(0)}%`,
+                    x * zoneWidth + zoneWidth / 2,
+                    y * zoneHeight + zoneHeight / 2 - 10
+                );
+                ctx.fillText(
+                    `(${zoneData.completions}/${zoneData.total})`,
+                    x * zoneWidth + zoneWidth / 2,
+                    y * zoneHeight + zoneHeight / 2 + 10
+                );
+            }
+        }
+    }
+}
+
+// Helper function to calculate zone statistics
+function calculateZoneStats(throwVectors, xZones, yZones) {
+    const zoneStats = {};
+    
+    // Initialize all zones
+    for (let x = 0; x < xZones; x++) {
+        for (let y = 0; y < yZones; y++) {
+            zoneStats[`${x}-${y}`] = { total: 0, completions: 0 };
+        }
+    }
+    
+    // Process throw vectors
+    throwVectors.forEach(vector => {
+        if (!vector.start_x || !vector.start_y) return;
+        
+        // Normalize coordinates to 0-1 range
+        // Assuming field coordinates are in the range 0-100 for x and 0-37 for y
+        const normX = Math.min(Math.max(vector.start_x / 100, 0), 0.99);
+        const normY = Math.min(Math.max(vector.start_y / 37, 0), 0.99);
+        
+        // Calculate zone indices
+        const xZone = Math.floor(normX * xZones);
+        const yZone = Math.floor(normY * yZones);
+        
+        // Update zone stats
+        const zoneKey = `${xZone}-${yZone}`;
+        zoneStats[zoneKey].total++;
+        
+        // Check if throw was completed
+        const isCompletion = vector.type !== 'throwaway';
+        if (isCompletion) {
+            zoneStats[zoneKey].completions++;
+        }
+    });
+    
+    return zoneStats;
+}
 
 
 
