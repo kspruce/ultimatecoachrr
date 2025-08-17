@@ -3245,19 +3245,11 @@ def generate_player_sankey_data(player_id, point_ids=None):
 
 
 
-@bp.route('/api/player-connections-sankey')
+@bp.route('/api/player-connections-sankey/<int:player_id>')
 @login_required
-def api_player_connections_sankey():
+def api_player_connections_sankey(player_id): # <-- Accept player_id here
     """API endpoint for Sankey diagram showing player throw connections"""
-    # Get the current user's player ID
-    current_player_id = None
-    if hasattr(current_user, 'player') and current_user.player:
-        current_player_id = current_user.player.id
-    
-    # If no player profile is associated with the user, return empty data
-    if not current_player_id:
-        return jsonify({"nodes": [], "links": []})
-    
+
     # Get filter parameters
     tournament_id = request.args.get('tournament_id', type=int)
     game_id = request.args.get('game_id', type=int)
@@ -3274,9 +3266,10 @@ def api_player_connections_sankey():
     # Get point IDs for filtering
     point_ids = get_point_ids_from_games(games)
     
-    # Generate Sankey data
-    sankey_data = generate_player_sankey_data(current_player_id, point_ids)
+    # Generate Sankey data using the player_id from the URL
+    sankey_data = generate_player_sankey_data(player_id, point_ids)
     return jsonify(sankey_data)
+
 
 @bp.route('/api/connection-data')
 @login_required

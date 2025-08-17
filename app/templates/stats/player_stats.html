@@ -2469,13 +2469,42 @@ function initializeSankeyDiagram() {
     container.style.width = '100%';
     container.style.display = 'block';
     
+    // Extract the player ID from the URL path
+    // For a URL like https://ultimatecoach.applikuapp.com/stats/player/14
+    const urlPath = window.location.pathname;
+    const playerIdMatch = urlPath.match(/\/stats\/player\/(\d+)/);
+    let playerId;
+    
+    if (playerIdMatch && playerIdMatch[1]) {
+        playerId = playerIdMatch[1];
+        console.log(`Using player ID ${playerId} from URL path`);
+    } else {
+        // Fallback: Try to get player ID from the form action URL
+        const form = document.querySelector('form[action*="/stats/dashboard/player/"]');
+        if (form) {
+            const formAction = form.getAttribute('action');
+            const formPlayerIdMatch = formAction.match(/\/player\/(\d+)/);
+            if (formPlayerIdMatch && formPlayerIdMatch[1]) {
+                playerId = formPlayerIdMatch[1];
+                console.log(`Using player ID ${playerId} from form action`);
+            }
+        }
+    }
+    
+    // If we still don't have a player ID, show an error
+    if (!playerId) {
+        console.error('Could not determine player ID for Sankey diagram');
+        container.innerHTML = '<div class="alert alert-danger">Could not determine player ID for connection diagram</div>';
+        return;
+    }
+    
     // Get current URL parameters for filtering
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournament_id');
     const gameId = urlParams.get('game_id');
     
-    // Build API URL with filters
-    let apiUrl = '/stats/api/player-connections-sankey';
+    // Build API URL with player ID and filters
+    let apiUrl = `/stats/api/player-connections-sankey/${playerId}`;
     const params = [];
     if (tournamentId) params.push(`tournament_id=${tournamentId}`);
     if (gameId) params.push(`game_id=${gameId}`);
@@ -2486,6 +2515,7 @@ function initializeSankeyDiagram() {
     // Show loading indicator
     container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading connection data...</p></div>';
     
+
     // Fetch data from API
     fetch(apiUrl)
         .then(response => {
