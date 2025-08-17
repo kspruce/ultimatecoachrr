@@ -2615,12 +2615,6 @@ function createThrowawayDirectionChart() {
 
 // Add to your existing JavaScript section
 function initializeSankeyDiagram() {
-    // Check if D3.js is loaded
-    if (typeof d3 === 'undefined') {
-        console.error('D3.js is required for the Sankey diagram');
-        return;
-    }
-    
     const container = document.getElementById('sankey-diagram');
     if (!container) return;
     
@@ -2631,8 +2625,61 @@ function initializeSankeyDiagram() {
     container.style.width = '100%';
     container.style.display = 'block';
     
+    // Show loading indicator
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading connection data...</p></div>';
+    
+    // Check if D3.js is loaded
+    function ensureD3Loaded(callback) {
+        if (typeof d3 !== 'undefined') {
+            console.log('D3.js is already loaded');
+            
+            // Check if d3.sankey is available
+            if (typeof d3.sankey === 'function') {
+                console.log('D3 Sankey plugin is already loaded');
+                callback();
+            } else {
+                console.log('Loading D3 Sankey plugin...');
+                const sankeyScript = document.createElement('script');
+                sankeyScript.src = 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js';
+                sankeyScript.onload = function() {
+                    console.log('D3 Sankey plugin loaded successfully');
+                    callback();
+                };
+                sankeyScript.onerror = function() {
+                    console.error('Failed to load D3 Sankey plugin');
+                    container.innerHTML = '<div class="alert alert-danger">Failed to load Sankey diagram plugin</div>';
+                };
+                document.head.appendChild(sankeyScript);
+            }
+        } else {
+            console.log('Loading D3.js dynamically...');
+            const d3Script = document.createElement('script');
+            d3Script.src = 'https://d3js.org/d3.v7.min.js';
+            d3Script.onload = function() {
+                console.log('D3.js loaded successfully');
+                
+                // Now load the Sankey plugin
+                const sankeyScript = document.createElement('script');
+                sankeyScript.src = 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js';
+                sankeyScript.onload = function() {
+                    console.log('D3 Sankey plugin loaded successfully');
+                    callback();
+                };
+                sankeyScript.onerror = function() {
+                    console.error('Failed to load D3 Sankey plugin');
+                    container.innerHTML = '<div class="alert alert-danger">Failed to load Sankey diagram plugin</div>';
+                };
+                document.head.appendChild(sankeyScript);
+            };
+            d3Script.onerror = function() {
+                console.error('Failed to load D3.js');
+                container.innerHTML = '<div class="alert alert-danger">Failed to load D3.js library</div>';
+            };
+            document.head.appendChild(d3Script);
+        }
+    }
+    
     // Extract the player ID from the URL path
-    // For a URL like https://ultimatecoach.applikuapp.com/stats/player/14
     const urlPath = window.location.pathname;
     const playerIdMatch = urlPath.match(/\/stats\/player\/(\d+)/);
     let playerId;
@@ -2674,68 +2721,68 @@ function initializeSankeyDiagram() {
     
     console.log("Fetching Sankey data from:", apiUrl);
     
-    // Show loading indicator
-    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading connection data...</p></div>';
-    
-
-    // Fetch data from API
-    fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    throw new Error('Authentication required. Please refresh the page and log in again.');
-                } else if (response.status === 500) {
-                    throw new Error('Server error. Please try again later or contact support.');
-                } else {
-                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    // Ensure D3.js is loaded, then fetch and render the data
+    ensureD3Loaded(function() {
+        // Fetch data from API
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Authentication required. Please refresh the page and log in again.');
+                    } else if (response.status === 500) {
+                        throw new Error('Server error. Please try again later or contact support.');
+                    } else {
+                        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                    }
                 }
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Received Sankey data:', data);
-            
-            // Check if we have valid data
-            if (!data.nodes || data.nodes.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No player connection data available.</div>';
-                return;
-            }
-            
-            if (!data.links || data.links.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">No throw connections found for this player.</div>';
-                return;
-            }
-            
-            // Validate data structure
-            let isValid = true;
-            const nodeIds = new Set(data.nodes.map(n => n.id));
-            
-            // Check for missing nodes in links
-            const missingNodes = [];
-            data.links.forEach(link => {
-                if (!nodeIds.has(link.source)) {
-                    missingNodes.push(`source: ${link.source}`);
-                    isValid = false;
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received Sankey data:', data);
+                
+                // Check if we have valid data
+                if (!data.nodes || data.nodes.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info">No player connection data available.</div>';
+                    return;
                 }
-                if (!nodeIds.has(link.target)) {
-                    missingNodes.push(`target: ${link.target}`);
-                    isValid = false;
+                
+                if (!data.links || data.links.length === 0) {
+                    container.innerHTML = '<div class="alert alert-info">No throw connections found for this player.</div>';
+                    return;
                 }
+                
+                // Validate data structure
+                let isValid = true;
+                const nodeIds = new Set(data.nodes.map(n => n.id));
+                
+                // Check for missing nodes in links
+                const missingNodes = [];
+                data.links.forEach(link => {
+                    if (!nodeIds.has(link.source)) {
+                        missingNodes.push(`source: ${link.source}`);
+                        isValid = false;
+                    }
+                    if (!nodeIds.has(link.target)) {
+                        missingNodes.push(`target: ${link.target}`);
+                        isValid = false;
+                    }
+                });
+                
+                if (!isValid) {
+                    console.error('Invalid Sankey data structure:', missingNodes);
+                    container.innerHTML = '<div class="alert alert-warning">The connection data contains inconsistencies. Please try again later.</div>';
+                    return;
+                }
+                
+                createSankeyDiagram(container, data);
+            })
+            .catch(error => {
+                console.error('Error fetching Sankey data:', error);
+                container.innerHTML = `<div class="alert alert-danger">Error loading connection data: ${error.message}</div>`;
             });
-            
-            if (!isValid) {
-                console.error('Invalid Sankey data structure:', missingNodes);
-                container.innerHTML = '<div class="alert alert-warning">The connection data contains inconsistencies. Please try again later.</div>';
-                return;
-            }
-            
-            createSankeyDiagram(container, data);
-        })
-        .catch(error => {
-            console.error('Error fetching Sankey data:', error);
-            container.innerHTML = `<div class="alert alert-danger">Error loading connection data: ${error.message}</div>`;
-        });
+    });
 }
+
 
 function createSankeyDiagram(container, data) {
     console.log("Creating Sankey diagram with", data.nodes.length, "nodes and", data.links.length, "links");
