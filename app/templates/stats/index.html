@@ -57,6 +57,17 @@
         margin-bottom: 20px;
         overflow: hidden;
     }
+
+    .field-container svg {
+        pointer-events: none;
+    }
+    
+    .field-container text {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
     
     .endzone {
         position: absolute;
@@ -689,16 +700,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const heatmapInstance = h337.create({
             container: heatmapContainer,
             radius: 15,
-            maxOpacity: 0.6,
+            maxOpacity: 0.7,
             minOpacity: 0.1,
             blur: 0.75,
             gradient: {
-                '.5': 'blue',
-                '.8': 'red',
-                '.95': 'white'
+                '.2': '#99ccff',
+                '.5': '#3399ff',
+                '.8': '#0066cc',
+                '.95': '#003366'
             }
         });
-
+    
         {% if heatmap_data %}
         const heatmapData = {{ heatmap_data|safe }};
         
@@ -707,6 +719,76 @@ document.addEventListener('DOMContentLoaded', function() {
         const fieldHeight = heatmapContainer.offsetHeight;
         const fieldLengthMeters = 100;  // Length in meters
         const fieldWidthMeters = 37;    // Width in meters
+        
+        // Draw field markings
+        function drawFieldMarkings() {
+            // Create SVG overlay for field markings
+            const svg = d3.select('#field-heatmap')
+                .append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%')
+                .style('position', 'absolute')
+                .style('top', 0)
+                .style('left', 0)
+                .style('pointer-events', 'none') // Allow clicks to pass through
+                .style('z-index', 3); // Above the heatmap
+            
+            // Add midfield line
+            svg.append('line')
+                .attr('x1', fieldWidth / 2)
+                .attr('y1', 0)
+                .attr('x2', fieldWidth / 2)
+                .attr('y2', fieldHeight)
+                .attr('stroke', 'white')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,5')
+                .attr('opacity', 0.7);
+            
+            // Add brick marks (20 yards from each endzone)
+            // Left brick mark (defensive)
+            svg.append('circle')
+                .attr('cx', fieldWidth * 0.2 + (fieldWidth * 0.2)) // 20 yards from left endzone
+                .attr('cy', fieldHeight / 2)
+                .attr('r', 5)
+                .attr('fill', 'white')
+                .attr('opacity', 0.7);
+            
+            // Right brick mark (offensive)
+            svg.append('circle')
+                .attr('cx', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2))) // 20 yards from right endzone
+                .attr('cy', fieldHeight / 2)
+                .attr('r', 5)
+                .attr('fill', 'white')
+                .attr('opacity', 0.7);
+            
+            // Add field labels
+            svg.append('text')
+                .attr('x', fieldWidth / 2)
+                .attr('y', 20)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'white')
+                .attr('font-size', '12px')
+                .attr('opacity', 0.7)
+                .text('Midfield');
+            
+            svg.append('text')
+                .attr('x', fieldWidth * 0.2 + (fieldWidth * 0.2))
+                .attr('y', fieldHeight / 2 - 15)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'white')
+                .attr('font-size', '12px')
+                .attr('opacity', 0.7)
+                .text('Brick');
+            
+            svg.append('text')
+                .attr('x', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2)))
+                .attr('y', fieldHeight / 2 - 15)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'white')
+                .attr('font-size', '12px')
+                .attr('opacity', 0.7)
+                .text('Brick');
+        }
         
         function updateHeatmap(filter = 'all') {
             let filteredData = heatmapData;
@@ -729,35 +811,50 @@ document.addEventListener('DOMContentLoaded', function() {
         
             // Use different gradients based on the filter
             if (filter === 'turnovers') {
+                // More vibrant and visible gradient for throwaways
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#ff9999',
-                        '.8': '#ff0000'
-                    }
+                        '.2': '#ffcccc',
+                        '.5': '#ff6666',
+                        '.8': '#cc0000',
+                        '.95': '#800000'
+                    },
+                    radius: 20, // Slightly larger radius for better visibility
+                    maxOpacity: 0.8 // Higher opacity for better visibility
                 });
             } else if (filter === 'goals') {
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#90EE90',
-                        '.8': '#006400'
-                    }
+                        '.2': '#ccffcc',
+                        '.5': '#66ff66',
+                        '.8': '#00cc00',
+                        '.95': '#008000'
+                    },
+                    radius: 20,
+                    maxOpacity: 0.8
                 });
             } else if (filter === 'scored_on') {
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#FFB6C1',
-                        '.8': '#8B0000'
-                    }
+                        '.2': '#ffccff',
+                        '.5': '#ff66ff',
+                        '.8': '#cc00cc',
+                        '.95': '#800080'
+                    },
+                    radius: 20,
+                    maxOpacity: 0.8
                 });
             } else {
+                // Default gradient for all events
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': 'blue',
-                        '.4': 'cyan',
-                        '.6': 'lime',
-                        '.8': 'yellow',
-                        '.95': 'red'
-                    }
+                        '.2': '#99ccff',
+                        '.5': '#3399ff',
+                        '.8': '#0066cc',
+                        '.95': '#003366'
+                    },
+                    radius: 15,
+                    maxOpacity: 0.7
                 });
             }
         
@@ -773,11 +870,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
             heatmapInstance.setData(pixelData);
         }
-
-
+    
         // Initialize with all data
         updateHeatmap();
-
+        
+        // Draw field markings after heatmap is initialized
+        drawFieldMarkings();
+    
         // Add event listeners to heatmap filter buttons
         document.querySelectorAll('[data-filter]').forEach(button => {
             button.addEventListener('click', function() {
@@ -788,6 +887,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         {% endif %}
     }
+
 
     // Enhanced Player Connections Network
     if (document.getElementById('player-connections')) {
