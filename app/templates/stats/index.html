@@ -695,14 +695,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // Initialize Heatmap
+    // Initialize Heatmap
     if (document.getElementById('field-heatmap')) {
         const heatmapContainer = document.getElementById('field-heatmap');
         const heatmapInstance = h337.create({
             container: heatmapContainer,
-            radius: 15,
-            maxOpacity: 0.7,
-            minOpacity: 0.1,
-            blur: 0.75,
+            radius: 18,             // Increased from 15
+            maxOpacity: 0.9,        // Increased from 0.7
+            minOpacity: 0.35,       // Increased from 0.1
+            blur: 0.6,              // Reduced from 0.75 for sharper points
             gradient: {
                 '.2': '#99ccff',
                 '.5': '#3399ff',
@@ -790,6 +791,102 @@ document.addEventListener('DOMContentLoaded', function() {
                 .text('Brick');
         }
         
+        // Add a legend for the heatmap
+        function addHeatmapLegend(filter) {
+            // Remove any existing legend
+            d3.select('#heatmap-legend').remove();
+            
+            const legendContainer = d3.select('#field-heatmap')
+                .append('div')
+                .attr('id', 'heatmap-legend')
+                .style('position', 'absolute')
+                .style('bottom', '10px')
+                .style('right', '10px')
+                .style('background', 'rgba(255,255,255,0.7)')
+                .style('padding', '5px')
+                .style('border-radius', '5px')
+                .style('z-index', 4);
+            
+            // Get the appropriate title based on filter
+            let title = 'All Events';
+            if (filter === 'throws') title = 'Throws';
+            else if (filter === 'goals') title = 'Goals';
+            else if (filter === 'turnovers') title = 'Turnovers';
+            else if (filter === 'scored_on') title = 'Scored On';
+            
+            legendContainer.append('div')
+                .style('font-weight', 'bold')
+                .style('font-size', '12px')
+                .style('margin-bottom', '5px')
+                .text(title + ' Intensity');
+            
+            // Create gradient bar
+            const gradientSvg = legendContainer.append('svg')
+                .attr('width', 150)
+                .attr('height', 20);
+            
+            // Define gradient based on current filter
+            let gradientColors;
+            if (filter === 'turnovers') {
+                gradientColors = [
+                    {offset: '0%', color: '#ffcccc'},
+                    {offset: '50%', color: '#ff6666'},
+                    {offset: '80%', color: '#cc0000'},
+                    {offset: '100%', color: '#800000'}
+                ];
+            } else if (filter === 'goals') {
+                gradientColors = [
+                    {offset: '0%', color: '#ccffcc'},
+                    {offset: '50%', color: '#66ff66'},
+                    {offset: '80%', color: '#00cc00'},
+                    {offset: '100%', color: '#008000'}
+                ];
+            } else if (filter === 'scored_on') {
+                gradientColors = [
+                    {offset: '0%', color: '#ffccff'},
+                    {offset: '50%', color: '#ff66ff'},
+                    {offset: '80%', color: '#cc00cc'},
+                    {offset: '100%', color: '#800080'}
+                ];
+            } else {
+                gradientColors = [
+                    {offset: '0%', color: '#99ccff'},
+                    {offset: '50%', color: '#3399ff'},
+                    {offset: '80%', color: '#0066cc'},
+                    {offset: '100%', color: '#003366'}
+                ];
+            }
+            
+            // Create linear gradient
+            const gradient = gradientSvg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'heatmap-gradient')
+                .attr('x1', '0%')
+                .attr('x2', '100%')
+                .attr('y1', '0%')
+                .attr('y2', '0%');
+            
+            // Add gradient stops
+            gradientColors.forEach(stop => {
+                gradient.append('stop')
+                    .attr('offset', stop.offset)
+                    .attr('stop-color', stop.color);
+            });
+            
+            // Draw gradient rectangle
+            gradientSvg.append('rect')
+                .attr('width', 150)
+                .attr('height', 15)
+                .style('fill', 'url(#heatmap-gradient)');
+            
+            // Add labels
+            legendContainer.append('div')
+                .style('display', 'flex')
+                .style('justify-content', 'space-between')
+                .style('font-size', '10px')
+                .html('<span>Low</span><span>High</span>');
+        }
+        
         function updateHeatmap(filter = 'all') {
             let filteredData = heatmapData;
             if (filter !== 'all') {
@@ -819,8 +916,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         '.8': '#cc0000',
                         '.95': '#800000'
                     },
-                    radius: 20, // Slightly larger radius for better visibility
-                    maxOpacity: 0.8 // Higher opacity for better visibility
+                    radius: 22,         // Larger radius for better visibility
+                    maxOpacity: 0.95,   // Almost fully opaque
+                    minOpacity: 0.4,    // Higher minimum opacity
+                    blur: 0.5           // Less blur for sharper points
                 });
             } else if (filter === 'goals') {
                 heatmapInstance.configure({
@@ -830,8 +929,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         '.8': '#00cc00',
                         '.95': '#008000'
                     },
-                    radius: 20,
-                    maxOpacity: 0.8
+                    radius: 22,
+                    maxOpacity: 0.95,
+                    minOpacity: 0.4,
+                    blur: 0.5
                 });
             } else if (filter === 'scored_on') {
                 heatmapInstance.configure({
@@ -841,8 +942,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         '.8': '#cc00cc',
                         '.95': '#800080'
                     },
-                    radius: 20,
-                    maxOpacity: 0.8
+                    radius: 22,
+                    maxOpacity: 0.95,
+                    minOpacity: 0.4,
+                    blur: 0.5
                 });
             } else {
                 // Default gradient for all events
@@ -853,22 +956,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         '.8': '#0066cc',
                         '.95': '#003366'
                     },
-                    radius: 15,
-                    maxOpacity: 0.7
+                    radius: 18,
+                    maxOpacity: 0.9,
+                    minOpacity: 0.35,
+                    blur: 0.6
                 });
             }
         
             const pixelData = {
-                max: Math.max(1, filteredData.length / 10),
+                max: Math.max(1, filteredData.length / 8),  // Reduced divisor from 10 to 8
                 min: 0,
                 data: filteredData.map(point => ({
                     x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
                     y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                    value: 1
+                    value: 1.5  // Increased from 1 to 1.5 to make each point more intense
                 }))
             };
         
             heatmapInstance.setData(pixelData);
+            
+            // Update the legend
+            addHeatmapLegend(filter);
         }
     
         // Initialize with all data
@@ -887,6 +995,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         {% endif %}
     }
+
 
 
     // Enhanced Player Connections Network
