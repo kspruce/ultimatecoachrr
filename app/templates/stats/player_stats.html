@@ -1295,9 +1295,9 @@ function initializeRadarCharts() {
     createRadarCharts();
 }
 
-// Separate function to create the actual charts
-function createRadarCharts() {
-    console.log('Creating radar charts...');
+// Radar chart initialization
+function initializeRadarCharts() {
+    console.log('initializeRadarCharts called');
     
     // Check if canvas elements exist
     const offensiveCanvas = document.getElementById('offensiveRadar');
@@ -3154,60 +3154,78 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for the printable report
     document.getElementById('printReportBtn').addEventListener('click', generatePrintableReport);
 
-    // Initialize charts for the Overview tab (which is visible by default)
-    if (typeof Chart !== 'undefined') {
-        // Initialize radar charts for the Overview tab
+    // Check if Chart.js is loaded and load it if necessary
+    function ensureChartJsLoaded(callback) {
+        if (typeof Chart !== 'undefined') {
+            console.log('Chart.js is already loaded');
+            callback();
+        } else {
+            console.log('Loading Chart.js dynamically...');
+            const chartScript = document.createElement('script');
+            chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+            chartScript.onload = function() {
+                console.log('Chart.js loaded successfully');
+                callback();
+            };
+            chartScript.onerror = function() {
+                console.error('Failed to load Chart.js');
+            };
+            document.head.appendChild(chartScript);
+        }
+    }
+
+    // Initialize all charts after ensuring Chart.js is loaded
+    ensureChartJsLoaded(function() {
+        // Initialize radar charts for the Overview tab (which is visible by default)
         initializeRadarCharts();
         
         // Initialize throwaway direction chart and field diagram
         createThrowawayDirectionChart();
         drawFieldDiagram();
-    } else {
-        console.error("Chart.js not loaded!");
-    }
 
-    // --- Lazy Loading for Charts in Tabs ---
-    // This ensures charts are only rendered when their tab is visible, which is more efficient.
+        // --- Lazy Loading for Charts in Tabs ---
+        // This ensures charts are only rendered when their tab is visible, which is more efficient.
 
-    // Throws Tab Listener (for Sankey and Field Zone charts)
-    const throwsTab = document.getElementById('throws-tab');
-    if (throwsTab) {
-        throwsTab.addEventListener('shown.bs.tab', function() {
-            // Check if Sankey has been initialized
-            if (!document.getElementById('sankey-diagram').querySelector('svg')) {
-                initializeSankeyDiagram();
-            }
-            
-            // Check if throw direction radar has been initialized
-            if (!Chart.getChart('throwDirectionRadar')) {
-                createThrowDirectionRadar();
-            }
-            
-            // Check if Field Zone chart has been initialized
-            createThrowSuccessZoneVisualization();
-        });
-    }
+        // Throws Tab Listener (for Sankey and Field Zone charts)
+        const throwsTab = document.getElementById('throws-tab');
+        if (throwsTab) {
+            throwsTab.addEventListener('shown.bs.tab', function() {
+                // Check if Sankey has been initialized
+                if (!document.getElementById('sankey-diagram').querySelector('svg')) {
+                    initializeSankeyDiagram();
+                }
+                
+                // Check if throw direction radar has been initialized
+                if (!Chart.getChart('throwDirectionRadar')) {
+                    createThrowDirectionRadar();
+                }
+                
+                // Check if Field Zone chart has been initialized
+                createThrowSuccessZoneVisualization();
+            });
+        }
 
-    // Game History Tab Listener (for Performance Trend chart)
-    const historyTab = document.getElementById('history-tab');
-    if (historyTab) {
-        historyTab.addEventListener('shown.bs.tab', function() {
-            if (!window.performanceTrendChart) {
-                window.performanceTrendChart = initializePerformanceTrendChart();
-            }
-        });
-    }
-    
-    // Cutting Skills Tab Listener
-    const cuttingTab = document.getElementById('cutting-tab');
-    if(cuttingTab) {
-        cuttingTab.addEventListener('shown.bs.tab', function() {
-            if(!window.cuttingChartsInitialized) {
-                initializeCuttingSkillsVisualizations();
-                window.cuttingChartsInitialized = true;
-            }
-        });
-    }
+        // Game History Tab Listener (for Performance Trend chart)
+        const historyTab = document.getElementById('history-tab');
+        if (historyTab) {
+            historyTab.addEventListener('shown.bs.tab', function() {
+                if (!window.performanceTrendChart) {
+                    window.performanceTrendChart = initializePerformanceTrendChart();
+                }
+            });
+        }
+        
+        // Cutting Skills Tab Listener
+        const cuttingTab = document.getElementById('cutting-tab');
+        if(cuttingTab) {
+            cuttingTab.addEventListener('shown.bs.tab', function() {
+                if(!window.cuttingChartsInitialized) {
+                    initializeCuttingSkillsVisualizations();
+                    window.cuttingChartsInitialized = true;
+                }
+            });
+        }
+    });
     
     // Add tab activation handler for Sankey diagram
     document.addEventListener('shown.bs.tab', function(event) {
@@ -3226,5 +3244,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 </script>
 {% endblock %}
