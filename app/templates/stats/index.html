@@ -893,41 +893,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 filteredData = heatmapData.filter(point => {
                     switch(filter) {
                         case 'throws':
-                            return point.type === 'throw_start';  // Only show throw start positions
+                            return point.type === 'throw_start';
                         case 'goals':
-                            return point.type === 'goal';  // Only show goal locations
+                            return point.type === 'goal';
                         case 'turnovers':
-                            return point.type === 'throwaway';  // Only show throwaways
+                            return point.type === 'throwaway';
                         case 'scored_on':
-                            return point.type === 'scored_on';  // Only show scored-on events
+                            return point.type === 'scored_on';
                         default:
                             return true;
                     }
                 });
             }
         
-            // Use different gradients based on the filter
+            // Configure gradient and appearance based on filter
             if (filter === 'turnovers') {
-                // More vibrant and visible gradient for throwaways
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#ffcccc',
-                        '.5': '#ff6666',
-                        '.8': '#cc0000',
-                        '.95': '#800000'
+                        '.0': 'rgba(255,200,200,0.1)',
+                        '.25': 'rgba(255,150,150,0.6)',
+                        '.55': 'rgba(255,100,100,0.7)',
+                        '.85': 'rgba(200,0,0,0.8)',
+                        '1.0': 'rgba(128,0,0,0.9)'
                     },
-                    radius: 22,         // Larger radius for better visibility
-                    maxOpacity: 0.95,   // Almost fully opaque
-                    minOpacity: 0.4,    // Higher minimum opacity
-                    blur: 0.5           // Less blur for sharper points
+                    radius: 22,
+                    maxOpacity: 0.95,
+                    minOpacity: 0.4,
+                    blur: 0.5
                 });
             } else if (filter === 'goals') {
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#ccffcc',
-                        '.5': '#66ff66',
-                        '.8': '#00cc00',
-                        '.95': '#008000'
+                        '.0': 'rgba(200,255,200,0.1)',
+                        '.25': 'rgba(150,255,150,0.6)',
+                        '.55': 'rgba(100,255,100,0.7)',
+                        '.85': 'rgba(0,200,0,0.8)',
+                        '1.0': 'rgba(0,128,0,0.9)'
                     },
                     radius: 22,
                     maxOpacity: 0.95,
@@ -937,24 +938,40 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (filter === 'scored_on') {
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#ffccff',
-                        '.5': '#ff66ff',
-                        '.8': '#cc00cc',
-                        '.95': '#800080'
+                        '.0': 'rgba(255,200,255,0.1)',
+                        '.25': 'rgba(255,150,255,0.6)',
+                        '.55': 'rgba(255,100,255,0.7)',
+                        '.85': 'rgba(200,0,200,0.8)',
+                        '1.0': 'rgba(128,0,128,0.9)'
                     },
                     radius: 22,
                     maxOpacity: 0.95,
                     minOpacity: 0.4,
                     blur: 0.5
                 });
-            } else {
-                // Default gradient for all events
+            } else if (filter === 'throws') {
+                // Special configuration for throws to enhance intensity
                 heatmapInstance.configure({
                     gradient: {
-                        '.2': '#99ccff',
-                        '.5': '#3399ff',
-                        '.8': '#0066cc',
-                        '.95': '#003366'
+                        '.0': 'rgba(0,0,255,0.1)',
+                        '.25': 'rgba(0,0,255,0.6)',
+                        '.55': 'rgba(0,255,255,0.7)',
+                        '.85': 'rgba(0,255,0,0.8)',
+                        '1.0': 'rgba(255,255,0,0.9)'
+                    },
+                    radius: 15,
+                    maxOpacity: 0.95,
+                    minOpacity: 0.4,
+                    blur: 0.6
+                });
+            } else {
+                heatmapInstance.configure({
+                    gradient: {
+                        '.0': 'rgba(0,0,255,0.1)',
+                        '.25': 'rgba(0,0,255,0.5)',
+                        '.55': 'rgba(0,255,0,0.6)',
+                        '.85': 'rgba(255,255,0,0.7)',
+                        '1.0': 'rgba(255,0,0,0.8)'
                     },
                     radius: 18,
                     maxOpacity: 0.9,
@@ -962,22 +979,68 @@ document.addEventListener('DOMContentLoaded', function() {
                     blur: 0.6
                 });
             }
-        
+            
+            // Pre-process data to aggregate overlapping points
+            const gridSize = 5; // Size of grid cells in pixels for aggregation
+            const pointGrid = {};
+            
+            // Map field coordinates to pixel coordinates and group by grid cells
+            filteredData.forEach(point => {
+                const x = Math.round((point.x / fieldLengthMeters) * fieldWidth);
+                const y = Math.round((point.y / fieldWidthMeters) * fieldHeight);
+                
+                // Create grid cell key
+                const cellX = Math.floor(x / gridSize);
+                const cellY = Math.floor(y / gridSize);
+                const cellKey = `${cellX}-${cellY}`;
+                
+                // Increment count for this cell or initialize it
+                if (pointGrid[cellKey]) {
+                    pointGrid[cellKey].count += 1;
+                } else {
+                    pointGrid[cellKey] = {
+                        x: x,
+                        y: y,
+                        count: 1
+                    };
+                }
+            });
+            
+            // Convert grid to data points with intensity based on count
+            let aggregatedData = Object.values(pointGrid).map(cell => ({
+                x: cell.x,
+                y: cell.y,
+                value: Math.min(10, cell.count * 2) // Default scaling
+            }));
+            
+            // Special handling for throws
+            if (filter === 'throws') {
+                aggregatedData = Object.values(pointGrid).map(cell => ({
+                    x: cell.x,
+                    y: cell.y,
+                    value: Math.min(15, cell.count * 3) // More aggressive scaling for throws
+                }));
+            }
+            
+            // Calculate a reasonable max value based on the data
+            const maxCount = Math.max(...aggregatedData.map(point => point.value), 1);
+            const reasonableMax = Math.ceil(maxCount * 0.7); // Use 70% of max as the "max" for better visualization
+            
             const pixelData = {
-                max: Math.max(1, filteredData.length / 8),  // Reduced divisor from 10 to 8
+                max: reasonableMax,
                 min: 0,
-                data: filteredData.map(point => ({
-                    x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
-                    y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                    value: 1.5  // Increased from 1 to 1.5 to make each point more intense
-                }))
+                data: aggregatedData
             };
-        
+            
+            console.log(`Heatmap data (${filter}): ${aggregatedData.length} points, max value: ${reasonableMax}`);
+            
+            // Set data with our aggregated points
             heatmapInstance.setData(pixelData);
             
             // Update the legend
             addHeatmapLegend(filter);
         }
+
     
         // Initialize with all data
         updateHeatmap();
