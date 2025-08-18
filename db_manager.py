@@ -7,11 +7,13 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
 from app.models.clip import Clip, ClipTag
-from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
+from app.models.session import SessionPlan, SessionComponent, Attendance
 from app.models.cutting_skill import CuttingSkill
 from app.models.theory import TheorySection
 from app.models.fitness import FitnessMetric, FitnessRecord
-from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these imports
+from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+from app.models.team_organization import TeamOrganization  # Add this import
+from app.models.drill import SavedDrill  # Make sure this is imported correctly
 from datetime import datetime
 import sys
 from sqlalchemy import text, inspect
@@ -44,31 +46,71 @@ def reset_database():
             db.create_all()
             print_status("Created all tables")
             
+            # Create default team organization
+            default_team = TeamOrganization(
+                name='Default Team',
+                slug='default-team',
+                description='Default team created during database reset'
+            )
+            db.session.add(default_team)
+            db.session.commit()
+            print_status("Created default team organization")
+            
             # Create admin user
-            admin = User(username='admin', email='admin@example.com', role='admin')
+            admin = User(
+                username='admin', 
+                email='admin@example.com', 
+                role='admin',
+                team_organization_id=default_team.id  # Assign to default team
+            )
             admin.set_password('password')
             db.session.add(admin)
             
             # Create bonus user
-            bonus = User(username='bonus', email='bonus@example.com', role='player')
+            bonus = User(
+                username='bonus', 
+                email='bonus@example.com', 
+                role='player',
+                team_organization_id=default_team.id  # Assign to default team
+            )
             bonus.set_password('bonusboys')
             db.session.add(bonus)
             
             # Create captain users with coach role
-            etaylor = User(username='etaylor', email='et@example.com', role='coach')
+            etaylor = User(
+                username='etaylor', 
+                email='et@example.com', 
+                role='coach',
+                team_organization_id=default_team.id  # Assign to default team
+            )
             etaylor.set_password('Taylor35')
             db.session.add(etaylor)
             
-            cspearing = User(username='cspearing', email='cs@example.com', role='coach')
+            cspearing = User(
+                username='cspearing', 
+                email='cs@example.com', 
+                role='coach',
+                team_organization_id=default_team.id  # Assign to default team
+            )
             cspearing.set_password('Spearing1')
             db.session.add(cspearing)
             
-            bleung = User(username='bleung', email='bl@example.com', role='coach')
+            bleung = User(
+                username='bleung', 
+                email='bl@example.com', 
+                role='coach',
+                team_organization_id=default_team.id  # Assign to default team
+            )
             bleung.set_password('Leung18')
             db.session.add(bleung)
             
             # Create a stat taker user
-            stat_taker = User(username='stats', email='stats@example.com', role='stat_taker')
+            stat_taker = User(
+                username='stats', 
+                email='stats@example.com', 
+                role='stat_taker',
+                team_organization_id=default_team.id  # Assign to default team
+            )
             stat_taker.set_password('stats123')
             db.session.add(stat_taker)
             
@@ -163,10 +205,92 @@ def add_stat_taker_role():
             db.session.rollback()
             sys.exit(1)
 
+def add_team_organization():
+    """Add team_organization table and columns to existing tables"""
+    with app.app_context():
+        try:
+            print_status("Starting team organization setup...")
+            
+            # Check if team_organization table exists
+            inspector = inspect(db.engine)
+            has_team_org_table = 'team_organization' in inspector.get_table_names()
+            
+            if not has_team_org_table:
+                print_status("Creating team_organization table...")
+                # Create the team_organization table
+                db.session.execute(text("""
+                CREATE TABLE team_organization (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL UNIQUE,
+                    slug VARCHAR(100) NOT NULL UNIQUE,
+                    description TEXT,
+                    logo VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """))
+                db.session.commit()
+            
+            # Check if default team exists
+            result = db.session.execute(text("SELECT id FROM team_organization WHERE slug = 'default-team'")).fetchone()
+            
+            if not result:
+                print_status("Creating default team organization...")
+                # Create default team
+                db.session.execute(text("""
+                INSERT INTO team_organization (name, slug, description, created_at) 
+                VALUES ('Default Team', 'default-team', 'Default team created during migration', CURRENT_TIMESTAMP)
+                """))
+                db.session.commit()
+            
+            # Get the default team ID
+            default_team_id = db.session.execute(text("SELECT id FROM team_organization WHERE slug = 'default-team'")).fetchone()[0]
+            print_status(f"Default team ID: {default_team_id}")
+            
+            # List of tables to add team_organization_id to
+            tables = [
+                'user', 'player', 'drill', 'tournament', 'game', 'session_plan',
+                'fitness_metric', 'fitness_record', 'clip', 'clip_tag',
+                'line_template', 'line_template_player', 'gameday_event', 'gameday_player_stats',
+                'attendance', 'session_rsvp', 'session_component', 'saved_drill',
+                'scouting_report', 'opponent_player', 'scouting_clip', 'player_point_stats',
+                'export_log'
+            ]
+            
+            # Add team_organization_id to tables if it doesn't exist
+            for table in tables:
+                try:
+                    # Check if the table exists
+                    if table in inspector.get_table_names():
+                        # Check if the column already exists
+                        has_column = check_column_exists(table, 'team_organization_id')
+                        
+                        if not has_column:
+                            print_status(f"Adding team_organization_id to {table}...")
+                            db.session.execute(text(f"""
+                            ALTER TABLE "{table}" ADD COLUMN team_organization_id INTEGER REFERENCES team_organization(id)
+                            """))
+                            
+                            # Update all records to use the default team
+                            db.session.execute(text(f"""
+                            UPDATE "{table}" SET team_organization_id = {default_team_id} WHERE team_organization_id IS NULL
+                            """))
+                            print_status(f"Updated {table} with default team ID")
+                except Exception as e:
+                    print_status(f"Error processing table {table}: {e}")
+                    # Continue with other tables even if one fails
+            
+            db.session.commit()
+            print_status("Team organization setup completed successfully!")
+            
+        except Exception as e:
+            print_status(f"Error during team organization setup: {str(e)}")
+            db.session.rollback()
+            sys.exit(1)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Database management tool')
-    parser.add_argument('action', choices=['reset', 'upgrade', 'add_stat_taker'], 
-                        help='Action to perform: reset (full database reset), upgrade (migrate user roles), or add_stat_taker (add stat taker role)')
+    parser.add_argument('action', choices=['reset', 'upgrade', 'add_stat_taker', 'add_team_org'], 
+                      help='Action to perform: reset (full database reset), upgrade (migrate user roles), add_stat_taker (add stat taker role), or add_team_org (add team organization)')
     
     args = parser.parse_args()
     
@@ -174,5 +298,8 @@ if __name__ == "__main__":
         reset_database()
     elif args.action == 'upgrade':
         migrate_user_roles()
+        add_team_organization()  # Add this line to include team organization setup during upgrade
     elif args.action == 'add_stat_taker':
         add_stat_taker_role()
+    elif args.action == 'add_team_org':
+        add_team_organization()
