@@ -16,7 +16,7 @@ class ScoutingReport(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
   
     # Relationships
@@ -44,7 +44,7 @@ class OpponentPlayer(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
     
     def __repr__(self):
@@ -61,7 +61,7 @@ class ScoutingClip(db.Model):
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
     def __repr__(self):
         return f'<ScoutingClip {self.title}>'

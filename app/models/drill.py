@@ -10,7 +10,7 @@ class Drill(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_public = db.Column(db.Boolean, default=False)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
   
     # Relationship with frames
@@ -21,7 +21,7 @@ class DrillFrame(db.Model):
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
     sequence = db.Column(db.Integer, nullable=False)  # Order in animation
     name = db.Column(db.String(50))  # Optional name for the frame
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Store all elements as JSON (players, discs, lines, text)
@@ -44,7 +44,7 @@ class SavedDrill(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationship to SessionComponent

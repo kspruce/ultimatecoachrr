@@ -9,7 +9,7 @@ class LineTemplate(db.Model):
     line_type = db.Column(db.String(20), nullable=False)  # O-line or D-line
     gender_ratio = db.Column(db.String(4), nullable=False)  # e.g., "4-3"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationships
@@ -20,7 +20,7 @@ class LineTemplatePlayer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     template_id = db.Column(db.Integer, db.ForeignKey('line_template.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
   
     # Relationships
@@ -35,7 +35,7 @@ class GameDayEvent(db.Model):
     event_result = db.Column(db.String(20), nullable=True)  # For pulls: in/out
     sequence = db.Column(db.Integer, nullable=False)  # Order of events within a point
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationships
@@ -60,7 +60,7 @@ class GameDayPlayerStats(db.Model):
     pulls_ob = db.Column(db.Integer, default=0)
     callahans = db.Column(db.Integer, default=0)
     plus_minus = db.Column(db.Integer, default=0)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
    
     # Relationships

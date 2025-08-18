@@ -1,5 +1,7 @@
 from app import db
 from datetime import datetime
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 from app.models.drill import SavedDrill
 from app.models.player import Player
 
@@ -95,16 +97,16 @@ class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session_plan.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
-    status = db.Column(db.String(20), nullable=False)
-    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='present')  # present, absent, late, excused
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
     
-    # Remove the conflicting backref here
-    player = db.relationship('Player', back_populates='attendances')
-    session = db.relationship('SessionPlan', back_populates='attendances')
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    
+    # Relationships
+    session = relationship('SessionPlan', back_populates='attendance')
+    player = relationship('Player', back_populates='attendance')
+
 
     def __repr__(self):
         return f'<Attendance {self.player_id} for {self.session_id}>'

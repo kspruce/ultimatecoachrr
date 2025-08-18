@@ -28,7 +28,7 @@ class Clip(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     description = db.Column(db.Text, nullable=True)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
    
     # Relationships
@@ -103,7 +103,7 @@ class ClipTag(db.Model):
     name = db.Column(db.String(50), nullable=False)
     category = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     team_organization = relationship('TeamOrganization', back_populates='users')
   
     def __repr__(self):
