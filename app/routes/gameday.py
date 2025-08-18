@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.game import Game
 from app.models.player import Player
+from app.models.game_player import GamePlayer
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
 
@@ -15,11 +16,18 @@ def game_dashboard(game_id):
     
     # Add our_team attribute if it doesn't exist
     if not hasattr(game, 'our_team'):
-        game.our_team = "Our Team"  # Or get it from your configuration
+        game.our_team = "Our Team"
     
-    # Get all active players
-    mmp_players = Player.query.filter_by(active=True, gender="male").all()
-    fmp_players = Player.query.filter_by(active=True, gender="female").all()
+    # Get players assigned to this game
+    game_player_entries = GamePlayer.query.filter_by(game_id=game_id).all()
+    game_player_ids = [gp.player_id for gp in game_player_entries]
+    
+    # Get player objects
+    all_game_players = Player.query.filter(Player.id.in_(game_player_ids)).all()
+    
+    # Split players by gender
+    mmp_players = [p for p in all_game_players if p.gender == "male"]
+    fmp_players = [p for p in all_game_players if p.gender == "female"]
     
     # Get player stats for this game
     player_stats = GameDayPlayerStats.query.filter_by(game_id=game_id).all()
@@ -57,6 +65,7 @@ def game_dashboard(game_id):
                           fmp_players=fmp_players,
                           line_templates=line_templates,
                           next_point_number=next_point_number)
+
 
 
 @bp.route('/api/record-point', methods=['POST'])
@@ -216,6 +225,7 @@ def record_point():
             'success': False,
             'error': str(e)
         })
+
 
 
 @bp.route('/api/line-template/save', methods=['POST'])
