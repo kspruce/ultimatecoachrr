@@ -1,0 +1,1181 @@
+{% extends "base.html" %}
+
+{% block title %}Game Day - {{ game.opponent }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <h2>Game Day: {{ game.our_team }} vs {{ game.opponent }}</h2>
+      <div class="d-flex justify-content-between align-items-center">
+        <h3>Score: <span id="our-score">{{ game.our_score }}</span> - <span id="their-score">{{ game.their_score }}</span></h3>
+        <div>
+          <a href="{{ url_for('game.view', game_id=game.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Game
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Line Selection Card -->
+      <div class="card mb-3" id="line-selection">
+        <div class="card-header bg-primary text-white">
+          <h5>Line Selection</h5>
+          <div class="d-flex justify-content-between">
+            <span>Point #<span id="next-point-number">{{ next_point_number }}</span></span>
+            <input type="hidden" id="game-id" value="{{ game.id }}">
+            <input type="hidden" id="next-point-number-input" value="{{ next_point_number }}">
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <!-- Line Type Selection -->
+          <div class="btn-group w-100 mb-3" role="group">
+            <input type="radio" class="btn-check" name="line_type" id="o-line" value="O-line" checked>
+            <label class="btn btn-outline-success" for="o-line">O-Line</label>
+            
+            <input type="radio" class="btn-check" name="line_type" id="d-line" value="D-line">
+            <label class="btn btn-outline-danger" for="d-line">D-Line</label>
+          </div>
+          
+          <!-- Gender Ratio Selection -->
+          <div class="btn-group w-100 mb-3" role="group">
+            <input type="radio" class="btn-check" name="gender_ratio" id="ratio-4-3" value="4-3" checked>
+            <label class="btn btn-outline-primary" for="ratio-4-3">4 MMP - 3 FMP</label>
+            
+            <input type="radio" class="btn-check" name="gender_ratio" id="ratio-3-4" value="3-4">
+            <label class="btn btn-outline-primary" for="ratio-3-4">3 MMP - 4 FMP</label>
+          </div>
+          
+          <!-- Line Templates -->
+          <div class="d-flex mb-3">
+            <select class="form-select me-2" id="line-template">
+              <option value="">Load Saved Line</option>
+              {% for template in line_templates %}
+              <option value="{{ template.id }}">{{ template.name }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-outline-secondary" id="save-line-btn" data-bs-toggle="modal" data-bs-target="#saveLineModal">Save Current</button>
+          </div>
+          
+          <!-- Power Line Button -->
+          <button class="btn btn-warning w-100 mb-3" id="power-line">
+            <i class="bi bi-lightning-charge-fill"></i> Power Line
+          </button>
+          
+          <!-- Player Selection Tabs -->
+          <ul class="nav nav-tabs" id="playerTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="mmp-tab" data-bs-toggle="tab" data-bs-target="#mmp-players" type="button">
+                MMP Players (<span id="mmp-count">0</span>/<span id="mmp-required">4</span>)
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="fmp-tab" data-bs-toggle="tab" data-bs-target="#fmp-players" type="button">
+                FMP Players (<span id="fmp-count">0</span>/<span id="fmp-required">3</span>)
+              </button>
+            </li>
+          </ul>
+          
+          <div class="tab-content p-2 border border-top-0 rounded-bottom mb-3">
+            <!-- MMP Players Tab -->
+            <div class="tab-pane fade show active" id="mmp-players" role="tabpanel">
+              <div class="player-grid">
+                {% for player in mmp_players %}
+                <div class="form-check player-card">
+                  <input class="form-check-input player-checkbox mmp-checkbox" type="checkbox" 
+                         value="{{ player.id }}" id="player-{{ player.id }}" data-gender="MMP">
+                  <label class="form-check-label" for="player-{{ player.id }}">
+                    <div class="d-flex align-items-center">
+                      <span class="badge bg-secondary me-1">{{ player.jersey_number }}</span>
+                      <span>{{ player.name }}</span>
+                      <span class="ms-auto badge bg-info">{{ player.game_stats.points_played }}</span>
+                      <span class="ms-1 badge {{ 'bg-success' if player.game_stats.plus_minus > 0 else 'bg-danger' if player.game_stats.plus_minus < 0 else 'bg-secondary' }} plus-minus">{{ player.game_stats.plus_minus }}</span>
+                    </div>
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            
+            <!-- FMP Players Tab -->
+            <div class="tab-pane fade" id="fmp-players" role="tabpanel">
+              <div class="player-grid">
+                {% for player in fmp_players %}
+                <div class="form-check player-card">
+                  <input class="form-check-input player-checkbox fmp-checkbox" type="checkbox" 
+                         value="{{ player.id }}" id="player-{{ player.id }}" data-gender="FMP">
+                  <label class="form-check-label" for="player-{{ player.id }}">
+                    <div class="d-flex align-items-center">
+                      <span class="badge bg-secondary me-1">{{ player.jersey_number }}</span>
+                      <span>{{ player.name }}</span>
+                      <span class="ms-auto badge bg-info">{{ player.game_stats.points_played }}</span>
+                      <span class="ms-1 badge {{ 'bg-success' if player.game_stats.plus_minus > 0 else 'bg-danger' if player.game_stats.plus_minus < 0 else 'bg-secondary' }} plus-minus">{{ player.game_stats.plus_minus }}</span>
+                    </div>
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Line Status -->
+          <div class="alert alert-info" id="line-status">
+            Select 7 players (4 MMP, 3 FMP)
+          </div>
+          
+          <!-- Start Point Button -->
+          <button class="btn btn-success btn-lg w-100" id="start-point" disabled>
+            Start Point
+          </button>
+        </div>
+      </div>
+      
+      <!-- Point Tracking Card -->
+      <div class="card mb-3" id="point-tracking" style="display: none;">
+        <div class="card-header bg-primary text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5>Point #<span id="current-point-number">{{ next_point_number }}</span> - <span id="current-line-type">O-Line</span></h5>
+            <div>
+              <span class="badge bg-light text-dark">Score: <span id="current-score">{{ game.our_score }}-{{ game.their_score }}</span></span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <!-- Pull Section (Only for D-Line) -->
+          <div id="pull-section" class="mb-3" style="display: none;">
+            <h6>Pull</h6>
+            <div class="d-flex">
+              <select class="form-select me-2" id="puller">
+                <option value="">Select Puller</option>
+                <!-- Options will be populated with selected players -->
+              </select>
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-success" id="pull-in">In</button>
+                <button class="btn btn-outline-danger" id="pull-out">Out</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Current Players -->
+          <div class="mb-3">
+            <h6>Players on Line</h6>
+            <div class="player-chips" id="active-players">
+              <!-- Will be populated with selected players -->
+            </div>
+          </div>
+          
+          <!-- Event Recording -->
+          <div class="mb-3">
+            <h6>Record Event</h6>
+            <select class="form-select mb-2" id="event-player">
+              <option value="">Select Player</option>
+              <!-- Will be populated with selected players -->
+            </select>
+            
+            <!-- Offensive Events -->
+            <div id="offense-events" class="event-buttons">
+              <button class="btn btn-outline-primary event-btn" data-event="catch">Catch</button>
+              <button class="btn btn-outline-primary event-btn" data-event="drop">Drop</button>
+              <button class="btn btn-outline-success event-btn" data-event="score">Score</button>
+              <button class="btn btn-outline-danger event-btn" data-event="throwaway">Throwaway</button>
+              <button class="btn btn-outline-danger event-btn" data-event="stall">Stall</button>
+            </div>
+            
+            <!-- Defensive Events -->
+            <div id="defense-events" class="event-buttons" style="display: none;">
+              <button class="btn btn-outline-success event-btn" data-event="block">Block</button>
+              <button class="btn btn-outline-primary event-btn" data-event="pickup">Pickup</button>
+              <button class="btn btn-outline-success event-btn" data-event="callahan">Callahan</button>
+            </div>
+          </div>
+          
+          <!-- Game Management -->
+          <div class="d-flex mb-3">
+            <button class="btn btn-warning me-2" id="call-timeout">
+              <i class="bi bi-clock"></i> Timeout
+            </button>
+            <button class="btn btn-info me-2" id="substitution" data-bs-toggle="modal" data-bs-target="#substitutionModal">
+              <i class="bi bi-people"></i> Substitution
+            </button>
+            <button class="btn btn-secondary" id="toggle-possession">
+              <i class="bi bi-arrow-repeat"></i> Switch O/D
+            </button>
+          </div>
+          
+          <!-- Event Log -->
+          <div class="mb-3">
+            <h6>Event Log</h6>
+            <div class="event-log" id="event-log">
+              <!-- Events will be logged here -->
+            </div>
+          </div>
+          
+          <!-- End Point -->
+          <div class="btn-group w-100">
+            <button class="btn btn-success" id="we-scored">We Scored</button>
+            <button class="btn btn-danger" id="they-scored">They Scored</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4">
+      <!-- Game Summary Card -->
+      <div class="card">
+        <div class="card-header bg-dark text-white">
+          <h5>Game Summary</h5>
+        </div>
+        
+        <div class="card-body">
+          <!-- Player Stats Table -->
+          <div class="table-responsive">
+            <table class="table table-sm table-hover">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Player</th>
+                  <th>Points</th>
+                  <th>G</th>
+                  <th>A</th>
+                  <th>D</th>
+                  <th>T</th>
+                  <th>+/-</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for player in mmp_players + fmp_players %}
+                {% if player.game_stats.points_played > 0 %}
+                <tr>
+                  <td>{{ player.jersey_number }}</td>
+                  <td>{{ player.name }}</td>
+                  <td>{{ player.game_stats.points_played }}</td>
+                  <td>{{ player.game_stats.goals }}</td>
+                  <td>{{ player.game_stats.assists }}</td>
+                  <td>{{ player.game_stats.blocks }}</td>
+                  <td>{{ player.game_stats.turns }}</td>
+                  <td class="{{ 'text-success' if player.game_stats.plus_minus > 0 else 'text-danger' if player.game_stats.plus_minus < 0 else '' }}">
+                    {{ player.game_stats.plus_minus }}
+                  </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Line Template Modal -->
+<div class="modal fade" id="saveLineModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Save Line Template</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="template-name" class="form-label">Template Name</label>
+          <input type="text" class="form-control" id="template-name" placeholder="e.g., O-Line Standard">
+        </div>
+        <div class="mb-3">
+          <p>Selected Players:</p>
+          <div id="template-players-list"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="save-template">Save Template</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Substitution Modal -->
+<div class="modal fade" id="substitutionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Player Substitution</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="player-out" class="form-label">Player Out</label>
+          <select class="form-select" id="player-out">
+            <option value="">Select player to sub out</option>
+            <!-- Options will be populated with active players -->
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="player-in" class="form-label">Player In</label>
+          <select class="form-select" id="player-in">
+            <option value="">Select player to sub in</option>
+            <!-- Options will be populated with available players -->
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirm-sub">Confirm Substitution</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Timeout Modal -->
+<div class="modal fade" id="timeoutModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Call Timeout</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Timeout Type</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="timeout_type" id="timeout-regular" value="regular" checked>
+            <label class="btn btn-outline-primary" for="timeout-regular">Regular</label>
+            
+            <input type="radio" class="btn-check" name="timeout_type" id="timeout-injury" value="injury">
+            <label class="btn btn-outline-warning" for="timeout-injury">Injury</label>
+            
+            <input type="radio" class="btn-check" name="timeout_type" id="timeout-technical" value="technical">
+            <label class="btn btn-outline-info" for="timeout-technical">Technical</label>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="timeout-notes" class="form-label">Notes (Optional)</label>
+          <textarea class="form-control" id="timeout-notes" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirm-timeout">Confirm Timeout</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Variables to track state
+  let currentPossession = 'offense'; // or 'defense'
+  let selectedPlayers = [];
+  let pointEvents = [];
+  let lastThrower = null;
+  
+  // Update player counts when checkboxes are clicked
+  document.querySelectorAll('.player-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updatePlayerCounts);
+  });
+  
+  // Gender ratio change handler
+  document.querySelectorAll('input[name="gender_ratio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const ratio = this.value;
+      const [mmpRequired, fmpRequired] = ratio.split('-').map(Number);
+      
+      document.getElementById('mmp-required').textContent = mmpRequired;
+      document.getElementById('fmp-required').textContent = fmpRequired;
+      
+      updatePlayerCounts();
+    });
+  });
+  
+  // Line type change handler
+  document.querySelectorAll('input[name="line_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const lineType = this.value;
+      document.getElementById('current-line-type').textContent = lineType;
+      
+      // Show/hide pull section based on line type
+      if (lineType === 'D-line') {
+        document.getElementById('pull-section').style.display = 'block';
+        currentPossession = 'defense';
+        updateEventButtons();
+      } else {
+        document.getElementById('pull-section').style.display = 'none';
+        currentPossession = 'offense';
+        updateEventButtons();
+      }
+    });
+  });
+  
+  // Power line button handler
+  document.getElementById('power-line').addEventListener('click', function() {
+    // Get the gender ratio
+    const ratio = document.querySelector('input[name="gender_ratio"]:checked').value;
+    const [mmpRequired, fmpRequired] = ratio.split('-').map(Number);
+    
+    // Uncheck all current selections
+    document.querySelectorAll('.player-checkbox:checked').forEach(checkbox => {
+      checkbox.checked = false;
+    });
+    
+    // Get top players by +/- for each gender
+    const mmpPlayers = Array.from(document.querySelectorAll('.mmp-checkbox'))
+      .map(checkbox => {
+        const plusMinusEl = checkbox.closest('.player-card').querySelector('.plus-minus');
+        const plusMinus = plusMinusEl ? parseInt(plusMinusEl.textContent) || 0 : 0;
+        return { id: checkbox.value, plusMinus: plusMinus, element: checkbox };
+      })
+      .sort((a, b) => b.plusMinus - a.plusMinus)
+      .slice(0, mmpRequired);
+    
+    const fmpPlayers = Array.from(document.querySelectorAll('.fmp-checkbox'))
+      .map(checkbox => {
+        const plusMinusEl = checkbox.closest('.player-card').querySelector('.plus-minus');
+        const plusMinus = plusMinusEl ? parseInt(plusMinusEl.textContent) || 0 : 0;
+        return { id: checkbox.value, plusMinus: plusMinus, element: checkbox };
+      })
+      .sort((a, b) => b.plusMinus - a.plusMinus)
+      .slice(0, fmpRequired);
+    
+    // Check the top players
+    mmpPlayers.forEach(player => player.element.checked = true);
+    fmpPlayers.forEach(player => player.element.checked = true);
+    
+    // Update counts
+    updatePlayerCounts();
+  });
+  
+  // Line template selection handler
+  document.getElementById('line-template').addEventListener('change', function() {
+    const templateId = this.value;
+    if (!templateId) return;
+    
+    // Fetch template data
+    fetch(`/api/line-template/${templateId}`)
+      .then(response => response.json())
+      .then(data => {
+        // Set line type and gender ratio
+        document.querySelector(`input[name="line_type"][value="${data.line_type}"]`).checked = true;
+        document.querySelector(`input[name="gender_ratio"][value="${data.gender_ratio}"]`).checked = true;
+        
+        // Update required counts
+        const [mmpRequired, fmpRequired] = data.gender_ratio.split('-').map(Number);
+        document.getElementById('mmp-required').textContent = mmpRequired;
+        document.getElementById('fmp-required').textContent = fmpRequired;
+        
+        // Uncheck all current selections
+        document.querySelectorAll('.player-checkbox:checked').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        
+        // Check players in template
+        data.players.forEach(playerId => {
+          const checkbox = document.getElementById(`player-${playerId}`);
+          if (checkbox) checkbox.checked = true;
+        });
+        
+        // Update counts
+        updatePlayerCounts();
+      })
+      .catch(error => {
+        console.error('Error loading template:', error);
+        alert('Error loading template. Please try again.');
+      });
+  });
+  
+  // Save template button handler
+  document.getElementById('save-line-btn').addEventListener('click', function() {
+    // Get selected players
+    const selectedPlayerIds = Array.from(document.querySelectorAll('.player-checkbox:checked'))
+      .map(checkbox => checkbox.value);
+    
+    // Get selected player names for display
+    const selectedPlayerNames = Array.from(document.querySelectorAll('.player-checkbox:checked'))
+      .map(checkbox => {
+        const label = checkbox.nextElementSibling;
+        const jersey = label.querySelector('.badge').textContent;
+        const name = label.textContent.replace(jersey, '').trim();
+        return `#${jersey} ${name}`;
+      });
+    
+    // Populate the modal
+    const playersList = document.getElementById('template-players-list');
+    playersList.innerHTML = '';
+    
+    selectedPlayerNames.forEach(name => {
+      const div = document.createElement('div');
+      div.textContent = name;
+      playersList.appendChild(div);
+    });
+    
+    // Store selected players in a data attribute
+    document.getElementById('save-template').dataset.players = selectedPlayerIds.join(',');
+  });
+  
+  // Save template confirmation handler
+  document.getElementById('save-template').addEventListener('click', function() {
+    const name = document.getElementById('template-name').value;
+    if (!name) {
+      alert('Please enter a template name');
+      return;
+    }
+    
+    const lineType = document.querySelector('input[name="line_type"]:checked').value;
+    const genderRatio = document.querySelector('input[name="gender_ratio"]:checked').value;
+    const playerIds = this.dataset.players.split(',').map(Number);
+    
+    // Send data to server
+    fetch('/api/line-template/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({
+        name: name,
+        line_type: lineType,
+        gender_ratio: genderRatio,
+        players: playerIds
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('saveLineModal'));
+        modal.hide();
+        
+        // Add to dropdown
+        const option = document.createElement('option');
+        option.value = data.template_id;
+        option.textContent = name;
+        document.getElementById('line-template').appendChild(option);
+        
+        // Show success message
+        alert('Line template saved successfully!');
+      } else {
+        alert('Error saving template: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error saving template. Please try again.');
+    });
+  });
+  
+  // Start point button handler
+  document.getElementById('start-point').addEventListener('click', function() {
+    // Collect selected players
+    selectedPlayers = Array.from(document.querySelectorAll('.player-checkbox:checked'))
+      .map(checkbox => {
+        const label = checkbox.nextElementSibling;
+        const jersey = label.querySelector('.badge').textContent;
+        const name = label.textContent.replace(jersey, '').trim();
+        return {
+          id: checkbox.value,
+          name: name,
+          jersey: jersey,
+          gender: checkbox.dataset.gender
+        };
+      });
+    
+    // Populate player chips
+    const activePlayersContainer = document.getElementById('active-players');
+    activePlayersContainer.innerHTML = '';
+    
+    selectedPlayers.forEach(player => {
+      const chip = document.createElement('span');
+      chip.className = 'badge bg-primary me-1 mb-1 player-chip';
+      chip.textContent = `#${player.jersey} ${player.name}`;
+      chip.dataset.playerId = player.id;
+      activePlayersContainer.appendChild(chip);
+    });
+    
+    // Populate player dropdown
+    const playerSelect = document.getElementById('event-player');
+    playerSelect.innerHTML = '<option value="">Select Player</option>';
+    
+    selectedPlayers.forEach(player => {
+      const option = document.createElement('option');
+      option.value = player.id;
+      option.textContent = `#${player.jersey} ${player.name}`;
+      playerSelect.appendChild(option);
+    });
+    
+    // Populate puller dropdown if D-line
+    if (document.querySelector('input[name="line_type"]:checked').value === 'D-line') {
+      const pullerSelect = document.getElementById('puller');
+      pullerSelect.innerHTML = '<option value="">Select Puller</option>';
+      
+      selectedPlayers.forEach(player => {
+        const option = document.createElement('option');
+        option.value = player.id;
+        option.textContent = `#${player.jersey} ${player.name}`;
+        pullerSelect.appendChild(option);
+      });
+      
+      document.getElementById('pull-section').style.display = 'block';
+      currentPossession = 'defense';
+    } else {
+      document.getElementById('pull-section').style.display = 'none';
+      currentPossession = 'offense';
+    }
+    
+    // Update point number
+    document.getElementById('current-point-number').textContent = 
+      document.getElementById('next-point-number').textContent;
+    
+    // Hide line selection, show point tracking
+    document.getElementById('line-selection').style.display = 'none';
+    document.getElementById('point-tracking').style.display = 'block';
+    
+    // Update event buttons based on possession
+    updateEventButtons();
+    
+    // Clear event log
+    document.getElementById('event-log').innerHTML = '';
+    pointEvents = [];
+    lastThrower = null;
+  });
+  
+  // Event button handlers
+  document.querySelectorAll('.event-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const eventType = this.dataset.event;
+      const playerId = document.getElementById('event-player').value;
+      
+      if (!playerId) {
+        alert('Please select a player first');
+        return;
+      }
+      
+      const player = selectedPlayers.find(p => p.id === playerId);
+      
+      // Record the event
+      const event = {
+        type: eventType,
+        player_id: playerId,
+        player_name: player ? `#${player.jersey} ${player.name}` : 'Unknown Player',
+        timestamp: new Date().toISOString()
+      };
+      
+      // Special handling for certain events
+      if (eventType === 'score') {
+        // If someone scores, they must have caught it from someone
+        if (lastThrower) {
+          // Record an assist for the last thrower
+          const assistEvent = {
+            type: 'assist',
+            player_id: lastThrower.id,
+            player_name: lastThrower.name,
+            timestamp: new Date().toISOString()
+          };
+          pointEvents.push(assistEvent);
+          addEventToLog(assistEvent);
+        }
+        
+        // We scored, so end the point
+        setTimeout(() => {
+          document.getElementById('we-scored').click();
+        }, 500);
+      }
+      
+      if (eventType === 'callahan') {
+        // We scored, so end the point
+        setTimeout(() => {
+          document.getElementById('we-scored').click();
+        }, 500);
+      }
+      
+      if (eventType === 'throwaway' || eventType === 'stall' || eventType === 'drop') {
+        // Turnover, switch possession
+        currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
+        updateEventButtons();
+      }
+      
+      if (eventType === 'block' || eventType === 'pickup') {
+        // Block or pickup, switch possession
+        currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
+        updateEventButtons();
+      }
+      
+      // For catches, track the last thrower
+      if (eventType === 'catch') {
+        lastThrower = {
+          id: playerId,
+          name: player ? `#${player.jersey} ${player.name}` : 'Unknown Player'
+        };
+      }
+      
+      // Add event to array and log
+      pointEvents.push(event);
+      addEventToLog(event);
+      
+      // Reset player selection
+      document.getElementById('event-player').value = '';
+    });
+  });
+  
+  // Toggle possession button
+  document.getElementById('toggle-possession').addEventListener('click', function() {
+    currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
+    updateEventButtons();
+    
+    // Add event to log
+    const event = {
+      type: 'possession_change',
+      description: `Switched to ${currentPossession}`,
+      timestamp: new Date().toISOString()
+    };
+    pointEvents.push(event);
+    addEventToLog(event);
+  });
+  
+  // Call timeout button
+  document.getElementById('call-timeout').addEventListener('click', function() {
+    const timeoutModal = new bootstrap.Modal(document.getElementById('timeoutModal'));
+    timeoutModal.show();
+  });
+  
+  // Confirm timeout button
+  document.getElementById('confirm-timeout').addEventListener('click', function() {
+    const timeoutType = document.querySelector('input[name="timeout_type"]:checked').value;
+    const notes = document.getElementById('timeout-notes').value;
+    
+    // Record timeout event
+    const event = {
+      type: 'timeout',
+      timeout_type: timeoutType,
+      notes: notes,
+      timestamp: new Date().toISOString()
+    };
+    
+    pointEvents.push(event);
+    addEventToLog(event);
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('timeoutModal'));
+    modal.hide();
+  });
+  
+  // Substitution button
+  document.getElementById('substitution').addEventListener('click', function() {
+    // Populate player-out dropdown with current line
+    const playerOutSelect = document.getElementById('player-out');
+    playerOutSelect.innerHTML = '<option value="">Select player to sub out</option>';
+    
+    selectedPlayers.forEach(player => {
+      const option = document.createElement('option');
+      option.value = player.id;
+      option.textContent = `#${player.jersey} ${player.name}`;
+      playerOutSelect.appendChild(option);
+    });
+    
+    // Populate player-in dropdown with available players
+    const playerInSelect = document.getElementById('player-in');
+    playerInSelect.innerHTML = '<option value="">Select player to sub in</option>';
+    
+    // Get all player checkboxes that aren't checked
+    const availablePlayers = Array.from(document.querySelectorAll('.player-checkbox:not(:checked)'))
+      .map(checkbox => {
+        const label = checkbox.nextElementSibling;
+        const jersey = label.querySelector('.badge').textContent;
+        const name = label.textContent.replace(jersey, '').trim();
+        return {
+          id: checkbox.value,
+          name: name,
+          jersey: jersey,
+          gender: checkbox.dataset.gender
+        };
+      });
+    
+    availablePlayers.forEach(player => {
+      const option = document.createElement('option');
+      option.value = player.id;
+      option.textContent = `#${player.jersey} ${player.name}`;
+      option.dataset.gender = player.gender;
+      playerInSelect.appendChild(option);
+    });
+  });
+  
+  // Confirm substitution button
+  document.getElementById('confirm-sub').addEventListener('click', function() {
+    const playerOutId = document.getElementById('player-out').value;
+    const playerInId = document.getElementById('player-in').value;
+    const playerInGender = document.getElementById('player-in').selectedOptions[0].dataset.gender;
+    
+    if (!playerOutId || !playerInId) {
+      alert('Please select both players');
+      return;
+    }
+    
+    // Find the player being subbed out
+    const playerOutIndex = selectedPlayers.findIndex(p => p.id === playerOutId);
+    if (playerOutIndex === -1) {
+      alert('Selected player not found in current line');
+      return;
+    }
+    
+    const playerOut = selectedPlayers[playerOutIndex];
+    
+    // Check gender match
+    if (playerOut.gender !== playerInGender) {
+      alert('Substitution must maintain gender balance');
+      return;
+    }
+    
+    // Find the new player
+    const playerInCheckbox = document.getElementById(`player-${playerInId}`);
+    if (!playerInCheckbox) {
+      alert('Substitute player not found');
+      return;
+    }
+    
+    const playerInLabel = playerInCheckbox.nextElementSibling;
+    const jersey = playerInLabel.querySelector('.badge').textContent;
+    const name = playerInLabel.textContent.replace(jersey, '').trim();
+    
+    // Create new player object
+    const playerIn = {
+      id: playerInId,
+      name: name,
+      jersey: jersey,
+      gender: playerInGender
+    };
+    
+    // Update selected players array
+    selectedPlayers.splice(playerOutIndex, 1, playerIn);
+    
+    // Update player chips
+    const playerChips = document.querySelectorAll('.player-chip');
+    playerChips.forEach(chip => {
+      if (chip.dataset.playerId === playerOutId) {
+        chip.textContent = `#${playerIn.jersey} ${playerIn.name}`;
+        chip.dataset.playerId = playerIn.id;
+      }
+    });
+    
+    // Update player dropdown
+    const playerOptions = document.getElementById('event-player').options;
+    for (let i = 0; i < playerOptions.length; i++) {
+      if (playerOptions[i].value === playerOutId) {
+        playerOptions[i].value = playerIn.id;
+        playerOptions[i].textContent = `#${playerIn.jersey} ${playerIn.name}`;
+        break;
+      }
+    }
+    
+    // Update puller dropdown if applicable
+    const pullerOptions = document.getElementById('puller').options;
+    for (let i = 0; i < pullerOptions.length; i++) {
+      if (pullerOptions[i].value === playerOutId) {
+        pullerOptions[i].value = playerIn.id;
+        pullerOptions[i].textContent = `#${playerIn.jersey} ${playerIn.name}`;
+        break;
+      }
+    }
+    
+    // Update checkboxes
+    document.getElementById(`player-${playerOutId}`).checked = false;
+    document.getElementById(`player-${playerInId}`).checked = true;
+    
+    // Record substitution event
+    const event = {
+      type: 'substitution',
+      player_out_id: playerOutId,
+      player_out_name: `#${playerOut.jersey} ${playerOut.name}`,
+      player_in_id: playerInId,
+      player_in_name: `#${playerIn.jersey} ${playerIn.name}`,
+      timestamp: new Date().toISOString()
+    };
+    
+    pointEvents.push(event);
+    addEventToLog(event);
+    
+    // Close modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('substitutionModal'));
+    modal.hide();
+  });
+  
+  // End point handlers
+  document.getElementById('we-scored').addEventListener('click', function() {
+    endPoint('scored');
+  });
+  
+  document.getElementById('they-scored').addEventListener('click', function() {
+    endPoint('conceded');
+  });
+  
+  // Pull handlers
+  document.getElementById('pull-in').addEventListener('click', function() {
+    const pullerId = document.getElementById('puller').value;
+    if (!pullerId) {
+      alert('Please select a puller');
+      return;
+    }
+    
+    const puller = selectedPlayers.find(p => p.id === pullerId);
+    
+    // Record pull event
+    const event = {
+      type: 'pull',
+      result: 'in',
+      player_id: pullerId,
+      player_name: puller ? `#${puller.jersey} ${puller.name}` : 'Unknown Player',
+      timestamp: new Date().toISOString()
+    };
+    
+    pointEvents.push(event);
+    addEventToLog(event);
+    
+    // Hide pull section after recording
+    document.getElementById('pull-section').style.display = 'none';
+  });
+  
+  document.getElementById('pull-out').addEventListener('click', function() {
+    const pullerId = document.getElementById('puller').value;
+    if (!pullerId) {
+      alert('Please select a puller');
+      return;
+    }
+    
+    const puller = selectedPlayers.find(p => p.id === pullerId);
+    
+    // Record pull event
+    const event = {
+      type: 'pull',
+      result: 'out',
+      player_id: pullerId,
+      player_name: puller ? `#${puller.jersey} ${puller.name}` : 'Unknown Player',
+      timestamp: new Date().toISOString()
+    };
+    
+    pointEvents.push(event);
+    addEventToLog(event);
+    
+    // Hide pull section after recording
+    document.getElementById('pull-section').style.display = 'none';
+  });
+  
+  // Helper functions
+  function updatePlayerCounts() {
+    const mmpChecked = document.querySelectorAll('.mmp-checkbox:checked').length;
+    const fmpChecked = document.querySelectorAll('.fmp-checkbox:checked').length;
+    const totalChecked = mmpChecked + fmpChecked;
+    
+    document.getElementById('mmp-count').textContent = mmpChecked;
+    document.getElementById('fmp-count').textContent = fmpChecked;
+    
+    const mmpRequired = parseInt(document.getElementById('mmp-required').textContent);
+    const fmpRequired = parseInt(document.getElementById('fmp-required').textContent);
+    
+    const lineStatus = document.getElementById('line-status');
+    const startButton = document.getElementById('start-point');
+    
+    if (totalChecked === 7 && mmpChecked === mmpRequired && fmpChecked === fmpRequired) {
+      lineStatus.className = 'alert alert-success';
+      lineStatus.textContent = 'Line complete! Ready to start point.';
+      startButton.disabled = false;
+    } else if (totalChecked > 7) {
+      lineStatus.className = 'alert alert-danger';
+      lineStatus.textContent = `Too many players selected (${totalChecked}/7)`;
+      startButton.disabled = true;
+    } else if (mmpChecked > mmpRequired) {
+      lineStatus.className = 'alert alert-warning';
+      lineStatus.textContent = `Too many MMP players (${mmpChecked}/${mmpRequired})`;
+      startButton.disabled = true;
+    } else if (fmpChecked > fmpRequired) {
+      lineStatus.className = 'alert alert-warning';
+      lineStatus.textContent = `Too many FMP players (${fmpChecked}/${fmpRequired})`;
+      startButton.disabled = true;
+    } else {
+      lineStatus.className = 'alert alert-info';
+      lineStatus.textContent = `Select ${7 - totalChecked} more players (${mmpRequired - mmpChecked} MMP, ${fmpRequired - fmpChecked} FMP)`;
+      startButton.disabled = true;
+    }
+  }
+  
+  function updateEventButtons() {
+    if (currentPossession === 'offense') {
+      document.getElementById('offense-events').style.display = 'block';
+      document.getElementById('defense-events').style.display = 'none';
+    } else {
+      document.getElementById('offense-events').style.display = 'none';
+      document.getElementById('defense-events').style.display = 'block';
+    }
+  }
+  
+  function addEventToLog(event) {
+    const logContainer = document.getElementById('event-log');
+    const eventElement = document.createElement('div');
+    eventElement.className = 'event-item';
+    
+    let eventText = '';
+    
+    switch (event.type) {
+      case 'catch':
+        eventText = `${event.player_name} caught the disc`;
+        eventElement.className += ' text-primary';
+        break;
+      case 'drop':
+        eventText = `${event.player_name} dropped the disc`;
+        eventElement.className += ' text-danger';
+        break;
+      case 'score':
+        eventText = `${event.player_name} scored!`;
+        eventElement.className += ' text-success fw-bold';
+        break;
+      case 'throwaway':
+        eventText = `${event.player_name} threw the disc away`;
+        eventElement.className += ' text-danger';
+        break;
+      case 'stall':
+        eventText = `${event.player_name} got stalled`;
+        eventElement.className += ' text-danger';
+        break;
+      case 'block':
+        eventText = `${event.player_name} got a block!`;
+        eventElement.className += ' text-success';
+        break;
+      case 'pickup':
+        eventText = `${event.player_name} picked up the disc`;
+        eventElement.className += ' text-primary';
+        break;
+      case 'callahan':
+        eventText = `${event.player_name} scored a Callahan!`;
+        eventElement.className += ' text-success fw-bold';
+        break;
+      case 'assist':
+        eventText = `${event.player_name} threw an assist`;
+        eventElement.className += ' text-success';
+        break;
+      case 'pull':
+        eventText = `${event.player_name} pulled (${event.result})`;
+        eventElement.className += ' text-secondary';
+        break;
+      case 'possession_change':
+        eventText = event.description;
+        eventElement.className += ' text-info fst-italic';
+        break;
+      case 'timeout':
+        eventText = `Timeout called (${event.timeout_type})`;
+        if (event.notes) eventText += `: ${event.notes}`;
+        eventElement.className += ' text-warning';
+        break;
+      case 'substitution':
+        eventText = `Sub: ${event.player_out_name} → ${event.player_in_name}`;
+        eventElement.className += ' text-info';
+        break;
+      default:
+        eventText = `${event.type}: ${event.player_name}`;
+    }
+    
+    eventElement.textContent = eventText;
+    logContainer.appendChild(eventElement);
+    
+    // Scroll to bottom
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+  
+  function endPoint(outcome) {
+    // Add final outcome to events
+    const event = {
+      type: 'point_outcome',
+      outcome: outcome,
+      timestamp: new Date().toISOString()
+    };
+    pointEvents.push(event);
+    
+    // Send all events to server
+    fetch('/api/record-point', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({
+        game_id: document.getElementById('game-id').value,
+        point_number: document.getElementById('current-point-number').textContent,
+        line_type: document.querySelector('input[name="line_type"]:checked').value,
+        gender_ratio: document.querySelector('input[name="gender_ratio"]:checked').value,
+        players: selectedPlayers.map(p => p.id),
+        events: pointEvents,
+        outcome: outcome
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Reset UI for next point
+        document.getElementById('point-tracking').style.display = 'none';
+        document.getElementById('line-selection').style.display = 'block';
+        
+        // Uncheck all players
+        document.querySelectorAll('.player-checkbox:checked').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        
+        // Update player counts
+        updatePlayerCounts();
+        
+        // Update game score
+        document.getElementById('our-score').textContent = data.our_score;
+        document.getElementById('their-score').textContent = data.their_score;
+        document.getElementById('current-score').textContent = `${data.our_score}-${data.their_score}`;
+        
+        // Update next point number
+        document.getElementById('next-point-number').textContent = data.next_point_number;
+        document.getElementById('next-point-number-input').value = data.next_point_number;
+        
+        // Show success message
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed top-0 end-0 p-3';
+        toast.style.zIndex = '1070';
+        toast.innerHTML = `
+          <div class="toast show ${outcome === 'scored' ? 'bg-success' : 'bg-danger'} text-white" role="alert">
+            <div class="toast-header ${outcome === 'scored' ? 'bg-success' : 'bg-danger'} text-white">
+              <strong class="me-auto">Point ${outcome === 'scored' ? 'Scored' : 'Conceded'}</strong>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+              Score: ${data.our_score}-${data.their_score}
+            </div>
+          </div>
+        `;
+        document.body.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+          toast.remove();
+        }, 3000);
+        
+        // Reload the game summary section to update stats
+        location.reload();
+      } else {
+        alert('Error recording point: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error recording point. See console for details.');
+    });
+  }
+  
+  // Initialize player counts
+  updatePlayerCounts();
+});
+</script>
+{% endblock %}
+        

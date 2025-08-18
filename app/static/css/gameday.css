@@ -1,0 +1,179 @@
+/* Game Day Specific Styles */
+
+/* Player selection grid */
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.player-card {
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.player-card:hover {
+  background-color: #e9ecef;
+}
+
+.player-card input:checked + label {
+  font-weight: bold;
+}
+
+/* Event buttons */
+.event-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.event-btn {
+  padding: 10px;
+  font-weight: 500;
+}
+
+/* Player chips */
+.player-chips {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.player-chip {
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  border-radius: 20px;
+}
+
+/* Event log */
+.event-log {
+  height: 200px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  margin-bottom: 16px;
+}
+
+.event-item {
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.event-item:last-child {
+  border-bottom: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .player-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .event-buttons {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  }
+}
+
+/* Power line button */
+#power-line {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+#power-line:hover {
+  background-color: #e0a800;
+  border-color: #e0a800;
+  transform: scale(1.02);
+}
+
+/* Tab styling */
+.nav-tabs .nav-link {
+  font-weight: 500;
+}
+
+/* Line status alert */
+#line-status {
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Start point button */
+#start-point {
+  font-size: 1.2rem;
+  padding: 12px;
+}
+
+/* End point buttons */
+#we-scored, #they-scored {
+  font-weight: bold;
+  padding: 12px;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 576px) {
+  /* Make buttons larger and easier to tap */
+  .event-btn {
+    padding: 15px 10px;
+    font-size: 1.1rem;
+  }
+  
+  /* Adjust grid layouts */
+  .event-buttons {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  /* Make player selection more compact */
+  .player-card {
+    padding: 12px 8px;
+  }
+  
+  /* Ensure modals are usable */
+  .modal-dialog {
+    margin: 10px;
+    max-width: calc(100% - 20px);
+  }
+  
+  /* Make the event log taller on mobile */
+  .event-log {
+    height: 250px;
+  }
+  
+  /* Make tabs more tappable */
+  .nav-tabs .nav-link {
+    padding: 10px 15px;
+  }
+  
+  /* Ensure player chips are readable */
+  .player-chip {
+    font-size: 1rem;
+    padding: 8px 12px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  
+  /* Make the score more prominent */
+  #current-score {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  
+  /* Ensure end point buttons are very tappable */
+  #we-scored, #they-scored {
+    padding: 15px;
+    font-size: 1.2rem;
+  }
+}

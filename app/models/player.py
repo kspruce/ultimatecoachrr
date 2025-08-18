@@ -55,6 +55,9 @@ class Player(db.Model):
                                     back_populates='receiver',
                                     lazy='dynamic')
     fitness_records = db.relationship('FitnessRecord', back_populates='player', cascade='all, delete-orphan')
+    # Add these relationships
+    gameday_events = db.relationship('GameDayEvent', back_populates='player', lazy='dynamic')
+    gameday_stats = db.relationship('GameDayPlayerStats', back_populates='player', cascade='all, delete-orphan')
 
     __table_args__ = (
         db.Index('idx_player_active', 'active'),

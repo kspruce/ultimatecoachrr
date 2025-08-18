@@ -183,12 +183,16 @@ def create_app(config_class=Config):
     from app.discord.routes import discord_bp as discord_bp
     app.register_blueprint(discord_bp)
     
+    from app.routes.gameday import bp as gameday_bp
+    app.register_blueprint(gameday_bp)
+
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,
        Event, Pull, Clip, ClipTag, ClipAnnotation,
        SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-       FitnessMetric, FitnessRecord  # Add these new models
+       FitnessMetric, FitnessRecord, LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these new models
     )
 
 

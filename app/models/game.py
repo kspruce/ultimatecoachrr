@@ -22,7 +22,9 @@ class Game(db.Model):
                           cascade='all, delete-orphan', lazy='dynamic')
     # Add relationship with GamePlayer
     assigned_players = db.relationship('GamePlayer', back_populates='game', cascade='all, delete-orphan', lazy='dynamic')
-    
+    # Add this relationship
+    gameday_stats = db.relationship('GameDayPlayerStats', back_populates='game', cascade='all, delete-orphan')
+
     __table_args__ = (
         db.Index('idx_game_tournament', 'tournament_id'),
         db.Index('idx_game_date', 'date'),

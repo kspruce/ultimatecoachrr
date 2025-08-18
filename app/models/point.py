@@ -28,6 +28,8 @@ class Point(db.Model):
     point_stats = db.relationship('PlayerPointStats', back_populates='point')
     throws = db.relationship('Throw', back_populates='point')  # Add this line
     cutting_skills = db.relationship('CuttingSkill', back_populates='point', cascade='all, delete-orphan')
+    # Add this relationship
+    gameday_events = db.relationship('GameDayEvent', back_populates='point', cascade='all, delete-orphan')
 
     __table_args__ = (
         db.Index('idx_point_game', 'game_id'),
