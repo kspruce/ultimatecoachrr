@@ -13,6 +13,10 @@ bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 def game_dashboard(game_id):
     game = Game.query.get_or_404(game_id)
     
+    # Add our_team attribute if it doesn't exist
+    if not hasattr(game, 'our_team'):
+        game.our_team = "Our Team"  # Or get it from your configuration
+    
     # Get all active players
     mmp_players = Player.query.filter_by(active=True, gender="male").all()
     fmp_players = Player.query.filter_by(active=True, gender="female").all()
@@ -53,6 +57,7 @@ def game_dashboard(game_id):
                           fmp_players=fmp_players,
                           line_templates=line_templates,
                           next_point_number=next_point_number)
+
 
 @bp.route('/api/record-point', methods=['POST'])
 @login_required
@@ -241,3 +246,11 @@ def get_line_template(template_id):
         'gender_ratio': template.gender_ratio,
         'players': [tp.player_id for tp in template_players]
     })
+
+@bp.errorhandler(Exception)
+def handle_error(e):
+    db.session.rollback()
+    return jsonify({
+        'success': False,
+        'error': str(e)
+    }), 500

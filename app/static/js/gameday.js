@@ -409,14 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
     logContainer.scrollTop = logContainer.scrollHeight;
   }
   
-  function endPoint(outcome) {
-    // Add final outcome to events
-    const event = {
-      type: 'point_outcome',
-      outcome: outcome,
-      timestamp: new Date().toISOString()
-    };
-    pointEvents.push(event);
+
     
     // Send all events to server
     fetch('/api/record-point', {
@@ -543,7 +536,7 @@ window.addEventListener('online', function() {
     
     // Create a queue of promises
     const syncPromises = offlinePoints.map(pointData => 
-      fetch('/api/record-point', {
+      fetch('/gameday/api/record-point', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -567,3 +560,4 @@ window.addEventListener('online', function() {
       });
   }
 });
+
