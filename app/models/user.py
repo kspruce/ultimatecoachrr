@@ -1,23 +1,26 @@
-from app import db, login
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
-from datetime import datetime
 
+# app/models/user.py
+from app import db, login
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255))
-    role = db.Column(db.String(20), default='player')  # Changed default from 'user' to 'player'
-    is_admin_flag = db.Column(db.Boolean, default=False, name='is_admin')  # Rename column but keep DB name
+    role = db.Column(db.String(20), default='player')
+    is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    discord_id = db.Column(db.String(64), nullable=True, unique=True)
+    
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', backref=db.backref('users', lazy='dynamic'))
     
-    player_profile = db.relationship('Player', back_populates='user_account', uselist=False)
-
+    # Define relationships
+    player = db.relationship('Player', back_populates='user_account', uselist=False)
+    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 

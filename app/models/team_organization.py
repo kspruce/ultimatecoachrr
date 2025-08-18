@@ -12,10 +12,15 @@ class TeamOrganization(db.Model):
     logo = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Define relationships
-    users = db.relationship('User', back_populates='team_organization')
-    players = db.relationship('Player', back_populates='team_organization')
-    drills = db.relationship('SavedDrill', back_populates='team_organization')  # Add this line
+    # Define relationships using backref
+    users = db.relationship('User', backref='team_organization')
+    players = db.relationship('Player', backref='team_organization')
+    drills = db.relationship('SavedDrill', backref='team_organization')
+    tournaments = db.relationship('Tournament', backref='team_organization')
+    games = db.relationship('Game', backref='team_organization')
+    sessions = db.relationship('SessionPlan', backref='team_organization')
+    fitness_metrics = db.relationship('FitnessMetric', backref='team_organization')
+    fitness_records = db.relationship('FitnessRecord', backref='team_organization')
     
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'

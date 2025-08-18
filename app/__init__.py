@@ -189,6 +189,9 @@ def create_app(config_class=Config):
     
     from app.routes.gameday import bp as gameday_bp
     app.register_blueprint(gameday_bp)
+    
+    from app.routes.team_organization import bp as team_organization_bp
+    app.register_blueprint(team_organization_bp)
 
     
     # Import models

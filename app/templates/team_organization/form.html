@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ title }}</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control") }}
+                    {% for error in form.name.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.slug.label(class="form-label") }}
+                    {{ form.slug(class="form-control") }}
+                    <small class="text-muted">Used in URLs, e.g., example-team</small>
+                    {% for error in form.slug.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=5) }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('team_organization.index') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
