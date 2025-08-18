@@ -462,6 +462,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function endPoint(outcome) {
+  // Add final outcome to events
+  const event = {
+    type: 'point_outcome',
+    outcome: outcome,
+    timestamp: new Date().toISOString()
+  };
+  pointEvents.push(event);
+  
   // Create point data object
   const pointData = {
     game_id: document.getElementById('game-id').value,
@@ -470,12 +478,11 @@ function endPoint(outcome) {
     gender_ratio: document.querySelector('input[name="gender_ratio"]:checked').value,
     players: selectedPlayers.map(p => p.id),
     events: pointEvents,
-    outcome: outcome,
-    timestamp: new Date().toISOString()
+    outcome: outcome
   };
   
-  // Try to send to server
-  fetch('/api/record-point', {
+  // Send all events to server
+  fetch('/gameday/api/record-point', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -485,79 +492,61 @@ function endPoint(outcome) {
   })
   .then(response => response.json())
   .then(data => {
-    // Handle success as before
-    // ...
+    if (data.success) {
+      // Reset UI for next point
+      document.getElementById('point-tracking').style.display = 'none';
+      document.getElementById('line-selection').style.display = 'block';
+      
+      // Uncheck all players
+      document.querySelectorAll('.player-checkbox:checked').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      
+      // Update player counts
+      updatePlayerCounts();
+      
+      // Update game score
+      document.getElementById('our-score').textContent = data.our_score;
+      document.getElementById('their-score').textContent = data.their_score;
+      document.getElementById('current-score').textContent = `${data.our_score}-${data.their_score}`;
+      
+      // Update next point number
+      document.getElementById('next-point-number').textContent = data.next_point_number;
+      document.getElementById('next-point-number-input').value = data.next_point_number;
+      
+      // Show success message
+      const toast = document.createElement('div');
+      toast.className = 'position-fixed top-0 end-0 p-3';
+      toast.style.zIndex = '1070';
+      toast.innerHTML = `
+        <div class="toast show ${outcome === 'scored' ? 'bg-success' : 'bg-danger'} text-white" role="alert">
+          <div class="toast-header ${outcome === 'scored' ? 'bg-success' : 'bg-danger'} text-white">
+            <strong class="me-auto">Point ${outcome === 'scored' ? 'Scored' : 'Conceded'}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+          </div>
+          <div class="toast-body">
+            Score: ${data.our_score}-${data.their_score}
+          </div>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      
+      // Remove toast after 3 seconds
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+      
+      // Reload the game summary section to update stats
+      location.reload();
+    } else {
+      alert('Error recording point: ' + data.error);
+    }
   })
   .catch(error => {
-    console.error('Error:', error);
-    
-    // Store data locally if offline
-    const offlinePoints = JSON.parse(localStorage.getItem('offlinePoints') || '[]');
-    offlinePoints.push(pointData);
-    localStorage.setItem('offlinePoints', JSON.stringify(offlinePoints));
-    
-    alert('You appear to be offline. Point data has been saved locally and will sync when you reconnect.');
-    
-    // Update UI as if successful
-    document.getElementById('point-tracking').style.display = 'none';
-    document.getElementById('line-selection').style.display = 'block';
-    
-    // Uncheck all players
-    document.querySelectorAll('.player-checkbox:checked').forEach(checkbox => {
-      checkbox.checked = false;
-    });
-    
-    // Update player counts
-    updatePlayerCounts();
-    
-    // Increment local score
-    const ourScore = parseInt(document.getElementById('our-score').textContent);
-    const theirScore = parseInt(document.getElementById('their-score').textContent);
-    
-    if (outcome === 'scored') {
-      document.getElementById('our-score').textContent = ourScore + 1;
-    } else {
-      document.getElementById('their-score').textContent = theirScore + 1;
-    }
-    
-    // Update next point number
-    const nextPoint = parseInt(document.getElementById('next-point-number').textContent) + 1;
-    document.getElementById('next-point-number').textContent = nextPoint;
-    document.getElementById('next-point-number-input').value = nextPoint;
+    console.error('Error recording point:', error);
+    alert('Error recording point. Please try again.');
   });
 }
 
-// Add a function to sync offline data when back online
-window.addEventListener('online', function() {
-  const offlinePoints = JSON.parse(localStorage.getItem('offlinePoints') || '[]');
-  
-  if (offlinePoints.length > 0) {
-    alert(`You're back online! Syncing ${offlinePoints.length} saved points...`);
-    
-    // Create a queue of promises
-    const syncPromises = offlinePoints.map(pointData => 
-      fetch('/gameday/api/record-point', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify(pointData)
-      })
-    );
-    
-    // Execute all promises
-    Promise.allSettled(syncPromises)
-      .then(results => {
-        const successful = results.filter(r => r.status === 'fulfilled').length;
-        alert(`Sync complete! ${successful}/${offlinePoints.length} points synchronized.`);
-        
-        // Clear offline storage
-        localStorage.removeItem('offlinePoints');
-        
-        // Reload to get updated data
-        location.reload();
-      });
-  }
-});
+
 
