@@ -137,9 +137,34 @@ def record_point():
             if not player_stat:
                 player_stat = GameDayPlayerStats(
                     player_id=player_id,
-                    game_id=game_id
+                    game_id=game_id,
+                    # Initialize all stats to 0
+                    points_played=0,
+                    o_points=0,
+                    d_points=0,
+                    goals=0,
+                    assists=0,
+                    blocks=0,
+                    turns=0,
+                    plus_minus=0,
+                    callahans=0,
+                    pulls=0,
+                    pulls_ob=0
                 )
                 db.session.add(player_stat)
+            
+            # Ensure all stats have default values
+            if player_stat.points_played is None: player_stat.points_played = 0
+            if player_stat.o_points is None: player_stat.o_points = 0
+            if player_stat.d_points is None: player_stat.d_points = 0
+            if player_stat.goals is None: player_stat.goals = 0
+            if player_stat.assists is None: player_stat.assists = 0
+            if player_stat.blocks is None: player_stat.blocks = 0
+            if player_stat.turns is None: player_stat.turns = 0
+            if player_stat.plus_minus is None: player_stat.plus_minus = 0
+            if player_stat.callahans is None: player_stat.callahans = 0
+            if player_stat.pulls is None: player_stat.pulls = 0
+            if player_stat.pulls_ob is None: player_stat.pulls_ob = 0
             
             # Update points played
             player_stat.points_played += 1
@@ -185,10 +210,13 @@ def record_point():
         
     except Exception as e:
         db.session.rollback()
+        import traceback
+        print(traceback.format_exc())  # Print the full traceback for debugging
         return jsonify({
             'success': False,
             'error': str(e)
         })
+
 
 @bp.route('/api/line-template/save', methods=['POST'])
 @login_required
