@@ -8,8 +8,10 @@ from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
 from app.models.clip import Clip, ClipTag
 from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance
-# Import the CuttingSkill model - make sure this file exists in app/models/
 from app.models.cutting_skill import CuttingSkill
+from app.models.theory import TheorySection
+from app.models.fitness import FitnessMetric, FitnessRecord
+from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these imports
 from datetime import datetime
 import sys
 from sqlalchemy import text
