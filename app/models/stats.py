@@ -12,12 +12,13 @@ class PlayerPointStats(db.Model):
     calculated_per = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
-  
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    
+ 
     # Use back_populates for bidirectional relationships
     player = db.relationship('Player', back_populates='point_stats')
     point = db.relationship('Point', back_populates='point_stats')
 
     def __repr__(self):
         return f'<PlayerPointStats {self.player_id}-{self.point_id}>'
+

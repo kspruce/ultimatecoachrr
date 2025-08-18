@@ -38,5 +38,8 @@ class TeamOrganization(db.Model):
     opponent_players = db.relationship('OpponentPlayer', backref='team_organization')
     scouting_clips = db.relationship('ScoutingClip', backref='team_organization')
     
+    # Add stats relationship
+    player_point_stats = db.relationship('PlayerPointStats', backref='team_organization')
+    
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'
