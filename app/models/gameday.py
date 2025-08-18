@@ -10,7 +10,6 @@ class LineTemplate(db.Model):
     gender_ratio = db.Column(db.String(4), nullable=False)  # e.g., "4-3"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationships
     players = db.relationship('LineTemplatePlayer', back_populates='template', 
@@ -21,8 +20,7 @@ class LineTemplatePlayer(db.Model):
     template_id = db.Column(db.Integer, db.ForeignKey('line_template.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
-  
+    
     # Relationships
     template = db.relationship('LineTemplate', back_populates='players')
     player = db.relationship('Player')
@@ -36,7 +34,6 @@ class GameDayEvent(db.Model):
     sequence = db.Column(db.Integer, nullable=False)  # Order of events within a point
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationships
     point = db.relationship('Point', back_populates='gameday_events')
@@ -61,8 +58,7 @@ class GameDayPlayerStats(db.Model):
     callahans = db.Column(db.Integer, default=0)
     plus_minus = db.Column(db.Integer, default=0)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
-   
+    
     # Relationships
     player = db.relationship('Player', back_populates='gameday_stats')
     game = db.relationship('Game', back_populates='gameday_stats')

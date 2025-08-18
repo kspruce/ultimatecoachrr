@@ -30,8 +30,7 @@ class Player(db.Model):
     coach_feedback = db.Column(db.Text) 
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', backref=db.backref('players', lazy='dynamic'))
-
+    
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
     user_account = db.relationship('User', back_populates='player_profile', uselist=False)

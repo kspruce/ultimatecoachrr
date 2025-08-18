@@ -11,8 +11,7 @@ class Drill(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_public = db.Column(db.Boolean, default=False)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
-  
+    
     # Relationship with frames
     frames = db.relationship('DrillFrame', backref='drill', lazy=True, cascade='all, delete-orphan')
 
@@ -23,7 +22,6 @@ class DrillFrame(db.Model):
     name = db.Column(db.String(50))  # Optional name for the frame
     # Fix the relationship to TeamOrganization
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', back_populates='drills')  # Change 'users' to 'drills'
     
     # Store all elements as JSON (players, discs, lines, text)
     # This includes positions, colors, labels, etc.
@@ -46,7 +44,6 @@ class SavedDrill(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationship to SessionComponent
     components = db.relationship('SessionComponent', back_populates='saved_drill', lazy='dynamic')

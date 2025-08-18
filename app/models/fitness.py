@@ -177,7 +177,6 @@ class FitnessMetric(db.Model):
 
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', backref=db.backref('fitness_metrics', lazy='dynamic'))
     
     # Use string reference for the relationship
     records = db.relationship('FitnessRecord', back_populates='metric', lazy='dynamic')
@@ -217,7 +216,6 @@ class FitnessRecord(db.Model):
     
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', backref=db.backref('fitness_records', lazy='dynamic'))
     
     # Existing relationships
     player = db.relationship('Player', back_populates='fitness_records')

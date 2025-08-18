@@ -16,8 +16,7 @@ class Game(db.Model):
     
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', backref=db.backref('games', lazy='dynamic')) 
-   
+    
     # Existing relationships
     tournament = db.relationship('Tournament', back_populates='games')
     points = db.relationship('Point', back_populates='game', 
