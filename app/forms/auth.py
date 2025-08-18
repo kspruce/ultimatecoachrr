@@ -35,6 +35,7 @@ class UserForm(FlaskForm):
     confirm_password = PasswordField('Confirm Password', validators=[EqualTo('password')])
     role = SelectField('Role', choices=[
         ('player', 'Player'),
+        ('stat_taker', 'Stat Taker'),  # Added new role
         ('coach', 'Coach'),
         ('admin', 'Admin')
     ], validators=[DataRequired()])
@@ -60,4 +61,3 @@ class UserForm(FlaskForm):
             user = User.query.filter_by(email=email.data).first()
             if user is not None:
                 raise ValidationError('Please use a different email address.')
-

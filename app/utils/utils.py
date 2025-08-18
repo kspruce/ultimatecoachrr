@@ -17,6 +17,24 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def coach_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_coach:
+            flash('You need coach privileges to access this page.', 'danger')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def stat_taker_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_stat_taker:
+            flash('You need stat taker privileges to access this page.', 'danger')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
@@ -42,7 +60,6 @@ def save_uploaded_file(file, folder):
         return unique_filename
     return None
 
-
 def delete_file(relative_path):
     """
     Delete a file given its relative path
@@ -51,4 +68,3 @@ def delete_file(relative_path):
         absolute_path = os.path.join(current_app.static_folder, relative_path)
         if os.path.exists(absolute_path):
             os.remove(absolute_path)
-
