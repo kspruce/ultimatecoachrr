@@ -223,7 +223,7 @@ def create_app(config_class=Config):
     # Create database tables
     with app.app_context():
         db.create_all()
-        ensure_default_metrics_exist(app)
+        #ensure_default_metrics_exist(app)
         from app.context_processors import team_info_processor
         app.context_processor(team_info_processor)
     
