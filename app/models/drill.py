@@ -21,8 +21,9 @@ class DrillFrame(db.Model):
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
     sequence = db.Column(db.Integer, nullable=False)  # Order in animation
     name = db.Column(db.String(50))  # Optional name for the frame
-    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
+    # Fix the relationship to TeamOrganization
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', back_populates='drills')  # Change 'users' to 'drills'
     
     # Store all elements as JSON (players, discs, lines, text)
     # This includes positions, colors, labels, etc.
