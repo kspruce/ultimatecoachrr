@@ -15,7 +15,7 @@
       <div class="d-flex justify-content-between align-items-center">
         <h3>Score: <span id="our-score">{{ game.our_score }}</span> - <span id="their-score">{{ game.their_score }}</span></h3>
         <div>
-          <a href="{{ url_for('game.view', game_id=game.id) }}" class="btn btn-outline-secondary">
+          <a href="{{ url_for('game.index', game_id=game.id) }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Game
           </a>
         </div>
