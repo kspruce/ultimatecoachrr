@@ -1219,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Register service worker for offline support
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('{{ url_for("static", filename="js/service-worker.js") }}')
+      navigator.serviceWorker.register('/static/js/service-worker.js')
         .then(registration => {
           console.log('ServiceWorker registration successful');
         })
