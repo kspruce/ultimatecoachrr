@@ -16,8 +16,10 @@ class ScoutingReport(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    # Remove this line:
+    # team_organization = relationship('TeamOrganization', back_populates='users')
+    # The backref in TeamOrganization will handle this relationship
   
     # Relationships
     tournament = db.relationship('Tournament', backref='scouting_reports')
@@ -44,8 +46,10 @@ class OpponentPlayer(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    # Remove this line:
+    # team_organization = relationship('TeamOrganization', back_populates='users')
+    # The backref in TeamOrganization will handle this relationship
     
     def __repr__(self):
         return f'<OpponentPlayer {self.name}>'
@@ -61,8 +65,11 @@ class ScoutingClip(db.Model):
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    # Remove this line:
+    # team_organization = relationship('TeamOrganization', back_populates='users')
+    # The backref in TeamOrganization will handle this relationship
+    
     def __repr__(self):
         return f'<ScoutingClip {self.title}>'
     

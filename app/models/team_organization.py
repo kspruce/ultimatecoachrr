@@ -33,5 +33,10 @@ class TeamOrganization(db.Model):
     session_rsvps = db.relationship('SessionRSVP', backref='team_organization')
     session_components = db.relationship('SessionComponent', backref='team_organization')
     
+    # Add scouting relationships
+    scouting_reports = db.relationship('ScoutingReport', backref='team_organization')
+    opponent_players = db.relationship('OpponentPlayer', backref='team_organization')
+    scouting_clips = db.relationship('ScoutingClip', backref='team_organization')
+    
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'
