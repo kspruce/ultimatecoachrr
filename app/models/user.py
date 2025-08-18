@@ -9,7 +9,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255))
     role = db.Column(db.String(20), default='player')  # Changed default from 'user' to 'player'
-    is_admin = db.Column(db.Boolean, default=False)  # Keep for backward compatibility
+    is_admin_flag = db.Column(db.Boolean, default=False, name='is_admin')  # Rename column but keep DB name
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     player_profile = db.relationship('Player', back_populates='user_account', uselist=False)
@@ -27,19 +27,30 @@ class User(UserMixin, db.Model):
     # Add role-based properties
     @property
     def is_admin(self):
-        return self.role == 'admin' or self.is_admin  # Support both new and old way
+        return self.role == 'admin' or self.is_admin_flag
+        
+    @is_admin.setter
+    def is_admin(self, value):
+        # When setting is_admin, update both role and is_admin_flag
+        if value:
+            self.role = 'admin'
+            self.is_admin_flag = True
+        else:
+            if self.role == 'admin':
+                self.role = 'player'  # Default to player if admin is removed
+            self.is_admin_flag = False
         
     @property
     def is_coach(self):
-        return self.role == 'coach' or self.is_admin  # Admins have coach privileges
+        return self.role == 'coach' or self.is_admin
         
     @property
     def is_stat_taker(self):
-        return self.role == 'stat_taker' or self.role == 'coach' or self.is_admin  # Stat takers, coaches, and admins can take stats
+        return self.role == 'stat_taker' or self.is_coach
         
     @property
     def is_player(self):
-        return self.role == 'player' or True  # Everyone has player privileges
+        return True  # Everyone has player privileges
 
     def __repr__(self):
         return f'<User {self.username}>'

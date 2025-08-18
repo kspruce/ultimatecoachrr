@@ -16,6 +16,7 @@ from datetime import datetime
 import sys
 from sqlalchemy import text
 import os
+import argparse
 
 # Disable Discord integration by setting environment variable
 os.environ['DISCORD_ENABLED'] = 'False'
@@ -43,40 +44,74 @@ def reset_database():
             db.create_all()
             print_status("Created all tables")
             
-            # The rest of your function remains the same...
             # Create admin user
-            admin = User(username='admin', email='admin@example.com', is_admin=True)
+            admin = User(username='admin', email='admin@example.com', role='admin', is_admin=True)
             admin.set_password('password')
             db.session.add(admin)
             
             # Create bonus user
-            bonus = User(username='bonus', email='bonus@example.com', is_admin=False)
+            bonus = User(username='bonus', email='bonus@example.com', role='player', is_admin=False)
             bonus.set_password('bonusboys')
             db.session.add(bonus)
             
-            # Create bonus user
-            etaylor = User(username='etaylor', email='et@example.com', is_admin=True)
+            # Create captain users with coach role
+            etaylor = User(username='etaylor', email='et@example.com', role='coach', is_admin=True)
             etaylor.set_password('Taylor35')
             db.session.add(etaylor)
             
-            # Create bonus user
-            cspearing = User(username='cspearing', email='cs@example.com', is_admin=True)
+            cspearing = User(username='cspearing', email='cs@example.com', role='coach', is_admin=True)
             cspearing.set_password('Spearing1')
             db.session.add(cspearing)
             
-            # Create bonus user
-            bleung = User(username='bleung', email='bl@example.com', is_admin=True)
+            bleung = User(username='bleung', email='bl@example.com', role='coach', is_admin=True)
             bleung.set_password('Leung18')
             db.session.add(bleung)
             
+            # Create a stat taker user
+            stat_taker = User(username='stats', email='stats@example.com', role='stat_taker', is_admin=False)
+            stat_taker.set_password('stats123')
+            db.session.add(stat_taker)
+            
             db.session.commit()
-            print_status("Created admin, captains and bonus users")
+            print_status("Created admin, captains, stat taker and bonus users")
 
             # Add test players
             test_players = [
-                # Your player data remains the same...
                 {"name": "Camilla Spearing", "jersey_number": "1", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "O"},
-                # ... rest of your players
+                {"name": "Bon Leung", "jersey_number": "18", "position": "hybrid", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Ed Taylor", "jersey_number": "35", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "O"},
+                {"name": "Aleksandra Marszalek", "jersey_number": "11", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "O"},
+                {"name": "Alexandra Weinberg", "jersey_number": "43", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Kate Mitrofanov", "jersey_number": "65", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Roan Talbut", "jersey_number": "73", "position": "hybrid", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Sophie Wharton", "jersey_number": "25", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Charlie Galloway", "jersey_number": "50", "position": "hybrid", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "O"},
+                {"name": "Chung Leung", "jersey_number": "21", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Kieran Spruce", "jersey_number": "22", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Siôn Regan", "jersey_number": "9", "position": "handler", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "O"},
+                {"name": "Milan Liu", "jersey_number": "59", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "O"},
+                {"name": "Christina Athanasiou", "jersey_number": "12", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Matt Butler", "jersey_number": "10", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Alan Sun", "jersey_number": "16", "position": "hybrid", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Patrick Moore", "jersey_number": "13", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "O"},
+                {"name": "Sophia Pym", "jersey_number": "90", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Adam Zafri", "jersey_number": "80", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Nour El Sheikh", "jersey_number": "15", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "D"},
+                {"name": "Laura Coleman", "jersey_number": "6", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team A", "line_preference": "O"},
+                {"name": "Callum Bennfors", "jersey_number": "51", "position": "handler", "gender": "male", "gender_match": "male", "team": "Team A", "line_preference": "D"},
+                {"name": "Irma Ostervall", "jersey_number": "17", "position": "hybrid", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "O"},
+                {"name": "Ali Thomas", "jersey_number": "", "position": "hybrid", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "D"},
+                {"name": "Enzia Schnyder", "jersey_number": "", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "O"},
+                {"name": "Suze Kurska", "jersey_number": "2", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "D"},
+                {"name": "Yousef Abouzeid", "jersey_number": "20", "position": "handler", "gender": "male", "gender_match": "male", "team": "Team B", "line_preference": "D"},
+                {"name": "Regina Tandu", "jersey_number": "5", "position": "hybrid", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "O"},
+                {"name": "Annie Ford", "jersey_number": "26", "position": "cutter", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "D"},
+                {"name": "Alice Logan", "jersey_number": "81", "position": "hybrid", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "O"},
+                {"name": "Tom Cliff", "jersey_number": "47", "position": "cutter", "gender": "male", "gender_match": "male", "team": "Team B", "line_preference": "O"},
+                {"name": "Vix Willby", "jersey_number": "7", "position": "handler", "gender": "female", "gender_match": "female", "team": "Team B", "line_preference": "O"},
+                {"name": "Jack Chuang", "jersey_number": "", "position": "handler", "gender": "male", "gender_match": "male", "team": "Team B", "line_preference": "D"},
+                {"name": "Gavin Buddle", "jersey_number": "30", "position": "hybrid", "gender": "male", "gender_match": "male", "team": "Team B", "line_preference": "O"},
+                {"name": "Kai Meller", "jersey_number": "28", "position": "handler", "gender": "male", "gender_match": "male", "team": "Team B", "line_preference": "O"},
             ]
 
             for player_data in test_players:
@@ -106,7 +141,323 @@ def reset_database():
             db.session.commit()
             print_status("Created theory sections")
 
-            # The rest of your function remains the same...
+            # Create some default clip tags
+            default_tags = [
+                {'name': 'Offense', 'category': 'phase'},
+                {'name': 'Defense', 'category': 'phase'},
+                {'name': 'Goal', 'category': 'outcome'},
+                {'name': 'Turnover', 'category': 'outcome'},
+            ]
+
+            for tag_data in default_tags:
+                tag = ClipTag(**tag_data)
+                db.session.add(tag)
+
+            db.session.commit()
+            print_status("Created default clip tags")
+            
+            # Create Moooxed tournament
+            tournament = Tournament(
+                name="Moooxed",
+                start_date=datetime(2025, 6, 7),
+                end_date=datetime(2025, 6, 8),
+                location="London"
+            )
+            db.session.add(tournament)
+            db.session.commit()
+            print_status("Created Moooxed tournament")
+            
+            # Create games for the tournament
+            games = [
+                # Day 1 - June 7, 2025
+                {
+                    "date": datetime(2025, 6, 7),
+                    "opponent": "Brixton",
+                    "our_score": 15,
+                    "their_score": 7,
+                    "tournament_id": tournament.id,
+                    "youtube_link": None,
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 7),
+                    "opponent": "Cambridge Mixed Ultimate A",
+                    "our_score": 15,
+                    "their_score": 4,
+                    "tournament_id": tournament.id,
+                    "youtube_link": None,
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 7),
+                    "opponent": "Curve Vector",
+                    "our_score": 12,
+                    "their_score": 8,
+                    "tournament_id": tournament.id,
+                    "youtube_link": None,
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - June 8, 2025
+                {
+                    "date": datetime(2025, 6, 8),
+                    "opponent": "Reading2",
+                    "our_score": 14,
+                    "their_score": 4,
+                    "tournament_id": tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 8),
+                    "opponent": "Bristol",
+                    "our_score": 13,
+                    "their_score": 8,
+                    "tournament_id": tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fifth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 6, 8),
+                    "opponent": "Curve Vector",
+                    "our_score": 13,
+                    "their_score": 9,
+                    "tournament_id": tournament.id,
+                    "youtube_link": None,
+                    "notes": "Final game of the tournament"
+                }
+            ]
+            
+            for game_data in games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(games)} games to the Moooxed tournament")
+
+            # Create EUC Spring Invite tournament
+            euc_tournament = Tournament(
+                name="EUC Spring Invite",
+                start_date=datetime(2025, 4, 26),
+                end_date=datetime(2025, 4, 27),
+                location="Padova"
+            )
+            db.session.add(euc_tournament)
+            db.session.commit()
+            print_status("Created EUC Spring Invite tournament")
+            
+            # Create games for the EUC Spring Invite tournament
+            euc_games = [
+                # Day 1 - April 26, 2025
+                {
+                    "date": datetime(2025, 4, 26),
+                    "opponent": "Disconnection",
+                    "our_score": 13,
+                    "their_score": 12,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": "https://youtu.be/OJ-j1Ss1C5Y",
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 26),
+                    "opponent": "Padova Rangers",
+                    "our_score": 15,
+                    "their_score": 5,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 26),
+                    "opponent": "Lemmings",
+                    "our_score": 15,
+                    "their_score": 8,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - April 27, 2025
+                {
+                    "date": datetime(2025, 4, 27),
+                    "opponent": "Colarado",
+                    "our_score": 15,
+                    "their_score": 13,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 27),
+                    "opponent": "ZU Mixed",
+                    "our_score": 11,
+                    "their_score": 8,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fifth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 27),
+                    "opponent": "Remix",
+                    "our_score": 12,
+                    "their_score": 10,
+                    "tournament_id": euc_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Final game of the tournament"
+                }
+            ]
+            
+            for game_data in euc_games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(euc_games)} games to the EUC Spring Invite tournament")
+
+            # Create MT1 - Uni Fans tournament
+            uni_fans_tournament = Tournament(
+                name="MT1 - Uni Fans",
+                start_date=datetime(2025, 4, 5),
+                end_date=datetime(2025, 4, 6),
+                location="Nottingham"
+            )
+            db.session.add(uni_fans_tournament)
+            db.session.commit()
+            print_status("Created MT1 - Uni Fans tournament")
+            
+            # Create games for the MT1 - Uni Fans tournament
+            uni_fans_games = [
+                # Day 1 - April 5, 2025
+                {
+                    "date": datetime(2025, 4, 5),
+                    "opponent": "Reading2",
+                    "our_score": 13,
+                    "their_score": 4,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 5),
+                    "opponent": "Solent Mixed",
+                    "our_score": 10,
+                    "their_score": 5,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 5),
+                    "opponent": "Flyght Mixed",
+                    "our_score": 10,
+                    "their_score": 3,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - April 6, 2025
+                {
+                    "date": datetime(2025, 4, 6),
+                    "opponent": "Newcastle Brown",
+                    "our_score": 7,
+                    "their_score": 15,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 4, 6),
+                    "opponent": "Oxford",
+                    "our_score": 12,
+                    "their_score": 15,
+                    "tournament_id": uni_fans_tournament.id,
+                    "youtube_link": None,
+                    "notes": "Fifth game of the tournament"
+                }
+            ]
+            
+            for game_data in uni_fans_games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(uni_fans_games)} games to the MT1 - Uni Fans tournament")
+            
+            # Create MT4 tournament
+            mt4_tournament = Tournament(
+                name="MT4",
+                start_date=datetime(2025, 7, 12),
+                end_date=datetime(2025, 7, 13),
+                location="Birmingham"
+            )
+            db.session.add(mt4_tournament)
+            db.session.commit()
+            print_status("Created MT4 tournament")
+            
+            # Create games for the MT4 tournament
+            mt4_games = [
+                # Day 1 - July 12, 2025
+                {
+                    "date": datetime(2025, 7, 12),
+                    "opponent": "Flyght",
+                    "our_score": 14,
+                    "their_score": 6,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/LsVGDAm6QWE",
+                    "notes": "First game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 12),
+                    "opponent": "Reading2",
+                    "our_score": 15,
+                    "their_score": 4,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/xNIZburP_ko",
+                    "notes": "Second game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 12),
+                    "opponent": "GUXYZ",
+                    "our_score": 15,
+                    "their_score": 1,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/kKAG--8Zrds",
+                    "notes": "Third game of the tournament"
+                },
+                # Day 2 - July 13, 2025
+                {
+                    "date": datetime(2025, 7, 13),
+                    "opponent": "Sheffield Steal",
+                    "our_score": 10,
+                    "their_score": 14,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/KeefOJmYNVA",
+                    "notes": "Fourth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 13),
+                    "opponent": "GUX",
+                    "our_score": 5,
+                    "their_score": 12,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/-HM2PDm9Xc8",
+                    "notes": "Fifth game of the tournament"
+                },
+                {
+                    "date": datetime(2025, 7, 13),
+                    "opponent": "Herd2",
+                    "our_score": 15,
+                    "their_score": 3,
+                    "tournament_id": mt4_tournament.id,
+                    "youtube_link": "https://youtu.be/yZlqSB0ghdI",
+                    "notes": "Final game of the tournament"
+                }
+            ]
+            
+            for game_data in mt4_games:
+                game = Game(**game_data)
+                db.session.add(game)
+                
+            db.session.commit()
+            print_status(f"Added {len(mt4_games)} games to the MT4 tournament")
 
             print_status("\nDatabase reset completed successfully!")
 
@@ -115,5 +466,42 @@ def reset_database():
             db.session.rollback()
             sys.exit(1)
 
+def migrate_user_roles():
+    """Migrate existing users to the new role system"""
+    with app.app_context():
+        try:
+            print_status("Starting user role migration...")
+            
+            # Update admin users
+            admin_users = User.query.filter_by(is_admin=True).all()
+            for user in admin_users:
+                if user.role != 'coach':  # Don't overwrite coach role for admins
+                    user.role = 'admin'
+                print_status(f"Set user {user.username} to {user.role} role (is_admin=True)")
+            
+            # Update regular users
+            regular_users = User.query.filter_by(is_admin=False).all()
+            for user in regular_users:
+                if user.role == 'user' or user.role is None:
+                    user.role = 'player'
+                    print_status(f"Set user {user.username} to player role")
+            
+            db.session.commit()
+            print_status("User role migration completed successfully!")
+            
+        except Exception as e:
+            print_status(f"Error during migration: {str(e)}")
+            db.session.rollback()
+            sys.exit(1)
+
 if __name__ == "__main__":
-    reset_database()
+    parser = argparse.ArgumentParser(description='Database management tool')
+    parser.add_argument('action', choices=['reset', 'upgrade'], 
+                        help='Action to perform: reset (full database reset) or upgrade (migrate user roles)')
+    
+    args = parser.parse_args()
+    
+    if args.action == 'reset':
+        reset_database()
+    elif args.action == 'upgrade':
+        migrate_user_roles()
