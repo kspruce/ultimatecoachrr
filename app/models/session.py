@@ -92,6 +92,7 @@ class SessionPlan(db.Model):
 
 
 
+# In session.py
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session_plan.id'), nullable=False)
@@ -102,13 +103,10 @@ class Attendance(db.Model):
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
-    # Relationships
-    session = relationship('SessionPlan', back_populates='attendance')
-    player = relationship('Player', back_populates='attendance')
+    # Fix this relationship - change 'attendance' to 'attendances'
+    session = relationship('SessionPlan', back_populates='attendances')
+    player = relationship('Player', back_populates='attendances')  # Also check this one
 
-
-    def __repr__(self):
-        return f'<Attendance {self.player_id} for {self.session_id}>'
 
 class SessionRSVP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
