@@ -41,6 +41,7 @@ class TeamOrganization(db.Model):
     # Add stats relationship
     player_point_stats = db.relationship('PlayerPointStats', backref='team_organization')
     export_logs = db.relationship('ExportLog', backref='team_organization')
+    tournament_rsvps = db.relationship('TournamentRSVP', backref='team_organization')
     
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'

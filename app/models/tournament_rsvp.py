@@ -10,7 +10,8 @@ class TournamentRSVP(db.Model):
     selected_by_admin = db.Column(db.Boolean, default=False)  # Indicates if admin selected this player for the tournament
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+   
     # Relationships
     player = db.relationship('Player', back_populates='tournament_rsvps')
     tournament = db.relationship('Tournament', back_populates='rsvps')
