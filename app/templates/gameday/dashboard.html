@@ -5,6 +5,75 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
+<style>
+  /* Inline styles for immediate effect */
+  .player-card {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    transition: background-color 0.2s;
+  }
+  
+  .player-card:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .player-card.selected {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+  }
+  
+  .player-card .form-check-input {
+    position: absolute;
+    opacity: 0;
+  }
+  
+  .player-card .form-check-label {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .player-button-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .player-button {
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .player-button:hover {
+    background-color: #e9ecef;
+  }
+  
+  .player-button.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0069d9;
+  }
+  
+  .event-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .event-btn {
+    padding: 10px 5px;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -176,11 +245,10 @@
           
           <!-- Event Recording -->
           <div class="mb-3">
-            <h6>Record Event</h6>
-            <select class="form-select mb-2" id="event-player">
-              <option value="">Select Player</option>
+            <h6>Select Player for Event</h6>
+            <div id="event-player-buttons" class="player-button-grid">
               <!-- Will be populated with selected players -->
-            </select>
+            </div>
             
             <!-- Offensive Events -->
             <div id="offense-events" class="event-buttons">
@@ -392,6 +460,27 @@ document.addEventListener('DOMContentLoaded', function() {
   let pointEvents = [];
   let lastThrower = null;
 
+  // Make player cards clickable
+  document.querySelectorAll('.player-card').forEach(card => {
+    card.addEventListener('click', function(e) {
+      // Don't trigger if clicking on a badge
+      if (e.target.classList.contains('badge')) return;
+      
+      const checkbox = this.querySelector('.player-checkbox');
+      checkbox.checked = !checkbox.checked;
+      
+      // Toggle selected class for visual feedback
+      this.classList.toggle('selected', checkbox.checked);
+      
+      // Trigger the change event to update counts
+      checkbox.dispatchEvent(new Event('change'));
+    });
+    
+    // Initialize selected state
+    const checkbox = card.querySelector('.player-checkbox');
+    card.classList.toggle('selected', checkbox.checked);
+  });
+
   // --- HELPER FUNCTIONS ---
   function updatePlayerCounts() {
     const mmpChecked = document.querySelectorAll('.mmp-checkbox:checked').length;
@@ -431,11 +520,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function updateEventButtons() {
     if (currentPossession === 'offense') {
-      document.getElementById('offense-events').style.display = 'grid'; // Use grid for consistency
+      document.getElementById('offense-events').style.display = 'grid'; 
       document.getElementById('defense-events').style.display = 'none';
     } else {
       document.getElementById('offense-events').style.display = 'none';
-      document.getElementById('defense-events').style.display = 'grid'; // Use grid for consistency
+      document.getElementById('defense-events').style.display = 'grid'; 
     }
   }
 
@@ -554,6 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('power-line').addEventListener('click', function() {
     const [mmpRequired, fmpRequired] = document.querySelector('input[name="gender_ratio"]:checked').value.split('-').map(Number);
     document.querySelectorAll('.player-checkbox:checked').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.player-card').forEach(card => card.classList.remove('selected'));
 
     const getTopPlayers = (selector, count) => Array.from(document.querySelectorAll(selector))
       .map(cb => ({
@@ -563,8 +653,16 @@ document.addEventListener('DOMContentLoaded', function() {
       .sort((a, b) => b.plusMinus - a.plusMinus)
       .slice(0, count);
 
-    getTopPlayers('.mmp-checkbox', mmpRequired).forEach(p => p.element.checked = true);
-    getTopPlayers('.fmp-checkbox', fmpRequired).forEach(p => p.element.checked = true);
+    getTopPlayers('.mmp-checkbox', mmpRequired).forEach(p => {
+      p.element.checked = true;
+      p.element.closest('.player-card').classList.add('selected');
+    });
+    
+    getTopPlayers('.fmp-checkbox', fmpRequired).forEach(p => {
+      p.element.checked = true;
+      p.element.closest('.player-card').classList.add('selected');
+    });
+    
     updatePlayerCounts();
   });
 
@@ -580,11 +678,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const [mmp, fmp] = data.gender_ratio.split('-').map(Number);
         document.getElementById('mmp-required').textContent = mmp;
         document.getElementById('fmp-required').textContent = fmp;
+        
+        // Uncheck all and remove selected class
         document.querySelectorAll('.player-checkbox:checked').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.player-card').forEach(card => card.classList.remove('selected'));
+        
+        // Check selected players and add selected class
         data.players.forEach(id => {
           const cb = document.getElementById(`player-${id}`);
-          if (cb) cb.checked = true;
+          if (cb) {
+            cb.checked = true;
+            cb.closest('.player-card').classList.add('selected');
+          }
         });
+        
         updatePlayerCounts();
       }).catch(err => console.error('Error loading template:', err));
   });
@@ -637,16 +744,45 @@ document.addEventListener('DOMContentLoaded', function() {
       return { id: cb.value, name: label.textContent.replace(jersey, '').trim(), jersey: jersey, gender: cb.dataset.gender };
     });
 
-    const populateSelect = (selectId, players) => {
-      const select = document.getElementById(selectId);
-      select.innerHTML = '<option value="">Select Player</option>';
-      players.forEach(p => select.innerHTML += `<option value="${p.id}">#${p.jersey} ${p.name}</option>`);
-    };
-
-    document.getElementById('active-players').innerHTML = selectedPlayers.map(p => `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${p.jersey} ${p.name}</span>`).join('');
-    populateSelect('event-player', selectedPlayers);
+    // Populate player chips
+    document.getElementById('active-players').innerHTML = selectedPlayers.map(p => 
+      `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${p.jersey} ${p.name}</span>`
+    ).join('');
+    
+    // Create player buttons for events
+    const eventPlayerButtons = document.getElementById('event-player-buttons');
+    eventPlayerButtons.innerHTML = '';
+    selectedPlayers.forEach(player => {
+      const button = document.createElement('div');
+      button.className = 'player-button';
+      button.textContent = `#${player.jersey} ${player.name}`;
+      button.dataset.playerId = player.id;
+      button.addEventListener('click', function() {
+        // Remove active class from all buttons
+        document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
+        // Add active class to this button
+        this.classList.add('active');
+        // Store the selected player ID in a data attribute on the container
+        eventPlayerButtons.dataset.selectedPlayerId = this.dataset.playerId;
+      });
+      eventPlayerButtons.appendChild(button);
+    });
+    
+    // Populate puller dropdown if D-line
     if (document.querySelector('input[name="line_type"]:checked').value === 'D-line') {
-      populateSelect('puller', selectedPlayers);
+      const pullerSelect = document.getElementById('puller');
+      pullerSelect.innerHTML = '<option value="">Select Puller</option>';
+      selectedPlayers.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = `#${p.jersey} ${p.name}`;
+        pullerSelect.appendChild(option);
+      });
+      document.getElementById('pull-section').style.display = 'block';
+      currentPossession = 'defense';
+    } else {
+      document.getElementById('pull-section').style.display = 'none';
+      currentPossession = 'offense';
     }
     
     document.getElementById('current-point-number').textContent = document.getElementById('next-point-number').textContent;
@@ -662,15 +798,29 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.event-btn').forEach(button => {
     button.addEventListener('click', function() {
       const eventType = this.dataset.event;
-      const playerId = document.getElementById('event-player').value;
-      if (!playerId) { alert('Please select a player first'); return; }
+      const playerId = document.getElementById('event-player-buttons').dataset.selectedPlayerId;
+      
+      if (!playerId) {
+        alert('Please select a player first');
+        return;
+      }
       
       const player = selectedPlayers.find(p => p.id === playerId);
-      const event = { type: eventType, player_id: playerId, player_name: player ? `#${player.jersey} ${player.name}` : 'Unknown', timestamp: new Date().toISOString() };
+      const event = { 
+        type: eventType, 
+        player_id: playerId, 
+        player_name: player ? `#${player.jersey} ${player.name}` : 'Unknown', 
+        timestamp: new Date().toISOString() 
+      };
       
       if (eventType === 'score' || eventType === 'callahan') {
         if (lastThrower && eventType === 'score') {
-          pointEvents.push({ type: 'assist', player_id: lastThrower.id, player_name: lastThrower.name, timestamp: new Date().toISOString() });
+          pointEvents.push({ 
+            type: 'assist', 
+            player_id: lastThrower.id, 
+            player_name: lastThrower.name, 
+            timestamp: new Date().toISOString() 
+          });
           addEventToLog(pointEvents[pointEvents.length - 1]);
         }
         setTimeout(() => document.getElementById('we-scored').click(), 100);
@@ -682,12 +832,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       if (eventType === 'catch') {
-        lastThrower = { id: playerId, name: player ? `#${player.jersey} ${player.name}` : 'Unknown' };
+        lastThrower = { 
+          id: playerId, 
+          name: player ? `#${player.jersey} ${player.name}` : 'Unknown' 
+        };
       }
       
       pointEvents.push(event);
       addEventToLog(event);
-      document.getElementById('event-player').value = '';
+      
+      // Clear player selection
+      document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('event-player-buttons').dataset.selectedPlayerId = '';
     });
   });
 
@@ -762,4 +918,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}
 
-        
