@@ -35,19 +35,31 @@ class UserForm(FlaskForm):
     confirm_password = PasswordField('Confirm Password', validators=[EqualTo('password')])
     role = SelectField('Role', choices=[
         ('player', 'Player'),
-        ('stat_taker', 'Stat Taker'),  # Added new role
+        ('stat_taker', 'Stat Taker'),
         ('coach', 'Coach'),
         ('admin', 'Admin')
     ], validators=[DataRequired()])
-    player_id = SelectField('Link to Player', coerce=int, default=0)  # Make it optional
+    player_id = SelectField('Link to Player', coerce=int, default=0)
+    team_organization_id = SelectField('Team', coerce=int)
     submit = SubmitField('Save User')
     
-    def __init__(self, original_username=None, *args, **kwargs):
+    def __init__(self, *args, original_username=None, original_email=None, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
+        # Store original values for validation
         self.original_username = original_username
-        self.player_id.choices = [(0, 'None')] + [
-            (p.id, f"{p.name} (#{p.jersey_number})") 
-            for p in Player.query.filter_by(active=True).order_by(Player.name).all()
+        self.original_email = original_email
+        
+        # Populate player choices
+        from app.models.player import Player
+        player_choices = [(0, 'None')] + [
+            (p.id, p.name) for p in Player.query.filter_by(active=True).order_by(Player.name).all()
+        ]
+        self.player_id.choices = player_choices
+        
+        # Populate team choices
+        from app.models.team_organization import TeamOrganization
+        self.team_organization_id.choices = [(0, 'None')] + [
+            (t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()
         ]
     
     def validate_username(self, username):
@@ -57,7 +69,7 @@ class UserForm(FlaskForm):
                 raise ValidationError('Please use a different username.')
     
     def validate_email(self, email):
-        if self.original_username is None:
+        if self.original_email is None or email.data != self.original_email:
             user = User.query.filter_by(email=email.data).first()
             if user is not None:
                 raise ValidationError('Please use a different email address.')

@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime
 
+
 class Tournament(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -10,7 +11,10 @@ class Tournament(db.Model):
     season = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('tournaments', lazy='dynamic'))   
+ 
     # Use back_populates instead of backref
     games = db.relationship('Game', back_populates='tournament', lazy='dynamic')
     # Add relationship with TournamentRSVP

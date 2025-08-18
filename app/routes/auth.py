@@ -7,7 +7,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 import logging
 from app.models.player import Player
 from app.forms.auth import UserForm
-
+from app.models.team_organization import TeamOrganization  # Add this import
 
 
 
@@ -85,8 +85,27 @@ def users():
         flash('You do not have permission to access this page.', 'danger')
         return redirect(url_for('main.index'))
     
-    users = User.query.all()
-    return render_template('auth/users.html', users=users)
+    # Get team filter from query parameters
+    team_id = request.args.get('team_id', type=int)
+    
+    # Get all teams for the filter dropdown
+    teams = TeamOrganization.query.order_by(TeamOrganization.name).all()
+    
+    # Filter users by team if a team is selected
+    if team_id:
+        users = User.query.filter_by(team_organization_id=team_id).all()
+        current_team = TeamOrganization.query.get(team_id)
+    else:
+        users = User.query.all()
+        current_team = None
+    
+    return render_template(
+        'auth/users.html', 
+        users=users, 
+        teams=teams, 
+        current_team=current_team
+    )
+
 
 @bp.route('/users/add', methods=['GET', 'POST'])
 @login_required
@@ -97,12 +116,21 @@ def add_user():
     
     form = UserForm()
     
+    # Populate team organization choices
+    form.team_organization_id.choices = [(0, 'None')] + [
+        (t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()
+    ]
+    
     if form.validate_on_submit():
         user = User(
             username=form.username.data,
             email=form.email.data,
             role=form.role.data
         )
+        
+        # Set team organization
+        if form.team_organization_id.data and form.team_organization_id.data > 0:
+            user.team_organization_id = form.team_organization_id.data
         
         if form.password.data:
             user.set_password(form.password.data)
@@ -115,12 +143,18 @@ def add_user():
             player = Player.query.get(form.player_id.data)
             if player:
                 player.user_id = user.id  # Set the user_id on the player
+                
+                # If user has a team organization, assign it to the player too
+                if user.team_organization_id:
+                    player.team_organization_id = user.team_organization_id
+                    
                 db.session.commit()
         
         flash(f'User {user.username} has been created!', 'success')
         return redirect(url_for('auth.users'))
     
     return render_template('auth/user_form.html', form=form, title='Add User')
+
 
 @bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -130,12 +164,25 @@ def edit_user(user_id):
         return redirect(url_for('main.index'))
     
     user = User.query.get_or_404(user_id)
-    form = UserForm(original_username=user.username)
+    form = UserForm(original_username=user.username, original_email=user.email)
+    
+    
+    # Populate team organization choices
+    form.team_organization_id.choices = [(0, 'None')] + [
+        (t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()
+    ]
     
     if request.method == 'GET':
         form.username.data = user.username
         form.email.data = user.email
         form.role.data = user.role
+        
+        # Set team organization in form
+        if user.team_organization_id:
+            form.team_organization_id.data = user.team_organization_id
+        else:
+            form.team_organization_id.data = 0
+            
         if user.player:
             form.player_id.data = user.player.id
     
@@ -143,6 +190,12 @@ def edit_user(user_id):
         user.username = form.username.data
         user.email = form.email.data
         user.role = form.role.data
+        
+        # Update team organization
+        if form.team_organization_id.data and form.team_organization_id.data > 0:
+            user.team_organization_id = form.team_organization_id.data
+        else:
+            user.team_organization_id = None
         
         if form.password.data:
             user.set_password(form.password.data)
@@ -162,6 +215,10 @@ def edit_user(user_id):
                         flash(f'Player was unlinked from user {other_user.username}', 'warning')
                 
                 player.user_id = user.id
+                
+                # If user has a team organization, assign it to the player too
+                if user.team_organization_id:
+                    player.team_organization_id = user.team_organization_id
         
         db.session.commit()
         
@@ -169,6 +226,7 @@ def edit_user(user_id):
         return redirect(url_for('auth.users'))
     
     return render_template('auth/user_form.html', form=form, user=user, title='Edit User')
+
 
 @bp.route('/users/delete/<int:user_id>', methods=['POST'])
 @login_required

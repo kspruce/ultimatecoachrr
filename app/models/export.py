@@ -1,5 +1,7 @@
 from app import db
 from datetime import datetime
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 
 class ExportLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -8,7 +10,9 @@ class ExportLog(db.Model):
     file_path = db.Column(db.String(200), nullable=False)
     parameters = db.Column(db.Text, nullable=True)  # JSON string of export parameters
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+  
     # Relationships
     user = db.relationship('User', backref='exports')
     

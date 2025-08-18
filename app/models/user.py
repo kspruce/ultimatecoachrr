@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime
 
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
@@ -11,7 +12,10 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default='player')  # Changed default from 'user' to 'player'
     is_admin_flag = db.Column(db.Boolean, default=False, name='is_admin')  # Rename column but keep DB name
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('users', lazy='dynamic'))
+    
     player_profile = db.relationship('Player', back_populates='user_account', uselist=False)
 
     def set_password(self, password):

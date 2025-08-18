@@ -3,6 +3,7 @@ from datetime import datetime
 from app.models.drill import SavedDrill
 from app.models.player import Player
 
+
 class SessionPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -16,7 +17,9 @@ class SessionPlan(db.Model):
     recurrence_pattern = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('sessions', lazy='dynamic'))
     # Relationships
     components = db.relationship('SessionComponent', back_populates='session', 
                                lazy='dynamic', cascade='all, delete-orphan')
@@ -96,7 +99,9 @@ class Attendance(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+    
     # Remove the conflicting backref here
     player = db.relationship('Player', back_populates='attendances')
     session = db.relationship('SessionPlan', back_populates='attendances')
@@ -112,7 +117,9 @@ class SessionRSVP(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+  
     # Update the relationship definition
     player = db.relationship('Player', back_populates='session_rsvps')
     session = db.relationship('SessionPlan', back_populates='rsvps')
@@ -134,7 +141,9 @@ class SessionComponent(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+   
     session = db.relationship('SessionPlan', back_populates='components')
     saved_drill = db.relationship('SavedDrill', back_populates='components')
 

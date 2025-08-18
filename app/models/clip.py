@@ -1,5 +1,7 @@
 from app import db
 from datetime import datetime
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 
 # Association tables
 clip_tag_relation = db.Table('clip_tag_relation',
@@ -26,7 +28,9 @@ class Clip(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     description = db.Column(db.Text, nullable=True)
-
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+   
     # Relationships
     game = db.relationship('Game', back_populates='clips')
     point = db.relationship('Point', back_populates='clips')
@@ -99,7 +103,9 @@ class ClipTag(db.Model):
     name = db.Column(db.String(50), nullable=False)
     category = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+  
     def __repr__(self):
         return f'<ClipTag {self.name}>'
 

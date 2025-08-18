@@ -174,6 +174,10 @@ class FitnessMetric(db.Model):
     higher_is_better = db.Column(db.Boolean, default=True)
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('fitness_metrics', lazy='dynamic'))
     
     # Use string reference for the relationship
     records = db.relationship('FitnessRecord', back_populates='metric', lazy='dynamic')
@@ -185,7 +189,10 @@ class FitnessMetric(db.Model):
     def team_average(self):
         """Calculate team average for this metric"""
         from sqlalchemy import func
-        result = db.session.query(func.avg(FitnessRecord.value)).filter_by(metric_id=self.id).scalar()
+        result = db.session.query(func.avg(FitnessRecord.value)).filter_by(
+            metric_id=self.id, 
+            team_organization_id=self.team_organization_id
+        ).scalar()
         return round(result, 2) if result else None
     
     @property
@@ -208,9 +215,11 @@ class FitnessRecord(db.Model):
     date_recorded = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
     
-    # Use string references for the relationships
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('fitness_records', lazy='dynamic'))
+    
+    # Existing relationships
     player = db.relationship('Player', back_populates='fitness_records')
     metric = db.relationship('FitnessMetric', back_populates='records')
-    
-    def __repr__(self):
-        return f'<FitnessRecord {self.id}: {self.value}>'
+

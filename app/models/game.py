@@ -14,15 +14,17 @@ class Game(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships - add lazy='dynamic' to get query objects
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('games', lazy='dynamic')) 
+   
+    # Existing relationships
     tournament = db.relationship('Tournament', back_populates='games')
     points = db.relationship('Point', back_populates='game', 
                            cascade='all, delete-orphan', lazy='dynamic')
     clips = db.relationship('Clip', back_populates='game', 
                           cascade='all, delete-orphan', lazy='dynamic')
-    # Add relationship with GamePlayer
     assigned_players = db.relationship('GamePlayer', back_populates='game', cascade='all, delete-orphan', lazy='dynamic')
-    # Add this relationship
     gameday_stats = db.relationship('GameDayPlayerStats', back_populates='game', cascade='all, delete-orphan')
 
     __table_args__ = (

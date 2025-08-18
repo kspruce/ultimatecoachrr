@@ -1,6 +1,7 @@
 # Core models
 from app.models.user import User
 from app.models.player import Player
+from app.models.team_organization import TeamOrganization
 
 # Drill and Session models
 from app.models.drill import SavedDrill
@@ -36,7 +37,7 @@ from app.models.export import ExportLog
 from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
 
 __all__ = [
-    'User', 'Player',
+    'User', 'Player', 'TeamOrganization',
     'SavedDrill', 'SessionPlan', 'SessionComponent', 'Attendance', 'SessionRSVP',
     'Play', 'Formation', 'PlayTag',
     'TheorySection', 'TheoryTopic', 'TheoryVideo',

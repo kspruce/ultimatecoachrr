@@ -1,5 +1,7 @@
 from app import db
 from datetime import datetime
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 
 class Player(db.Model):
     __tablename__ = 'player'
@@ -26,7 +28,9 @@ class Player(db.Model):
     long_term_goals = db.Column(db.Text)
     skills_to_develop = db.Column(db.Text)
     coach_feedback = db.Column(db.Text) 
-
+    # Add team organization relationship
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    team_organization = db.relationship('TeamOrganization', backref=db.backref('players', lazy='dynamic'))
 
     # Relationships
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)

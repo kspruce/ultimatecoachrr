@@ -260,6 +260,25 @@
                             <li><a class="dropdown-item" href="{{ url_for('discord.settings') }}">
                                 <i class="bi bi-discord"></i> Discord Settings
                             </a></li>
+                            <!-- Team Selector Section -->
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Team Selection</h6></li>
+                            <li>
+                                <a class="dropdown-item d-flex justify-content-between align-items-center" href="{{ url_for('team_organization.index') }}">
+                                    <span><i class="bi bi-gear-fill me-2"></i> Manage Teams</span>
+                                </a>
+                            </li>
+                            {% for team in available_teams %}
+                            <li>
+                                <a class="dropdown-item d-flex justify-content-between align-items-center" 
+                                   href="{{ url_for('team_organization.switch', team_id=team.id) }}">
+                                    <span>{{ team.name }}</span>
+                                    {% if current_team and current_team.id == team.id %}
+                                    <span class="badge bg-primary rounded-pill"><i class="bi bi-check"></i></span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% endfor %}
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>

@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime
-
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 
 class PlayerPointStats(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -11,7 +12,9 @@ class PlayerPointStats(db.Model):
     calculated_per = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+  
     # Use back_populates for bidirectional relationships
     player = db.relationship('Player', back_populates='point_stats')
     point = db.relationship('Point', back_populates='point_stats')

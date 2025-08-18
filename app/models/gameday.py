@@ -1,5 +1,7 @@
 from app import db
 from datetime import datetime
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
 
 class LineTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -7,6 +9,8 @@ class LineTemplate(db.Model):
     line_type = db.Column(db.String(20), nullable=False)  # O-line or D-line
     gender_ratio = db.Column(db.String(4), nullable=False)  # e.g., "4-3"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationships
     players = db.relationship('LineTemplatePlayer', back_populates='template', 
@@ -16,7 +20,9 @@ class LineTemplatePlayer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     template_id = db.Column(db.Integer, db.ForeignKey('line_template.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
-    
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+  
     # Relationships
     template = db.relationship('LineTemplate', back_populates='players')
     player = db.relationship('Player')
@@ -29,6 +35,8 @@ class GameDayEvent(db.Model):
     event_result = db.Column(db.String(20), nullable=True)  # For pulls: in/out
     sequence = db.Column(db.Integer, nullable=False)  # Order of events within a point
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
     
     # Relationships
     point = db.relationship('Point', back_populates='gameday_events')
@@ -52,7 +60,9 @@ class GameDayPlayerStats(db.Model):
     pulls_ob = db.Column(db.Integer, default=0)
     callahans = db.Column(db.Integer, default=0)
     plus_minus = db.Column(db.Integer, default=0)
-    
+    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
+    team_organization = relationship('TeamOrganization', back_populates='users')
+   
     # Relationships
     player = db.relationship('Player', back_populates='gameday_stats')
     game = db.relationship('Game', back_populates='gameday_stats')
