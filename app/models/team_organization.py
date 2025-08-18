@@ -22,5 +22,16 @@ class TeamOrganization(db.Model):
     fitness_metrics = db.relationship('FitnessMetric', backref='team_organization')
     fitness_records = db.relationship('FitnessRecord', backref='team_organization')
     
+    # Add these new relationships
+    clip_tags = db.relationship('ClipTag', backref='team_organization')
+    clips = db.relationship('Clip', backref='team_organization')
+    line_templates = db.relationship('LineTemplate', backref='team_organization')
+    line_template_players = db.relationship('LineTemplatePlayer', backref='team_organization')
+    gameday_events = db.relationship('GameDayEvent', backref='team_organization')
+    gameday_player_stats = db.relationship('GameDayPlayerStats', backref='team_organization')
+    attendances = db.relationship('Attendance', backref='team_organization')
+    session_rsvps = db.relationship('SessionRSVP', backref='team_organization')
+    session_components = db.relationship('SessionComponent', backref='team_organization')
+    
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'

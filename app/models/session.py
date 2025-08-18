@@ -21,7 +21,6 @@ class SessionPlan(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    team_organization = db.relationship('TeamOrganization', backref=db.backref('sessions', lazy='dynamic'))
     # Relationships
     components = db.relationship('SessionComponent', back_populates='session', 
                                lazy='dynamic', cascade='all, delete-orphan')
@@ -119,9 +118,8 @@ class SessionRSVP(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
-  
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
+    
     # Update the relationship definition
     player = db.relationship('Player', back_populates='session_rsvps')
     session = db.relationship('SessionPlan', back_populates='rsvps')
@@ -143,9 +141,8 @@ class SessionComponent(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = Column(Integer, ForeignKey('team_organization.id'))
-    team_organization = relationship('TeamOrganization', back_populates='users')
-   
+    team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
+    
     session = db.relationship('SessionPlan', back_populates='components')
     saved_drill = db.relationship('SavedDrill', back_populates='components')
 

@@ -19,7 +19,7 @@ class User(UserMixin, db.Model):
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Define relationships
-    player = db.relationship('Player', back_populates='user_account', uselist=False)
+    player_profile = db.relationship('Player', back_populates='user_account', uselist=False)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
