@@ -7,7 +7,7 @@ from app.models.game import Game
 from app.forms.scouting import ScoutingReportForm, OpponentPlayerForm, ScoutingClipForm, ScoutingFilterForm
 import re
 from flask_wtf.csrf import CSRFProtect
-from app.utils.utils import admin_required
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 csrf = CSRFProtect()
 
@@ -39,7 +39,7 @@ def index():
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_report():
     form = ScoutingReportForm()
     
@@ -66,7 +66,7 @@ def add_report():
 
 @bp.route('/edit/<int:report_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_report(report_id):
     report = ScoutingReport.query.get_or_404(report_id)
     form = ScoutingReportForm(obj=report)
@@ -91,7 +91,7 @@ def edit_report(report_id):
 
 @bp.route('/delete/<int:report_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_report(report_id):
     try:
         report = ScoutingReport.query.get_or_404(report_id)
@@ -126,7 +126,7 @@ def detail(report_id):
 
 @bp.route('/<int:report_id>/players')
 @login_required
-@admin_required
+@coach_required
 def players(report_id):
     report = ScoutingReport.query.get_or_404(report_id)
     players = report.players.order_by(OpponentPlayer.jersey_number).all()
@@ -135,7 +135,7 @@ def players(report_id):
 
 @bp.route('/<int:report_id>/add_player', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_player(report_id):
     report = ScoutingReport.query.get_or_404(report_id)
     form = OpponentPlayerForm()
@@ -166,7 +166,7 @@ def add_player(report_id):
 
 @bp.route('/edit_player/<int:player_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_player(player_id):
     player = OpponentPlayer.query.get_or_404(player_id)
     report = ScoutingReport.query.get(player.scouting_report_id)
@@ -194,7 +194,7 @@ def edit_player(player_id):
 
 @bp.route('/delete_player/<int:player_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_player(player_id):
     player = OpponentPlayer.query.get_or_404(player_id)
     report_id = player.scouting_report_id
@@ -216,7 +216,7 @@ def clips(report_id):
 
 @bp.route('/<int:report_id>/add_clip', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_clip(report_id):
     report = ScoutingReport.query.get_or_404(report_id)
     form = ScoutingClipForm()
@@ -253,7 +253,7 @@ def add_clip(report_id):
 
 @bp.route('/edit_clip/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_clip(clip_id):
     clip = ScoutingClip.query.get_or_404(clip_id)
     report = ScoutingReport.query.get(clip.scouting_report_id)
@@ -287,7 +287,7 @@ def edit_clip(clip_id):
 
 @bp.route('/delete_clip/<int:clip_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_clip(clip_id):
     clip = ScoutingClip.query.get_or_404(clip_id)
     report_id = clip.scouting_report_id

@@ -12,7 +12,7 @@ from app.models.game_player import GamePlayer
 from app.models.player import Player
 from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
-from app.utils.utils import admin_required
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 from wtforms import SubmitField, HiddenField
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
@@ -66,7 +66,7 @@ def detail(tournament_id):
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add():
     form = TournamentForm()
     if form.validate_on_submit():
@@ -97,7 +97,7 @@ def add():
 
 @bp.route('/edit/<int:tournament_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     form = TournamentForm(obj=tournament)
@@ -117,7 +117,7 @@ def edit(tournament_id):
 
 @bp.route('/delete/<int:tournament_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete(tournament_id):
     try:
         tournament = Tournament.query.get_or_404(tournament_id)
@@ -289,7 +289,7 @@ def rsvp(tournament_id):
 # Admin RSVP Management
 @bp.route('/<int:tournament_id>/rsvps')
 @login_required
-@admin_required
+@coach_required
 def rsvps(tournament_id):
     """Display RSVPs for a tournament."""
     tournament = Tournament.query.get_or_404(tournament_id)
@@ -335,7 +335,7 @@ def rsvps(tournament_id):
 
 @bp.route('/<int:tournament_id>/update_selections', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def update_selections(tournament_id):
     """Update player selections for a tournament."""
     tournament = Tournament.query.get_or_404(tournament_id)
@@ -387,7 +387,7 @@ def update_selections(tournament_id):
 
 @bp.route('/<int:tournament_id>/assign_players')
 @login_required
-@admin_required
+@coach_required
 def assign_players(tournament_id):
     """Assign selected players to games in a tournament."""
     tournament = Tournament.query.get_or_404(tournament_id)
@@ -426,7 +426,7 @@ def assign_players(tournament_id):
 
 @bp.route('/<int:tournament_id>/games/<int:game_id>/update_players', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def update_game_players(tournament_id, game_id):
     """Update player assignments for a specific game."""
     tournament = Tournament.query.get_or_404(tournament_id)

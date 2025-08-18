@@ -22,7 +22,7 @@ import base64
 from flask_wtf.csrf import CSRFProtect
 from app.utils.s3_utils import upload_file_to_s3, delete_file_from_s3
 from app.utils.storage import store_file
-from app.utils.utils import admin_required
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 csrf = CSRFProtect()
 
@@ -88,7 +88,7 @@ def index():
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_session():
     form = SessionPlanForm()
     
@@ -125,7 +125,7 @@ def drills():
 @bp.route('/drills/add', methods=['GET', 'POST'])
 @bp.route('/drills/add/<string:drill_type>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_drill(drill_type='basic'):
     form = DrillForm()
 
@@ -186,7 +186,7 @@ def drill_detail(drill_id):
 # Drill API Routes
 @bp.route('/api/drills', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def create_drill():
     """Create a new drill via API"""
     try:
@@ -303,7 +303,7 @@ def components(session_id):
 
 @bp.route('/<int:session_id>/add_component', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_component(session_id):
     session = SessionPlan.query.get_or_404(session_id)
     form = SessionComponentForm()
@@ -352,7 +352,7 @@ def add_component(session_id):
 
 @bp.route('/edit_component/<int:component_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_component(component_id):
     component = SessionComponent.query.get_or_404(component_id)
     session = SessionPlan.query.get(component.session_id)
@@ -385,7 +385,7 @@ def edit_component(component_id):
 
 @bp.route('/delete_component/<int:component_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_component(component_id):
     component = SessionComponent.query.get_or_404(component_id)
     session_id = component.session_id
@@ -400,7 +400,7 @@ def delete_component(component_id):
 # Attendance Routes
 @bp.route('/<int:session_id>/attendance', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def attendance(session_id):
     session = SessionPlan.query.get_or_404(session_id)
     form = AttendanceForm()
@@ -777,7 +777,7 @@ def search_drills():
 
 @bp.route('/api/drills/duplicate/<int:drill_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def duplicate_drill(drill_id):
     """Create a copy of an existing drill"""
     original_drill = SavedDrill.query.get_or_404(drill_id)
@@ -835,7 +835,7 @@ def detail(session_id):
 
 @bp.route('/edit/<int:session_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_session(session_id):
     """Edit an existing session"""
     session = SessionPlan.query.get_or_404(session_id)
@@ -867,7 +867,7 @@ def edit_session(session_id):
 
 @bp.route('/delete/<int:session_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_session(session_id):
     try:
         # Log the request
@@ -907,7 +907,7 @@ def delete_session(session_id):
 
 @bp.route('/drills/edit/<int:drill_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_drill(drill_id):
     """Edit an existing drill"""
     drill = SavedDrill.query.get_or_404(drill_id)
@@ -940,7 +940,7 @@ def edit_drill(drill_id):
 
 @bp.route('/drills/delete/<int:drill_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_drill(drill_id):
     """Delete a drill (form-based deletion)"""
     drill = SavedDrill.query.get_or_404(drill_id)

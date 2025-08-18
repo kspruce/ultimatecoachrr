@@ -7,6 +7,7 @@ from app.models.game import Game
 from app.models.stats import PlayerPointStats
 from app.models.throws import Throw
 from app.utils.stat_utils import determine_possession, is_point_ending_event
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
@@ -39,6 +40,7 @@ def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
 
 @bp.route('/record/<int:point_id>', methods=['GET', 'POST'])
 @login_required
+@stat_taker_required
 def record_events(point_id):
     if request.method == 'GET':
         point = Point.query.get_or_404(point_id)
@@ -250,6 +252,7 @@ def record_events(point_id):
 
 @bp.route('/undo_event/<int:point_id>', methods=['POST'])
 @login_required
+@stat_taker_required
 def undo_event(point_id):
     try:
         point = Point.query.get_or_404(point_id)
@@ -321,6 +324,7 @@ def undo_event(point_id):
 
 @bp.route('/undo_cutting_skill/<int:point_id>', methods=['POST'])
 @login_required
+@stat_taker_required
 def undo_cutting_skill(point_id):
     try:
         data = request.get_json()
@@ -350,6 +354,7 @@ def undo_cutting_skill(point_id):
 
 @bp.route('/finish_point/<int:point_id>', methods=['POST'])
 @login_required
+@stat_taker_required
 def finish_point(point_id):
     try:
         point = Point.query.get_or_404(point_id)
@@ -531,6 +536,7 @@ def create_throw_from_events(previous_event, current_event):
 
 @bp.route('/admin/mark_break_throws')
 @login_required
+@stat_taker_required
 def mark_break_throws():
     """Retroactively mark break throws in the database"""
     # Get all throws that don't have break_throw set
@@ -551,6 +557,7 @@ def mark_break_throws():
 
 @bp.route('/debug/break_throws')
 @login_required
+@admin_required
 def debug_break_throws():
     """Debug route to check break throws"""
     # Get all throws
@@ -581,6 +588,7 @@ def debug_break_throws():
 
 @bp.route('/admin/recalculate_throw_distances')
 @login_required
+@stat_taker_required
 def recalculate_throw_distances():
     """Recalculate distances for all throws in the database"""
     try:
@@ -616,6 +624,7 @@ def recalculate_throw_distances():
 
 @bp.route('/available_players/<int:point_id>', methods=['GET'])
 @login_required
+@stat_taker_required
 def available_players(point_id):
     try:
         print(f"Fetching available players for point {point_id}")
@@ -661,6 +670,7 @@ def available_players(point_id):
 
 @bp.route('/substitute_player/<int:point_id>', methods=['POST'])
 @login_required
+@stat_taker_required
 def substitute_player(point_id):
     try:
         data = request.get_json()

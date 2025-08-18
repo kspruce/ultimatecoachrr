@@ -6,11 +6,13 @@ from app.models.player import Player
 from app.models.game_player import GamePlayer
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 
 @bp.route('/game/<int:game_id>')
 @login_required
+@stat_taker_required
 def game_dashboard(game_id):
     game = Game.query.get_or_404(game_id)
     
@@ -70,6 +72,7 @@ def game_dashboard(game_id):
 
 @bp.route('/api/record-point', methods=['POST'])
 @login_required
+@stat_taker_required
 def record_point():
     data = request.json
     
@@ -230,6 +233,7 @@ def record_point():
 
 @bp.route('/api/line-template/save', methods=['POST'])
 @login_required
+@stat_taker_required
 def save_line_template():
     data = request.json
     
@@ -273,6 +277,7 @@ def save_line_template():
 
 @bp.route('/api/line-template/<int:template_id>', methods=['GET'])
 @login_required
+@stat_taker_required
 def get_line_template(template_id):
     template = LineTemplate.query.get_or_404(template_id)
     template_players = LineTemplatePlayer.query.filter_by(template_id=template_id).all()

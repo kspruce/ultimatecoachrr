@@ -9,7 +9,7 @@ from app.forms.game import GameForm, GameFilterForm
 from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Event, Pull
-from app.utils.utils import admin_required
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
 from sqlalchemy import and_
@@ -144,7 +144,7 @@ def add():
 
 @bp.route('/edit/<int:game_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit(game_id):
     game = Game.query.get_or_404(game_id)
     form = GameForm(obj=game)
@@ -170,7 +170,7 @@ def edit(game_id):
 
 @bp.route('/delete/<int:game_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete(game_id):
     try:
         game = Game.query.get_or_404(game_id)
@@ -268,7 +268,7 @@ def delete(game_id):
 
 @bp.route('/<int:game_id>/update_players', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def update_players(game_id):
     game = Game.query.get_or_404(game_id)
     player_ids = request.form.getlist('player_ids', type=int)

@@ -9,7 +9,7 @@ from app.forms.team import PlayerForm, PlayerFilterForm
 from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
-from app.utils.utils import admin_required
+from app.utils.utils import admin_required, coach_required, stat_taker_required
 from app.models.session import SessionPlan
 from datetime import datetime
 from markupsafe import Markup
@@ -66,7 +66,7 @@ def index():
 
 @bp.route('/add_player', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def add_player():
     form = PlayerForm()
     if form.validate_on_submit():
@@ -118,7 +118,7 @@ def add_player():
 
 @bp.route('/edit_player/<int:player_id>', methods=['GET', 'POST'])
 @login_required
-@admin_required
+@coach_required
 def edit_player(player_id):
     player = Player.query.get_or_404(player_id)
     form = PlayerForm(obj=player)
@@ -172,7 +172,7 @@ def edit_player(player_id):
 
 @bp.route('/delete_player/<int:player_id>', methods=['POST'])
 @login_required
-@admin_required
+@coach_required
 def delete_player(player_id):
     try:
         player = Player.query.get_or_404(player_id)
