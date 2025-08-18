@@ -12,7 +12,7 @@ from flask_moment import Moment
 from app.discord_integration import init_discord_integration
 from flask import session
 from flask_login import current_user
-from app.models.team_organization import TeamOrganization
+
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -93,45 +93,7 @@ def create_app(config_class=Config):
     import markdown
     from markupsafe import Markup
     
-    @app.context_processor
-    def inject_team_info():
-        """Make team information available to all templates"""
-        from app.models.team_organization import TeamOrganization
-        
-        if not current_user.is_authenticated:
-            return {'current_team': None, 'available_teams': []}
-        
-        # For admins, get all teams
-        if current_user.is_admin:
-            available_teams = TeamOrganization.query.all()
-            
-            # Get current team from session
-            current_team_id = session.get('current_team_id')
-            current_team = None
-            
-            if current_team_id:
-                # Try to get team from session
-                current_team = TeamOrganization.query.get(current_team_id)
-            elif available_teams:
-                # Default to first available team
-                current_team = available_teams[0]
-                session['current_team_id'] = current_team.id
-        else:
-            # For regular users, only their assigned team
-            current_team = None
-            available_teams = []
-            
-            if current_user.team_organization_id:
-                current_team = TeamOrganization.query.get(current_user.team_organization_id)
-                available_teams = [current_team] if current_team else []
-        
-        return {
-            'current_team': current_team,
-            'available_teams': available_teams
-        }
-
-
-    
+   
     @app.template_filter('markdown')
     def markdown_filter(text):
         if text is None:
@@ -238,7 +200,7 @@ def create_app(config_class=Config):
        LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these new models
     )
 
-
+    
     # Create upload directory in /tmp
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -259,8 +221,11 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
         ensure_default_metrics_exist(app)
+        from app.context_processors import team_info_processor
+        app.context_processor(team_info_processor)
     
     init_discord_integration(app)
     
     return app
 
+from app.models import User, Player, TeamOrganization

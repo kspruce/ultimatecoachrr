@@ -12,11 +12,7 @@ class TeamOrganization(db.Model):
     logo = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationships
-    users = db.relationship('User', back_populates='team_organization')
-    players = db.relationship('Player', back_populates='team_organization')
-    tournaments = db.relationship('Tournament', back_populates='team_organization')
-    games = db.relationship('Game', back_populates='team_organization')
+    # Don't define relationships here - define them in their respective models
     
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'
