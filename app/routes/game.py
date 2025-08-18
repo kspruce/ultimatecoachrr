@@ -176,6 +176,22 @@ def delete(game_id):
         game = Game.query.get_or_404(game_id)
         opponent = game.opponent
 
+        # First, get all point IDs for this game
+        point_ids = [point.id for point in game.points]
+        
+        if point_ids:
+            # Delete GameDayEvent records first (these are causing the foreign key violation)
+            db.session.execute(
+                text("DELETE FROM game_day_event WHERE point_id IN :point_ids"),
+                {"point_ids": tuple(point_ids) if len(point_ids) > 1 else f"({point_ids[0]})"}
+            )
+            
+            # Delete GameDayPlayerStats records
+            db.session.execute(
+                text("DELETE FROM game_day_player_stats WHERE game_id = :game_id"),
+                {"game_id": game_id}
+            )
+
         # Delete all related data for each point
         for point in game.points:
             # Delete throws associated with events in this point
@@ -190,7 +206,7 @@ def delete(game_id):
                 {"point_id": point.id}
             )
             
-            # Delete cutting skills - ADD THIS LINE
+            # Delete cutting skills
             db.session.execute(
                 text("DELETE FROM cutting_skill WHERE point_id = :point_id"),
                 {"point_id": point.id}
@@ -227,6 +243,9 @@ def delete(game_id):
                 {"game_id": game_id}
             )
 
+        # Delete game player associations
+        GamePlayer.query.filter_by(game_id=game_id).delete()
+
         # Finally delete the game
         db.session.delete(game)
         db.session.commit()
@@ -245,6 +264,7 @@ def delete(game_id):
             return jsonify({'success': False, 'message': message}), 500
         flash(message, 'danger')
         return redirect(url_for('game.detail', game_id=game_id))
+
 
 @bp.route('/<int:game_id>/update_players', methods=['POST'])
 @login_required
