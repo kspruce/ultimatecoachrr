@@ -1,51 +1,125 @@
 # backfill.py
 import sys
+import inspect
+import importlib
+from sqlalchemy import inspect as sqlalchemy_inspect
+from sqlalchemy.exc import IntegrityError, OperationalError
 from app import create_app, db
-from sqlalchemy.exc import IntegrityError
-
-# Import models directly from their module files
-from app.models.clip import Clip
-from app.models.annotation import ClipAnnotation
-from app.models.event import Event, Pull
-from app.models.point import Point, LineUp
-from app.models.game import Game
-from app.models.game_player import GamePlayer
-from app.models.throws import Throw
-from app.models.cutting_skill import CuttingSkill
-from app.models.playbook import PlayTag, Formation, Play, PlayerPosition, PlayAssignment
-from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
-from app.models.team_organization import TeamOrganization  # Import TeamOrganization to check valid IDs
+from app.models.user import TeamOrganization
 
 app = create_app()
 
+def discover_models():
+    """
+    Automatically discover all SQLAlchemy models in the application.
+    Returns a dictionary mapping model names to model classes.
+    """
+    models = {}
+    
+    # Import all modules that might contain models
+    modules_to_check = [
+        'app.models.user',
+        'app.models.game',
+        'app.models.player',
+        'app.models.point',
+        'app.models.event',
+        'app.models.throws',
+        'app.models.stats',
+        'app.models.clip',
+        'app.models.annotation',
+        'app.models.game_player',
+        'app.models.cutting_skill',
+        'app.models.playbook',
+        'app.models.theory',
+        'app.models.discord_user',
+        'app.models.fitness',
+        'app.models.drill',
+        'app.models.gameday',
+        'app.models.tournament',
+        'app.models.session',
+        'app.models.export',
+        'app.models.tournament_rsvp',
+        'app.models.scouting',
+        
+        # Add any other modules that might contain models
+    ]
+    
+    for module_name in modules_to_check:
+        try:
+            module = importlib.import_module(module_name)
+            # Find all classes in the module that are SQLAlchemy models
+            for name, obj in inspect.getmembers(module):
+                if inspect.isclass(obj) and hasattr(obj, '__tablename__'):
+                    models[name] = obj
+        except ImportError as e:
+            print(f"Warning: Could not import module {module_name}: {e}")
+    
+    return models
+
+def check_model_has_team_column(model):
+    """
+    Check if a model has a team_organization_id column.
+    Returns True if it does, False otherwise.
+    """
+    try:
+        columns = sqlalchemy_inspect(model).columns
+        return 'team_organization_id' in columns
+    except Exception as e:
+        print(f"Error inspecting model {model.__name__}: {e}")
+        return False
+
 def get_valid_team_id():
     """Get a valid team_organization_id from the database."""
-    with app.app_context():
-        # Get all team IDs
-        teams = TeamOrganization.query.all()
-        if not teams:
-            print("ERROR: No teams found in the database. Please create at least one team first.")
-            sys.exit(1)
-        
-        # Print available teams
-        print("Available teams:")
-        for team in teams:
-            print(f"  ID: {team.id}, Name: {team.name}")
-        
-        # Use the first team ID as default
-        default_team_id = teams[0].id
-        print(f"\nUsing team ID {default_team_id} as the default for backfilling.")
-        return default_team_id
+    # Get all team IDs
+    teams = TeamOrganization.query.all()
+    if not teams:
+        print("ERROR: No teams found in the database. Please create at least one team first.")
+        sys.exit(1)
+    
+    # Print available teams
+    print("Available teams:")
+    for team in teams:
+        print(f"  ID: {team.id}, Name: {team.name}")
+    
+    # Use the first team ID as default
+    default_team_id = teams[0].id
+    print(f"\nUsing team ID {default_team_id} as the default for backfilling.")
+    return default_team_id
 
-def backfill_with_default(model_class, default_team_id):
-    """Backfills models that don't have a direct parent by setting a default team_id."""
+def find_parent_relationship(model):
+    """
+    Find potential parent relationships for a model.
+    Returns a list of (relationship_name, related_model) tuples.
+    """
+    relationships = []
+    
+    # Check all attributes of the model
+    for attr_name in dir(model):
+        if attr_name.startswith('_'):
+            continue
+            
+        try:
+            attr = getattr(model, attr_name)
+            # Check if this is a relationship property
+            if hasattr(attr, 'prop') and hasattr(attr.prop, 'mapper'):
+                related_model = attr.prop.mapper.class_
+                # Only consider relationships to models that have team_organization_id
+                if check_model_has_team_column(related_model):
+                    relationships.append((attr_name, related_model))
+        except Exception:
+            pass
+    
+    return relationships
+
+def backfill_model_with_default(model, default_team_id):
+    """Backfill a model with a default team ID."""
     try:
-        items_to_update = model_class.query.filter(model_class.team_organization_id.is_(None)).all()
+        items_to_update = model.query.filter(model.team_organization_id.is_(None)).all()
         if not items_to_update:
-            print(f"No {model_class.__name__} records to update.")
-            return
+            print(f"  No {model.__name__} records need updating.")
+            return 0
         
-        print(f"Found {len(items_to_update)} {model_class.__name__} records to update...")
+        print(f"  Found {len(items_to_update)} {model.__name__} records to update...")
         updated_count = 0
         
         for item in items_to_update:
@@ -53,130 +127,158 @@ def backfill_with_default(model_class, default_team_id):
             updated_count += 1
         
         db.session.commit()
-        print(f"Updated {updated_count} {model_class.__name__} records with team ID {default_team_id}.")
+        print(f"  Updated {updated_count} {model.__name__} records with team ID {default_team_id}.")
+        return updated_count
     except IntegrityError as e:
         db.session.rollback()
-        print(f"ERROR updating {model_class.__name__}: {str(e)}")
-        print("This might be caused by a foreign key constraint violation.")
-        return
+        print(f"  ERROR updating {model.__name__}: {str(e)}")
+        return 0
+    except OperationalError as e:
+        db.session.rollback()
+        print(f"  ERROR: Database operation failed for {model.__name__}: {str(e)}")
+        return 0
+    except Exception as e:
+        db.session.rollback()
+        print(f"  ERROR: Unexpected error updating {model.__name__}: {str(e)}")
+        return 0
 
-def backfill_child_from_parent(child_model, parent_model, child_fk_attr):
-    """
-    Efficiently backfills child models from their direct parent.
-    This avoids the N+1 query problem by fetching all parents in one go.
-    """
+def backfill_model_from_parent(model, parent_model, relationship_attr):
+    """Backfill a model from its parent."""
     try:
-        items_to_update = child_model.query.filter(child_model.team_organization_id.is_(None)).all()
-        
+        items_to_update = model.query.filter(model.team_organization_id.is_(None)).all()
         if not items_to_update:
-            print(f"No {child_model.__name__} records to update.")
-            return
-
-        print(f"Found {len(items_to_update)} {child_model.__name__} records to update...")
+            print(f"  No {model.__name__} records need updating.")
+            return 0
         
-        # Get all unique parent IDs needed
-        parent_ids = {getattr(item, child_fk_attr) for item in items_to_update if getattr(item, child_fk_attr) is not None}
-        
-        if not parent_ids:
-            print(f"Warning: No valid parent IDs found for {child_model.__name__} records.")
-            return
-
-        # Fetch all required parents in a single query
-        parents = parent_model.query.filter(parent_model.id.in_(parent_ids)).all()
-        parent_map = {parent.id: parent for parent in parents}
-
+        print(f"  Found {len(items_to_update)} {model.__name__} records to update...")
         updated_count = 0
-        for item in items_to_update:
-            parent_id = getattr(item, child_fk_attr)
-            parent = parent_map.get(parent_id)
-            
-            if parent and parent.team_organization_id:
-                item.team_organization_id = parent.team_organization_id
-                updated_count += 1
-            else:
-                print(f"Warning: Could not find a parent or team ID for {child_model.__name__} {item.id}", file=sys.stderr)
         
-        db.session.commit()        
-        print(f"Successfully updated {updated_count} of {len(items_to_update)} {child_model.__name__} records.")
+        for item in items_to_update:
+            try:
+                parent = getattr(item, relationship_attr)
+                if parent and parent.team_organization_id:
+                    item.team_organization_id = parent.team_organization_id
+                    updated_count += 1
+            except Exception as e:
+                print(f"  Warning: Error processing {model.__name__} {getattr(item, 'id', 'unknown')}: {e}")
+        
+        db.session.commit()
+        print(f"  Updated {updated_count} of {len(items_to_update)} {model.__name__} records.")
+        return updated_count
     except IntegrityError as e:
         db.session.rollback()
-        print(f"ERROR updating {child_model.__name__}: {str(e)}")
-        print("This might be caused by a foreign key constraint violation.")
-        return
+        print(f"  ERROR updating {model.__name__}: {str(e)}")
+        return 0
+    except OperationalError as e:
+        db.session.rollback()
+        print(f"  ERROR: Database operation failed for {model.__name__}: {str(e)}")
+        return 0
+    except Exception as e:
+        db.session.rollback()
+        print(f"  ERROR: Unexpected error updating {model.__name__}: {str(e)}")
+        return 0
 
-def run_backfill():
-    """
-    Runs the entire backfill process in the correct, dependency-aware order.
-    """
-    # Get a valid team ID to use for default backfilling
+def run_comprehensive_backfill():
+    """Run a comprehensive backfill of all models."""
+    # Get all models
+    print("Discovering models...")
+    all_models = discover_models()
+    print(f"Found {len(all_models)} models.")
+    
+    # Check which models have team_organization_id
+    models_with_team_column = {}
+    models_missing_team_column = []
+    
+    print("\nChecking models for team_organization_id column...")
+    for name, model in all_models.items():
+        if check_model_has_team_column(model):
+            models_with_team_column[name] = model
+            print(f"  ✓ {name} has team_organization_id column")
+        else:
+            models_missing_team_column.append(name)
+            print(f"  ✗ {name} is missing team_organization_id column")
+    
+    if not models_with_team_column:
+        print("No models found with team_organization_id column. Nothing to backfill.")
+        return
+    
+    # Get a valid team ID
     default_team_id = get_valid_team_id()
     
-    print("\n--- Step 1: Backfilling top-level models with default ID ---")
-    # These models don't have a team-aware parent, so we assign the default.
-    try:
-        # Check if ClipTag exists
+    # First pass: backfill models that don't need a parent
+    print("\n--- STEP 1: Backfilling top-level models ---")
+    backfilled_models = set()
+    
+    for name, model in models_with_team_column.items():
         try:
-            from app.models.clip import ClipTag
-            backfill_with_default(ClipTag, default_team_id)
-        except ImportError:
-            print("ClipTag model not found, skipping...")
+            # Check if this is a top-level model (no foreign keys to other models with team_id)
+            if name == 'TeamOrganization':
+                print(f"  Skipping {name} (this is the teams table itself)")
+                continue
+                
+            print(f"Backfilling {name}...")
+            updated = backfill_model_with_default(model, default_team_id)
+            if updated > 0:
+                backfilled_models.add(name)
+        except Exception as e:
+            print(f"  ERROR processing {name}: {str(e)}")
+    
+    # Second pass: try to backfill models from their parents
+    print("\n--- STEP 2: Backfilling models from their parents ---")
+    
+    # Keep track of models we've tried to backfill from parents
+    attempted_parent_backfill = set()
+    
+    # We'll keep trying until we can't backfill any more models
+    while True:
+        newly_backfilled = 0
         
-        backfill_with_default(Clip, default_team_id)
-        backfill_with_default(PlayTag, default_team_id)
-        backfill_with_default(Formation, default_team_id)
-        backfill_with_default(Play, default_team_id)
-        backfill_with_default(PlayerPosition, default_team_id)
-        backfill_with_default(TheorySection, default_team_id)
-        backfill_with_default(TheoryTag, default_team_id)
-    except Exception as e:
-        print(f"Error in Step 1: {str(e)}")
-        return
-
-    print("\n--- Step 2: Backfilling child models from their parents (Level 1) ---")
-    # These models depend on the models from Step 1.
-    try:
-        backfill_child_from_parent(ClipAnnotation, Clip, 'clip_id')
-        backfill_child_from_parent(PlayAssignment, Play, 'play_id')
-        backfill_child_from_parent(TheoryTopic, TheorySection, 'section_id')
-    except Exception as e:
-        print(f"Error in Step 2: {str(e)}")
-        return
-
-    print("\n--- Step 3: Backfilling child models from their parents (Level 2) ---")
-    # This model depends on TheoryTopic from Step 2.
-    try:
-        backfill_child_from_parent(TheoryVideo, TheoryTopic, 'topic_id')
-    except Exception as e:
-        print(f"Error in Step 3: {str(e)}")
-        return
-
-    print("\n--- Step 4: Backfilling game-related data (must be in order) ---")
-    try:
-        # Point depends on Game (which should already have a team_id)
-        print("Backfilling Points from Games...")
-        backfill_child_from_parent(Point, Game, 'game_id')
-
-        # These models all depend on Point, which we just backfilled.
-        print("Backfilling LineUps from Points...")
-        backfill_child_from_parent(LineUp, Point, 'point_id')
-        print("Backfilling Events from Points...")
-        backfill_child_from_parent(Event, Point, 'point_id')
-        print("Backfilling Pulls from Points...")
-        backfill_child_from_parent(Pull, Point, 'point_id')
-        print("Backfilling Throws from Points...")
-        backfill_child_from_parent(Throw, Point, 'point_id')
-        print("Backfilling CuttingSkills from Points...")
-        backfill_child_from_parent(CuttingSkill, Point, 'point_id')
-
-        # This model depends directly on Game.
-        print("Backfilling GamePlayers from Games...")
-        backfill_child_from_parent(GamePlayer, Game, 'game_id')
-    except Exception as e:
-        print(f"Error in Step 4: {str(e)}")
-        return
-
-    print("\nBackfill process complete.")
+        for name, model in models_with_team_column.items():
+            if name in attempted_parent_backfill or name == 'TeamOrganization':
+                continue
+                
+            # Find potential parent relationships
+            relationships = find_parent_relationship(model)
+            if not relationships:
+                print(f"  No parent relationships found for {name}")
+                attempted_parent_backfill.add(name)
+                continue
+            
+            print(f"Trying to backfill {name} from its parents...")
+            for rel_name, parent_model in relationships:
+                print(f"  Attempting to use relationship {rel_name} to {parent_model.__name__}")
+                updated = backfill_model_from_parent(model, parent_model, rel_name)
+                if updated > 0:
+                    newly_backfilled += updated
+                    backfilled_models.add(name)
+                    break
+            
+            attempted_parent_backfill.add(name)
+        
+        # If we didn't backfill any new models in this iteration, we're done
+        if newly_backfilled == 0:
+            break
+    
+    # Final report
+    print("\n=== BACKFILL SUMMARY ===")
+    print(f"Total models found: {len(all_models)}")
+    print(f"Models with team_organization_id column: {len(models_with_team_column)}")
+    print(f"Models missing team_organization_id column: {len(models_missing_team_column)}")
+    print(f"Models successfully backfilled: {len(backfilled_models)}")
+    
+    if models_missing_team_column:
+        print("\nThe following models are missing the team_organization_id column:")
+        for name in models_missing_team_column:
+            print(f"  - {name}")
+        print("\nYou may need to add the team_organization_id column to these models and run migrations.")
+    
+    not_backfilled = set(models_with_team_column.keys()) - backfilled_models - {'TeamOrganization'}
+    if not_backfilled:
+        print("\nThe following models have the team_organization_id column but could not be backfilled:")
+        for name in not_backfilled:
+            print(f"  - {name}")
+        print("\nYou may need to manually backfill these models or add specific logic to this script.")
 
 if __name__ == '__main__':
     with app.app_context():
-        run_backfill()
+        run_comprehensive_backfill()
