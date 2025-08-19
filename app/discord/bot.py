@@ -1115,7 +1115,12 @@ async def sync_calendar(self):
         import threading
         
         def run_bot():
-            asyncio.run(self.bot.start(self.token))
+            try:
+                import asyncio
+                asyncio.run(self.bot.start(self.token))
+            except Exception as e:
+                logger.error(f"Error starting Discord bot: {str(e)}")
+                logger.exception(e)
         
         bot_thread = threading.Thread(target=run_bot, daemon=True)
         bot_thread.start()

@@ -62,6 +62,8 @@ def init_discord(app):
                     )
                     db.session.add(settings)
                     db.session.commit()
+        except ImportError:
+            logger.warning("TeamSettings model not found, skipping team-specific Discord settings")
         except Exception as e:
             logger.error(f"Error loading team Discord settings: {str(e)}")
     
@@ -84,8 +86,12 @@ def init_discord(app):
     
     # Start Discord bot
     if app.config.get('DISCORD_BOT_TOKEN'):
-        discord_bot.start_bot()
+        try:
+            discord_bot.start_bot()
+        except AttributeError:
+            logger.warning("Discord bot doesn't have start_bot method, skipping bot start")
     else:
         logger.warning("Discord bot token not configured, bot will not start")
     
     logger.info("Discord integration initialized")
+
