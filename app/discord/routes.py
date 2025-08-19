@@ -232,10 +232,85 @@ def link_account():
 @login_required
 def test_notification():
     """Send a test notification to Discord"""
-    # ... (existing code)
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
+    
+    notification_type = request.form.get('type', 'webhook')
+    
+    try:
+        if notification_type == 'webhook':
+            # Test webhook
+            success = discord_webhook.send_message(
+                content="This is a test notification from Ultimate Coach.",
+                embeds=[{
+                    "title": "Test Notification",
+                    "description": "If you can see this, your Discord webhook is working correctly!",
+                    "color": 3066993  # Green color
+                }]
+            )
+            
+            if success:
+                return jsonify({'success': True, 'message': 'Test notification sent successfully via webhook.'})
+            else:
+                return jsonify({'success': False, 'message': 'Failed to send test notification via webhook. Check your webhook URL and settings.'})
+        
+        elif notification_type == 'bot':
+            # Test bot
+            if not discord_bot.bot:
+                return jsonify({'success': False, 'message': 'Discord bot is not initialized. Check your bot token and settings.'})
+            
+            try:
+                import discord
+                success = discord_bot.send_notification(
+                    title="Test Notification",
+                    message="This is a test notification from Ultimate Coach.",
+                    embed=discord.Embed(
+                        title="Test Notification",
+                        description="If you can see this, your Discord bot is working correctly!",
+                        color=discord.Color.green()
+                    )
+                )
+                
+                if success:
+                    return jsonify({'success': True, 'message': 'Test notification sent successfully via bot.'})
+                else:
+                    return jsonify({'success': False, 'message': 'Failed to send test notification via bot. Check your bot settings and channel ID.'})
+            except ImportError:
+                return jsonify({'success': False, 'message': 'Discord.py library not installed or not properly imported.'})
+        
+        else:
+            return jsonify({'success': False, 'message': 'Invalid notification type.'}), 400
+    
+    except Exception as e:
+        logger.error(f"Error sending test notification: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
 
 @discord_bp.route('/sync-calendar', methods=['POST'])
 @login_required
 def sync_calendar():
     """Manually trigger calendar synchronization"""
-    # ... (existing code)
+    if not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
+    
+    try:
+        # Trigger calendar sync
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Create a future to run the sync_calendar method
+        future = asyncio.ensure_future(discord_bot.sync_calendar())
+        
+        # Run the future to completion
+        try:
+            loop.run_until_complete(future)
+        finally:
+            loop.close()
+        
+        return jsonify({'success': True, 'message': 'Calendar synchronization started successfully.'})
+    
+    except Exception as e:
+        logger.error(f"Error syncing calendar: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
