@@ -6,6 +6,7 @@ class CuttingSkill(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True) # Nullable for migration
     
     # Cutting type (2x2 grid options)
     cutting_type = db.Column(db.String(20), nullable=False)  # 'open_deep', 'open_under', 'break_deep', 'break_under'

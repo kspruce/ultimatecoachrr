@@ -15,6 +15,7 @@ class TheorySection(db.Model):
     order = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     
     # Relationships
     topics = db.relationship('TheoryTopic', back_populates='section', 
@@ -44,6 +45,7 @@ class TheoryTopic(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     
     # Relationships
     section = db.relationship('TheorySection', back_populates='topics')
@@ -80,6 +82,7 @@ class TheoryVideo(db.Model):
     order = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     
     # Relationship
     topic = db.relationship('TheoryTopic', back_populates='related_videos')
@@ -93,7 +96,8 @@ class TheoryTag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
+    
     def __repr__(self):
         return f'<TheoryTag {self.name}>'
 

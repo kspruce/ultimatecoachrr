@@ -22,6 +22,7 @@ class Event(db.Model):
     is_offensive = db.Column(db.Boolean, nullable=False, default=True)  # Track possession
     is_unknown_player = db.Column(db.Boolean, default=False)  # Add this line
     is_opponent = db.Column(db.Boolean, default=False)  # Add this line
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True) # Nullable for migration
     
     point = db.relationship('Point', back_populates='events')
     
@@ -79,7 +80,8 @@ class Pull(db.Model):
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     is_inbounds = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True) # Nullable for migration
+   
     # Relationships
     point = db.relationship('Point', back_populates='pulls')
     player = db.relationship('Player', back_populates='pulls')

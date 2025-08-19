@@ -18,7 +18,8 @@ class Point(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     gender_ratio = db.Column(db.String(4))
     force_direction = db.Column(db.String(10))
-
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
+    
     # Relationships
     game = db.relationship('Game', back_populates='points')
     lineups = db.relationship('LineUp', back_populates='point', cascade='all, delete-orphan')
@@ -80,7 +81,8 @@ class LineUp(db.Model):
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
+    
     # Relationships
     point = db.relationship('Point', back_populates='lineups')
     player = db.relationship('Player', back_populates='lineups')

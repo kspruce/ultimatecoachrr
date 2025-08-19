@@ -7,7 +7,8 @@ class GamePlayer(db.Model):
     game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True) # Nullable for migration
+   
     # Relationships
     game = db.relationship('Game', back_populates='assigned_players')
 
