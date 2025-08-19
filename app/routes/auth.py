@@ -164,31 +164,20 @@ def edit_user(user_id):
         return redirect(url_for('main.index'))
     
     user = User.query.get_or_404(user_id)
-    form = UserForm(obj=user, original_username=user.username, original_email=user.email)
     
-    # Populate form fields manually for GET request
-    if request.method == 'GET':
-        form.username.data = user.username
-        form.email.data = user.email
-        form.role.data = user.role
-        
-        # Set team organization in form - use 0 if None
-        if user.team_organization_id:
-            form.team_organization_id.data = user.team_organization_id
-        else:
-            form.team_organization_id.data = 0
-            
-        if user.player:
-            form.player_id.data = user.player.id
-        else:
-            form.player_id.data = 0
+    # Pass the user object to the form
+    form = UserForm(
+        obj=user,  # Pass the user object
+        original_username=user.username, 
+        original_email=user.email
+    )
     
     if form.validate_on_submit():
         user.username = form.username.data
         user.email = form.email.data
         user.role = form.role.data
         
-        # Update team organization - handle None case properly
+        # Update team organization
         if form.team_organization_id.data and form.team_organization_id.data > 0:
             user.team_organization_id = form.team_organization_id.data
         else:
@@ -223,6 +212,7 @@ def edit_user(user_id):
         return redirect(url_for('auth.users'))
     
     return render_template('auth/user_form.html', form=form, user=user, title='Edit User')
+
 
 
 @bp.route('/users/delete/<int:user_id>', methods=['POST'])

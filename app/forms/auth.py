@@ -40,10 +40,13 @@ class UserForm(FlaskForm):
         ('admin', 'Admin')
     ], validators=[DataRequired()])
     player_id = SelectField('Link to Player', coerce=int, default=0)
-    team_organization_id = SelectField('Team', coerce=int)
+    team_organization_id = SelectField('Team', coerce=int, default=0)  # Add default=0
     submit = SubmitField('Save User')
     
     def __init__(self, *args, original_username=None, original_email=None, **kwargs):
+        # Extract user object if provided
+        self.user = kwargs.pop('obj', None)
+        
         super(UserForm, self).__init__(*args, **kwargs)
         # Store original values for validation
         self.original_username = original_username
@@ -61,6 +64,18 @@ class UserForm(FlaskForm):
         self.team_organization_id.choices = [(0, 'None')] + [
             (t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()
         ]
+        
+        # Pre-populate form fields if user object is provided
+        if self.user:
+            if self.user.team_organization_id:
+                self.team_organization_id.data = self.user.team_organization_id
+            else:
+                self.team_organization_id.data = 0
+                
+            if hasattr(self.user, 'player') and self.user.player:
+                self.player_id.data = self.user.player.id
+            else:
+                self.player_id.data = 0
     
     def validate_username(self, username):
         if self.original_username is None or username.data != self.original_username:
@@ -73,3 +88,4 @@ class UserForm(FlaskForm):
             user = User.query.filter_by(email=email.data).first()
             if user is not None:
                 raise ValidationError('Please use a different email address.')
+
