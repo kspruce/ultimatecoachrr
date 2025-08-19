@@ -1,11 +1,19 @@
 # backfill.py
 import sys
 from app import create_app, db
-from app.models import (
-    Clip, ClipAnnotation, Event, Point, Game, GamePlayer, Throw, Pull, CuttingSkill, LineUp,
-    PlayTag, Formation, Play, PlayerPosition, PlayAssignment,
-    TheorySection, TheoryTopic, TheoryVideo, TheoryTag
-)
+
+# Import models directly from their module files
+from app.models.clip import Clip
+from app.models.clip import ClipTag  # Assuming ClipTag is in clip.py
+from app.models.annotation import ClipAnnotation
+from app.models.event import Event, Pull
+from app.models.point import Point, LineUp
+from app.models.game import Game
+from app.models.game_player import GamePlayer
+from app.models.throws import Throw
+from app.models.cutting_skill import CuttingSkill
+from app.models.playbook import PlayTag, Formation, Play, PlayerPosition, PlayAssignment
+from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
 
 app = create_app()
 
