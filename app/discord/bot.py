@@ -18,6 +18,7 @@ class UltimateCoachBot:
         self.calendar_channel_id = None
         self.notification_channel_id = None
         self.sync_task = None
+        self.team_discord_settings = {}  # Map team_id to Discord settings
         
         if app is not None:
             self.init_app(app)
@@ -31,6 +32,24 @@ class UltimateCoachBot:
         self.guild_id = app.config.get('DISCORD_GUILD_ID')
         self.calendar_channel_id = app.config.get('DISCORD_CALENDAR_CHANNEL_ID')
         self.notification_channel_id = app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID')
+        
+        # Load team-specific Discord settings
+        with app.app_context():
+            try:
+                from app.models.team_organization import TeamOrganization
+                from app.models.team_settings import TeamSettings
+                
+                teams = TeamOrganization.query.all()
+                for team in teams:
+                    settings = TeamSettings.query.filter_by(team_id=team.id).first()
+                    if settings:
+                        self.team_discord_settings[team.id] = {
+                            'guild_id': getattr(settings, 'discord_guild_id', self.guild_id),
+                            'calendar_channel_id': getattr(settings, 'discord_calendar_channel_id', self.calendar_channel_id),
+                            'notification_channel_id': getattr(settings, 'discord_notification_channel_id', self.notification_channel_id)
+                        }
+            except Exception as e:
+                logger.error(f"Error loading team Discord settings: {str(e)}")
         
         # Initialize bot with intents
         intents = discord.Intents.default()
@@ -720,36 +739,84 @@ class UltimateCoachBot:
             
             await ctx.send(embed=embed)
     
-    @tasks.loop(hours=12)
-    async def sync_calendar(self):
-        """Sync calendar events with Discord scheduled events"""
-        logger.info("Starting calendar sync")
-        
-        try:
-            with self.app.app_context():
-                from app.models.session import SessionPlan
-                from app.models.tournament import Tournament
-                from app.models.game import Game
-                from datetime import datetime, timedelta
+@tasks.loop(hours=12)
+async def sync_calendar(self):
+    """Sync calendar events with Discord scheduled events"""
+    logger.info("Starting calendar sync")
+    
+    try:
+        with self.app.app_context():
+            from app.models.session import SessionPlan
+            from app.models.tournament import Tournament
+            from app.models.game import Game
+            from app.models.team_organization import TeamOrganization
+            from datetime import datetime, timedelta, timezone
+            
+            # Get events for the next 30 days
+            now = datetime.now()
+            next_month = now + timedelta(days=30)
+            
+            # Process each team separately
+            teams = TeamOrganization.query.all()
+            
+            for team in teams:
+                team_id = team.id
+                
+                # Skip teams without Discord settings
+                if team_id not in self.team_discord_settings:
+                    logger.info(f"No Discord settings for team {team_id}, using default settings")
+                    team_discord = {
+                        'guild_id': self.guild_id,
+                        'calendar_channel_id': self.calendar_channel_id,
+                        'notification_channel_id': self.notification_channel_id
+                    }
+                else:
+                    team_discord = self.team_discord_settings[team_id]
+                
+                guild_id = team_discord.get('guild_id')
+                
+                if not guild_id:
+                    logger.warning(f"No Discord guild ID for team {team_id}, skipping")
+                    continue
                 
                 # Get guild
-                guild = self.bot.get_guild(int(self.guild_id))
-                if not guild:
-                    logger.error(f"Could not find guild with ID {self.guild_id}")
-                    return
+                try:
+                    guild = self.bot.get_guild(int(guild_id))
+                    if not guild:
+                        logger.error(f"Could not find guild with ID {guild_id} for team {team_id}")
+                        continue
+                except ValueError:
+                    logger.error(f"Invalid guild ID for team {team_id}: {guild_id}")
+                    continue
                 
-                # Get events for the next 30 days
-                now = datetime.now()
-                next_month = now + timedelta(days=30)
+                logger.info(f"Processing calendar sync for team {team_id} in guild {guild.name}")
                 
-                # Get all types of events
-                sessions = SessionPlan.query.filter(SessionPlan.date >= now, SessionPlan.date <= next_month).all()
-                tournaments = Tournament.query.filter(Tournament.start_date >= now, Tournament.start_date <= next_month).all()
-                games = Game.query.filter(Game.date >= now, Game.date <= next_month).all()
+                # Get all types of events for this team
+                sessions = SessionPlan.query.filter(
+                    SessionPlan.date >= now, 
+                    SessionPlan.date <= next_month,
+                    SessionPlan.team_organization_id == team_id
+                ).all()
+                
+                tournaments = Tournament.query.filter(
+                    Tournament.start_date >= now.date(), 
+                    Tournament.start_date <= next_month.date(),
+                    Tournament.team_organization_id == team_id
+                ).all()
+                
+                games = Game.query.filter(
+                    Game.date >= now, 
+                    Game.date <= next_month,
+                    Game.team_organization_id == team_id
+                ).all()
                 
                 # Get existing Discord events
-                discord_events = await guild.fetch_scheduled_events()
-                discord_event_names = {event.name: event for event in discord_events}
+                try:
+                    discord_events = await guild.fetch_scheduled_events()
+                    discord_event_names = {event.name: event for event in discord_events}
+                except Exception as e:
+                    logger.error(f"Error fetching scheduled events for team {team_id}: {str(e)}")
+                    discord_event_names = {}
                 
                 # Sync sessions
                 for session in sessions:
@@ -759,7 +826,45 @@ class UltimateCoachBot:
                     if event_name in discord_event_names:
                         # Update existing event if needed
                         discord_event = discord_event_names[event_name]
-                        # TODO: Update event if details changed
+                        
+                        # Check if event details need updating
+                        location = session.location or "TBD"
+                        description = f"Training session: {session.title}\n\n"
+                        if hasattr(session, 'notes') and session.notes:
+                            description += f"{session.notes}\n\n"
+                        description += f"RSVP in the app or use the command:\n!uc rsvp session {session.id} [yes/no/maybe]"
+                        
+                        # Convert date to datetime with timezone
+                        if isinstance(session.date, datetime):
+                            start_time = session.date.replace(tzinfo=timezone.utc)
+                        else:
+                            # If it's just a date, convert to datetime
+                            start_time = datetime.combine(session.date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                        
+                        end_time = start_time + timedelta(hours=2)  # Assume 2 hours duration
+                        
+                        # Check if any details have changed
+                        needs_update = (
+                            discord_event.description != description or
+                            discord_event.location != location or
+                            abs((discord_event.start_time - start_time).total_seconds()) > 60 or
+                            abs((discord_event.end_time - end_time).total_seconds()) > 60
+                        )
+                        
+                        if needs_update:
+                            try:
+                                await discord_event.edit(
+                                    name=event_name,
+                                    description=description,
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    location=location,
+                                    entity_type=discord.EntityType.external,
+                                    privacy_level=discord.PrivacyLevel.guild_only
+                                )
+                                logger.info(f"Updated Discord event for session: {session.title} (Team {team_id})")
+                            except Exception as e:
+                                logger.error(f"Error updating Discord event for session {session.id} (Team {team_id}): {str(e)}")
                     else:
                         # Create new event
                         location = session.location or "TBD"
@@ -770,7 +875,6 @@ class UltimateCoachBot:
                         
                         try:
                             # Convert date to datetime with timezone
-                            from datetime import timezone
                             if isinstance(session.date, datetime):
                                 start_time = session.date.replace(tzinfo=timezone.utc)
                             else:
@@ -778,6 +882,9 @@ class UltimateCoachBot:
                                 start_time = datetime.combine(session.date, datetime.min.time()).replace(tzinfo=timezone.utc)
                             
                             end_time = start_time + timedelta(hours=2)  # Assume 2 hours duration
+                            
+                            # Add team name to description for clarity
+                            description += f"\n\nTeam: {team.name}"
                             
                             await guild.create_scheduled_event(
                                 name=event_name,
@@ -788,10 +895,9 @@ class UltimateCoachBot:
                                 entity_type=discord.EntityType.external,
                                 privacy_level=discord.PrivacyLevel.guild_only
                             )
-                            logger.info(f"Created Discord event for session: {session.title}")
+                            logger.info(f"Created Discord event for session: {session.title} (Team {team_id})")
                         except Exception as e:
-                            logger.error(f"Error creating Discord event for session {session.id}: {str(e)}")
-
+                            logger.error(f"Error creating Discord event for session {session.id} (Team {team_id}): {str(e)}")
                 
                 # Sync tournaments
                 for tournament in tournaments:
@@ -801,7 +907,48 @@ class UltimateCoachBot:
                     if event_name in discord_event_names:
                         # Update existing event if needed
                         discord_event = discord_event_names[event_name]
-                        # TODO: Update event if details changed
+                        
+                        # Check if event details need updating
+                        location = tournament.location or "TBD"
+                        description = f"Tournament: {tournament.name}\n\n"
+                        if hasattr(tournament, 'description') and tournament.description:
+                            description += f"{tournament.description}\n\n"
+                        description += f"RSVP in the app or use the command:\n!uc rsvp tournament {tournament.id} [attending/not_attending/maybe]"
+                        
+                        # Use end_date if available, otherwise assume 1 day
+                        if hasattr(tournament, 'end_date') and tournament.end_date:
+                            end_time = datetime.combine(tournament.end_date, datetime.max.time())
+                        else:
+                            end_time = datetime.combine(tournament.start_date, datetime.max.time())
+                        
+                        start_time = datetime.combine(tournament.start_date, datetime.min.time())
+                        
+                        # Add timezone info
+                        start_time = start_time.replace(tzinfo=timezone.utc)
+                        end_time = end_time.replace(tzinfo=timezone.utc)
+                        
+                        # Check if any details have changed
+                        needs_update = (
+                            discord_event.description != description or
+                            discord_event.location != location or
+                            abs((discord_event.start_time - start_time).total_seconds()) > 60 or
+                            abs((discord_event.end_time - end_time).total_seconds()) > 60
+                        )
+                        
+                        if needs_update:
+                            try:
+                                await discord_event.edit(
+                                    name=event_name,
+                                    description=description,
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    location=location,
+                                    entity_type=discord.EntityType.external,
+                                    privacy_level=discord.PrivacyLevel.guild_only
+                                )
+                                logger.info(f"Updated Discord event for tournament: {tournament.name} (Team {team_id})")
+                            except Exception as e:
+                                logger.error(f"Error updating Discord event for tournament {tournament.id} (Team {team_id}): {str(e)}")
                     else:
                         # Create new event
                         location = tournament.location or "TBD"
@@ -812,7 +959,7 @@ class UltimateCoachBot:
                         
                         try:
                             # Use end_date if available, otherwise assume 1 day
-                            if tournament.end_date:
+                            if hasattr(tournament, 'end_date') and tournament.end_date:
                                 end_time = datetime.combine(tournament.end_date, datetime.max.time())
                             else:
                                 end_time = datetime.combine(tournament.start_date, datetime.max.time())
@@ -820,9 +967,11 @@ class UltimateCoachBot:
                             start_time = datetime.combine(tournament.start_date, datetime.min.time())
                             
                             # Add timezone info
-                            from datetime import timezone
                             start_time = start_time.replace(tzinfo=timezone.utc)
                             end_time = end_time.replace(tzinfo=timezone.utc)
+                            
+                            # Add team name to description for clarity
+                            description += f"\n\nTeam: {team.name}"
                             
                             await guild.create_scheduled_event(
                                 name=event_name,
@@ -833,11 +982,9 @@ class UltimateCoachBot:
                                 entity_type=discord.EntityType.external,
                                 privacy_level=discord.PrivacyLevel.guild_only
                             )
-                            logger.info(f"Created Discord event for tournament: {tournament.name}")
+                            logger.info(f"Created Discord event for tournament: {tournament.name} (Team {team_id})")
                         except Exception as e:
-                            logger.error(f"Error creating Discord event for tournament {tournament.id}: {str(e)}")
-
-
+                            logger.error(f"Error creating Discord event for tournament {tournament.id} (Team {team_id}): {str(e)}")
                 
                 # Sync games
                 for game in games:
@@ -848,7 +995,44 @@ class UltimateCoachBot:
                     if event_name in discord_event_names:
                         # Update existing event if needed
                         discord_event = discord_event_names[event_name]
-                        # TODO: Update event if details changed
+                        
+                        # Check if event details need updating
+                        location = game.location or "TBD"
+                        description = f"Game vs {opponent}\n\n"
+                        if hasattr(game, 'description') and game.description:
+                            description += f"{game.description}\n\n"
+                        
+                        # Add timezone info to game date
+                        if isinstance(game.date, datetime):
+                            start_time = game.date.replace(tzinfo=timezone.utc)
+                        else:
+                            # If it's just a date, convert to datetime
+                            start_time = datetime.combine(game.date, datetime.min.time()).replace(tzinfo=timezone.utc)
+                            
+                        end_time = start_time + timedelta(hours=2)  # Assume 2 hours duration
+                        
+                        # Check if any details have changed
+                        needs_update = (
+                            discord_event.description != description or
+                            discord_event.location != location or
+                            abs((discord_event.start_time - start_time).total_seconds()) > 60 or
+                            abs((discord_event.end_time - end_time).total_seconds()) > 60
+                        )
+                        
+                        if needs_update:
+                            try:
+                                await discord_event.edit(
+                                    name=event_name,
+                                    description=description,
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    location=location,
+                                    entity_type=discord.EntityType.external,
+                                    privacy_level=discord.PrivacyLevel.guild_only
+                                )
+                                logger.info(f"Updated Discord event for game vs {opponent} (Team {team_id})")
+                            except Exception as e:
+                                logger.error(f"Error updating Discord event for game {game.id} (Team {team_id}): {str(e)}")
                     else:
                         # Create new event
                         location = game.location or "TBD"
@@ -858,7 +1042,6 @@ class UltimateCoachBot:
                         
                         try:
                             # Add timezone info to game date
-                            from datetime import timezone
                             if isinstance(game.date, datetime):
                                 start_time = game.date.replace(tzinfo=timezone.utc)
                             else:
@@ -866,6 +1049,9 @@ class UltimateCoachBot:
                                 start_time = datetime.combine(game.date, datetime.min.time()).replace(tzinfo=timezone.utc)
                                 
                             end_time = start_time + timedelta(hours=2)  # Assume 2 hours duration
+                            
+                            # Add team name to description for clarity
+                            description += f"\n\nTeam: {team.name}"
                             
                             await guild.create_scheduled_event(
                                 name=event_name,
@@ -876,15 +1062,49 @@ class UltimateCoachBot:
                                 entity_type=discord.EntityType.external,
                                 privacy_level=discord.PrivacyLevel.guild_only
                             )
-                            logger.info(f"Created Discord event for game vs {opponent}")
+                            logger.info(f"Created Discord event for game vs {opponent} (Team {team_id})")
                         except Exception as e:
-                            logger.error(f"Error creating Discord event for game {game.id}: {str(e)}")
-
+                            logger.error(f"Error creating Discord event for game {game.id} (Team {team_id}): {str(e)}")
                 
-                logger.info("Calendar sync completed")
-        
-        except Exception as e:
-            logger.error(f"Error during calendar sync: {str(e)}")
+                # Clean up old events that no longer exist in the database
+                current_event_ids = set()
+                
+                # Add all current session IDs
+                for session in sessions:
+                    event_name = f"Training: {session.title}"
+                    current_event_ids.add(event_name)
+                
+                # Add all current tournament IDs
+                for tournament in tournaments:
+                    event_name = f"Tournament: {tournament.name}"
+                    current_event_ids.add(event_name)
+                
+                # Add all current game IDs
+                for game in games:
+                    opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
+                    event_name = f"Game: vs {opponent}"
+                    current_event_ids.add(event_name)
+                
+                # Delete events that are no longer in the database
+                for event_name, discord_event in discord_event_names.items():
+                    # Only delete events that match our naming pattern and are not in current_event_ids
+                    if (event_name.startswith(("Training: ", "Tournament: ", "Game: vs ")) and 
+                        event_name not in current_event_ids):
+                        try:
+                            # Check if this event belongs to our team by looking at the description
+                            if hasattr(discord_event, 'description') and discord_event.description:
+                                if f"Team: {team.name}" in discord_event.description:
+                                    await discord_event.delete()
+                                    logger.info(f"Deleted obsolete Discord event: {event_name} (Team {team_id})")
+                        except Exception as e:
+                            logger.error(f"Error deleting Discord event {event_name} (Team {team_id}): {str(e)}")
+            
+            logger.info("Calendar sync completed")
+    
+    except Exception as e:
+        logger.error(f"Error during calendar sync: {str(e)}")
+        logger.exception(e)  # This will print the full stack trace
+
     
     def start_bot(self):
         """Start the Discord bot in a separate thread"""
@@ -901,17 +1121,45 @@ class UltimateCoachBot:
         bot_thread.start()
         logger.info("Discord bot started in background thread")
     
-    def send_notification(self, title, message, embed=None):
-        """Send a notification to the configured channel"""
-        if not self.bot or not self.notification_channel_id:
-            logger.error("Bot not initialized or notification channel not configured")
+    def send_notification(self, title, message, embed=None, team_id=None):
+        """Send a notification to the configured channel
+        
+        Parameters:
+        -----------
+        title: str
+            The notification title
+        message: str
+            The notification message
+        embed: discord.Embed
+            Optional embed to include
+        team_id: int
+            The team organization ID
+        
+        Returns:
+        --------
+        bool
+            True if successful, False otherwise
+        """
+        if not self.bot:
+            logger.error("Bot not initialized")
+            return False
+        
+        # Get the appropriate channel ID for the team
+        notification_channel_id = self.notification_channel_id
+        
+        if team_id and team_id in self.team_discord_settings:
+            team_discord = self.team_discord_settings[team_id]
+            notification_channel_id = team_discord.get('notification_channel_id', notification_channel_id)
+        
+        if not notification_channel_id:
+            logger.error(f"Notification channel not configured for team {team_id}")
             return False
         
         async def _send():
             try:
-                channel = self.bot.get_channel(int(self.notification_channel_id))
+                channel = self.bot.get_channel(int(notification_channel_id))
                 if not channel:
-                    logger.error(f"Could not find channel with ID {self.notification_channel_id}")
+                    logger.error(f"Could not find channel with ID {notification_channel_id}")
                     return False
                 
                 if embed:

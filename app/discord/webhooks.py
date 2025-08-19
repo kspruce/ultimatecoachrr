@@ -11,6 +11,7 @@ class DiscordWebhook:
     def __init__(self, app=None):
         self.app = app
         self.webhook_url = None
+        self.team_webhook_urls = {}  # Map team_id to webhook URL
         
         if app is not None:
             self.init_app(app)
@@ -19,8 +20,40 @@ class DiscordWebhook:
         """Initialize with Flask app context"""
         self.app = app
         self.webhook_url = app.config.get('DISCORD_WEBHOOK_URL')
+        
+        # Load team-specific webhook URLs from config or database
+        # This would be implemented based on how you store team-specific Discord settings
+        with app.app_context():
+            try:
+                from app.models.team_organization import TeamOrganization
+                from app.models.team_settings import TeamSettings
+                
+                teams = TeamOrganization.query.all()
+                for team in teams:
+                    settings = TeamSettings.query.filter_by(team_id=team.id).first()
+                    if settings and hasattr(settings, 'discord_webhook_url') and settings.discord_webhook_url:
+                        self.team_webhook_urls[team.id] = settings.discord_webhook_url
+            except Exception as e:
+                logger.error(f"Error loading team webhook URLs: {str(e)}")
     
-    def send_message(self, content, embeds=None, username=None, avatar_url=None):
+    def get_webhook_url(self, team_id=None):
+        """Get the appropriate webhook URL for the team
+        
+        Parameters:
+        -----------
+        team_id: int
+            The team organization ID
+            
+        Returns:
+        --------
+        str
+            The webhook URL to use
+        """
+        if team_id and team_id in self.team_webhook_urls:
+            return self.team_webhook_urls[team_id]
+        return self.webhook_url
+    
+    def send_message(self, content, embeds=None, username=None, avatar_url=None, team_id=None):
         """Send a message to the Discord webhook
         
         Parameters:
@@ -33,14 +66,18 @@ class DiscordWebhook:
             Override the webhook's username
         avatar_url: str
             Override the webhook's avatar
+        team_id: int
+            The team organization ID
         
         Returns:
         --------
         bool
             True if successful, False otherwise
         """
-        if not self.webhook_url:
-            logger.error("Discord webhook URL not configured")
+        webhook_url = self.get_webhook_url(team_id)
+        
+        if not webhook_url:
+            logger.error(f"Discord webhook URL not configured for team {team_id}")
             return False
         
         payload = {"content": content}
@@ -60,7 +97,7 @@ class DiscordWebhook:
             time.sleep(1)  # Wait 1 second between webhook requests
             
             response = requests.post(
-                self.webhook_url,
+                webhook_url,
                 data=json.dumps(payload),
                 headers={"Content-Type": "application/json"}
             )
@@ -73,7 +110,7 @@ class DiscordWebhook:
                 
                 # Try again after waiting
                 response = requests.post(
-                    self.webhook_url,
+                    webhook_url,
                     data=json.dumps(payload),
                     headers={"Content-Type": "application/json"}
                 )
@@ -84,16 +121,20 @@ class DiscordWebhook:
             logger.error(f"Error sending Discord webhook: {str(e)}")
             return False
 
-    
-
-    def notify_new_game(self, game):
+    def notify_new_game(self, game, team_id=None):
         """Send notification about a new game
         
         Parameters:
         -----------
         game: Game
             The game object
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from game if not provided
+        if team_id is None and hasattr(game, 'team_organization_id'):
+            team_id = game.team_organization_id
+            
         opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
         game_date = game.date.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'date') else "TBD"
         location = game.location if hasattr(game, 'location') else "TBD"
@@ -132,11 +173,11 @@ class DiscordWebhook:
         return self.send_message(
             content="@everyone A new game has been added to the calendar!",
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
-
     
-    def notify_upcoming_game(self, game, days_until):
+    def notify_upcoming_game(self, game, days_until, team_id=None):
         """Send notification about an upcoming game
         
         Parameters:
@@ -145,7 +186,13 @@ class DiscordWebhook:
             The game object
         days_until: int
             Number of days until the game
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from game if not provided
+        if team_id is None and hasattr(game, 'team_organization_id'):
+            team_id = game.team_organization_id
+            
         opponent = game.opponent if hasattr(game, 'opponent') else "TBD"
         game_date = game.date.strftime("%Y-%m-%d %H:%M") if hasattr(game, 'date') else "TBD"
         location = game.location if hasattr(game, 'location') else "TBD"
@@ -185,17 +232,24 @@ class DiscordWebhook:
         return self.send_message(
             content=content,
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
     
-    def notify_new_session(self, session):
+    def notify_new_session(self, session, team_id=None):
         """Send notification about a new training session
         
         Parameters:
         -----------
         session: Session
             The session object
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from session if not provided
+        if team_id is None and hasattr(session, 'team_organization_id'):
+            team_id = session.team_organization_id
+            
         session_date = session.date.strftime("%Y-%m-%d %H:%M") if hasattr(session, 'date') else "TBD"
         location = session.location if hasattr(session, 'location') else "TBD"
         
@@ -233,13 +287,11 @@ class DiscordWebhook:
         return self.send_message(
             content="A new training session has been added to the calendar!",
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
-
-
     
-
-    def notify_upcoming_session(self, session, days_until):
+    def notify_upcoming_session(self, session, days_until, team_id=None):
         """Send notification about an upcoming training session
         
         Parameters:
@@ -248,7 +300,13 @@ class DiscordWebhook:
             The session object
         days_until: int
             Number of days until the session
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from session if not provided
+        if team_id is None and hasattr(session, 'team_organization_id'):
+            team_id = session.team_organization_id
+            
         session_date = session.date.strftime("%Y-%m-%d %H:%M") if hasattr(session, 'date') else "TBD"
         location = session.location if hasattr(session, 'location') else "TBD"
         
@@ -303,19 +361,24 @@ class DiscordWebhook:
         return self.send_message(
             content=content,
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
-
     
-
-    def notify_new_tournament(self, tournament):
+    def notify_new_tournament(self, tournament, team_id=None):
         """Send notification about a new tournament
         
         Parameters:
         -----------
         tournament: Tournament
             The tournament object
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from tournament if not provided
+        if team_id is None and hasattr(tournament, 'team_organization_id'):
+            team_id = tournament.team_organization_id
+            
         start_date = tournament.start_date.strftime("%Y-%m-%d") if hasattr(tournament, 'start_date') else "TBD"
         end_date = tournament.end_date.strftime("%Y-%m-%d") if hasattr(tournament, 'end_date') and tournament.end_date else start_date
         location = tournament.location if hasattr(tournament, 'location') else "TBD"
@@ -358,11 +421,11 @@ class DiscordWebhook:
         return self.send_message(
             content="@everyone A new tournament has been added to the calendar!",
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
-
     
-    def notify_upcoming_tournament(self, tournament, days_until):
+    def notify_upcoming_tournament(self, tournament, days_until, team_id=None):
         """Send notification about an upcoming tournament
         
         Parameters:
@@ -371,7 +434,13 @@ class DiscordWebhook:
             The tournament object
         days_until: int
             Number of days until the tournament
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from tournament if not provided
+        if team_id is None and hasattr(tournament, 'team_organization_id'):
+            team_id = tournament.team_organization_id
+            
         start_date = tournament.start_date.strftime("%Y-%m-%d") if hasattr(tournament, 'start_date') else "TBD"
         end_date = tournament.end_date.strftime("%Y-%m-%d") if hasattr(tournament, 'end_date') and tournament.end_date else start_date
         location = tournament.location if hasattr(tournament, 'location') else "TBD"
@@ -422,18 +491,24 @@ class DiscordWebhook:
         return self.send_message(
             content=content,
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
-    
-    
-    def notify_new_clip(self, clip):
+
+    def notify_new_clip(self, clip, team_id=None):
         """Send notification about a new clip
         
         Parameters:
         -----------
         clip: Clip
             The clip object
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from clip if not provided
+        if team_id is None and hasattr(clip, 'team_organization_id'):
+            team_id = clip.team_organization_id
+            
         title = clip.title if hasattr(clip, 'title') else f"Clip #{clip.id}"
         game_info = f" from game vs {clip.game.opponent}" if hasattr(clip, 'game') and hasattr(clip.game, 'opponent') else ""
         
@@ -459,7 +534,7 @@ class DiscordWebhook:
         
         # Add link to view the clip
         base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
-        clip_url = f"{base_url}/clips/view/{clip.id}"  # Changed from /clip/ to /clips/
+        clip_url = f"{base_url}/clips/view/{clip.id}"
         embed["fields"].append({
             "name": "View Clip",
             "value": f"[Click here to view]({clip_url})",
@@ -469,18 +544,24 @@ class DiscordWebhook:
         return self.send_message(
             content="A new video clip has been added to the library!",
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
-
     
-    def notify_new_theory(self, theory_item):
+    def notify_new_theory(self, theory_item, team_id=None):
         """Send notification about new theory content
         
         Parameters:
         -----------
         theory_item: TheoryTopic or TheorySection
             The theory content object
+        team_id: int
+            The team organization ID
         """
+        # Get team_id from theory_item if not provided
+        if team_id is None and hasattr(theory_item, 'team_organization_id'):
+            team_id = theory_item.team_organization_id
+            
         # Determine if it's a topic or section
         is_topic = hasattr(theory_item, 'section_id')
         
@@ -529,7 +610,8 @@ class DiscordWebhook:
         return self.send_message(
             content=f"New theory {'topic' if is_topic else 'section'} added: **{theory_item.title}**",
             embeds=[embed],
-            username="Ultimate Coach"
+            username="Ultimate Coach",
+            team_id=team_id
         )
 
 

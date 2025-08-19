@@ -37,8 +37,8 @@ def register_event_listeners(app):
         def session_after_insert(mapper, connection, target):
             """Listen for new session creation"""
             logger.info(f"New session created: {target.title}")
-            #notification_service.notify_new_event('session', target)
-            notification_service.notify_new_database_item('session', target)
+            # Pass team_organization_id to notification service
+            notification_service.notify_new_database_item('session', target, target.team_organization_id)
         
         logger.info("Session listeners registered")
     except Exception as e:
@@ -52,8 +52,8 @@ def register_event_listeners(app):
         def tournament_after_insert(mapper, connection, target):
             """Listen for new tournament creation"""
             logger.info(f"New tournament created: {target.name}")
-            #notification_service.notify_new_event('tournament', target)
-            notification_service.notify_new_database_item('tournament', target)
+            # Pass team_organization_id to notification service
+            notification_service.notify_new_database_item('tournament', target, target.team_organization_id)
         
         logger.info("Tournament listeners registered")
     except Exception as e:
@@ -67,7 +67,8 @@ def register_event_listeners(app):
         def game_after_insert(mapper, connection, target):
             """Listen for new game creation"""
             logger.info(f"New game created: vs {target.opponent if hasattr(target, 'opponent') else 'TBD'}")
-            notification_service.notify_new_event('game', target)
+            # Pass team_organization_id to notification service
+            notification_service.notify_new_event('game', target, target.team_organization_id)
         
         logger.info("Game listeners registered")
     except Exception as e:
@@ -81,7 +82,8 @@ def register_event_listeners(app):
         def clip_after_insert(mapper, connection, target):
             """Listen for new clip creation"""
             logger.info(f"New clip created: ID {target.id}")
-            notification_service.notify_new_database_item('clip', target)
+            # Pass team_organization_id to notification service
+            notification_service.notify_new_database_item('clip', target, target.team_organization_id)
         
         logger.info("Clip listeners registered")
     except Exception as e:
@@ -95,7 +97,8 @@ def register_event_listeners(app):
         def theory_topic_after_insert(mapper, connection, target):
             """Listen for new theory topic creation"""
             logger.info(f"New theory topic created: {target.title}")
-            notification_service.notify_new_database_item('theory', target)
+            # Pass team_organization_id to notification service
+            notification_service.notify_new_database_item('theory', target, target.team_organization_id)
         
         from app.models.theory import TheorySection
         
@@ -103,7 +106,8 @@ def register_event_listeners(app):
         def theory_section_after_insert(mapper, connection, target):
             """Listen for new theory section creation"""
             logger.info(f"New theory section created: {target.title}")
-            notification_service.notify_new_database_item('theory', target)
+            # Pass team_organization_id to notification service
+            notification_service.notify_new_database_item('theory', target, target.team_organization_id)
         
         logger.info("Theory listeners registered")
     except Exception as e:

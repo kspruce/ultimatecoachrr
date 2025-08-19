@@ -40,6 +40,31 @@ def init_discord(app):
         logger.info("Discord integration is disabled")
         return
     
+    # Load team-specific Discord settings from database
+    with app.app_context():
+        try:
+            from app.models.team_organization import TeamOrganization
+            from app.models.team_settings import TeamSettings
+            
+            # Create TeamSettings for teams that don't have it yet
+            teams = TeamOrganization.query.all()
+            for team in teams:
+                settings = TeamSettings.query.filter_by(team_id=team.id).first()
+                if not settings:
+                    from app import db
+                    settings = TeamSettings(
+                        team_id=team.id,
+                        discord_enabled=app.config.get('DISCORD_ENABLED', False),
+                        discord_webhook_url=app.config.get('DISCORD_WEBHOOK_URL', ''),
+                        discord_guild_id=app.config.get('DISCORD_GUILD_ID', ''),
+                        discord_calendar_channel_id=app.config.get('DISCORD_CALENDAR_CHANNEL_ID', ''),
+                        discord_notification_channel_id=app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID', '')
+                    )
+                    db.session.add(settings)
+                    db.session.commit()
+        except Exception as e:
+            logger.error(f"Error loading team Discord settings: {str(e)}")
+    
     # Initialize Discord bot
     from app.discord.bot import discord_bot
     discord_bot.init_app(app)

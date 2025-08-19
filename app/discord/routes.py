@@ -18,25 +18,55 @@ def settings():
         flash('You do not have permission to access this page.', 'danger')
         return redirect(url_for('main.index'))
     
+    # Get current team ID
+    team_id = None
+    if hasattr(current_user, 'team_organization_id'):
+        team_id = current_user.team_organization_id
+    elif 'current_team_id' in session:
+        team_id = session['current_team_id']
+    
+    if not team_id:
+        flash('No team selected.', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # Get team settings
+    from app.models.team_settings import TeamSettings
+    team_settings = TeamSettings.query.filter_by(team_id=team_id).first()
+    
+    if not team_settings:
+        # Create default settings
+        from app import db
+        team_settings = TeamSettings(
+            team_id=team_id,
+            discord_enabled=current_app.config.get('DISCORD_ENABLED', False),
+            discord_webhook_url=current_app.config.get('DISCORD_WEBHOOK_URL', ''),
+            discord_guild_id=current_app.config.get('DISCORD_GUILD_ID', ''),
+            discord_calendar_channel_id=current_app.config.get('DISCORD_CALENDAR_CHANNEL_ID', ''),
+            discord_notification_channel_id=current_app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID', '')
+        )
+        db.session.add(team_settings)
+        db.session.commit()
+    
     if request.method == 'POST':
-        # Update Discord settings
-        current_app.config['DISCORD_ENABLED'] = 'discord_enabled' in request.form
-        current_app.config['DISCORD_SYNC_CALENDAR'] = 'discord_sync_calendar' in request.form
-        current_app.config['DISCORD_NOTIFY_NEW_EVENTS'] = 'discord_notify_new_events' in request.form
-        current_app.config['DISCORD_NOTIFY_UPCOMING_EVENTS'] = 'discord_notify_upcoming_events' in request.form
-        current_app.config['DISCORD_NOTIFY_NEW_ITEMS'] = 'discord_notify_new_items' in request.form
+        # Update Discord settings for this team
+        team_settings.discord_enabled = 'discord_enabled' in request.form
+        team_settings.discord_sync_calendar = 'discord_sync_calendar' in request.form
+        team_settings.discord_notify_new_events = 'discord_notify_new_events' in request.form
+        team_settings.discord_notify_upcoming_events = 'discord_notify_upcoming_events' in request.form
+        team_settings.discord_notify_new_items = 'discord_notify_new_items' in request.form
         
         # Update Discord bot settings
-        current_app.config['DISCORD_BOT_TOKEN'] = request.form.get('discord_bot_token', '')
-        current_app.config['DISCORD_GUILD_ID'] = request.form.get('discord_guild_id', '')
-        current_app.config['DISCORD_CALENDAR_CHANNEL_ID'] = request.form.get('discord_calendar_channel_id', '')
-        current_app.config['DISCORD_NOTIFICATION_CHANNEL_ID'] = request.form.get('discord_notification_channel_id', '')
+        team_settings.discord_bot_token = request.form.get('discord_bot_token', '')
+        team_settings.discord_guild_id = request.form.get('discord_guild_id', '')
+        team_settings.discord_calendar_channel_id = request.form.get('discord_calendar_channel_id', '')
+        team_settings.discord_notification_channel_id = request.form.get('discord_notification_channel_id', '')
         
         # Update Discord webhook settings
-        current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
+        team_settings.discord_webhook_url = request.form.get('discord_webhook_url', '')
         
-        # Save settings to environment variables or database
-        # This would typically be handled by a settings service
+        # Save settings
+        from app import db
+        db.session.commit()
         
         # Reinitialize Discord integration
         from app.discord.config import init_discord
@@ -48,17 +78,19 @@ def settings():
     return render_template(
         'discord/settings.html',
         title='Discord Settings',
-        discord_enabled=current_app.config.get('DISCORD_ENABLED', False),
-        discord_sync_calendar=current_app.config.get('DISCORD_SYNC_CALENDAR', True),
-        discord_notify_new_events=current_app.config.get('DISCORD_NOTIFY_NEW_EVENTS', True),
-        discord_notify_upcoming_events=current_app.config.get('DISCORD_NOTIFY_UPCOMING_EVENTS', True),
-        discord_notify_new_items=current_app.config.get('DISCORD_NOTIFY_NEW_ITEMS', True),
-        discord_bot_token=current_app.config.get('DISCORD_BOT_TOKEN', ''),
-        discord_guild_id=current_app.config.get('DISCORD_GUILD_ID', ''),
-        discord_calendar_channel_id=current_app.config.get('DISCORD_CALENDAR_CHANNEL_ID', ''),
-        discord_notification_channel_id=current_app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID', ''),
-        discord_webhook_url=current_app.config.get('DISCORD_WEBHOOK_URL', '')
+        discord_enabled=team_settings.discord_enabled,
+        discord_sync_calendar=team_settings.discord_sync_calendar,
+        discord_notify_new_events=team_settings.discord_notify_new_events,
+        discord_notify_upcoming_events=team_settings.discord_notify_upcoming_events,
+        discord_notify_new_items=team_settings.discord_notify_new_items,
+        discord_bot_token=team_settings.discord_bot_token,
+        discord_guild_id=team_settings.discord_guild_id,
+        discord_calendar_channel_id=team_settings.discord_calendar_channel_id,
+        discord_notification_channel_id=team_settings.discord_notification_channel_id,
+        discord_webhook_url=team_settings.discord_webhook_url,
+        team_id=team_id
     )
+
 
 
     
