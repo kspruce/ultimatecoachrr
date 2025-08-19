@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash, session
 from flask_login import login_required, current_user
 from app import db
 from app.models.session import SessionPlan, SessionRSVP
@@ -10,17 +10,28 @@ import json
 
 calendar_bp = Blueprint('calendar', __name__)
 
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
+
 @calendar_bp.route('/calendar')
 @login_required
 def index():
-    # Get upcoming sessions
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Get upcoming sessions - filter by team
     upcoming_sessions = SessionPlan.query.filter(
-        SessionPlan.date >= datetime.now().date()
+        SessionPlan.date >= datetime.now().date(),
+        SessionPlan.team_organization_id == team_id  # Add team filter
     ).order_by(SessionPlan.date).all()
     
-    # Get upcoming tournaments
+    # Get upcoming tournaments - filter by team
     upcoming_tournaments = Tournament.query.filter(
-        Tournament.start_date >= datetime.now().date()
+        Tournament.start_date >= datetime.now().date(),
+        Tournament.team_organization_id == team_id  # Add team filter
     ).order_by(Tournament.start_date).all()
     
     # Create events list for calendar
@@ -34,7 +45,8 @@ def index():
         if current_user.player:
             rsvp = SessionRSVP.query.filter_by(
                 session_id=session_plan.id,
-                player_id=current_user.player.id
+                player_id=current_user.player.id,
+                team_organization_id=team_id  # Add team filter
             ).first()
             if rsvp:
                 rsvp_status = rsvp.status
@@ -69,7 +81,8 @@ def index():
         if current_user.player:
             rsvp = TournamentRSVP.query.filter_by(
                 tournament_id=tournament.id,
-                player_id=current_user.player.id
+                player_id=current_user.player.id,
+                team_organization_id=team_id  # Add team filter
             ).first()
             if rsvp:
                 rsvp_status = rsvp.status
@@ -118,12 +131,20 @@ def session_rsvp(session_id):
         flash('You need to link your account to a player profile to RSVP.', 'warning')
         return redirect(url_for('auth.link_player'))
     
-    session = SessionPlan.query.get_or_404(session_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter session by team
+    session = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=team_id
+    ).first_or_404()
     
     # Check if user has already RSVP'd
     existing_rsvp = SessionRSVP.query.filter_by(
         session_id=session.id,
-        player_id=current_user.player.id
+        player_id=current_user.player.id,
+        team_organization_id=team_id  # Add team filter
     ).first()
     
     # Handle AJAX request
@@ -144,7 +165,8 @@ def session_rsvp(session_id):
                 session_id=session.id,
                 player_id=current_user.player.id,
                 status=status,
-                notes=notes
+                notes=notes,
+                team_organization_id=team_id  # Add team ID
             )
             db.session.add(new_rsvp)
         
@@ -165,7 +187,8 @@ def session_rsvp(session_id):
                 session_id=session.id,
                 player_id=current_user.player.id,
                 status=form.status.data,
-                notes=form.notes.data
+                notes=form.notes.data,
+                team_organization_id=team_id  # Add team ID
             )
             db.session.add(new_rsvp)
         
@@ -199,12 +222,22 @@ def api_rsvp():
     if not current_user.player:
         return jsonify({'success': False, 'message': 'You need to link your account to a player first'}), 400
     
+    # Get current team ID
+    team_id = get_current_team_id()
+    
     try:
         if event_type == 'session':
+            # Verify session belongs to current team
+            session = SessionPlan.query.filter_by(
+                id=event_id,
+                team_organization_id=team_id
+            ).first_or_404()
+            
             # Handle session RSVP
             existing_rsvp = SessionRSVP.query.filter_by(
                 session_id=event_id,
-                player_id=current_user.player.id
+                player_id=current_user.player.id,
+                team_organization_id=team_id  # Add team filter
             ).first()
             
             if existing_rsvp:
@@ -215,15 +248,23 @@ def api_rsvp():
                     session_id=event_id,
                     player_id=current_user.player.id,
                     status=status,
-                    notes=notes
+                    notes=notes,
+                    team_organization_id=team_id  # Add team ID
                 )
                 db.session.add(rsvp)
         
         elif event_type == 'tournament':
+            # Verify tournament belongs to current team
+            tournament = Tournament.query.filter_by(
+                id=event_id,
+                team_organization_id=team_id
+            ).first_or_404()
+            
             # Handle tournament RSVP
             existing_rsvp = TournamentRSVP.query.filter_by(
                 tournament_id=event_id,
-                player_id=current_user.player.id
+                player_id=current_user.player.id,
+                team_organization_id=team_id  # Add team filter
             ).first()
             
             if existing_rsvp:
@@ -234,7 +275,8 @@ def api_rsvp():
                     tournament_id=event_id,
                     player_id=current_user.player.id,
                     status=status,
-                    notes=notes
+                    notes=notes,
+                    team_organization_id=team_id  # Add team ID
                 )
                 db.session.add(rsvp)
         
