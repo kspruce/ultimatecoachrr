@@ -752,4 +752,91 @@ def point_detail(point_id):
                           point=point, 
                           game=game, 
                           events=reordered_events,  # Use reordered_events here too
-                
+                          events_data=events_data,
+                          lineups=lineups)
+
+@bp.route('/fix_lineups/<int:point_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def fix_lineups(point_id):
+    # Get point with team isolation
+    point = Point.query.filter_by(
+        id=point_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    # Get game with team isolation
+    game = Game.query.filter_by(
+        id=point.game_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    if request.method == 'POST':
+        # Get selected players
+        player_ids = request.form.getlist('players')
+        
+        if len(player_ids) != 7:
+            flash(f'You must select exactly 7 players. You selected {len(player_ids)}.', 'danger')
+            return redirect(url_for('point.fix_lineups', point_id=point_id))
+        
+        # Delete existing lineups with team isolation
+        LineUp.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
+        
+        # Add new lineups
+        for player_id in player_ids:
+            # Find the highest existing lineup ID and add 1
+            highest_lineup_id = db.session.query(db.func.max(LineUp.id)).scalar() or 0
+            next_lineup_id = highest_lineup_id + 1
+            
+            # Verify player belongs to current team
+            player = Player.query.filter_by(
+                id=player_id,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if player:
+                lineup = LineUp(
+                    id=next_lineup_id,  # Explicitly set the ID
+                    point_id=point_id, 
+                    player_id=player_id,
+                    team_organization_id=get_current_team_id()  # Add team organization ID
+                )
+                db.session.add(lineup)
+        
+        db.session.commit()
+        flash('Lineups have been updated!', 'success')
+        return redirect(url_for('point.point_detail', point_id=point_id))
+    
+    # Get all active players with team isolation
+    all_players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).order_by(Player.jersey_number).all()
+    
+    # If this is a tournament game, filter players to only show those selected for the tournament
+    if game.tournament_id:
+        selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
+            tournament_id=game.tournament_id,
+            selected_by_admin=True,
+            team_organization_id=get_current_team_id()  # Add team isolation
+        ).all()
+        
+        selected_player_ids = [id[0] for id in selected_player_ids]
+        
+        if selected_player_ids:
+            all_players = Player.query.filter(
+                Player.active == True,
+                Player.id.in_(selected_player_ids),
+                Player.team_organization_id == get_current_team_id()  # Add team isolation
+            ).order_by(Player.jersey_number).all()
+    
+    return render_template('point/fix_lineups.html', 
+                          point=point, 
+                          all_players=all_players)
+
+
+
+
