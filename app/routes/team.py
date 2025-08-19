@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
@@ -15,6 +15,12 @@ from datetime import datetime
 from markupsafe import Markup
 
 bp = Blueprint('team', __name__, url_prefix='/team')
+
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
 
 @bp.route('/')
 @login_required
@@ -40,7 +46,7 @@ def index():
     form.active_only.data = active_only != 'n'
     
     # Build query based on filters
-    query = Player.query
+    query = Player.query.filter_by(team_organization_id=get_current_team_id())
     
     if position:
         query = query.filter(Player.position == position)
@@ -71,8 +77,13 @@ def add_player():
     form = PlayerForm()
     if form.validate_on_submit():
         try:
+            # Find the highest existing player ID and add 1
+            highest_id = db.session.query(db.func.max(Player.id)).scalar() or 0
+            next_id = highest_id + 1
+            
             # Create the player
             player = Player(
+                id=next_id,  # Explicitly set the ID to avoid conflicts
                 name=form.name.data,
                 jersey_number=form.jersey_number.data,
                 position=form.position.data,
@@ -81,18 +92,31 @@ def add_player():
                 team=form.team.data if hasattr(form, 'team') else None,
                 email=form.email.data,
                 line_preference=form.line_preference.data,
-                active=form.active.data
+                active=form.active.data,
+                team_organization_id=get_current_team_id()  # Add team organization ID
             )
             
             db.session.add(player)
             
             # Create user account if requested
             if form.create_account.data and form.username.data and form.password.data:
+                # Check if username already exists
+                existing_user = User.query.filter_by(username=form.username.data).first()
+                if existing_user:
+                    flash(f'Username {form.username.data} is already taken.', 'danger')
+                    return render_template('team/player_form.html', title='Add Player', form=form)
+                
+                # Find the highest existing user ID and add 1
+                highest_user_id = db.session.query(db.func.max(User.id)).scalar() or 0
+                next_user_id = highest_user_id + 1
+                
                 user = User(
+                    id=next_user_id,  # Explicitly set the ID
                     username=form.username.data,
                     email=form.email.data,
                     role='player',
-                    is_admin=False
+                    is_admin=False,
+                    team_organization_id=get_current_team_id()  # Add team organization ID
                 )
                 user.set_password(form.password.data)
                 db.session.add(user)
@@ -120,7 +144,11 @@ def add_player():
 @login_required
 @coach_required
 def edit_player(player_id):
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = PlayerForm(obj=player)
     
     if request.method == 'GET' and player.user_account:
@@ -144,16 +172,39 @@ def edit_player(player_id):
                 if player.user_account:
                     # Update existing user account
                     if form.username.data != player.user_account.username:
+                        # Check if new username is already taken
+                        existing_user = User.query.filter(
+                            User.username == form.username.data,
+                            User.id != player.user_account.id
+                        ).first()
+                        
+                        if existing_user:
+                            flash(f'Username {form.username.data} is already taken.', 'danger')
+                            return render_template('team/player_form.html', title='Edit Player', form=form, player=player)
+                        
                         player.user_account.username = form.username.data
+                    
                     if form.password.data:
                         player.user_account.set_password(form.password.data)
                 else:
+                    # Check if username is already taken
+                    existing_user = User.query.filter_by(username=form.username.data).first()
+                    if existing_user:
+                        flash(f'Username {form.username.data} is already taken.', 'danger')
+                        return render_template('team/player_form.html', title='Edit Player', form=form, player=player)
+                    
+                    # Find the highest existing user ID and add 1
+                    highest_user_id = db.session.query(db.func.max(User.id)).scalar() or 0
+                    next_user_id = highest_user_id + 1
+                    
                     # Create new user account
                     user = User(
+                        id=next_user_id,  # Explicitly set the ID
                         username=form.username.data,
                         email=form.email.data,
                         role='player',
-                        is_admin=False
+                        is_admin=False,
+                        team_organization_id=get_current_team_id()  # Add team organization ID
                     )
                     user.set_password(form.password.data)
                     db.session.add(user)
@@ -175,36 +226,62 @@ def edit_player(player_id):
 @coach_required
 def delete_player(player_id):
     try:
-        player = Player.query.get_or_404(player_id)
+        player = Player.query.filter_by(
+            id=player_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
         name = player.name
 
         # Delete player_point_stats
         db.session.execute(
-            text("DELETE FROM player_point_stats WHERE player_id = :player_id"),
-            {"player_id": player_id}
+            text("DELETE FROM player_point_stats WHERE player_id = :player_id AND team_organization_id = :team_id"),
+            {"player_id": player_id, "team_id": get_current_team_id()}
         )
 
         # Delete throws first (both as thrower and receiver)
         db.session.execute(
-            text("DELETE FROM throw WHERE thrower_id = :player_id OR receiver_id = :player_id"),
-            {"player_id": player_id}
+            text("DELETE FROM throw WHERE (thrower_id = :player_id OR receiver_id = :player_id) AND team_organization_id = :team_id"),
+            {"player_id": player_id, "team_id": get_current_team_id()}
         )
 
         # Delete related records - Updated to use new relationship pattern
         # Remove player from clips (many-to-many relationship)
         player.clips = []  # This will remove the associations without deleting clips
         
-        LineUp.query.filter_by(player_id=player_id).delete()
-        Event.query.filter_by(receiver_id=player_id).update({Event.receiver_id: None})
-        Event.query.filter_by(player_id=player_id).delete()
-        Pull.query.filter_by(player_id=player_id).delete()
-        Attendance.query.filter_by(player_id=player_id).delete()
+        LineUp.query.filter_by(
+            player_id=player_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
+        
+        Event.query.filter_by(
+            receiver_id=player_id,
+            team_organization_id=get_current_team_id()
+        ).update({Event.receiver_id: None})
+        
+        Event.query.filter_by(
+            player_id=player_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
+        
+        Pull.query.filter_by(
+            player_id=player_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
+        
+        Attendance.query.filter_by(
+            player_id=player_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
         
         if hasattr(player, 'session_rsvps'):
-            SessionRSVP.query.filter_by(player_id=player_id).delete()
+            SessionRSVP.query.filter_by(
+                player_id=player_id,
+                team_organization_id=get_current_team_id()
+            ).delete()
 
         # Delete associated user account if it exists
-        if player.user_account:
+        if player.user_account and player.user_account.team_organization_id == get_current_team_id():
             db.session.delete(player.user_account)
 
         # Finally delete the player
@@ -224,19 +301,25 @@ def delete_player(player_id):
 def player_detail(player_id):
     from sqlalchemy import func, desc
     
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get recent lineups
-    recent_lineups = player.lineups.order_by(desc('id')).limit(10).all()
+    recent_lineups = player.lineups.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(desc('id')).limit(10).all()
     
     # Create a list of unique games from these lineups
     unique_games = {}
     recent_games = []
     for lineup in recent_lineups:
-        game_id = lineup.point.game.id
-        if game_id not in unique_games:
-            unique_games[game_id] = 1
-            recent_games.append(lineup.point.game)
+        if lineup.point and lineup.point.game:
+            game_id = lineup.point.game.id
+            if game_id not in unique_games:
+                unique_games[game_id] = 1
+                recent_games.append(lineup.point.game)
     
     # Calculate games played
     subquery = db.session.query(
@@ -244,11 +327,14 @@ def player_detail(player_id):
     ).join(
         LineUp.point
     ).filter(
-        LineUp.player_id == player_id
+        LineUp.player_id == player_id,
+        LineUp.team_organization_id == get_current_team_id()
     ).distinct().subquery()
     
     games_played = db.session.query(func.count()).select_from(subquery).scalar() or 0
-    points_played = player.lineups.count()
+    points_played = player.lineups.filter_by(
+        team_organization_id=get_current_team_id()
+    ).count()
     
     # Pass current date for filtering upcoming sessions
     now = datetime.now().date()
@@ -267,13 +353,19 @@ def player_detail(player_id):
 @bp.route('/debug')
 @login_required
 def debug():
-    players = Player.query.all()
+    players = Player.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).all()
+    
     return render_template('team/debug.html', players=players)
 
 @bp.route('/player/<int:player_id>/update_goals', methods=['POST'])
 @login_required
 def update_player_goals(player_id):
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Check permissions - only the player, coaches, or admins can update goals
     if not (current_user.is_admin or current_user.id == player.user_id or 
@@ -299,4 +391,3 @@ def update_player_goals(player_id):
         flash(f'Error updating goals: {str(e)}', 'danger')
     
     return redirect(url_for('team.player_detail', player_id=player_id))
-
