@@ -14,7 +14,7 @@ from app.models.throws import Throw
 from app.models.cutting_skill import CuttingSkill
 from app.models.playbook import PlayTag, Formation, Play, PlayerPosition, PlayAssignment
 from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
-from app.models.user import TeamOrganization  # Import TeamOrganization to check valid IDs
+from app.models.team_organization import TeamOrganization  # Import TeamOrganization to check valid IDs
 
 app = create_app()
 
