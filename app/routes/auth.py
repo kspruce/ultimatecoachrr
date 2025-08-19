@@ -164,20 +164,15 @@ def edit_user(user_id):
         return redirect(url_for('main.index'))
     
     user = User.query.get_or_404(user_id)
-    form = UserForm(original_username=user.username, original_email=user.email)
+    form = UserForm(obj=user, original_username=user.username, original_email=user.email)
     
-    
-    # Populate team organization choices
-    form.team_organization_id.choices = [(0, 'None')] + [
-        (t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()
-    ]
-    
+    # Populate form fields manually for GET request
     if request.method == 'GET':
         form.username.data = user.username
         form.email.data = user.email
         form.role.data = user.role
         
-        # Set team organization in form
+        # Set team organization in form - use 0 if None
         if user.team_organization_id:
             form.team_organization_id.data = user.team_organization_id
         else:
@@ -185,13 +180,15 @@ def edit_user(user_id):
             
         if user.player:
             form.player_id.data = user.player.id
+        else:
+            form.player_id.data = 0
     
     if form.validate_on_submit():
         user.username = form.username.data
         user.email = form.email.data
         user.role = form.role.data
         
-        # Update team organization
+        # Update team organization - handle None case properly
         if form.team_organization_id.data and form.team_organization_id.data > 0:
             user.team_organization_id = form.team_organization_id.data
         else:
