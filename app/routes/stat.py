@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify, request, render_template, url_for
-from flask_login import login_required
+from flask import Blueprint, jsonify, request, render_template, url_for, session
+from flask_login import login_required, current_user
 from app import db
 from app.models.point import Point, LineUp
 from app.models.event import Event
@@ -11,6 +11,12 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
+
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
 
 def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
     """
@@ -43,13 +49,19 @@ def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
 @stat_taker_required
 def record_events(point_id):
     if request.method == 'GET':
-        point = Point.query.get_or_404(point_id)
+        point = Point.query.filter_by(
+            id=point_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         return render_template('stats/record.html', point=point)
 
     if request.method == 'POST':
         try:
             data = request.get_json()
-            point = Point.query.get_or_404(point_id)
+            point = Point.query.filter_by(
+                id=point_id,
+                team_organization_id=get_current_team_id()
+            ).first_or_404()
             
             # Handle special player IDs
             player_id = data.get('player_id')
@@ -65,7 +77,8 @@ def record_events(point_id):
                 field_position_y=float(data.get('field_position_y', 0)),
                 is_offensive=bool(data.get('is_offensive', True)),
                 is_unknown_player=is_unknown_player,
-                is_opponent=is_opponent
+                is_opponent=is_opponent,
+                team_organization_id=get_current_team_id()  # Add team ID
             )
             
             # Add and flush the event to get its ID
@@ -75,7 +88,8 @@ def record_events(point_id):
             # Get previous event in this point
             previous_event = Event.query.filter(
                 Event.point_id == point_id,
-                Event.id < event.id
+                Event.id < event.id,
+                Event.team_organization_id == get_current_team_id()
             ).order_by(Event.id.desc()).first()
 
             # Handle goal events and create associated throws
@@ -83,7 +97,8 @@ def record_events(point_id):
                 # Get previous events for assist and hockey assist
                 previous_events = Event.query.filter(
                     Event.point_id == point_id,
-                    Event.id < event.id
+                    Event.id < event.id,
+                    Event.team_organization_id == get_current_team_id()
                 ).order_by(Event.id.desc()).limit(2).all()
 
                 if previous_events:
@@ -109,7 +124,8 @@ def record_events(point_id):
                             assist_event.field_position_y,
                             event.field_position_x,
                             event.field_position_y
-                        )
+                        ),
+                        team_organization_id=get_current_team_id()  # Add team ID
                     )
                     db.session.add(assist_throw)
 
@@ -136,7 +152,8 @@ def record_events(point_id):
                                 hockey_assist_event.field_position_y,
                                 assist_event.field_position_x,
                                 assist_event.field_position_y
-                            )
+                            ),
+                            team_organization_id=get_current_team_id()  # Add team ID
                         )
                         db.session.add(hockey_throw)
                         # Remove any regular throws that are now hockey assists
@@ -144,7 +161,8 @@ def record_events(point_id):
                             Throw.point_id == point_id,
                             Throw.thrower_id == hockey_assist_event.player_id,
                             Throw.receiver_id == assist_event.player_id,
-                            Throw.throw_type == 'regular'
+                            Throw.throw_type == 'regular',
+                            Throw.team_organization_id == get_current_team_id()  # Add team ID
                         ).first()
                         
                         if regular_throw:
@@ -172,7 +190,8 @@ def record_events(point_id):
                         previous_event.field_position_y,
                         event.field_position_x,
                         event.field_position_y
-                    )
+                    ),
+                    team_organization_id=get_current_team_id()  # Add team ID
                 )
                 db.session.add(regular_throw)
 
@@ -195,14 +214,16 @@ def record_events(point_id):
                         previous_event.field_position_y,
                         event.field_position_x,
                         event.field_position_y
-                    )
+                    ),
+                    team_organization_id=get_current_team_id()  # Add team ID
                 )
                 db.session.add(throwaway)
 
             # Update PlayerPointStats
             stats = PlayerPointStats.query.filter_by(
                 player_id=event.player_id,
-                point_id=point_id
+                point_id=point_id,
+                team_organization_id=get_current_team_id()  # Add team ID
             ).first()
             
             if not stats:
@@ -210,7 +231,8 @@ def record_events(point_id):
                     player_id=event.player_id,
                     point_id=point_id,
                     o_line_plus_minus=0.0,
-                    d_line_plus_minus=0.0
+                    d_line_plus_minus=0.0,
+                    team_organization_id=get_current_team_id()  # Add team ID
                 )
                 db.session.add(stats)
 
@@ -255,20 +277,33 @@ def record_events(point_id):
 @stat_taker_required
 def undo_event(point_id):
     try:
-        point = Point.query.get_or_404(point_id)
-        last_event = Event.query.filter_by(point_id=point_id).order_by(Event.id.desc()).first()
+        point = Point.query.filter_by(
+            id=point_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
+        last_event = Event.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()
+        ).order_by(Event.id.desc()).first()
 
         if last_event:
             # First, delete any throws associated with this event
             from app.models.throws import Throw
             
             # Delete throws where this event is the receiving event
-            throws_received = Throw.query.filter_by(receiving_event_id=last_event.id).all()
+            throws_received = Throw.query.filter_by(
+                receiving_event_id=last_event.id,
+                team_organization_id=get_current_team_id()
+            ).all()
             for throw in throws_received:
                 db.session.delete(throw)
                 
             # Delete throws where this event is the throwing event
-            throws_thrown = Throw.query.filter_by(throwing_event_id=last_event.id).all()
+            throws_thrown = Throw.query.filter_by(
+                throwing_event_id=last_event.id,
+                team_organization_id=get_current_team_id()
+            ).all()
             for throw in throws_thrown:
                 db.session.delete(throw)
             
@@ -290,7 +325,8 @@ def undo_event(point_id):
             from app.models.stats import PlayerPointStats
             stats = PlayerPointStats.query.filter_by(
                 player_id=last_event.player_id,
-                point_id=point_id
+                point_id=point_id,
+                team_organization_id=get_current_team_id()  # Add team ID
             ).first()
             
             if stats:
@@ -334,7 +370,10 @@ def undo_cutting_skill(point_id):
             return jsonify({'error': 'No cutting skill ID provided'}), 400
         
         from app.models.cutting_skill import CuttingSkill
-        cutting_skill = CuttingSkill.query.get_or_404(cutting_skill_id)
+        cutting_skill = CuttingSkill.query.filter_by(
+            id=cutting_skill_id,
+            team_organization_id=get_current_team_id()  # Add team ID
+        ).first_or_404()
         
         if cutting_skill.point_id != point_id:
             return jsonify({'error': 'Cutting skill does not belong to this point'}), 400
@@ -357,11 +396,21 @@ def undo_cutting_skill(point_id):
 @stat_taker_required
 def finish_point(point_id):
     try:
-        point = Point.query.get_or_404(point_id)
-        game = Game.query.get_or_404(point.game_id)
+        point = Point.query.filter_by(
+            id=point_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
+        game = Game.query.filter_by(
+            id=point.game_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
 
         # Always check the last event to determine point outcome
-        last_event = Event.query.filter_by(point_id=point_id).order_by(Event.id.desc()).first()
+        last_event = Event.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()
+        ).order_by(Event.id.desc()).first()
         
         if last_event:
             if last_event.event_type in ['goal', 'callahan']:
@@ -397,7 +446,8 @@ def finish_point(point_id):
         # Get all hockey assist throws in this point
         hockey_assists = Throw.query.filter_by(
             point_id=point_id,
-            throw_type='hockey_assist'
+            throw_type='hockey_assist',
+            team_organization_id=get_current_team_id()  # Add team ID
         ).all()
         
         # For each hockey assist, find and remove any regular throws with the same coordinates
@@ -411,7 +461,8 @@ def finish_point(point_id):
                 Throw.y_start == hockey.y_start,
                 Throw.x_end == hockey.x_end,
                 Throw.y_end == hockey.y_end,
-                Throw.id != hockey.id  # Make sure we don't delete the hockey assist itself
+                Throw.id != hockey.id,  # Make sure we don't delete the hockey assist itself
+                Throw.team_organization_id == get_current_team_id()  # Add team ID
             ).all()
             
             for duplicate in duplicate_throws:
@@ -422,17 +473,22 @@ def finish_point(point_id):
         for lineup in point.lineups:
             stats = PlayerPointStats.query.filter_by(
                 player_id=lineup.player_id,
-                point_id=point_id
+                point_id=point_id,
+                team_organization_id=get_current_team_id()  # Add team ID
             ).first()
             
             if not stats:
                 stats = PlayerPointStats(
                     player_id=lineup.player_id,
-                    point_id=point_id
+                    point_id=point_id,
+                    team_organization_id=get_current_team_id()  # Add team ID
                 )
                 db.session.add(stats)
 
-        throws_without_distance = Throw.query.filter_by(point_id=point_id).filter(
+        throws_without_distance = Throw.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()  # Add team ID
+        ).filter(
             (Throw.distance.is_(None)) | (Throw.distance == 0)
         ).all()
         
@@ -464,7 +520,13 @@ def finish_point(point_id):
 
 def calculate_assists(point, goal_event):
     # Get events for the point, ordered by timestamp if available, otherwise by ID
-    events = sorted(point.events.all(), key=lambda e: (e.timestamp or 0, e.id))
+    events = sorted(
+        Event.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).all(),
+        key=lambda e: (e.timestamp or 0, e.id)
+    )
 
     # Find the throw leading to the goal
     for i in range(len(events) - 2, -1, -1):  # Iterate backward from the goal
@@ -515,7 +577,8 @@ def create_throw_from_events(previous_event, current_event):
             previous_event.field_position_y,
             current_event.field_position_x,
             current_event.field_position_y
-        )
+        ),
+        team_organization_id=get_current_team_id()  # Add team ID
     )
     
     # Calculate distance
@@ -540,7 +603,10 @@ def create_throw_from_events(previous_event, current_event):
 def mark_break_throws():
     """Retroactively mark break throws in the database"""
     # Get all throws that don't have break_throw set
-    throws = Throw.query.filter(Throw.break_throw.is_(None)).all()
+    throws = Throw.query.filter(
+        Throw.break_throw.is_(None),
+        Throw.team_organization_id == get_current_team_id()  # Add team ID
+    ).all()
     
     count = 0
     for throw in throws:
@@ -561,7 +627,9 @@ def mark_break_throws():
 def debug_break_throws():
     """Debug route to check break throws"""
     # Get all throws
-    all_throws = Throw.query.all()
+    all_throws = Throw.query.filter_by(
+        team_organization_id=get_current_team_id()  # Add team ID
+    ).all()
     
     # Count break throws
     break_throws = [t for t in all_throws if t.break_throw]
@@ -596,7 +664,9 @@ def recalculate_throw_distances():
         import math
         
         # Get all throws
-        throws = Throw.query.all()
+        throws = Throw.query.filter_by(
+            team_organization_id=get_current_team_id()  # Add team ID
+        ).all()
         updated_count = 0
         
         for throw in throws:
@@ -628,9 +698,15 @@ def recalculate_throw_distances():
 def available_players(point_id):
     try:
         print(f"Fetching available players for point {point_id}")
-        point = Point.query.get_or_404(point_id)
+        point = Point.query.filter_by(
+            id=point_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         print(f"Found point: {point}")
-        game = Game.query.get_or_404(point.game_id)
+        game = Game.query.filter_by(
+            id=point.game_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         print(f"Found game: {game}")
         
         # Get players already in the point
@@ -641,7 +717,10 @@ def available_players(point_id):
         from app.models.player import Player
         
         # Get all active players
-        available_players = Player.query.filter_by(active=True).all()
+        available_players = Player.query.filter_by(
+            active=True,
+            team_organization_id=get_current_team_id()  # Add team ID
+        ).all()
         
         # Filter out players already in the lineup
         available_players = [p for p in available_players if p.id not in current_player_ids]
@@ -658,6 +737,7 @@ def available_players(point_id):
                 for player in available_players
             ]
         }
+
         print(f"Returning result: {result}")
         return jsonify(result)
     except Exception as e:
@@ -674,20 +754,31 @@ def available_players(point_id):
 def substitute_player(point_id):
     try:
         data = request.get_json()
-        point = Point.query.get_or_404(point_id)
+        point = Point.query.filter_by(
+            id=point_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         
         player_out_id = int(data['player_out_id'])
         player_in_id = int(data['player_in_id'])
         
         # Get the players
         from app.models.player import Player
-        player_out = Player.query.get_or_404(player_out_id)
-        player_in = Player.query.get_or_404(player_in_id)
+        player_out = Player.query.filter_by(
+            id=player_out_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
+        player_in = Player.query.filter_by(
+            id=player_in_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         
         # Check if player_out is in the lineup
         lineup_out = LineUp.query.filter_by(
             point_id=point_id,
-            player_id=player_out_id
+            player_id=player_out_id,
+            team_organization_id=get_current_team_id()
         ).first()
         
         if not lineup_out:
@@ -700,7 +791,8 @@ def substitute_player(point_id):
         # Add the player_in to the lineup
         lineup_in = LineUp(
             point_id=point_id,
-            player_id=player_in_id
+            player_id=player_in_id,
+            team_organization_id=get_current_team_id()  # Add team ID
         )
         db.session.add(lineup_in)
         
@@ -711,7 +803,8 @@ def substitute_player(point_id):
             event_type='substitution',
             field_position_x=50,  # Center of field
             field_position_y=18.5,
-            is_offensive=point.starting_position == 'offense'
+            is_offensive=point.starting_position == 'offense',
+            team_organization_id=get_current_team_id()  # Add team ID
         )
         db.session.add(sub_event)
         
@@ -741,3 +834,306 @@ def substitute_player(point_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@bp.route('/record_cutting_skill/<int:point_id>', methods=['POST'])
+@login_required
+@stat_taker_required
+def record_cutting_skill(point_id):
+    try:
+        data = request.get_json()
+        point = Point.query.filter_by(
+            id=point_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
+        # Extract data from request
+        player_id = int(data.get('player_id'))
+        cutting_type = data.get('cutting_type')
+        outcome = data.get('outcome')
+        field_position_x = float(data.get('field_position_x', 0))
+        field_position_y = float(data.get('field_position_y', 0))
+        
+        # Validate player belongs to the team
+        from app.models.player import Player
+        player = Player.query.filter_by(
+            id=player_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
+        # Create cutting skill record
+        from app.models.cutting_skill import CuttingSkill
+        cutting_skill = CuttingSkill(
+            point_id=point_id,
+            player_id=player_id,
+            cutting_type=cutting_type,
+            outcome=outcome,
+            field_position_x=field_position_x,
+            field_position_y=field_position_y,
+            team_organization_id=get_current_team_id()  # Add team ID
+        )
+        
+        db.session.add(cutting_skill)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'cutting_skill_id': cutting_skill.id,
+            'message': f'Cutting skill recorded for {player.name}'
+        }), 201
+        
+    except Exception as e:
+        import traceback
+        print("Error in record_cutting_skill:", str(e))
+        print(traceback.format_exc())
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/get_cutting_skills/<int:point_id>', methods=['GET'])
+@login_required
+@stat_taker_required
+def get_cutting_skills(point_id):
+    try:
+        from app.models.cutting_skill import CuttingSkill
+        from app.models.player import Player
+        
+        # Get all cutting skills for this point
+        cutting_skills = CuttingSkill.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()
+        ).all()
+        
+        # Format the data for the frontend
+        result = []
+        for skill in cutting_skills:
+            player = Player.query.filter_by(
+                id=skill.player_id,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if player:
+                result.append({
+                    'id': skill.id,
+                    'player_id': skill.player_id,
+                    'player_name': player.name,
+                    'jersey_number': player.jersey_number or 'N/A',
+                    'cutting_type': skill.cutting_type,
+                    'outcome': skill.outcome,
+                    'field_position_x': skill.field_position_x,
+                    'field_position_y': skill.field_position_y,
+                    'timestamp': skill.created_at.isoformat() if skill.created_at else None
+                })
+        
+        return jsonify({
+            'success': True,
+            'cutting_skills': result
+        })
+        
+    except Exception as e:
+        import traceback
+        print("Error in get_cutting_skills:", str(e))
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/get_events/<int:point_id>', methods=['GET'])
+@login_required
+@stat_taker_required
+def get_events(point_id):
+    try:
+        # Get all events for this point
+        events = Event.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()
+        ).order_by(Event.timestamp).all()
+        
+        # Format the data for the frontend
+        result = []
+        for event in events:
+            # Get player name if available
+            player_name = "Unknown"
+            jersey_number = "N/A"
+            
+            if event.player_id:
+                from app.models.player import Player
+                player = Player.query.filter_by(
+                    id=event.player_id,
+                    team_organization_id=get_current_team_id()
+                ).first()
+                
+                if player:
+                    player_name = player.name
+                    jersey_number = player.jersey_number or "N/A"
+            
+            result.append({
+                'id': event.id,
+                'event_type': event.event_type,
+                'player_id': event.player_id,
+                'player_name': player_name,
+                'jersey_number': jersey_number,
+                'field_position_x': event.field_position_x,
+                'field_position_y': event.field_position_y,
+                'is_offensive': event.is_offensive,
+                'timestamp': event.timestamp.isoformat() if event.timestamp else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'events': result
+        })
+        
+    except Exception as e:
+        import traceback
+        print("Error in get_events:", str(e))
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/get_throws/<int:point_id>', methods=['GET'])
+@login_required
+@stat_taker_required
+def get_throws(point_id):
+    try:
+        # Get all throws for this point
+        throws = Throw.query.filter_by(
+            point_id=point_id,
+            team_organization_id=get_current_team_id()
+        ).all()
+        
+        # Format the data for the frontend
+        result = []
+        for throw in throws:
+            # Get thrower and receiver names if available
+            thrower_name = "Unknown"
+            receiver_name = "Unknown"
+            
+            if throw.thrower_id:
+                from app.models.player import Player
+                thrower = Player.query.filter_by(
+                    id=throw.thrower_id,
+                    team_organization_id=get_current_team_id()
+                ).first()
+                
+                if thrower:
+                    thrower_name = thrower.name
+            
+            if throw.receiver_id:
+                from app.models.player import Player
+                receiver = Player.query.filter_by(
+                    id=throw.receiver_id,
+                    team_organization_id=get_current_team_id()
+                ).first()
+                
+                if receiver:
+                    receiver_name = receiver.name
+            
+            result.append({
+                'id': throw.id,
+                'throw_type': throw.throw_type,
+                'thrower_id': throw.thrower_id,
+                'thrower_name': thrower_name,
+                'receiver_id': throw.receiver_id,
+                'receiver_name': receiver_name,
+                'x_start': throw.x_start,
+                'y_start': throw.y_start,
+                'x_end': throw.x_end,
+                'y_end': throw.y_end,
+                'is_completion': throw.is_completion,
+                'break_throw': throw.break_throw,
+                'distance': throw.distance
+            })
+        
+        return jsonify({
+            'success': True,
+            'throws': result
+        })
+        
+    except Exception as e:
+        import traceback
+        print("Error in get_throws:", str(e))
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/admin/fix_missing_team_ids', methods=['GET'])
+@login_required
+@admin_required
+def fix_missing_team_ids():
+    """
+    Administrative route to fix any records that might be missing team_organization_id
+    This is useful during the transition to multi-team support
+    """
+    try:
+        # Only allow this operation for admin users
+        if not current_user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
+        # Get the current team ID
+        team_id = get_current_team_id()
+        if not team_id:
+            return jsonify({'error': 'No team ID available'}), 400
+            
+        # Fix Events
+        events_fixed = Event.query.filter(Event.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        # Fix Throws
+        throws_fixed = Throw.query.filter(Throw.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        # Fix PlayerPointStats
+        stats_fixed = PlayerPointStats.query.filter(PlayerPointStats.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        # Fix LineUps
+        lineups_fixed = LineUp.query.filter(LineUp.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        # Fix Points
+        points_fixed = Point.query.filter(Point.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        # Fix Games
+        games_fixed = Game.query.filter(Game.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        # Fix CuttingSkills
+        from app.models.cutting_skill import CuttingSkill
+        cutting_skills_fixed = CuttingSkill.query.filter(CuttingSkill.team_organization_id.is_(None)).update(
+            {'team_organization_id': team_id}, 
+            synchronize_session=False
+        )
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Fixed missing team IDs',
+            'stats': {
+                'events_fixed': events_fixed,
+                'throws_fixed': throws_fixed,
+                'stats_fixed': stats_fixed,
+                'lineups_fixed': lineups_fixed,
+                'points_fixed': points_fixed,
+                'games_fixed': games_fixed,
+                'cutting_skills_fixed': cutting_skills_fixed
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print("Error in fix_missing_team_ids:", str(e))
+        print(traceback.format_exc())
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
