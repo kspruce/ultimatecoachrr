@@ -37,6 +37,7 @@ def add():
         return redirect(url_for('team_organization.index'))
     return render_template('team_organization/form.html', form=form, title='Add Team')
 
+
 @bp.route('/edit/<int:team_id>', methods=['GET', 'POST'])
 @login_required
 def edit(team_id):
@@ -45,13 +46,14 @@ def edit(team_id):
         return redirect(url_for('main.index'))
     
     team = TeamOrganization.query.get_or_404(team_id)
-    form = TeamOrganizationForm(obj=team)
+    form = TeamOrganizationForm(obj=team, team_id=team_id)  # Pass team_id here
     if form.validate_on_submit():
         form.populate_obj(team)
         db.session.commit()
         flash(f'Team {team.name} has been updated!', 'success')
         return redirect(url_for('team_organization.index'))
     return render_template('team_organization/form.html', form=form, team=team, title='Edit Team')
+
 
 @bp.route('/switch/<int:team_id>')
 @login_required
