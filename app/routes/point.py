@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_required
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask_login import login_required, current_user
 from app import db
 from app.models.game import Game
 from app.models.point import Point, LineUp
@@ -14,17 +14,35 @@ from app.utils.utils import admin_required
 
 bp = Blueprint('point', __name__, url_prefix='/points')
 
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
+
 @bp.route('/game/<int:game_id>')
 @login_required
 def game_points(game_id):
-    game = Game.query.get_or_404(game_id)
-    points = Point.query.filter_by(game_id=game_id).order_by(Point.point_number).all()
+    game = Game.query.filter_by(
+        id=game_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    points = Point.query.filter_by(
+        game_id=game_id,
+        team_organization_id=get_current_team_id()
+    ).order_by(Point.point_number).all()
+    
     return render_template('point/game_points.html', game=game, points=points)
 
 def get_player_stats(game_id):
     """Get statistics for all players who have played in the game."""
     # Get all points for this game
-    points = Point.query.filter_by(game_id=game_id).all()
+    points = Point.query.filter_by(
+        game_id=game_id,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
     point_ids = [p.id for p in points]
     
     if not point_ids:
@@ -37,7 +55,12 @@ def get_player_stats(game_id):
     players = db.session.query(Player)\
         .join(LineUp)\
         .join(Point)\
-        .filter(Point.game_id == game_id)\
+        .filter(
+            Point.game_id == game_id,
+            Point.team_organization_id == get_current_team_id(),
+            LineUp.team_organization_id == get_current_team_id(),
+            Player.team_organization_id == get_current_team_id()
+        )\
         .distinct().all()
     
     for player in players:
@@ -45,7 +68,8 @@ def get_player_stats(game_id):
         events = Event.query\
             .filter(
                 Event.point_id.in_(point_ids),
-                Event.player_id == player.id
+                Event.player_id == player.id,
+                Event.team_organization_id == get_current_team_id()
             )\
             .order_by(Event.id)\
             .all()
@@ -114,7 +138,9 @@ def get_player_stats(game_id):
             .join(Point)\
             .filter(
                 Point.game_id == game_id,
-                LineUp.player_id == player.id
+                LineUp.player_id == player.id,
+                Point.team_organization_id == get_current_team_id(),
+                LineUp.team_organization_id == get_current_team_id()
             ).count()
         
         # Calculate completion rate using total throws
@@ -150,7 +176,11 @@ def get_player_stats(game_id):
 def calculate_completion_rate(game_id):
     """Calculate the team's completion rate for the game so far."""
     # Get all points for this game
-    points = Point.query.filter_by(game_id=game_id).all()
+    points = Point.query.filter_by(
+        game_id=game_id,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
     point_ids = [p.id for p in points]
     
     if not point_ids:
@@ -158,7 +188,10 @@ def calculate_completion_rate(game_id):
     
     # Get all events in chronological order
     events = Event.query\
-        .filter(Event.point_id.in_(point_ids))\
+        .filter(
+            Event.point_id.in_(point_ids),
+            Event.team_organization_id == get_current_team_id()
+        )\
         .order_by(Event.id)\
         .all()
     
@@ -183,7 +216,6 @@ def calculate_completion_rate(game_id):
         return 0
         
     return round((completions / (completions + throwaways)) * 100, 1)
-
 
 
 
@@ -222,24 +254,34 @@ def determine_line_and_position(previous_point):
 @login_required
 @admin_required
 def add_point(game_id):
-    game = Game.query.get_or_404(game_id)
+    game = Game.query.filter_by(
+        id=game_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = PointForm()
     
     # Get all active players
-    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    all_players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).order_by(Player.jersey_number).all()
     
     # If this is a tournament game, filter players to only show those selected for the tournament
     if game.tournament_id:
         selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
             tournament_id=game.tournament_id,
-            selected_by_admin=True
+            selected_by_admin=True,
+            team_organization_id=get_current_team_id()
         ).all()
+        
         selected_player_ids = [id[0] for id in selected_player_ids]
         
         if selected_player_ids:
             all_players = Player.query.filter(
                 Player.active == True,
-                Player.id.in_(selected_player_ids)
+                Player.id.in_(selected_player_ids),
+                Player.team_organization_id == get_current_team_id()
             ).order_by(Player.jersey_number).all()
     
     # Get player stats
@@ -252,7 +294,10 @@ def add_point(game_id):
             player_stats_dict[stat['player_id']] = stat
     
     # Get the last point for this game
-    last_point = Point.query.filter_by(game_id=game_id)\
+    last_point = Point.query.filter_by(
+        game_id=game_id,
+        team_organization_id=get_current_team_id()
+    )\
         .order_by(Point.point_number.desc())\
         .first()
     
@@ -318,7 +363,11 @@ def add_point(game_id):
             female_count = 0
             
             for player_id in form.players.data:
-                player = Player.query.get(player_id)
+                player = Player.query.filter_by(
+                    id=player_id,
+                    team_organization_id=get_current_team_id()
+                ).first()
+                
                 if player:
                     if player.gender == "male":
                         male_count += 1
@@ -339,8 +388,13 @@ def add_point(game_id):
                                      all_players=all_players,
                                      player_stats_dict=player_stats_dict)
             
+            # Find the highest existing point ID and add 1
+            highest_id = db.session.query(db.func.max(Point.id)).scalar() or 0
+            next_id = highest_id + 1
+            
             # Create the point
             point = Point(
+                id=next_id,  # Explicitly set the ID
                 game_id=game_id,
                 point_number=form.point_number.data,
                 our_line_type=form.our_line_type.data,
@@ -351,7 +405,8 @@ def add_point(game_id):
                 force_direction=form.force_direction.data,
                 point_outcome=form.point_outcome.data,
                 duration=form.duration.data,
-                timestamp_in_video=form.timestamp_in_video.data
+                timestamp_in_video=form.timestamp_in_video.data,
+                team_organization_id=get_current_team_id()  # Add team organization ID
             )
             
             # Calculate scores after point
@@ -367,7 +422,16 @@ def add_point(game_id):
             
             # Add players to lineup
             for player_id in form.players.data:
-                lineup = LineUp(point_id=point.id, player_id=player_id)
+                # Find the highest existing lineup ID and add 1
+                highest_lineup_id = db.session.query(db.func.max(LineUp.id)).scalar() or 0
+                next_lineup_id = highest_lineup_id + 1
+                
+                lineup = LineUp(
+                    id=next_lineup_id,  # Explicitly set the ID
+                    point_id=point.id, 
+                    player_id=player_id,
+                    team_organization_id=get_current_team_id()  # Add team organization ID
+                )
                 db.session.add(lineup)
             
             # Update game score
@@ -410,27 +474,40 @@ def add_point(game_id):
 @login_required
 @admin_required
 def edit_point(point_id):
-    point = Point.query.get_or_404(point_id)
-    game = Game.query.get(point.game_id)
+    point = Point.query.filter_by(
+        id=point_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    game = Game.query.filter_by(
+        id=point.game_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = PointForm(obj=point)
     
     # Get all active players
-    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
+    all_players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).order_by(Player.jersey_number).all()
     
     # If this is a tournament game, filter players to only show those selected for the tournament
     if game.tournament_id:
         selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
             tournament_id=game.tournament_id,
-            selected_by_admin=True
+            selected_by_admin=True,
+            team_organization_id=get_current_team_id()
         ).all()
+        
         selected_player_ids = [id[0] for id in selected_player_ids]
         
         if selected_player_ids:
             all_players = Player.query.filter(
                 Player.active == True,
-                Player.id.in_(selected_player_ids)
+                Player.id.in_(selected_player_ids),
+                Player.team_organization_id == get_current_team_id()
             ).order_by(Player.jersey_number).all()
-    
 
     
     # Get player stats
@@ -499,11 +576,23 @@ def edit_point(point_id):
                 print(f"DEBUG: Updating lineup from {current_lineup_player_ids} to {form.players.data}")
                 
                 # Remove all existing lineups
-                LineUp.query.filter_by(point_id=point.id).delete()
+                LineUp.query.filter_by(
+                    point_id=point.id,
+                    team_organization_id=get_current_team_id()
+                ).delete()
                 
                 # Then add the new ones
                 for player_id in form.players.data:
-                    lineup = LineUp(point_id=point.id, player_id=player_id)
+                    # Find the highest existing lineup ID and add 1
+                    highest_lineup_id = db.session.query(db.func.max(LineUp.id)).scalar() or 0
+                    next_lineup_id = highest_lineup_id + 1
+                    
+                    lineup = LineUp(
+                        id=next_lineup_id,  # Explicitly set the ID
+                        point_id=point.id, 
+                        player_id=player_id,
+                        team_organization_id=get_current_team_id()  # Add team organization ID
+                    )
                     db.session.add(lineup)
             else:
                 print("DEBUG: Lineup unchanged, not updating")
@@ -528,29 +617,51 @@ def edit_point(point_id):
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
 def delete_point(point_id):
-    point = Point.query.get_or_404(point_id)
+    point = Point.query.filter_by(
+        id=point_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     game_id = point.game_id
     point_number = point.point_number
     
     try:
         # First, get all event IDs for this point
-        event_ids = [event.id for event in Event.query.filter_by(point_id=point.id).all()]
+        event_ids = [event.id for event in Event.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).all()]
         
         # Delete throws that reference these events
         if event_ids:
-            Throw.query.filter(Throw.throwing_event_id.in_(event_ids)).delete(synchronize_session=False)
+            Throw.query.filter(
+                Throw.throwing_event_id.in_(event_ids),
+                Throw.team_organization_id == get_current_team_id()
+            ).delete(synchronize_session=False)
             
         # Delete player_point_stats records
-        PlayerPointStats.query.filter_by(point_id=point.id).delete()
+        PlayerPointStats.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).delete()
         
         # Delete lineups
-        LineUp.query.filter_by(point_id=point.id).delete()
+        LineUp.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).delete()
         
         # Now it's safe to delete events
-        Event.query.filter_by(point_id=point.id).delete()
+        Event.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).delete()
         
         # Delete pulls
-        Pull.query.filter_by(point_id=point.id).delete()
+        Pull.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).delete()
         
         # Delete the point
         db.session.delete(point)
@@ -568,16 +679,25 @@ def delete_point(point_id):
 
 
 
-
 @bp.route('/<int:point_id>')
 @login_required
 def point_detail(point_id):
-    point = Point.query.get_or_404(point_id)
-    game = Game.query.get(point.game_id)
+    point = Point.query.filter_by(
+        id=point_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    game = Game.query.filter_by(
+        id=point.game_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get events
     from app.models.event import Event
-    events = Event.query.filter_by(point_id=point_id).order_by(Event.timestamp).all()
+    events = Event.query.filter_by(
+        point_id=point_id,
+        team_organization_id=get_current_team_id()
+    ).order_by(Event.timestamp).all()
     
     # Reorder events to ensure assists and hockey assists appear before goals
     reordered_events = []
@@ -606,7 +726,10 @@ def point_detail(point_id):
     
     # Explicitly load lineups
     from app.models.point import LineUp
-    lineups = LineUp.query.filter_by(point_id=point_id).all()
+    lineups = LineUp.query.filter_by(
+        point_id=point_id,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Create a serializable version of events for JavaScript
     events_data = []
@@ -629,58 +752,4 @@ def point_detail(point_id):
                           point=point, 
                           game=game, 
                           events=reordered_events,  # Use reordered_events here too
-                          events_data=events_data,
-                          lineups=lineups)
-
-
-
-
-@bp.route('/fix_lineups/<int:point_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def fix_lineups(point_id):
-    point = Point.query.get_or_404(point_id)
-    game = Game.query.get(point.game_id)
-    
-    if request.method == 'POST':
-        # Get selected players
-        player_ids = request.form.getlist('players')
-        
-        if len(player_ids) != 7:
-            flash(f'You must select exactly 7 players. You selected {len(player_ids)}.', 'danger')
-            return redirect(url_for('point.fix_lineups', point_id=point_id))
-        
-        # Delete existing lineups
-        LineUp.query.filter_by(point_id=point_id).delete()
-        
-        # Add new lineups
-        for player_id in player_ids:
-            lineup = LineUp(point_id=point_id, player_id=player_id)
-            db.session.add(lineup)
-        
-        db.session.commit()
-        flash('Lineups have been updated!', 'success')
-        return redirect(url_for('point.point_detail', point_id=point_id))
-    
-    # Get all active players
-    all_players = Player.query.filter_by(active=True).order_by(Player.jersey_number).all()
-    
-    # If this is a tournament game, filter players to only show those selected for the tournament
-    if game.tournament_id:
-        selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
-            tournament_id=game.tournament_id,
-            selected_by_admin=True
-        ).all()
-        selected_player_ids = [id[0] for id in selected_player_ids]
-        
-        if selected_player_ids:
-            all_players = Player.query.filter(
-                Player.active == True,
-                Player.id.in_(selected_player_ids)
-            ).order_by(Player.jersey_number).all()
-    
-    return render_template('point/fix_lineups.html', 
-                          point=point, 
-                          all_players=all_players)
-
-
+                
