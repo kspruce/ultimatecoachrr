@@ -5,7 +5,7 @@ import importlib
 from sqlalchemy import inspect as sqlalchemy_inspect
 from sqlalchemy.exc import IntegrityError, OperationalError
 from app import create_app, db
-from app.models.user import TeamOrganization
+from app.models.team_organization import TeamOrganization
 
 app = create_app()
 
