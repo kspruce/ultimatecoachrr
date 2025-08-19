@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from app import db
@@ -17,6 +17,12 @@ from flask import send_file
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
+
 @bp.route('/')
 @login_required
 def index():
@@ -28,8 +34,11 @@ def index():
     tag_id = request.args.get('tag_id', type=int)
     player_id = request.args.get('player_id', type=int)
 
+    # Get current team ID
+    team_id = get_current_team_id()
+
     # Build query based on filters
-    query = Clip.query
+    query = Clip.query.filter_by(team_organization_id=team_id)  # Add team filter
 
     if game_id:
         query = query.filter(Clip.game_id == game_id)
@@ -49,15 +58,38 @@ def index():
 @bp.route('/game/<int:game_id>')
 @login_required
 def game_clips(game_id):
-    game = Game.query.get_or_404(game_id)
-    clips = Clip.query.filter_by(game_id=game_id).order_by(Clip.created_at.desc()).all()
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter game by team
+    game = Game.query.filter_by(id=game_id, team_organization_id=team_id).first_or_404()
+    
+    # Filter clips by game and team
+    clips = Clip.query.filter_by(
+        game_id=game_id,
+        team_organization_id=team_id
+    ).order_by(Clip.created_at.desc()).all()
+    
     return render_template('clip/game_clips.html', game=game, clips=clips)
 
 @bp.route('/point/<int:point_id>')
 @login_required
 def point_clips(point_id):
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Get point and verify it belongs to the current team
     point = Point.query.get_or_404(point_id)
-    clips = Clip.query.filter_by(point_id=point_id).order_by(Clip.created_at.desc()).all()
+    
+    # Check if the point's game belongs to the current team
+    game = Game.query.filter_by(id=point.game_id, team_organization_id=team_id).first_or_404()
+    
+    # Filter clips by point and team
+    clips = Clip.query.filter_by(
+        point_id=point_id,
+        team_organization_id=team_id
+    ).order_by(Clip.created_at.desc()).all()
+    
     return render_template('clip/point_clips.html', point=point, clips=clips)
 
 
@@ -68,8 +100,11 @@ def point_clips(point_id):
 def add_clip():
     form = ClipForm()
     
+    # Get current team ID
+    team_id = get_current_team_id()
+    
     # Check if there are any tags
-    tags_exist = ClipTag.query.count() > 0
+    tags_exist = ClipTag.query.filter_by(team_organization_id=team_id).count() > 0
     
     if form.validate_on_submit():
         clip = Clip(
@@ -80,16 +115,23 @@ def add_clip():
             point_id=form.point_id.data if form.point_id.data else None,
             start_time=form.start_time.data,
             end_time=form.end_time.data,
-            description=form.description.data
+            description=form.description.data,
+            team_organization_id=team_id  # Add team ID
         )
 
         # Add tags and players using the new relationship pattern
         if form.tags.data:
-            tags = ClipTag.query.filter(ClipTag.id.in_(form.tags.data)).all()
+            tags = ClipTag.query.filter(
+                ClipTag.id.in_(form.tags.data),
+                ClipTag.team_organization_id == team_id  # Filter tags by team
+            ).all()
             clip.tags = tags
 
         if form.players.data:
-            players = Player.query.filter(Player.id.in_(form.players.data)).all()
+            players = Player.query.filter(
+                Player.id.in_(form.players.data),
+                Player.team_organization_id == team_id  # Filter players by team
+            ).all()
             clip.players = players
 
         db.session.add(clip)
@@ -119,11 +161,16 @@ def get_veo_embed_url(url):
 @login_required
 @admin_required
 def edit_clip(clip_id):
-    clip = Clip.query.get_or_404(clip_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter clip by team
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    
     form = ClipForm(obj=clip)
     
     # Check if there are any tags
-    tags_exist = ClipTag.query.count() > 0
+    tags_exist = ClipTag.query.filter_by(team_organization_id=team_id).count() > 0
     
     if request.method == 'GET':
         # Pre-select tags and players using the new relationship pattern
@@ -146,14 +193,20 @@ def edit_clip(clip_id):
         
         # Update tags using the new relationship pattern
         if form.tags.data:
-            tags = ClipTag.query.filter(ClipTag.id.in_(form.tags.data)).all()
+            tags = ClipTag.query.filter(
+                ClipTag.id.in_(form.tags.data),
+                ClipTag.team_organization_id == team_id  # Filter tags by team
+            ).all()
             clip.tags = tags
         else:
             clip.tags = []
         
         # Update players using the new relationship pattern
         if form.players.data:
-            players = Player.query.filter(Player.id.in_(form.players.data)).all()
+            players = Player.query.filter(
+                Player.id.in_(form.players.data),
+                Player.team_organization_id == team_id  # Filter players by team
+            ).all()
             clip.players = players
         else:
             clip.players = []
@@ -170,7 +223,12 @@ def edit_clip(clip_id):
 @login_required
 @admin_required
 def delete_clip(clip_id):
-    clip = Clip.query.get_or_404(clip_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter clip by team
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    
     title = clip.title
 
     # Clear relationships
@@ -186,7 +244,11 @@ def delete_clip(clip_id):
 @bp.route('/view/<int:clip_id>')
 @login_required
 def view_clip(clip_id):
-    clip = Clip.query.get_or_404(clip_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter clip by team
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
     
     # Make sure we're explicitly querying for annotations
     annotations = ClipAnnotation.query.filter_by(clip_id=clip.id).order_by(ClipAnnotation.timestamp).all()
@@ -202,19 +264,27 @@ def view_clip(clip_id):
         from app.models.tournament_rsvp import TournamentRSVP
         from sqlalchemy import and_
         
-        game_player_records = GamePlayer.query.filter_by(game_id=clip.game.id).all()
+        game_player_records = GamePlayer.query.filter_by(
+            game_id=clip.game.id,
+            team_organization_id=team_id  # Filter by team
+        ).all()
         
         if game_player_records:
             # Get the actual Player objects
             player_ids = [gp.player_id for gp in game_player_records]
-            game_players = Player.query.filter(Player.id.in_(player_ids)).all()
+            game_players = Player.query.filter(
+                Player.id.in_(player_ids),
+                Player.team_organization_id == team_id  # Filter by team
+            ).all()
         
         # Get all players assigned to the tournament (if this game belongs to a tournament)
         if clip.game.tournament_id:
             tournament_players = Player.query.join(TournamentRSVP).filter(
                 and_(
                     TournamentRSVP.tournament_id == clip.game.tournament_id,
-                    TournamentRSVP.selected_by_admin == True
+                    TournamentRSVP.selected_by_admin == True,
+                    TournamentRSVP.team_organization_id == team_id,  # Filter by team
+                    Player.team_organization_id == team_id  # Filter by team
                 )
             ).all()
     
@@ -237,7 +307,12 @@ def view_clip(clip_id):
 @login_required
 @admin_required
 def add_annotation(clip_id):
-    clip = Clip.query.get_or_404(clip_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter clip by team
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    
     form = AnnotationForm()
     
     if form.validate_on_submit():
@@ -255,7 +330,8 @@ def add_annotation(clip_id):
             their_score=form.their_score.data,
             offense=form.offense.data,
             defense=form.defense.data,
-            notes=form.notes.data
+            notes=form.notes.data,
+            team_organization_id=team_id  # Add team ID
         )
         
         db.session.add(annotation)
@@ -273,7 +349,15 @@ def add_annotation(clip_id):
 @login_required
 @admin_required
 def edit_annotation(annotation_id):
-    annotation = ClipAnnotation.query.get_or_404(annotation_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter annotation by team
+    annotation = ClipAnnotation.query.filter_by(id=annotation_id).first_or_404()
+    
+    # Verify the annotation belongs to a clip in the current team
+    clip = Clip.query.filter_by(id=annotation.clip_id, team_organization_id=team_id).first_or_404()
+    
     form = AnnotationForm(obj=annotation)
     
     if request.method == 'GET':
@@ -305,7 +389,15 @@ def edit_annotation(annotation_id):
 @login_required
 @admin_required
 def delete_annotation(annotation_id):
-    annotation = ClipAnnotation.query.get_or_404(annotation_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter annotation by team
+    annotation = ClipAnnotation.query.filter_by(id=annotation_id).first_or_404()
+    
+    # Verify the annotation belongs to a clip in the current team
+    clip = Clip.query.filter_by(id=annotation.clip_id, team_organization_id=team_id).first_or_404()
+    
     clip_id = annotation.clip_id
     
     db.session.delete(annotation)
@@ -317,7 +409,12 @@ def delete_annotation(annotation_id):
 @bp.route('/tags')
 @login_required
 def tags():
-    tags = ClipTag.query.order_by(ClipTag.name).all()
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter tags by team
+    tags = ClipTag.query.filter_by(team_organization_id=team_id).order_by(ClipTag.name).all()
+    
     return render_template('clip/tags.html', tags=tags)
 
 @bp.route('/tags/add', methods=['GET', 'POST'])
@@ -326,14 +423,24 @@ def tags():
 def add_tag():
     form = ClipTagForm()
     
+    # Get current team ID
+    team_id = get_current_team_id()
+    
     if form.validate_on_submit():
-        # Check if tag already exists
-        existing_tag = ClipTag.query.filter_by(name=form.name.data).first()
+        # Check if tag already exists in this team
+        existing_tag = ClipTag.query.filter_by(
+            name=form.name.data,
+            team_organization_id=team_id
+        ).first()
+        
         if existing_tag:
             flash(f'Tag "{form.name.data}" already exists!', 'danger')
             return render_template('clip/tag_form.html', form=form, title='Add Tag')
         
-        tag = ClipTag(name=form.name.data)
+        tag = ClipTag(
+            name=form.name.data,
+            team_organization_id=team_id  # Add team ID
+        )
         db.session.add(tag)
         db.session.commit()
         
@@ -346,12 +453,22 @@ def add_tag():
 @login_required
 @admin_required
 def edit_tag(tag_id):
-    tag = ClipTag.query.get_or_404(tag_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter tag by team
+    tag = ClipTag.query.filter_by(id=tag_id, team_organization_id=team_id).first_or_404()
+    
     form = ClipTagForm(obj=tag)
     
     if form.validate_on_submit():
-        # Check if tag already exists
-        existing_tag = ClipTag.query.filter(ClipTag.name == form.name.data, ClipTag.id != tag_id).first()
+        # Check if tag already exists in this team
+        existing_tag = ClipTag.query.filter(
+            ClipTag.name == form.name.data,
+            ClipTag.id != tag_id,
+            ClipTag.team_organization_id == team_id
+        ).first()
+        
         if existing_tag:
             flash(f'Tag "{form.name.data}" already exists!', 'danger')
             return render_template('clip/tag_form.html', form=form, title='Edit Tag')
@@ -368,7 +485,12 @@ def edit_tag(tag_id):
 @login_required
 @admin_required
 def delete_tag(tag_id):
-    tag = ClipTag.query.get_or_404(tag_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter tag by team
+    tag = ClipTag.query.filter_by(id=tag_id, team_organization_id=team_id).first_or_404()
+    
     name = tag.name
     
     # Clear relationships using the new pattern
@@ -384,6 +506,12 @@ def delete_tag(tag_id):
 @bp.route('/get_points/<int:game_id>')
 @login_required
 def get_points(game_id):
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Verify the game belongs to the current team
+    game = Game.query.filter_by(id=game_id, team_organization_id=team_id).first_or_404()
+    
     points = Point.query.filter_by(game_id=game_id).order_by(Point.point_number).all()
     return jsonify([{'id': p.id, 'name': f'Point {p.point_number}'} for p in points])
 
@@ -432,7 +560,12 @@ def timestamp_to_seconds(timestamp):
 @bp.route('/get_game_link/<int:game_id>')
 @login_required
 def get_game_link(game_id):
-    game = Game.query.get_or_404(game_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter game by team
+    game = Game.query.filter_by(id=game_id, team_organization_id=team_id).first_or_404()
+    
     return jsonify({
         'youtube_link': game.youtube_link or ''
     })
@@ -440,7 +573,12 @@ def get_game_link(game_id):
 @bp.route('/export_annotations_csv/<int:clip_id>')
 @login_required
 def export_annotations_csv(clip_id):
-    clip = Clip.query.get_or_404(clip_id)
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Filter clip by team
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    
     annotations = ClipAnnotation.query.filter_by(clip_id=clip.id).order_by(ClipAnnotation.timestamp).all()
     
     # Create a file-like buffer
@@ -528,4 +666,3 @@ def seconds_to_timestamp(seconds):
     minutes = (int(seconds) % 3600) // 60
     secs = int(seconds) % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
-
