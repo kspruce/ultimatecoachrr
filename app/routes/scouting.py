@@ -1,4 +1,4 @@
-from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from app import db
 from app.models.scouting import ScoutingReport, OpponentPlayer, ScoutingClip
@@ -11,8 +11,13 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 csrf = CSRFProtect()
 
-
 bp = Blueprint('scouting', __name__, url_prefix='/scouting')
+
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
 
 @bp.route('/')
 @login_required
@@ -27,10 +32,17 @@ def index():
         form.tournament_id.data = tournament_id
     
     # Build query based on filters
-    query = ScoutingReport.query
+    query = ScoutingReport.query.filter_by(team_organization_id=get_current_team_id())
     
     if tournament_id:
-        query = query.filter(ScoutingReport.tournament_id == tournament_id)
+        # Verify tournament belongs to current team
+        tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
+        if tournament:
+            query = query.filter(ScoutingReport.tournament_id == tournament_id)
     
     # Get reports and sort by date (newest first)
     reports = query.order_by(ScoutingReport.date.desc()).all()
@@ -43,8 +55,27 @@ def index():
 def add_report():
     form = ScoutingReportForm()
     
+    # Update tournament choices to only include tournaments from current team
+    form.tournament_id.choices = [(0, 'None')] + [
+        (t.id, t.name) for t in Tournament.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(Tournament.start_date.desc()).all()
+    ]
+    
+    # Update game choices to only include games from current team
+    form.game_id.choices = [(0, 'None')] + [
+        (g.id, f"{g.opponent} ({g.date.strftime('%Y-%m-%d')})") for g in Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(Game.date.desc()).all()
+    ]
+    
     if form.validate_on_submit():
+        # Find the highest existing report ID and add 1
+        highest_id = db.session.query(db.func.max(ScoutingReport.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         report = ScoutingReport(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             team_name=form.team_name.data,
             date=form.date.data,
             tournament_id=form.tournament_id.data if form.tournament_id.data > 0 else None,
@@ -53,7 +84,8 @@ def add_report():
             defense_strategy=form.defense_strategy.data,
             strengths=form.strengths.data,
             weaknesses=form.weaknesses.data,
-            notes=form.notes.data
+            notes=form.notes.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         db.session.add(report)
@@ -68,14 +100,51 @@ def add_report():
 @login_required
 @coach_required
 def edit_report(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
+    report = ScoutingReport.query.filter_by(
+        id=report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = ScoutingReportForm(obj=report)
+    
+    # Update tournament choices to only include tournaments from current team
+    form.tournament_id.choices = [(0, 'None')] + [
+        (t.id, t.name) for t in Tournament.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(Tournament.start_date.desc()).all()
+    ]
+    
+    # Update game choices to only include games from current team
+    form.game_id.choices = [(0, 'None')] + [
+        (g.id, f"{g.opponent} ({g.date.strftime('%Y-%m-%d')})") for g in Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(Game.date.desc()).all()
+    ]
     
     if form.validate_on_submit():
         report.team_name = form.team_name.data
         report.date = form.date.data
-        report.tournament_id = form.tournament_id.data if form.tournament_id.data > 0 else None
-        report.game_id = form.game_id.data if form.game_id.data > 0 else None
+        
+        # Verify tournament belongs to current team if selected
+        if form.tournament_id.data > 0:
+            tournament = Tournament.query.filter_by(
+                id=form.tournament_id.data,
+                team_organization_id=get_current_team_id()
+            ).first()
+            report.tournament_id = tournament.id if tournament else None
+        else:
+            report.tournament_id = None
+            
+        # Verify game belongs to current team if selected
+        if form.game_id.data > 0:
+            game = Game.query.filter_by(
+                id=form.game_id.data,
+                team_organization_id=get_current_team_id()
+            ).first()
+            report.game_id = game.id if game else None
+        else:
+            report.game_id = None
+            
         report.offense_strategy = form.offense_strategy.data
         report.defense_strategy = form.defense_strategy.data
         report.strengths = form.strengths.data
@@ -94,7 +163,11 @@ def edit_report(report_id):
 @coach_required
 def delete_report(report_id):
     try:
-        report = ScoutingReport.query.get_or_404(report_id)
+        report = ScoutingReport.query.filter_by(
+            id=report_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
         team_name = report.team_name
         
         db.session.delete(report)
@@ -118,9 +191,18 @@ def delete_report(report_id):
 @bp.route('/<int:report_id>')
 @login_required
 def detail(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
-    players = report.players.order_by(OpponentPlayer.jersey_number).all()
-    clips = report.clips.all()
+    report = ScoutingReport.query.filter_by(
+        id=report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    players = report.players.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OpponentPlayer.jersey_number).all()
+    
+    clips = report.clips.filter_by(
+        team_organization_id=get_current_team_id()
+    ).all()
     
     return render_template('scouting/detail.html', report=report, players=players, clips=clips)
 
@@ -128,8 +210,14 @@ def detail(report_id):
 @login_required
 @coach_required
 def players(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
-    players = report.players.order_by(OpponentPlayer.jersey_number).all()
+    report = ScoutingReport.query.filter_by(
+        id=report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    players = report.players.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OpponentPlayer.jersey_number).all()
     
     return render_template('scouting/players.html', report=report, players=players)
 
@@ -137,11 +225,20 @@ def players(report_id):
 @login_required
 @coach_required
 def add_player(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
+    report = ScoutingReport.query.filter_by(
+        id=report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = OpponentPlayerForm()
     
     if form.validate_on_submit():
+        # Find the highest existing player ID and add 1
+        highest_id = db.session.query(db.func.max(OpponentPlayer.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         player = OpponentPlayer(
+            id=next_id,  # Explicitly set the ID
             scouting_report_id=report.id,
             name=form.name.data,
             jersey_number=form.jersey_number.data,
@@ -153,7 +250,8 @@ def add_player(report_id):
             defensive_ability=form.defensive_ability.data,
             athletic_ability=form.athletic_ability.data,
             preferred_throws=form.preferred_throws.data,
-            notes=form.notes.data
+            notes=form.notes.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         db.session.add(player)
@@ -168,8 +266,16 @@ def add_player(report_id):
 @login_required
 @coach_required
 def edit_player(player_id):
-    player = OpponentPlayer.query.get_or_404(player_id)
-    report = ScoutingReport.query.get(player.scouting_report_id)
+    player = OpponentPlayer.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    report = ScoutingReport.query.filter_by(
+        id=player.scouting_report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = OpponentPlayerForm(obj=player)
     
     if form.validate_on_submit():
@@ -196,7 +302,11 @@ def edit_player(player_id):
 @login_required
 @coach_required
 def delete_player(player_id):
-    player = OpponentPlayer.query.get_or_404(player_id)
+    player = OpponentPlayer.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     report_id = player.scouting_report_id
     name = player.name
     
@@ -209,8 +319,14 @@ def delete_player(player_id):
 @bp.route('/<int:report_id>/clips')
 @login_required
 def clips(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
-    clips = report.clips.all()
+    report = ScoutingReport.query.filter_by(
+        id=report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    clips = report.clips.filter_by(
+        team_organization_id=get_current_team_id()
+    ).all()
     
     return render_template('scouting/clips.html', report=report, clips=clips)
 
@@ -218,7 +334,11 @@ def clips(report_id):
 @login_required
 @coach_required
 def add_clip(report_id):
-    report = ScoutingReport.query.get_or_404(report_id)
+    report = ScoutingReport.query.filter_by(
+        id=report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = ScoutingClipForm()
     
     if form.validate_on_submit():
@@ -233,14 +353,20 @@ def add_clip(report_id):
         # Create standardized YouTube link
         standard_link = f'https://www.youtube.com/watch?v={video_id}'
         
+        # Find the highest existing clip ID and add 1
+        highest_id = db.session.query(db.func.max(ScoutingClip.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         clip = ScoutingClip(
+            id=next_id,  # Explicitly set the ID
             scouting_report_id=report.id,
             title=form.title.data,
             youtube_link=standard_link,
             start_time=form.start_time.data,
             end_time=form.end_time.data,
             clip_type=form.clip_type.data,
-            description=form.description.data
+            description=form.description.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         db.session.add(clip)
@@ -255,8 +381,16 @@ def add_clip(report_id):
 @login_required
 @coach_required
 def edit_clip(clip_id):
-    clip = ScoutingClip.query.get_or_404(clip_id)
-    report = ScoutingReport.query.get(clip.scouting_report_id)
+    clip = ScoutingClip.query.filter_by(
+        id=clip_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    report = ScoutingReport.query.filter_by(
+        id=clip.scouting_report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = ScoutingClipForm(obj=clip)
     
     if form.validate_on_submit():
@@ -289,7 +423,11 @@ def edit_clip(clip_id):
 @login_required
 @coach_required
 def delete_clip(clip_id):
-    clip = ScoutingClip.query.get_or_404(clip_id)
+    clip = ScoutingClip.query.filter_by(
+        id=clip_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     report_id = clip.scouting_report_id
     title = clip.title
     
@@ -302,8 +440,15 @@ def delete_clip(clip_id):
 @bp.route('/view_clip/<int:clip_id>')
 @login_required
 def view_clip(clip_id):
-    clip = ScoutingClip.query.get_or_404(clip_id)
-    report = ScoutingReport.query.get(clip.scouting_report_id)
+    clip = ScoutingClip.query.filter_by(
+        id=clip_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    report = ScoutingReport.query.filter_by(
+        id=clip.scouting_report_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     return render_template('scouting/view_clip.html', clip=clip, report=report)
 
