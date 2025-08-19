@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from sqlalchemy.orm import subqueryload
 from flask_login import login_required, current_user
 from app import db
@@ -7,7 +7,7 @@ from app.models.game import Game
 from app.models.tournament import Tournament
 from app.models.point import Point, LineUp
 from app.models.event import Event
-from app.models.stats import PlayerPointStats#
+from app.models.stats import PlayerPointStats
 from app.models.throws import Throw
 from app.models.cutting_skill import CuttingSkill
 from app.models.clip import Clip
@@ -20,6 +20,12 @@ from datetime import datetime, timedelta
 
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
+
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
 
 def is_admin(user):
     """Check if user has admin role"""
@@ -35,14 +41,15 @@ _team_avg_timestamp = {}
 
 def get_cached_team_averages(games=None, max_age_minutes=15):
     """Get team averages with caching"""
-    # Create a cache key based on game IDs
+    # Create a cache key based on game IDs and team ID
+    team_id = get_current_team_id()
     if games:
         if isinstance(games, list):
-            cache_key = tuple(sorted([g.id for g in games]))
+            cache_key = (team_id, tuple(sorted([g.id for g in games])))
         else:
-            cache_key = (games.id,)
+            cache_key = (team_id, (games.id,))
     else:
-        cache_key = 'all_games'
+        cache_key = (team_id, 'all_games')
     
     now = datetime.now()
     if (cache_key in _team_avg_cache and 
@@ -70,13 +77,25 @@ def safe_date_format(date_obj, format_str='%Y-%m-%d'):
 
 # Use LRU cache for player stats that don't change often
 @lru_cache(maxsize=128)
-def get_cached_player_base_stats(player_id, game_ids_tuple=None):
+def get_cached_player_base_stats(player_id, game_ids_tuple=None, team_id=None):
     """Cached version of player stats"""
-    player = Player.query.get(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=team_id
+    ).first()
+    
+    if not player:
+        return {}
+        
     if game_ids_tuple:
-        games = [Game.query.get(gid) for gid in game_ids_tuple]
+        games = [Game.query.filter_by(
+            id=gid,
+            team_organization_id=team_id
+        ).first() for gid in game_ids_tuple]
+        games = [g for g in games if g]  # Filter out None values
     else:
         games = None
+        
     return get_player_base_stats(player, games)
 
 # Helper function to convert games to a tuple of IDs for caching
@@ -132,7 +151,10 @@ def convert_booleans_for_js(obj):
 def calculate_hockey_assists(player, games=None):
     """Calculate hockey assists (second-to-last pass before a goal)"""
     # Start with base query for all throws in points
-    query = Throw.query.filter_by(thrower_id=player.id)
+    query = Throw.query.filter_by(
+        thrower_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
     
     if games:
         if isinstance(games, list):
@@ -154,7 +176,8 @@ def calculate_hockey_assists(player, games=None):
                 Throw.thrower_id == throw.receiver_id,
                 Throw.point_id == throw.point_id,
                 Throw.throw_type == 'assist',
-                Throw.created_at > throw.created_at
+                Throw.created_at > throw.created_at,
+                Throw.team_organization_id == get_current_team_id()
             ).order_by(Throw.created_at).first()
             
             if assist:
@@ -168,7 +191,7 @@ def get_player_throw_stats(player, games=None):
     query = Throw.query.filter(
         (Throw.thrower_id == player.id) |
         (Throw.receiver_id == player.id)
-    )
+    ).filter_by(team_organization_id=get_current_team_id())
     
     if games:
         if isinstance(games, list):
@@ -279,7 +302,11 @@ def get_player_throw_stats(player, games=None):
 def calculate_team_radar_stats(games, team_name):
     """Calculate team average statistics for radar charts"""
     # Get all active players from the team
-    players = Player.query.filter_by(active=True, team=team_name).all()
+    players = Player.query.filter_by(
+        active=True, 
+        team=team_name,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     if not players or not games:
         return default_team_stats()
@@ -414,15 +441,10 @@ def calculate_per(player, games=None, team_avgs=None):
     """
     # Use cached stats if possible
     game_ids_tuple = games_to_tuple(games)
-    stats = get_cached_player_base_stats(player.id, game_ids_tuple)
+    stats = get_cached_player_base_stats(player.id, game_ids_tuple, get_current_team_id())
     
     # Use the optimized function that works with pre-loaded stats
     return calculate_per_from_stats(stats, team_avgs)
-
-
-
-
-
 
 def get_player_base_stats(player, games=None):
     """Get comprehensive player statistics"""
@@ -481,7 +503,10 @@ def get_player_base_stats(player, games=None):
     
     try:
         # Get points played
-        lineup_query = LineUp.query.filter_by(player_id=player.id)
+        lineup_query = LineUp.query.filter_by(
+            player_id=player.id,
+            team_organization_id=get_current_team_id()
+        )
         if games:
             if isinstance(games, list):
                 point_ids = [p.id for g in games for p in g.points]
@@ -502,7 +527,10 @@ def get_player_base_stats(player, games=None):
             stats['games_played'] = len(set(lineup.point.game_id for lineup in points_played))
 
         # Get all throws for this player
-        throws_query = Throw.query.filter(Throw.thrower_id == player.id)
+        throws_query = Throw.query.filter(
+            Throw.thrower_id == player.id,
+            Throw.team_organization_id == get_current_team_id()
+        )
         if games:
             throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
 
@@ -540,7 +568,10 @@ def get_player_base_stats(player, games=None):
         ]
 
         # Get all events for this player
-        events_query = Event.query.filter_by(player_id=player.id)
+        events_query = Event.query.filter_by(
+            player_id=player.id,
+            team_organization_id=get_current_team_id()
+        )
         if games:
             events_query = events_query.filter(Event.point_id.in_(point_ids))
         
@@ -594,7 +625,10 @@ def get_player_base_stats(player, games=None):
         stats['d_line_plus_minus'] = 0
         
         # Get all events for this player
-        events_query = Event.query.filter_by(player_id=player.id)
+        events_query = Event.query.filter_by(
+            player_id=player.id,
+            team_organization_id=get_current_team_id()
+        )
         if games:
             if isinstance(games, list):
                 point_ids = [p.id for g in games for p in g.points]
@@ -609,7 +643,10 @@ def get_player_base_stats(player, games=None):
         # Process all events for this player
         for event in events_query.all():
             # Get the point for this event
-            point = Point.query.get(event.point_id)
+            point = Point.query.filter_by(
+                id=event.point_id,
+                team_organization_id=get_current_team_id()
+            ).first()
             
             # Skip if point is None
             if not point:
@@ -637,7 +674,9 @@ def get_player_base_stats(player, games=None):
             stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['d_line_points_played']
 
         # Get clips statistics using new relationship pattern
-        clips_query = player.clip_appearances
+        clips_query = player.clip_appearances.filter_by(
+            team_organization_id=get_current_team_id()
+        )
         if games:
             if isinstance(games, list):
                 game_ids = [g.id for g in games]
@@ -654,7 +693,6 @@ def get_player_base_stats(player, games=None):
         # Count hockey assists directly from throw type
         stats['hockey_assists'] = sum(1 for t in unique_throws.values() if t.throw_type == 'hockey_assist')
 
-        
 
     except Exception as e:
         print(f"Error getting stats for {player.name}: {str(e)}")
@@ -662,11 +700,6 @@ def get_player_base_stats(player, games=None):
         traceback.print_exc()
     
     return stats
-
-
-
-
-
 
 def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, limit=None):
     """Process throw data for heatmap visualization with limit"""
@@ -684,7 +717,7 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
                 })
 
     # 1. Get Throw Start Locations
-    throw_query = Throw.query
+    throw_query = Throw.query.filter_by(team_organization_id=get_current_team_id())
     if player_id:
         throw_query = throw_query.filter(Throw.thrower_id == player_id)
     if team_name:
@@ -703,7 +736,10 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
     # 2. Get Goal, Throwaway, and Scored On Locations from Events
     event_types_to_query = ['goal', 'throwaway', 'scored_on']
     for event_type in event_types_to_query:
-        event_query = Event.query.filter_by(event_type=event_type)
+        event_query = Event.query.filter_by(
+            event_type=event_type,
+            team_organization_id=get_current_team_id()
+        )
         if player_id:
             event_query = event_query.filter_by(player_id=player_id)
         if team_name:
@@ -718,7 +754,10 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
 
 def generate_player_connections(team_name=None, opposition_team=None, min_connections=1):
     """Generate player connection data using Throws model with minimum connection threshold"""
-    query = Throw.query.filter(Throw.receiver_id.isnot(None))
+    query = Throw.query.filter(
+        Throw.receiver_id.isnot(None),
+        Throw.team_organization_id == get_current_team_id()
+    )
     
     if team_name:
         query = query.join(Throw.thrower).filter(Player.team == team_name)
@@ -757,7 +796,10 @@ def generate_player_connections(team_name=None, opposition_team=None, min_connec
     
     nodes = []
     for player_id in player_ids_in_connections:
-        player = Player.query.get(player_id)
+        player = Player.query.filter_by(
+            id=player_id,
+            team_organization_id=get_current_team_id()
+        ).first()
         if player:
             nodes.append({
                 'id': player.id,
@@ -771,16 +813,16 @@ def generate_player_connections(team_name=None, opposition_team=None, min_connec
         'links': list(connections.values())
     }
 
-
-
-
 # --- Additional Helper Functions ---
 
 def calculate_team_averages(games=None):
     """
     Calculate team averages for PER normalization with optimizations
     """
-    players = Player.query.filter_by(active=True).all()
+    players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Use batch loading for player stats
     player_stats = get_players_base_stats(players, games)
@@ -822,9 +864,6 @@ def calculate_team_averages(games=None):
     initial_avgs['avg_uper'] = totals['uper_total'] / totals['player_count'] if totals['player_count'] > 0 else 1
     
     return initial_avgs
-
-
-
 
 def calculate_game_stats(game):
     """
@@ -884,7 +923,11 @@ def calculate_game_stats(game):
         })
         
         # Count turnovers and possessions
-        point_events = Event.query.filter_by(point_id=point.id).order_by(Event.timestamp).all()
+        point_events = Event.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).order_by(Event.timestamp).all()
+        
         stats['turnovers'] += sum(1 for e in point_events if e.event_type in ['throwaway', 'drop', 'stall'])
         stats['possessions'] += count_possessions(point_events)
     
@@ -896,7 +939,10 @@ def calculate_game_stats(game):
 @login_required
 def debug_throws():
     """Debug view for throws model"""
-    throws = Throw.query.order_by(Throw.created_at.desc()).limit(100).all()
+    throws = Throw.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(Throw.created_at.desc()).limit(100).all()
+    
     return render_template('stats/debug_throws.html', throws=throws)
 
 @bp.route('/')
@@ -936,7 +982,10 @@ def index():
             team_name = current_user.player.team
 
         # Get active players with eager loading
-        players_query = Player.query.filter_by(active=True)
+        players_query = Player.query.filter_by(
+            active=True,
+            team_organization_id=get_current_team_id()
+        )
         if team_name:
             players_query = players_query.filter_by(team=team_name)
         players = players_query.all()
@@ -947,7 +996,9 @@ def index():
 
 
         # Get recent games with eager loading for tournament only
-        recent_games = Game.query.options(
+        recent_games = Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).options(
             db.joinedload(Game.tournament)
         ).order_by(Game.date.desc()).all()
         
@@ -1087,12 +1138,6 @@ def index():
         flash(f"An error occurred: {str(e)}", "danger")
         return render_template('stats/index.html', **default_context)
 
-
-
-
-
-
-
 # Add these helper functions:
 
 def calculate_player_recent_performance(player, recent_games):
@@ -1212,12 +1257,13 @@ def calculate_performance_trends(games):
         'break_percentage': json.dumps(break_percentage)
     }
 
-
-
 @bp.route('/player/<int:player_id>')
 @login_required
 def player_stats(player_id):
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Check if user has permission to view this player's stats
     if not (is_admin(current_user) or is_coach(current_user) or (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player.id)):
@@ -1230,12 +1276,25 @@ def player_stats(player_id):
 
     # Determine which games to analyze
     if game_id:
-        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+        games = [Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first()] if Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first() else []
     elif tournament_id:
-        tournament = Tournament.query.get(tournament_id)
-        games = tournament.games.all() if tournament else []
+        tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        games = tournament.games.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all() if tournament else []
     else:
-        games = Game.query.all()
+        games = Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all()
     
     # Use the new batch function for a single player to ensure consistency
     player_stats_dict = get_players_base_stats([player], games)
@@ -1255,7 +1314,10 @@ def player_stats(player_id):
     point_ids = get_point_ids_from_games(games)
 
     # Get cutting skills data
-    cutting_skills_query = CuttingSkill.query.filter_by(player_id=player_id)
+    cutting_skills_query = CuttingSkill.query.filter_by(
+        player_id=player_id,
+        team_organization_id=get_current_team_id()
+    )
     if point_ids:
         cutting_skills_query = cutting_skills_query.filter(CuttingSkill.point_id.in_(point_ids))
     cutting_skills = cutting_skills_query.all()
@@ -1320,7 +1382,9 @@ def player_stats(player_id):
     
     # Get player's game history
     player_games = []
-    games_query = Game.query
+    games_query = Game.query.filter_by(
+        team_organization_id=get_current_team_id()
+    )
     if tournament_id:
         games_query = games_query.filter_by(tournament_id=tournament_id)
     elif game_id:
@@ -1330,7 +1394,9 @@ def player_stats(player_id):
         # Check if player participated in this game
         lineup_query = LineUp.query.join(Point).filter(
             LineUp.player_id == player.id,
-            Point.game_id == game.id
+            Point.game_id == game.id,
+            LineUp.team_organization_id == get_current_team_id(),
+            Point.team_organization_id == get_current_team_id()
         )
         
         if lineup_query.count() > 0:
@@ -1358,7 +1424,9 @@ def player_stats(player_id):
         throwaway_direction_data['percentage'] = (throwaway_direction_data['count'] / throwaway_direction_data['total']) * 100
     
     # Get tournaments for filter
-    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    tournaments = Tournament.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(Tournament.start_date.desc()).all()
 
     # Calculate per-point metrics for radar charts
     if stats['points_played'] > 0:
@@ -1420,30 +1488,32 @@ def player_stats(player_id):
         throwaway_direction_data=throwaway_direction_data
     )
 
-
-
-
-
-
-
-
-
-
 @bp.route('/game/<int:game_id>')
 @login_required
 def game_stats(game_id):
     """
     Comprehensive game statistics and visualizations
     """
-    game = Game.query.get_or_404(game_id)
+    game = Game.query.filter_by(
+        id=game_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Calculate team statistics
     team_stats = calculate_game_stats(game)
     
     # Get all players who participated in this game
-    player_ids = db.session.query(LineUp.player_id).join(Point).filter(Point.game_id == game_id).distinct().all()
+    player_ids = db.session.query(LineUp.player_id).join(Point).filter(
+        Point.game_id == game_id,
+        LineUp.team_organization_id == get_current_team_id(),
+        Point.team_organization_id == get_current_team_id()
+    ).distinct().all()
+    
     player_ids = [pid[0] for pid in player_ids]
-    players = Player.query.filter(Player.id.in_(player_ids)).all()
+    players = Player.query.filter(
+        Player.id.in_(player_ids),
+        Player.team_organization_id == get_current_team_id()
+    ).all()
     
     # Calculate team averages for this game
     team_avgs = get_cached_team_averages([game])
@@ -1498,8 +1568,6 @@ def calculate_impact_score(stats):
     return (stats['goals'] * 2 + stats['assists'] * 1.5 + 
             stats['blocks'] * 1.5 - stats['turnovers'])
 
-
-
 @bp.route('/team')
 @login_required
 def team_stats():
@@ -1511,11 +1579,14 @@ def team_stats():
     tournament_id = request.args.get('tournament_id', type=int)
     
     # Get filtered games
-    games_query = Game.query
+    games_query = Game.query.filter_by(team_organization_id=get_current_team_id())
     if tournament_id:
         games_query = games_query.filter_by(tournament_id=tournament_id)
     elif season:
-        tournament_ids = [t.id for t in Tournament.query.filter_by(season=season).all()]
+        tournament_ids = [t.id for t in Tournament.query.filter_by(
+            season=season,
+            team_organization_id=get_current_team_id()
+        ).all()]
         games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
     
     # Use eager loading for related data
@@ -1559,7 +1630,10 @@ def team_stats():
         team_name = current_user.player.team
     
     # Calculate player statistics
-    players_query = Player.query.filter_by(active=True)
+    players_query = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    )
     if team_name:
         players_query = players_query.filter_by(team=team_name)
     players = players_query.all()
@@ -1613,8 +1687,13 @@ def team_stats():
     performance_trends = calculate_performance_trends(games)
     
     # Get filter options
-    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
-    seasons = db.session.query(Tournament.season).distinct().all()
+    tournaments = Tournament.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(Tournament.start_date.desc()).all()
+    
+    seasons = db.session.query(Tournament.season).filter_by(
+        team_organization_id=get_current_team_id()
+    ).distinct().all()
     seasons = [s[0] for s in seasons if s[0]]
     
     return render_template(
@@ -1636,15 +1715,14 @@ def team_stats():
         performance_trends=performance_trends
     )
 
-
-
 # --- Helper functions for visualization data ---
 
 def generate_throw_vectors(player, games=None):
     """Generate throw vector data based on consecutive catches"""
     events_query = Event.query.filter(
         Event.player_id == player.id,
-        Event.event_type.in_(['catch', 'goal'])
+        Event.event_type.in_(['catch', 'goal']),
+        Event.team_organization_id == get_current_team_id()
     )
 
     if games:
@@ -1657,7 +1735,11 @@ def generate_throw_vectors(player, games=None):
     throw_vectors = []
     for event in events_query.all():
         if event.previous_catch_id:
-            previous_catch = Event.query.get(event.previous_catch_id)
+            previous_catch = Event.query.filter_by(
+                id=event.previous_catch_id,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
             if previous_catch:
                 throw_vectors.append({
                     'start_x': previous_catch.field_position_x,
@@ -1676,7 +1758,12 @@ def generate_throwaway_locations(player, games=None):
     """
     Generate throwaway location data for visualization
     """
-    events_query = Event.query.filter_by(player_id=player.id, event_type='throwaway')
+    events_query = Event.query.filter_by(
+        player_id=player.id, 
+        event_type='throwaway',
+        team_organization_id=get_current_team_id()
+    )
+    
     if games:
         if isinstance(games, list):
             point_ids = [p.id for g in games for p in g.points]
@@ -1695,7 +1782,8 @@ def generate_throwaway_locations(player, games=None):
             # Try to find the previous event to show throw trajectory
             prev_event = Event.query.filter(
                 Event.point_id == event.point_id,
-                Event.timestamp < event.timestamp
+                Event.timestamp < event.timestamp,
+                Event.team_organization_id == get_current_team_id()
             ).order_by(Event.timestamp.desc()).first()
             
             if prev_event and prev_event.field_position_x is not None and prev_event.field_position_y is not None:
@@ -1710,13 +1798,18 @@ def generate_throwaway_locations(player, games=None):
 
 def count_points_played(player, games=None):
     """Count number of points played by a player"""
-    query = LineUp.query.filter_by(player_id=player.id)
+    query = LineUp.query.filter_by(
+        player_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
+    
     if games:
         if isinstance(games, list):
             point_ids = [p.id for g in games for p in g.points]
         else:
             point_ids = [p.id for p in games.points]
         query = query.filter(LineUp.point_id.in_(point_ids))
+    
     return query.count()
 
 def count_events(query_base, event_types):
@@ -1745,7 +1838,11 @@ def calculate_o_d_line_stats(player, games=None):
     }
 
     try:
-        query = LineUp.query.filter_by(player_id=player.id).join(Point)
+        query = LineUp.query.filter_by(
+            player_id=player.id,
+            team_organization_id=get_current_team_id()
+        ).join(Point)
+        
         if games:
             if isinstance(games, list):
                 game_ids = [g.id for g in games]
@@ -1954,9 +2051,20 @@ def get_optimal_lines(points, players):
 @bp.route('/debug_stats/<int:player_id>')
 @login_required
 def debug_stats(player_id):
-    player = Player.query.get_or_404(player_id)
-    point_stats = PlayerPointStats.query.filter_by(player_id=player_id).all()
-    events = Event.query.filter_by(player_id=player_id).all()
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    point_stats = PlayerPointStats.query.filter_by(
+        player_id=player_id,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    events = Event.query.filter_by(
+        player_id=player_id,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     return jsonify({
         'player': player.name,
@@ -1996,7 +2104,11 @@ def calculate_hucks(player, games=None):
 @bp.route('/debug/players')
 @login_required
 def debug_players():
-    players = Player.query.filter_by(active=True).all()
+    players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
     return jsonify({
         'players': [{
             'id': p.id,
@@ -2010,10 +2122,15 @@ def debug_players():
 @login_required
 def debug_break_throws():
     # Get all throws with break_throw=True
-    break_throws = Throw.query.filter_by(break_throw=True).all()
+    break_throws = Throw.query.filter_by(
+        break_throw=True,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Get total throws for comparison
-    total_throws = Throw.query.count()
+    total_throws = Throw.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).count()
     
     return jsonify({
         'total_throws': total_throws,
@@ -2029,12 +2146,14 @@ def debug_break_throws():
         } for t in break_throws[:10]]  # Show first 10 break throws
     })
 
-
 @bp.route('/debug/per/<int:player_id>')
 @login_required
 def debug_per_calculation(player_id):
     """Debug page showing step-by-step PER calculation for a player"""
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get filter parameters
     tournament_id = request.args.get('tournament_id', type=int)
@@ -2042,12 +2161,25 @@ def debug_per_calculation(player_id):
 
     # Determine which games to analyze
     if game_id:
-        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+        games = [Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first()] if Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first() else []
     elif tournament_id:
-        tournament = Tournament.query.get(tournament_id)
-        games = tournament.games.all() if tournament else []
+        tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        games = tournament.games.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all() if tournament else []
     else:
-        games = Game.query.all()
+        games = Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all()
     
     # Get player stats
     stats = get_player_base_stats(player, games)
@@ -2056,7 +2188,10 @@ def debug_per_calculation(player_id):
     team_avgs = calculate_team_averages(games)
     
     # Calculate raw PER values for all players to find max
-    all_players = Player.query.filter_by(active=True).all()
+    all_players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).all()
     raw_per_values = {}
     
     for p in all_players:
@@ -2208,7 +2343,9 @@ def debug_per_calculation(player_id):
         }
     
     # Get tournaments for filter
-    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    tournaments = Tournament.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(Tournament.start_date.desc()).all()
     
     return render_template(
         'stats/debug_per.html',
@@ -2273,7 +2410,7 @@ def calculate_additional_team_metrics(games):
         point_ids.extend([p.id for p in points])
     
     # Count all throws
-    throws_query = Throw.query
+    throws_query = Throw.query.filter_by(team_organization_id=get_current_team_id())
     throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
     throws = throws_query.all()
     
@@ -2284,14 +2421,18 @@ def calculate_additional_team_metrics(games):
     goals = sum(1 for t in throws if t.throw_type == 'assist')
     
     # Count blocks
-    blocks_query = Event.query.filter_by(event_type='block')
+    blocks_query = Event.query.filter_by(
+        event_type='block',
+        team_organization_id=get_current_team_id()
+    )
     blocks_query = blocks_query.filter(Event.point_id.in_(point_ids))
     blocks = blocks_query.count()
     
     # Count turnovers forced
     turnovers_forced_query = Event.query.filter(
         Event.event_type.in_(['throwaway', 'drop', 'stall']),
-        Event.is_offensive == False
+        Event.is_offensive == False,
+        Event.team_organization_id == get_current_team_id()
     )
     turnovers_forced_query = turnovers_forced_query.filter(Event.point_id.in_(point_ids))
     turnovers_forced = turnovers_forced_query.count()
@@ -2466,67 +2607,57 @@ def get_previous_period_games(season, tournament_id):
     """Get games from previous period for comparison"""
     if tournament_id:
         # Get current tournament
-        current_tournament = Tournament.query.get(tournament_id)
+        current_tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
         if current_tournament:
             # Find previous tournament in same season
             prev_tournament = Tournament.query.filter(
                 Tournament.season == current_tournament.season,
-                Tournament.start_date < current_tournament.start_date
+                Tournament.start_date < current_tournament.start_date,
+                Tournament.team_organization_id == get_current_team_id()
             ).order_by(Tournament.start_date.desc()).first()
             
             if prev_tournament:
-                return Game.query.filter_by(tournament_id=prev_tournament.id).all()
+                return Game.query.filter_by(
+                    tournament_id=prev_tournament.id,
+                    team_organization_id=get_current_team_id()
+                ).all()
     elif season:
         # Get previous season
-        seasons = db.session.query(Tournament.season).distinct().order_by(Tournament.season).all()
+        seasons = db.session.query(Tournament.season).filter_by(
+            team_organization_id=get_current_team_id()
+        ).distinct().order_by(Tournament.season).all()
+        
         seasons = [s[0] for s in seasons if s[0]]
         
         if season in seasons:
             idx = seasons.index(season)
             if idx > 0:
                 prev_season = seasons[idx - 1]
-                tournament_ids = [t.id for t in Tournament.query.filter_by(season=prev_season).all()]
-                return Game.query.filter(Game.tournament_id.in_(tournament_ids)).all()
+                tournament_ids = [t.id for t in Tournament.query.filter_by(
+                    season=prev_season,
+                    team_organization_id=get_current_team_id()
+                ).all()]
+                
+                return Game.query.filter(
+                    Game.tournament_id.in_(tournament_ids),
+                    Game.team_organization_id == get_current_team_id()
+                ).all()
     
     # Default: return empty list if no previous period found
     return []
-
-
-
-def calculate_line_efficiency(players, games, is_offensive=True):
-    """Calculate line efficiency with gender separation"""
-    player_efficiency = {}
-    
-    for player in players:
-        # Get points where player was in lineup
-        lineup_query = LineUp.query.join(Point).filter(
-            LineUp.player_id == player.id,
-            Point.our_line_type == ('O-line' if is_offensive else 'D-line')
-        )
-        
-        if games:
-            game_ids = [g.id for g in games]
-            lineup_query = lineup_query.filter(Point.game_id.in_(game_ids))
-        
-        points = lineup_query.all()
-        points_played = len(points)
-        
-        if points_played > 0:
-            # Count points where we scored using the Point.we_scored property
-            points_scored = sum(1 for lineup in points if lineup.point.we_scored)
-            
-            # Calculate efficiency as scoring percentage
-            efficiency = points_scored / points_played
-
-            player_efficiency[player] = efficiency
-
-    return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
 
 @bp.route('/debug/line_plus_minus/<int:player_id>')
 @login_required
 def debug_line_plus_minus(player_id):
     """Debug view for O-line and D-line plus/minus calculation"""
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get filter parameters
     tournament_id = request.args.get('tournament_id', type=int)
@@ -2534,15 +2665,31 @@ def debug_line_plus_minus(player_id):
 
     # Determine which games to analyze
     if game_id:
-        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+        games = [Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first()] if Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first() else []
     elif tournament_id:
-        tournament = Tournament.query.get(tournament_id)
-        games = tournament.games.all() if tournament else []
+        tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        games = tournament.games.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all() if tournament else []
     else:
-        games = Game.query.all()
+        games = Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all()
     
     # Get points played by this player
-    lineup_query = LineUp.query.filter_by(player_id=player.id)
+    lineup_query = LineUp.query.filter_by(
+        player_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
     if games:
         if isinstance(games, list):
             point_ids = [p.id for g in games for p in g.points]
@@ -2567,7 +2714,10 @@ def debug_line_plus_minus(player_id):
     negative_events = ['throwaway', 'drop', 'stall']
     
     # Get all events for this player
-    events_query = Event.query.filter_by(player_id=player.id)
+    events_query = Event.query.filter_by(
+        player_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
     if games:
         if isinstance(games, list):
             point_ids = [p.id for g in games for p in g.points]
@@ -2578,7 +2728,10 @@ def debug_line_plus_minus(player_id):
     # Process all events for this player
     for event in events_query.order_by(Event.timestamp).all():
         # Get the point for this event
-        point = Point.query.get(event.point_id)
+        point = Point.query.filter_by(
+            id=event.point_id,
+            team_organization_id=get_current_team_id()
+        ).first()
         
         # Skip if point is None
         if not point:
@@ -2622,7 +2775,10 @@ def debug_line_plus_minus(player_id):
                 d_line_events.append(event_data)
     
     # Get throws data for completeness (in case throwaways are tracked there)
-    throws_query = Throw.query.filter_by(thrower_id=player.id)
+    throws_query = Throw.query.filter_by(
+        thrower_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
     if games:
         if isinstance(games, list):
             point_ids = [p.id for g in games for p in g.points]
@@ -2634,7 +2790,10 @@ def debug_line_plus_minus(player_id):
     throwaway_events = []
     for throw in throws_query.filter_by(throw_type='throwaway').order_by(Throw.created_at).all():
         # Get the point for this throw
-        point = Point.query.get(throw.point_id)
+        point = Point.query.filter_by(
+            id=throw.point_id,
+            team_organization_id=get_current_team_id()
+        ).first()
         
         # Skip if point is None
         if not point:
@@ -2672,7 +2831,9 @@ def debug_line_plus_minus(player_id):
     d_line_plus_minus_per_point = d_line_plus_minus / len(d_line_points) if d_line_points else 0
     
     # Get tournaments for filter
-    tournaments = Tournament.query.order_by(Tournament.start_date.desc()).all()
+    tournaments = Tournament.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(Tournament.start_date.desc()).all()
     
     # Sort events by timestamp
     o_line_events.sort(key=lambda x: x['timestamp'] if x['timestamp'] != "Unknown" else "")
@@ -2727,7 +2888,10 @@ def get_players_base_stats(players, games=None):
                 print(f"Error getting points for game: {str(e)}")
     
     # 1. Preload all lineups for these players in one query
-    lineup_query = LineUp.query.filter(LineUp.player_id.in_(player_ids))
+    lineup_query = LineUp.query.filter(
+        LineUp.player_id.in_(player_ids),
+        LineUp.team_organization_id == get_current_team_id()
+    )
     if point_ids:
         lineup_query = lineup_query.filter(LineUp.point_id.in_(point_ids))
     
@@ -2744,7 +2908,8 @@ def get_players_base_stats(players, games=None):
     # 2. Preload all throws by these players in one query
     throws_query = Throw.query.filter(
         (Throw.thrower_id.in_(player_ids)) | 
-        (Throw.receiver_id.in_(player_ids))
+        (Throw.receiver_id.in_(player_ids)),
+        Throw.team_organization_id == get_current_team_id()
     )
     if point_ids:
         throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
@@ -2764,7 +2929,10 @@ def get_players_base_stats(players, games=None):
             throws_by_receiver[throw.receiver_id].append(throw)
     
     # 3. Preload all events for these players in one query
-    events_query = Event.query.filter(Event.player_id.in_(player_ids))
+    events_query = Event.query.filter(
+        Event.player_id.in_(player_ids),
+        Event.team_organization_id == get_current_team_id()
+    )
     if point_ids:
         events_query = events_query.filter(Event.point_id.in_(point_ids))
     
@@ -3148,7 +3316,11 @@ def generate_player_sankey_data(player_id, point_ids=None):
     }
     
     # Get the player
-    player = Player.query.get(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first()
+    
     if not player:
         return sankey_data
     
@@ -3165,12 +3337,18 @@ def generate_player_sankey_data(player_id, point_ids=None):
     added_node_ids = {f"player_{player.id}"}
     
     # Query for throws TO the player (incoming)
-    incoming_query = Throw.query.filter_by(receiver_id=player.id)
+    incoming_query = Throw.query.filter_by(
+        receiver_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
     if point_ids:
         incoming_query = incoming_query.filter(Throw.point_id.in_(point_ids))
     
     # Query for throws FROM the player (outgoing)
-    outgoing_query = Throw.query.filter_by(thrower_id=player.id)
+    outgoing_query = Throw.query.filter_by(
+        thrower_id=player.id,
+        team_organization_id=get_current_team_id()
+    )
     if point_ids:
         outgoing_query = outgoing_query.filter(Throw.point_id.in_(point_ids))
     
@@ -3194,7 +3372,11 @@ def generate_player_sankey_data(player_id, point_ids=None):
     
     # Add thrower nodes and links
     for thrower_id, count in thrower_counts.items():
-        thrower = Player.query.get(thrower_id)
+        thrower = Player.query.filter_by(
+            id=thrower_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
         if thrower:
             # Add thrower node
             node_id = f"thrower_{thrower.id}"
@@ -3218,7 +3400,11 @@ def generate_player_sankey_data(player_id, point_ids=None):
     
     # Add receiver nodes and links
     for receiver_id, count in receiver_counts.items():
-        receiver = Player.query.get(receiver_id)
+        receiver = Player.query.filter_by(
+            id=receiver_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
         if receiver:
             # Add receiver node
             node_id = f"receiver_{receiver.id}"
@@ -3256,12 +3442,25 @@ def api_player_connections_sankey(player_id): # <-- Accept player_id here
     
     # Determine which games to analyze
     if game_id:
-        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+        games = [Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first()] if Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first() else []
     elif tournament_id:
-        tournament = Tournament.query.get(tournament_id)
-        games = tournament.games.all() if tournament else []
+        tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        games = tournament.games.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all() if tournament else []
     else:
-        games = Game.query.all()
+        games = Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all()
     
     # Get point IDs for filtering
     point_ids = get_point_ids_from_games(games)
@@ -3301,12 +3500,25 @@ def api_player_stats():
     
     # Determine which games to analyze
     if game_id:
-        games = [Game.query.get(game_id)] if Game.query.get(game_id) else []
+        games = [Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first()] if Game.query.filter_by(
+            id=game_id,
+            team_organization_id=get_current_team_id()
+        ).first() else []
     elif tournament_id:
-        tournament = Tournament.query.get(tournament_id)
-        games = tournament.games.all() if tournament else []
+        tournament = Tournament.query.filter_by(
+            id=tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        games = tournament.games.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all() if tournament else []
     else:
-        games = Game.query.all()
+        games = Game.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all()
     
     # Get team name from current user's player
     team_name = None
@@ -3314,7 +3526,10 @@ def api_player_stats():
         team_name = current_user.player.team
     
     # Get active players
-    players_query = Player.query.filter_by(active=True)
+    players_query = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    )
     if team_name:
         players_query = players_query.filter_by(team=team_name)
     players = players_query.all()
@@ -3388,7 +3603,11 @@ def calculate_most_common_throwaway_direction(player, games=None):
     """Analyzes throwaway throws to find the most common direction."""
     point_ids = get_point_ids_from_games(games)
 
-    query = Throw.query.filter_by(thrower_id=player.id, throw_type='throwaway')
+    query = Throw.query.filter_by(
+        thrower_id=player.id, 
+        throw_type='throwaway',
+        team_organization_id=get_current_team_id()
+    )
     if point_ids:
         query = query.filter(Throw.point_id.in_(point_ids))
         
@@ -3467,7 +3686,11 @@ def calculate_most_common_throwaway_location(player, games=None):
     """Analyzes throwaway events to find the most common field zone."""
     point_ids = get_point_ids_from_games(games)
     
-    query = Event.query.filter_by(player_id=player.id, event_type='throwaway')
+    query = Event.query.filter_by(
+        player_id=player.id, 
+        event_type='throwaway',
+        team_organization_id=get_current_team_id()
+    )
     if point_ids:
         query = query.filter(Event.point_id.in_(point_ids))
         
@@ -3560,3 +3783,34 @@ def calculate_per_from_stats(stats, team_avgs):
         avg_uper = 1
     
     return raw_uper * (15 / avg_uper)
+
+def calculate_line_efficiency(players, games, is_offensive=True):
+    """Calculate line efficiency with gender separation"""
+    player_efficiency = {}
+    
+    for player in players:
+        # Get points where player was in lineup
+        lineup_query = LineUp.query.join(Point).filter(
+            LineUp.player_id == player.id,
+            Point.our_line_type == ('O-line' if is_offensive else 'D-line'),
+            LineUp.team_organization_id == get_current_team_id(),
+            Point.team_organization_id == get_current_team_id()
+        )
+        
+        if games:
+            game_ids = [g.id for g in games]
+            lineup_query = lineup_query.filter(Point.game_id.in_(game_ids))
+        
+        points = lineup_query.all()
+        points_played = len(points)
+        
+        if points_played > 0:
+            # Count points where we scored using the Point.we_scored property
+            points_scored = sum(1 for lineup in points if lineup.point.we_scored)
+            
+            # Calculate efficiency as scoring percentage
+            efficiency = points_scored / points_played
+
+            player_efficiency[player] = efficiency
+    
+    return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
