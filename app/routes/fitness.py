@@ -1,5 +1,5 @@
 # app/routes/fitness.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, session
 from flask_login import login_required, current_user
 from app import db
 from app.models.fitness import FitnessMetric, FitnessRecord
@@ -16,6 +16,13 @@ import io
 import tempfile
 
 bp = Blueprint('fitness', __name__, url_prefix='/fitness')
+
+# Helper function to get current team ID
+def get_current_team_id():
+    """Get the current team ID based on user role."""
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
 
 class FitnessRecordForm(FlaskForm):
     metric = SelectField('Metric', coerce=int, validators=[DataRequired()])
@@ -40,7 +47,16 @@ class FitnessGoalForm(FlaskForm):
 @login_required
 def index():
     """Main fitness dashboard"""
-    metrics = FitnessMetric.query.filter_by(active=True).all()
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+        
+    # Filter metrics by team
+    metrics = FitnessMetric.query.filter_by(
+        active=True,
+        team_organization_id=team_id
+    ).all()
     
     # Get team averages and record holders for each metric
     metric_data = []
@@ -59,8 +75,11 @@ def index():
             'record_holder': record_holder_entry
         })
     
-    # Get recent fitness records
-    recent_records = FitnessRecord.query.join(Player).filter(Player.active == True).order_by(
+    # Get recent fitness records - filter by team
+    recent_records = FitnessRecord.query.join(Player).filter(
+        Player.active == True,
+        FitnessRecord.team_organization_id == team_id
+    ).order_by(
         FitnessRecord.date_recorded.desc()
     ).limit(10).all()
     
@@ -72,7 +91,16 @@ def index():
 @login_required
 def player_fitness(player_id):
     """View fitness data for a specific player"""
-    player = Player.query.get_or_404(player_id)
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+        
+    # Filter player by team
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=team_id
+    ).first_or_404()
     
     # Check permissions - only the player, coaches, or admins can view detailed fitness data
     if not (current_user.is_admin or 
@@ -90,8 +118,11 @@ def player_fitness(player_id):
         'skills': ['Maximum Pull Distance', 'Throwing Accuracy', 'Lateral Quickness Drill', 'Jump & Reach']
     }
     
-    # Get all metrics
-    all_metrics = FitnessMetric.query.filter_by(active=True).all()
+    # Get all metrics - filter by team
+    all_metrics = FitnessMetric.query.filter_by(
+        active=True,
+        team_organization_id=team_id
+    ).all()
     
     # Organize metrics by category
     categorized_metrics = {}
@@ -99,15 +130,17 @@ def player_fitness(player_id):
         categorized_metrics[category] = []
         for metric in all_metrics:
             if metric.name in metric_names:
-                # Get player's data for this metric
+                # Get player's data for this metric - filter by team
                 latest_record = FitnessRecord.query.filter_by(
                     player_id=player_id, 
-                    metric_id=metric.id
+                    metric_id=metric.id,
+                    team_organization_id=team_id
                 ).order_by(FitnessRecord.date_recorded.desc()).first()
                 
                 history = FitnessRecord.query.filter_by(
                     player_id=player_id, 
-                    metric_id=metric.id
+                    metric_id=metric.id,
+                    team_organization_id=team_id
                 ).order_by(FitnessRecord.date_recorded).all()
                 
                 team_avg = metric.team_average
@@ -239,7 +272,10 @@ def player_fitness(player_id):
         pass
     
     # Get recent records for this player
-    recent_records = FitnessRecord.query.filter_by(player_id=player_id).order_by(
+    recent_records = FitnessRecord.query.filter_by(
+        player_id=player_id,
+        team_organization_id=team_id
+    ).order_by(
         FitnessRecord.date_recorded.desc()
     ).limit(5).all()
     
@@ -262,7 +298,13 @@ def player_fitness(player_id):
 @login_required
 def record_fitness(player_id):
     """Record a new fitness metric for a player"""
-    player = Player.query.get_or_404(player_id)
+       
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+    
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
     
     # Check permissions
     if not (current_user.is_admin or 
@@ -274,7 +316,7 @@ def record_fitness(player_id):
     form = FitnessRecordForm()
     
     # Get all active metrics for the form dropdown
-    active_metrics = FitnessMetric.query.filter_by(active=True).all()
+    active_metrics = FitnessMetric.query.filter_by(active=True, team_organization_id=team_id).all()
     form.metric.choices = [(m.id, f"{m.name} ({m.unit})") for m in active_metrics]
     
     # Create a dictionary of metric descriptions for the JavaScript
@@ -287,7 +329,8 @@ def record_fitness(player_id):
                 metric_id=form.metric.data,
                 value=form.value.data,
                 notes=form.notes.data,
-                date_recorded=datetime.utcnow()
+                date_recorded=datetime.utcnow(),
+                team_organization_id=team_id  # Add team ID
             )
             db.session.add(record)
             db.session.commit()
@@ -299,7 +342,8 @@ def record_fitness(player_id):
                 goals = FitnessGoal.query.filter_by(
                     player_id=player_id,
                     metric_id=form.metric.data,
-                    completed=False
+                    completed=False,
+                    team_organization_id=team_id
                 ).all()
                 
                 for goal in goals:
@@ -321,7 +365,10 @@ def record_fitness(player_id):
             flash(f'Error recording fitness data: {str(e)}', 'danger')
     
     # Get recent records for this player
-    recent_records = FitnessRecord.query.filter_by(player_id=player_id).order_by(
+    recent_records = FitnessRecord.query.filter_by(
+        player_id=player_id,
+        team_organization_id=team_id
+    ).order_by(
         FitnessRecord.date_recorded.desc()
     ).limit(5).all()
     
@@ -336,7 +383,11 @@ def record_fitness(player_id):
 @admin_required
 def manage_metrics():
     """Manage fitness metrics (admin only)"""
-    metrics = FitnessMetric.query.all()
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))    
+    metrics = FitnessMetric.query.filter_by(team_organization_id=team_id).all()
     return render_template('fitness/manage_metrics.html', metrics=metrics)
 
 @bp.route('/metrics/add', methods=['GET', 'POST'])
@@ -344,6 +395,11 @@ def manage_metrics():
 @admin_required
 def add_metric():
     """Add a new fitness metric (admin only)"""
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+
     form = FitnessMetricForm()
     
     if form.validate_on_submit():
@@ -353,7 +409,8 @@ def add_metric():
                 description=form.description.data,
                 unit=form.unit.data,
                 higher_is_better=form.higher_is_better.data,
-                active=form.active.data
+                active=form.active.data,
+                team_organization_id=team_id  # Add team ID
             )
             db.session.add(metric)
             db.session.commit()
@@ -372,11 +429,19 @@ def add_metric():
 @admin_required
 def edit_metric(metric_id):
     """Edit an existing fitness metric (admin only)"""
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+    
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
     form = FitnessMetricForm(obj=metric)
     
     # Get player count for this metric
-    player_count = db.session.query(FitnessRecord.player_id).filter_by(metric_id=metric_id).distinct().count()
+    player_count = db.session.query(FitnessRecord.player_id).filter_by(
+        metric_id=metric_id,
+        team_organization_id=team_id
+    ).distinct().count()
     
     if form.validate_on_submit():
         try:
@@ -405,11 +470,19 @@ def edit_metric(metric_id):
 @admin_required
 def delete_metric(metric_id):
     """Delete a fitness metric (admin only)"""
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
     
     try:
         # Check if there are any records using this metric
-        record_count = FitnessRecord.query.filter_by(metric_id=metric_id).count()
+        record_count = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).count()
         
         if record_count > 0:
             # Instead of deleting, just mark as inactive
@@ -433,7 +506,12 @@ def delete_metric(metric_id):
 @login_required
 def delete_record(record_id):
     """Delete a fitness record"""
-    record = FitnessRecord.query.get_or_404(record_id)
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+
+    record = FitnessRecord.query.filter_by(id=record_id, team_organization_id=team_id).first_or_404()
     player_id = record.player_id
     
     # Check permissions
@@ -458,20 +536,29 @@ def delete_record(record_id):
 @login_required
 def team_leaderboard():
     """Display leaderboards for all fitness metrics"""
-    metrics = FitnessMetric.query.filter_by(active=True).all()
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+
+    metrics = FitnessMetric.query.filter_by(active=True, team_organization_id=team_id).all()
     
     leaderboards = []
     for metric in metrics:
         # Get top 5 records for this metric
         if metric.higher_is_better:
-            top_records = FitnessRecord.query.filter_by(metric_id=metric.id)\
-                .join(Player)\
+            top_records = FitnessRecord.query.filter_by(
+                metric_id=metric.id,
+                team_organization_id=team_id
+            ).join(Player)\
                 .filter(Player.active == True)\
                 .order_by(FitnessRecord.value.desc())\
                 .limit(5).all()
         else:
-            top_records = FitnessRecord.query.filter_by(metric_id=metric.id)\
-                .join(Player)\
+            top_records = FitnessRecord.query.filter_by(
+                metric_id=metric.id,
+                team_organization_id=team_id
+            ).join(Player)\
                 .filter(Player.active == True)\
                 .order_by(FitnessRecord.value)\
                 .limit(5).all()
@@ -487,8 +574,13 @@ def team_leaderboard():
 @login_required
 def player_metric_history(player_id, metric_id):
     """View detailed history for a specific player and metric"""
-    player = Player.query.get_or_404(player_id)
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))    
+    
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
     
     # Check permissions
     if not (current_user.is_admin or 
@@ -500,7 +592,8 @@ def player_metric_history(player_id, metric_id):
     # Get all records for this player and metric
     records = FitnessRecord.query.filter_by(
         player_id=player_id,
-        metric_id=metric_id
+        metric_id=metric_id,
+        team_organization_id=team_id
     ).order_by(FitnessRecord.date_recorded.desc()).all()
     
     # Get team average
@@ -508,11 +601,15 @@ def player_metric_history(player_id, metric_id):
     
     # Get record holder
     if metric.higher_is_better:
-        record_holder = FitnessRecord.query.filter_by(metric_id=metric_id)\
-            .order_by(FitnessRecord.value.desc()).first()
+        record_holder = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).order_by(FitnessRecord.value.desc()).first()
     else:
-        record_holder = FitnessRecord.query.filter_by(metric_id=metric_id)\
-            .order_by(FitnessRecord.value).first()
+        record_holder = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).order_by(FitnessRecord.value).first()
     
     # Calculate best value and date
     best_value = None
@@ -548,8 +645,13 @@ def player_metric_history(player_id, metric_id):
 @login_required
 def set_goal(player_id, metric_id):
     """Set a fitness goal for a player"""
-    player = Player.query.get_or_404(player_id)
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+    
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
     
     # Check permissions
     if not (current_user.is_admin or 
@@ -573,7 +675,8 @@ def set_goal(player_id, metric_id):
             target_value=target_value,
             target_date=target_date,
             created_at=datetime.utcnow(),
-            completed=False
+            completed=False,
+            team_organization_id=team_id  # Add team ID
         )
         
         db.session.add(goal)
@@ -593,25 +696,34 @@ def set_goal(player_id, metric_id):
 @admin_required
 def batch_record():
     """Record fitness data for multiple players at once (admin/coach only)"""
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+    
     metric_id = request.args.get('metric_id', type=int)
     
     if not metric_id:
-        metrics = FitnessMetric.query.filter_by(active=True).all()
+        metrics = FitnessMetric.query.filter_by(active=True, team_organization_id=team_id).all()
         return render_template('fitness/batch_select_metric.html', metrics=metrics)
     
-    metric = FitnessMetric.query.get_or_404(metric_id)
-    active_players = Player.query.filter_by(active=True).order_by(Player.name).all()
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
+    active_players = Player.query.filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
     
     # Get top records for this metric to display on the page
     if metric.higher_is_better:
-        top_records = FitnessRecord.query.filter_by(metric_id=metric_id)\
-            .join(Player)\
+        top_records = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).join(Player)\
             .filter(Player.active == True)\
             .order_by(FitnessRecord.value.desc())\
             .limit(5).all()
     else:
-        top_records = FitnessRecord.query.filter_by(metric_id=metric_id)\
-            .join(Player)\
+        top_records = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).join(Player)\
             .filter(Player.active == True)\
             .order_by(FitnessRecord.value)\
             .limit(5).all()
@@ -633,7 +745,8 @@ def batch_record():
                             metric_id=metric_id,
                             value=value,
                             notes=notes,
-                            date_recorded=datetime.utcnow()
+                            date_recorded=datetime.utcnow(),
+                            team_organization_id=team_id  # Add team ID
                         )
                         db.session.add(record)
                         records_added += 1
@@ -658,6 +771,14 @@ def batch_record():
 def api_player_metric_chart_data(player_id, metric_id):
     """API endpoint to get chart data for a player's metric history"""
     # Check permissions
+    # ADD THIS BLOCK
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        return jsonify({'error': 'Please select a team first'}), 400
+
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
+
     if not (current_user.is_admin or 
             (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
@@ -665,13 +786,15 @@ def api_player_metric_chart_data(player_id, metric_id):
     
     records = FitnessRecord.query.filter_by(
         player_id=player_id,
-        metric_id=metric_id
+        metric_id=metric_id,
+        team_organization_id=team_id
     ).order_by(FitnessRecord.date_recorded).all()
     
     data = {
         'labels': [record.date_recorded.strftime('%Y-%m-%d') for record in records],
         'values': [float(record.value) for record in records]
     }
+    
     
     return jsonify(data)
 
@@ -680,6 +803,13 @@ def api_player_metric_chart_data(player_id, metric_id):
 def api_previous_values(metric_id):
     """API endpoint to get the most recent values for a metric for all players"""
     # Check permissions for batch operations
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        return jsonify({'error': 'Please select a team first'}), 400
+    
+    # Verify metric belongs to current team
+    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
+
     if not (current_user.is_admin or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
         return jsonify({'error': 'Permission denied'}), 403
@@ -688,7 +818,10 @@ def api_previous_values(metric_id):
     subquery = db.session.query(
         FitnessRecord.player_id,
         func.max(FitnessRecord.date_recorded).label('max_date')
-    ).filter_by(metric_id=metric_id).group_by(FitnessRecord.player_id).subquery()
+    ).filter_by(
+        metric_id=metric_id,
+        team_organization_id=team_id
+    ).group_by(FitnessRecord.player_id).subquery()
     
     # Join with the main table to get the actual records
     records = db.session.query(FitnessRecord).join(
@@ -696,7 +829,8 @@ def api_previous_values(metric_id):
         and_(
             FitnessRecord.player_id == subquery.c.player_id,
             FitnessRecord.date_recorded == subquery.c.max_date,
-            FitnessRecord.metric_id == metric_id
+            FitnessRecord.metric_id == metric_id,
+            FitnessRecord.team_organization_id == team_id
         )
     ).all()
     
@@ -715,6 +849,11 @@ def api_previous_values(metric_id):
 @admin_required
 def export_data():
     """Export all fitness data as CSV"""
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+
     try:
         # Create a StringIO object to write CSV data
         output = io.StringIO()
@@ -730,6 +869,8 @@ def export_data():
             Player, FitnessRecord.player_id == Player.id
         ).join(
             FitnessMetric, FitnessRecord.metric_id == FitnessMetric.id
+        ).filter(
+            FitnessRecord.team_organization_id == team_id
         ).all()
         
         # Write data rows
@@ -780,6 +921,11 @@ class ImportForm(FlaskForm):
 @admin_required
 def import_data():
     """Import fitness data from CSV"""
+    team_id = get_current_team_id()
+    if team_id is None:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+    
     if 'csv_file' not in request.files:
         flash('No file part', 'danger')
         return redirect(url_for('fitness.manage_metrics'))
@@ -818,8 +964,8 @@ def import_data():
                     notes = row[7]
                     
                     # Check if player and metric exist
-                    player = Player.query.get(player_id)
-                    metric = FitnessMetric.query.get(metric_id)
+                    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first()
+                    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first()
                     
                     if not player or not metric:
                         records_skipped += 1
@@ -835,7 +981,8 @@ def import_data():
                     existing_record = FitnessRecord.query.filter_by(
                         player_id=player_id,
                         metric_id=metric_id,
-                        date_recorded=date_recorded
+                        date_recorded=date_recorded,
+                        team_organization_id=team_id
                     ).first()
                     
                     if existing_record:
@@ -850,7 +997,8 @@ def import_data():
                             metric_id=metric_id,
                             value=value,
                             notes=notes,
-                            date_recorded=date_recorded
+                            date_recorded=date_recorded,
+                            team_organization_id=team_id  # Add team ID
                         )
                         db.session.add(record)
                         records_added += 1
@@ -875,7 +1023,12 @@ def import_data():
 @login_required
 def player_goals(player_id):
     """View and manage fitness goals for a player"""
-    player = Player.query.get_or_404(player_id)
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))   
+    
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
     
     # Check permissions
     if not (current_user.is_admin or 
@@ -891,8 +1044,16 @@ def player_goals(player_id):
         # Get active goals
         active_goals = FitnessGoal.query.filter_by(
             player_id=player_id,
-            completed=False
+            completed=False,
+            team_organization_id=team_id
         ).order_by(FitnessGoal.target_date).all()
+        
+        # Get completed goals
+        completed_goals = FitnessGoal.query.filter_by(
+            player_id=player_id,
+            completed=True,
+            team_organization_id=team_id
+        ).order_by(FitnessGoal.completed_date.desc()).all()
         
         # Get completed goals
         completed_goals = FitnessGoal.query.filter_by(
@@ -906,7 +1067,8 @@ def player_goals(player_id):
             # Get current value for this metric
             latest = FitnessRecord.query.filter_by(
                 player_id=player_id,
-                metric_id=goal.metric_id
+                metric_id=goal.metric_id,
+                team_organization_id=team_id
             ).order_by(FitnessRecord.date_recorded.desc()).first()
             
             current_value = latest.value if latest else None
@@ -927,7 +1089,7 @@ def player_goals(player_id):
             })
         
         # Get available metrics for setting new goals
-        available_metrics = FitnessMetric.query.filter_by(active=True).all()
+        available_metrics = FitnessMetric.query.filter_by(active=True, team_organization_id=team_id).all()
         
         return render_template('fitness/player_goals.html',
                               player=player,
@@ -943,10 +1105,15 @@ def player_goals(player_id):
 @login_required
 def complete_goal(goal_id):
     """Mark a goal as completed"""
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))    
+    
     try:
         from app.models.fitness import FitnessGoal
         
-        goal = FitnessGoal.query.get_or_404(goal_id)
+        goal = FitnessGoal.query.filter_by(id=goal_id, team_organization_id=team_id).first_or_404()
         player_id = goal.player_id
         
         # Check permissions
@@ -975,10 +1142,15 @@ def complete_goal(goal_id):
 @login_required
 def delete_goal(goal_id):
     """Delete a fitness goal"""
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+    
     try:
         from app.models.fitness import FitnessGoal
         
-        goal = FitnessGoal.query.get_or_404(goal_id)
+        goal = FitnessGoal.query.filter_by(id=goal_id, team_organization_id=team_id).first_or_404()
         player_id = goal.player_id
         
         # Check permissions
@@ -1006,7 +1178,12 @@ def delete_goal(goal_id):
 @login_required
 def add_goal(player_id):
     """Add a new fitness goal for a player"""
-    player = Player.query.get_or_404(player_id)
+    team_id = get_current_team_id()
+    if team_id is None and current_user.is_admin:
+        flash('Please select a team first', 'warning')
+        return redirect(url_for('team.select_team'))
+
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
     
     # Check permissions
     if not (current_user.is_admin or 
@@ -1024,7 +1201,7 @@ def add_goal(player_id):
         target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
         
         # Validate the metric exists
-        metric = FitnessMetric.query.get_or_404(metric_id)
+        metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first_or_404()
         
         # Create the goal
         goal = FitnessGoal(
@@ -1033,7 +1210,8 @@ def add_goal(player_id):
             target_value=target_value,
             target_date=target_date,
             created_at=datetime.utcnow(),
-            completed=False
+            completed=False,
+            team_organization_id=team_id  # Add team ID
         )
         
         db.session.add(goal)
