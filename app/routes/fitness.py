@@ -230,13 +230,18 @@ def player_fitness(player_id):
     try:
         # This assumes you have a FitnessGoal model - if not, leave as empty list
         from app.models.fitness import FitnessGoal
-        goals = FitnessGoal.query.filter_by(player_id=player_id, completed=False).all()
+        goals = FitnessGoal.query.filter_by(
+            player_id=player_id, 
+            completed=False,
+            team_organization_id=team_id
+        ).all()
         
         for goal in goals:
             # Get current value for this metric
             latest = FitnessRecord.query.filter_by(
                 player_id=player_id,
-                metric_id=goal.metric_id
+                metric_id=goal.metric_id,
+                team_organization_id=team_id
             ).order_by(FitnessRecord.date_recorded.desc()).first()
             
             current_value = latest.value if latest else None
@@ -698,8 +703,8 @@ def batch_record():
     
     if not metric_id:
         metrics = FitnessMetric.query.filter_by(active=True).all()
-    return render_template('fitness/batch_select_metric.html', metrics=metrics)
-    
+        return render_template('fitness/batch_select_metric.html', metrics=metrics)    
+   
     metric = FitnessMetric.query.get_or_404(metric_id)
     active_players = Player.query.filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
     
@@ -958,7 +963,7 @@ def import_data():
                     
                     # Check if player and metric exist
                     player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first()
-                    metric = FitnessMetric.query.filter_by(id=metric_id, team_organization_id=team_id).first()
+                    metric = FitnessMetric.query.get(metric_id)
                     
                     if not player or not metric:
                         records_skipped += 1
@@ -1048,12 +1053,7 @@ def player_goals(player_id):
             team_organization_id=team_id
         ).order_by(FitnessGoal.completed_date.desc()).all()
         
-        # Get completed goals
-        completed_goals = FitnessGoal.query.filter_by(
-            player_id=player_id,
-            completed=True
-        ).order_by(FitnessGoal.completed_date.desc()).all()
-        
+       
         # Process goals to add current values and progress
         processed_active_goals = []
         for goal in active_goals:
