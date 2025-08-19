@@ -52,23 +52,41 @@ def index():
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
         
-    # Filter metrics by team
+    # Get all active metrics (shared across teams)
     metrics = FitnessMetric.query.filter_by(active=True).all()
     
-    # Get team averages and record holders for each metric
+    # Get team averages and record holders for each metric - filtered by team
     metric_data = []
     for metric in metrics:
+        # Calculate team average for this specific team
+        team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
+            metric_id=metric.id,
+            team_organization_id=team_id
+        ).scalar()
+        
+        # Get record holder for this specific team
+        if metric.higher_is_better:
+            record = FitnessRecord.query.filter_by(
+                metric_id=metric.id,
+                team_organization_id=team_id
+            ).order_by(FitnessRecord.value.desc()).first()
+        else:
+            record = FitnessRecord.query.filter_by(
+                metric_id=metric.id,
+                team_organization_id=team_id
+            ).order_by(FitnessRecord.value).first()
+        
         record_holder_entry = None
-        if metric.record_holder:
+        if record:
             record_holder_entry = {
-                'player': metric.record_holder.player,
-                'value': metric.record_holder.value,
-                'date': metric.record_holder.date_recorded
+                'player': record.player,
+                'value': record.value,
+                'date': record.date_recorded
             }
             
         metric_data.append({
             'metric': metric,
-            'average': metric.team_average,
+            'average': team_avg,
             'record_holder': record_holder_entry
         })
     
@@ -137,9 +155,25 @@ def player_fitness(player_id):
                     team_organization_id=team_id
                 ).order_by(FitnessRecord.date_recorded).all()
                 
-                team_avg = metric.team_average
+                # Calculate team average for this specific team
+                team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
+                    metric_id=metric.id,
+                    team_organization_id=team_id
+                ).scalar()
                 
-                record_holder = metric.record_holder
+                # Get record holder for this specific team
+                if metric.higher_is_better:
+                    record = FitnessRecord.query.filter_by(
+                        metric_id=metric.id,
+                        team_organization_id=team_id
+                    ).order_by(FitnessRecord.value.desc()).first()
+                else:
+                    record = FitnessRecord.query.filter_by(
+                        metric_id=metric.id,
+                        team_organization_id=team_id
+                    ).order_by(FitnessRecord.value).first()
+                
+                record_holder = record
                 
                 categorized_metrics[category].append({
                     'metric': metric,
@@ -441,6 +475,18 @@ def edit_metric(metric_id):
         team_organization_id=team_id
     ).distinct().count()
     
+    # Get team-specific record holder
+    if metric.higher_is_better:
+        record_holder = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).order_by(FitnessRecord.value.desc()).first()
+    else:
+        record_holder = FitnessRecord.query.filter_by(
+            metric_id=metric_id,
+            team_organization_id=team_id
+        ).order_by(FitnessRecord.value).first()
+    
     if form.validate_on_submit():
         try:
             metric.name = form.name.data
@@ -460,7 +506,7 @@ def edit_metric(metric_id):
                           form=form, 
                           metric=metric,
                           player_count=player_count,
-                          record_holder=metric.record_holder,
+                          record_holder=record_holder,  # Use the team-specific record holder
                           title="Edit Fitness Metric")
 
 @bp.route('/metrics/delete/<int:metric_id>', methods=['POST'])
@@ -595,7 +641,10 @@ def player_metric_history(player_id, metric_id):
     ).order_by(FitnessRecord.date_recorded.desc()).all()
     
     # Get team average
-    team_avg = metric.team_average
+    team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
+        metric_id=metric_id,
+        team_organization_id=team_id
+    ).scalar()
     
     # Get record holder
     if metric.higher_is_better:
