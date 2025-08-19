@@ -1,7 +1,7 @@
 # app/routes/playbook.py
 from flask import (
     Blueprint, render_template, redirect, url_for, flash, 
-    request, jsonify, current_app, abort
+    request, jsonify, current_app, abort, session
 )
 from flask_login import login_required, current_user
 from app import db
@@ -15,14 +15,30 @@ from app.utils.utils import admin_required
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
+
 # Main Routes
 @bp.route('/')
 @login_required
 def index():
     """Display playbook overview"""
-    offensive_plays = Play.query.filter_by(type='offense').all()
-    defensive_plays = Play.query.filter_by(type='defense').all()
-    formations = Formation.query.all()
+    offensive_plays = Play.query.filter_by(
+        type='offense',
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    defensive_plays = Play.query.filter_by(
+        type='defense',
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    formations = Formation.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).all()
     
     return render_template('playbook/index.html',
                          offensive_plays=offensive_plays,
@@ -40,23 +56,53 @@ def add_play():
 
     form = PlayForm()
     
+    # Update formation choices to only include formations from current team
+    form.formation_id.choices = [(0, 'None')] + [
+        (f.id, f.name) for f in Formation.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(Formation.name).all()
+    ]
+    
+    # Update tag choices to only include tags from current team
+    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(PlayTag.name).all()]
+    
     if form.validate_on_submit():
+        # Find the highest existing play ID and add 1
+        highest_id = db.session.query(db.func.max(Play.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         play = Play(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
             notes=form.notes.data,
             ultiplay_embed=form.ultiplay_embed.data,
-            created_by=current_user.id
+            created_by=current_user.id,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         if form.formation_id.data and form.formation_id.data > 0:
-            play.formation_id = form.formation_id.data
+            # Verify formation belongs to current team
+            formation = Formation.query.filter_by(
+                id=form.formation_id.data,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if formation:
+                play.formation_id = formation.id
             
         # Handle tags if any are selected
         if form.tags.data:
             for tag_id in form.tags.data:
-                tag = PlayTag.query.get(tag_id)
+                # Verify tag belongs to current team
+                tag = PlayTag.query.filter_by(
+                    id=tag_id,
+                    team_organization_id=get_current_team_id()
+                ).first()
+                
                 if tag:
                     play.tags.append(tag)
 
@@ -72,20 +118,35 @@ def add_play():
 @bp.route('/plays/<int:play_id>')
 @login_required
 def view_play(play_id):
-    play = Play.query.get_or_404(play_id)
+    play = Play.query.filter_by(
+        id=play_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     return render_template('playbook/play_detail.html', play=play)
 
 @bp.route('/plays/<int:play_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_play(play_id):
-    play = Play.query.get_or_404(play_id)
+    play = Play.query.filter_by(
+        id=play_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = PlayForm(obj=play)
     
+    # Update formation choices to only include formations from current team
     form.formation_id.choices = [(0, 'None')] + [
-        (f.id, f.name) for f in Formation.query.order_by(Formation.name).all()
+        (f.id, f.name) for f in Formation.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(Formation.name).all()
     ]
-    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.order_by(PlayTag.name).all()]
+    
+    # Update tag choices to only include tags from current team
+    form.tags.choices = [(t.id, t.name) for t in PlayTag.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(PlayTag.name).all()]
     
     if form.validate_on_submit():
         play.name = form.name.data
@@ -94,7 +155,16 @@ def edit_play(play_id):
         play.notes = form.notes.data
         
         if form.formation_id.data and form.formation_id.data > 0:
-            play.formation_id = form.formation_id.data
+            # Verify formation belongs to current team
+            formation = Formation.query.filter_by(
+                id=form.formation_id.data,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if formation:
+                play.formation_id = formation.id
+            else:
+                play.formation_id = None
         else:
             play.formation_id = None
             
@@ -133,13 +203,19 @@ def edit_play(play_id):
 def add_formation():
     form = FormationForm()
     if form.validate_on_submit():
+        # Find the highest existing formation ID and add 1
+        highest_id = db.session.query(db.func.max(Formation.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         formation = Formation(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
             ultiplay_embed=form.ultiplay_embed.data,
-            imgur_url=form.imgur_url.data,  # Add this line
-            created_by=current_user.id
+            imgur_url=form.imgur_url.data,
+            created_by=current_user.id,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         # Debug print
@@ -177,7 +253,11 @@ def internal_error(error):
 @login_required
 @admin_required
 def edit_formation(formation_id):
-    formation = Formation.query.get_or_404(formation_id)
+    formation = Formation.query.filter_by(
+        id=formation_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = FormationForm(obj=formation)
     
     if form.validate_on_submit():
@@ -209,7 +289,10 @@ def delete_play(play_id):
             'message': 'Permission denied'
         }), 403
     
-    play = Play.query.get_or_404(play_id)
+    play = Play.query.filter_by(
+        id=play_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     try:
         title = play.name
@@ -239,10 +322,18 @@ def delete_formation(formation_id):
             'message': 'Permission denied'
         }), 403
     
-    formation = Formation.query.get_or_404(formation_id)
+    formation = Formation.query.filter_by(
+        id=formation_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Check if formation is being used by any plays
-    if formation.plays:
+    plays_using_formation = Play.query.filter_by(
+        formation_id=formation_id,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    if plays_using_formation:
         return jsonify({
             'success': False,
             'message': 'Cannot delete formation that is being used by plays.'
@@ -270,10 +361,17 @@ def delete_formation(formation_id):
 @bp.route('/formation/<int:formation_id>')
 @login_required
 def view_formation(formation_id):
-    formation = Formation.query.get_or_404(formation_id)
+    formation = Formation.query.filter_by(
+        id=formation_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get plays that use this formation
-    related_plays = Play.query.filter_by(formation_id=formation_id).all()
+    related_plays = Play.query.filter_by(
+        formation_id=formation_id,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
     # Debug print
     print(f"Formation ID: {formation.id}, Name: {formation.name}")
     print(f"Imgur URL: {formation.imgur_url}")
@@ -286,27 +384,40 @@ def view_formation(formation_id):
 @login_required
 @admin_required
 def manage_assignments(play_id):
-    play = Play.query.get_or_404(play_id)
+    play = Play.query.filter_by(
+        id=play_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = PositionAssignmentForm()
     
-    # Get all positions for the dropdown
-    form.position_id.choices = [(p.id, p.name) for p in PlayerPosition.query.order_by(PlayerPosition.name).all()]
+    # Get all positions for the dropdown (filter by team)
+    form.position_id.choices = [(p.id, p.name) for p in PlayerPosition.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(PlayerPosition.name).all()]
     
     if form.validate_on_submit():
         # Check if assignment for this position already exists
         existing = PlayAssignment.query.filter_by(
             play_id=play.id, 
-            position_id=form.position_id.data
+            position_id=form.position_id.data,
+            team_organization_id=get_current_team_id()
         ).first()
         
         if existing:
             existing.instructions = form.instructions.data
             flash('Position assignment updated', 'success')
         else:
+            # Find the highest existing assignment ID and add 1
+            highest_id = db.session.query(db.func.max(PlayAssignment.id)).scalar() or 0
+            next_id = highest_id + 1
+            
             assignment = PlayAssignment(
+                id=next_id,  # Explicitly set the ID
                 play_id=play.id,
                 position_id=form.position_id.data,
-                instructions=form.instructions.data
+                instructions=form.instructions.data,
+                team_organization_id=get_current_team_id()  # Add team organization ID
             )
             db.session.add(assignment)
             flash('Position assignment added', 'success')
@@ -315,7 +426,10 @@ def manage_assignments(play_id):
         return redirect(url_for('playbook.manage_assignments', play_id=play.id))
     
     # Get existing assignments
-    assignments = PlayAssignment.query.filter_by(play_id=play.id).all()
+    assignments = PlayAssignment.query.filter_by(
+        play_id=play.id,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     return render_template('playbook/assignments.html', 
                           play=play, form=form, assignments=assignments)
@@ -324,7 +438,17 @@ def manage_assignments(play_id):
 @login_required
 @admin_required
 def delete_assignment(play_id, assignment_id):
-    assignment = PlayAssignment.query.get_or_404(assignment_id)
+    # Verify the play belongs to the current team
+    play = Play.query.filter_by(
+        id=play_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    assignment = PlayAssignment.query.filter_by(
+        id=assignment_id,
+        play_id=play_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Verify the assignment belongs to the specified play
     if assignment.play_id != play_id:
