@@ -1,5 +1,5 @@
 # app/routes/theory.py
-from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from app import db
 from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
@@ -12,25 +12,45 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 bp = Blueprint('theory', __name__, url_prefix='/theory')
 
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
+
 # Main Routes
 @bp.route('/')
 @login_required
 def index():
-    sections = TheorySection.query.order_by(TheorySection.order).all()
+    sections = TheorySection.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(TheorySection.order).all()
+    
     return render_template('theory/index.html', sections=sections)
 
 @bp.route('/section/<string:slug>')
 @login_required
 def section(slug):
-    section = TheorySection.query.filter_by(slug=slug).first_or_404()
-    topics = section.topics.order_by(TheoryTopic.order).all()
+    section = TheorySection.query.filter_by(
+        slug=slug,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    topics = section.topics.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(TheoryTopic.order).all()
+    
     return render_template('theory/section.html', section=section, topics=topics)
 
 @bp.route('/topic/<int:topic_id>')
 @login_required
 def topic(topic_id):
     try:
-        topic = TheoryTopic.query.get_or_404(topic_id)
+        topic = TheoryTopic.query.filter_by(
+            id=topic_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
         return render_template('theory/topic.html', 
                              topic=topic,
                              title=topic.name)
@@ -46,10 +66,16 @@ def topic(topic_id):
 def add_section():
     form = TheorySectionForm()
     if form.validate_on_submit():
+        # Find the highest existing section ID and add 1
+        highest_id = db.session.query(db.func.max(TheorySection.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         section = TheorySection(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             description=form.description.data,
-            order=form.order.data
+            order=form.order.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         db.session.add(section)
         try:
@@ -66,7 +92,11 @@ def add_section():
 @login_required
 @coach_required
 def edit_section(section_id):
-    section = TheorySection.query.get_or_404(section_id)
+    section = TheorySection.query.filter_by(
+        id=section_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = TheorySectionForm(obj=section)
     
     if form.validate_on_submit():
@@ -88,7 +118,11 @@ def edit_section(section_id):
 @login_required
 @coach_required
 def delete_section(section_id):
-    section = TheorySection.query.get_or_404(section_id)
+    section = TheorySection.query.filter_by(
+        id=section_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     name = section.name
     
     try:
@@ -107,16 +141,36 @@ def delete_section(section_id):
 @coach_required
 def add_topic():
     form = TheoryTopicForm()
-    form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.order_by(TheorySection.name).all()]
+    
+    # Only show sections from current team
+    form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(TheorySection.name).all()]
     
     if form.validate_on_submit():
+        # Verify section belongs to current team
+        section = TheorySection.query.filter_by(
+            id=form.section_id.data,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
+        if not section:
+            flash('Invalid section selected.', 'danger')
+            return render_template('theory/topic_form.html', form=form, title='Add Topic')
+        
+        # Find the highest existing topic ID and add 1
+        highest_id = db.session.query(db.func.max(TheoryTopic.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         topic = TheoryTopic(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             content=form.content.data,
             section_id=form.section_id.data,
             order=form.order.data,
             created_by=current_user.id,
-            image_url=form.image_url.data  # Use the URL directly
+            image_url=form.image_url.data,  # Use the URL directly
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         db.session.add(topic)
@@ -134,11 +188,29 @@ def add_topic():
 @login_required
 @coach_required
 def edit_topic(topic_id):
-    topic = TheoryTopic.query.get_or_404(topic_id)
+    topic = TheoryTopic.query.filter_by(
+        id=topic_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = TheoryTopicForm(obj=topic)
-    form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.order_by(TheorySection.name).all()]
+    
+    # Only show sections from current team
+    form.section_id.choices = [(s.id, s.name) for s in TheorySection.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(TheorySection.name).all()]
     
     if form.validate_on_submit():
+        # Verify section belongs to current team
+        section = TheorySection.query.filter_by(
+            id=form.section_id.data,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
+        if not section:
+            flash('Invalid section selected.', 'danger')
+            return render_template('theory/topic_form.html', form=form, topic=topic, title='Edit Topic')
+        
         topic.name = form.name.data
         topic.content = form.content.data
         topic.section_id = form.section_id.data
@@ -162,7 +234,11 @@ def edit_topic(topic_id):
 @login_required
 @coach_required
 def delete_topic(topic_id):
-    topic = TheoryTopic.query.get_or_404(topic_id)
+    topic = TheoryTopic.query.filter_by(
+        id=topic_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     section_slug = topic.section.slug
     name = topic.name
     
@@ -181,16 +257,26 @@ def delete_topic(topic_id):
 @login_required
 @coach_required
 def add_video(topic_id):
-    topic = TheoryTopic.query.get_or_404(topic_id)
+    topic = TheoryTopic.query.filter_by(
+        id=topic_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = TheoryVideoForm()
     
     if form.validate_on_submit():
+        # Find the highest existing video ID and add 1
+        highest_id = db.session.query(db.func.max(TheoryVideo.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         video = TheoryVideo(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             topic_id=topic_id,
             title=form.title.data,
             url=form.url.data,
             description=form.description.data,
-            order=form.order.data
+            order=form.order.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         db.session.add(video)
         try:
