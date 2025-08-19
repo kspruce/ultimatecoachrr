@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, abort, render_template, redirect, url_for, flash, 
-    request, jsonify, current_app, render_template_string
+    request, jsonify, current_app, render_template_string, session
 )
 from flask_login import login_required, current_user
 from app import db
@@ -26,12 +26,14 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 csrf = CSRFProtect()
 
-
-
-
 bp = Blueprint('session', __name__, url_prefix='/sessions')
 
-   
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id')
+    return current_user.team_organization_id
+
 # Existing Session Routes
 @bp.route('/')
 @login_required
@@ -52,7 +54,7 @@ def index():
         form.session_type.data = session_type
     
     # Build query based on filters
-    query = SessionPlan.query
+    query = SessionPlan.query.filter_by(team_organization_id=get_current_team_id())
     
     if focus_area:
         query = query.filter(SessionPlan.focus_area == focus_area)
@@ -76,7 +78,8 @@ def index():
     
     # Get upcoming sessions (future dates)
     upcoming_sessions = SessionPlan.query.filter(
-        SessionPlan.date >= datetime.now().date()
+        SessionPlan.date >= datetime.now().date(),
+        SessionPlan.team_organization_id == get_current_team_id()
     ).order_by(SessionPlan.date).limit(5).all()
     
     return render_template(
@@ -93,7 +96,12 @@ def add_session():
     form = SessionPlanForm()
     
     if form.validate_on_submit():
-        session = SessionPlan(
+        # Find the highest existing session ID and add 1
+        highest_id = db.session.query(db.func.max(SessionPlan.id)).scalar() or 0
+        next_id = highest_id + 1
+        
+        session_plan = SessionPlan(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             title=form.title.data,
             date=form.date.data,
             start_time=form.start_time.data,
@@ -103,14 +111,15 @@ def add_session():
             notes=form.notes.data,
             is_recurring=form.is_recurring.data,
             recurrence_pattern=form.recurrence_pattern.data if form.is_recurring.data else None,
-            session_type=form.session_type.data
+            session_type=form.session_type.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
-        db.session.add(session)
+        db.session.add(session_plan)
         db.session.commit()
         
-        flash(f'Session plan "{session.title}" has been created!', 'success')
-        return redirect(url_for('session.detail', session_id=session.id))
+        flash(f'Session plan "{session_plan.title}" has been created!', 'success')
+        return redirect(url_for('session.detail', session_id=session_plan.id))
     
     return render_template('session/session_form.html', form=form, title='Add Session Plan')
 
@@ -119,7 +128,10 @@ def add_session():
 @login_required
 def drills():
     """Display all drills in the library"""
-    drills = SavedDrill.query.order_by(SavedDrill.title).all()
+    drills = SavedDrill.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SavedDrill.title).all()
+    
     return render_template('session/drills/list.html', drills=drills)
 
 @bp.route('/drills/add', methods=['GET', 'POST'])
@@ -130,7 +142,12 @@ def add_drill(drill_type='basic'):
     form = DrillForm()
 
     if form.validate_on_submit():
+        # Find the highest existing drill ID and add 1
+        highest_id = db.session.query(db.func.max(SavedDrill.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         drill = SavedDrill(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             title=form.title.data,
             description=form.description.data,
             setup_instructions=form.setup_instructions.data,
@@ -140,8 +157,9 @@ def add_drill(drill_type='basic'):
             skill_level=form.skill_level.data,
             focus_area=form.focus_area.data,
             equipment_needed=form.equipment_needed.data,
-            ultiplay_embed=form.ultiplay_embed.data,  # Add this line
-            created_by=current_user.id
+            ultiplay_embed=form.ultiplay_embed.data,
+            created_by=current_user.id,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
 
         db.session.add(drill)
@@ -151,6 +169,7 @@ def add_drill(drill_type='basic'):
         return redirect(url_for('session.drills'))
 
     return render_template('session/drills/form.html', form=form)
+
 @bp.route('/drills/editor')
 @bp.route('/drills/editor/<int:drill_id>')
 @login_required
@@ -158,7 +177,11 @@ def drill_editor(drill_id=None):
     """Render the drill editor page"""
     drill = None
     if drill_id:
-        drill = SavedDrill.query.get_or_404(drill_id)
+        drill = SavedDrill.query.filter_by(
+            id=drill_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
         # Ensure user has permission to edit this drill
         if drill.created_by != current_user.id and not current_user.is_admin:
             abort(403)
@@ -169,16 +192,27 @@ def drill_editor(drill_id=None):
 @login_required
 def drill_viewer(drill_id):
     """View a drill"""
-    drill = SavedDrill.query.get_or_404(drill_id)
+    drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     return render_template('session/drills/viewer.html', drill=drill)
 
 @bp.route('/drills/<int:drill_id>')
 @login_required
 def drill_detail(drill_id):
-    drill = SavedDrill.query.get_or_404(drill_id)
+    drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
 
     # Find the session ID associated with this drill (if any)
-    session_component = SessionComponent.query.filter_by(drill_id=drill_id).first()
+    session_component = SessionComponent.query.filter_by(
+        drill_id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first()
+    
     session_id = session_component.session_id if session_component else None
 
     return render_template('session/drills/detail.html', drill=drill, session_id=session_id)
@@ -192,7 +226,12 @@ def create_drill():
     try:
         data = request.get_json()
         
+        # Find the highest existing drill ID and add 1
+        highest_id = db.session.query(db.func.max(SavedDrill.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         drill = SavedDrill(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             title=data.get('title', 'Untitled Drill'),
             description=data.get('description', ''),
             setup_instructions=data.get('setup_instructions', ''),
@@ -202,9 +241,10 @@ def create_drill():
             skill_level=data.get('skill_level'),
             focus_area=data.get('focus_area'),
             equipment_needed=data.get('equipment_needed'),
-            ultiplay_embed=data.get('ultiplay_embed'),  # Add this line
+            ultiplay_embed=data.get('ultiplay_embed'),
             is_public=data.get('is_public', False),
-            created_by=current_user.id
+            created_by=current_user.id,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
 
         db.session.add(drill)
@@ -215,14 +255,6 @@ def create_drill():
             'drill_id': drill.id,
             'message': 'Drill created successfully'
         }), 201
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error creating drill: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'Failed to create drill'
-        }), 500
 
     except Exception as e:
         db.session.rollback()
@@ -243,7 +275,10 @@ def manage_drill(drill_id):
         }), 401
 
     try:
-        drill = SavedDrill.query.get_or_404(drill_id)
+        drill = SavedDrill.query.filter_by(
+            id=drill_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         
         # Check permissions
         if drill.created_by != current_user.id and not current_user.is_admin:
@@ -262,7 +297,11 @@ def manage_drill(drill_id):
                         current_app.logger.info(f"Deleted file: {file_path}")
 
                 # Delete associated components
-                components_deleted = SessionComponent.query.filter_by(drill_id=drill.id).delete()
+                components_deleted = SessionComponent.query.filter_by(
+                    drill_id=drill.id,
+                    team_organization_id=get_current_team_id()
+                ).delete()
+                
                 current_app.logger.info(f"Deleted {components_deleted} components")
 
                 # Delete the drill
@@ -297,29 +336,51 @@ def manage_drill(drill_id):
 @bp.route('/<int:session_id>/components')
 @login_required
 def components(session_id):
-    session = SessionPlan.query.get_or_404(session_id)
-    components = session.components.order_by(SessionComponent.order).all()
-    return render_template('session/components.html', session=session, components=components)
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    components = session_plan.components.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SessionComponent.order).all()
+    
+    return render_template('session/components.html', session=session_plan, components=components)
 
 @bp.route('/<int:session_id>/add_component', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def add_component(session_id):
-    session = SessionPlan.query.get_or_404(session_id)
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = SessionComponentForm()
     
-    # Populate drill choices
-    form.drill_id.choices = [(0, 'None')] + [(d.id, d.title) for d in SavedDrill.query.order_by(SavedDrill.title).all()]
+    # Populate drill choices - only from current team
+    form.drill_id.choices = [(0, 'None')] + [(d.id, d.title) for d in SavedDrill.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SavedDrill.title).all()]
     
     # Set default order to next available
     next_order = 1
-    last_component = SessionComponent.query.filter_by(session_id=session_id).order_by(SessionComponent.order.desc()).first()
+    last_component = SessionComponent.query.filter_by(
+        session_id=session_id,
+        team_organization_id=get_current_team_id()
+    ).order_by(SessionComponent.order.desc()).first()
+    
     if last_component:
         next_order = last_component.order + 1
     form.order.data = next_order
     
     if form.validate_on_submit():
+        # Find the highest existing component ID and add 1
+        highest_id = db.session.query(db.func.max(SessionComponent.id)).scalar() or 0
+        next_id = highest_id + 1
+        
         component = SessionComponent(
+            id=next_id,  # Explicitly set the ID to avoid conflicts
             session_id=session_id,
             title=form.title.data,
             description=form.description.data,
@@ -327,12 +388,17 @@ def add_component(session_id):
             order=form.order.data,
             component_type=form.component_type.data,
             focus_area=form.focus_area.data,
-            notes=form.notes.data
+            notes=form.notes.data,
+            team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
         # If a saved drill was selected, associate it and copy its details
         if form.drill_id.data and form.drill_id.data > 0:
-            drill = SavedDrill.query.get(form.drill_id.data)
+            drill = SavedDrill.query.filter_by(
+                id=form.drill_id.data,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
             if drill:
                 component.drill_id = drill.id
                 if not form.description.data:
@@ -348,18 +414,28 @@ def add_component(session_id):
         flash(f'Component "{component.title}" has been added!', 'success')
         return redirect(url_for('session.components', session_id=session_id))
     
-    return render_template('session/component_form.html', form=form, session=session, title='Add Session Component')
+    return render_template('session/component_form.html', form=form, session=session_plan, title='Add Session Component')
 
 @bp.route('/edit_component/<int:component_id>', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def edit_component(component_id):
-    component = SessionComponent.query.get_or_404(component_id)
-    session = SessionPlan.query.get(component.session_id)
+    component = SessionComponent.query.filter_by(
+        id=component_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    session_plan = SessionPlan.query.filter_by(
+        id=component.session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = SessionComponentForm(obj=component)
     
-    # Populate drill choices
-    form.drill_id.choices = [(0, 'None')] + [(d.id, d.title) for d in SavedDrill.query.order_by(SavedDrill.title).all()]
+    # Populate drill choices - only from current team
+    form.drill_id.choices = [(0, 'None')] + [(d.id, d.title) for d in SavedDrill.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SavedDrill.title).all()]
     
     if form.validate_on_submit():
         component.title = form.title.data
@@ -372,7 +448,16 @@ def edit_component(component_id):
         
         # Update drill association
         if form.drill_id.data and form.drill_id.data > 0:
-            component.drill_id = form.drill_id.data
+            # Verify drill belongs to current team
+            drill = SavedDrill.query.filter_by(
+                id=form.drill_id.data,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if drill:
+                component.drill_id = drill.id
+            else:
+                component.drill_id = None
         else:
             component.drill_id = None
         
@@ -381,13 +466,17 @@ def edit_component(component_id):
         flash(f'Component "{component.title}" has been updated!', 'success')
         return redirect(url_for('session.components', session_id=component.session_id))
     
-    return render_template('session/component_form.html', form=form, component=component, session=session, title='Edit Session Component')
+    return render_template('session/component_form.html', form=form, component=component, session=session_plan, title='Edit Session Component')
 
 @bp.route('/delete_component/<int:component_id>', methods=['POST'])
 @login_required
 @coach_required
 def delete_component(component_id):
-    component = SessionComponent.query.get_or_404(component_id)
+    component = SessionComponent.query.filter_by(
+        id=component_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     session_id = component.session_id
     title = component.title
     
@@ -402,7 +491,11 @@ def delete_component(component_id):
 @login_required
 @coach_required
 def attendance(session_id):
-    session = SessionPlan.query.get_or_404(session_id)
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = AttendanceForm()
     
     if form.validate_on_submit():
@@ -413,18 +506,32 @@ def attendance(session_id):
         for player_id in form.players.data:
             Attendance.query.filter_by(
                 session_id=session_id, 
-                player_id=player_id
+                player_id=player_id,
+                team_organization_id=get_current_team_id()
             ).delete()
         
         # Create new attendance records for the selected players
         for player_id in form.players.data:
-            attendance = Attendance(
-                session_id=session_id,
-                player_id=player_id,
-                status=status,
-                notes=form.notes.data
-            )
-            db.session.add(attendance)
+            # Verify player belongs to current team
+            player = Player.query.filter_by(
+                id=player_id,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if player:
+                # Find the highest existing attendance ID and add 1
+                highest_id = db.session.query(db.func.max(Attendance.id)).scalar() or 0
+                next_id = highest_id + 1
+                
+                attendance = Attendance(
+                    id=next_id,  # Explicitly set the ID to avoid conflicts
+                    session_id=session_id,
+                    player_id=player_id,
+                    status=status,
+                    notes=form.notes.data,
+                    team_organization_id=get_current_team_id()  # Add team organization ID
+                )
+                db.session.add(attendance)
         
         db.session.commit()
         
@@ -437,11 +544,23 @@ def attendance(session_id):
         form.status.data = status
         
         # Get players with the selected status
-        attendances = Attendance.query.filter_by(session_id=session_id, status=status).all()
+        attendances = Attendance.query.filter_by(
+            session_id=session_id, 
+            status=status,
+            team_organization_id=get_current_team_id()
+        ).all()
+        
         form.players.data = [a.player_id for a in attendances]
     
-    players = Player.query.filter_by(active=True).order_by(Player.name).all()
-    attendances = Attendance.query.filter_by(session_id=session_id).all()
+    players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).order_by(Player.name).all()
+    
+    attendances = Attendance.query.filter_by(
+        session_id=session_id,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Group attendances by status
     attendance_by_status = {
@@ -457,7 +576,7 @@ def attendance(session_id):
     
     return render_template(
         'session/attendance.html', 
-        session=session, 
+        session=session_plan, 
         form=form, 
         players=players, 
         attendances=attendances,
@@ -468,7 +587,10 @@ def attendance(session_id):
 @bp.route('/<int:session_id>/rsvp', methods=['GET', 'POST'])
 @login_required
 def rsvp(session_id):
-    session = SessionPlan.query.get_or_404(session_id)
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get the current user's player
     if not current_user.player:
@@ -478,7 +600,11 @@ def rsvp(session_id):
     player = current_user.player
     
     # Check if player has already RSVP'd
-    existing_rsvp = SessionRSVP.query.filter_by(session_id=session_id, player_id=player.id).first()
+    existing_rsvp = SessionRSVP.query.filter_by(
+        session_id=session_id, 
+        player_id=player.id,
+        team_organization_id=get_current_team_id()
+    ).first()
     
     form = SessionRSVPForm(obj=existing_rsvp)
     
@@ -489,12 +615,18 @@ def rsvp(session_id):
             existing_rsvp.notes = form.notes.data
             flash('Your RSVP has been updated!', 'success')
         else:
+            # Find the highest existing RSVP ID and add 1
+            highest_id = db.session.query(db.func.max(SessionRSVP.id)).scalar() or 0
+            next_id = highest_id + 1
+            
             # Create new RSVP
             rsvp = SessionRSVP(
+                id=next_id,  # Explicitly set the ID to avoid conflicts
                 session_id=session_id,
                 player_id=player.id,
                 status=form.status.data,
-                notes=form.notes.data
+                notes=form.notes.data,
+                team_organization_id=get_current_team_id()  # Add team organization ID
             )
             db.session.add(rsvp)
             flash('Your RSVP has been submitted!', 'success')
@@ -502,44 +634,77 @@ def rsvp(session_id):
         db.session.commit()
         return redirect(url_for('session.detail', session_id=session_id))
     
-    return render_template('session/rsvp.html', form=form, session=session, existing_rsvp=existing_rsvp)
+    return render_template('session/rsvp.html', form=form, session=session_plan, existing_rsvp=existing_rsvp)
 
 @bp.route('/<int:session_id>/rsvps')
 @login_required
 def rsvps(session_id):
-    session = SessionPlan.query.get_or_404(session_id)
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Group RSVPs by status
-    attending = SessionRSVP.query.filter_by(session_id=session_id, status='attending').all()
-    not_attending = SessionRSVP.query.filter_by(session_id=session_id, status='not_attending').all()
-    maybe = SessionRSVP.query.filter_by(session_id=session_id, status='maybe').all()
+    attending = SessionRSVP.query.filter_by(
+        session_id=session_id, 
+        status='attending',
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    not_attending = SessionRSVP.query.filter_by(
+        session_id=session_id, 
+        status='not_attending',
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    maybe = SessionRSVP.query.filter_by(
+        session_id=session_id, 
+        status='maybe',
+        team_organization_id=get_current_team_id()
+    ).all()
     
     return render_template(
         'session/rsvps.html', 
-        session=session, 
+        session=session_plan, 
         attending=attending, 
         not_attending=not_attending, 
         maybe=maybe
     )
+
 # Analytics Routes
 @bp.route('/attendance_analytics')
 @login_required
 def attendance_analytics():
     # Get all sessions with dates, ordered by date
-    sessions = SessionPlan.query.filter(SessionPlan.date != None).order_by(SessionPlan.date).all()
+    sessions = SessionPlan.query.filter(
+        SessionPlan.date != None,
+        SessionPlan.team_organization_id == get_current_team_id()
+    ).order_by(SessionPlan.date).all()
     
     # Get all active players
-    players = Player.query.filter_by(active=True).order_by(Player.name).all()
+    players = Player.query.filter_by(
+        active=True,
+        team_organization_id=get_current_team_id()
+    ).order_by(Player.name).all()
     
     # Get selected player for individual trend
     selected_player_id = request.args.get('player_id', type=int)
-    selected_player = Player.query.get(selected_player_id) if selected_player_id else None
+    selected_player = None
+    
+    if selected_player_id:
+        selected_player = Player.query.filter_by(
+            id=selected_player_id,
+            team_organization_id=get_current_team_id()
+        ).first()
     
     # Calculate attendance statistics for each player
     player_stats = []
     for player in players:
         # Get attendance records for this player
-        attendances = Attendance.query.filter_by(player_id=player.id).all()
+        attendances = Attendance.query.filter_by(
+            player_id=player.id,
+            team_organization_id=get_current_team_id()
+        ).all()
         
         # Count attendance by status
         present_count = sum(1 for a in attendances if a.status == 'present')
@@ -576,12 +741,16 @@ def attendance_analytics():
     if selected_player:
         # Individual player trend
         attendance_by_session = {}
-        attendances = Attendance.query.filter_by(player_id=selected_player.id).all()
+        attendances = Attendance.query.filter_by(
+            player_id=selected_player.id,
+            team_organization_id=get_current_team_id()
+        ).all()
+        
         for attendance in attendances:
             attendance_by_session[attendance.session_id] = attendance
         
-        for session in sessions:
-            attendance = attendance_by_session.get(session.id)
+        for session_plan in sessions:
+            attendance = attendance_by_session.get(session_plan.id)
             status_value = 0  # Default: absent/unknown
             
             if attendance:
@@ -593,22 +762,41 @@ def attendance_analytics():
                     status_value = 0.25
             
             trend_data.append({
-                'date': session.date.strftime('%Y-%m-%d'),
-                'title': session.title,
+                'date': session_plan.date.strftime('%Y-%m-%d'),
+                'title': session_plan.title,
                 'status': attendance.status if attendance else 'unknown',
                 'value': status_value
             })
     else:
         # Team trend
-        for session in sessions:
-            present_count = Attendance.query.filter_by(session_id=session.id, status='present').count()
-            late_count = Attendance.query.filter_by(session_id=session.id, status='late').count()
-            absent_count = Attendance.query.filter_by(session_id=session.id, status='absent').count()
-            excused_count = Attendance.query.filter_by(session_id=session.id, status='excused').count()
+        for session_plan in sessions:
+            present_count = Attendance.query.filter_by(
+                session_id=session_plan.id, 
+                status='present',
+                team_organization_id=get_current_team_id()
+            ).count()
+            
+            late_count = Attendance.query.filter_by(
+                session_id=session_plan.id, 
+                status='late',
+                team_organization_id=get_current_team_id()
+            ).count()
+            
+            absent_count = Attendance.query.filter_by(
+                session_id=session_plan.id, 
+                status='absent',
+                team_organization_id=get_current_team_id()
+            ).count()
+            
+            excused_count = Attendance.query.filter_by(
+                session_id=session_plan.id, 
+                status='excused',
+                team_organization_id=get_current_team_id()
+            ).count()
             
             trend_data.append({
-                'date': session.date.strftime('%Y-%m-%d'),
-                'title': session.title,
+                'date': session_plan.date.strftime('%Y-%m-%d'),
+                'title': session_plan.title,
                 'present': present_count,
                 'late': late_count,
                 'absent': absent_count,
@@ -628,13 +816,22 @@ def attendance_analytics():
 @bp.route('/player_attendance/<int:player_id>')
 @login_required
 def player_attendance(player_id):
-    player = Player.query.get_or_404(player_id)
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     # Get all sessions with dates
-    sessions = SessionPlan.query.filter(SessionPlan.date != None).order_by(SessionPlan.date).all()
+    sessions = SessionPlan.query.filter(
+        SessionPlan.date != None,
+        SessionPlan.team_organization_id == get_current_team_id()
+    ).order_by(SessionPlan.date).all()
     
     # Get attendance records for this player
-    attendances = Attendance.query.filter_by(player_id=player_id).all()
+    attendances = Attendance.query.filter_by(
+        player_id=player_id,
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Create a dictionary of attendance records by session ID
     attendance_by_session = {a.session_id: a for a in attendances}
@@ -651,13 +848,13 @@ def player_attendance(player_id):
     
     # Generate attendance trend data for chart
     trend_data = []
-    for session in sessions:
-        attendance = attendance_by_session.get(session.id)
+    for session_plan in sessions:
+        attendance = attendance_by_session.get(session_plan.id)
         status = attendance.status if attendance else 'unknown'
         
         trend_data.append({
-            'date': session.date.strftime('%Y-%m-%d'),
-            'title': session.title,
+            'date': session_plan.date.strftime('%Y-%m-%d'),
+            'title': session_plan.title,
             'status': status
         })
     
@@ -669,21 +866,28 @@ def player_attendance(player_id):
     
     # Get tournaments where the player was selected
     tournament_rsvps = TournamentRSVP.query.filter_by(
-        player_id=player_id
+        player_id=player_id,
+        team_organization_id=get_current_team_id()
     ).all()
     
     # Create a dictionary of tournament data
     tournament_data = {}
     
     for rsvp in tournament_rsvps:
-        tournament = Tournament.query.get(rsvp.tournament_id)
+        tournament = Tournament.query.filter_by(
+            id=rsvp.tournament_id,
+            team_organization_id=get_current_team_id()
+        ).first()
+        
         if tournament:
             # Get games where player was assigned
             games = db.session.query(Game).join(
                 GamePlayer, Game.id == GamePlayer.game_id
             ).filter(
                 Game.tournament_id == tournament.id,
-                GamePlayer.player_id == player_id
+                GamePlayer.player_id == player_id,
+                Game.team_organization_id == get_current_team_id(),
+                GamePlayer.team_organization_id == get_current_team_id()
             ).all()
             
             tournament_data[tournament.id] = {
@@ -748,7 +952,7 @@ def search_drills():
     skill_level = request.args.get('skill_level', '')
     focus_area = request.args.get('focus_area', '')
     
-    drills = SavedDrill.query
+    drills = SavedDrill.query.filter_by(team_organization_id=get_current_team_id())
     
     if query:
         drills = drills.filter(
@@ -780,10 +984,18 @@ def search_drills():
 @coach_required
 def duplicate_drill(drill_id):
     """Create a copy of an existing drill"""
-    original_drill = SavedDrill.query.get_or_404(drill_id)
+    original_drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    # Find the highest existing drill ID and add 1
+    highest_id = db.session.query(db.func.max(SavedDrill.id)).scalar() or 0
+    next_id = highest_id + 1
     
     # Create new drill with copied data
     new_drill = SavedDrill(
+        id=next_id,  # Explicitly set the ID to avoid conflicts
         title=f"Copy of {original_drill.title}",
         description=original_drill.description,
         setup_instructions=original_drill.setup_instructions,
@@ -794,7 +1006,8 @@ def duplicate_drill(drill_id):
         focus_area=original_drill.focus_area,
         equipment_needed=original_drill.equipment_needed,
         created_by=current_user.id,
-        elements=original_drill.elements
+        elements=original_drill.elements,
+        team_organization_id=get_current_team_id()  # Add team organization ID
     )
     
     db.session.add(new_drill)
@@ -810,9 +1023,18 @@ def duplicate_drill(drill_id):
 @login_required
 def detail(session_id):
     """Show session details"""
-    session = SessionPlan.query.get_or_404(session_id)
-    components = session.components.order_by(SessionComponent.order).all()
-    attendances = session.attendances.all()
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    components = session_plan.components.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SessionComponent.order).all()
+    
+    attendances = session_plan.attendances.filter_by(
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Group attendances by status
     attendance_by_status = {
@@ -828,7 +1050,7 @@ def detail(session_id):
     
     return render_template(
         'session/detail.html',
-        session=session,
+        session=session_plan,
         components=components,
         attendance_by_status=attendance_by_status
     )
@@ -838,30 +1060,34 @@ def detail(session_id):
 @coach_required
 def edit_session(session_id):
     """Edit an existing session"""
-    session = SessionPlan.query.get_or_404(session_id)
-    form = SessionPlanForm(obj=session)
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    form = SessionPlanForm(obj=session_plan)
     
     if form.validate_on_submit():
-        session.title = form.title.data
-        session.date = form.date.data
-        session.start_time = form.start_time.data
-        session.end_time = form.end_time.data
-        session.location = form.location.data
-        session.focus_area = form.focus_area.data
-        session.notes = form.notes.data
-        session.is_recurring = form.is_recurring.data
-        session.recurrence_pattern = form.recurrence_pattern.data if form.is_recurring.data else None
-        session.session_type = form.session_type.data
+        session_plan.title = form.title.data
+        session_plan.date = form.date.data
+        session_plan.start_time = form.start_time.data
+        session_plan.end_time = form.end_time.data
+        session_plan.location = form.location.data
+        session_plan.focus_area = form.focus_area.data
+        session_plan.notes = form.notes.data
+        session_plan.is_recurring = form.is_recurring.data
+        session_plan.recurrence_pattern = form.recurrence_pattern.data if form.is_recurring.data else None
+        session_plan.session_type = form.session_type.data
         
         db.session.commit()
         
-        flash(f'Session plan "{session.title}" has been updated!', 'success')
-        return redirect(url_for('session.detail', session_id=session.id))
+        flash(f'Session plan "{session_plan.title}" has been updated!', 'success')
+        return redirect(url_for('session.detail', session_id=session_plan.id))
     
     return render_template(
         'session/session_form.html',
         form=form,
-        session=session,
+        session=session_plan,
         title='Edit Session Plan'
     )
 
@@ -873,7 +1099,10 @@ def delete_session(session_id):
         # Log the request
         current_app.logger.info(f"Delete request received for session {session_id}")
         
-        session = SessionPlan.query.get_or_404(session_id)
+        session_plan = SessionPlan.query.filter_by(
+            id=session_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
         
         # Check if user has permission (optional)
         if not current_user.is_admin:
@@ -881,15 +1110,26 @@ def delete_session(session_id):
             flash('Permission denied', 'danger')
             return redirect(url_for('session.index'))
 
-        title = session.title
+        title = session_plan.title
 
         # Delete associated records first
-        SessionComponent.query.filter_by(session_id=session_id).delete()
-        Attendance.query.filter_by(session_id=session_id).delete()
-        SessionRSVP.query.filter_by(session_id=session_id).delete()
+        SessionComponent.query.filter_by(
+            session_id=session_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
+        
+        Attendance.query.filter_by(
+            session_id=session_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
+        
+        SessionRSVP.query.filter_by(
+            session_id=session_id,
+            team_organization_id=get_current_team_id()
+        ).delete()
 
         # Delete the session
-        db.session.delete(session)
+        db.session.delete(session_plan)
         db.session.commit()
 
         current_app.logger.info(f"Successfully deleted session {session_id}")
@@ -910,7 +1150,11 @@ def delete_session(session_id):
 @coach_required
 def edit_drill(drill_id):
     """Edit an existing drill"""
-    drill = SavedDrill.query.get_or_404(drill_id)
+    drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
     form = DrillForm(obj=drill)
     
     if form.validate_on_submit():
@@ -923,7 +1167,7 @@ def edit_drill(drill_id):
         drill.skill_level = form.skill_level.data
         drill.focus_area = form.focus_area.data
         drill.equipment_needed = form.equipment_needed.data
-        drill.ultiplay_embed = form.ultiplay_embed.data  # Add this line
+        drill.ultiplay_embed = form.ultiplay_embed.data
         drill.is_public = form.is_public.data if hasattr(form, 'is_public') else False
         
         db.session.commit()
@@ -943,14 +1187,20 @@ def edit_drill(drill_id):
 @coach_required
 def delete_drill(drill_id):
     """Delete a drill (form-based deletion)"""
-    drill = SavedDrill.query.get_or_404(drill_id)
+    drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
     
     if drill.created_by != current_user.id and not current_user.is_admin:
         abort(403)
 
     try:
         # Delete associated components
-        SessionComponent.query.filter_by(drill_id=drill.id).delete()
+        SessionComponent.query.filter_by(
+            drill_id=drill.id,
+            team_organization_id=get_current_team_id()
+        ).delete()
         
         title = drill.title
         db.session.delete(drill)
@@ -1028,7 +1278,10 @@ def debug_files():
     static_folder = current_app.static_folder
     
     # Get all drills with diagrams
-    drills_with_diagrams = SavedDrill.query.filter(SavedDrill.diagram_url.isnot(None)).all()
+    drills_with_diagrams = SavedDrill.query.filter(
+        SavedDrill.diagram_url.isnot(None),
+        SavedDrill.team_organization_id == get_current_team_id()
+    ).all()
     
     debug_info = {
         'upload_folder': upload_folder,
@@ -1063,9 +1316,18 @@ def export_pdf(session_id):
         import pdfkit
         from flask import make_response
         
-        session = SessionPlan.query.get_or_404(session_id)
-        components = session.components.order_by(SessionComponent.order).all()
-        attendances = session.attendances.all()
+        session_plan = SessionPlan.query.filter_by(
+            id=session_id,
+            team_organization_id=get_current_team_id()
+        ).first_or_404()
+        
+        components = session_plan.components.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(SessionComponent.order).all()
+        
+        attendances = session_plan.attendances.filter_by(
+            team_organization_id=get_current_team_id()
+        ).all()
         
         # Group attendances by status
         attendance_by_status = {
@@ -1082,7 +1344,7 @@ def export_pdf(session_id):
         # Render the template to HTML
         html = render_template(
             'session/pdf_export.html',
-            session=session,
+            session=session_plan,
             components=components,
             attendance_by_status=attendance_by_status
         )
@@ -1108,7 +1370,7 @@ def export_pdf(session_id):
         # Create response with PDF
         response = make_response(pdf)
         response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session.title.replace(" ", "_")}.pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session_plan.title.replace(" ", "_")}.pdf'
         
         return response
         
@@ -1119,7 +1381,7 @@ def export_pdf(session_id):
             
             html = render_template(
                 'session/pdf_export.html',
-                session=session,
+                session=session_plan,
                 components=components,
                 attendance_by_status=attendance_by_status
             )
@@ -1128,7 +1390,7 @@ def export_pdf(session_id):
             
             response = make_response(pdf)
             response.headers['Content-Type'] = 'application/pdf'
-            response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session.title.replace(" ", "_")}.pdf'
+            response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session_plan.title.replace(" ", "_")}.pdf'
             
             return response
             
@@ -1141,9 +1403,18 @@ def export_pdf(session_id):
 @login_required
 def printable_view(session_id):
     """Show printable view of session plan"""
-    session = SessionPlan.query.get_or_404(session_id)
-    components = session.components.order_by(SessionComponent.order).all()
-    attendances = session.attendances.all()
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    components = session_plan.components.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SessionComponent.order).all()
+    
+    attendances = session_plan.attendances.filter_by(
+        team_organization_id=get_current_team_id()
+    ).all()
     
     # Group attendances by status
     attendance_by_status = {
@@ -1159,8 +1430,9 @@ def printable_view(session_id):
     
     return render_template(
         'session/printable.html',
-        session=session,
+        session=session_plan,
         components=components,
         attendance_by_status=attendance_by_status
     )
 
+        
