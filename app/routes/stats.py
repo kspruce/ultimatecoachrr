@@ -1698,7 +1698,7 @@ def team_stats():
     
     return render_template(
         'stats/team_stats.html',
-        player_stats=player_stats,
+        player_stats=player_stats_dict,
         team_summary=team_summary,
         tournaments=tournaments,
         seasons=seasons,
