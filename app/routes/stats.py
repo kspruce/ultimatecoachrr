@@ -2435,7 +2435,7 @@ def calculate_additional_team_metrics(games):
         Event.team_organization_id == get_current_team_id()
     )
     turnovers_forced_query = turnovers_forced_query.filter(Event.point_id.in_(point_ids))
-    turnovers_forced = turnovers_forced_query.count()
+    turnovers_forced = turnovers_forced_query.count() + blocks
     
     # Count hucks
     hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > 20)
@@ -3215,19 +3215,46 @@ def calculate_optimized_line_efficiency(players, player_stats, is_offensive=True
             continue
             
         stats = player_stats[player.id]
-        points_played = stats['o_line_points_played'] if is_offensive else stats['d_line_points_played']
+        
+        # Get the appropriate points played count
+        if is_offensive:
+            points_played = stats.get('o_line_points_played', 0)
+            # We need to calculate how many O-line points with this player resulted in scoring
+            # This requires additional data that might not be in the player_stats
+        else:
+            points_played = stats.get('d_line_points_played', 0)
+            # Similar for D-line points
         
         if points_played > 0:
-            # For O-line, use o_line_plus_minus as a proxy for scoring efficiency
-            # For D-line, use d_line_plus_minus as a proxy for defensive efficiency
-            plus_minus = stats['o_line_plus_minus'] if is_offensive else stats['d_line_plus_minus']
-            
-            # Calculate efficiency as plus/minus per point
-            efficiency = plus_minus / points_played
-            
-            player_efficiency[player] = efficiency
+            # We need to query the database to get the actual points data
+            # This is a more complex calculation that requires point-level data
+            player_efficiency[player] = calculate_player_line_efficiency(player, is_offensive)
     
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
+
+def calculate_player_line_efficiency(player, is_offensive=True):
+    """Calculate a player's line efficiency based on points scored vs points played"""
+    # Query for lineups where this player participated
+    lineup_query = LineUp.query.join(Point).filter(
+        LineUp.player_id == player.id,
+        Point.our_line_type == ('O-line' if is_offensive else 'D-line'),
+        LineUp.team_organization_id == get_current_team_id(),
+        Point.team_organization_id == get_current_team_id()
+    )
+    
+    # Get all points where this player was in the lineup
+    lineups = lineup_query.all()
+    points_played = len(lineups)
+    
+    if points_played == 0:
+        return 0
+    
+    # Count points where we scored
+    points_scored = sum(1 for lineup in lineups if lineup.point.we_scored)
+    
+    # Calculate efficiency as scoring percentage
+    return points_scored / points_played
+
 
 def calculate_team_avg_stats(player_stats):
     """Calculate team average stats from preloaded player stats"""
