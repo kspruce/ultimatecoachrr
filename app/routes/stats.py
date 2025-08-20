@@ -1486,6 +1486,27 @@ def player_stats(player_id):
         team_organization_id=get_current_team_id()
     ).order_by(Tournament.start_date.desc()).all()
 
+    # Calculate per-point metrics for radar charts if not already calculated
+    if stats['points_played'] > 0:
+        total_points = stats['points_played']
+        if 'goals_per_point' not in stats:
+            stats['goals_per_point'] = stats['goals'] / total_points
+        if 'assists_per_point' not in stats:
+            stats['assists_per_point'] = stats['assists'] / total_points
+        if 'throws_per_point' not in stats:
+            stats['throws_per_point'] = stats['throws'] / total_points
+        if 'hucks_per_point' not in stats:
+            stats['hucks_per_point'] = stats['hucks'] / total_points
+    
+    # Defensive per-point metrics
+    if stats['d_line_points_played'] > 0:
+        d_line_points = stats['d_line_points_played']
+        if 'blocks_per_point' not in stats:
+            stats['blocks_per_point'] = stats['blocks'] / d_line_points
+        if 'turnovers_forced_per_point' not in stats:
+            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / d_line_points
+
+
     return render_template(
         'stats/player_stats.html',
         player=player,

@@ -1267,18 +1267,14 @@ function initializeRadarCharts() {
     if (Chart.getChart(offensiveCanvas)) Chart.getChart(offensiveCanvas).destroy();
     if (Chart.getChart(defensiveCanvas)) Chart.getChart(defensiveCanvas).destroy();
 
-    const normalize = (value, key, excellentValues) => {
-        const excellent = excellentValues[key];
-        if (excellent === 0) return 0; // Avoid division by zero
-        return Math.min(100, (value / excellent) * 100);
-    };
-
     // --- Offensive Radar Chart ---
     const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Throws Per Point', 'Hucks Per Point'];
     const offensiveExcellentValues = {
         'Completion Rate': 100, 'O-Line Conversion': 80, 'Goals Per Point': 1.0, 
         'Assists Per Point': 1.0, 'Throws Per Point': 10.0, 'Hucks Per Point': 0.5
     };
+    
+    // Get raw values from the template variables
     const playerOffensiveRaw = {
         'Completion Rate': {{ stats.completion_rate|default(0)|round(1) }},
         'O-Line Conversion': {{ stats.o_line_conversion_rate|default(0)|round(1) }},
@@ -1287,6 +1283,7 @@ function initializeRadarCharts() {
         'Throws Per Point': {{ stats.throws_per_point|default(0)|round(1) }},
         'Hucks Per Point': {{ stats.hucks_per_point|default(0)|round(2) }}
     };
+    
     const teamOffensiveRaw = {
         'Completion Rate': {{ team_summary.completion_rate|default(0)|round(1) }},
         'O-Line Conversion': {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
@@ -1296,19 +1293,26 @@ function initializeRadarCharts() {
         'Hucks Per Point': {{ team_summary.hucks_per_point|default(0)|round(2) }}
     };
 
+    // Normalize values to 0-100 scale
+    const normalizeValue = (value, key) => {
+        const excellent = offensiveExcellentValues[key];
+        if (excellent === 0) return 0; // Avoid division by zero
+        return Math.min(100, (value / excellent) * 100);
+    };
+
     new Chart(offensiveCanvas, {
         type: 'radar',
         data: {
             labels: offensiveLabels,
             datasets: [{
                 label: 'Player Stats',
-                data: offensiveLabels.map(label => normalize(playerOffensiveRaw[label], label, offensiveExcellentValues)),
+                data: offensiveLabels.map(label => normalizeValue(playerOffensiveRaw[label], label)),
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 2
             }, {
                 label: 'Team Average',
-                data: offensiveLabels.map(label => normalize(teamOffensiveRaw[label], label, offensiveExcellentValues)),
+                data: offensiveLabels.map(label => normalizeValue(teamOffensiveRaw[label], label)),
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
                 borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1
@@ -1324,7 +1328,8 @@ function initializeRadarCharts() {
                     callbacks: {
                         label: function(context) {
                             const label = context.label;
-                            const rawValue = context.dataset.label === 'Player Stats' ? playerOffensiveRaw[label] : teamOffensiveRaw[label];
+                            const rawValue = context.dataset.label === 'Player Stats' ? 
+                                playerOffensiveRaw[label] : teamOffensiveRaw[label];
                             return `${context.dataset.label}: ${rawValue.toFixed(2)}`;
                         }
                     }
@@ -1365,13 +1370,13 @@ function initializeRadarCharts() {
             labels: defensiveLabels,
             datasets: [{
                 label: 'Player Stats',
-                data: defensiveLabels.map(label => normalize(playerDefensiveRaw[label], label, defensiveExcellentValues)),
+                data: defensiveLabels.map(label => normalizeValue(playerDefensiveRaw[label], defensiveExcellentValues[label])),
                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
                 borderColor: 'rgba(255, 99, 132, 1)',
                 borderWidth: 2
             }, {
                 label: 'Team Average',
-                data: defensiveLabels.map(label => normalize(teamDefensiveRaw[label], label, defensiveExcellentValues)),
+                data: defensiveLabels.map(label => normalizeValue(teamDefensiveRaw[label], defensiveExcellentValues[label])),
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
                 borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1
@@ -1387,7 +1392,8 @@ function initializeRadarCharts() {
                     callbacks: {
                         label: function(context) {
                             const label = context.label;
-                            const rawValue = context.dataset.label === 'Player Stats' ? playerDefensiveRaw[label] : teamDefensiveRaw[label];
+                            const rawValue = context.dataset.label === 'Player Stats' ? 
+                                playerDefensiveRaw[label] : teamDefensiveRaw[label];
                             return `${context.dataset.label}: ${rawValue.toFixed(2)}`;
                         }
                     }
@@ -1398,9 +1404,6 @@ function initializeRadarCharts() {
     
     console.log('Radar charts updated successfully.');
 }
-
-
-
 
 // Cutting Skills Visualization
 function initializeCuttingSkillsVisualizations() {
