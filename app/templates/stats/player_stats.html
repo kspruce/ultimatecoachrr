@@ -1354,13 +1354,17 @@ function initializeRadarCharts() {
         'Defensive Efficiency': 80
     };
 
+
+
     const playerDefensiveRaw = {
         'D-Line Conversion': {{ stats.d_line_conversion_rate|default(0)|round(1) }},
         'Blocks Per Point': {{ stats.blocks_per_point|default(0)|round(2) }},
-        'Break Percentage': {{ team_summary.break_percentage|default(0)|round(1) }}, // Team metric
+        // CORRECTED LINE: Use the player's stat, not the team's.
+        'Break Percentage': {{ stats.d_line_conversion_rate|default(0)|round(1) }}, 
         'Turnovers Forced/Point': {{ stats.turnovers_forced_per_point|default(0)|round(2) }},
-        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // Same as D-Line Conversion for player
+        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // This is also correct
     };
+
 
     const teamDefensiveRaw = {
         'D-Line Conversion': {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
