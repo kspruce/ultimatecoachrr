@@ -1322,61 +1322,11 @@ def player_stats(player_id):
     # Get point IDs for filtering if games are selected
     point_ids = get_point_ids_from_games(games)
 
-    # --- Player-specific conversion rate calculations ---
-    if stats['o_line_points_played'] > 0:
-        o_line_points_player_was_in = db.session.query(Point.id).join(LineUp).filter(
-            LineUp.player_id == player.id, Point.our_line_type == 'O-line', Point.id.in_(point_ids)
-        ).all()
-        o_line_point_ids = [p[0] for p in o_line_points_player_was_in]
-        o_line_scores = db.session.query(Point.id).filter(
-            Point.id.in_(o_line_point_ids), Point.we_scored == True
-        ).count()
-        stats['o_line_conversion_rate'] = (o_line_scores / stats['o_line_points_played']) * 100
-    else:
-        stats['o_line_conversion_rate'] = 0
-
-    if stats['d_line_points_played'] > 0:
-        d_line_points_player_was_in = db.session.query(Point.id).join(LineUp).filter(
-            LineUp.player_id == player.id, Point.our_line_type == 'D-line', Point.id.in_(point_ids)
-        ).all()
-        d_line_point_ids = [p[0] for p in d_line_points_player_was_in]
-        d_line_scores = db.session.query(Point.id).filter(
-            Point.id.in_(d_line_point_ids), Point.we_scored == True
-        ).count()
-        stats['d_line_conversion_rate'] = (d_line_scores / stats['d_line_points_played']) * 100
-    else:
-        stats['d_line_conversion_rate'] = 0
-    
     # --- Team-level summary calculations ---
     team_summary = calculate_team_summary(games)
     team_summary.update(calculate_additional_team_metrics(games))
 
-    # --- NEW: Centralized Per-Point Calculations ---
-    # Offensive per-point metrics
-    if stats['points_played'] > 0:
-        total_points = stats['points_played']
-        stats['goals_per_point'] = stats['goals'] / total_points
-        stats['assists_per_point'] = stats['assists'] / total_points
-        stats['throws_per_point'] = stats['throws'] / total_points
-        stats['hucks_per_point'] = stats['hucks'] / total_points
-    else:
-        stats['goals_per_point'] = 0
-        stats['assists_per_point'] = 0
-        stats['throws_per_point'] = 0
-        stats['hucks_per_point'] = 0
-
-    # Defensive per-point metrics
-    if stats['d_line_points_played'] > 0:
-        d_line_points = stats['d_line_points_played']
-        stats['blocks_per_point'] = stats['blocks'] / d_line_points
-        stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / d_line_points
-    else:
-        stats['blocks_per_point'] = 0
-        stats['turnovers_forced_per_point'] = 0
-    # --- END OF CENTRALIZED CALCULATIONS ---
-
-    # ... (cutting skills, game history, etc. calculations remain here) ...
-    # Get cutting skills data
+    # --- Cutting Skills Calculations ---
     cutting_skills_query = CuttingSkill.query.filter_by(
         player_id=player_id,
         team_organization_id=get_current_team_id()
@@ -1384,109 +1334,22 @@ def player_stats(player_id):
     if point_ids:
         cutting_skills_query = cutting_skills_query.filter(CuttingSkill.point_id.in_(point_ids))
     cutting_skills = cutting_skills_query.all()
-    
-    # Process cutting skills data for frontend
     cutting_data = [skill.to_dict() for skill in cutting_skills]
-    
-    # Calculate cutting stats
-    cutting_stats = {
-        'total_cuts': len(cutting_skills),
-        'total_open_looked_off': sum(1 for s in cutting_skills if s.outcome == 'open_looked_off'),
-        'total_guarded_looked_off': sum(1 for s in cutting_skills if s.outcome == 'guarded_looked_off'),
-        'total_open_thrown_to': sum(1 for s in cutting_skills if s.outcome == 'open_thrown_to'),
-        'total_guarded_thrown_to': sum(1 for s in cutting_skills if s.outcome == 'guarded_thrown_to'),
-        'by_type': {},
-        'success_rate': 0,
-        'open_rate': 0,
-        'preferred_cut': 'N/A'
-    }
-    
-    # Calculate success rate (thrown to / total)
-    successful_cuts = cutting_stats['total_open_thrown_to'] + cutting_stats['total_guarded_thrown_to']
-    if cutting_stats['total_cuts'] > 0:
-        cutting_stats['success_rate'] = (successful_cuts / cutting_stats['total_cuts']) * 100
-        
-        # Calculate open rate (open / total)
-        open_cuts = cutting_stats['total_open_looked_off'] + cutting_stats['total_open_thrown_to']
-        cutting_stats['open_rate'] = (open_cuts / cutting_stats['total_cuts']) * 100
-    
-    # Calculate stats by cutting type
-    cut_types = ['open_deep', 'open_under', 'break_deep', 'break_under']
-    for cut_type in cut_types:
-        type_skills = [s for s in cutting_skills if s.cutting_type == cut_type]
-        
-        open_looked_off = sum(1 for s in type_skills if s.outcome == 'open_looked_off')
-        guarded_looked_off = sum(1 for s in type_skills if s.outcome == 'guarded_looked_off')
-        open_thrown_to = sum(1 for s in type_skills if s.outcome == 'open_thrown_to')
-        guarded_thrown_to = sum(1 for s in type_skills if s.outcome == 'guarded_thrown_to')
-        
-        total = len(type_skills)
-        success_rate = 0
-        if total > 0:
-            success_rate = ((open_thrown_to + guarded_thrown_to) / total) * 100
-            
-        cutting_stats['by_type'][cut_type] = {
-            'total': total,
-            'open_looked_off': open_looked_off,
-            'guarded_looked_off': guarded_looked_off,
-            'open_thrown_to': open_thrown_to,
-            'guarded_thrown_to': guarded_thrown_to,
-            'success_rate': success_rate
-        }
-    
-    # Determine preferred cut (most used)
-    if cutting_stats['total_cuts'] > 0:
-        preferred_cut_type = max(cut_types, key=lambda ct: cutting_stats['by_type'][ct]['total'] if ct in cutting_stats['by_type'] else 0)
-        if cutting_stats['by_type'].get(preferred_cut_type, {}).get('total', 0) > 0:
-            cutting_stats['preferred_cut'] = preferred_cut_type.replace('_', ' ').title()
-    
-    # Calculate team radar stats
-    team_stats = calculate_team_radar_stats(games, player.team)
-    
-    # Get player's game history
-    player_games = []
-    games_query = Game.query.filter_by(
-        team_organization_id=get_current_team_id()
-    )
-    if tournament_id:
-        games_query = games_query.filter_by(tournament_id=tournament_id)
-    elif game_id:
-        games_query = games_query.filter_by(id=game_id)
-    
-    for game in games_query.order_by(Game.date.desc()).all():
-        # Check if player participated in this game
-        lineup_query = LineUp.query.join(Point).filter(
-            LineUp.player_id == player.id,
-            Point.game_id == game.id,
-            LineUp.team_organization_id == get_current_team_id(),
-            Point.team_organization_id == get_current_team_id()
-        )
-        
-        if lineup_query.count() > 0:
-            game_stats_dict = get_players_base_stats([player], [game])
-            game_stats = game_stats_dict[player.id]
-            
-            game_team_avgs = get_cached_team_averages([game])
-            game_stats['per'] = calculate_per_from_stats(game_stats, game_team_avgs)
-            
-            player_games.append({
-                'game': game,
-                'stats': game_stats
-            })
-    
+    cutting_stats = calculate_cutting_stats(cutting_skills) # Refactored for clarity
+
+    # --- Game History Calculation ---
+    player_games = get_player_game_history(player, tournament_id, game_id)
+
+    # --- Turnover Analysis ---
     most_common_throwaway_location = calculate_most_common_throwaway_location(player, games)
     throwaway_direction_data = calculate_most_common_throwaway_direction(player, games)
-    
-    if throwaway_direction_data and throwaway_direction_data.get('total', 0) == 0:
-        throwaway_direction_data['percentage'] = 0
-    elif throwaway_direction_data:
+    if throwaway_direction_data and throwaway_direction_data.get('total', 0) > 0:
         throwaway_direction_data['percentage'] = (throwaway_direction_data['count'] / throwaway_direction_data['total']) * 100
-    
-    tournaments = Tournament.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(Tournament.start_date.desc()).all()
+    else:
+        throwaway_direction_data['percentage'] = 0
 
-    # Ensure all required metrics are calculated for radar charts
+    # --- CORRECTED AND CONSOLIDATED RADAR CHART METRICS ---
+    # This block ensures all necessary stats are calculated and correctly formatted.
     if stats['points_played'] > 0:
         # Offensive metrics
         stats['goals_per_point'] = stats['goals'] / stats['points_played']
@@ -1502,58 +1365,52 @@ def player_stats(player_id):
             stats['blocks_per_point'] = 0
             stats['turnovers_forced_per_point'] = 0
             
-    # Ensure all required metrics are calculated for radar charts
-    if stats['points_played'] > 0:
-        # Offensive metrics
-        stats['goals_per_point'] = stats['goals'] / stats['points_played']
-        stats['assists_per_point'] = stats['assists'] / stats['points_played']
-        stats['throws_per_point'] = stats['throws'] / stats['points_played']
-        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['points_played']
-        
-        # Defensive metrics
-        if stats['d_line_points_played'] > 0:
-            stats['blocks_per_point'] = stats['blocks'] / stats['d_line_points_played']
-            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / stats['d_line_points_played']
-        else:
-            stats['blocks_per_point'] = 0
-            stats['turnovers_forced_per_point'] = 0
-            
-        # Ensure conversion rates are calculated
-        if 'o_line_conversion_rate' not in stats or stats['o_line_conversion_rate'] == 0:
-            # Calculate from points data if not already set
+        # O-Line Conversion Rate Calculation
+        if stats['o_line_points_played'] > 0:
             o_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
                 LineUp.player_id == player.id, 
                 Point.our_line_type == 'O-line',
-                Point.team_organization_id == get_current_team_id()
+                Point.id.in_(point_ids)
             )
-            if point_ids:
-                o_line_points_player_was_in = o_line_points_player_was_in.filter(Point.id.in_(point_ids))
-            
-            o_line_points_count = o_line_points_player_was_in.count()
             o_line_scores = o_line_points_player_was_in.filter(Point.we_scored == True).count()
-            
-            if o_line_points_count > 0:
-                stats['o_line_conversion_rate'] = (o_line_scores / o_line_points_count) * 100
+            stats['o_line_conversion_rate'] = (o_line_scores / stats['o_line_points_played']) * 100
+        else:
+            stats['o_line_conversion_rate'] = 0
 
+        # D-Line Conversion Rate Calculation (FIXED)
+        if stats['d_line_points_played'] > 0:
+            d_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
+                LineUp.player_id == player.id, 
+                Point.our_line_type == 'D-line',
+                Point.id.in_(point_ids)
+            )
+            d_line_scores = d_line_points_player_was_in.filter(Point.we_scored == True).count()
+            stats['d_line_conversion_rate'] = (d_line_scores / stats['d_line_points_played']) * 100
+        else:
+            stats['d_line_conversion_rate'] = 0
+    else:
+        # Default all per-point metrics to 0 if no points played
+        stats['goals_per_point'] = 0
+        stats['assists_per_point'] = 0
+        stats['throws_per_point'] = 0
+        stats['hucks_per_point'] = 0
+        stats['blocks_per_point'] = 0
+        stats['turnovers_forced_per_point'] = 0
+        stats['o_line_conversion_rate'] = 0
+        stats['d_line_conversion_rate'] = 0
 
-    # Debug output
-    print(f"Player: {player.name}")
-    print(f"Points played: {stats['points_played']}")
-    print(f"O-line points: {stats['o_line_points_played']}")
-    print(f"D-line points: {stats['d_line_points_played']}")
-    print(f"Throws: {stats['throws']}")
-    print(f"Throws per point: {stats.get('throws_per_point', 0)}")
-    print(f"Blocks: {stats['blocks']}")
-    print(f"Blocks per point: {stats.get('blocks_per_point', 0)}")
-    print(f"O-line conversion rate: {stats.get('o_line_conversion_rate', 0)}")
-    print(f"D-line conversion rate: {stats.get('d_line_conversion_rate', 0)}")
+    # Ensure team_summary has defensive_efficiency for comparison
+    if 'defensive_efficiency' not in team_summary:
+        team_summary['defensive_efficiency'] = team_summary.get('d_line_conversion_rate', 0)
 
+    tournaments = Tournament.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(Tournament.start_date.desc()).all()
 
     return render_template(
         'stats/player_stats.html',
         player=player,
         stats=stats,
-        team_stats=team_stats,
         team_summary=team_summary, 
         player_games=player_games,
         tournaments=tournaments,
@@ -1577,6 +1434,71 @@ def player_stats(player_id):
         most_common_throwaway_location=most_common_throwaway_location,
         throwaway_direction_data=throwaway_direction_data
     )
+
+# You will also need to add these two new helper functions to stats.py
+# (or refactor the existing code into them)
+
+def calculate_cutting_stats(cutting_skills):
+    """Processes a list of cutting skills and returns a summary dictionary."""
+    stats = {
+        'total_cuts': len(cutting_skills),
+        'total_open_looked_off': sum(1 for s in cutting_skills if s.outcome == 'open_looked_off'),
+        'total_guarded_looked_off': sum(1 for s in cutting_skills if s.outcome == 'guarded_looked_off'),
+        'total_open_thrown_to': sum(1 for s in cutting_skills if s.outcome == 'open_thrown_to'),
+        'total_guarded_thrown_to': sum(1 for s in cutting_skills if s.outcome == 'guarded_thrown_to'),
+        'by_type': {},
+        'success_rate': 0,
+        'open_rate': 0,
+        'preferred_cut': 'N/A'
+    }
+    
+    successful_cuts = stats['total_open_thrown_to'] + stats['total_guarded_thrown_to']
+    if stats['total_cuts'] > 0:
+        stats['success_rate'] = (successful_cuts / stats['total_cuts']) * 100
+        open_cuts = stats['total_open_looked_off'] + stats['total_open_thrown_to']
+        stats['open_rate'] = (open_cuts / stats['total_cuts']) * 100
+
+    cut_types = ['open_deep', 'open_under', 'break_deep', 'break_under']
+    for cut_type in cut_types:
+        type_skills = [s for s in cutting_skills if s.cutting_type == cut_type]
+        total = len(type_skills)
+        open_thrown_to = sum(1 for s in type_skills if s.outcome == 'open_thrown_to')
+        guarded_thrown_to = sum(1 for s in type_skills if s.outcome == 'guarded_thrown_to')
+        
+        stats['by_type'][cut_type] = {
+            'total': total,
+            'open_looked_off': sum(1 for s in type_skills if s.outcome == 'open_looked_off'),
+            'guarded_looked_off': sum(1 for s in type_skills if s.outcome == 'guarded_looked_off'),
+            'open_thrown_to': open_thrown_to,
+            'guarded_thrown_to': guarded_thrown_to,
+            'success_rate': ((open_thrown_to + guarded_thrown_to) / total) * 100 if total > 0 else 0
+        }
+
+    if stats['total_cuts'] > 0:
+        preferred_cut_type = max(cut_types, key=lambda ct: stats['by_type'][ct]['total'] if ct in stats['by_type'] else 0)
+        if stats['by_type'].get(preferred_cut_type, {}).get('total', 0) > 0:
+            stats['preferred_cut'] = preferred_cut_type.replace('_', ' ').title()
+            
+    return stats
+
+def get_player_game_history(player, tournament_id, game_id):
+    """Fetches and calculates stats for a player's game history."""
+    player_games = []
+    games_query = Game.query.filter_by(team_organization_id=get_current_team_id())
+    if tournament_id:
+        games_query = games_query.filter_by(tournament_id=tournament_id)
+    elif game_id:
+        games_query = games_query.filter_by(id=game_id)
+    
+    for game in games_query.order_by(Game.date.desc()).all():
+        if LineUp.query.join(Point).filter(LineUp.player_id == player.id, Point.game_id == game.id).first():
+            game_stats_dict = get_players_base_stats([player], [game])
+            game_stats = game_stats_dict[player.id]
+            game_team_avgs = get_cached_team_averages([game])
+            game_stats['per'] = calculate_per_from_stats(game_stats, game_team_avgs)
+            player_games.append({'game': game, 'stats': game_stats})
+            
+    return player_games
 
 
 @bp.route('/game/<int:game_id>')
