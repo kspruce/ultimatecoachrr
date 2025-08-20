@@ -1502,44 +1502,39 @@ def player_stats(player_id):
             stats['blocks_per_point'] = 0
             stats['turnovers_forced_per_point'] = 0
             
-        # Ensure conversion rates are calculated
-        if stats['o_line_points_played'] > 0:
-            if 'o_line_conversion_rate' not in stats or stats['o_line_conversion_rate'] == 0:
-                # Calculate from points data if not already set
-                o_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
-                    LineUp.player_id == player.id, 
-                    Point.our_line_type == 'O-line',
-                    Point.team_organization_id == get_current_team_id()
-                )
-                if point_ids:
-                    o_line_points_player_was_in = o_line_points_player_was_in.filter(Point.id.in_(point_ids))
-                
-                o_line_points_count = o_line_points_player_was_in.count()
-                o_line_scores = o_line_points_player_was_in.filter(Point.we_scored == True).count()
-                
-                if o_line_points_count > 0:
-                    stats['o_line_conversion_rate'] = (o_line_scores / o_line_points_count) * 100
+    # Ensure all required metrics are calculated for radar charts
+    if stats['points_played'] > 0:
+        # Offensive metrics
+        stats['goals_per_point'] = stats['goals'] / stats['points_played']
+        stats['assists_per_point'] = stats['assists'] / stats['points_played']
+        stats['throws_per_point'] = stats['throws'] / stats['points_played']
+        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['points_played']
         
+        # Defensive metrics
         if stats['d_line_points_played'] > 0:
-            if 'd_line_conversion_rate' not in stats or stats['d_line_conversion_rate'] == 0:
-                # Calculate from points data if not already set
-                d_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
-                    LineUp.player_id == player.id, 
-                    Point.our_line_type == 'D-line',
-                    Point.team_organization_id == get_current_team_id()
-                )
-                if point_ids:
-                    d_line_points_player_was_in = d_line_points_player_was_in.filter(Point.id.in_(point_ids))
-                
-                d_line_points_count = d_line_points_player_was_in.count()
-                d_line_scores = d_line_points_player_was_in.filter(Point.we_scored == True).count()
-                
-                if d_line_points_count > 0:
-                    stats['d_line_conversion_rate'] = (d_line_scores / d_line_points_count) * 100
-    
-    # Make sure team_summary has all the metrics needed for comparison
-    if 'defensive_efficiency' not in team_summary:
-        team_summary['defensive_efficiency'] = team_summary.get('d_line_conversion_rate', 0)
+            stats['blocks_per_point'] = stats['blocks'] / stats['d_line_points_played']
+            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / stats['d_line_points_played']
+        else:
+            stats['blocks_per_point'] = 0
+            stats['turnovers_forced_per_point'] = 0
+            
+        # Ensure conversion rates are calculated
+        if 'o_line_conversion_rate' not in stats or stats['o_line_conversion_rate'] == 0:
+            # Calculate from points data if not already set
+            o_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
+                LineUp.player_id == player.id, 
+                Point.our_line_type == 'O-line',
+                Point.team_organization_id == get_current_team_id()
+            )
+            if point_ids:
+                o_line_points_player_was_in = o_line_points_player_was_in.filter(Point.id.in_(point_ids))
+            
+            o_line_points_count = o_line_points_player_was_in.count()
+            o_line_scores = o_line_points_player_was_in.filter(Point.we_scored == True).count()
+            
+            if o_line_points_count > 0:
+                stats['o_line_conversion_rate'] = (o_line_scores / o_line_points_count) * 100
+
 
     # Debug output
     print(f"Player: {player.name}")
