@@ -1284,6 +1284,9 @@ function initializeRadarCharts() {
         'Hucks Per Point': 0.5
     };
     
+    // Define labels (this was missing)
+    const labels = Object.keys(offensiveExcellentValues);
+    
     // Get raw values
     const rawValues = [
         {{ stats.completion_rate|default(0)|round(1) }},
@@ -1298,6 +1301,7 @@ function initializeRadarCharts() {
     const normalizedValues = rawValues.map((value, index) => 
         Math.min(100, (value / offensiveExcellentValues[labels[index]]) * 100)
     );
+
 
     
     const teamOffensiveRaw = {
