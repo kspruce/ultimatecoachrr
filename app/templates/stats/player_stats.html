@@ -1251,6 +1251,7 @@ function initializePerformanceTrendChart() {
 }
 
 // Radar chart initialization
+// Radar chart initialization
 function initializeRadarCharts() {
     console.log('Initializing aligned radar charts');
     
@@ -1266,9 +1267,13 @@ function initializeRadarCharts() {
     if (Chart.getChart(offensiveCanvas)) Chart.getChart(offensiveCanvas).destroy();
     if (Chart.getChart(defensiveCanvas)) Chart.getChart(defensiveCanvas).destroy();
 
-    const normalize = (value, key, excellentValues) => Math.min(100, (value / excellentValues[key]) * 100);
+    const normalize = (value, key, excellentValues) => {
+        const excellent = excellentValues[key];
+        if (excellent === 0) return 0; // Avoid division by zero
+        return Math.min(100, (value / excellent) * 100);
+    };
 
-    // --- Offensive Radar Chart (remains the same as previous update) ---
+    // --- Offensive Radar Chart ---
     const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Throws Per Point', 'Hucks Per Point'];
     const offensiveExcellentValues = {
         'Completion Rate': 100, 'O-Line Conversion': 80, 'Goals Per Point': 1.0, 
@@ -1290,9 +1295,45 @@ function initializeRadarCharts() {
         'Throws Per Point': {{ team_summary.throws_per_point|default(0)|round(1) }},
         'Hucks Per Point': {{ team_summary.hucks_per_point|default(0)|round(2) }}
     };
-    new Chart(offensiveCanvas, { /* ... offensive chart config ... */ }); // This part is unchanged from previous step, so it's omitted for brevity.
 
-    // --- NEW: Updated Defensive Radar Chart ---
+    new Chart(offensiveCanvas, {
+        type: 'radar',
+        data: {
+            labels: offensiveLabels,
+            datasets: [{
+                label: 'Player Stats',
+                data: offensiveLabels.map(label => normalize(playerOffensiveRaw[label], label, offensiveExcellentValues)),
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2
+            }, {
+                label: 'Team Average',
+                data: offensiveLabels.map(label => normalize(teamOffensiveRaw[label], label, offensiveExcellentValues)),
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { r: { suggestedMin: 0, suggestedMax: 100, ticks: { stepSize: 20 } } },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label;
+                            const rawValue = context.dataset.label === 'Player Stats' ? playerOffensiveRaw[label] : teamOffensiveRaw[label];
+                            return `${context.dataset.label}: ${rawValue.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // --- Defensive Radar Chart ---
     const defensiveLabels = ['D-Line Conversion', 'Blocks Per Point', 'Break Percentage', 'Turnovers Forced/Point', 'Defensive Efficiency'];
     const defensiveExcellentValues = {
         'D-Line Conversion': 50,
@@ -1305,9 +1346,9 @@ function initializeRadarCharts() {
     const playerDefensiveRaw = {
         'D-Line Conversion': {{ stats.d_line_conversion_rate|default(0)|round(1) }},
         'Blocks Per Point': {{ stats.blocks_per_point|default(0)|round(2) }},
-        'Break Percentage': {{ team_summary.break_percentage|default(0)|round(1) }}, // This is a team metric
+        'Break Percentage': {{ team_summary.break_percentage|default(0)|round(1) }}, // This is a team metric, player value is same as team
         'Turnovers Forced/Point': {{ stats.turnovers_forced_per_point|default(0)|round(2) }},
-        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // Same as D-Line Conversion for player
+        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // Player's D-Line Conversion is their Defensive Efficiency
     };
 
     const teamDefensiveRaw = {
@@ -1357,6 +1398,7 @@ function initializeRadarCharts() {
     
     console.log('Radar charts updated successfully.');
 }
+
 
 
 
