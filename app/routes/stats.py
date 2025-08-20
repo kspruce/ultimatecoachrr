@@ -3761,3 +3761,23 @@ def calculate_line_efficiency(players, games, is_offensive=True):
             player_efficiency[player] = efficiency
     
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
+
+@bp.route('/debug/point-outcomes/<int:game_id>')
+@login_required
+@admin_required # Or coach_required
+def debug_point_outcomes(game_id):
+    """Debug view to check point outcomes and events."""
+    game = Game.query.get_or_404(game_id)
+    points_data = []
+    for point in game.points.order_by(Point.point_number):
+        events = Event.query.filter_by(point_id=point.id).order_by(Event.timestamp).all()
+        event_summary = [f"{e.event_type} by {e.player.name if e.player else 'N/A'}" for e in events]
+        
+        points_data.append({
+            "point_number": point.point_number,
+            "line_type": point.our_line_type,
+            "we_scored_flag": point.we_scored, # The flag we are checking
+            "point_outcome": point.point_outcome,
+            "events": event_summary
+        })
+    return jsonify(points_data)
