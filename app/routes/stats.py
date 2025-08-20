@@ -701,8 +701,8 @@ def get_player_base_stats(player, games=None):
     
     return stats
 
-def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, limit=None):
-    """Process throw data for heatmap visualization with limit"""
+def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, limit=None, point_ids=None):
+    """Process throw data for heatmap visualization with limit and point filtering"""
     heatmap_data = []
     
     # Helper function to add events to heatmap_data
@@ -722,6 +722,8 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
         throw_query = throw_query.filter(Throw.thrower_id == player_id)
     if team_name:
         throw_query = throw_query.join(Throw.thrower).filter(Player.team == team_name)
+    if point_ids:
+        throw_query = throw_query.filter(Throw.point_id.in_(point_ids))
     if limit:
         throw_query = throw_query.limit(limit)
     for throw in throw_query.all():
@@ -744,6 +746,8 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
             event_query = event_query.filter_by(player_id=player_id)
         if team_name:
             event_query = event_query.join(Event.player).filter(Player.team == team_name)
+        if point_ids:
+            event_query = event_query.filter(Event.point_id.in_(point_ids))
         if limit:
             event_query = event_query.limit(limit)
         
@@ -752,7 +756,8 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
     return heatmap_data
 
 
-def generate_player_connections(team_name=None, opposition_team=None, min_connections=1):
+
+def generate_player_connections(team_name=None, opposition_team=None, min_connections=1, point_ids=None):
     """Generate player connection data using Throws model with minimum connection threshold"""
     query = Throw.query.filter(
         Throw.receiver_id.isnot(None),
@@ -763,8 +768,13 @@ def generate_player_connections(team_name=None, opposition_team=None, min_connec
         query = query.join(Throw.thrower).filter(Player.team == team_name)
     if opposition_team:
         query = query.filter(Throw.opposition_team == opposition_team)
+    if point_ids:
+        query = query.filter(Throw.point_id.in_(point_ids))
     
     throws = query.all()
+    
+    # Rest of the function remains the same...
+
     
     # Track unique players and their connections
     players = set()
@@ -1542,8 +1552,9 @@ def game_stats(game_id):
         team_name = first_player.team
     
     # Generate visualization data
-    heatmap_data = process_heatmap_data(team_name=team_name, limit=1000)
-    connection_data = generate_player_connections(team_name=team_name, min_connections=2)
+    point_ids = [p.id for p in game.points]
+    heatmap_data = process_heatmap_data(team_name=team_name, point_ids=point_ids)
+    connection_data = generate_player_connections(team_name=team_name, min_connections=2, point_ids=point_ids)
     
     # Add additional team metrics
     team_stats.update(calculate_additional_team_metrics([game]))
