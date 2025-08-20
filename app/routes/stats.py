@@ -1429,8 +1429,6 @@ def player_stats(player_id):
     # Add this right after calculating d_line_conversion_rate
     print(f"DEBUG: Player {player.name}")
     print(f"DEBUG: d_line_points_played = {stats['d_line_points_played']}")
-    print(f"DEBUG: d_line_points query count = {d_line_points_player_was_in.count()}")
-    print(f"DEBUG: d_line_scores = {d_line_scores}")
     print(f"DEBUG: d_line_conversion_rate = {stats['d_line_conversion_rate']}")
     
     # Also print the point IDs to check if they match what we expect
