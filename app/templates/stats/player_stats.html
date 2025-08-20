@@ -1344,7 +1344,7 @@ function initializeRadarCharts() {
         }
     });
 
-    // --- Defensive Radar Chart ---
+   // --- Defensive Radar Chart ---
     const defensiveLabels = ['D-Line Conversion', 'Blocks Per Point', 'Break Percentage', 'Turnovers Forced/Point', 'Defensive Efficiency'];
     const defensiveExcellentValues = {
         'D-Line Conversion': 50,
@@ -1374,7 +1374,7 @@ function initializeRadarCharts() {
     console.log("Player defensive raw values:", playerDefensiveRaw);
     console.log("Team defensive raw values:", teamDefensiveRaw);
 
-    new Chart(defensiveCanvas, {
+    new Chart(defensiveCtx, {  // Use defensiveCtx here, not defensiveCanvas
         type: 'radar',
         data: {
             labels: defensiveLabels,
