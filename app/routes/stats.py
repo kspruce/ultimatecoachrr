@@ -1377,17 +1377,36 @@ def player_stats(player_id):
         else:
             stats['o_line_conversion_rate'] = 0
 
-        # D-Line Conversion Rate Calculation (FIXED)
-        if stats['d_line_points_played'] > 0:
-            d_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
-                LineUp.player_id == player.id, 
-                Point.our_line_type == 'D-line',
-                Point.id.in_(point_ids)
-            )
-            d_line_scores = d_line_points_player_was_in.filter(Point.we_scored == True).count()
-            stats['d_line_conversion_rate'] = (d_line_scores / stats['d_line_points_played']) * 100
+        # --- OPTIMIZED D-LINE CONVERSION CALCULATION ---
+        # Get the count of D-line points the player participated in
+        d_line_points_query = db.session.query(Point).join(
+            Event, Point.id == Event.point_id
+        ).filter(
+            Point.our_line_type == 'D-line',
+            Event.player_id == player.id,
+            Point.game_id.in_([g.id for g in games]),
+            Point.team_organization_id == get_current_team_id()
+        ).distinct(Point.id)
+        
+        # Count total points and scored points
+        d_line_points_played = 0
+        d_line_points_scored = 0
+        
+        for point in d_line_points_query:
+            d_line_points_played += 1
+            if point.we_scored:
+                d_line_points_scored += 1
+        
+        # Calculate D-line conversion rate
+        if d_line_points_played > 0:
+            stats['d_line_conversion_rate'] = (d_line_points_scored / d_line_points_played) * 100
+            # Log for debugging
+            print(f"DEBUG: Player {player.name} - D-line points played: {d_line_points_played}, scored: {d_line_points_scored}, rate: {stats['d_line_conversion_rate']}%")
         else:
             stats['d_line_conversion_rate'] = 0
+        
+        # This also serves as the Defensive Efficiency for the player
+        stats['defensive_efficiency'] = stats['d_line_conversion_rate']
     else:
         # Default all per-point metrics to 0 if no points played
         stats['goals_per_point'] = 0
@@ -1406,6 +1425,17 @@ def player_stats(player_id):
     tournaments = Tournament.query.filter_by(
         team_organization_id=get_current_team_id()
     ).order_by(Tournament.start_date.desc()).all()
+
+    # Add this right after calculating d_line_conversion_rate
+    print(f"DEBUG: Player {player.name}")
+    print(f"DEBUG: d_line_points_played = {stats['d_line_points_played']}")
+    print(f"DEBUG: d_line_points query count = {d_line_points_player_was_in.count()}")
+    print(f"DEBUG: d_line_scores = {d_line_scores}")
+    print(f"DEBUG: d_line_conversion_rate = {stats['d_line_conversion_rate']}")
+    
+    # Also print the point IDs to check if they match what we expect
+    point_ids_list = [p_id for p_id in point_ids] if point_ids else []
+    print(f"DEBUG: point_ids = {point_ids_list}")
 
     return render_template(
         'stats/player_stats.html',
