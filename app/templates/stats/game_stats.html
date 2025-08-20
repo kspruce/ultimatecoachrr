@@ -414,7 +414,118 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
-
+    
+    // Game flow chart
+    try {
+        const flowCtx = document.getElementById('game-flow-chart').getContext('2d');
+        if (flowCtx) {
+            const pointFlow = {{ team_stats.point_flow|tojson }};
+            
+            const labels = pointFlow.map(p => p.point_number);
+            const ourScores = pointFlow.map(p => p.our_score_after);
+            const theirScores = pointFlow.map(p => p.their_score_after);
+            
+            const gameFlowChart = new Chart(flowCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Our Score',
+                            data: ourScores,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: 'Their Score',
+                            data: theirScores,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Score'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Point Number'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Score Progression'
+                        }
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Error initializing game flow chart:", e);
+    }
+    
+    // Point distribution chart
+    try {
+        const distributionCtx = document.getElementById('point-distribution-chart').getContext('2d');
+        if (distributionCtx) {
+            const distributionChart = new Chart(distributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['O-Line Scores', 'O-Line Conceded', 'D-Line Scores', 'D-Line Conceded'],
+                    datasets: [{
+                        data: [
+                            {{ team_stats.o_line_conversions }},
+                            {{ team_stats.o_line_points - team_stats.o_line_conversions }},
+                            {{ team_stats.d_line_conversions }},
+                            {{ team_stats.d_line_points - team_stats.d_line_conversions }}
+                        ],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Point Distribution'
+                        }
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Error initializing point distribution chart:", e);
+    }    
+    
     // Check if player-stats-table exists before initializing DataTable
     if (document.getElementById('player-stats-table')) {
         try {
