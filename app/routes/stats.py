@@ -1324,24 +1324,7 @@ def player_stats(player_id):
     point_ids = get_point_ids_from_games(games)
 
     # --- NEW: Add calculations for aligned radar chart metrics ---
-    # Player's O-Line Conversion Rate (scoring on O-points they played)
-    if stats['o_line_points_played'] > 0:
-        o_line_points_player_was_in = db.session.query(Point.id).join(LineUp).filter(
-            LineUp.player_id == player.id,
-            Point.our_line_type == 'O-line',
-            Point.id.in_(point_ids)
-        ).all()
-        o_line_point_ids = [p[0] for p in o_line_points_player_was_in]
-        
-        o_line_scores = db.session.query(Point.id).filter(
-            Point.id.in_(o_line_point_ids),
-            Point.we_scored == True
-        ).count()
-        stats['o_line_conversion_rate'] = (o_line_scores / stats['o_line_points_played']) * 100
-    else:
-        stats['o_line_conversion_rate'] = 0
-
-    # Player's D-Line Conversion Rate (scoring on D-points they played, i.e., breaks)
+    # Player's D-Line Conversion Rate (scoring on D-points they played)
     if stats['d_line_points_played'] > 0:
         d_line_points_player_was_in = db.session.query(Point.id).join(LineUp).filter(
             LineUp.player_id == player.id,
@@ -1357,6 +1340,11 @@ def player_stats(player_id):
         stats['d_line_conversion_rate'] = (d_line_scores / stats['d_line_points_played']) * 100
     else:
         stats['d_line_conversion_rate'] = 0
+    
+    # Calculate team-level summary and additional metrics for the filtered games
+    team_summary = calculate_team_summary(games)
+    team_summary.update(calculate_additional_team_metrics(games))
+    # --- END OF NEW CALCULATIONS ---
 
     # Get cutting skills data
     cutting_skills_query = CuttingSkill.query.filter_by(
