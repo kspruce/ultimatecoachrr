@@ -415,572 +415,597 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
 
-    // Initialize DataTable with improved configuration
-    const playerStatsTable = $('#player-stats-table').DataTable({
-        pageLength: 25,
-        order: [[14, "desc"]], // Sort by PER by default
-        language: {
-            search: "Search players:",
-            lengthMenu: "Show _MENU_ players"
-        },
-        responsive: true
-    });
+    // Check if player-stats-table exists before initializing DataTable
+    if (document.getElementById('player-stats-table')) {
+        try {
+            const playerStatsTable = $('#player-stats-table').DataTable({
+                pageLength: 25,
+                order: [[8, "desc"]], // Sort by plus/minus by default - adjust column index as needed
+                language: {
+                    search: "Search players:",
+                    lengthMenu: "Show _MENU_ players"
+                },
+                responsive: true
+            });
+        } catch (e) {
+            console.error("DataTable initialization error:", e);
+        }
+    }
 
     // Initialize Heatmap
     if (document.getElementById('field-heatmap')) {
-        const heatmapContainer = document.getElementById('field-heatmap');
-        const heatmapInstance = h337.create({
-            container: heatmapContainer,
-            radius: 18,             // Increased from 15
-            maxOpacity: 0.9,        // Increased from 0.7
-            minOpacity: 0.35,       // Increased from 0.1
-            blur: 0.6,              // Reduced from 0.75 for sharper points
-            gradient: {
-                '.2': '#99ccff',
-                '.5': '#3399ff',
-                '.8': '#0066cc',
-                '.95': '#003366'
-            }
-        });
-    
-        {% if heatmap_data %}
-        const heatmapData = {{ heatmap_data|safe }};
-        
-        // Convert field coordinates to pixel coordinates
-        const fieldWidth = heatmapContainer.offsetWidth;
-        const fieldHeight = heatmapContainer.offsetHeight;
-        const fieldLengthMeters = 100;  // Length in meters
-        const fieldWidthMeters = 37;    // Width in meters
-        
-        // Draw field markings
-        function drawFieldMarkings() {
-            // Create SVG overlay for field markings
-            const svg = d3.select('#field-heatmap')
-                .append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%')
-                .style('position', 'absolute')
-                .style('top', 0)
-                .style('left', 0)
-                .style('pointer-events', 'none') // Allow clicks to pass through
-                .style('z-index', 3); // Above the heatmap
-            
-            // Add midfield line
-            svg.append('line')
-                .attr('x1', fieldWidth / 2)
-                .attr('y1', 0)
-                .attr('x2', fieldWidth / 2)
-                .attr('y2', fieldHeight)
-                .attr('stroke', 'white')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', '5,5')
-                .attr('opacity', 0.7);
-            
-            // Add brick marks (20 yards from each endzone)
-            // Left brick mark (defensive)
-            svg.append('circle')
-                .attr('cx', fieldWidth * 0.2 + (fieldWidth * 0.2)) // 20 yards from left endzone
-                .attr('cy', fieldHeight / 2)
-                .attr('r', 5)
-                .attr('fill', 'white')
-                .attr('opacity', 0.7);
-            
-            // Right brick mark (offensive)
-            svg.append('circle')
-                .attr('cx', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2))) // 20 yards from right endzone
-                .attr('cy', fieldHeight / 2)
-                .attr('r', 5)
-                .attr('fill', 'white')
-                .attr('opacity', 0.7);
-            
-            // Add field labels
-            svg.append('text')
-                .attr('x', fieldWidth / 2)
-                .attr('y', 20)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Midfield');
-            
-            svg.append('text')
-                .attr('x', fieldWidth * 0.2 + (fieldWidth * 0.2))
-                .attr('y', fieldHeight / 2 - 15)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Brick');
-            
-            svg.append('text')
-                .attr('x', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2)))
-                .attr('y', fieldHeight / 2 - 15)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Brick');
-        }
-        
-        // Add a legend for the heatmap
-        function addHeatmapLegend(filter) {
-            // Remove any existing legend
-            d3.select('#heatmap-legend').remove();
-            
-            const legendContainer = d3.select('#field-heatmap')
-                .append('div')
-                .attr('id', 'heatmap-legend')
-                .style('position', 'absolute')
-                .style('bottom', '10px')
-                .style('right', '10px')
-                .style('background', 'rgba(255,255,255,0.7)')
-                .style('padding', '5px')
-                .style('border-radius', '5px')
-                .style('z-index', 4);
-            
-            // Get the appropriate title based on filter
-            let title = 'All Events';
-            if (filter === 'throws') title = 'Throws';
-            else if (filter === 'goals') title = 'Goals';
-            else if (filter === 'turnovers') title = 'Turnovers';
-            else if (filter === 'scored_on') title = 'Scored On';
-            
-            legendContainer.append('div')
-                .style('font-weight', 'bold')
-                .style('font-size', '12px')
-                .style('margin-bottom', '5px')
-                .text(title + ' Intensity');
-            
-            // Create gradient bar
-            const gradientSvg = legendContainer.append('svg')
-                .attr('width', 150)
-                .attr('height', 20);
-            
-            // Define gradient based on current filter
-            let gradientColors;
-            if (filter === 'turnovers') {
-                gradientColors = [
-                    {offset: '0%', color: '#ffcccc'},
-                    {offset: '50%', color: '#ff6666'},
-                    {offset: '80%', color: '#cc0000'},
-                    {offset: '100%', color: '#800000'}
-                ];
-            } else if (filter === 'goals') {
-                gradientColors = [
-                    {offset: '0%', color: '#ccffcc'},
-                    {offset: '50%', color: '#66ff66'},
-                    {offset: '80%', color: '#00cc00'},
-                    {offset: '100%', color: '#008000'}
-                ];
-            } else if (filter === 'scored_on') {
-                gradientColors = [
-                    {offset: '0%', color: '#ffccff'},
-                    {offset: '50%', color: '#ff66ff'},
-                    {offset: '80%', color: '#cc00cc'},
-                    {offset: '100%', color: '#800080'}
-                ];
-            } else {
-                gradientColors = [
-                    {offset: '0%', color: '#99ccff'},
-                    {offset: '50%', color: '#3399ff'},
-                    {offset: '80%', color: '#0066cc'},
-                    {offset: '100%', color: '#003366'}
-                ];
-            }
-            
-            // Create linear gradient
-            const gradient = gradientSvg.append('defs')
-                .append('linearGradient')
-                .attr('id', 'heatmap-gradient')
-                .attr('x1', '0%')
-                .attr('x2', '100%')
-                .attr('y1', '0%')
-                .attr('y2', '0%');
-            
-            // Add gradient stops
-            gradientColors.forEach(stop => {
-                gradient.append('stop')
-                    .attr('offset', stop.offset)
-                    .attr('stop-color', stop.color);
-            });
-            
-            // Draw gradient rectangle
-            gradientSvg.append('rect')
-                .attr('width', 150)
-                .attr('height', 15)
-                .style('fill', 'url(#heatmap-gradient)');
-            
-            // Add labels
-            legendContainer.append('div')
-                .style('display', 'flex')
-                .style('justify-content', 'space-between')
-                .style('font-size', '10px')
-                .html('<span>Low</span><span>High</span>');
-        }
-        
-        function updateHeatmap(filter = 'all') {
-            let filteredData = heatmapData;
-            if (filter !== 'all') {
-                filteredData = heatmapData.filter(point => {
-                    switch(filter) {
-                        case 'throws':
-                            return point.type === 'throw_start';
-                        case 'goals':
-                            return point.type === 'goal';
-                        case 'turnovers':
-                            return point.type === 'throwaway';
-                        case 'scored_on':
-                            return point.type === 'scored_on';
-                        default:
-                            return true;
-                    }
-                });
-            }
-        
-            // Configure gradient and appearance based on filter
-            if (filter === 'turnovers') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(255,200,200,0.1)',
-                        '.25': 'rgba(255,150,150,0.6)',
-                        '.55': 'rgba(255,100,100,0.7)',
-                        '.85': 'rgba(200,0,0,0.8)',
-                        '1.0': 'rgba(128,0,0,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'goals') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(200,255,200,0.1)',
-                        '.25': 'rgba(150,255,150,0.6)',
-                        '.55': 'rgba(100,255,100,0.7)',
-                        '.85': 'rgba(0,200,0,0.8)',
-                        '1.0': 'rgba(0,128,0,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'scored_on') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(255,200,255,0.1)',
-                        '.25': 'rgba(255,150,255,0.6)',
-                        '.55': 'rgba(255,100,255,0.7)',
-                        '.85': 'rgba(200,0,200,0.8)',
-                        '1.0': 'rgba(128,0,128,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'throws') {
-                // Special configuration for throws to enhance intensity
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(0,0,255,0.1)',
-                        '.25': 'rgba(0,0,255,0.6)',
-                        '.55': 'rgba(0,255,255,0.7)',
-                        '.85': 'rgba(0,255,0,0.8)',
-                        '1.0': 'rgba(255,255,0,0.9)'
-                    },
-                    radius: 15,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.6
-                });
-            } else {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(0,0,255,0.1)',
-                        '.25': 'rgba(0,0,255,0.5)',
-                        '.55': 'rgba(0,255,0,0.6)',
-                        '.85': 'rgba(255,255,0,0.7)',
-                        '1.0': 'rgba(255,0,0,0.8)'
-                    },
-                    radius: 18,
-                    maxOpacity: 0.9,
-                    minOpacity: 0.35,
-                    blur: 0.6
-                });
-            }
-            
-            // Pre-process data to aggregate overlapping points
-            const gridSize = 5; // Size of grid cells in pixels for aggregation
-            const pointGrid = {};
-            
-            // Map field coordinates to pixel coordinates and group by grid cells
-            filteredData.forEach(point => {
-                const x = Math.round((point.x / fieldLengthMeters) * fieldWidth);
-                const y = Math.round((point.y / fieldWidthMeters) * fieldHeight);
-                
-                // Create grid cell key
-                const cellX = Math.floor(x / gridSize);
-                const cellY = Math.floor(y / gridSize);
-                const cellKey = `${cellX}-${cellY}`;
-                
-                // Increment count for this cell or initialize it
-                if (pointGrid[cellKey]) {
-                    pointGrid[cellKey].count += 1;
-                } else {
-                    pointGrid[cellKey] = {
-                        x: x,
-                        y: y,
-                        count: 1
-                    };
+        try {
+            const heatmapContainer = document.getElementById('field-heatmap');
+            const heatmapInstance = h337.create({
+                container: heatmapContainer,
+                radius: 18,
+                maxOpacity: 0.9,
+                minOpacity: 0.35,
+                blur: 0.6,
+                gradient: {
+                    '.2': '#99ccff',
+                    '.5': '#3399ff',
+                    '.8': '#0066cc',
+                    '.95': '#003366'
                 }
             });
+        
+            {% if heatmap_data %}
+            const heatmapData = {{ heatmap_data|safe }};
             
-            // Convert grid to data points with intensity based on count
-            let aggregatedData = Object.values(pointGrid).map(cell => ({
-                x: cell.x,
-                y: cell.y,
-                value: Math.min(10, cell.count * 2) // Default scaling
-            }));
+            // Convert field coordinates to pixel coordinates
+            const fieldWidth = heatmapContainer.offsetWidth;
+            const fieldHeight = heatmapContainer.offsetHeight;
+            const fieldLengthMeters = 100;  // Length in meters
+            const fieldWidthMeters = 37;    // Width in meters
             
-            // Special handling for throws
-            if (filter === 'throws') {
-                aggregatedData = Object.values(pointGrid).map(cell => ({
-                    x: cell.x,
-                    y: cell.y,
-                    value: Math.min(15, cell.count * 3) // More aggressive scaling for throws
-                }));
+            // Draw field markings
+            function drawFieldMarkings() {
+                // Create SVG overlay for field markings
+                const svg = d3.select('#field-heatmap')
+                    .append('svg')
+                    .attr('width', '100%')
+                    .attr('height', '100%')
+                    .style('position', 'absolute')
+                    .style('top', 0)
+                    .style('left', 0)
+                    .style('pointer-events', 'none') // Allow clicks to pass through
+                    .style('z-index', 3); // Above the heatmap
+                
+                // Add midfield line
+                svg.append('line')
+                    .attr('x1', fieldWidth / 2)
+                    .attr('y1', 0)
+                    .attr('x2', fieldWidth / 2)
+                    .attr('y2', fieldHeight)
+                    .attr('stroke', 'white')
+                    .attr('stroke-width', 2)
+                    .attr('stroke-dasharray', '5,5')
+                    .attr('opacity', 0.7);
+                
+                // Add brick marks (20 yards from each endzone)
+                // Left brick mark (defensive)
+                svg.append('circle')
+                    .attr('cx', fieldWidth * 0.2 + (fieldWidth * 0.2)) // 20 yards from left endzone
+                    .attr('cy', fieldHeight / 2)
+                    .attr('r', 5)
+                    .attr('fill', 'white')
+                    .attr('opacity', 0.7);
+                
+                // Right brick mark (offensive)
+                svg.append('circle')
+                    .attr('cx', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2))) // 20 yards from right endzone
+                    .attr('cy', fieldHeight / 2)
+                    .attr('r', 5)
+                    .attr('fill', 'white')
+                    .attr('opacity', 0.7);
+                
+                // Add field labels
+                svg.append('text')
+                    .attr('x', fieldWidth / 2)
+                    .attr('y', 20)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '12px')
+                    .attr('opacity', 0.7)
+                    .text('Midfield');
+                
+                svg.append('text')
+                    .attr('x', fieldWidth * 0.2 + (fieldWidth * 0.2))
+                    .attr('y', fieldHeight / 2 - 15)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '12px')
+                    .attr('opacity', 0.7)
+                    .text('Brick');
+                
+                svg.append('text')
+                    .attr('x', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2)))
+                    .attr('y', fieldHeight / 2 - 15)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', 'white')
+                    .attr('font-size', '12px')
+                    .attr('opacity', 0.7)
+                    .text('Brick');
             }
             
-            // Calculate a reasonable max value based on the data
-            const maxCount = Math.max(...aggregatedData.map(point => point.value), 1);
-            const reasonableMax = Math.ceil(maxCount * 0.7); // Use 70% of max as the "max" for better visualization
+            // Add a legend for the heatmap
+            function addHeatmapLegend(filter) {
+                // Remove any existing legend
+                d3.select('#heatmap-legend').remove();
+                
+                const legendContainer = d3.select('#field-heatmap')
+                    .append('div')
+                    .attr('id', 'heatmap-legend')
+                    .style('position', 'absolute')
+                    .style('bottom', '10px')
+                    .style('right', '10px')
+                    .style('background', 'rgba(255,255,255,0.7)')
+                    .style('padding', '5px')
+                    .style('border-radius', '5px')
+                    .style('z-index', 4);
+                
+                // Get the appropriate title based on filter
+                let title = 'All Events';
+                if (filter === 'throws') title = 'Throws';
+                else if (filter === 'goals') title = 'Goals';
+                else if (filter === 'turnovers') title = 'Turnovers';
+                else if (filter === 'scored_on') title = 'Scored On';
+                
+                legendContainer.append('div')
+                    .style('font-weight', 'bold')
+                    .style('font-size', '12px')
+                    .style('margin-bottom', '5px')
+                    .text(title + ' Intensity');
+                
+                // Create gradient bar
+                const gradientSvg = legendContainer.append('svg')
+                    .attr('width', 150)
+                    .attr('height', 20);
+                
+                // Define gradient based on current filter
+                let gradientColors;
+                if (filter === 'turnovers') {
+                    gradientColors = [
+                        {offset: '0%', color: '#ffcccc'},
+                        {offset: '50%', color: '#ff6666'},
+                        {offset: '80%', color: '#cc0000'},
+                        {offset: '100%', color: '#800000'}
+                    ];
+                } else if (filter === 'goals') {
+                    gradientColors = [
+                        {offset: '0%', color: '#ccffcc'},
+                        {offset: '50%', color: '#66ff66'},
+                        {offset: '80%', color: '#00cc00'},
+                        {offset: '100%', color: '#008000'}
+                    ];
+                } else if (filter === 'scored_on') {
+                    gradientColors = [
+                        {offset: '0%', color: '#ffccff'},
+                        {offset: '50%', color: '#ff66ff'},
+                        {offset: '80%', color: '#cc00cc'},
+                        {offset: '100%', color: '#800080'}
+                    ];
+                } else {
+                    gradientColors = [
+                        {offset: '0%', color: '#99ccff'},
+                        {offset: '50%', color: '#3399ff'},
+                        {offset: '80%', color: '#0066cc'},
+                        {offset: '100%', color: '#003366'}
+                    ];
+                }
+                
+                // Create linear gradient
+                const gradient = gradientSvg.append('defs')
+                    .append('linearGradient')
+                    .attr('id', 'heatmap-gradient')
+                    .attr('x1', '0%')
+                    .attr('x2', '100%')
+                    .attr('y1', '0%')
+                    .attr('y2', '0%');
+                
+                // Add gradient stops
+                gradientColors.forEach(stop => {
+                    gradient.append('stop')
+                        .attr('offset', stop.offset)
+                        .attr('stop-color', stop.color);
+                });
+                
+                // Draw gradient rectangle
+                gradientSvg.append('rect')
+                    .attr('width', 150)
+                    .attr('height', 15)
+                    .style('fill', 'url(#heatmap-gradient)');
+                
+                // Add labels
+                legendContainer.append('div')
+                    .style('display', 'flex')
+                    .style('justify-content', 'space-between')
+                    .style('font-size', '10px')
+                    .html('<span>Low</span><span>High</span>');
+            }
             
-            const pixelData = {
-                max: reasonableMax,
-                min: 0,
-                data: aggregatedData
-            };
+            function updateHeatmap(filter = 'all') {
+                let filteredData = heatmapData;
+                if (filter !== 'all') {
+                    filteredData = heatmapData.filter(point => {
+                        switch(filter) {
+                            case 'throws':
+                                return point.type === 'throw_start';
+                            case 'goals':
+                                return point.type === 'goal';
+                            case 'turnovers':
+                                return point.type === 'throwaway';
+                            case 'scored_on':
+                                return point.type === 'scored_on';
+                            default:
+                                return true;
+                        }
+                    });
+                }
             
-            console.log(`Heatmap data (${filter}): ${aggregatedData.length} points, max value: ${reasonableMax}`);
-            
-            // Set data with our aggregated points
-            heatmapInstance.setData(pixelData);
-            
-            // Update the legend
-            addHeatmapLegend(filter);
-        }
+                // Configure gradient and appearance based on filter
+                if (filter === 'turnovers') {
+                    heatmapInstance.configure({
+                        gradient: {
+                            '.0': 'rgba(255,200,200,0.1)',
+                            '.25': 'rgba(255,150,150,0.6)',
+                            '.55': 'rgba(255,100,100,0.7)',
+                            '.85': 'rgba(200,0,0,0.8)',
+                            '1.0': 'rgba(128,0,0,0.9)'
+                        },
+                        radius: 22,
+                        maxOpacity: 0.95,
+                        minOpacity: 0.4,
+                        blur: 0.5
+                    });
+                } else if (filter === 'goals') {
+                    heatmapInstance.configure({
+                        gradient: {
+                            '.0': 'rgba(200,255,200,0.1)',
+                            '.25': 'rgba(150,255,150,0.6)',
+                            '.55': 'rgba(100,255,100,0.7)',
+                            '.85': 'rgba(0,200,0,0.8)',
+                            '1.0': 'rgba(0,128,0,0.9)'
+                        },
+                        radius: 22,
+                        maxOpacity: 0.95,
+                        minOpacity: 0.4,
+                        blur: 0.5
+                    });
+                } else if (filter === 'scored_on') {
+                    heatmapInstance.configure({
+                        gradient: {
+                            '.0': 'rgba(255,200,255,0.1)',
+                            '.25': 'rgba(255,150,255,0.6)',
+                            '.55': 'rgba(255,100,255,0.7)',
+                            '.85': 'rgba(200,0,200,0.8)',
+                            '1.0': 'rgba(128,0,128,0.9)'
+                        },
+                        radius: 22,
+                        maxOpacity: 0.95,
+                        minOpacity: 0.4,
+                        blur: 0.5
+                    });
+                } else if (filter === 'throws') {
+                    // Special configuration for throws to enhance intensity
+                    heatmapInstance.configure({
+                        gradient: {
+                            '.0': 'rgba(0,0,255,0.1)',
+                            '.25': 'rgba(0,0,255,0.6)',
+                            '.55': 'rgba(0,255,255,0.7)',
+                            '.85': 'rgba(0,255,0,0.8)',
+                            '1.0': 'rgba(255,255,0,0.9)'
+                        },
+                        radius: 15,
+                        maxOpacity: 0.95,
+                        minOpacity: 0.4,
+                        blur: 0.6
+                    });
+                } else {
+                    heatmapInstance.configure({
+                        gradient: {
+                            '.0': 'rgba(0,0,255,0.1)',
+                            '.25': 'rgba(0,0,255,0.5)',
+                            '.55': 'rgba(0,255,0,0.6)',
+                            '.85': 'rgba(255,255,0,0.7)',
+                            '1.0': 'rgba(255,0,0,0.8)'
+                        },
+                        radius: 18,
+                        maxOpacity: 0.9,
+                        minOpacity: 0.35,
+                        blur: 0.6
+                    });
+                }
+                
+                // Pre-process data to aggregate overlapping points
+                const gridSize = 5; // Size of grid cells in pixels for aggregation
+                const pointGrid = {};
+                
+                // Map field coordinates to pixel coordinates and group by grid cells
+                filteredData.forEach(point => {
+                    const x = Math.round((point.x / fieldLengthMeters) * fieldWidth);
+                    const y = Math.round((point.y / fieldWidthMeters) * fieldHeight);
+                    
+                    // Create grid cell key
+                    const cellX = Math.floor(x / gridSize);
+                    const cellY = Math.floor(y / gridSize);
+                    const cellKey = `${cellX}-${cellY}`;
+                    
+                    // Increment count for this cell or initialize it
+                    if (pointGrid[cellKey]) {
+                        pointGrid[cellKey].count += 1;
+                    } else {
+                        pointGrid[cellKey] = {
+                            x: x,
+                            y: y,
+                            count: 1
+                        };
+                    }
+                });
+                
+                // Convert grid to data points with intensity based on count
+                let aggregatedData = Object.values(pointGrid).map(cell => ({
+                    x: cell.x,
+                    y: cell.y,
+                    value: Math.min(10, cell.count * 2) // Default scaling
+                }));
+                
+                // Special handling for throws
+                if (filter === 'throws') {
+                    aggregatedData = Object.values(pointGrid).map(cell => ({
+                        x: cell.x,
+                        y: cell.y,
+                        value: Math.min(15, cell.count * 3) // More aggressive scaling for throws
+                    }));
+                }
+                
+                // Calculate a reasonable max value based on the data
+                const maxCount = Math.max(...aggregatedData.map(point => point.value), 1);
+                const reasonableMax = Math.ceil(maxCount * 0.7); // Use 70% of max as the "max" for better visualization
+                
+                const pixelData = {
+                    max: reasonableMax,
+                    min: 0,
+                    data: aggregatedData
+                };
+                
+                console.log(`Heatmap data (${filter}): ${aggregatedData.length} points, max value: ${reasonableMax}`);
+                
+                // Set data with our aggregated points
+                heatmapInstance.setData(pixelData);
+                
+                // Update the legend
+                addHeatmapLegend(filter);
+            }
 
-    
-        // Initialize with all data
-        updateHeatmap();
         
-        // Draw field markings after heatmap is initialized
-        drawFieldMarkings();
-    
-        // Add event listeners to heatmap filter buttons
-        document.querySelectorAll('[data-filter]').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                updateHeatmap(this.dataset.filter);
+            // Initialize with all data
+            updateHeatmap();
+            
+            // Draw field markings after heatmap is initialized
+            drawFieldMarkings();
+        
+            // Add event listeners to heatmap filter buttons
+            document.querySelectorAll('[data-filter]').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    updateHeatmap(this.dataset.filter);
+                });
             });
-        });
-        {% endif %}
+            {% endif %}
+        } catch (e) {
+            console.error("Heatmap initialization error:", e);
+        }
     }
 
     // Enhanced Player Connections Network
     if (document.getElementById('player-connections')) {
-        {% if connections %}
-        const connections = {{ connections|safe }};
-        const width = document.getElementById('player-connections').offsetWidth;
-        const height = 400;
-    
-        const svg = d3.select('#player-connections')
-            .append('svg')
-            .attr('width', width)
-            .attr('height', height)
-            .call(d3.zoom().on("zoom", function(event) {
-                g.attr("transform", event.transform);
-            }));
-    
-        // Create a group for all elements to enable zooming
-        const g = svg.append("g");
-    
-        // Create force simulation
-        const simulation = d3.forceSimulation(connections.nodes)
-            .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
-            .force('charge', d3.forceManyBody().strength(-400)) // repulsion strength
-            .force('center', d3.forceCenter(width / 2, height / 2));
-    
-        // Draw links
-        const link = g.append('g')
-            .selectAll('line')
-            .data(connections.links)
-            .enter().append('line')
-            .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
-            .attr('stroke', '#999')
-            .attr('stroke-opacity', 0.6);
-    
-        // Draw nodes
-        const node = g.append('g')
-            .selectAll('circle')
-            .data(connections.nodes)
-            .enter().append('circle')
-            .attr('r', 25)  // increase size here
-            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
-                             (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
-            .call(d3.drag()
-                .on('start', dragstarted)
-                .on('drag', dragged)
-                .on('end', dragended));
+        try {
+            {% if connections %}
+            const connections = {{ connections|safe }};
+            const width = document.getElementById('player-connections').offsetWidth;
+            const height = 400;
         
-        // Create custom tooltips instead of using the default title attribute
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "d3-tooltip")
-            .style("position", "absolute")
-            .style("background", "rgba(0,0,0,0.7)")
-            .style("color", "white")
-            .style("padding", "8px")
-            .style("border-radius", "4px")
-            .style("font-size", "12px")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .style("z-index", 1000);
-        
-        // Add tooltip behavior
-        node.on("mouseover", function(event, d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add tooltips for links to show connection strength
-        link.on("mouseover", function(event, d) {
-                const source = connections.nodes.find(n => n.id === d.source.id);
-                const target = connections.nodes.find(n => n.id === d.target.id);
+            const svg = d3.select('#player-connections')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
                 
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
+            // Create zoom behavior
+            const zoom = d3.zoom()
+                .on("zoom", function(event) {
+                    g.attr("transform", event.transform);
+                });
+                
+            // Apply zoom behavior to svg
+            svg.call(zoom);
         
-        // Add labels - use jersey numbers instead of initials
-        const label = g.append('g')
-            .selectAll('text')
-            .data(connections.nodes)
-            .enter().append('text')
-            .text(d => d.jersey_number || '?')  // Use jersey number as the label
-            .attr('font-size', 14)  // node font size
-            .attr('text-anchor', 'middle')  // Center the text
-            .attr('dy', 4)  // Slight vertical adjustment
-            .attr('fill', 'white');
-
-
-        // Update positions on tick
-        simulation.on('tick', () => {
-            link
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
+            // Create a group for all elements to enable zooming
+            const g = svg.append("g");
         
-            node
-                .attr('cx', d => d.x)
-                .attr('cy', d => d.y);
+            // Create force simulation
+            const simulation = d3.forceSimulation(connections.nodes)
+                .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-400)) // repulsion strength
+                .force('center', d3.forceCenter(width / 2, height / 2));
         
-            label
-                .attr('x', d => d.x)  // Center the text horizontally
-                .attr('y', d => d.y); // Center the text vertically
-        });
-
-
-        // Add reset zoom button
-        svg.append("rect")
-            .attr("x", 10)
-            .attr("y", 10)
-            .attr("width", 80)
-            .attr("height", 30)
-            .attr("rx", 5)
-            .attr("fill", "rgba(255,255,255,0.7)")
-            .attr("stroke", "#999");
+            // Draw links
+            const link = g.append('g')
+                .selectAll('line')
+                .data(connections.links)
+                .enter().append('line')
+                .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
+                .attr('stroke', '#999')
+                .attr('stroke-opacity', 0.6);
+        
+            // Draw nodes
+            const node = g.append('g')
+                .selectAll('circle')
+                .data(connections.nodes)
+                .enter().append('circle')
+                .attr('r', 25)  // increase size here
+                .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
+                                 (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
             
-        svg.append("text")
-            .attr("x", 50)
-            .attr("y", 30)
-            .attr("text-anchor", "middle")
-            .text("Reset Zoom")
-            .style("font-size", "12px")
-            .style("cursor", "pointer")
-            .on("click", function() {
-                svg.transition().duration(750).call(
-                    d3.zoom().transform,
-                    d3.zoomIdentity
-                );
+            // Create custom tooltips instead of using the default title attribute
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "d3-tooltip")
+                .style("position", "absolute")
+                .style("background", "rgba(0,0,0,0.7)")
+                .style("color", "white")
+                .style("padding", "8px")
+                .style("border-radius", "4px")
+                .style("font-size", "12px")
+                .style("pointer-events", "none")
+                .style("opacity", 0)
+                .style("z-index", 1000);
+            
+            // Add tooltip behavior
+            node.on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+            
+            // Add tooltips for links to show connection strength
+            link.on("mouseover", function(event, d) {
+                    const source = connections.nodes.find(n => n.id === d.source.id);
+                    const target = connections.nodes.find(n => n.id === d.target.id);
+                    
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+            
+            // Add labels - use jersey numbers instead of initials
+            const label = g.append('g')
+                .selectAll('text')
+                .data(connections.nodes)
+                .enter().append('text')
+                .text(d => d.jersey_number || '?')  // Use jersey number as the label
+                .attr('font-size', 14)  // node font size
+                .attr('text-anchor', 'middle')  // Center the text
+                .attr('dy', 4)  // Slight vertical adjustment
+                .attr('fill', 'white');
+
+
+            // Update positions on tick
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+            
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+            
+                label
+                    .attr('x', d => d.x)  // Center the text horizontally
+                    .attr('y', d => d.y); // Center the text vertically
             });
-    
-        // Drag functions
-        function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
-        }
-    
-        function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
-        }
-    
-        function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
-        }
-    
-        // Add connection strength filter functionality
-        document.querySelectorAll('[data-strength]').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                const strength = this.dataset.strength;
+
+
+            // Add reset zoom button
+            svg.append("rect")
+                .attr("x", 10)
+                .attr("y", 10)
+                .attr("width", 80)
+                .attr("height", 30)
+                .attr("rx", 5)
+                .attr("fill", "rgba(255,255,255,0.7)")
+                .attr("stroke", "#999");
                 
-                link.style('display', d => {
-                    if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
-                    if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
-                    return 'block';
+            svg.append("text")
+                .attr("x", 50)
+                .attr("y", 30)
+                .attr("text-anchor", "middle")
+                .text("Reset Zoom")
+                .style("font-size", "12px")
+                .style("cursor", "pointer")
+                .on("click", function() {
+                    svg.transition().duration(750).call(
+                        zoom.transform,
+                        d3.zoomIdentity
+                    );
+                });
+        
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+        
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+        
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        
+            // Add connection strength filter functionality
+            document.querySelectorAll('[data-strength]').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    const strength = this.dataset.strength;
+                    
+                    link.style('display', d => {
+                        if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
+                        if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
+                        return 'block';
+                    });
                 });
             });
-        });
-        {% endif %}
+            {% endif %}
+        } catch (e) {
+            console.error("Player connections initialization error:", e);
+        }
     }
 
     // Add window resize handler
     window.addEventListener('resize', debounce(function() {
         // Redraw visualizations on window resize
-        if (typeof heatmapInstance !== 'undefined') {
+        if (typeof heatmapInstance !== 'undefined' && typeof updateHeatmap === 'function') {
             updateHeatmap();
         }
         if (typeof simulation !== 'undefined') {
-            const width = document.getElementById('player-connections').offsetWidth;
-            simulation.force('center', d3.forceCenter(width / 2, height / 2));
-            simulation.alpha(0.3).restart();
+            try {
+                const width = document.getElementById('player-connections').offsetWidth;
+                const height = 400;
+                simulation.force('center', d3.forceCenter(width / 2, height / 2));
+                simulation.alpha(0.3).restart();
+            } catch (e) {
+                console.error("Error resizing player connections:", e);
+            }
         }
     }, 250));
 
@@ -997,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
 
 {% endblock %}
 
