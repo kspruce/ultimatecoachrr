@@ -1498,6 +1498,7 @@ def player_stats(player_id):
         player=player,
         stats=stats,
         team_stats=team_stats,
+        team_summary=team_summary, 
         player_games=player_games,
         tournaments=tournaments,
         selected_tournament=tournament_id,
