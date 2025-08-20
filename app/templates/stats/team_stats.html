@@ -291,6 +291,7 @@
                                     <th>Name</th>
                                     <th>Position</th>
                                     <th>Gender</th>
+                                    <th>Points</th>  <!-- New column -->
                                     <th>Efficiency</th>
                                 </tr>
                             </thead>
@@ -298,7 +299,7 @@
                                 {% if o_line_women %}
                                 <!-- Women section -->
                                 <tr class="gender-divider">
-                                    <td colspan="5">Women (Top {{ o_line_women|length }})</td>
+                                    <td colspan="6">Women (Top {{ o_line_women|length }})</td>
                                 </tr>
                                 {% for player in o_line_women %}
                                 <tr class="player-card o-line female">
@@ -310,6 +311,7 @@
                                     </td>
                                     <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
                                     <td>F</td>
+                                    <td>{{ player_stats[player.id]['o_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
@@ -318,7 +320,7 @@
                                 {% if o_line_men %}
                                 <!-- Men section -->
                                 <tr class="gender-divider">
-                                    <td colspan="5">Men (Top {{ o_line_men|length }})</td>
+                                    <td colspan="6">Men (Top {{ o_line_men|length }})</td>
                                 </tr>
                                 {% for player in o_line_men %}
                                 <tr class="player-card o-line male">
@@ -330,6 +332,7 @@
                                     </td>
                                     <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
                                     <td>M</td>
+                                    <td>{{ player_stats[player.id]['o_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
@@ -338,7 +341,7 @@
                                 {% if not o_line_women and not o_line_men %}
                                 <!-- If no gender data, show all players -->
                                 <tr class="gender-divider">
-                                    <td colspan="5">Top Players (Gender data unavailable)</td>
+                                    <td colspan="6">Top Players (Gender data unavailable)</td>
                                 </tr>
                                 {% for player in o_line_players %}
                                 <tr class="player-card o-line">
@@ -350,6 +353,7 @@
                                     </td>
                                     <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
                                     <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
+                                    <td>{{ player_stats[player.id]['o_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (o_line_efficiency[player] * 100)|round(1) if player in o_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
@@ -384,6 +388,7 @@
                                     <th>Name</th>
                                     <th>Position</th>
                                     <th>Gender</th>
+                                    <th>Points</th>  <!-- New column -->
                                     <th>Efficiency</th>
                                 </tr>
                             </thead>
@@ -391,7 +396,7 @@
                                 {% if d_line_women %}
                                 <!-- Women section -->
                                 <tr class="gender-divider">
-                                    <td colspan="5">Women (Top {{ d_line_women|length }})</td>
+                                    <td colspan="6">Women (Top {{ d_line_women|length }})</td>
                                 </tr>
                                 {% for player in d_line_women %}
                                 <tr class="player-card d-line female">
@@ -403,6 +408,7 @@
                                     </td>
                                     <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
                                     <td>F</td>
+                                    <td>{{ player_stats[player.id]['d_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
@@ -411,7 +417,7 @@
                                 {% if d_line_men %}
                                 <!-- Men section -->
                                 <tr class="gender-divider">
-                                    <td colspan="5">Men (Top {{ d_line_men|length }})</td>
+                                    <td colspan="6">Men (Top {{ d_line_men|length }})</td>
                                 </tr>
                                 {% for player in d_line_men %}
                                 <tr class="player-card d-line male">
@@ -423,6 +429,7 @@
                                     </td>
                                     <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
                                     <td>M</td>
+                                    <td>{{ player_stats[player.id]['d_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
@@ -431,7 +438,7 @@
                                 {% if not d_line_women and not d_line_men %}
                                 <!-- If no gender data, show all players -->
                                 <tr class="gender-divider">
-                                    <td colspan="5">Top Players (Gender data unavailable)</td>
+                                    <td colspan="6">Top Players (Gender data unavailable)</td>
                                 </tr>
                                 {% for player in d_line_players %}
                                 <tr class="player-card d-line">
@@ -443,12 +450,14 @@
                                     </td>
                                     <td>{{ player.position|capitalize if player.position else 'N/A' }}</td>
                                     <td>{{ player.gender|capitalize if player.gender else 'N/A' }}</td>
+                                    <td>{{ player_stats[player.id]['d_line_points_played'] }}</td>  <!-- New cell -->
                                     <td>{{ (d_line_efficiency[player] * 100)|round(1) if player in d_line_efficiency else 0 }}%</td>
                                 </tr>
                                 {% endfor %}
                                 {% endif %}
                             </tbody>
                         </table>
+
                     </div>
                     {% else %}
                     <p class="text-center">Not enough data to generate optimal line.</p>
@@ -477,44 +486,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-
-    <!-- Improve filtering interface -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5>Filter Statistics</h5>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Season</label>
-                    <select name="season" class="form-select">
-                        <option value="">All Seasons</option>
-                        {% for season in seasons %}
-                        <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>
-                            {{ season }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Tournament</label>
-                    <select name="tournament_id" class="form-select">
-                        <option value="">All Tournaments</option>
-                        {% for tournament in tournaments %}
-                        <option value="{{ tournament.id }}" {% if selected_tournament == tournament.id %}selected{% endif %}>
-                            {{ tournament.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
