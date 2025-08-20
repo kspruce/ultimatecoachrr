@@ -1251,7 +1251,6 @@ function initializePerformanceTrendChart() {
 }
 
 // Radar chart initialization
-// Radar chart initialization
 function initializeRadarCharts() {
     console.log('Initializing aligned radar charts');
     
@@ -1267,11 +1266,21 @@ function initializeRadarCharts() {
     if (Chart.getChart(offensiveCanvas)) Chart.getChart(offensiveCanvas).destroy();
     if (Chart.getChart(defensiveCanvas)) Chart.getChart(defensiveCanvas).destroy();
 
+    // Helper function for normalization
+    const normalize = (value, maxValue) => {
+        if (maxValue === 0) return 0; // Avoid division by zero
+        return Math.min(100, (value / maxValue) * 100);
+    };
+
     // --- Offensive Radar Chart ---
     const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Throws Per Point', 'Hucks Per Point'];
     const offensiveExcellentValues = {
-        'Completion Rate': 100, 'O-Line Conversion': 80, 'Goals Per Point': 1.0, 
-        'Assists Per Point': 1.0, 'Throws Per Point': 10.0, 'Hucks Per Point': 0.5
+        'Completion Rate': 100, 
+        'O-Line Conversion': 80, 
+        'Goals Per Point': 1.0, 
+        'Assists Per Point': 1.0, 
+        'Throws Per Point': 10.0, 
+        'Hucks Per Point': 0.5
     };
     
     // Get raw values from the template variables
@@ -1293,12 +1302,9 @@ function initializeRadarCharts() {
         'Hucks Per Point': {{ team_summary.hucks_per_point|default(0)|round(2) }}
     };
 
-    // Normalize values to 0-100 scale
-    const normalizeValue = (value, key) => {
-        const excellent = offensiveExcellentValues[key];
-        if (excellent === 0) return 0; // Avoid division by zero
-        return Math.min(100, (value / excellent) * 100);
-    };
+    // Debug output
+    console.log("Player offensive raw values:", playerOffensiveRaw);
+    console.log("Team offensive raw values:", teamOffensiveRaw);
 
     new Chart(offensiveCanvas, {
         type: 'radar',
@@ -1306,13 +1312,13 @@ function initializeRadarCharts() {
             labels: offensiveLabels,
             datasets: [{
                 label: 'Player Stats',
-                data: offensiveLabels.map(label => normalizeValue(playerOffensiveRaw[label], label)),
+                data: offensiveLabels.map(label => normalize(playerOffensiveRaw[label], offensiveExcellentValues[label])),
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 2
             }, {
                 label: 'Team Average',
-                data: offensiveLabels.map(label => normalizeValue(teamOffensiveRaw[label], label)),
+                data: offensiveLabels.map(label => normalize(teamOffensiveRaw[label], offensiveExcellentValues[label])),
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
                 borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1
@@ -1330,7 +1336,7 @@ function initializeRadarCharts() {
                             const label = context.label;
                             const rawValue = context.dataset.label === 'Player Stats' ? 
                                 playerOffensiveRaw[label] : teamOffensiveRaw[label];
-                            return `${context.dataset.label}: ${rawValue.toFixed(2)}`;
+                            return `${context.dataset.label}: ${rawValue}`;
                         }
                     }
                 }
@@ -1351,9 +1357,9 @@ function initializeRadarCharts() {
     const playerDefensiveRaw = {
         'D-Line Conversion': {{ stats.d_line_conversion_rate|default(0)|round(1) }},
         'Blocks Per Point': {{ stats.blocks_per_point|default(0)|round(2) }},
-        'Break Percentage': {{ team_summary.break_percentage|default(0)|round(1) }}, // This is a team metric, player value is same as team
+        'Break Percentage': {{ team_summary.break_percentage|default(0)|round(1) }}, // Team metric
         'Turnovers Forced/Point': {{ stats.turnovers_forced_per_point|default(0)|round(2) }},
-        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // Player's D-Line Conversion is their Defensive Efficiency
+        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // Same as D-Line Conversion for player
     };
 
     const teamDefensiveRaw = {
@@ -1364,19 +1370,23 @@ function initializeRadarCharts() {
         'Defensive Efficiency': {{ team_summary.defensive_efficiency|default(0)|round(1) }}
     };
 
+    // Debug output
+    console.log("Player defensive raw values:", playerDefensiveRaw);
+    console.log("Team defensive raw values:", teamDefensiveRaw);
+
     new Chart(defensiveCanvas, {
         type: 'radar',
         data: {
             labels: defensiveLabels,
             datasets: [{
                 label: 'Player Stats',
-                data: defensiveLabels.map(label => normalizeValue(playerDefensiveRaw[label], defensiveExcellentValues[label])),
+                data: defensiveLabels.map(label => normalize(playerDefensiveRaw[label], defensiveExcellentValues[label])),
                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
                 borderColor: 'rgba(255, 99, 132, 1)',
                 borderWidth: 2
             }, {
                 label: 'Team Average',
-                data: defensiveLabels.map(label => normalizeValue(teamDefensiveRaw[label], defensiveExcellentValues[label])),
+                data: defensiveLabels.map(label => normalize(teamDefensiveRaw[label], defensiveExcellentValues[label])),
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
                 borderColor: 'rgba(153, 102, 255, 1)',
                 borderWidth: 1
@@ -1394,7 +1404,7 @@ function initializeRadarCharts() {
                             const label = context.label;
                             const rawValue = context.dataset.label === 'Player Stats' ? 
                                 playerDefensiveRaw[label] : teamDefensiveRaw[label];
-                            return `${context.dataset.label}: ${rawValue.toFixed(2)}`;
+                            return `${context.dataset.label}: ${rawValue}`;
                         }
                     }
                 }
@@ -1404,6 +1414,7 @@ function initializeRadarCharts() {
     
     console.log('Radar charts updated successfully.');
 }
+
 
 // Cutting Skills Visualization
 function initializeCuttingSkillsVisualizations() {

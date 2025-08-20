@@ -1486,25 +1486,72 @@ def player_stats(player_id):
         team_organization_id=get_current_team_id()
     ).order_by(Tournament.start_date.desc()).all()
 
-    # Calculate per-point metrics for radar charts if not already calculated
+    # Ensure all required metrics are calculated for radar charts
     if stats['points_played'] > 0:
-        total_points = stats['points_played']
-        if 'goals_per_point' not in stats:
-            stats['goals_per_point'] = stats['goals'] / total_points
-        if 'assists_per_point' not in stats:
-            stats['assists_per_point'] = stats['assists'] / total_points
-        if 'throws_per_point' not in stats:
-            stats['throws_per_point'] = stats['throws'] / total_points
-        if 'hucks_per_point' not in stats:
-            stats['hucks_per_point'] = stats['hucks'] / total_points
+        # Offensive metrics
+        stats['goals_per_point'] = stats['goals'] / stats['points_played']
+        stats['assists_per_point'] = stats['assists'] / stats['points_played']
+        stats['throws_per_point'] = stats['throws'] / stats['points_played']
+        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['points_played']
+        
+        # Defensive metrics
+        if stats['d_line_points_played'] > 0:
+            stats['blocks_per_point'] = stats['blocks'] / stats['d_line_points_played']
+            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / stats['d_line_points_played']
+        else:
+            stats['blocks_per_point'] = 0
+            stats['turnovers_forced_per_point'] = 0
+            
+        # Ensure conversion rates are calculated
+        if stats['o_line_points_played'] > 0:
+            if 'o_line_conversion_rate' not in stats or stats['o_line_conversion_rate'] == 0:
+                # Calculate from points data if not already set
+                o_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
+                    LineUp.player_id == player.id, 
+                    Point.our_line_type == 'O-line',
+                    Point.team_organization_id == get_current_team_id()
+                )
+                if point_ids:
+                    o_line_points_player_was_in = o_line_points_player_was_in.filter(Point.id.in_(point_ids))
+                
+                o_line_points_count = o_line_points_player_was_in.count()
+                o_line_scores = o_line_points_player_was_in.filter(Point.we_scored == True).count()
+                
+                if o_line_points_count > 0:
+                    stats['o_line_conversion_rate'] = (o_line_scores / o_line_points_count) * 100
+        
+        if stats['d_line_points_played'] > 0:
+            if 'd_line_conversion_rate' not in stats or stats['d_line_conversion_rate'] == 0:
+                # Calculate from points data if not already set
+                d_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
+                    LineUp.player_id == player.id, 
+                    Point.our_line_type == 'D-line',
+                    Point.team_organization_id == get_current_team_id()
+                )
+                if point_ids:
+                    d_line_points_player_was_in = d_line_points_player_was_in.filter(Point.id.in_(point_ids))
+                
+                d_line_points_count = d_line_points_player_was_in.count()
+                d_line_scores = d_line_points_player_was_in.filter(Point.we_scored == True).count()
+                
+                if d_line_points_count > 0:
+                    stats['d_line_conversion_rate'] = (d_line_scores / d_line_points_count) * 100
     
-    # Defensive per-point metrics
-    if stats['d_line_points_played'] > 0:
-        d_line_points = stats['d_line_points_played']
-        if 'blocks_per_point' not in stats:
-            stats['blocks_per_point'] = stats['blocks'] / d_line_points
-        if 'turnovers_forced_per_point' not in stats:
-            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / d_line_points
+    # Make sure team_summary has all the metrics needed for comparison
+    if 'defensive_efficiency' not in team_summary:
+        team_summary['defensive_efficiency'] = team_summary.get('d_line_conversion_rate', 0)
+
+    # Debug output
+    print(f"Player: {player.name}")
+    print(f"Points played: {stats['points_played']}")
+    print(f"O-line points: {stats['o_line_points_played']}")
+    print(f"D-line points: {stats['d_line_points_played']}")
+    print(f"Throws: {stats['throws']}")
+    print(f"Throws per point: {stats.get('throws_per_point', 0)}")
+    print(f"Blocks: {stats['blocks']}")
+    print(f"Blocks per point: {stats.get('blocks_per_point', 0)}")
+    print(f"O-line conversion rate: {stats.get('o_line_conversion_rate', 0)}")
+    print(f"D-line conversion rate: {stats.get('d_line_conversion_rate', 0)}")
 
 
     return render_template(
@@ -2424,16 +2471,14 @@ def calculate_additional_team_metrics(games):
             'break_percentage': 0
         }
     
-    # Count total points - handle both query objects and lists
+    # Count total points
     total_points = 0
     for game in games:
         try:
-            # If game.points is a query object
-            points = game.points.all()
-        except AttributeError:
-            # If game.points is already a list
-            points = game.points
-        total_points += len(points)
+            points = game.points.all() if hasattr(game.points, 'all') else game.points
+            total_points += len(points)
+        except Exception as e:
+            print(f"Error counting points for game {game.id}: {str(e)}")
     
     if total_points == 0:
         return {
@@ -2452,12 +2497,10 @@ def calculate_additional_team_metrics(games):
     point_ids = []
     for game in games:
         try:
-            # If game.points is a query object
-            points = game.points.all()
-        except AttributeError:
-            # If game.points is already a list
-            points = game.points
-        point_ids.extend([p.id for p in points])
+            points = game.points.all() if hasattr(game.points, 'all') else game.points
+            point_ids.extend([p.id for p in points])
+        except Exception as e:
+            print(f"Error getting points for game {game.id}: {str(e)}")
     
     # Count all throws
     throws_query = Throw.query.filter_by(team_organization_id=get_current_team_id())
@@ -2494,140 +2537,50 @@ def calculate_additional_team_metrics(games):
     breaks = 0
     for game in games:
         try:
-            # If game.points is a query object
-            points = game.points.all()
-        except AttributeError:
-            # If game.points is already a list
-            points = game.points
-        breaks += sum(1 for p in points if p.is_break)
-    break_percentage = (breaks / total_points) * 100
+            points = game.points.all() if hasattr(game.points, 'all') else game.points
+            breaks += sum(1 for p in points if p.is_break)
+        except Exception as e:
+            print(f"Error calculating breaks for game {game.id}: {str(e)}")
+    break_percentage = (breaks / total_points) * 100 if total_points > 0 else 0
     
     # Calculate defensive efficiency
     d_points_count = 0
     d_conversions = 0
     for game in games:
         try:
-            # If game.d_line_points is a query object
-            d_points = game.d_line_points.all()
-        except AttributeError:
-            # If game.d_line_points is already a list
-            d_points = game.d_line_points
-        d_points_count += len(d_points)
-        d_conversions += sum(1 for p in d_points if p.we_scored)
+            d_points = game.d_line_points.all() if hasattr(game.d_line_points, 'all') else game.d_line_points
+            d_points_count += len(d_points)
+            d_conversions += sum(1 for p in d_points if p.we_scored)
+        except Exception as e:
+            print(f"Error calculating d-line stats for game {game.id}: {str(e)}")
     defensive_efficiency = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
     
-    # Initialize new metrics
-    clean_hold_count = 0
-    total_o_points = 0
-    regain_offense_count = 0
-    o_line_turnovers = 0
-    
-    clean_break_count = 0
-    points_with_block = 0 
-    total_d_points = 0
-    d_line_goals_after_turnover = 0
-    d_line_turnovers = 0
-    total_d_line_possessions = 0
-    d_line_possessions_gained = 0 
-    
+    # Calculate o-line points
+    o_points_count = 0
     for game in games:
-        # Process O-line points
-        for point in game.o_line_points:
-            total_o_points += 1
-            
-            # Get events for this point
-            events = sorted(point.events, key=lambda e: e.timestamp or 0)
-            
-            # Count turnovers in this point
-            point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
-            o_line_turnovers += point_turnovers
-            
-            # Check if this is a clean hold (we scored with no turnovers)
-            if point.we_scored and point_turnovers == 0:
-                clean_hold_count += 1
-            
-            # Check if we regained possession after turnover
-            if point_turnovers > 0 and point.we_scored:
-                regain_offense_count += 1
-        
-            # Process D-line points
-            for point in game.d_line_points:
-                total_d_points += 1
-                
-                # Get events for this point
-                events = sorted(point.events, key=lambda e: e.timestamp or 0)
-                
-                # Count turnovers in this point
-                point_turnovers = sum(1 for e in events if e.event_type in ['throwaway', 'drop', 'stall'])
-                d_line_turnovers += point_turnovers
-                
-                # Count all possessions gained in this point
-                point_possessions_gained = 0
-                
-                # Count blocks
-                point_possessions_gained += sum(1 for e in events if e.event_type == 'block')
-                
-                # Count forced turnovers
-                point_possessions_gained += sum(1 for e in events if e.event_type == 'forced_turnover')
-                
-                # Count opponent unforced turnovers
-                point_possessions_gained += sum(1 for e in events if e.event_type == 'unforced_turnover' and e.is_opponent)
-                
-                d_line_possessions_gained += point_possessions_gained
-                
-                # Check if we had at least one block in this point
-                had_block = any(e.event_type == 'block' for e in events)
-                
-                if had_block:
-                    points_with_block += 1
-                    
-                    # Check if this is a clean break (we scored without losing possession after block)
-                    if point.we_scored:
-                        # Find the first block
-                        block_index = next((i for i, e in enumerate(events) if e.event_type == 'block'), -1)
-                        
-                        # Count turnovers after the block
-                        turnovers_after_block = sum(1 for e in events[block_index:] 
-                                                  if e.event_type in ['throwaway', 'drop', 'stall'])
-                        
-                        if turnovers_after_block == 0:
-                            clean_break_count += 1
-                        
-                        # Count goals after block (possession gain)
-                        d_line_goals_after_turnover += 1
+        try:
+            o_points = game.o_line_points.all() if hasattr(game.o_line_points, 'all') else game.o_line_points
+            o_points_count += len(o_points)
+        except Exception as e:
+            print(f"Error calculating o-line stats for game {game.id}: {str(e)}")
     
-    # Calculate percentages and averages
-    clean_hold_percentage = (clean_hold_count / total_o_points * 100) if total_o_points > 0 else 0
-    clean_break_percentage = (clean_break_count / points_with_block * 100) if points_with_block > 0 else 0
-    avg_o_turnovers_per_point = o_line_turnovers / total_o_points if total_o_points > 0 else 0
-    avg_d_turnovers_per_point = d_line_turnovers / total_d_points if total_d_points > 0 else 0
-    possessions_per_goal = (d_line_turnovers / d_line_goals_after_turnover) if d_line_goals_after_turnover > 0 else 0   
-    avg_possessions_gained_per_point = (d_line_possessions_gained / total_d_points) if total_d_points > 0 else 0
+    # Calculate throws per point correctly - total throws divided by total points
+    throws_per_point = len(throws) / total_points if total_points > 0 else 0
     
     result = {
         'completion_rate': (completions / len(throws)) * 100 if throws else 0,
         'goals_per_point': goals / total_points,
         'assists_per_point': goals / total_points,  # Same as goals
-        'throws_per_point': len(throws) / total_points,
+        'throws_per_point': throws_per_point,
         'hucks_per_point': hucks / total_points,
         'blocks_per_point': blocks / total_points,
         'turnovers_forced_per_point': turnovers_forced / total_points,
         'defensive_efficiency': defensive_efficiency,
-        'break_percentage': break_percentage,
-        
-        # New offensive metrics
-        'clean_hold_percentage': clean_hold_percentage,
-        'regain_offense_count': regain_offense_count,
-        'avg_o_turnovers_per_point': avg_o_turnovers_per_point,
-        
-        # New defensive metrics
-        'clean_break_percentage': clean_break_percentage,
-        'possessions_per_goal': possessions_per_goal,
-        'avg_d_turnovers_per_point': avg_d_turnovers_per_point,
-        'avg_possessions_gained_per_point': avg_possessions_gained_per_point,        
-        }
+        'break_percentage': break_percentage
+    }
     
     return result
+
 
 def count_d_line_possessions(point):
     """Count number of D-line possessions in a point"""
