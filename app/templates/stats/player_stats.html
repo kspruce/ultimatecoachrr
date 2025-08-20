@@ -1252,19 +1252,19 @@ function initializePerformanceTrendChart() {
 
 // Radar chart initialization
 function initializeRadarCharts() {
-    console.log('Initializing aligned radar charts');
+    console.log('Initializing radar charts');
     
-    const offensiveCanvas = document.getElementById('offensiveRadar');
-    const defensiveCanvas = document.getElementById('defensiveRadar');
+    const offensiveCtx = document.getElementById('offensiveRadar');
+    const defensiveCtx = document.getElementById('defensiveRadar');
 
-    if (!offensiveCanvas || !defensiveCanvas) {
+    if (!offensiveCtx || !defensiveCtx) {
         console.error('Radar canvas elements not found');
         return;
     }
 
     // Destroy existing charts if they exist to prevent conflicts
-    if (Chart.getChart(offensiveCanvas)) Chart.getChart(offensiveCanvas).destroy();
-    if (Chart.getChart(defensiveCanvas)) Chart.getChart(defensiveCanvas).destroy();
+    if (Chart.getChart(offensiveCtx)) Chart.getChart(offensiveCtx).destroy();
+    if (Chart.getChart(defensiveCtx)) Chart.getChart(defensiveCtx).destroy();
 
     // Helper function for normalization
     const normalize = (value, maxValue) => {
@@ -1274,35 +1274,24 @@ function initializeRadarCharts() {
 
     // --- Offensive Radar Chart ---
     const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Throws Per Point', 'Hucks Per Point'];
-    // Define excellent performance values for normalization
     const offensiveExcellentValues = {
         'Completion Rate': 100, 
         'O-Line Conversion': 80, 
-        'Goals Per Point': 1.0,
-        'Assists Per Point': 1.0,
-        'Throws Per Point': 10.0,
+        'Goals Per Point': 1.0, 
+        'Assists Per Point': 1.0, 
+        'Throws Per Point': 10.0, 
         'Hucks Per Point': 0.5
     };
     
-    // Define labels (this was missing)
-    const labels = Object.keys(offensiveExcellentValues);
-    
-    // Get raw values
-    const rawValues = [
-        {{ stats.completion_rate|default(0)|round(1) }},
-        {{ stats.o_line_conversion_rate|default(0)|round(1) }},
-        {{ stats.goals_per_point|default(0)|round(2) }},
-        {{ stats.assists_per_point|default(0)|round(2) }},
-        {{ stats.throws_per_point|default(0)|round(1) }},
-        {{ stats.hucks_per_point|default(0)|round(2) }}
-    ];
-    
-    // Normalize values to 0-100 scale
-    const normalizedValues = rawValues.map((value, index) => 
-        Math.min(100, (value / offensiveExcellentValues[labels[index]]) * 100)
-    );
-
-
+    // Get raw values from the template variables
+    const playerOffensiveRaw = {
+        'Completion Rate': {{ stats.completion_rate|default(0)|round(1) }},
+        'O-Line Conversion': {{ stats.o_line_conversion_rate|default(0)|round(1) }},
+        'Goals Per Point': {{ stats.goals_per_point|default(0)|round(2) }},
+        'Assists Per Point': {{ stats.assists_per_point|default(0)|round(2) }},
+        'Throws Per Point': {{ stats.throws_per_point|default(0)|round(1) }},
+        'Hucks Per Point': {{ stats.hucks_per_point|default(0)|round(2) }}
+    };
     
     const teamOffensiveRaw = {
         'Completion Rate': {{ team_summary.completion_rate|default(0)|round(1) }},
@@ -1317,7 +1306,7 @@ function initializeRadarCharts() {
     console.log("Player offensive raw values:", playerOffensiveRaw);
     console.log("Team offensive raw values:", teamOffensiveRaw);
 
-    new Chart(offensiveCanvas, {
+    new Chart(offensiveCtx, {
         type: 'radar',
         data: {
             labels: offensiveLabels,
