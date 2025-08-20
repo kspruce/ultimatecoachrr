@@ -1314,7 +1314,6 @@ def player_stats(player_id):
     team_avgs = get_cached_team_averages(games)
     
     if stats['points_played'] > 0:
-        # Use the optimized calculate_per_from_stats function for consistent PER calculation
         stats['per'] = calculate_per_from_stats(stats, team_avgs)
     
     # Add hucks to player stats
@@ -1323,46 +1322,60 @@ def player_stats(player_id):
     # Get point IDs for filtering if games are selected
     point_ids = get_point_ids_from_games(games)
 
-    # --- CORRECTED: Add calculations for BOTH O-Line and D-Line conversion rates ---
-    # Player's O-Line Conversion Rate (scoring on O-points they played)
+    # --- Player-specific conversion rate calculations ---
     if stats['o_line_points_played'] > 0:
         o_line_points_player_was_in = db.session.query(Point.id).join(LineUp).filter(
-            LineUp.player_id == player.id,
-            Point.our_line_type == 'O-line',
-            Point.id.in_(point_ids)
+            LineUp.player_id == player.id, Point.our_line_type == 'O-line', Point.id.in_(point_ids)
         ).all()
         o_line_point_ids = [p[0] for p in o_line_points_player_was_in]
-        
         o_line_scores = db.session.query(Point.id).filter(
-            Point.id.in_(o_line_point_ids),
-            Point.we_scored == True
+            Point.id.in_(o_line_point_ids), Point.we_scored == True
         ).count()
         stats['o_line_conversion_rate'] = (o_line_scores / stats['o_line_points_played']) * 100
     else:
         stats['o_line_conversion_rate'] = 0
 
-    # Player's D-Line Conversion Rate (scoring on D-points they played, i.e., breaks)
     if stats['d_line_points_played'] > 0:
         d_line_points_player_was_in = db.session.query(Point.id).join(LineUp).filter(
-            LineUp.player_id == player.id,
-            Point.our_line_type == 'D-line',
-            Point.id.in_(point_ids)
+            LineUp.player_id == player.id, Point.our_line_type == 'D-line', Point.id.in_(point_ids)
         ).all()
         d_line_point_ids = [p[0] for p in d_line_points_player_was_in]
-
         d_line_scores = db.session.query(Point.id).filter(
-            Point.id.in_(d_line_point_ids),
-            Point.we_scored == True
+            Point.id.in_(d_line_point_ids), Point.we_scored == True
         ).count()
         stats['d_line_conversion_rate'] = (d_line_scores / stats['d_line_points_played']) * 100
     else:
         stats['d_line_conversion_rate'] = 0
     
-    # Calculate team-level summary and additional metrics for the filtered games
+    # --- Team-level summary calculations ---
     team_summary = calculate_team_summary(games)
     team_summary.update(calculate_additional_team_metrics(games))
-    # --- END OF NEW CALCULATIONS ---
 
+    # --- NEW: Centralized Per-Point Calculations ---
+    # Offensive per-point metrics
+    if stats['points_played'] > 0:
+        total_points = stats['points_played']
+        stats['goals_per_point'] = stats['goals'] / total_points
+        stats['assists_per_point'] = stats['assists'] / total_points
+        stats['throws_per_point'] = stats['throws'] / total_points
+        stats['hucks_per_point'] = stats['hucks'] / total_points
+    else:
+        stats['goals_per_point'] = 0
+        stats['assists_per_point'] = 0
+        stats['throws_per_point'] = 0
+        stats['hucks_per_point'] = 0
+
+    # Defensive per-point metrics
+    if stats['d_line_points_played'] > 0:
+        d_line_points = stats['d_line_points_played']
+        stats['blocks_per_point'] = stats['blocks'] / d_line_points
+        stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / d_line_points
+    else:
+        stats['blocks_per_point'] = 0
+        stats['turnovers_forced_per_point'] = 0
+    # --- END OF CENTRALIZED CALCULATIONS ---
+
+    # ... (cutting skills, game history, etc. calculations remain here) ...
     # Get cutting skills data
     cutting_skills_query = CuttingSkill.query.filter_by(
         player_id=player_id,
@@ -1450,13 +1463,10 @@ def player_stats(player_id):
         )
         
         if lineup_query.count() > 0:
-            # Use the batch function for consistency, even for a single player
             game_stats_dict = get_players_base_stats([player], [game])
             game_stats = game_stats_dict[player.id]
             
-            # Calculate game-specific team averages
             game_team_avgs = get_cached_team_averages([game])
-            # Use the optimized calculate_per_from_stats function
             game_stats['per'] = calculate_per_from_stats(game_stats, game_team_avgs)
             
             player_games.append({
@@ -1467,48 +1477,14 @@ def player_stats(player_id):
     most_common_throwaway_location = calculate_most_common_throwaway_location(player, games)
     throwaway_direction_data = calculate_most_common_throwaway_direction(player, games)
     
-    # Fix for zero division error in template
     if throwaway_direction_data and throwaway_direction_data.get('total', 0) == 0:
         throwaway_direction_data['percentage'] = 0
     elif throwaway_direction_data:
         throwaway_direction_data['percentage'] = (throwaway_direction_data['count'] / throwaway_direction_data['total']) * 100
     
-    # Get tournaments for filter
     tournaments = Tournament.query.filter_by(
         team_organization_id=get_current_team_id()
     ).order_by(Tournament.start_date.desc()).all()
-
-    # Calculate per-point metrics for radar charts
-    if stats['points_played'] > 0:
-        total_points = stats['points_played']
-        stats['goals_per_point'] = stats['goals'] / total_points
-        stats['assists_per_point'] = stats['assists'] / total_points
-        stats['hockey_assists_per_point'] = stats['hockey_assists'] / total_points
-        stats['throws_per_point'] = stats['throws'] / total_points
-        stats['catches_per_point'] = stats['catches'] / total_points
-        stats['hucks_per_point'] = stats['hucks'] / total_points
-    else:
-        stats['goals_per_point'] = 0
-        stats['assists_per_point'] = 0
-        stats['hockey_assists_per_point'] = 0
-        stats['throws_per_point'] = 0
-        stats['catches_per_point'] = 0
-        stats['hucks_per_point'] = 0
-
-    # Calculate defensive per-point metrics
-    if stats['d_line_points_played'] > 0:
-        d_line_points = stats['d_line_points_played']
-        stats['blocks_per_point'] = stats['blocks'] / d_line_points
-        stats['stalls_per_point'] = stats.get('stalls', 0) / d_line_points
-        stats['shutdowns_per_point'] = stats.get('shutdowns', 0) / d_line_points
-        stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / d_line_points
-        stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / d_line_points
-    else:
-        stats['blocks_per_point'] = 0
-        stats['stalls_per_point'] = 0
-        stats['shutdowns_per_point'] = 0
-        stats['turnovers_forced_per_point'] = 0
-        stats['d_line_plus_minus_per_point'] = 0
 
     return render_template(
         'stats/player_stats.html',
@@ -1521,7 +1497,7 @@ def player_stats(player_id):
         selected_tournament=tournament_id,
         selected_game=game_id,
         throw_vectors=stats['throw_vectors'],
-        throwaway_locations=[],  # This would need to be calculated separately if needed
+        throwaway_locations=[],
         throw_stats={
             'total_throws': stats['throws'],
             'completions': stats['completions'],
@@ -1538,6 +1514,7 @@ def player_stats(player_id):
         most_common_throwaway_location=most_common_throwaway_location,
         throwaway_direction_data=throwaway_direction_data
     )
+
 
 @bp.route('/game/<int:game_id>')
 @login_required
