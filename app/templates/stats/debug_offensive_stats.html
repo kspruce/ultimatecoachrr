@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Offensive Stats Debugger</h1>
+            <h4 class="text-muted">{{ player.name }}</h4>
+        </div>
+        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id, tournament_id=selected_tournament, game_id=selected_game) }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Player Stats
+        </a>
+    </div>
+
+    <!-- Raw Stats Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">1. Raw Data Points</h5>
+        </div>
+        <div class="card-body">
+            <p>These are the fundamental counts from the database that are used in the calculations.</p>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Goals</td>
+                        <td><code>{{ debug_info.raw_stats.goals }}</code></td>
+                        <td>Total goals scored by the player.</td>
+                    </tr>
+                    <tr>
+                        <td>Assists</td>
+                        <td><code>{{ debug_info.raw_stats.assists }}</code></td>
+                        <td>Total assists thrown by the player.</td>
+                    </tr>
+                    <tr>
+                        <td>Throws</td>
+                        <td><code>{{ debug_info.raw_stats.throws }}</code></td>
+                        <td>Total throws made by the player.</td>
+                    </tr>
+                    <tr>
+                        <td>Hucks (>20m)</td>
+                        <td><code>{{ debug_info.raw_stats.hucks }}</code></td>
+                        <td>Total throws with a distance greater than 20 meters.</td>
+                    </tr>
+                    <tr>
+                        <td>Total Points Played</td>
+                        <td><code>{{ debug_info.raw_stats.points_played }}</code></td>
+                        <td>Total unique points the player was on the line for.</td>
+                    </tr>
+                    <tr>
+                        <td>O-Line Points Played</td>
+                        <td><code>{{ debug_info.raw_stats.o_line_points_played }}</code></td>
+                        <td>Total unique O-Line points the player was on the line for.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Per Point Calculations Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">2. Per-Point Calculations</h5>
+        </div>
+        <div class="card-body">
+            <p>These metrics are normalized by the total number of points played.</p>
+            <table class="table">
+                <tr>
+                    <th>Goals Per Point</th>
+                    <td><code>{{ debug_info.raw_stats.goals }} / {{ debug_info.raw_stats.points_played }}</code></td>
+                    <td>= <strong>{{ debug_info.per_point_calcs.goals_per_point|round(2) }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Assists Per Point</th>
+                    <td><code>{{ debug_info.raw_stats.assists }} / {{ debug_info.raw_stats.points_played }}</code></td>
+                    <td>= <strong>{{ debug_info.per_point_calcs.assists_per_point|round(2) }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Throws Per Point</th>
+                    <td><code>{{ debug_info.raw_stats.throws }} / {{ debug_info.raw_stats.points_played }}</code></td>
+                    <td>= <strong>{{ debug_info.per_point_calcs.throws_per_point|round(2) }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Hucks Per Point</th>
+                    <td><code>{{ debug_info.raw_stats.hucks }} / {{ debug_info.raw_stats.points_played }}</code></td>
+                    <td>= <strong>{{ debug_info.per_point_calcs.hucks_per_point|round(2) }}</strong></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- O-Line Conversion Rate Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">3. O-Line Conversion Rate Calculation</h5>
+        </div>
+        <div class="card-body">
+            <p>This is the percentage of O-Line points the player was on that resulted in a score for your team.</p>
+            <table class="table">
+                <tr>
+                    <th>Formula</th>
+                    <td colspan="2"><code>(O-Line Points Scored / O-Line Points Played) * 100</code></td>
+                </tr>
+                <tr>
+                    <th>Calculation</th>
+                    <td><code>({{ debug_info.conversion_rate_calcs.o_line_scores }} / {{ debug_info.raw_stats.o_line_points_played }}) * 100</code></td>
+                    <td>= <strong>{{ debug_info.conversion_rate_calcs.result|round(1) }}%</strong></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

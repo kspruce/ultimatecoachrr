@@ -3809,3 +3809,82 @@ def debug_point_outcomes(game_id):
             "events": event_summary
         })
     return jsonify(points_data)
+
+
+# In stats.py
+
+@bp.route('/debug/offensive-stats/<int:player_id>')
+@login_required
+def debug_offensive_stats(player_id):
+    """Debug page showing step-by-step offensive stat calculations."""
+    player = Player.query.filter_by(
+        id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+
+    # Get filter parameters
+    tournament_id = request.args.get('tournament_id', type=int)
+    game_id = request.args.get('game_id', type=int)
+
+    # Determine which games to analyze
+    if game_id:
+        game_obj = Game.query.get(game_id)
+        games = [game_obj] if game_obj else []
+    elif tournament_id:
+        tournament = Tournament.query.get(tournament_id)
+        games = tournament.games.all() if tournament else []
+    else:
+        games = Game.query.filter_by(team_organization_id=get_current_team_id()).all()
+
+    # Get base stats and point IDs
+    stats = get_players_base_stats([player], games).get(player.id, {})
+    point_ids = get_point_ids_from_games(games)
+
+    # --- Start Debug Info Calculation ---
+    debug_info = {
+        'raw_stats': {},
+        'per_point_calcs': {},
+        'conversion_rate_calcs': {}
+    }
+
+    # Populate raw stats used in calculations
+    debug_info['raw_stats'] = {
+        'goals': stats.get('goals', 0),
+        'assists': stats.get('assists', 0),
+        'throws': stats.get('throws', 0),
+        'hucks': sum(1 for t in stats.get('throw_vectors', []) if t.get('distance', 0) > 20),
+        'points_played': stats.get('points_played', 0),
+        'o_line_points_played': stats.get('o_line_points_played', 0)
+    }
+
+    # Calculate Per-Point metrics step-by-step
+    pp = debug_info['raw_stats']['points_played']
+    debug_info['per_point_calcs'] = {
+        'goals_per_point': (debug_info['raw_stats']['goals'] / pp) if pp > 0 else 0,
+        'assists_per_point': (debug_info['raw_stats']['assists'] / pp) if pp > 0 else 0,
+        'throws_per_point': (debug_info['raw_stats']['throws'] / pp) if pp > 0 else 0,
+        'hucks_per_point': (debug_info['raw_stats']['hucks'] / pp) if pp > 0 else 0,
+    }
+
+    # Calculate O-Line Conversion Rate step-by-step
+    olp = debug_info['raw_stats']['o_line_points_played']
+    o_line_scores = 0
+    if olp > 0:
+        o_line_scores = Point.query.join(LineUp).filter(
+            LineUp.player_id == player.id, Point.our_line_type == 'O-line',
+            Point.id.in_(point_ids), Point.we_scored == True
+        ).count()
+    
+    debug_info['conversion_rate_calcs'] = {
+        'o_line_scores': o_line_scores,
+        'result': (o_line_scores / olp * 100) if olp > 0 else 0
+    }
+
+    return render_template(
+        'stats/debug_offensive_stats.html',
+        player=player,
+        stats=stats,
+        debug_info=debug_info,
+        selected_tournament=tournament_id,
+        selected_game=game_id
+    )
