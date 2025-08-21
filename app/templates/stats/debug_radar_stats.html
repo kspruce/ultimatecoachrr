@@ -13,17 +13,23 @@
     </div>
 
     <div class="alert alert-info">
-        This page shows the detailed calculations for each metric on the offensive and defensive radar charts.
-        Compare the player's calculations side-by-side with the final team averages.
+        <p><strong>How to use this page:</strong> This debugger shows the detailed calculations for each metric on the offensive and defensive radar charts.</p>
+        <p>For each metric, you can see:</p>
+        <ul>
+            <li>The raw numbers used in the calculation</li>
+            <li>The formula being applied</li>
+            <li>The resulting value that appears on the radar chart</li>
+            <li>A comparison between the player's value and the team average</li>
+        </ul>
     </div>
 
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Radar Metric Calculations</h5>
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Offensive Radar Metrics</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-striped mb-0">
+                <table class="table table-bordered mb-0">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 20%;">Metric</th>
@@ -34,77 +40,163 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Offensive Metrics -->
-                        <tr class="table-success">
-                            <td colspan="5" class="fw-bold">Offensive Radar</td>
-                        </tr>
                         <tr>
-                            <td>O-Line Conversion %</td>
-                            <td><code>({{ debug_info.o_line_conversion.player.num }} / {{ debug_info.o_line_conversion.player.den }}) * 100</code></td>
-                            <td><strong>{{ debug_info.o_line_conversion.player.res|round(1) }}%</strong></td>
-                            <td><code>({{ debug_info.o_line_conversion.team.num }} / {{ debug_info.o_line_conversion.team.den }}) * 100</code></td>
-                            <td><strong>{{ debug_info.o_line_conversion.team.res|round(1) }}%</strong></td>
-                        </tr>
-                        <tr>
-                            <td>Completion Rate %</td>
-                            <td><code>({{ debug_info.completion_rate.player.num }} / {{ debug_info.completion_rate.player.den }}) * 100</code></td>
+                            <td>Completion Rate</td>
+                            <td>
+                                <code>({{ debug_info.completion_rate.player.num }} / {{ debug_info.completion_rate.player.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.completion_rate.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.completion_rate.player.res|round(1) }}%</strong></td>
-                            <td>(Aggregate of player rates)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.completion_rate.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.completion_rate.team.res|round(1) }}%</strong></td>
                         </tr>
                         <tr>
+                            <td>O-Line Conversion</td>
+                            <td>
+                                <code>({{ debug_info.o_line_conversion.player.num }} / {{ debug_info.o_line_conversion.player.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.o_line_conversion.player.explanation }}</div>
+                            </td>
+                            <td><strong>{{ debug_info.o_line_conversion.player.res|round(1) }}%</strong></td>
+                            <td>
+                                <code>({{ debug_info.o_line_conversion.team.num }} / {{ debug_info.o_line_conversion.team.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.o_line_conversion.team.explanation }}</div>
+                            </td>
+                            <td><strong>{{ debug_info.o_line_conversion.team.res|round(1) }}%</strong></td>
+                        </tr>
+                        <tr>
                             <td>Goals Per Point</td>
-                            <td><code>{{ debug_info.goals_per_point.player.num }} / {{ debug_info.goals_per_point.player.den }}</code></td>
+                            <td>
+                                <code>{{ debug_info.goals_per_point.player.num }} / {{ debug_info.goals_per_point.player.den }}</code>
+                                <div class="small text-muted mt-1">{{ debug_info.goals_per_point.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.goals_per_point.player.res|round(2) }}</strong></td>
-                            <td>(Team total / Team points)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.goals_per_point.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.goals_per_point.team.res|round(2) }}</strong></td>
                         </tr>
                         <tr>
                             <td>Assists Per Point</td>
-                            <td><code>{{ debug_info.assists_per_point.player.num }} / {{ debug_info.assists_per_point.player.den }}</code></td>
+                            <td>
+                                <code>{{ debug_info.assists_per_point.player.num }} / {{ debug_info.assists_per_point.player.den }}</code>
+                                <div class="small text-muted mt-1">{{ debug_info.assists_per_point.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.assists_per_point.player.res|round(2) }}</strong></td>
-                            <td>(Team total / Team points)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.assists_per_point.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.assists_per_point.team.res|round(2) }}</strong></td>
                         </tr>
                         <tr>
                             <td>Throws Per Point</td>
-                            <td><code>{{ debug_info.throws_per_point.player.num }} / {{ debug_info.throws_per_point.player.den }}</code></td>
+                            <td>
+                                <code>{{ debug_info.throws_per_point.player.num }} / {{ debug_info.throws_per_point.player.den }}</code>
+                                <div class="small text-muted mt-1">{{ debug_info.throws_per_point.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.throws_per_point.player.res|round(2) }}</strong></td>
-                            <td>(Team total / Team points)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.throws_per_point.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.throws_per_point.team.res|round(2) }}</strong></td>
                         </tr>
                         <tr>
                             <td>Hucks Per Point</td>
-                            <td><code>{{ debug_info.hucks_per_point.player.num }} / {{ debug_info.hucks_per_point.player.den }}</code></td>
+                            <td>
+                                <code>{{ debug_info.hucks_per_point.player.num }} / {{ debug_info.hucks_per_point.player.den }}</code>
+                                <div class="small text-muted mt-1">{{ debug_info.hucks_per_point.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.hucks_per_point.player.res|round(2) }}</strong></td>
-                            <td>(Team total / Team points)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.hucks_per_point.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.hucks_per_point.team.res|round(2) }}</strong></td>
                         </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-                        <!-- Defensive Metrics -->
-                        <tr class="table-danger">
-                            <td colspan="5" class="fw-bold">Defensive Radar</td>
-                        </tr>
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Defensive Radar Metrics</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <td>D-Line Conversion %</td>
-                            <td><code>({{ debug_info.d_line_conversion.player.num }} / {{ debug_info.d_line_conversion.player.den }}) * 100</code></td>
+                            <th style="width: 20%;">Metric</th>
+                            <th style="width: 30%;">Player Calculation</th>
+                            <th style="width: 10%;">Player Value</th>
+                            <th style="width: 30%;">Team Calculation</th>
+                            <th style="width: 10%;">Team Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>D-Line Conversion</td>
+                            <td>
+                                <code>({{ debug_info.d_line_conversion.player.num }} / {{ debug_info.d_line_conversion.player.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.d_line_conversion.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.d_line_conversion.player.res|round(1) }}%</strong></td>
-                            <td><code>({{ debug_info.d_line_conversion.team.num }} / {{ debug_info.d_line_conversion.team.den }}) * 100</code></td>
+                            <td>
+                                <code>({{ debug_info.d_line_conversion.team.num }} / {{ debug_info.d_line_conversion.team.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.d_line_conversion.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.d_line_conversion.team.res|round(1) }}%</strong></td>
                         </tr>
                         <tr>
-                            <td>Blocks Per D-Point</td>
-                            <td><code>{{ debug_info.blocks_per_point.player.num }} / {{ debug_info.blocks_per_point.player.den }}</code></td>
+                            <td>Blocks Per Point</td>
+                            <td>
+                                <code>{{ debug_info.blocks_per_point.player.num }} / {{ debug_info.blocks_per_point.player.den }}</code>
+                                <div class="small text-muted mt-1">{{ debug_info.blocks_per_point.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.blocks_per_point.player.res|round(2) }}</strong></td>
-                            <td>(Team total / Team D-points)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.blocks_per_point.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.blocks_per_point.team.res|round(2) }}</strong></td>
                         </tr>
                         <tr>
-                            <td>Turnovers Forced / D-Point</td>
-                            <td><code>{{ debug_info.turnovers_forced_per_point.player.num }} / {{ debug_info.turnovers_forced_per_point.player.den }}</code></td>
+                            <td>Break Percentage</td>
+                            <td>
+                                <code>({{ debug_info.break_percentage.player.num }} / {{ debug_info.break_percentage.player.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.break_percentage.player.explanation }}</div>
+                            </td>
+                            <td><strong>{{ debug_info.break_percentage.player.res|round(1) }}%</strong></td>
+                            <td>
+                                <code>({{ debug_info.break_percentage.team.num }} / {{ debug_info.break_percentage.team.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.break_percentage.team.explanation }}</div>
+                            </td>
+                            <td><strong>{{ debug_info.break_percentage.team.res|round(1) }}%</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Turnovers Forced/Point</td>
+                            <td>
+                                <code>{{ debug_info.turnovers_forced_per_point.player.num }} / {{ debug_info.turnovers_forced_per_point.player.den }}</code>
+                                <div class="small text-muted mt-1">{{ debug_info.turnovers_forced_per_point.player.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.turnovers_forced_per_point.player.res|round(2) }}</strong></td>
-                            <td>(Team total / Team D-points)</td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.turnovers_forced_per_point.team.explanation }}</div>
+                            </td>
                             <td><strong>{{ debug_info.turnovers_forced_per_point.team.res|round(2) }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Defensive Efficiency</td>
+                            <td>
+                                <code>({{ debug_info.defensive_efficiency.player.num }} / {{ debug_info.defensive_efficiency.player.den }}) * 100</code>
+                                <div class="small text-muted mt-1">{{ debug_info.defensive_efficiency.player.explanation }}</div>
+                            </td>
+                            <td><strong>{{ debug_info.defensive_efficiency.player.res|round(1) }}%</strong></td>
+                            <td>
+                                <div class="small text-muted">{{ debug_info.defensive_efficiency.team.explanation }}</div>
+                            </td>
+                            <td><strong>{{ debug_info.defensive_efficiency.team.res|round(1) }}%</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -113,18 +205,19 @@
     </div>
 
     <div class="card mt-4">
-        <div class="card-header bg-warning">
-            <h5 class="mb-0">Radar Chart Alias Information</h5>
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Notes on Calculations</h5>
         </div>
         <div class="card-body">
-            <p>Some metrics on the defensive radar chart are aliases for <strong>D-Line Conversion Rate</strong> to provide a more intuitive chart. This is because a player's direct contribution to a "Break" or "Defensive Efficiency" is measured by how often their D-line scores when they are on the field.</p>
-            <ul>
-                <li><strong>Break Percentage (Player):</strong> This is set to the player's <strong>D-Line Conversion Rate</strong>.</li>
-                <li><strong>Defensive Efficiency (Player):</strong> This is also set to the player's <strong>D-Line Conversion Rate</strong>.</li>
-            </ul>
-            <p>The team's values for these metrics are calculated independently based on overall team performance.</p>
+            <h6>Team Averages vs. Team Totals</h6>
+            <p>Team metrics are calculated as <strong>averages across all players</strong>, not as team totals divided by total points. This is why the team average shows values like 5.0 games played, 12.5 points played, etc.</p>
+            
+            <h6>Conversion Rates</h6>
+            <p>Conversion rates are calculated as <strong>"points scored containing the player / points played by the player"</strong> for both O-line and D-line.</p>
+            
+            <h6>Defensive Metrics Aliases</h6>
+            <p>For individual players, both "Break Percentage" and "Defensive Efficiency" are aliases for the player's D-Line Conversion Rate. This is because a player's direct contribution to a "Break" or "Defensive Efficiency" is measured by how often their D-line scores when they are on the field.</p>
         </div>
     </div>
-
 </div>
 {% endblock %}

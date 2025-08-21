@@ -3842,6 +3842,9 @@ def debug_radar_stats(player_id):
     team_summary = calculate_team_summary(games)
     team_metrics = calculate_additional_team_metrics(games)
     team_summary.update(team_metrics) # Combine team data into one dict
+    
+    # --- Get Team Averages ---
+    team_avgs = get_cached_team_averages(games)
 
     # --- Build Debug Info Dictionary ---
     debug_info = {}
@@ -3850,32 +3853,57 @@ def debug_radar_stats(player_id):
     player_olp = stats.get('o_line_points_played', 0)
     player_dlp = stats.get('d_line_points_played', 0)
     player_pp = stats.get('points_played', 0)
-    team_olp = team_summary.get('o_line_points', 0)
-    team_dlp = team_summary.get('d_line_points', 0)
-    team_pp = team_summary.get('total_points', 0)
 
-    # O-Line Conversion Rate
+    # O-Line Conversion Rate - CORRECTED
     player_o_scores = 0
     if player_olp > 0:
+        # Count points where player was in the lineup AND the team scored
         player_o_scores = Point.query.join(LineUp).filter(
-            LineUp.player_id == player.id, Point.our_line_type == 'O-line',
-            Point.id.in_(point_ids), Point.we_scored == True
+            LineUp.player_id == player.id, 
+            Point.our_line_type == 'O-line',
+            Point.id.in_(point_ids), 
+            Point.we_scored == True
         ).count()
+    
     debug_info['o_line_conversion'] = {
-        'player': {'num': player_o_scores, 'den': player_olp, 'res': (player_o_scores / player_olp * 100) if player_olp > 0 else 0},
-        'team': {'num': team_summary.get('o_line_conversions', 0), 'den': team_olp, 'res': team_summary.get('o_line_conversion_rate', 0)}
+        'player': {
+            'num': player_o_scores, 
+            'den': player_olp, 
+            'res': (player_o_scores / player_olp * 100) if player_olp > 0 else 0,
+            'explanation': "O-Line points where player was in lineup AND team scored / Total O-Line points played by player"
+        },
+        'team': {
+            'num': team_summary.get('o_line_conversions', 0), 
+            'den': team_summary.get('o_line_points', 0), 
+            'res': team_summary.get('o_line_conversion_rate', 0),
+            'explanation': "Total O-Line points scored by team / Total O-Line points played by team"
+        }
     }
 
-    # D-Line Conversion Rate
+    # D-Line Conversion Rate - CORRECTED
     player_d_scores = 0
     if player_dlp > 0:
+        # Count points where player was in the lineup AND the team scored
         player_d_scores = Point.query.join(LineUp).filter(
-            LineUp.player_id == player.id, Point.our_line_type == 'D-line',
-            Point.id.in_(point_ids), Point.we_scored == True
+            LineUp.player_id == player.id, 
+            Point.our_line_type == 'D-line',
+            Point.id.in_(point_ids), 
+            Point.we_scored == True
         ).count()
+    
     debug_info['d_line_conversion'] = {
-        'player': {'num': player_d_scores, 'den': player_dlp, 'res': (player_d_scores / player_dlp * 100) if player_dlp > 0 else 0},
-        'team': {'num': team_summary.get('d_line_conversions', 0), 'den': team_dlp, 'res': team_summary.get('d_line_conversion_rate', 0)}
+        'player': {
+            'num': player_d_scores, 
+            'den': player_dlp, 
+            'res': (player_d_scores / player_dlp * 100) if player_dlp > 0 else 0,
+            'explanation': "D-Line points where player was in lineup AND team scored / Total D-Line points played by player"
+        },
+        'team': {
+            'num': team_summary.get('d_line_conversions', 0), 
+            'den': team_summary.get('d_line_points', 0), 
+            'res': team_summary.get('d_line_conversion_rate', 0),
+            'explanation': "Total D-Line points scored by team / Total D-Line points played by team"
+        }
     }
 
     # Per-Point Metrics
@@ -3887,35 +3915,142 @@ def debug_radar_stats(player_id):
     player_stalls = stats.get('stalls', 0)
     
     debug_info['goals_per_point'] = {
-        'player': {'num': player_goals, 'den': player_pp, 'res': (player_goals / player_pp) if player_pp > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('goals_per_point', 0)}
+        'player': {
+            'num': player_goals, 
+            'den': player_pp, 
+            'res': (player_goals / player_pp) if player_pp > 0 else 0,
+            'explanation': "Player's total goals / Player's total points played"
+        },
+        'team': {
+            'num': team_avgs.get('goals_per_point', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('goals_per_point', 0),
+            'explanation': "Average goals per point across all players"
+        }
     }
+    
     debug_info['assists_per_point'] = {
-        'player': {'num': player_assists, 'den': player_pp, 'res': (player_assists / player_pp) if player_pp > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('assists_per_point', 0)}
+        'player': {
+            'num': player_assists, 
+            'den': player_pp, 
+            'res': (player_assists / player_pp) if player_pp > 0 else 0,
+            'explanation': "Player's total assists / Player's total points played"
+        },
+        'team': {
+            'num': team_avgs.get('assists_per_point', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('assists_per_point', 0),
+            'explanation': "Average assists per point across all players"
+        }
     }
+    
     debug_info['throws_per_point'] = {
-        'player': {'num': player_throws, 'den': player_pp, 'res': (player_throws / player_pp) if player_pp > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('throws_per_point', 0)}
+        'player': {
+            'num': player_throws, 
+            'den': player_pp, 
+            'res': (player_throws / player_pp) if player_pp > 0 else 0,
+            'explanation': "Player's total throws / Player's total points played"
+        },
+        'team': {
+            'num': team_avgs.get('throws_per_point', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('throws_per_point', 0),
+            'explanation': "Average throws per point across all players"
+        }
     }
+    
     debug_info['hucks_per_point'] = {
-        'player': {'num': player_hucks, 'den': player_pp, 'res': (player_hucks / player_pp) if player_pp > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('hucks_per_point', 0)}
+        'player': {
+            'num': player_hucks, 
+            'den': player_pp, 
+            'res': (player_hucks / player_pp) if player_pp > 0 else 0,
+            'explanation': "Player's total hucks (throws > 20m) / Player's total points played"
+        },
+        'team': {
+            'num': team_avgs.get('hucks_per_point', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('hucks_per_point', 0),
+            'explanation': "Average hucks per point across all players"
+        }
     }
+    
     debug_info['blocks_per_point'] = {
-        'player': {'num': player_blocks, 'den': player_dlp, 'res': (player_blocks / player_dlp) if player_dlp > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('blocks_per_point', 0)}
+        'player': {
+            'num': player_blocks, 
+            'den': player_dlp, 
+            'res': (player_blocks / player_dlp) if player_dlp > 0 else 0,
+            'explanation': "Player's total blocks / Player's D-line points played"
+        },
+        'team': {
+            'num': team_avgs.get('blocks_per_point', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('blocks_per_point', 0),
+            'explanation': "Average blocks per D-line point across all players"
+        }
     }
+    
     debug_info['turnovers_forced_per_point'] = {
-        'player': {'num': player_blocks + player_stalls, 'den': player_dlp, 'res': ((player_blocks + player_stalls) / player_dlp) if player_dlp > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('turnovers_forced_per_point', 0)}
+        'player': {
+            'num': player_blocks + player_stalls, 
+            'den': player_dlp, 
+            'res': ((player_blocks + player_stalls) / player_dlp) if player_dlp > 0 else 0,
+            'explanation': "Player's (blocks + stalls) / Player's D-line points played"
+        },
+        'team': {
+            'num': team_avgs.get('turnovers_forced_per_point', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('turnovers_forced_per_point', 0),
+            'explanation': "Average turnovers forced per D-line point across all players"
+        }
     }
     
     # Completion Rate
     player_completions = stats.get('completions', 0)
     debug_info['completion_rate'] = {
-        'player': {'num': player_completions, 'den': player_throws, 'res': (player_completions / player_throws * 100) if player_throws > 0 else 0},
-        'team': {'num': 'N/A', 'den': 'N/A', 'res': team_summary.get('completion_rate', 0)}
+        'player': {
+            'num': player_completions, 
+            'den': player_throws, 
+            'res': (player_completions / player_throws * 100) if player_throws > 0 else 0,
+            'explanation': "Player's completions / Player's total throws * 100"
+        },
+        'team': {
+            'num': team_avgs.get('completion_rate', 0), 
+            'den': 'N/A', 
+            'res': team_avgs.get('completion_rate', 0),
+            'explanation': "Average completion rate across all players"
+        }
+    }
+    
+    # Break Percentage (alias for D-Line Conversion for player)
+    debug_info['break_percentage'] = {
+        'player': {
+            'num': player_d_scores, 
+            'den': player_dlp, 
+            'res': (player_d_scores / player_dlp * 100) if player_dlp > 0 else 0,
+            'explanation': "Same as D-Line Conversion Rate for player"
+        },
+        'team': {
+            'num': team_summary.get('breaks', 0), 
+            'den': team_summary.get('total_points', 0), 
+            'res': team_summary.get('break_percentage', 0),
+            'explanation': "Team breaks / Total points played by team * 100"
+        }
+    }
+    
+    # Defensive Efficiency (alias for D-Line Conversion for player)
+    debug_info['defensive_efficiency'] = {
+        'player': {
+            'num': player_d_scores, 
+            'den': player_dlp, 
+            'res': (player_d_scores / player_dlp * 100) if player_dlp > 0 else 0,
+            'explanation': "Same as D-Line Conversion Rate for player"
+        },
+        'team': {
+            'num': team_summary.get('d_line_conversion_rate', 0), 
+            'den': 'N/A', 
+            'res': team_summary.get('defensive_efficiency', 0),
+            'explanation': "Team D-Line Conversion Rate"
+        }
     }
 
     return render_template(
@@ -3923,5 +4058,7 @@ def debug_radar_stats(player_id):
         player=player,
         debug_info=debug_info,
         selected_tournament=tournament_id,
-        selected_game=game_id
+        selected_game=game_id,
+        team_avgs=team_avgs
     )
+
