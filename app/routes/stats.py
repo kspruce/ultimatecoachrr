@@ -3920,9 +3920,6 @@ def debug_radar_stats(player_id):
     player_blocks = stats.get('blocks', 0)
     player_stalls = stats.get('stalls', 0)
     
-    # ... rest of the function remains the same ...
-
-    
     debug_info['goals_per_point'] = {
         'player': {
             'num': player_goals, 
@@ -3931,9 +3928,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's total goals / Player's total points played"
         },
         'team': {
-            'num': team_avgs.get('goals_per_point', 0), 
+            'num': team_summary.get('goals_per_point', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('goals_per_point', 0),
+            'res': team_summary.get('goals_per_point', 0),
             'explanation': "Average goals per point across all players"
         }
     }
@@ -3946,9 +3943,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's total assists / Player's total points played"
         },
         'team': {
-            'num': team_avgs.get('assists_per_point', 0), 
+            'num': team_summary.get('assists_per_point', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('assists_per_point', 0),
+            'res': team_summary.get('assists_per_point', 0),
             'explanation': "Average assists per point across all players"
         }
     }
@@ -3961,9 +3958,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's total throws / Player's total points played"
         },
         'team': {
-            'num': team_avgs.get('throws_per_point', 0), 
+            'num': team_summary.get('throws_per_point', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('throws_per_point', 0),
+            'res': team_summary.get('throws_per_point', 0),
             'explanation': "Average throws per point across all players"
         }
     }
@@ -3976,9 +3973,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's total hucks (throws > 20m) / Player's total points played"
         },
         'team': {
-            'num': team_avgs.get('hucks_per_point', 0), 
+            'num': team_summary.get('hucks_per_point', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('hucks_per_point', 0),
+            'res': team_summary.get('hucks_per_point', 0),
             'explanation': "Average hucks per point across all players"
         }
     }
@@ -3991,9 +3988,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's total blocks / Player's D-line points played"
         },
         'team': {
-            'num': team_avgs.get('blocks_per_point', 0), 
+            'num': team_summary.get('blocks_per_point', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('blocks_per_point', 0),
+            'res': team_summary.get('blocks_per_point', 0),
             'explanation': "Average blocks per D-line point across all players"
         }
     }
@@ -4006,9 +4003,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's (blocks + stalls) / Player's D-line points played"
         },
         'team': {
-            'num': team_avgs.get('turnovers_forced_per_point', 0), 
+            'num': team_summary.get('turnovers_forced_per_point', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('turnovers_forced_per_point', 0),
+            'res': team_summary.get('turnovers_forced_per_point', 0),
             'explanation': "Average turnovers forced per D-line point across all players"
         }
     }
@@ -4023,9 +4020,9 @@ def debug_radar_stats(player_id):
             'explanation': "Player's completions / Player's total throws * 100"
         },
         'team': {
-            'num': team_avgs.get('completion_rate', 0), 
+            'num': team_summary.get('completion_rate', 0), 
             'den': 'N/A', 
-            'res': team_avgs.get('completion_rate', 0),
+            'res': team_summary.get('completion_rate', 0),
             'explanation': "Average completion rate across all players"
         }
     }
@@ -4057,7 +4054,7 @@ def debug_radar_stats(player_id):
         'team': {
             'num': team_summary.get('d_line_conversion_rate', 0), 
             'den': 'N/A', 
-            'res': team_summary.get('defensive_efficiency', 0),
+            'res': team_summary.get('defensive_efficiency', 0) or team_summary.get('d_line_conversion_rate', 0),
             'explanation': "Team D-Line Conversion Rate"
         }
     }
@@ -4067,7 +4064,7 @@ def debug_radar_stats(player_id):
         player=player,
         debug_info=debug_info,
         selected_tournament=tournament_id,
-        selected_game=game_id,
-        team_avgs=team_avgs
+        selected_game=game_id
     )
+
 
