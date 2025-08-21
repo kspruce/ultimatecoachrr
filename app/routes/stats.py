@@ -3842,9 +3842,6 @@ def debug_radar_stats(player_id):
     team_summary = calculate_team_summary(games)
     team_metrics = calculate_additional_team_metrics(games)
     team_summary.update(team_metrics) # Combine team data into one dict
-    
-    # --- Get Team Averages ---
-    team_avgs = get_cached_team_averages(games)
 
     # --- Build Debug Info Dictionary ---
     debug_info = {}
@@ -3853,17 +3850,20 @@ def debug_radar_stats(player_id):
     player_olp = stats.get('o_line_points_played', 0)
     player_dlp = stats.get('d_line_points_played', 0)
     player_pp = stats.get('points_played', 0)
+    team_olp = team_summary.get('o_line_points', 0)
+    team_dlp = team_summary.get('d_line_points', 0)
+    team_pp = team_summary.get('total_points', 0)
 
-    # O-Line Conversion Rate - CORRECTED
-    player_o_scores = 0
-    if player_olp > 0:
-        # Count points where player was in the lineup AND the team scored
-        player_o_scores = Point.query.join(LineUp).filter(
-            LineUp.player_id == player.id, 
-            Point.our_line_type == 'O-line',
-            Point.id.in_(point_ids), 
-            Point.we_scored == True
-        ).count()
+    # O-Line Conversion Rate
+    # First, get all O-line points the player was in
+    player_o_line_points = db.session.query(Point).join(LineUp).filter(
+        LineUp.player_id == player.id,
+        Point.our_line_type == 'O-line',
+        Point.id.in_(point_ids) if point_ids else True
+    ).all()
+    
+    # Count how many of those points resulted in a score
+    player_o_scores = sum(1 for p in player_o_line_points if p.we_scored)
     
     debug_info['o_line_conversion'] = {
         'player': {
@@ -3874,22 +3874,28 @@ def debug_radar_stats(player_id):
         },
         'team': {
             'num': team_summary.get('o_line_conversions', 0), 
-            'den': team_summary.get('o_line_points', 0), 
+            'den': team_olp, 
             'res': team_summary.get('o_line_conversion_rate', 0),
             'explanation': "Total O-Line points scored by team / Total O-Line points played by team"
         }
     }
 
     # D-Line Conversion Rate - CORRECTED
-    player_d_scores = 0
-    if player_dlp > 0:
-        # Count points where player was in the lineup AND the team scored
-        player_d_scores = Point.query.join(LineUp).filter(
-            LineUp.player_id == player.id, 
-            Point.our_line_type == 'D-line',
-            Point.id.in_(point_ids), 
-            Point.we_scored == True
-        ).count()
+    # First, get all D-line points the player was in
+    player_d_line_points = db.session.query(Point).join(LineUp).filter(
+        LineUp.player_id == player.id,
+        Point.our_line_type == 'D-line',
+        Point.id.in_(point_ids) if point_ids else True
+    ).all()
+    
+    # Count how many of those points resulted in a score
+    player_d_scores = sum(1 for p in player_d_line_points if p.we_scored)
+    
+    # Print debug information to help diagnose the issue
+    print(f"DEBUG: Player {player.name} - D-line points played: {len(player_d_line_points)}")
+    print(f"DEBUG: Player {player.name} - D-line points scored: {player_d_scores}")
+    for i, p in enumerate(player_d_line_points):
+        print(f"DEBUG: D-line point {i+1}: Point ID {p.id}, We scored: {p.we_scored}")
     
     debug_info['d_line_conversion'] = {
         'player': {
@@ -3900,7 +3906,7 @@ def debug_radar_stats(player_id):
         },
         'team': {
             'num': team_summary.get('d_line_conversions', 0), 
-            'den': team_summary.get('d_line_points', 0), 
+            'den': team_dlp, 
             'res': team_summary.get('d_line_conversion_rate', 0),
             'explanation': "Total D-Line points scored by team / Total D-Line points played by team"
         }
@@ -3913,6 +3919,9 @@ def debug_radar_stats(player_id):
     player_hucks = sum(1 for t in stats.get('throw_vectors', []) if t.get('distance', 0) > 20)
     player_blocks = stats.get('blocks', 0)
     player_stalls = stats.get('stalls', 0)
+    
+    # ... rest of the function remains the same ...
+
     
     debug_info['goals_per_point'] = {
         'player': {
