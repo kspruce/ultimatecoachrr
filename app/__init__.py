@@ -210,19 +210,21 @@ def create_app(config_class=Config):
     
     # Create upload directory in /tmp
     try:
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
         # Create subdirectories
         for subdir in ['drills', 'playbook', 'theory', 'temp']:
-            os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], subdir), exist_ok=True)
+            os.makedirs(os.path.join(Config.UPLOAD_FOLDER, subdir), exist_ok=True)
         
         # Test write permissions
-        test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'temp', 'test.txt')
+        test_file = os.path.join(Config.UPLOAD_FOLDER, 'temp', 'test.txt')
         with open(test_file, 'w') as f:
             f.write('test')
         os.remove(test_file)
     except Exception as e:
-        app.logger.error(f"Storage initialization error: {str(e)}")
+        print(f"Storage initialization error: {str(e)}")
         raise
+
+
     
     # Create database tables
     with app.app_context():

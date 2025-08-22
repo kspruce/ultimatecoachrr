@@ -1,4 +1,4 @@
-from app import create_app, db
+from app.__init__ import create_app, db
 # Import models directly from app.models
 from app.models.user import User
 from app.models.player import Player
