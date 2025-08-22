@@ -193,6 +193,10 @@ def create_app(config_class=Config):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
+    from app.routes.stats_blueprint import stats_dashboard
+    app.register_blueprint(stats_dashboard)
+    
+    import app.utils.stats_events
     
     # Import models
     from app.models import (
