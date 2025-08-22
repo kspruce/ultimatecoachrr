@@ -154,8 +154,8 @@ def create_app(config_class=Config):
     from app.routes.stat import bp as stat_bp
     app.register_blueprint(stat_bp)
     
-    from app.routes.stats import bp as stats_dashboard_bp
-    app.register_blueprint(stats_dashboard_bp)
+    #from app.routes.stats import bp as stats_dashboard_bp
+    #app.register_blueprint(stats_dashboard_bp)
     
     from app.routes.clip import bp as clip_bp
     app.register_blueprint(clip_bp)
