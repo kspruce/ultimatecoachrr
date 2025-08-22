@@ -9,7 +9,7 @@ from app.routes.clip import bp as clip_bp
 from app.routes.session import bp as session_bp
 from app.routes.theory import bp as theory_bp
 from app.routes.tournament import bp as tournament_bp
-from app.routes.stats import bp as stats_bp
+#from app.routes.stats import bp as stats_bp
 from app.routes.playbook import bp as playbook_bp
 from app.routes.scouting import bp as scouting_bp
 from app.routes.gameday import bp as gameday_bp  # Add this line
