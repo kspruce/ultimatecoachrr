@@ -22,7 +22,10 @@ moment = Moment()
 def create_app(config_class=Config):
     """Application factory function that creates and configures the Flask app"""
     # Create Flask app
-    app = Flask(__name__)
+    app = Flask(__name__, 
+                template_folder='app/templates',
+                static_folder='app/static',
+                static_url_path='/static')
     app.config.from_object(config_class)
     
     # Initialize extensions with the app
