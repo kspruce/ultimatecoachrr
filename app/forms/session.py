@@ -6,7 +6,7 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, NumberRange, Length, URL
 from app.models.player import Player
-from app import db
+from app_factory import db
 from flask_wtf.file import FileField, FileAllowed
 from werkzeug.utils import secure_filename
 import os

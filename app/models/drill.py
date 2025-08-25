@@ -1,5 +1,5 @@
 from datetime import datetime
-from app import db  # Import your Flask-SQLAlchemy instance
+from app_factory import db  # Import your Flask-SQLAlchemy instance
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 

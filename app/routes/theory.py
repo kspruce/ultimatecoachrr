@@ -1,7 +1,7 @@
 # app/routes/theory.py
 from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
-from app import db
+from app_factory import db
 from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
 from app.forms.theory import TheorySectionForm, TheoryTopicForm, TheoryVideoForm
 from app.utils.utils import save_uploaded_file

@@ -1,6 +1,6 @@
 from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
-from app import db
+from app_factory import db
 from app.models.scouting import ScoutingReport, OpponentPlayer, ScoutingClip
 from app.models.tournament import Tournament
 from app.models.game import Game

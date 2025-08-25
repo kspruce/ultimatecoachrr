@@ -1,4 +1,4 @@
-from app import db
+from app_factory import db
 
 def add_discord_fields_to_user(app=None):
     """

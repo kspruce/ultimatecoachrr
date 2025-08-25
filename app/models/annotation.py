@@ -1,4 +1,4 @@
-from app import db
+from app_factory import db
 from datetime import datetime
 
 def seconds_to_timestamp(seconds):

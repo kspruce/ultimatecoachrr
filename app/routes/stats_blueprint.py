@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from app import db
+from app_factory import db
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_, not_
 from app.utils.stats_service import StatsService

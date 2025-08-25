@@ -1,5 +1,5 @@
 # app/models/team_settings.py
-from app import db
+from app_factory import db
 
 class TeamSettings(db.Model):
     __tablename__ = 'team_settings'

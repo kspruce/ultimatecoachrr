@@ -1,7 +1,7 @@
 # app/commands.py
 import click
 from flask.cli import with_appcontext
-from app import db
+from app_factory import db
 from app.models.user import User
 from app.utils.data_manager import DataManager
 import json

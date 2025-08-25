@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text, and_
-from app import db
+from app_factory import db
 from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP
 from app.models.game import Game

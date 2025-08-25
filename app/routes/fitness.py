@@ -1,7 +1,7 @@
 # app/routes/fitness.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, session
 from flask_login import login_required, current_user
-from app import db
+from app_factory import db
 from app.models.fitness import FitnessMetric, FitnessRecord
 from app.models.player import Player
 from app.utils.utils import admin_required

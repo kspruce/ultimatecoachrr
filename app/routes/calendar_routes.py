@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash, session
 from flask_login import login_required, current_user
-from app import db
+from app_factory import db
 from app.models.session import SessionPlan, SessionRSVP
 from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP

@@ -1,5 +1,5 @@
 # app/models/fitness.py
-from app import db
+from app_factory import db
 from datetime import datetime
 
 # Define the default metrics

@@ -1,5 +1,5 @@
 # models/throw.py
-from app import db
+from app_factory import db
 from datetime import datetime
 import math
 

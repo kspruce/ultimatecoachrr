@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template, session
 from flask_login import login_required, current_user
-from app import db
+from app_factory import db
 from app.models.point import Point
 from app.models.cutting_skill import CuttingSkill
 

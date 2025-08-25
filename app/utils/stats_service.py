@@ -1,4 +1,4 @@
-from app import db
+from app_factory import db
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_, not_
 from app.models.stats_cache import PlayerStatsCache, TeamStatsCache, GameStatsCache

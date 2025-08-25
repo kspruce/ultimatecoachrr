@@ -3,7 +3,7 @@ from flask import (
     request, jsonify, current_app, render_template_string, session
 )
 from flask_login import login_required, current_user
-from app import db
+from app_factory import db
 from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance, SessionRSVP
 from app.models.player import Player
 from app.forms.session import (
