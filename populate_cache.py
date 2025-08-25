@@ -1,6 +1,12 @@
-from app_factory import app, db
-from models import Player, Game, TeamOrganization
-from stats_service import StatsService
+# populate_cache.py
+from app_factory import create_app, db
+from app.models.player import Player
+from app.models.game import Game
+from app.models.team_organization import TeamOrganization
+from app.utils.stats_service import StatsService
+
+# Create the app
+app = create_app()
 
 # Create application context
 with app.app_context():
