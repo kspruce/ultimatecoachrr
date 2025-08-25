@@ -1,4 +1,4 @@
-from app import app, db
+from app_factory import app, db
 from models import Player, Game, TeamOrganization
 from stats_service import StatsService
 
