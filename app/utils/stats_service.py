@@ -95,7 +95,7 @@ class StatsService:
             if end_date:
                 throws_query = throws_query.filter(Point.date <= end_date)
                 
-        completions = throws_query.filter_by(outcome='complete').count()
+        completions = throws_query.filter_by(is_completion=True).count()
         throw_attempts = throws_query.count()
         
         # Calculate completion percentage
@@ -608,7 +608,8 @@ class StatsService:
             if end_date:
                 throws_query = throws_query.filter(Point.date <= end_date)
                 
-        completions = throws_query.filter_by(outcome='complete').count()
+        completions = throws_query.filter_by(is_completion=True).count()
+
         throw_attempts = throws_query.count()
         avg_completion_pct = (completions / throw_attempts * 100) if throw_attempts > 0 else 0
         
