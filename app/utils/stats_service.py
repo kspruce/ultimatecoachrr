@@ -208,9 +208,8 @@ class StatsService:
         if team_organization_id:
             throws_query = throws_query.filter(Throw.team_organization_id == team_organization_id)
             
-        cache.completions = throws_query.filter_by(outcome='complete').count()
+        cache.completions = throws_query.filter_by(is_completion=True).count()
         cache.throw_attempts = throws_query.count()
-        cache.completion_percentage = (cache.completions / cache.throw_attempts * 100) if cache.throw_attempts > 0 else 0
         
         # Get scoring stats
         events_query = player.player_events
