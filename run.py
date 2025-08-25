@@ -1,16 +1,21 @@
-from app import create_app, db
-from app.models import (
-    User, Player, Tournament, Game, Point, LineUp, Event, Pull,
-    Clip, ClipTag, ClipAnnotation,
-    ScoutingReport, SessionPlan, SessionComponent, Attendance, SavedDrill,
-    PlayerPointStats, ExportLog
-)
+# run.py
 import os
 import sys
 import logging
 from logging.handlers import RotatingFileHandler
 import boto3
 from botocore.exceptions import ClientError
+
+# Import from app_factory instead of app
+from app_factory import create_app, db
+
+# Import models
+from app.models import (
+    User, Player, Tournament, Game, Point, LineUp, Event, Pull,
+    Clip, ClipTag, ClipAnnotation,
+    ScoutingReport, SessionPlan, SessionComponent, Attendance, SavedDrill,
+    PlayerPointStats, ExportLog
+)
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
