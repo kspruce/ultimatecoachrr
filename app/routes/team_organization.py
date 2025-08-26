@@ -1,7 +1,7 @@
 # app/routes/team_organization.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, g
 from flask_login import login_required, current_user
-from app_factory import db
+from app import db
 from app.models.team_organization import TeamOrganization
 from app.forms.team_organization import TeamOrganizationForm
 

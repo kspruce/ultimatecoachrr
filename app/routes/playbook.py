@@ -4,7 +4,7 @@ from flask import (
     request, jsonify, current_app, abort, session
 )
 from flask_login import login_required, current_user
-from app_factory import db
+from app import db
 from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, PlayerPosition
 from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
 from werkzeug.utils import secure_filename

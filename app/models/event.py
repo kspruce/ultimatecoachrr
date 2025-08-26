@@ -1,4 +1,4 @@
-from app_factory import db
+from app import db
 from datetime import datetime
 import math
 from sqlalchemy.orm import validates

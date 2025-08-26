@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, abort, current_app, session
 from flask_login import login_required, current_user
-from app_factory import db
+from app import db
 from app.models.drill import Drill, DrillFrame
 
 # Create Blueprint

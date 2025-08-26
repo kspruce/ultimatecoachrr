@@ -1,15 +1,27 @@
-# db_manager.py
-import os
-import sys
+from app import create_app, db
+# Import models directly from app.models
+from app.models.user import User
+from app.models.player import Player
+from app.models.tournament import Tournament
+from app.models.game import Game
+from app.models.point import Point, LineUp
+from app.models.event import Event, Pull
+from app.models.clip import Clip, ClipTag
+from app.models.session import SessionPlan, SessionComponent, Attendance
+from app.models.cutting_skill import CuttingSkill
+from app.models.theory import TheorySection
+from app.models.fitness import FitnessMetric, FitnessRecord
+from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+from app.models.team_organization import TeamOrganization  # Add this import
+from app.models.drill import SavedDrill  # Make sure this is imported correctly
 from datetime import datetime
+import sys
 from sqlalchemy import text, inspect
+import os
 import argparse
 
 # Disable Discord integration by setting environment variable
 os.environ['DISCORD_ENABLED'] = 'False'
-
-# Import from app_factory instead of app
-from app_factory import create_app, db
 
 # Create app with Discord disabled
 app = create_app()
@@ -33,22 +45,6 @@ def reset_database():
             # Create all tables
             db.create_all()
             print_status("Created all tables")
-            
-            # Import models here to avoid circular imports
-            from app.models.user import User
-            from app.models.player import Player
-            from app.models.tournament import Tournament
-            from app.models.game import Game
-            from app.models.point import Point, LineUp
-            from app.models.event import Event, Pull
-            from app.models.clip import Clip, ClipTag
-            from app.models.session import SessionPlan, SessionComponent, Attendance
-            from app.models.cutting_skill import CuttingSkill
-            from app.models.theory import TheorySection
-            from app.models.fitness import FitnessMetric, FitnessRecord
-            from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
-            from app.models.team_organization import TeamOrganization
-            from app.models.drill import SavedDrill
             
             # Create default team organization
             default_team = TeamOrganization(
@@ -120,23 +116,9 @@ def reset_database():
             
             db.session.commit()
             print_status("Created admin, captains, stat taker and bonus users")
-            
-            # Add default fitness metrics if they exist
-            try:
-                from app.models.fitness import DEFAULT_METRICS
-                if DEFAULT_METRICS:
-                    for metric_data in DEFAULT_METRICS:
-                        metric = FitnessMetric(
-                            **metric_data,
-                            team_organization_id=default_team.id
-                        )
-                        db.session.add(metric)
-                    db.session.commit()
-                    print_status(f"Added {len(DEFAULT_METRICS)} default fitness metrics")
-            except (ImportError, AttributeError):
-                print_status("No default fitness metrics defined, skipping")
 
-            print_status("Database reset completed successfully!")
+            # Rest of your reset_database function...
+            # [Your existing code for adding players, tournaments, etc.]
 
         except Exception as e:
             print_status(f"Error: {str(e)}")
@@ -201,9 +183,6 @@ def add_stat_taker_role():
     with app.app_context():
         try:
             print_status("Checking for stat_taker users...")
-            
-            # Import User model here to avoid circular imports
-            from app.models.user import User
             
             # Check if we have any stat_taker users
             result = db.session.execute(
@@ -319,7 +298,7 @@ if __name__ == "__main__":
         reset_database()
     elif args.action == 'upgrade':
         migrate_user_roles()
-        add_team_organization()  # Include team organization setup during upgrade
+        add_team_organization()  # Add this line to include team organization setup during upgrade
     elif args.action == 'add_stat_taker':
         add_stat_taker_role()
     elif args.action == 'add_team_org':

@@ -1,5 +1,5 @@
 # app/models/theory.py
-from app_factory import db
+from app import db
 from datetime import datetime
 from flask_login import current_user
 from slugify import slugify
