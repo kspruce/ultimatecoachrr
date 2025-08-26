@@ -163,7 +163,7 @@ def main():
                                     if args.verbose:
                                         print(f"  Caching stats for player {player.name}...")
                                     
-                                    StatsService.update_player_stats_cache(player, team_org.id, start_date, end_date)
+                                    StatsService.update_player_stats_cache(player, team_organization_id=team_org.id, start_date=start_date, end_date=end_date)
                                     
                                     # Print progress periodically
                                     if player_idx % 5 == 0 or player_idx == len(players):
