@@ -53,33 +53,77 @@ def index():
     
     players = players_query.all()
     
+    # Create player_stats dictionary
+    player_stats = {}
+    team_avg_stats = {}
+    
     for player in players:
         # Get player stats from cache
-        player_stats = StatsService.get_player_stats(
+        stats = StatsService.get_player_stats(
             player.id, 
             team_organization_id, 
             start_date, 
             end_date
         )
         
-        if player_stats.get('points_played', 0) > 0:
-            top_players.append({
-                'player': player,
-                'per': player_stats.get('per', 0),
-                'points_played': player_stats.get('points_played', 0)
-            })
+        if stats:
+            player_stats[player.id] = stats
+            
+            # Add additional fields needed by the template
+            player_stats[player.id]['games_played'] = 0  # You'll need to calculate this
+            player_stats[player.id]['hockey_assists'] = 0  # Add if you have this data
+            player_stats[player.id]['break_throws'] = 0  # Add if you have this data
+            player_stats[player.id]['throwaways'] = 0  # Add if you have this data
+            player_stats[player.id]['drops'] = 0  # Add if you have this data
+            player_stats[player.id]['completion_rate'] = stats.get('completion_percentage', 0)
+            
+            if stats.get('points_played', 0) > 0:
+                top_players.append({
+                    'player': player,
+                    'per': stats.get('per', 0),
+                    'points_played': stats.get('points_played', 0)
+                })
     
     # Sort by PER and limit to top 10
     top_players.sort(key=lambda x: x['per'], reverse=True)
     top_players = top_players[:10]
     
+    # Calculate team average stats
+    if player_stats:
+        team_avg_stats = {
+            'games_played': sum(ps.get('games_played', 0) for ps in player_stats.values()) / len(player_stats),
+            'points_played': sum(ps.get('points_played', 0) for ps in player_stats.values()) / len(player_stats),
+            'o_line_points_played': sum(ps.get('o_line_points_played', 0) for ps in player_stats.values()) / len(player_stats),
+            'd_line_points_played': sum(ps.get('d_line_points_played', 0) for ps in player_stats.values()) / len(player_stats),
+            'goals': sum(ps.get('goals', 0) for ps in player_stats.values()) / len(player_stats),
+            'assists': sum(ps.get('assists', 0) for ps in player_stats.values()) / len(player_stats),
+            'hockey_assists': sum(ps.get('hockey_assists', 0) for ps in player_stats.values()) / len(player_stats),
+            'break_throws': sum(ps.get('break_throws', 0) for ps in player_stats.values()) / len(player_stats),
+            'blocks': sum(ps.get('blocks', 0) for ps in player_stats.values()) / len(player_stats),
+            'completions': sum(ps.get('completions', 0) for ps in player_stats.values()) / len(player_stats),
+            'completion_rate': sum(ps.get('completion_percentage', 0) for ps in player_stats.values()) / len(player_stats),
+            'throwaways': sum(ps.get('throwaways', 0) for ps in player_stats.values()) / len(player_stats),
+            'drops': sum(ps.get('drops', 0) for ps in player_stats.values()) / len(player_stats),
+            'plus_minus': sum((ps.get('goals', 0) + ps.get('assists', 0) + ps.get('blocks', 0) - 
+                              ps.get('throwaways', 0) - ps.get('drops', 0)) for ps in player_stats.values()) / len(player_stats),
+            'per': sum(ps.get('per', 0) for ps in player_stats.values()) / len(player_stats)
+        }
+    
     # Get performance trends
     performance_trends = get_performance_trends(team_organization_id)
     
+    # Add stats for the template
     stats = {
         'active_players_count': Player.query.filter_by(active=True).count(),
         # Add other stats as needed
     }
+    
+    # Add dummy data for visualizations if needed
+    heatmap_data = []  # Add real data if available
+    connection_data = {
+        'nodes': [],
+        'links': []
+    }  # Add real data if available
     
     return render_template(
         '/stats/index.html',
@@ -87,7 +131,12 @@ def index():
         recent_games=recent_games,
         top_players=top_players,
         performance_trends=performance_trends,
-        stats=stats 
+        stats=stats,
+        players=players,
+        player_stats=player_stats,
+        team_avg_stats=team_avg_stats,
+        heatmap_data=heatmap_data,
+        connection_data=connection_data,
     )
 
 @stats_dashboard.route('/player/<int:player_id>')

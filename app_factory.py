@@ -40,8 +40,8 @@ def create_app(config_class=Config):
         app.config['SECRET_KEY'] = os.urandom(24)
     
     # Configure static file serving
-    app.static_folder = 'static'
-    app.static_url_path = '/static'
+    #app.static_folder = 'static'
+    #app.static_url_path = '/static'
     
     # Create upload directories
     try:
