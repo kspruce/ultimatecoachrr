@@ -10,6 +10,7 @@ from app.models.event import Event
 from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
 from app.models.team_organization import TeamOrganization
+from flask_login import current_user
 
 # Create a Blueprint for stats routes
 stats_dashboard = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
@@ -125,6 +126,72 @@ def index():
         'links': []
     }  # Add real data if available
     
+    # Add these lines before the return statement
+    is_admin = False
+    is_coach = False
+    
+    if current_user.is_authenticated:
+        is_admin = current_user.is_admin if hasattr(current_user, 'is_admin') else False
+        is_coach = current_user.role == 'coach' if hasattr(current_user, 'role') else False
+     
+###### TEST DATA ###
+
+    # Generate sample heatmap data if none exists
+    if not heatmap_data:
+        # Create sample throw data
+        heatmap_data = []
+        
+        # Get throws from the database
+        throws = Throw.query.filter_by(team_organization_id=team_organization_id).limit(100).all()
+        
+        if throws:
+            for throw in throws:
+                # Get coordinates from throw
+                if throw.x_coordinate and throw.y_coordinate:
+                    heatmap_data.append({
+                        'x': throw.x_coordinate,
+                        'y': throw.y_coordinate,
+                        'type': 'throw_start'
+                    })
+        else:
+            # If no throws in database, create sample data
+            import random
+            for _ in range(50):
+                heatmap_data.append({
+                    'x': random.uniform(10, 90),  # Field coordinates
+                    'y': random.uniform(5, 32),
+                    'type': random.choice(['throw_start', 'goal', 'throwaway', 'scored_on'])
+                })
+    
+    # Generate sample connection data if none exists
+    if not connection_data['nodes'] and players:
+        # Create nodes for each player
+        nodes = []
+        for player in players[:10]:  # Limit to 10 players for sample
+            nodes.append({
+                'id': player.id,
+                'name': player.name,
+                'jersey_number': player.jersey_number if hasattr(player, 'jersey_number') else '0',
+                'position': 'handler' if player.id % 3 == 0 else 'cutter'  # Alternate positions
+            })
+        
+        # Create sample links between players
+        links = []
+        for i in range(len(nodes)):
+            for j in range(i+1, len(nodes)):
+                if random.random() > 0.5:  # 50% chance of connection
+                    links.append({
+                        'source': nodes[i]['id'],
+                        'target': nodes[j]['id'],
+                        'value': random.randint(1, 5)  # Random connection strength
+                    })
+        
+        connection_data = {
+            'nodes': nodes,
+            'links': links
+        }        
+        
+    
     return render_template(
         '/stats/index.html',
         team_stats=team_stats,
@@ -137,6 +204,8 @@ def index():
         team_avg_stats=team_avg_stats,
         heatmap_data=heatmap_data,
         connection_data=connection_data,
+        is_admin=is_admin,  # Add these variables
+        is_coach=is_coach,
     )
 
 @stats_dashboard.route('/player/<int:player_id>')
