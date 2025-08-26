@@ -3,7 +3,6 @@
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.1.0/css/fixedColumns.dataTables.min.css">
-<script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 <style>
     .stat-card {
         transition: all 0.3s ease;
@@ -592,11 +591,20 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- jQuery first (if not already included in base.html) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Then DataTables core -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Then DataTables extensions -->
+<script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
+
+<!-- Other libraries -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -621,8 +629,9 @@ document.addEventListener('DOMContentLoaded', function() {
         scrollY: "500px",
         scrollCollapse: true,
         paging: true, // Enable paging
+        // Initialize FixedColumns after the table is created
         fixedColumns: {
-            leftColumns: 1 // Fix Player column
+            left: 1 // Fix Player column
         },
         columnDefs: [
             { targets: [10], // Completion percentage column
@@ -637,11 +646,12 @@ document.addEventListener('DOMContentLoaded', function() {
         ],
         responsive: true
     });
-
+    
     // Add responsive behavior
     $(window).on('resize', function() {
         playerStatsTable.columns.adjust().draw();
     });
+
     
     // Add filtering functionality for the player stats table
     document.querySelectorAll('[data-view]').forEach(button => {
