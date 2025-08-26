@@ -117,7 +117,13 @@ def player_stats(player_id):
     
     # Get recent games the player participated in
     recent_games = []
-    games_query = db.session.query(Game).join(Point, LineUp).filter(
+    
+    # Fixed JOIN syntax
+    games_query = db.session.query(Game).join(
+        Point, Point.game_id == Game.id
+    ).join(
+        LineUp, LineUp.point_id == Point.id
+    ).filter(
         LineUp.player_id == player_id
     ).distinct()
     

@@ -270,6 +270,9 @@ class StatsService:
         Returns:
             TeamStatsCache: Updated cache object
         """
+        # Don't proceed if team_organization_id is None
+        if team_organization_id is None:
+            return None
         # Find existing cache or create new one
         cache = TeamStatsCache.query.filter_by(
             team_organization_id=team_organization_id,
@@ -490,59 +493,47 @@ class StatsService:
             'blocks': cache.blocks
         }
     
-    @staticmethod
-    def get_team_stats(team_organization_id, start_date=None, end_date=None, use_cache=True):
-        """
-        Get statistics for a team, either from cache or by calculating them
-        
-        Args:
-            team_organization_id: ID of the team organization
-            start_date: Optional start date for filtering
-            end_date: Optional end date for filtering
-            use_cache: Whether to use cached values if available
-            
-        Returns:
-            dict: Team statistics
-        """
-        if use_cache:
-            # Try to get from cache first
-            cache = TeamStatsCache.query.filter_by(
-                team_organization_id=team_organization_id,
-                start_date=start_date,
-                end_date=end_date
-            ).first()
-            
-            if cache:
-                # Convert cache object to dictionary
-                return {
-                    'o_line_conversion_rate': cache.o_line_conversion_rate,
-                    'o_line_efficiency': cache.o_line_efficiency,
-                    'd_line_conversion_rate': cache.d_line_conversion_rate,
-                    'd_line_efficiency': cache.d_line_efficiency,
-                    'defensive_efficiency': cache.defensive_efficiency,
-                    'break_percentage': cache.break_percentage,
-                    'blocks_per_point': cache.blocks_per_point,
-                    'turnovers_forced_per_point': cache.turnovers_forced_per_point
-                }
-        
-        # If not using cache or cache not found, calculate and update cache
-        cache = StatsService.update_team_stats_cache(
-            team_organization_id, 
-            start_date, 
-            end_date
-        )
-        
-        # Convert cache object to dictionary
+@staticmethod
+def get_team_stats_summary(team_organization_id, start_date=None, end_date=None):
+    """
+    Get a summary of team statistics for use in calculations
+    """
+    # Return empty stats if team_organization_id is None
+    if team_organization_id is None:
         return {
-            'o_line_conversion_rate': cache.o_line_conversion_rate,
-            'o_line_efficiency': cache.o_line_efficiency,
-            'd_line_conversion_rate': cache.d_line_conversion_rate,
-            'd_line_efficiency': cache.d_line_efficiency,
-            'defensive_efficiency': cache.defensive_efficiency,
-            'break_percentage': cache.break_percentage,
-            'blocks_per_point': cache.blocks_per_point,
-            'turnovers_forced_per_point': cache.turnovers_forced_per_point
+            'o_line_conversion_rate': 0.0,
+            'o_line_efficiency': 0.0,
+            'd_line_conversion_rate': 0.0,
+            'd_line_efficiency': 0.0,
+            'defensive_efficiency': 0.0,
+            'break_percentage': 0.0,
+            'blocks_per_point': 0.0,
+            'turnovers_forced_per_point': 0.0,
+            'avg_completion_pct': 0.0
         }
+    
+    # Get team stats
+    team_stats = StatsService.get_team_stats(team_organization_id, start_date, end_date)
+    
+    # Calculate average completion percentage for the team
+    throws_query = db.session.query(Throw).filter_by(team_organization_id=team_organization_id)
+    if start_date or end_date:
+        throws_query = throws_query.join(Throw.point)
+        if start_date:
+            throws_query = throws_query.filter(Point.date >= start_date)
+        if end_date:
+            throws_query = throws_query.filter(Point.date <= end_date)
+            
+    # Use is_completion instead of outcome
+    completions = throws_query.filter_by(is_completion=True).count()
+    throw_attempts = throws_query.count()
+    avg_completion_pct = (completions / throw_attempts * 100) if throw_attempts > 0 else 0
+    
+    # Add to team stats
+    team_stats['avg_completion_pct'] = avg_completion_pct
+    
+    return team_stats
+
     
     @staticmethod
     def get_game_stats(game_id, use_cache=True):
