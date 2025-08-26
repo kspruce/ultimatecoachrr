@@ -76,12 +76,18 @@ def index():
     # Get performance trends
     performance_trends = get_performance_trends(team_organization_id)
     
+    stats = {
+        'active_players_count': Player.query.filter_by(active=True).count(),
+        # Add other stats as needed
+    }
+    
     return render_template(
         'index.html',
         team_stats=team_stats,
         recent_games=recent_games,
         top_players=top_players,
-        performance_trends=performance_trends
+        performance_trends=performance_trends,
+        stats=stats 
     )
 
 @stats_dashboard.route('/player/<int:player_id>')

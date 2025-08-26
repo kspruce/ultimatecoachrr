@@ -75,10 +75,13 @@ class StatsService:
         """
         # Get player events with optional date filtering
         query = player.player_events
-        if start_date:
-            query = query.join(player.player_events.point).filter(Point.date >= start_date)
-        if end_date:
-            query = query.join(player.player_events.point).filter(Point.date <= end_date)
+        if start_date or end_date:
+            query = query.join(Event.point).join(Game, Point.game_id == Game.id)
+            if start_date:
+                query = query.filter(Game.date >= start_date)
+            if end_date:
+                query = query.filter(Game.date <= end_date)
+
             
         # Calculate basic stats
         goals = query.filter_by(event_type='goal').count()
@@ -87,13 +90,13 @@ class StatsService:
         blocks = query.filter_by(event_type='block').count()
         
         # Get throws data
-        throws_query = player.throws_made
+        throws_query = db.session.query(Throw).filter_by(team_organization_id=team_organization_id)
         if start_date or end_date:
-            throws_query = throws_query.join(Throw.point)
+            throws_query = throws_query.join(Throw.point).join(Game, Point.game_id == Game.id)
             if start_date:
-                throws_query = throws_query.filter(Point.date >= start_date)
+                throws_query = throws_query.filter(Game.date >= start_date)
             if end_date:
-                throws_query = throws_query.filter(Point.date <= end_date)
+                throws_query = throws_query.filter(Game.date <= end_date)
                 
         completions = throws_query.filter_by(is_completion=True).count()
         throw_attempts = throws_query.count()
@@ -109,9 +112,9 @@ class StatsService:
         if start_date or end_date:
             query = query.join(PlayerPointStats.point)
             if start_date:
-                query = query.filter(Point.date >= start_date)
+                query = query.filter(Game.date>= start_date)
             if end_date:
-                query = query.filter(Point.date <= end_date)
+                query = query.filter(Game.date<= end_date)
                 
         o_plus_minus, d_plus_minus = query.first()
         o_plus_minus = o_plus_minus or 0
@@ -167,12 +170,14 @@ class StatsService:
         
         # Get points played by the player
         points_query = db.session.query(Point).join(LineUp).filter(LineUp.player_id == player.id)
-        if start_date:
-            points_query = points_query.filter(Point.date >= start_date)
-        if end_date:
-            points_query = points_query.filter(Point.date <= end_date)
-        if team_organization_id:
-            points_query = points_query.filter(Point.team_organization_id == team_organization_id)
+        
+        # If date filtering is needed, join with Game which has the date
+        if start_date or end_date:
+            points_query = points_query.join(Game, Point.game_id == Game.id)
+            if start_date:
+                points_query = points_query.filter(Game.date >= start_date)
+            if end_date:
+                points_query = points_query.filter(Game.date <= end_date)
             
         points = points_query.all()
         
@@ -202,9 +207,9 @@ class StatsService:
         if start_date or end_date:
             throws_query = throws_query.join(Throw.point)
             if start_date:
-                throws_query = throws_query.filter(Point.date >= start_date)
+                throws_query = throws_query.filter(Game.date>= start_date)
             if end_date:
-                throws_query = throws_query.filter(Point.date <= end_date)
+                throws_query = throws_query.filter(Game.date<= end_date)
         if team_organization_id:
             throws_query = throws_query.filter(Throw.team_organization_id == team_organization_id)
             
@@ -216,9 +221,9 @@ class StatsService:
         if start_date or end_date:
             events_query = events_query.join(Event.point)
             if start_date:
-                events_query = events_query.filter(Point.date >= start_date)
+                events_query = events_query.filter(Game.date>= start_date)
             if end_date:
-                events_query = events_query.filter(Point.date <= end_date)
+                events_query = events_query.filter(Game.date<= end_date)
         if team_organization_id:
             events_query = events_query.filter(Event.team_organization_id == team_organization_id)
             
@@ -235,9 +240,9 @@ class StatsService:
         if start_date or end_date:
             plus_minus_query = plus_minus_query.join(PlayerPointStats.point)
             if start_date:
-                plus_minus_query = plus_minus_query.filter(Point.date >= start_date)
+                plus_minus_query = plus_minus_query.filter(Game.date>= start_date)
             if end_date:
-                plus_minus_query = plus_minus_query.filter(Point.date <= end_date)
+                plus_minus_query = plus_minus_query.filter(Game.date<= end_date)
         if team_organization_id:
             plus_minus_query = plus_minus_query.filter(PlayerPointStats.team_organization_id == team_organization_id)
             
@@ -289,10 +294,12 @@ class StatsService:
         
         # Get points for the team
         points_query = Point.query.filter_by(team_organization_id=team_organization_id)
-        if start_date:
-            points_query = points_query.filter(Point.date >= start_date)
-        if end_date:
-            points_query = points_query.filter(Point.date <= end_date)
+        if start_date or end_date:
+            points_query = points_query.join(Game, Point.game_id == Game.id)
+            if start_date:
+                points_query = points_query.filter(Game.date >= start_date)
+            if end_date:
+                points_query = points_query.filter(Game.date <= end_date)
             
         points = points_query.all()
         
@@ -336,9 +343,9 @@ class StatsService:
         if start_date or end_date:
             events_query = events_query.join(Event.point)
             if start_date:
-                events_query = events_query.filter(Point.date >= start_date)
+                events_query = events_query.filter(Game.date>= start_date)
             if end_date:
-                events_query = events_query.filter(Point.date <= end_date)
+                events_query = events_query.filter(Game.date<= end_date)
                 
         blocks = events_query.count()
         cache.blocks_per_point = blocks / len(points) if points else 0.0
@@ -351,9 +358,9 @@ class StatsService:
         if start_date or end_date:
             events_query = events_query.join(Event.point)
             if start_date:
-                events_query = events_query.filter(Point.date >= start_date)
+                events_query = events_query.filter(Game.date>= start_date)
             if end_date:
-                events_query = events_query.filter(Point.date <= end_date)
+                events_query = events_query.filter(Game.date<= end_date)
                 
         turnovers_forced = events_query.count()
         cache.turnovers_forced_per_point = turnovers_forced / len(points) if points else 0.0
@@ -631,11 +638,11 @@ class StatsService:
         # Calculate average completion percentage for the team
         throws_query = db.session.query(Throw).filter_by(team_organization_id=team_organization_id)
         if start_date or end_date:
-            throws_query = throws_query.join(Throw.point)
+            throws_query = throws_query.join(Throw.point).join(Game, Point.game_id == Game.id)
             if start_date:
-                throws_query = throws_query.filter(Point.date >= start_date)
+                throws_query = throws_query.filter(Game.date >= start_date)
             if end_date:
-                throws_query = throws_query.filter(Point.date <= end_date)
+                throws_query = throws_query.filter(Game.date <= end_date)
                 
         completions = throws_query.filter_by(is_completion=True).count()
 

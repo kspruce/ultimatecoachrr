@@ -63,14 +63,15 @@ class UltimateCoachBot:
         
         # Register event handlers
         @self.bot.event
-        async def on_ready():
-            logger.info(f'Bot logged in as {self.bot.user}')
-            # Start background tasks
-            if not self.sync_task or not self.sync_task.is_running():
-                if hasattr(self, 'sync_calendar'):
-                    self.sync_calendar.start()
-                else:
-                    self.logger.warning("sync_calendar task not found, skipping")
+        async def on_ready(self):
+            """Called when the bot is ready."""
+            print(f'Bot logged in as {self.user}')
+            
+            # Use print instead of logger
+            if hasattr(self, 'sync_calendar'):
+                self.sync_calendar.start()
+            else:
+                print("sync_calendar task not found, skipping")
 
         
                 
