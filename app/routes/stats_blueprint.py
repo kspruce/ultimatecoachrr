@@ -553,9 +553,14 @@ def get_player_performance_trends(player_id, team_organization_id=None, num_peri
         dict: Performance trends data
     """
     # Get games this player participated in
-    games_query = db.session.query(Game).join(Point, LineUp).filter(
+    games_query = db.session.query(Game).join(
+        Point, Point.game_id == Game.id
+    ).join(
+        LineUp, LineUp.point_id == Point.id
+    ).filter(
         LineUp.player_id == player_id
     ).distinct()
+
     
     if team_organization_id:
         games_query = games_query.filter(Game.team_organization_id == team_organization_id)

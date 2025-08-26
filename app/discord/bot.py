@@ -67,7 +67,10 @@ class UltimateCoachBot:
             logger.info(f'Bot logged in as {self.bot.user}')
             # Start background tasks
             if not self.sync_task or not self.sync_task.is_running():
-                self.sync_calendar.start()
+                if hasattr(self, 'sync_calendar'):
+                    self.sync_calendar.start()
+                else:
+                    self.logger.warning("sync_calendar task not found, skipping")
 
         
                 
