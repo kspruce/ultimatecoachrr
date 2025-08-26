@@ -82,7 +82,7 @@ def index():
     }
     
     return render_template(
-        'index.html',
+        '/stats/index.html',
         team_stats=team_stats,
         recent_games=recent_games,
         top_players=top_players,
