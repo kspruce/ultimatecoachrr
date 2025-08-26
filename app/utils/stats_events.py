@@ -1,4 +1,4 @@
-from app import db
+from app_factory import db
 from sqlalchemy import event
 from app.models.point import Point
 from app.models.game import Game
@@ -6,8 +6,7 @@ from app.models.player import Player
 from app.models.throws import Throw
 from app.models.event import Event
 from app.models.stats import PlayerPointStats
-from app.utils.stats_service import StatsService
-
+from stats_service import StatsService
 # Define event listeners to automatically update the cache when data changes
 
 # Point events

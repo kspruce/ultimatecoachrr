@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app_factory import db
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_, not_
-from app.utils.stats_service import StatsService
+from stats_service import StatsService
 from app.models.player import Player
 from app.models.game import Game
 from app.models.point import Point, LineUp
@@ -11,7 +11,6 @@ from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
 from app.models.team_organization import TeamOrganization
 from flask_login import current_user
-
 # Create a Blueprint for stats routes
 stats_dashboard = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 

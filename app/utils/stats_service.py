@@ -1,15 +1,15 @@
 from app_factory import db
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_, not_
-from app.models.stats_cache import PlayerStatsCache, TeamStatsCache, GameStatsCache
+from stats_cache import PlayerStatsCache, TeamStatsCache, GameStatsCache
 from app.models.player import Player
 from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
+from app.models.team_organization import TeamOrganization
 import math
-
 class StatsService:
     """
     Service class for calculating and managing statistics.
