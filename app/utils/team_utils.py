@@ -1,3 +1,4 @@
+# app/utils/team_utils.py
 from flask_login import current_user
 from flask import g
 
@@ -15,9 +16,6 @@ def get_current_team_id():
     # Otherwise, get it from the current user
     if current_user and hasattr(current_user, 'team_organization_id'):
         return current_user.team_organization_id
-    
-    # If you have a different way to get the team ID in your application,
-    # add that logic here
     
     # Return None if no team ID is found
     return None

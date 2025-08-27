@@ -1,16 +1,5 @@
 from app.models.stats import PlayerStats, TeamStats
-from flask_login import current_user
-
-def get_current_team_id():
-    """
-    Get the current team organization ID from the logged-in user.
-    
-    Returns:
-        int: The team organization ID or None if not found
-    """
-    if current_user and hasattr(current_user, 'team_organization_id'):
-        return current_user.team_organization_id
-    return None
+from app.utils.team_utils import get_current_team_id
 
 def get_player_stats_from_db(player_id, game_id=None, tournament_id=None, season=None):
     """
