@@ -27,96 +27,12 @@ def index():
     """Admin dashboard index page."""
     return render_template('admin/index.html')
 
-@admin_bp.route('/stats_calculator', methods=['GET', 'POST'])
+@admin_bp.route('/stats_calculator')
 @login_required
 @admin_required
 def stats_calculator():
-    """Admin interface for calculating and storing statistics in the database."""
-    
-    team_org_id = get_current_team_id()
-    """Admin interface for calculating and storing statistics in the database."""
-    
-    
-    team_org_id = get_current_team_id()
-    
-    # Get all tournaments for this team
-    tournaments = Tournament.query.filter_by(team_organization_id=team_org_id).order_by(Tournament.start_date.desc()).all()
-    
-    # Get all seasons (distinct)
-    seasons = [s[0] for s in db.session.query(Tournament.season).filter_by(
-        team_organization_id=team_org_id).distinct().all() if s[0]]
-    
-    # Get stats on how many records are already in the database
-    player_stats_count = db.session.query(func.count(PlayerStats.id)).scalar()
-    team_stats_count = db.session.query(func.count(TeamStats.id)).scalar()
-    
-    # Process form submission
-    if request.method == 'POST':
-        scope = request.form.get('scope')
-        tournament_id = request.form.get('tournament_id')
-        game_id = request.form.get('game_id')
-        season = request.form.get('season')
-        
-        # Start timing the operation
-        start_time = time.time()
-        
-        # Determine which games to process based on the scope
-        games = []
-        if scope == 'game' and game_id:
-            game = Game.query.get(int(game_id))
-            if game:
-                games = [game]
-                flash_prefix = f"Game '{game.opponent}'"
-        elif scope == 'tournament' and tournament_id:
-            tournament = Tournament.query.get(int(tournament_id))
-            if tournament:
-                games = tournament.games.all()
-                flash_prefix = f"Tournament '{tournament.name}'"
-        elif scope == 'season' and season:
-            tourney_ids = [t.id for t in Tournament.query.filter_by(season=season).all()]
-            games = Game.query.filter(Game.tournament_id.in_(tourney_ids)).all()
-            flash_prefix = f"Season '{season}'"
-        elif scope == 'all':
-            games = Game.query.filter_by(team_organization_id=team_org_id).all()
-            flash_prefix = "All games"
-        
-        if games:
-            # Get all active players
-            players = Player.query.filter_by(active=True, team_organization_id=team_org_id).all()
-            
-            # Calculate team stats
-            team_stats = calculate_team_summary(games)
-            team_stats.update(calculate_additional_team_metrics(games))
-            team_avgs = calculate_team_averages(games)
-            
-            # Calculate player stats
-            player_stats_dict = get_players_base_stats(players, games)
-            
-            # Store team stats in the database
-            store_team_stats(team_stats, game_id, tournament_id, season)
-            
-            # Store player stats in the database
-            store_player_stats(player_stats_dict, team_avgs, players, game_id, tournament_id, season)
-            
-            # Calculate execution time
-            execution_time = time.time() - start_time
-            
-            flash(f"{flash_prefix} statistics calculated and stored successfully in {execution_time:.2f} seconds!", "success")
-            return redirect(url_for('admin.stats_calculator'))
-        else:
-            flash("No games found for the selected criteria", "warning")
-    
-    # For the game dropdown, get recent games
-    recent_games = Game.query.filter_by(team_organization_id=team_org_id).order_by(Game.date.desc()).limit(20).all()
-    
-    return render_template(
-        'admin/stats_calculator.html',
-        tournaments=tournaments,
-        seasons=seasons,
-        recent_games=recent_games,
-        player_stats_count=player_stats_count,
-        team_stats_count=team_stats_count
-    )
+    """Redirect to the stats calculator in the admin_stats blueprint."""
+    return redirect(url_for('admin_stats.calculator'))
 
 def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
     """Store team statistics in the TeamStats table."""
