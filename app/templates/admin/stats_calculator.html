@@ -26,7 +26,10 @@
             <h5 class="mb-0">Calculate Statistics</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ url_for('admin.stats_calculator') }}">
+            <form method="POST" action="{{ url_for('admin_stats.calculator') }}">
+                <!-- Add CSRF token here -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
                 <div class="form-group mb-3">
                     <label for="scope"><strong>Calculation Scope:</strong></label>
                     <select class="form-control" id="scope" name="scope" required>
