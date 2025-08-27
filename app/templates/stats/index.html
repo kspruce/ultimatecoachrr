@@ -468,97 +468,34 @@
             </div>
         </div>
         <div class="card-body p-0">
-            {% if players and player_stats %}
-                <table class="table table-striped" id="player-stats-table">
+            <div class="table-responsive">
+                <table class="table table-striped" id="player-stats-table" style="width:100%;">
                     <thead>
                         <tr>
                             <th>Player</th>
-                            <th data-toggle="tooltip" title="Games Played">Games</th>
-                            <th data-toggle="tooltip" title="Points Played">Points</th>
-                            <th data-toggle="tooltip" title="O-Line Points Played">O Points</th>
-                            <th data-toggle="tooltip" title="D-Line Points Played">D Points</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Goals Scored">Goals</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Assists Thrown">Assists</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Hockey Assists">Hockey</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Break Throws">Breaks</th>
-                            <th class="defensive-stat" data-toggle="tooltip" title="Blocks Made">Blocks</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Throwaways">Throwaways</th>
-                            <th class="offensive-stat" data-toggle="tooltip" title="Drops">Drops</th>
-                            <th data-toggle="tooltip" title="Plus/Minus">+/-</th>
-                            <th data-toggle="tooltip" title="Player Efficiency Rating">PER</th>
+                            <th data-bs-toggle="tooltip" title="Games Played">Games</th>
+                            <th data-bs-toggle="tooltip" title="Points Played">Points</th>
+                            <th data-bs-toggle="tooltip" title="O-Line Points Played">O Points</th>
+                            <th data-bs-toggle="tooltip" title="D-Line Points Played">D Points</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Goals Scored">Goals</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Assists Thrown">Assists</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Hockey Assists">Hockey</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Break Throws">Breaks</th>
+                            <th class="defensive-stat" data-bs-toggle="tooltip" title="Blocks Made">Blocks</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Completions (Completion Rate)">Comp</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Throwaways">Throwaways</th>
+                            <th class="offensive-stat" data-bs-toggle="tooltip" title="Drops">Drops</th>
+                            <th data-bs-toggle="tooltip" title="Plus/Minus">+/-</th>
+                            <th data-bs-toggle="tooltip" title="Player Efficiency Rating">PER</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% if is_admin or is_coach or not current_user.player %}
-                            <!-- Show all players for admins, coaches, or users without player accounts -->
-                            {% for player in players %}
-                                {% if player.id in player_stats %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('stats_dashboard.player_stats', player_id=player.id) }}">
-                                            {{ player.name }}
-                                            <small class="text-muted">#{{ player.jersey_number }}</small>
-                                        </a>
-                                    </td>
-                                    <td>{{ player_stats[player.id].games_played }}</td>
-                                    <td>{{ player_stats[player.id].points_played }}</td>
-                                    <td>{{ player_stats[player.id].o_line_points_played }}</td>
-                                    <td>{{ player_stats[player.id].d_line_points_played }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].goals }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].assists }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].hockey_assists }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].break_throws }}</td>
-                                    <td class="defensive-stat">{{ player_stats[player.id].blocks }}</td>
-                                    <td class="offensive-stat">
-                                        {{ player_stats[player.id].completions }}
-                                        <small class="text-muted">({{ player_stats[player.id].completion_rate|round(1) }}%)</small>
-                                    </td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].throwaways }}</td>
-                                    <td class="offensive-stat">{{ player_stats[player.id].drops }}</td>
-                                    <td>{{ (player_stats[player.id].goals + player_stats[player.id].assists + 
-                                       player_stats[player.id].blocks - player_stats[player.id].throwaways - 
-                                       player_stats[player.id].drops)|round(1) }}</td>
-                                    <td>{{ player_stats[player.id].per|round(1) }}</td>
-                                </tr>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            <!-- Show only current user's player stats -->
-                            {% if current_user.player and current_user.player.id in player_stats %}
-                            <tr>
-                                <td>
-                                    <a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}">
-                                        {{ current_user.player.name }}
-                                        <small class="text-muted">#{{ current_user.player.jersey_number }}</small>
-                                    </a>
-                                </td>
-                                <td>{{ player_stats[current_user.player.id].games_played }}</td>
-                                <td>{{ player_stats[current_user.player.id].points_played }}</td>
-                                <td>{{ player_stats[current_user.player.id].o_line_points_played }}</td>
-                                <td>{{ player_stats[current_user.player.id].d_line_points_played }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].goals }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].assists }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].hockey_assists }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].break_throws }}</td>
-                                <td class="defensive-stat">{{ player_stats[current_user.player.id].blocks }}</td>
-                                <td class="offensive-stat">
-                                    {{ player_stats[current_user.player.id].completions }}
-                                    <small class="text-muted">({{ player_stats[current_user.player.id].completion_rate|round(1) }}%)</small>
-                                </td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].throwaways }}</td>
-                                <td class="offensive-stat">{{ player_stats[current_user.player.id].drops }}</td>
-                                <td>{{ (player_stats[current_user.player.id].goals + player_stats[current_user.player.id].assists + 
-                                   player_stats[current_user.player.id].blocks - player_stats[current_user.player.id].throwaways - 
-                                   player_stats[current_user.player.id].drops)|round(1) }}</td>
-                                <td>{{ player_stats[current_user.player.id].per|round(1) }}</td>
-                            </tr>
-                            {% endif %}
-                        {% endif %}
-                        
-                        <!-- Team Average Row - Always show this regardless of user role -->
+                        <!-- Data will be loaded here by DataTables via API -->
+                    </tbody>
+                    <tfoot>
+                        <!-- Team Average Row - This will be shown by DataTables callback -->
                         {% if team_avg_stats %}
-                        <tr class="table-secondary">
+                        <tr class="table-secondary" style="display:none;">
                             <td><strong>Team Average</strong></td>
                             <td>{{ team_avg_stats.games_played|round(1) }}</td>
                             <td>{{ team_avg_stats.points_played|round(1) }}</td>
@@ -579,11 +516,9 @@
                             <td>{{ team_avg_stats.per|round(1) }}</td>
                         </tr>
                         {% endif %}
-                    </tbody>
+                    </tfoot>
                 </table>
-            {% else %}
-                <div class="alert alert-info m-3">No player statistics available yet.</div>
-            {% endif %}
+            </div>
         </div>
     </div>
 
@@ -600,638 +535,231 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Initialize DataTable with improved configuration
+    // --- 1. Initialize Player Stats Table via API ---
     const playerStatsTable = $('#player-stats-table').DataTable({
+        processing: true,
+        ajax: {
+            url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
+            dataSrc: 'data'
+        },
+        columns: [
+            { "data": 0, "className": "dt-body-left" },
+            { "data": 1 },
+            { "data": 2 },
+            { "data": 3 },
+            { "data": 4 },
+            { "data": 5, "className": "offensive-stat" },
+            { "data": 6, "className": "offensive-stat" },
+            { "data": 7, "className": "offensive-stat" },
+            { "data": 8, "className": "offensive-stat" },
+            { "data": 9, "className": "defensive-stat" },
+            { "data": 10, "className": "offensive-stat" },
+            { "data": 11, "className": "offensive-stat" },
+            { "data": 12, "className": "offensive-stat" },
+            { "data": 13 },
+            { "data": 14 }
+        ],
         pageLength: 25,
-        order: [[14, "desc"]], // Sort by PER by default (column 14)
-        dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-             "<'row'<'col-sm-12'tr>>" +
-             "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        order: [[14, "desc"]],
+        scrollX: true,
+        scrollY: "500px",
+        scrollCollapse: true,
+        paging: true,
+        fixedColumns: {
+            left: 1
+        },
         language: {
             search: "Search players:",
             lengthMenu: "Show _MENU_ players"
         },
-        scrollX: true,
-        scrollY: "500px",
-        scrollCollapse: true,
-        paging: true, // Enable paging
-        fixedColumns: {
-            leftColumns: 1 // Fix Player column
-        },
-        columnDefs: [
-            { targets: [10], // Completion percentage column
-                render: function(data, type, row) {
-                    if (type === 'sort') {
-                        const match = data.match(/\((.*?)%\)/);
-                        return match ? parseFloat(match[1]) : 0;
-                    }
-                    return data;
-                }
-            }
-        ],
-        responsive: true
+        drawCallback: function (settings) {
+            var api = this.api();
+            $(api.table().footer()).show();
+        }
     });
 
-    // Add responsive behavior
-    $(window).on('resize', function() {
-        playerStatsTable.columns.adjust().draw();
-    });
-    
-    // Add filtering functionality for the player stats table
-    document.querySelectorAll('[data-view]').forEach(button => {
-        button.addEventListener('click', function() {
-            // Update active button
-            document.querySelectorAll('[data-view]').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            const view = this.dataset.view;
-            const table = $('#player-stats-table').DataTable();
-            
-            // Clear any existing search
-            table.search('').columns().search('');
-            
-            if (view === 'offense') {
-                // Custom filtering function for offensive stats
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Check goals, assists, hockey assists, or completions
-                        const goals = parseInt(data[5]) || 0;
-                        const assists = parseInt(data[6]) || 0;
-                        const hockey = parseInt(data[7]) || 0;
-                        const completions = parseInt(data[10].split('(')[0].trim()) || 0;
-                        
-                        return goals > 0 || assists > 0 || hockey > 0 || completions > 5;
-                    }
-                );
-            } else if (view === 'defense') {
-                // Custom filtering function for defensive stats
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Check blocks
-                        const blocks = parseInt(data[9]) || 0;
-                        return blocks > 0;
-                    }
-                );
-            } else {
-                // Remove any custom filtering for 'all' view
-                $.fn.dataTable.ext.search.pop();
-            }
-            
-            // Redraw the table with the new filter
-            table.draw();
-            
-            // Clear the custom filter after drawing
-            if (view !== 'all') {
-                $.fn.dataTable.ext.search.pop();
-            }
-        });
-    });
-
-
-    // Initialize Heatmap
-    // Initialize Heatmap
+    // --- 2. Lazy Load Heatmap Data ---
     if (document.getElementById('field-heatmap')) {
         const heatmapContainer = document.getElementById('field-heatmap');
-        const heatmapInstance = h337.create({
-            container: heatmapContainer,
-            radius: 18,             // Increased from 15
-            maxOpacity: 0.9,        // Increased from 0.7
-            minOpacity: 0.35,       // Increased from 0.1
-            blur: 0.6,              // Reduced from 0.75 for sharper points
-            gradient: {
-                '.2': '#99ccff',
-                '.5': '#3399ff',
-                '.8': '#0066cc',
-                '.95': '#003366'
-            }
-        });
-    
-        {% if heatmap_data %}
-        const heatmapData = {{ heatmap_data|safe }};
-        
-        // Convert field coordinates to pixel coordinates
-        const fieldWidth = heatmapContainer.offsetWidth;
-        const fieldHeight = heatmapContainer.offsetHeight;
-        const fieldLengthMeters = 100;  // Length in meters
-        const fieldWidthMeters = 37;    // Width in meters
-        
-        // Draw field markings
-        function drawFieldMarkings() {
-            // Create SVG overlay for field markings
-            const svg = d3.select('#field-heatmap')
-                .append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%')
-                .style('position', 'absolute')
-                .style('top', 0)
-                .style('left', 0)
-                .style('pointer-events', 'none') // Allow clicks to pass through
-                .style('z-index', 3); // Above the heatmap
-            
-            // Add midfield line
-            svg.append('line')
-                .attr('x1', fieldWidth / 2)
-                .attr('y1', 0)
-                .attr('x2', fieldWidth / 2)
-                .attr('y2', fieldHeight)
-                .attr('stroke', 'white')
-                .attr('stroke-width', 2)
-                .attr('stroke-dasharray', '5,5')
-                .attr('opacity', 0.7);
-            
-            // Add brick marks (20 yards from each endzone)
-            // Left brick mark (defensive)
-            svg.append('circle')
-                .attr('cx', fieldWidth * 0.2 + (fieldWidth * 0.2)) // 20 yards from left endzone
-                .attr('cy', fieldHeight / 2)
-                .attr('r', 5)
-                .attr('fill', 'white')
-                .attr('opacity', 0.7);
-            
-            // Right brick mark (offensive)
-            svg.append('circle')
-                .attr('cx', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2))) // 20 yards from right endzone
-                .attr('cy', fieldHeight / 2)
-                .attr('r', 5)
-                .attr('fill', 'white')
-                .attr('opacity', 0.7);
-            
-            // Add field labels
-            svg.append('text')
-                .attr('x', fieldWidth / 2)
-                .attr('y', 20)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Midfield');
-            
-            svg.append('text')
-                .attr('x', fieldWidth * 0.2 + (fieldWidth * 0.2))
-                .attr('y', fieldHeight / 2 - 15)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Brick');
-            
-            svg.append('text')
-                .attr('x', fieldWidth - (fieldWidth * 0.2 + (fieldWidth * 0.2)))
-                .attr('y', fieldHeight / 2 - 15)
-                .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
-                .attr('font-size', '12px')
-                .attr('opacity', 0.7)
-                .text('Brick');
-        }
-        
-        // Add a legend for the heatmap
-        function addHeatmapLegend(filter) {
-            // Remove any existing legend
-            d3.select('#heatmap-legend').remove();
-            
-            const legendContainer = d3.select('#field-heatmap')
-                .append('div')
-                .attr('id', 'heatmap-legend')
-                .style('position', 'absolute')
-                .style('bottom', '10px')
-                .style('right', '10px')
-                .style('background', 'rgba(255,255,255,0.7)')
-                .style('padding', '5px')
-                .style('border-radius', '5px')
-                .style('z-index', 4);
-            
-            // Get the appropriate title based on filter
-            let title = 'All Events';
-            if (filter === 'throws') title = 'Throws';
-            else if (filter === 'goals') title = 'Goals';
-            else if (filter === 'turnovers') title = 'Turnovers';
-            else if (filter === 'scored_on') title = 'Scored On';
-            
-            legendContainer.append('div')
-                .style('font-weight', 'bold')
-                .style('font-size', '12px')
-                .style('margin-bottom', '5px')
-                .text(title + ' Intensity');
-            
-            // Create gradient bar
-            const gradientSvg = legendContainer.append('svg')
-                .attr('width', 150)
-                .attr('height', 20);
-            
-            // Define gradient based on current filter
-            let gradientColors;
-            if (filter === 'turnovers') {
-                gradientColors = [
-                    {offset: '0%', color: '#ffcccc'},
-                    {offset: '50%', color: '#ff6666'},
-                    {offset: '80%', color: '#cc0000'},
-                    {offset: '100%', color: '#800000'}
-                ];
-            } else if (filter === 'goals') {
-                gradientColors = [
-                    {offset: '0%', color: '#ccffcc'},
-                    {offset: '50%', color: '#66ff66'},
-                    {offset: '80%', color: '#00cc00'},
-                    {offset: '100%', color: '#008000'}
-                ];
-            } else if (filter === 'scored_on') {
-                gradientColors = [
-                    {offset: '0%', color: '#ffccff'},
-                    {offset: '50%', color: '#ff66ff'},
-                    {offset: '80%', color: '#cc00cc'},
-                    {offset: '100%', color: '#800080'}
-                ];
-            } else {
-                gradientColors = [
-                    {offset: '0%', color: '#99ccff'},
-                    {offset: '50%', color: '#3399ff'},
-                    {offset: '80%', color: '#0066cc'},
-                    {offset: '100%', color: '#003366'}
-                ];
-            }
-            
-            // Create linear gradient
-            const gradient = gradientSvg.append('defs')
-                .append('linearGradient')
-                .attr('id', 'heatmap-gradient')
-                .attr('x1', '0%')
-                .attr('x2', '100%')
-                .attr('y1', '0%')
-                .attr('y2', '0%');
-            
-            // Add gradient stops
-            gradientColors.forEach(stop => {
-                gradient.append('stop')
-                    .attr('offset', stop.offset)
-                    .attr('stop-color', stop.color);
+        const loadingOverlay = heatmapContainer.querySelector('.loading-overlay');
+        if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+
+        fetch("{{ url_for('stats_dashboard.api_dashboard_heatmap') }}")
+            .then(response => response.json())
+            .then(data => {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                initializeHeatmap(heatmapContainer, data);
+            })
+            .catch(error => {
+                console.error("Error fetching heatmap data:", error);
+                if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load heatmap data.</p>';
             });
-            
-            // Draw gradient rectangle
-            gradientSvg.append('rect')
-                .attr('width', 150)
-                .attr('height', 15)
-                .style('fill', 'url(#heatmap-gradient)');
-            
-            // Add labels
-            legendContainer.append('div')
-                .style('display', 'flex')
-                .style('justify-content', 'space-between')
-                .style('font-size', '10px')
-                .html('<span>Low</span><span>High</span>');
-        }
-        
-        function updateHeatmap(filter = 'all') {
+    }
+
+    // --- 3. Lazy Load Player Connections Data ---
+    if (document.getElementById('player-connections')) {
+        const connectionsContainer = document.getElementById('player-connections');
+        const loadingOverlay = connectionsContainer.querySelector('.loading-overlay');
+        if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+
+        fetch("{{ url_for('stats_dashboard.api_dashboard_connections') }}")
+            .then(response => response.json())
+            .then(data => {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                if (data.nodes && data.nodes.length > 0) {
+                    createNetworkGraph(connectionsContainer, data);
+                } else {
+                    connectionsContainer.innerHTML = '<p class="text-center text-muted mt-5">No connection data available.</p>';
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching connection data:", error);
+                if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load connection data.</p>';
+            });
+    }
+
+    // --- Visualization Helper Functions ---
+
+    function initializeHeatmap(container, heatmapData) {
+        const heatmapInstance = h337.create({
+            container: container,
+            radius: 18,
+            maxOpacity: 0.9,
+            minOpacity: 0.35,
+            blur: 0.6,
+            gradient: { '.2': '#99ccff', '.5': '#3399ff', '.8': '#0066cc', '.95': '#003366' }
+        });
+
+        const fieldWidth = container.offsetWidth;
+        const fieldHeight = container.offsetHeight;
+        const fieldLengthMeters = 100;
+        const fieldWidthMeters = 37;
+
+        function updateHeatmapDisplay(filter = 'all') {
             let filteredData = heatmapData;
             if (filter !== 'all') {
-                filteredData = heatmapData.filter(point => {
-                    switch(filter) {
-                        case 'throws':
-                            return point.type === 'throw_start';
-                        case 'goals':
-                            return point.type === 'goal';
-                        case 'turnovers':
-                            return point.type === 'throwaway';
-                        case 'scored_on':
-                            return point.type === 'scored_on';
-                        default:
-                            return true;
-                    }
-                });
+                filteredData = heatmapData.filter(point => point.type === filter);
             }
-        
-            // Configure gradient and appearance based on filter
-            if (filter === 'turnovers') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(255,200,200,0.1)',
-                        '.25': 'rgba(255,150,150,0.6)',
-                        '.55': 'rgba(255,100,100,0.7)',
-                        '.85': 'rgba(200,0,0,0.8)',
-                        '1.0': 'rgba(128,0,0,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'goals') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(200,255,200,0.1)',
-                        '.25': 'rgba(150,255,150,0.6)',
-                        '.55': 'rgba(100,255,100,0.7)',
-                        '.85': 'rgba(0,200,0,0.8)',
-                        '1.0': 'rgba(0,128,0,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'scored_on') {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(255,200,255,0.1)',
-                        '.25': 'rgba(255,150,255,0.6)',
-                        '.55': 'rgba(255,100,255,0.7)',
-                        '.85': 'rgba(200,0,200,0.8)',
-                        '1.0': 'rgba(128,0,128,0.9)'
-                    },
-                    radius: 22,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.5
-                });
-            } else if (filter === 'throws') {
-                // Special configuration for throws to enhance intensity
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(0,0,255,0.1)',
-                        '.25': 'rgba(0,0,255,0.6)',
-                        '.55': 'rgba(0,255,255,0.7)',
-                        '.85': 'rgba(0,255,0,0.8)',
-                        '1.0': 'rgba(255,255,0,0.9)'
-                    },
-                    radius: 15,
-                    maxOpacity: 0.95,
-                    minOpacity: 0.4,
-                    blur: 0.6
-                });
-            } else {
-                heatmapInstance.configure({
-                    gradient: {
-                        '.0': 'rgba(0,0,255,0.1)',
-                        '.25': 'rgba(0,0,255,0.5)',
-                        '.55': 'rgba(0,255,0,0.6)',
-                        '.85': 'rgba(255,255,0,0.7)',
-                        '1.0': 'rgba(255,0,0,0.8)'
-                    },
-                    radius: 18,
-                    maxOpacity: 0.9,
-                    minOpacity: 0.35,
-                    blur: 0.6
-                });
-            }
-            
-            // Pre-process data to aggregate overlapping points
-            const gridSize = 5; // Size of grid cells in pixels for aggregation
-            const pointGrid = {};
-            
-            // Map field coordinates to pixel coordinates and group by grid cells
-            filteredData.forEach(point => {
-                const x = Math.round((point.x / fieldLengthMeters) * fieldWidth);
-                const y = Math.round((point.y / fieldWidthMeters) * fieldHeight);
-                
-                // Create grid cell key
-                const cellX = Math.floor(x / gridSize);
-                const cellY = Math.floor(y / gridSize);
-                const cellKey = `${cellX}-${cellY}`;
-                
-                // Increment count for this cell or initialize it
-                if (pointGrid[cellKey]) {
-                    pointGrid[cellKey].count += 1;
-                } else {
-                    pointGrid[cellKey] = {
-                        x: x,
-                        y: y,
-                        count: 1
-                    };
-                }
-            });
-            
-            // Convert grid to data points with intensity based on count
-            let aggregatedData = Object.values(pointGrid).map(cell => ({
-                x: cell.x,
-                y: cell.y,
-                value: Math.min(10, cell.count * 2) // Default scaling
-            }));
-            
-            // Special handling for throws
-            if (filter === 'throws') {
-                aggregatedData = Object.values(pointGrid).map(cell => ({
-                    x: cell.x,
-                    y: cell.y,
-                    value: Math.min(15, cell.count * 3) // More aggressive scaling for throws
-                }));
-            }
-            
-            // Calculate a reasonable max value based on the data
-            const maxCount = Math.max(...aggregatedData.map(point => point.value), 1);
-            const reasonableMax = Math.ceil(maxCount * 0.7); // Use 70% of max as the "max" for better visualization
             
             const pixelData = {
-                max: reasonableMax,
-                min: 0,
-                data: aggregatedData
+                max: 5, // Adjust this value based on data density
+                data: filteredData.map(point => ({
+                    x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
+                    y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
+                    value: point.value
+                }))
             };
-            
-            console.log(`Heatmap data (${filter}): ${aggregatedData.length} points, max value: ${reasonableMax}`);
-            
-            // Set data with our aggregated points
             heatmapInstance.setData(pixelData);
-            
-            // Update the legend
-            addHeatmapLegend(filter);
         }
 
-    
-        // Initialize with all data
-        updateHeatmap();
-        
-        // Draw field markings after heatmap is initialized
-        drawFieldMarkings();
-    
-        // Add event listeners to heatmap filter buttons
+        updateHeatmapDisplay(); // Initial display
+        drawFieldMarkings(container, fieldWidth, fieldHeight);
+
         document.querySelectorAll('[data-filter]').forEach(button => {
             button.addEventListener('click', function() {
                 document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
-                updateHeatmap(this.dataset.filter);
+                updateHeatmapDisplay(this.dataset.filter);
             });
         });
-        {% endif %}
     }
 
-
-
-    // Enhanced Player Connections Network
-    if (document.getElementById('player-connections')) {
-        {% if connection_data %}
-        const connections = {{ connection_data|safe }};
-        const width = document.getElementById('player-connections').offsetWidth;
-        const height = 400;
-    
-        const svg = d3.select('#player-connections')
+    function drawFieldMarkings(container, fieldWidth, fieldHeight) {
+        const svg = d3.select(container)
             .append('svg')
+            .attr('width', '100%')
+            .attr('height', '100%')
+            .style('position', 'absolute')
+            .style('top', 0)
+            .style('left', 0)
+            .style('pointer-events', 'none')
+            .style('z-index', 3);
+
+        svg.append('line')
+            .attr('x1', fieldWidth / 2).attr('y1', 0)
+            .attr('x2', fieldWidth / 2).attr('y2', fieldHeight)
+            .attr('stroke', 'white').attr('stroke-width', 2).attr('stroke-dasharray', '5,5').attr('opacity', 0.7);
+    }
+
+    function createNetworkGraph(container, data) {
+        const width = container.offsetWidth;
+        const height = 400;
+
+        const svg = d3.select(container).append('svg')
             .attr('width', width)
             .attr('height', height)
-            .call(d3.zoom().on("zoom", function(event) {
-                g.attr("transform", event.transform);
-            }));
-    
-        // Create a group for all elements to enable zooming
+            .call(d3.zoom().on("zoom", (event) => g.attr("transform", event.transform)));
+
         const g = svg.append("g");
-    
-        // Create force simulation
-        const simulation = d3.forceSimulation(connections.nodes)
-            .force('link', d3.forceLink(connections.links).id(d => d.id).distance(100))
-            .force('charge', d3.forceManyBody().strength(-400)) // repusion strength
+
+        const simulation = d3.forceSimulation(data.nodes)
+            .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
+            .force('charge', d3.forceManyBody().strength(-400))
             .force('center', d3.forceCenter(width / 2, height / 2));
-    
-        // Draw links
-        const link = g.append('g')
-            .selectAll('line')
-            .data(connections.links)
-            .enter().append('line')
-            .attr('stroke-width', d => Math.sqrt(d.value) * 2) // 2 is the scale factor
-            .attr('stroke', '#999')
-            .attr('stroke-opacity', 0.6);
-    
-        // Draw nodes
-        const node = g.append('g')
-            .selectAll('circle')
-            .data(connections.nodes)
-            .enter().append('circle')
-            .attr('r', 25)  // increase size here
-            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : 
-                             (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
+
+        const link = g.append('g').selectAll('line')
+            .data(data.links).enter().append('line')
+            .attr('stroke-width', d => Math.sqrt(d.value) * 2)
+            .attr('stroke', '#999').attr('stroke-opacity', 0.6);
+
+        const node = g.append('g').selectAll('circle')
+            .data(data.nodes).enter().append('circle')
+            .attr('r', 25)
+            .attr('fill', d => d.position === 'handler' ? '#ff7f0e' : (d.position === 'cutter' ? '#1f77b4' : '#2ca02c'))
             .call(d3.drag()
                 .on('start', dragstarted)
                 .on('drag', dragged)
                 .on('end', dragended));
-        
-        // Create custom tooltips instead of using the default title attribute
+
         const tooltip = d3.select("body").append("div")
             .attr("class", "d3-tooltip")
-            .style("position", "absolute")
-            .style("background", "rgba(0,0,0,0.7)")
-            .style("color", "white")
-            .style("padding", "8px")
-            .style("border-radius", "4px")
-            .style("font-size", "12px")
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .style("z-index", 1000);
-        
-        // Add tooltip behavior
-        node.on("mouseover", function(event, d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add tooltips for links to show connection strength
-        link.on("mouseover", function(event, d) {
-                const source = connections.nodes.find(n => n.id === d.source.id);
-                const target = connections.nodes.find(n => n.id === d.target.id);
-                
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(`<strong>Connection:</strong><br/>${source.name} → ${target.name}<br/><strong>Throws:</strong> ${d.value}`)
-                    .style("left", (event.pageX + 10) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-        
-        // Add labels - use jersey numbers instead of initials
-        const label = g.append('g')
-            .selectAll('text')
-            .data(connections.nodes)
-            .enter().append('text')
-            .text(d => d.jersey_number || '?')  // Use jersey number as the label
-            .attr('font-size', 14)  // node font size
-            .attr('text-anchor', 'middle')  // Center the text
-            .attr('dy', 4)  // Slight vertical adjustment
-            .attr('fill', 'white');
+            .style("opacity", 0);
 
-
-        // Update positions on tick
-        simulation.on('tick', () => {
-            link
-                .attr('x1', d => d.source.x)
-                .attr('y1', d => d.source.y)
-                .attr('x2', d => d.target.x)
-                .attr('y2', d => d.target.y);
-        
-            node
-                .attr('cx', d => d.x)
-                .attr('cy', d => d.y);
-        
-            label
-                .attr('x', d => d.x)  // Center the text horizontally
-                .attr('y', d => d.y); // Center the text vertically
+        node.on("mouseover", (event, d) => {
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`<strong>${d.name}</strong> (#${d.jersey_number})<br/>Position: ${d.position || 'N/A'}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        }).on("mouseout", () => {
+            tooltip.transition().duration(500).style("opacity", 0);
         });
 
+        const label = g.append('g').selectAll('text')
+            .data(data.nodes).enter().append('text')
+            .text(d => d.jersey_number || '?')
+            .attr('font-size', 14).attr('text-anchor', 'middle')
+            .attr('dy', 4).attr('fill', 'white');
 
-        // Add reset zoom button
-        svg.append("rect")
-            .attr("x", 10)
-            .attr("y", 10)
-            .attr("width", 80)
-            .attr("height", 30)
-            .attr("rx", 5)
-            .attr("fill", "rgba(255,255,255,0.7)")
-            .attr("stroke", "#999");
-            
-        svg.append("text")
-            .attr("x", 50)
-            .attr("y", 30)
-            .attr("text-anchor", "middle")
-            .text("Reset Zoom")
-            .style("font-size", "12px")
-            .style("cursor", "pointer")
-            .on("click", function() {
-                svg.transition().duration(750).call(
-                    d3.zoom().transform,
-                    d3.zoomIdentity
-                );
-            });
-    
-        // Drag functions
+        simulation.on('tick', () => {
+            link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            node.attr('cx', d => d.x).attr('cy', d => d.y);
+            label.attr('x', d => d.x).attr('y', d => d.y);
+        });
+
         function dragstarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
+            d.fx = d.x; d.fy = d.y;
         }
-    
         function dragged(event, d) {
-            d.fx = event.x;
-            d.fy = event.y;
+            d.fx = event.x; d.fy = event.y;
         }
-    
         function dragended(event, d) {
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
+            d.fx = null; d.fy = null;
         }
-    
-        // Add connection strength filter functionality
+        
         document.querySelectorAll('[data-strength]').forEach(button => {
             button.addEventListener('click', function() {
                 document.querySelectorAll('[data-strength]').forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
                 const strength = this.dataset.strength;
-                
                 link.style('display', d => {
                     if (strength === 'strong') return d.value >= 3 ? 'block' : 'none';
                     if (strength === 'weak') return d.value < 3 ? 'block' : 'none';
@@ -1239,36 +767,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
         });
-        {% endif %}
     }
 
-
-    // Add window resize handler
-    window.addEventListener('resize', debounce(function() {
-        // Redraw visualizations on window resize
-        if (typeof heatmapInstance !== 'undefined') {
-            updateHeatmap();
-        }
-        if (typeof simulation !== 'undefined') {
-            const width = document.getElementById('player-connections').offsetWidth;
-            simulation.force('center', d3.forceCenter(width / 2, height / 2));
-            simulation.alpha(0.3).restart();
-        }
-    }, 250));
-
-    // Debounce function
+    // Debounce function for resize handler
     function debounce(func, wait) {
         let timeout;
-        return function() {
-            const context = this, args = arguments;
+        return function(...args) {
+            const context = this;
             clearTimeout(timeout);
-            timeout = setTimeout(function() {
-                func.apply(context, args);
-            }, wait);
+            timeout = setTimeout(() => func.apply(context, args), wait);
         };
     }
-});
 
+    // Resize handler
+    window.addEventListener('resize', debounce(function() {
+        // This is a simplified resize handler. A full implementation would
+        // clear and redraw the visualizations.
+        console.log("Window resized. Visualizations may need to be redrawn.");
+    }, 250));
+});
 </script>
 {% endblock %}
+
 
