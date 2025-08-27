@@ -12,6 +12,7 @@ from flask_moment import Moment
 from app.discord_integration import init_discord_integration
 from flask import session
 from flask_login import current_user
+from app.utils.db_error_handlers import handle_db_errors
 
 
 db = SQLAlchemy()
@@ -125,6 +126,10 @@ def create_app(config_class=Config):
                 db.session.commit()
                 print(f"Added {len(DEFAULT_METRICS)} default fitness metrics")
    
+    
+    # Register database error handlers
+    handle_db_errors(app)
+    
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)

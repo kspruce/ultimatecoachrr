@@ -77,6 +77,7 @@ def data_management():
         flash(f"An error occurred while loading the data management page: {str(e)}", "error")
         
         # Return the error page with details
+        from flask import current_app
         debug_info = None
         if current_app.debug:  # Only show technical details in debug mode
             import traceback
@@ -86,6 +87,7 @@ def data_management():
                              error_message="Database error occurred. The transaction has been rolled back.",
                              back_url=url_for('admin.index'),
                              debug_info=debug_info)
+
 
 
 @bp.route('/export-data', methods=['POST'])
