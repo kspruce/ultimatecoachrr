@@ -14,6 +14,7 @@ import zipfile
 import logging
 from datetime import datetime
 import math
+from flask import current_app
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -41,25 +42,51 @@ def get_manager():
 @admin_required
 def data_management():
     """Enhanced data management interface."""
-    manager = get_manager()  # Get the manager instance
-    model_info = manager.get_model_info()
+    try:
+        # Ensure any previous failed transaction is rolled back
+        from app import db
+        db.session.rollback()
+        
+        manager = get_manager()  # Get the manager instance
+        model_info = manager.get_model_info()
+        
+        # Get available exports with details
+        exports = manager.get_available_exports()
+        
+        # Calculate total records
+        total_records = sum(model['record_count'] for model in model_info['models'].values())
+        
+        # Get last export date
+        last_export = exports[0]['date'] if exports else None
+        
+        return render_template('admin/enhanced_data_management.html', 
+                             model_info=model_info, 
+                             exports=exports,
+                             total_records=total_records,
+                             last_export=last_export,
+                             export_dir=manager.export_dir)
+    except Exception as e:
+        # Log the error
+        logger.error(f"Error in data management page: {e}", exc_info=True)
+        
+        # Roll back the session to clear any aborted transaction
+        from app import db
+        db.session.rollback()
+        
+        # Show an error message
+        flash(f"An error occurred while loading the data management page: {str(e)}", "error")
+        
+        # Return the error page with details
+        debug_info = None
+        if current_app.debug:  # Only show technical details in debug mode
+            import traceback
+            debug_info = traceback.format_exc()
+            
+        return render_template('admin/error.html', 
+                             error_message="Database error occurred. The transaction has been rolled back.",
+                             back_url=url_for('admin.index'),
+                             debug_info=debug_info)
 
-    
-    # Get available exports with details
-    exports = manager.get_available_exports()
-    
-    # Calculate total records
-    total_records = sum(model['record_count'] for model in model_info['models'].values())
-    
-    # Get last export date
-    last_export = exports[0]['date'] if exports else None
-    
-    return render_template('admin/enhanced_data_management.html', 
-                         model_info=model_info, 
-                         exports=exports,
-                         total_records=total_records,
-                         last_export=last_export,
-                         export_dir=manager.export_dir)
 
 @bp.route('/export-data', methods=['POST'])
 @login_required
