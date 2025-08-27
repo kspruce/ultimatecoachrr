@@ -1,5 +1,11 @@
 from app.models.stats import PlayerStats, TeamStats
-from app.utils.team_utils import get_current_team_id
+from flask_login import current_user
+
+def get_current_team_id():
+    """Temporary function until proper team_utils module is created"""
+    if current_user and hasattr(current_user, 'team_organization_id'):
+        return current_user.team_organization_id
+    return None
 
 def get_player_stats_from_db(player_id, game_id=None, tournament_id=None, season=None):
     """
@@ -47,6 +53,9 @@ def get_team_summary_from_db(game_id=None, tournament_id=None, season=None):
         Dictionary of team statistics or None if not found
     """
     team_org_id = get_current_team_id()
+    if not team_org_id:
+        return None
+        
     query = TeamStats.query.filter_by(team_organization_id=team_org_id)
     
     if game_id:
