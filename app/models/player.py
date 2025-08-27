@@ -61,7 +61,8 @@ class Player(db.Model):
     # Add these relationships
     gameday_events = db.relationship('GameDayEvent', back_populates='player', lazy='dynamic')
     gameday_stats = db.relationship('GameDayPlayerStats', back_populates='player', cascade='all, delete-orphan')
-
+    stats = db.relationship('PlayerStats', back_populates='player', cascade='all, delete-orphan')
+    
     __table_args__ = (
         db.Index('idx_player_active', 'active'),
         db.Index('idx_player_team', 'team'),

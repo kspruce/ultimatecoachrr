@@ -193,6 +193,8 @@ def create_app(config_class=Config):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
+    from app.routes.admin_stats import bp as admin_stats_bp
+    app.register_blueprint(admin_stats_bp)
     
     # Import models
     from app.models import (

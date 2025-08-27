@@ -18,7 +18,10 @@ class Tournament(db.Model):
     games = db.relationship('Game', back_populates='tournament', lazy='dynamic')
     # Add relationship with TournamentRSVP
     rsvps = db.relationship('TournamentRSVP', back_populates='tournament', lazy='dynamic', cascade='all, delete-orphan')
-    
+    # In the Tournament model class
+    player_stats = db.relationship('PlayerStats', back_populates='tournament', cascade='all, delete-orphan')
+    team_stats = db.relationship('TeamStats', back_populates='tournament', cascade='all, delete-orphan')
+ 
     def __repr__(self):
         return f'<Tournament {self.name}>'
     
@@ -68,3 +71,4 @@ class Tournament(db.Model):
     def selected_players_count(self):
         """Return the number of players selected by admin for this tournament."""
         return self.rsvps.filter_by(selected_by_admin=True).count()
+    
