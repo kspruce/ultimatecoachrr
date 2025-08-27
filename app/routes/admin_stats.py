@@ -111,91 +111,88 @@ def calculator():
     )
 
 def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
-    """Store team statistics in the TeamStats table."""
+    """Store or update team statistics in the TeamStats table."""
     team_org_id = get_current_team_id()
     
-    # Filter out keys that don't exist in the TeamStats model
-    # Get the column names from the TeamStats model
     from sqlalchemy import inspect
     inspector = inspect(TeamStats)
     valid_columns = {c.key for c in inspector.columns}
-    
-    # Filter the team_stats dictionary to only include valid columns
     filtered_stats = {k: v for k, v in team_stats.items() if k in valid_columns}
-    
-    # Check if a record already exists
-    existing = TeamStats.query.filter_by(
-        team_organization_id=team_org_id,
-        game_id=game_id,
-        tournament_id=tournament_id,
-        season=season
-    ).first()
-    
-    if existing:
-        # Update existing record
-        for key, value in filtered_stats.items():
-            if hasattr(existing, key):
-                setattr(existing, key, value)
-    else:
-        # Create new record
-        team_stats_obj = TeamStats(
+
+    try:
+        existing = TeamStats.query.filter_by(
             team_organization_id=team_org_id,
             game_id=game_id,
             tournament_id=tournament_id,
-            season=season,
-            **filtered_stats
-        )
-        db.session.add(team_stats_obj)
-    
-    db.session.commit()
+            season=season
+        ).first()
+
+        if existing:
+            # Update existing record
+            for key, value in filtered_stats.items():
+                setattr(existing, key, value)
+        else:
+            # Create new record
+            team_stats_obj = TeamStats(
+                team_organization_id=team_org_id,
+                game_id=game_id,
+                tournament_id=tournament_id,
+                season=season,
+                **filtered_stats
+            )
+            db.session.add(team_stats_obj)
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"A database error occurred while saving team stats: {e}", "danger")
+        print(f"Error in store_team_stats: {e}")
 
 
 def store_player_stats(player_stats_dict, team_avgs, players, game_id=None, tournament_id=None, season=None):
-    """Store player statistics in the PlayerStats table."""
+    """Store or update player statistics in the PlayerStats table."""
     team_org_id = get_current_team_id()
     
-    # Get the column names from the PlayerStats model
     from sqlalchemy import inspect
     inspector = inspect(PlayerStats)
     valid_columns = {c.key for c in inspector.columns}
-    
-    for player in players:
-        if player.id in player_stats_dict:
-            stats = player_stats_dict[player.id]
-            
-            # Calculate PER if points played > 0
-            if stats.get('points_played', 0) > 0:
-                stats['per'] = calculate_per_from_stats(stats, team_avgs)
-            else:
-                stats['per'] = 0
-            
-            # Filter the stats dictionary to only include valid columns
-            filtered_stats = {k: v for k, v in stats.items() if k in valid_columns}
-            
-            # Check if a record already exists
-            existing = PlayerStats.query.filter_by(
-                player_id=player.id,
-                game_id=game_id,
-                tournament_id=tournament_id,
-                season=season
-            ).first()
-            
-            if existing:
-                # Update existing record
-                for key, value in filtered_stats.items():
-                    if hasattr(existing, key):
-                        setattr(existing, key, value)
-            else:
-                # Create new record
-                player_stats_obj = PlayerStats(
+
+    try:
+        for player in players:
+            if player.id in player_stats_dict:
+                stats = player_stats_dict[player.id]
+                
+                if stats.get('points_played', 0) > 0:
+                    stats['per'] = calculate_per_from_stats(stats, team_avgs)
+                else:
+                    stats['per'] = 0
+                
+                filtered_stats = {k: v for k, v in stats.items() if k in valid_columns}
+                
+                existing = PlayerStats.query.filter_by(
                     player_id=player.id,
-                    team_organization_id=team_org_id,
                     game_id=game_id,
                     tournament_id=tournament_id,
-                    season=season,
-                    **filtered_stats
-                )
-                db.session.add(player_stats_obj)
-    
-    db.session.commit()
+                    season=season
+                ).first()
+
+                if existing:
+                    for key, value in filtered_stats.items():
+                        setattr(existing, key, value)
+                else:
+                    player_stats_obj = PlayerStats(
+                        player_id=player.id,
+                        team_organization_id=team_org_id,
+                        game_id=game_id,
+                        tournament_id=tournament_id,
+                        season=season,
+                        **filtered_stats
+                    )
+                    db.session.add(player_stats_obj)
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"A database error occurred while saving player stats: {e}", "danger")
+        print(f"Error in store_player_stats: {e}")
 
