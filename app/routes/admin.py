@@ -14,7 +14,7 @@ from app.utils.stats_calculator import (
 )
 from app.utils.team_utils import get_current_team_id
 from sqlalchemy import func
-from app_factory import db
+from app import db
 import time
 
 # Create a blueprint for admin routes

@@ -14,7 +14,7 @@ from app.utils.stats_calculator import (
     calculate_per_from_stats
 )
 from sqlalchemy import func
-from app_factory import db
+from app import db
 import time
 
 # Create a blueprint for admin stats routes
