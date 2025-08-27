@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from app.utils import admin_required
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+from app.utils import admin_required  # Import from app.utils package
 from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
@@ -12,13 +14,20 @@ from app.utils.stats_calculator import (
     calculate_team_averages,
     calculate_per_from_stats
 )
-from app.utils.team_utils import get_current_team_id
+from app.utils.stats_retrieval import get_current_team_id  # Import from stats_retrieval
 from sqlalchemy import func
 from app import db
 import time
 
 # Create a blueprint for admin routes
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+@admin_bp.route('/')
+@login_required
+@admin_required
+def index():
+    """Admin dashboard index page."""
+    return render_template('admin/index.html')
 
 @admin_bp.route('/stats_calculator', methods=['GET', 'POST'])
 @login_required

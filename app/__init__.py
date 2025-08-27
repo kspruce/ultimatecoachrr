@@ -196,6 +196,7 @@ def create_app(config_class=Config):
     from app.routes.admin import admin_bp
     app.register_blueprint(admin_bp)
     
+    # Register the admin stats blueprint
     from app.routes.admin_stats import admin_stats_bp
     app.register_blueprint(admin_stats_bp)
     
