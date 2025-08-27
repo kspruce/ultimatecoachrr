@@ -1,6 +1,7 @@
+# app/routes/admin_stats.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from app.utils.auth import is_admin
+from app.utils import admin_required  # Use the existing decorator
 from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
@@ -20,19 +21,16 @@ import time
 admin_stats_bp = Blueprint('admin_stats', __name__, url_prefix='/admin/stats')
 
 def get_current_team_id():
-    """Temporary function until proper team_utils module is created"""
+    """Get the current team organization ID from the logged-in user"""
     if current_user and hasattr(current_user, 'team_organization_id'):
         return current_user.team_organization_id
     return None
 
 @admin_stats_bp.route('/calculator', methods=['GET', 'POST'])
 @login_required
+@admin_required  # Use the existing decorator
 def calculator():
     """Admin interface for calculating and storing statistics in the database."""
-    if not is_admin(current_user):
-        flash("You don't have permission to access this page", "danger")
-        return redirect(url_for('main.index'))
-    
     team_org_id = get_current_team_id()
     if not team_org_id:
         flash("No team organization found", "danger")

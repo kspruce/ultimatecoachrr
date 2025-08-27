@@ -2,7 +2,7 @@ from app.models.stats import PlayerStats, TeamStats
 from flask_login import current_user
 
 def get_current_team_id():
-    """Temporary function until proper team_utils module is created"""
+    """Get the current team organization ID from the logged-in user"""
     if current_user and hasattr(current_user, 'team_organization_id'):
         return current_user.team_organization_id
     return None
