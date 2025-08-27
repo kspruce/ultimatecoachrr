@@ -27,6 +27,7 @@ class PlayerStats(db.Model):
     game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=True)
     season = db.Column(db.String(50), nullable=True)
+    games_played = db.Column(db.Integer, default=0)
     
     # Core Stats
     points_played = db.Column(db.Integer, default=0)
@@ -61,6 +62,10 @@ class PlayerStats(db.Model):
     __table_args__ = (
         db.UniqueConstraint('player_id', 'game_id', 'tournament_id', 'season', name='_player_stats_scope_uc'),
     )
+    
+    def to_dict(self):
+        """Converts the PlayerStats object to a dictionary."""
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}    
 
 class TeamStats(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -96,3 +101,7 @@ class TeamStats(db.Model):
     __table_args__ = (
         db.UniqueConstraint('game_id', 'tournament_id', 'season', name='_team_stats_scope_uc'),
     )
+    
+    def to_dict(self):
+        """Converts the TeamStats object to a dictionary."""
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

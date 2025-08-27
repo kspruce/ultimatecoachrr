@@ -948,13 +948,21 @@ def index():
     team_org_id = get_current_team_id()
 
     # 1. Fetch pre-calculated team summary (fast)
-    team_summary = get_team_summary_from_db() # Uses your existing function
-    if not team_summary:
-        team_summary = {} # Provide a default empty dict
+    team_summary_record = get_team_summary_from_db()
+    if not team_summary_record:
+        team_summary = {}
         flash("No overall team stats found. Please run the stats calculator.", "info")
+    else:
+        team_summary = team_summary_record.to_dict()
 
-    # 2. Fetch all pre-calculated player stats (fast)
-    player_stats_records = get_player_stats_from_db() # Uses your existing function
+    # 2. Fetch all pre-calculated "all-time" player stats (fast)
+    player_stats_records = PlayerStats.query.join(Player).filter(
+        Player.team_organization_id == team_org_id,
+        Player.active == True,
+        PlayerStats.game_id.is_(None),
+        PlayerStats.tournament_id.is_(None),
+        PlayerStats.season.is_(None)
+    ).all()
     
     # 3. Format data for the template
     player_stats = {r.player_id: r.to_dict() for r in player_stats_records}
@@ -963,8 +971,7 @@ def index():
     # 4. Calculate team averages from the pre-calculated data (fast)
     team_avg_stats = calculate_team_avg_stats(player_stats)
 
-    # 5. Defer loading of heavy visualization data
-    # We will load these with JavaScript after the page loads
+    # 5. Pass empty data for visualizations; they will be loaded via API
     heatmap_data = []
     connection_data = {'nodes': [], 'links': []}
 
@@ -974,7 +981,6 @@ def index():
         players=players,
         player_stats=player_stats,
         team_avg_stats=team_avg_stats,
-        # Pass empty data initially, it will be loaded via API
         heatmap_data=json.dumps(heatmap_data),
         connection_data=json.dumps(connection_data),
         is_admin=is_admin(current_user),
@@ -3786,8 +3792,16 @@ def debug_radar_stats(player_id):
 @login_required
 def api_player_stats_table():
     """API endpoint for the main player stats table on the index page."""
-    # This fetches the "all-time" stats
-    stats_records = get_player_stats_from_db()
+    team_org_id = get_current_team_id()
+
+    # This fetches the "all-time" stats for active players
+    stats_records = PlayerStats.query.join(Player).filter(
+        Player.team_organization_id == team_org_id,
+        Player.active == True,
+        PlayerStats.game_id.is_(None),
+        PlayerStats.tournament_id.is_(None),
+        PlayerStats.season.is_(None)
+    ).all()
     
     data = []
     for record in stats_records:
