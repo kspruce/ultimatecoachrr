@@ -17,11 +17,10 @@ from app.utils.stats_retrieval import get_current_team_id  # Import from stats_r
 from sqlalchemy import func
 from app import db
 import time
+from app.forms.stats_form import StatsCalculatorForm
 
 # Create a blueprint for admin stats routes
 admin_stats_bp = Blueprint('admin_stats', __name__, url_prefix='/admin/stats')
-
-from app.forms.stats_form import StatsCalculatorForm
 
 @admin_stats_bp.route('/calculator', methods=['GET', 'POST'])
 @login_required
@@ -51,17 +50,6 @@ def calculator():
         tournament_id = form.tournament_id.data if form.tournament_id.data else None
         game_id = form.game_id.data if form.game_id.data else None
         season = form.season.data if form.season.data else None
-    
-    # Get stats on how many records are already in the database
-    player_stats_count = db.session.query(func.count(PlayerStats.id)).scalar()
-    team_stats_count = db.session.query(func.count(TeamStats.id)).scalar()
-    
-    # Process form submission
-    if request.method == 'POST':
-        scope = request.form.get('scope')
-        tournament_id = request.form.get('tournament_id')
-        game_id = request.form.get('game_id')
-        season = request.form.get('season')
         
         # Start timing the operation
         start_time = time.time()
@@ -112,11 +100,9 @@ def calculator():
         else:
             flash("No games found for the selected criteria", "warning")
     
-    # For the game dropdown, get recent games
-    recent_games = Game.query.filter_by(team_organization_id=team_org_id).order_by(Game.date.desc()).limit(20).all()
-    
     return render_template(
         'admin/stats_calculator.html',
+        form=form,  # Pass the form to the template
         tournaments=tournaments,
         seasons=seasons,
         recent_games=recent_games,
