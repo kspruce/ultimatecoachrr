@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from app.utils.auth import is_admin
+from app.utils import admin_required
 from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
@@ -14,7 +14,7 @@ from app.utils.stats_calculator import (
 )
 from app.utils.team_utils import get_current_team_id
 from sqlalchemy import func
-from app import db
+from app_factory import db
 import time
 
 # Create a blueprint for admin routes
@@ -22,11 +22,10 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 @admin_bp.route('/stats_calculator', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def stats_calculator():
     """Admin interface for calculating and storing statistics in the database."""
-    if not is_admin(current_user):
-        flash("You don't have permission to access this page", "danger")
-        return redirect(url_for('main.index'))
+    
     
     team_org_id = get_current_team_id()
     
