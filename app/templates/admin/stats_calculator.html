@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics Calculator{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Statistics Calculator</h1>
+    <p class="lead">Calculate and store statistics in the database for faster access.</p>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Database Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Player Statistics Records:</strong> {{ player_stats_count }}</p>
+                    <p><strong>Team Statistics Records:</strong> {{ team_stats_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Calculate Statistics</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.stats_calculator') }}">
+                <div class="form-group mb-3">
+                    <label for="scope"><strong>Calculation Scope:</strong></label>
+                    <select class="form-control" id="scope" name="scope" required>
+                        <option value="game">Single Game</option>
+                        <option value="tournament">Tournament</option>
+                        <option value="season">Season</option>
+                        <option value="all">All Games</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mb-3 scope-option" id="game-option">
+                    <label for="game_id">Select Game:</label>
+                    <select class="form-control" id="game_id" name="game_id">
+                        <option value="">-- Select Game --</option>
+                        {% for game in recent_games %}
+                        <option value="{{ game.id }}">{{ game.date.strftime('%Y-%m-%d') }} vs {{ game.opponent }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group mb-3 scope-option" id="tournament-option" style="display: none;">
+                    <label for="tournament_id">Select Tournament:</label>
+                    <select class="form-control" id="tournament_id" name="tournament_id">
+                        <option value="">-- Select Tournament --</option>
+                        {% for tournament in tournaments %}
+                        <option value="{{ tournament.id }}">{{ tournament.name }} ({{ tournament.start_date.strftime('%Y-%m-%d') }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group mb-3 scope-option" id="season-option" style="display: none;">
+                    <label for="season">Select Season:</label>
+                    <select class="form-control" id="season" name="season">
+                        <option value="">-- Select Season --</option>
+                        {% for season in seasons %}
+                        <option value="{{ season }}">{{ season }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Calculating statistics for a large number of games may take some time. Please be patient.
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-calculator"></i> Calculate and Store Statistics
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scopeSelect = document.getElementById('scope');
+    const gameOption = document.getElementById('game-option');
+    const tournamentOption = document.getElementById('tournament-option');
+    const seasonOption = document.getElementById('season-option');
+    
+    function updateVisibility() {
+        const selectedScope = scopeSelect.value;
+        
+        gameOption.style.display = selectedScope === 'game' ? 'block' : 'none';
+        tournamentOption.style.display = selectedScope === 'tournament' ? 'block' : 'none';
+        seasonOption.style.display = selectedScope === 'season' ? 'block' : 'none';
+        
+        // Reset values when hidden
+        if (selectedScope !== 'game') document.getElementById('game_id').value = '';
+        if (selectedScope !== 'tournament') document.getElementById('tournament_id').value = '';
+        if (selectedScope !== 'season') document.getElementById('season').value = '';
+    }
+    
+    scopeSelect.addEventListener('change', updateVisibility);
+    updateVisibility(); // Initial setup
+});
+</script>
+{% endblock %}

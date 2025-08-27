@@ -18,6 +18,7 @@ from app.utils.utils import admin_required
 from datetime import datetime, date
 from functools import lru_cache
 from datetime import datetime, timedelta
+from app.utils.stats_retrieval import get_player_stats_from_db, get_team_summary_from_db, get_cached_team_averages
 
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
@@ -26,59 +27,8 @@ bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
 # REPLACE the existing get_player_stats_from_db and get_team_summary_from_db with these
 
-def get_player_stats_from_db(player_id, game_id=None, tournament_id=None, season=None):
-    """
-    Retrieves pre-calculated player stats from the database.
-    Returns a dictionary or None.
-    """
-    team_org_id = get_current_team_id()
-    query = PlayerStats.query.filter_by(player_id=player_id, team_organization_id=team_org_id)
-    
-    if game_id:
-        query = query.filter_by(game_id=game_id)
-    elif tournament_id:
-        query = query.filter_by(tournament_id=tournament_id, game_id=None)
-    elif season:
-        query = query.filter_by(season=season, tournament_id=None, game_id=None)
-    else: # All-time
-        query = query.filter(PlayerStats.game_id.is_(None), PlayerStats.tournament_id.is_(None), PlayerStats.season.is_(None))
-        
-    stats_record = query.first()
-    
-    if not stats_record:
-        return None
 
-    # Convert the SQLAlchemy object to a dictionary
-    stats_dict = {c.name: getattr(stats_record, c.name) for c in stats_record.__table__.columns}
-    
-    # Manually add derived stats that might be needed by templates but aren't stored
-    stats_dict['turnovers'] = stats_dict.get('throwaways', 0) + stats_dict.get('drops', 0)
-    stats_dict['plus_minus'] = (stats_dict.get('goals', 0) + stats_dict.get('assists', 0) + 
-                              stats_dict.get('blocks', 0) - stats_dict['turnovers'])
-    
-    return stats_dict
 
-def get_team_summary_from_db(game_id=None, tournament_id=None, season=None):
-    """
-    Retrieves pre-calculated team stats from the database.
-    """
-    team_org_id = get_current_team_id()
-    query = TeamStats.query.filter_by(team_organization_id=team_org_id)
-
-    if game_id:
-        query = query.filter_by(game_id=game_id)
-    elif tournament_id:
-        query = query.filter_by(tournament_id=tournament_id, game_id=None)
-    elif season:
-        query = query.filter_by(season=season, tournament_id=None, game_id=None)
-    else: # All-time
-        query = query.filter(TeamStats.game_id.is_(None), TeamStats.tournament_id.is_(None), TeamStats.season.is_(None))
-
-    team_stats_record = query.first()
-    if not team_stats_record:
-        return None
-        
-    return {c.name: getattr(team_stats_record, c.name) for c in team_stats_record.__table__.columns}
 
 
 def get_current_team_id():
@@ -98,31 +48,7 @@ def is_coach(user):
 _team_avg_cache = {}
 _team_avg_timestamp = {}
 
-def get_cached_team_averages(games=None, max_age_minutes=15):
-    """Get team averages with caching"""
-    # Create a cache key based on game IDs and team ID
-    team_id = get_current_team_id()
-    if games:
-        if isinstance(games, list):
-            cache_key = (team_id, tuple(sorted([g.id for g in games])))
-        else:
-            cache_key = (team_id, (games.id,))
-    else:
-        cache_key = (team_id, 'all_games')
-    
-    now = datetime.now()
-    if (cache_key in _team_avg_cache and 
-        cache_key in _team_avg_timestamp and
-        now - _team_avg_timestamp[cache_key] < timedelta(minutes=max_age_minutes)):
-        print(f"Using cached team averages for {cache_key}")
-        return _team_avg_cache[cache_key]
-    
-    # Calculate if not in cache or expired
-    print(f"Calculating team averages for {cache_key}")
-    result = calculate_team_averages(games)
-    _team_avg_cache[cache_key] = result
-    _team_avg_timestamp[cache_key] = now
-    return result
+
 
 def safe_date_format(date_obj, format_str='%Y-%m-%d'):
     """Safely format a date object, handling None values"""
