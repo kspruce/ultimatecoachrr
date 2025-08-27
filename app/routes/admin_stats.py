@@ -114,6 +114,15 @@ def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
     """Store team statistics in the TeamStats table."""
     team_org_id = get_current_team_id()
     
+    # Filter out keys that don't exist in the TeamStats model
+    # Get the column names from the TeamStats model
+    from sqlalchemy import inspect
+    inspector = inspect(TeamStats)
+    valid_columns = {c.key for c in inspector.columns}
+    
+    # Filter the team_stats dictionary to only include valid columns
+    filtered_stats = {k: v for k, v in team_stats.items() if k in valid_columns}
+    
     # Check if a record already exists
     existing = TeamStats.query.filter_by(
         team_organization_id=team_org_id,
@@ -124,7 +133,7 @@ def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
     
     if existing:
         # Update existing record
-        for key, value in team_stats.items():
+        for key, value in filtered_stats.items():
             if hasattr(existing, key):
                 setattr(existing, key, value)
     else:
@@ -134,11 +143,12 @@ def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
             game_id=game_id,
             tournament_id=tournament_id,
             season=season,
-            **team_stats
+            **filtered_stats
         )
         db.session.add(team_stats_obj)
     
     db.session.commit()
+
 
 def store_player_stats(player_stats_dict, team_avgs, players, game_id=None, tournament_id=None, season=None):
     """Store player statistics in the PlayerStats table."""

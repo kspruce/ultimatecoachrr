@@ -23,7 +23,6 @@ class UltimateCoachBot:
         if app is not None:
             self.init_app(app)
     
-
     def init_app(self, app):
         """Initialize the bot with Flask app context"""
         self.app = app
@@ -33,7 +32,6 @@ class UltimateCoachBot:
         self.guild_id = app.config.get('DISCORD_GUILD_ID')
         self.calendar_channel_id = app.config.get('DISCORD_CALENDAR_CHANNEL_ID')
         self.notification_channel_id = app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID')
-        
         # Initialize the sync_calendar task
         self.sync_calendar = tasks.loop(hours=12)(self.sync_calendar_task)
             
