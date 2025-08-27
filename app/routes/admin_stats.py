@@ -21,22 +21,36 @@ import time
 # Create a blueprint for admin stats routes
 admin_stats_bp = Blueprint('admin_stats', __name__, url_prefix='/admin/stats')
 
+from app.forms.stats_form import StatsCalculatorForm
+
 @admin_stats_bp.route('/calculator', methods=['GET', 'POST'])
 @login_required
-@admin_required  # Use the existing decorator from app.utils
+@admin_required
 def calculator():
-    """Admin interface for calculating and storing statistics in the database."""
+    form = StatsCalculatorForm()
+    
+    # Populate form choices
     team_org_id = get_current_team_id()
-    if not team_org_id:
-        flash("No team organization found", "danger")
-        return redirect(url_for('main.index'))
-    
-    # Get all tournaments for this team
     tournaments = Tournament.query.filter_by(team_organization_id=team_org_id).order_by(Tournament.start_date.desc()).all()
+    form.tournament_id.choices = [(str(t.id), f"{t.name} ({t.start_date.strftime('%Y-%m-%d')})") for t in tournaments]
     
-    # Get all seasons (distinct)
     seasons = [s[0] for s in db.session.query(Tournament.season).filter_by(
         team_organization_id=team_org_id).distinct().all() if s[0]]
+    form.season.choices = [(s, s) for s in seasons]
+    
+    recent_games = Game.query.filter_by(team_organization_id=team_org_id).order_by(Game.date.desc()).limit(20).all()
+    form.game_id.choices = [(str(g.id), f"{g.date.strftime('%Y-%m-%d')} vs {g.opponent}") for g in recent_games]
+    
+    # Get stats on how many records are already in the database
+    player_stats_count = db.session.query(func.count(PlayerStats.id)).scalar()
+    team_stats_count = db.session.query(func.count(TeamStats.id)).scalar()
+    
+    if form.validate_on_submit():
+        # Process form submission
+        scope = form.scope.data
+        tournament_id = form.tournament_id.data if form.tournament_id.data else None
+        game_id = form.game_id.data if form.game_id.data else None
+        season = form.season.data if form.season.data else None
     
     # Get stats on how many records are already in the database
     player_stats_count = db.session.query(func.count(PlayerStats.id)).scalar()

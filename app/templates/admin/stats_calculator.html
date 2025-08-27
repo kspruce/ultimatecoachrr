@@ -27,47 +27,26 @@
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('admin_stats.calculator') }}">
-                <!-- Add CSRF token here -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                {{ form.hidden_tag() }}
                 
                 <div class="form-group mb-3">
-                    <label for="scope"><strong>Calculation Scope:</strong></label>
-                    <select class="form-control" id="scope" name="scope" required>
-                        <option value="game">Single Game</option>
-                        <option value="tournament">Tournament</option>
-                        <option value="season">Season</option>
-                        <option value="all">All Games</option>
-                    </select>
+                    <label for="scope"><strong>{{ form.scope.label }}</strong></label>
+                    {{ form.scope(class="form-control", id="scope") }}
                 </div>
                 
                 <div class="form-group mb-3 scope-option" id="game-option">
-                    <label for="game_id">Select Game:</label>
-                    <select class="form-control" id="game_id" name="game_id">
-                        <option value="">-- Select Game --</option>
-                        {% for game in recent_games %}
-                        <option value="{{ game.id }}">{{ game.date.strftime('%Y-%m-%d') }} vs {{ game.opponent }}</option>
-                        {% endfor %}
-                    </select>
+                    <label for="game_id">{{ form.game_id.label }}</label>
+                    {{ form.game_id(class="form-control", id="game_id") }}
                 </div>
                 
                 <div class="form-group mb-3 scope-option" id="tournament-option" style="display: none;">
-                    <label for="tournament_id">Select Tournament:</label>
-                    <select class="form-control" id="tournament_id" name="tournament_id">
-                        <option value="">-- Select Tournament --</option>
-                        {% for tournament in tournaments %}
-                        <option value="{{ tournament.id }}">{{ tournament.name }} ({{ tournament.start_date.strftime('%Y-%m-%d') }})</option>
-                        {% endfor %}
-                    </select>
+                    <label for="tournament_id">{{ form.tournament_id.label }}</label>
+                    {{ form.tournament_id(class="form-control", id="tournament_id") }}
                 </div>
                 
                 <div class="form-group mb-3 scope-option" id="season-option" style="display: none;">
-                    <label for="season">Select Season:</label>
-                    <select class="form-control" id="season" name="season">
-                        <option value="">-- Select Season --</option>
-                        {% for season in seasons %}
-                        <option value="{{ season }}">{{ season }}</option>
-                        {% endfor %}
-                    </select>
+                    <label for="season">{{ form.season.label }}</label>
+                    {{ form.season(class="form-control", id="season") }}
                 </div>
                 
                 <div class="alert alert-info">
@@ -75,9 +54,7 @@
                     Calculating statistics for a large number of games may take some time. Please be patient.
                 </div>
                 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-calculator"></i> Calculate and Store Statistics
-                </button>
+                {{ form.submit(class="btn btn-primary") }}
             </form>
         </div>
     </div>
