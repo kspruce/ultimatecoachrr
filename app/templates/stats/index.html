@@ -552,19 +552,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 1. Initialize Player Stats Table via API ---
     if ($('#player-stats-table').length > 0) {
         console.log("Initializing player stats table");
-        const playerStatsTable = $('#player-stats-table').DataTable({
-            processing: true,
-            ajax: {
-                url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
-                dataSrc: 'data',
-                error: function(xhr, error, thrown) {
-                    console.error("DataTables AJAX error:", error, thrown);
-                    // Display a user-friendly error in the table
-                    $('#player-stats-table tbody').html(
-                        '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">Error loading data from server. Please try again later.</td></tr>'
-                    );
-                }
-            },
+        
+        // Check if DataTable is already initialized
+        if (!$.fn.DataTable.isDataTable('#player-stats-table')) {
+            const playerStatsTable = $('#player-stats-table').DataTable({
+                processing: true,
+                ajax: {
+                    url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
+                    dataSrc: 'data',
+                    error: function(xhr, error, thrown) {
+                        console.error("DataTables AJAX error:", error, thrown);
+                        // Display a user-friendly error in the table
+                        $('#player-stats-table tbody').html(
+                            '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">Error loading data from server. Please try again later.</td></tr>'
+                        );
+                    }
+                },
             columns: [
                 { "data": 0, "className": "dt-body-left" },
                 { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
@@ -659,48 +662,50 @@ document.addEventListener('DOMContentLoaded', function() {
         const fieldLengthMeters = 100;
         const fieldWidthMeters = 37;
 
-        function updateHeatmapDisplay(filter = 'all') {
-            let filteredData = heatmapData;
-            
-            // Log the first data point to help debug the structure
-            if (heatmapData && heatmapData.length > 0) {
-                console.log("Sample heatmap data point:", heatmapData[0]);
-            }
-            
-            if (filter !== 'all') {
-                // More flexible filtering that checks multiple possible property names
-                filteredData = heatmapData.filter(point => {
-                    // Check various possible property names for event type
-                    const eventType = point.type || point.event_type || point.eventType;
-                    
-                    switch(filter) {
-                        case 'throws':
-                            return eventType === 'throw' || eventType === 'assist';
-                        case 'goals':
-                            return eventType === 'goal' || eventType === 'assist';
-                        case 'turnovers':
-                            return eventType === 'throwaway' || eventType === 'drop' || eventType === 'stall';
-                        case 'scored_on':
-                            return eventType === 'scored_on';
-                        default:
-                            return false;
-                    }
-                });
-            }
-            
-            // Log how many points are being displayed
-            console.log(`Displaying ${filteredData.length} points for filter: ${filter}`);
-            
-            const pixelData = {
-                max: 5, // Adjust this value based on data density
-                data: filteredData.map(point => ({
-                    x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
-                    y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                    value: point.value || 1 // Default to 1 if no value is provided
-                }))
-            };
-            heatmapInstance.setData(pixelData);
+    function updateHeatmapDisplay(filter = 'all') {
+        let filteredData = heatmapData;
+        
+        // Log the first data point to help debug the structure
+        if (heatmapData && heatmapData.length > 0) {
+            console.log("Sample heatmap data point:", heatmapData[0]);
         }
+        
+        if (filter !== 'all') {
+            // More flexible filtering that checks multiple possible property names
+            filteredData = heatmapData.filter(point => {
+                // Check various possible property names for event type
+                const eventType = point.type || point.event_type || point.eventType;
+                
+                switch(filter) {
+                    case 'throws':
+                        // Check for any throw-related event types
+                        return ['throw', 'assist', 'pass', 'completion'].includes(eventType);
+                    case 'goals':
+                        return ['goal', 'assist', 'score'].includes(eventType);
+                    case 'turnovers':
+                        return ['throwaway', 'drop', 'stall', 'turnover'].includes(eventType);
+                    case 'scored_on':
+                        return ['scored_on', 'score_against'].includes(eventType);
+                    default:
+                        return false;
+                }
+            });
+        }
+        
+        // Log how many points are being displayed
+        console.log(`Displaying ${filteredData.length} points for filter: ${filter}`);
+        
+        const pixelData = {
+            max: 5, // Adjust this value based on data density
+            data: filteredData.map(point => ({
+                x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
+                y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
+                value: point.value || 1 // Default to 1 if no value is provided
+            }))
+        };
+        heatmapInstance.setData(pixelData);
+    }
+
 
 
         updateHeatmapDisplay(); // Initial display
@@ -714,6 +719,32 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    fetch("{{ url_for('stats_dashboard.api_dashboard_heatmap') }}")
+        .then(response => response.json())
+        .then(data => {
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            
+            // Debug the data structure
+            console.log("Heatmap data received:", data);
+            console.log("Data length:", data.length);
+            
+            // Count event types to understand what's available
+            const eventTypes = {};
+            data.forEach(point => {
+                const type = point.type || point.event_type || point.eventType;
+                if (type) {
+                    eventTypes[type] = (eventTypes[type] || 0) + 1;
+                }
+            });
+            console.log("Event types in data:", eventTypes);
+            
+            initializeHeatmap(heatmapContainer, data);
+        })
+        .catch(error => {
+            console.error("Error fetching heatmap data:", error);
+            if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load heatmap data.</p>';
+        });
 
     function drawFieldMarkings(container, fieldWidth, fieldHeight) {
         const svg = d3.select(container)
