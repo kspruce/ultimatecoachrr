@@ -1,11 +1,13 @@
 from flask import request, flash, redirect, url_for, render_template
 from sqlalchemy.exc import DBAPIError, InternalError
 import logging
-from app import db
+
+# Don't import db here - we'll get it from the app parameter
+# from app import db  <- Remove this line
 
 logger = logging.getLogger(__name__)
 
-def handle_db_errors(app):
+def handle_db_errors(app, db):
     """Register database error handlers for the Flask app."""
     
     @app.before_request

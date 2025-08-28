@@ -1,5 +1,5 @@
 # app/models/team_organization.py
-from app import db
+from app.models.base import db
 from datetime import datetime
 
 class TeamOrganization(db.Model):

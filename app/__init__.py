@@ -1,5 +1,4 @@
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from config import Config
@@ -9,13 +8,12 @@ from flask_wtf.csrf import CSRFError
 import json
 import markdown
 from flask_moment import Moment
-from app.discord_integration import init_discord_integration
 from flask import session
 from flask_login import current_user
-from app.utils.db_error_handlers import handle_db_errors
 
+# Import db from models.base instead of creating it here
+from app.models.base import db
 
-db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
@@ -126,10 +124,6 @@ def create_app(config_class=Config):
                 db.session.commit()
                 print(f"Added {len(DEFAULT_METRICS)} default fitness metrics")
    
-    
-    # Register database error handlers
-    handle_db_errors(app)
-    
     # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
@@ -205,15 +199,9 @@ def create_app(config_class=Config):
     from app.routes.admin_stats import admin_stats_bp
     app.register_blueprint(admin_stats_bp)
     
-    # Import models
-    from app.models import (
-       User, Player, Tournament, Game, Point, LineUp,
-       Event, Pull, Clip, ClipTag, ClipAnnotation,
-       SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-       FitnessMetric, FitnessRecord, 
-       LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these new models
-    )
-
+    # Register database error handlers - MOVED HERE AFTER ALL BLUEPRINTS
+    from app.utils.db_error_handlers import handle_db_errors
+    handle_db_errors(app, db)
     
     # Create upload directory in /tmp
     try:
@@ -241,5 +229,3 @@ def create_app(config_class=Config):
     init_discord_integration(app)
     
     return app
-
-from app.models import User, Player, TeamOrganization

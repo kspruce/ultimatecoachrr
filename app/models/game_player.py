@@ -1,4 +1,4 @@
-from app import db
+from app.models.base import db
 from datetime import datetime
 
 class GamePlayer(db.Model):
