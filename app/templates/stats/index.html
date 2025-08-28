@@ -661,20 +661,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function updateHeatmapDisplay(filter = 'all') {
             let filteredData = heatmapData;
-            if (filter !== 'all') {
-                filteredData = heatmapData.filter(point => point.type === filter);
+            
+            // Log the first data point to help debug the structure
+            if (heatmapData && heatmapData.length > 0) {
+                console.log("Sample heatmap data point:", heatmapData[0]);
             }
+            
+            if (filter !== 'all') {
+                // More flexible filtering that checks multiple possible property names
+                filteredData = heatmapData.filter(point => {
+                    // Check various possible property names for event type
+                    const eventType = point.type || point.event_type || point.eventType;
+                    
+                    switch(filter) {
+                        case 'throws':
+                            return eventType === 'throw' || eventType === 'assist';
+                        case 'goals':
+                            return eventType === 'goal' || eventType === 'assist';
+                        case 'turnovers':
+                            return eventType === 'throwaway' || eventType === 'drop' || eventType === 'stall';
+                        case 'scored_on':
+                            return eventType === 'scored_on';
+                        default:
+                            return false;
+                    }
+                });
+            }
+            
+            // Log how many points are being displayed
+            console.log(`Displaying ${filteredData.length} points for filter: ${filter}`);
             
             const pixelData = {
                 max: 5, // Adjust this value based on data density
                 data: filteredData.map(point => ({
                     x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
                     y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                    value: point.value
+                    value: point.value || 1 // Default to 1 if no value is provided
                 }))
             };
             heatmapInstance.setData(pixelData);
         }
+
 
         updateHeatmapDisplay(); // Initial display
         drawFieldMarkings(container, fieldWidth, fieldHeight);
