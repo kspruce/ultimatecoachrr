@@ -594,11 +594,6 @@
 <script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 
 <script>
-// Add this at the beginning of your script
-window.addEventListener('error', function(e) {
-    console.error('Global error caught:', e.error);
-});
-
 document.addEventListener('DOMContentLoaded', function() {
     // Test jQuery and DataTables
     if (typeof jQuery === 'undefined') {
