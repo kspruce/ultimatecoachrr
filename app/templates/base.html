@@ -25,14 +25,14 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.index') }}"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Return to homepage"><i class="bi bi-house-fill"></i> Home</a>
                     </li>
                     <!--  Manage club dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="clubDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Manage club, team, games and tournaments">
                             <i class="bi bi-people-fill"></i> Manage Club
                         </a>
@@ -51,7 +51,7 @@
                     <!-- New Calendar Nav Item -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('calendar.index') }}"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="View team calendar and schedule">
                             <i class="bi bi-calendar3"></i> Calendar
                         </a>
@@ -73,7 +73,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="fitnessDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Track and analyze fitness metrics">
                             <i class="bi bi-heart-pulse"></i> Fitness
                         </a>
@@ -95,7 +95,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="strategyDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Team strategy and plays">
                             <i class="bi bi-lightbulb"></i> Strategy
                         </a>
@@ -103,7 +103,7 @@
                             <!-- Playbook Section -->
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('playbook.index') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="View team playbook">
                                     <i class="bi bi-book"></i> Playbook
                                 </a>
@@ -111,14 +111,14 @@
                             {% if current_user.is_admin %}
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('playbook.add_play') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="Add new play">
                                     <i class="bi bi-plus-circle"></i> New Play
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('playbook.add_formation') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="Add new formation">
                                     <i class="bi bi-diagram-3"></i> New Formation
                                 </a>
@@ -129,7 +129,7 @@
                             <li><hr class="dropdown-divider"></li>  
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('scouting.index') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="View scouting reports">
                                     <i class="bi bi-binoculars"></i> Scouting
                                 </a>
@@ -139,7 +139,7 @@
                     <!--  Theory dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Ultimate Theory and Learning Resources">
                             <i class="bi bi-mortarboard"></i> Theory
                         </a>
@@ -196,21 +196,21 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="statsDropdown" 
                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="View comprehensive statistics and analytics">
                             <i class="bi bi-graph-up"></i> Stats
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="statsDropdown">
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="Overview of team and player statistics">
                                     <i class="bi bi-speedometer2"></i> Stats Dashboard
                                 </a>
                             </li>
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="Detailed team performance metrics">
                                     <i class="bi bi-people"></i> Team Statistics
                                 </a>
@@ -218,7 +218,7 @@
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item" href="{{ url_for('game.index') }}"
-                                   data-bs-tooltip="true" data-bs-placement="right" 
+                                   data-bs-toggle="tooltip" data-bs-placement="right" 
                                    title="View game statistics">
                                     <i class="bi bi-controller"></i> Game Statistics
                                 </a>
@@ -228,13 +228,13 @@
                     <!--  Clips-->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('clip.index') }}"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Manage video clips"><i class="bi bi-camera-video"></i> Clips</a>
                     </li>
                     <!--  Help section -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('main.how_to_use') }}"
-                           data-bs-tooltip="true" data-bs-placement="bottom" 
+                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
                            title="Learn how to use Ultimate Coach">
                             <i class="bi bi-question-circle"></i> Help
                         </a>
@@ -343,7 +343,7 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-tooltip="true"]'))
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
