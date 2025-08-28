@@ -85,7 +85,7 @@ def data_management():
             
         return render_template('admin/error.html', 
                              error_message="Database error occurred. The transaction has been rolled back.",
-                             back_url=url_for('admin.index'),
+                             back_url=url_for('main.index'),
                              debug_info=debug_info)
 
 
