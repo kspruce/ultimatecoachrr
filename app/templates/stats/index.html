@@ -555,56 +555,69 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if DataTable is already initialized
         if (!$.fn.DataTable.isDataTable('#player-stats-table')) {
-            const playerStatsTable = $('#player-stats-table').DataTable({
-                processing: true,
-                ajax: {
-                    url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
-                    dataSrc: 'data',
-                    error: function(xhr, error, thrown) {
-                        console.error("DataTables AJAX error:", error, thrown);
-                        // Display a user-friendly error in the table
+            // First, check if the API returns data
+            $.ajax({
+                url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
+                dataType: 'json',
+                success: function(response) {
+                    console.log("API response:", response);
+                    console.log("Data rows:", response.data ? response.data.length : 0);
+                    
+                    if (response.data && response.data.length > 0) {
+                        const playerStatsTable = $('#player-stats-table').DataTable({
+                            processing: true,
+                            data: response.data, // Use the data we already fetched
+                            columns: [
+                                { "data": 0, "className": "dt-body-left" },
+                                { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
+                                { "data": 5, "className": "offensive-stat" },
+                                { "data": 6, "className": "offensive-stat" },
+                                { "data": 7, "className": "offensive-stat" },
+                                { "data": 8, "className": "offensive-stat" },
+                                { "data": 9, "className": "defensive-stat" },
+                                { "data": 10, "className": "offensive-stat" },
+                                { "data": 11, "className": "offensive-stat" },
+                                { "data": 12, "className": "offensive-stat" },
+                                { "data": 13 }, { "data": 14 }
+                            ],
+                            pageLength: 25,
+                            order: [[14, "desc"]],
+                            scrollX: true,
+                            scrollY: "500px",
+                            scrollCollapse: true,
+                            paging: true,
+                            fixedColumns: {
+                                left: 1
+                            },
+                            language: {
+                                search: "Search players:",
+                                lengthMenu: "Show _MENU_ players",
+                                emptyTable: "No player statistics available for this team.",
+                                processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+                            },
+                            drawCallback: function (settings) {
+                                var api = this.api();
+                                $(api.table().footer()).show();
+                            }
+                        });
+                    } else {
                         $('#player-stats-table tbody').html(
-                            '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">Error loading data from server. Please try again later.</td></tr>'
+                            '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">No player statistics available. Please calculate statistics from the admin panel.</td></tr>'
                         );
                     }
                 },
-                columns: [
-                    { "data": 0, "className": "dt-body-left" },
-                    { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
-                    { "data": 5, "className": "offensive-stat" },
-                    { "data": 6, "className": "offensive-stat" },
-                    { "data": 7, "className": "offensive-stat" },
-                    { "data": 8, "className": "offensive-stat" },
-                    { "data": 9, "className": "defensive-stat" },
-                    { "data": 10, "className": "offensive-stat" },
-                    { "data": 11, "className": "offensive-stat" },
-                    { "data": 12, "className": "offensive-stat" },
-                    { "data": 13 }, { "data": 14 }
-                ],
-                pageLength: 25,
-                order: [[14, "desc"]],
-                scrollX: true,
-                scrollY: "500px",
-                scrollCollapse: true,
-                paging: true,
-                fixedColumns: {
-                    left: 1
-                },
-                language: {
-                    search: "Search players:",
-                    lengthMenu: "Show _MENU_ players",
-                    emptyTable: "No player statistics available for this team.",
-                    processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
-                },
-                drawCallback: function (settings) {
-                    var api = this.api();
-                    $(api.table().footer()).show();
+                error: function(xhr, error, thrown) {
+                    console.error("DataTables AJAX error:", error, thrown);
+                    $('#player-stats-table tbody').html(
+                        '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">Error loading data from server. Please try again later.</td></tr>'
+                    );
                 }
             });
-        } // <-- This closing brace was missing
+        }
     } else {
         console.error("Player stats table element not found!");
     }
+
 
 
 
@@ -669,6 +682,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Visualization Helper Functions ---
 
     function initializeHeatmap(container, heatmapData) {
+        // Set willReadFrequently attribute on canvas to improve performance
+        const existingCanvas = container.querySelector('canvas');
+        if (existingCanvas) {
+            existingCanvas.setAttribute('willReadFrequently', 'true');
+        }
+    
         const heatmapInstance = h337.create({
             container: container,
             radius: 18,
@@ -677,6 +696,12 @@ document.addEventListener('DOMContentLoaded', function() {
             blur: 0.6,
             gradient: { '.2': '#99ccff', '.5': '#3399ff', '.8': '#0066cc', '.95': '#003366' }
         });
+    
+        // After heatmap is created, set attribute on the new canvas
+        const canvas = container.querySelector('canvas');
+        if (canvas) {
+            canvas.setAttribute('willReadFrequently', 'true');
+        }
 
         const fieldWidth = container.offsetWidth;
         const fieldHeight = container.offsetHeight;
@@ -699,14 +724,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 switch(filter) {
                     case 'throws':
-                        // Check for any throw-related event types
-                        return ['throw', 'assist', 'pass', 'completion'].includes(eventType);
+                        // Updated to match your actual data
+                        return eventType === 'throw_start';
                     case 'goals':
-                        return ['goal', 'assist', 'score'].includes(eventType);
+                        return eventType === 'goal';
                     case 'turnovers':
-                        return ['throwaway', 'drop', 'stall', 'turnover'].includes(eventType);
+                        return eventType === 'throwaway';
                     case 'scored_on':
-                        return ['scored_on', 'score_against'].includes(eventType);
+                        return eventType === 'scored_on';
                     default:
                         return false;
                 }
