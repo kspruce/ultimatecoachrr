@@ -42,6 +42,7 @@ class PlayerStats(db.Model):
     throwaways = db.Column(db.Integer, default=0)
     drops = db.Column(db.Integer, default=0)
     stalls = db.Column(db.Integer, default=0)
+    break_throws = db.Column(db.Integer, default=0)
     
     # Calculated Stats
     completion_rate = db.Column(db.Float, default=0.0)
