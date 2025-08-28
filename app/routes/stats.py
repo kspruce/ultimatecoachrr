@@ -3796,40 +3796,52 @@ def debug_radar_stats(player_id):
 @login_required
 def api_player_stats_table():
     """API endpoint for the main player stats table on the index page."""
-    team_org_id = get_current_team_id()
+    try:
+        team_org_id = get_current_team_id()
 
-    # This fetches the "all-time" stats for active players
-    stats_records = PlayerStats.query.join(Player).filter(
-        Player.team_organization_id == team_org_id,
-        Player.active == True,
-        PlayerStats.game_id.is_(None),
-        PlayerStats.tournament_id.is_(None),
-        PlayerStats.season.is_(None)
-    ).all()
-    
-    data = []
-    for record in stats_records:
-        player = record.player
-        stats = record.to_dict()
-        data.append([
-            f'<a href="{url_for("stats_dashboard.player_stats", player_id=player.id)}">{player.name} <small class="text-muted">#{player.jersey_number}</small></a>',
-            stats.get('games_played', 0),
-            stats.get('points_played', 0),
-            stats.get('o_line_points_played', 0),
-            stats.get('d_line_points_played', 0),
-            stats.get('goals', 0),
-            stats.get('assists', 0),
-            stats.get('hockey_assists', 0),
-            stats.get('break_throws', 0),
-            stats.get('blocks', 0),
-            f"{stats.get('completions', 0)} <small class='text-muted'>({stats.get('completion_rate', 0):.1f}%)</small>",
-            stats.get('throwaways', 0),
-            stats.get('drops', 0),
-            stats.get('plus_minus', 0),
-            f"{stats.get('per', 0):.1f}"
-        ])
+        # If there's no team ID, we can't fetch stats.
+        if not team_org_id:
+            print("API Error: No team_org_id found for current user.")
+            return jsonify({'data': [], 'error': 'User not associated with a team.'}), 400
+
+        # This fetches the "all-time" stats for active players
+        stats_records = PlayerStats.query.join(Player).filter(
+            Player.team_organization_id == team_org_id,
+            Player.active == True,
+            PlayerStats.game_id.is_(None),
+            PlayerStats.tournament_id.is_(None),
+            PlayerStats.season.is_(None)
+        ).all()
         
-    return jsonify({'data': data})
+        data = []
+        for record in stats_records:
+            player = record.player
+            stats = record.to_dict()
+            data.append([
+                f'<a href="{url_for("stats_dashboard.player_stats", player_id=player.id)}">{player.name} <small class="text-muted">#{player.jersey_number}</small></a>',
+                stats.get('games_played', 0),
+                stats.get('points_played', 0),
+                stats.get('o_line_points_played', 0),
+                stats.get('d_line_points_played', 0),
+                stats.get('goals', 0),
+                stats.get('assists', 0),
+                stats.get('hockey_assists', 0),
+                stats.get('break_throws', 0),
+                stats.get('blocks', 0),
+                f"{stats.get('completions', 0)} <small class='text-muted'>({stats.get('completion_rate', 0):.1f}%)</small>",
+                stats.get('throwaways', 0),
+                stats.get('drops', 0),
+                stats.get('plus_minus', 0),
+                f"{stats.get('per', 0):.1f}"
+            ])
+        
+        return jsonify({'data': data})
+
+    except Exception as e:
+        print(f"Error in api_player_stats_table: {str(e)}")
+        # Return empty data array with an error message to prevent JS errors
+        return jsonify({'data': [], 'error': 'An internal error occurred.'}), 500
+
 
 @bp.route('/api/dashboard-heatmap')
 @login_required
