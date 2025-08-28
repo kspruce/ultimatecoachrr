@@ -1,7 +1,5 @@
-
 # app/models/user.py
-from app.models.base import db
-from app import login
+from app.models.base import db, login
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime

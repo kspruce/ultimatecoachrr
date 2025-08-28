@@ -1,30 +1,23 @@
 from flask import Flask, jsonify
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from config import Config
-from flask_wtf.csrf import CSRFProtect
 import os
 from flask_wtf.csrf import CSRFError
 import json
 import markdown
-from flask_moment import Moment
 from flask import session
 from flask_login import current_user
 
-# Import db from models.base instead of creating it here
-from app.models.base import db
+# Import extensions from models.base
+from app.models.base import db, migrate, login, csrf, moment
 
-migrate = Migrate()
-login = LoginManager()
-login.login_view = 'auth.login'
-login.login_message = 'Please log in to access this page.'
-csrf = CSRFProtect()
-moment = Moment()
-
-
-def create_app(config_class=Config):
+def create_app(config_class=None):
     app = Flask(__name__)
-    app.config.from_object(config_class)
+    
+    # Configure the app
+    if config_class:
+        app.config.from_object(config_class)
+    else:
+        from config import Config
+        app.config.from_object(Config)
     
     # Initialize extensions
     db.init_app(app)
@@ -226,6 +219,7 @@ def create_app(config_class=Config):
         from app.context_processors import team_info_processor
         app.context_processor(team_info_processor)
     
+    from app.discord_integration import init_discord_integration
     init_discord_integration(app)
     
     return app
