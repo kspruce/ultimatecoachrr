@@ -568,53 +568,73 @@ document.addEventListener('DOMContentLoaded', function() {
                         );
                     }
                 },
-            columns: [
-                { "data": 0, "className": "dt-body-left" },
-                { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
-                { "data": 5, "className": "offensive-stat" },
-                { "data": 6, "className": "offensive-stat" },
-                { "data": 7, "className": "offensive-stat" },
-                { "data": 8, "className": "offensive-stat" },
-                { "data": 9, "className": "defensive-stat" },
-                { "data": 10, "className": "offensive-stat" },
-                { "data": 11, "className": "offensive-stat" },
-                { "data": 12, "className": "offensive-stat" },
-                { "data": 13 }, { "data": 14 }
-            ],
-            pageLength: 25,
-            order: [[14, "desc"]],
-            scrollX: true,
-            scrollY: "500px",
-            scrollCollapse: true,
-            paging: true,
-            fixedColumns: {
-                left: 1
-            },
-            language: {
-                search: "Search players:",
-                lengthMenu: "Show _MENU_ players",
-                emptyTable: "No player statistics available for this team.",
-                processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
-            },
-            drawCallback: function (settings) {
-                var api = this.api();
-                $(api.table().footer()).show();
-            }
-        });
+                columns: [
+                    { "data": 0, "className": "dt-body-left" },
+                    { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
+                    { "data": 5, "className": "offensive-stat" },
+                    { "data": 6, "className": "offensive-stat" },
+                    { "data": 7, "className": "offensive-stat" },
+                    { "data": 8, "className": "offensive-stat" },
+                    { "data": 9, "className": "defensive-stat" },
+                    { "data": 10, "className": "offensive-stat" },
+                    { "data": 11, "className": "offensive-stat" },
+                    { "data": 12, "className": "offensive-stat" },
+                    { "data": 13 }, { "data": 14 }
+                ],
+                pageLength: 25,
+                order: [[14, "desc"]],
+                scrollX: true,
+                scrollY: "500px",
+                scrollCollapse: true,
+                paging: true,
+                fixedColumns: {
+                    left: 1
+                },
+                language: {
+                    search: "Search players:",
+                    lengthMenu: "Show _MENU_ players",
+                    emptyTable: "No player statistics available for this team.",
+                    processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+                },
+                drawCallback: function (settings) {
+                    var api = this.api();
+                    $(api.table().footer()).show();
+                }
+            });
+        } // <-- This closing brace was missing
     } else {
         console.error("Player stats table element not found!");
     }
+
+
 
     // --- 2. Lazy Load Heatmap Data ---
     if (document.getElementById('field-heatmap')) {
         const heatmapContainer = document.getElementById('field-heatmap');
         const loadingOverlay = heatmapContainer.querySelector('.loading-overlay');
         if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
-
+    
         fetch("{{ url_for('stats_dashboard.api_dashboard_heatmap') }}")
             .then(response => response.json())
             .then(data => {
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
+                
+                // Debug the data structure
+                console.log("Heatmap data received:", data);
+                console.log("Data length:", data.length);
+                
+                // Count event types to understand what's available
+                const eventTypes = {};
+                data.forEach(point => {
+                    const type = point.type || point.event_type || point.eventType;
+                    if (type) {
+                        eventTypes[type] = (eventTypes[type] || 0) + 1;
+                    } else {
+                        console.log("Point without event type:", point);
+                    }
+                });
+                console.log("Event types in data:", eventTypes);
+                
                 initializeHeatmap(heatmapContainer, data);
             })
             .catch(error => {
@@ -622,6 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load heatmap data.</p>';
             });
     }
+
 
     // --- 3. Lazy Load Player Connections Data ---
     if (document.getElementById('player-connections')) {
