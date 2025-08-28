@@ -542,6 +542,11 @@
 <script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 
 <script>
+// Add this at the beginning of your script
+window.addEventListener('error', function(e) {
+    console.error('Global error caught:', e.error);
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -601,6 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         });
                     } else {
+                        console.error("No data returned from API or data is empty");
                         $('#player-stats-table tbody').html(
                             '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">No player statistics available. Please calculate statistics from the admin panel.</td></tr>'
                         );
@@ -608,17 +614,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 error: function(xhr, error, thrown) {
                     console.error("DataTables AJAX error:", error, thrown);
+                    console.error("Status:", xhr.status);
+                    console.error("Response text:", xhr.responseText);
                     $('#player-stats-table tbody').html(
                         '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">Error loading data from server. Please try again later.</td></tr>'
                     );
                 }
             });
+        } else {
+            console.log("DataTable already initialized, skipping initialization");
         }
     } else {
         console.error("Player stats table element not found!");
     }
-
-
 
 
     // --- 2. Lazy Load Heatmap Data ---
