@@ -4,7 +4,7 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 # Import stats functions from the new module
 try:
-    from app.utils.stats_utils import (
+    from app.utils.stat_utils import (
         calculate_throw_distance,
         is_break_throw,
         determine_possession,
@@ -17,6 +17,6 @@ try:
         generate_player_connections
     )
 except ImportError:
-    # Handle the case where stats_utils might not be available yet
+    # Handle the case where stat_utils might not be available yet
     import logging
-    logging.warning("Could not import stats_utils functions")
+    logging.warning("Could not import stat_utils functions")
