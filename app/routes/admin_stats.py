@@ -114,12 +114,8 @@ def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
     """Store or update team statistics in the TeamStats table."""
     team_org_id = get_current_team_id()
     
-    from sqlalchemy import inspect
-    inspector = inspect(TeamStats)
-    valid_columns = {c.key for c in inspector.columns}
-    filtered_stats = {k: v for k, v in team_stats.items() if k in valid_columns}
-
     try:
+        # Find if a record already exists for this scope
         existing = TeamStats.query.filter_by(
             team_organization_id=team_org_id,
             game_id=game_id,
@@ -127,21 +123,32 @@ def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
             season=season
         ).first()
 
-        if existing:
-            # Update existing record
-            for key, value in filtered_stats.items():
-                setattr(existing, key, value)
-        else:
-            # Create new record
-            team_stats_obj = TeamStats(
+        if not existing:
+            # If it doesn't exist, create a new one
+            existing = TeamStats(
                 team_organization_id=team_org_id,
                 game_id=game_id,
                 tournament_id=tournament_id,
-                season=season,
-                **filtered_stats
+                season=season
             )
-            db.session.add(team_stats_obj)
-        
+            db.session.add(existing)
+
+        # Explicitly map each stat from the dictionary to the model attribute
+        # Use .get() with a default value to prevent errors if a key is missing
+        existing.games_played = team_stats.get('games_played', 0)
+        existing.wins = team_stats.get('wins', 0)
+        existing.losses = team_stats.get('losses', 0)
+        existing.ties = team_stats.get('ties', 0)
+        existing.total_points = team_stats.get('total_points', 0)
+        existing.o_line_points = team_stats.get('o_line_points', 0)
+        existing.o_line_conversions = team_stats.get('o_line_conversions', 0)
+        existing.d_line_points = team_stats.get('d_line_points', 0)
+        existing.d_line_conversions = team_stats.get('d_line_conversions', 0)
+        existing.win_percentage = team_stats.get('win_percentage', 0.0)
+        existing.o_line_conversion_rate = team_stats.get('o_line_conversion_rate', 0.0)
+        existing.d_line_conversion_rate = team_stats.get('d_line_conversion_rate', 0.0)
+        existing.is_dirty = False # Mark as clean after calculation
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -149,26 +156,25 @@ def store_team_stats(team_stats, game_id=None, tournament_id=None, season=None):
         print(f"Error in store_team_stats: {e}")
 
 
+
+
 def store_player_stats(player_stats_dict, team_avgs, players, game_id=None, tournament_id=None, season=None):
     """Store or update player statistics in the PlayerStats table."""
     team_org_id = get_current_team_id()
-    
-    from sqlalchemy import inspect
-    inspector = inspect(PlayerStats)
-    valid_columns = {c.key for c in inspector.columns}
 
     try:
         for player in players:
             if player.id in player_stats_dict:
                 stats = player_stats_dict[player.id]
                 
-                if stats.get('points_played', 0) > 0:
-                    stats['per'] = calculate_per_from_stats(stats, team_avgs)
-                else:
-                    stats['per'] = 0
+                # Skip players who didn't play
+                if stats.get('points_played', 0) == 0:
+                    continue
+
+                # Calculate PER before saving
+                stats['per'] = calculate_per_from_stats(stats, team_avgs)
                 
-                filtered_stats = {k: v for k, v in stats.items() if k in valid_columns}
-                
+                # Find if a record already exists for this scope
                 existing = PlayerStats.query.filter_by(
                     player_id=player.id,
                     game_id=game_id,
@@ -176,23 +182,42 @@ def store_player_stats(player_stats_dict, team_avgs, players, game_id=None, tour
                     season=season
                 ).first()
 
-                if existing:
-                    for key, value in filtered_stats.items():
-                        setattr(existing, key, value)
-                else:
-                    player_stats_obj = PlayerStats(
+                if not existing:
+                    # If it doesn't exist, create a new one
+                    existing = PlayerStats(
                         player_id=player.id,
                         team_organization_id=team_org_id,
                         game_id=game_id,
                         tournament_id=tournament_id,
-                        season=season,
-                        **filtered_stats
+                        season=season
                     )
-                    db.session.add(player_stats_obj)
-        
+                    db.session.add(existing)
+
+                # Explicitly map each stat from the dictionary to the model attribute
+                existing.games_played = stats.get('games_played', 0)
+                existing.points_played = stats.get('points_played', 0)
+                existing.o_line_points_played = stats.get('o_line_points_played', 0)
+                existing.d_line_points_played = stats.get('d_line_points_played', 0)
+                existing.goals = stats.get('goals', 0)
+                existing.assists = stats.get('assists', 0)
+                existing.hockey_assists = stats.get('hockey_assists', 0)
+                existing.blocks = stats.get('blocks', 0)
+                existing.throws = stats.get('throws', 0)
+                existing.completions = stats.get('completions', 0)
+                existing.throwaways = stats.get('throwaways', 0)
+                existing.drops = stats.get('drops', 0)
+                existing.stalls = stats.get('stalls', 0)
+                existing.completion_rate = stats.get('completion_rate', 0.0)
+                existing.catch_rate = stats.get('catch_rate', 0.0)
+                existing.plus_minus = stats.get('plus_minus', 0.0)
+                existing.per = stats.get('per', 0.0)
+                existing.is_dirty = False # Mark as clean
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         flash(f"A database error occurred while saving player stats: {e}", "danger")
         print(f"Error in store_player_stats: {e}")
+
+
 
