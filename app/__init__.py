@@ -192,6 +192,9 @@ def create_app(config_class=Config):
     
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
+    
+    from app.error_handlers import register_error_handlers
+    register_error_handlers(app)
 
     
     # Import models
