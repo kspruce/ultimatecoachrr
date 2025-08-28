@@ -953,7 +953,11 @@ def index():
         team_summary = {}
         flash("No overall team stats found. Please run the stats calculator.", "info")
     else:
-        team_summary = team_summary_record.to_dict()
+        # Check if team_summary_record is already a dict or has to_dict method
+        if isinstance(team_summary_record, dict):
+            team_summary = team_summary_record
+        else:
+            team_summary = team_summary_record.to_dict()
 
     # 2. Fetch all pre-calculated "all-time" player stats (fast)
     player_stats_records = PlayerStats.query.join(Player).filter(
