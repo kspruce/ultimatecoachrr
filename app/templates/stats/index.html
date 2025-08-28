@@ -560,18 +560,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if DataTable is already initialized
         if (!$.fn.DataTable.isDataTable('#player-stats-table')) {
-            // First, check if the API returns data
+            console.log("DataTable not initialized yet, proceeding with initialization");
+            
+            // First, make a direct AJAX call to check the API response
             $.ajax({
                 url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
-                dataType: 'json',
+                method: "GET",
+                dataType: "json",
                 success: function(response) {
-                    console.log("API response:", response);
-                    console.log("Data rows:", response.data ? response.data.length : 0);
+                    console.log("API response received:", response);
                     
                     if (response.data && response.data.length > 0) {
+                        console.log(`Initializing DataTable with ${response.data.length} rows`);
+                        
                         const playerStatsTable = $('#player-stats-table').DataTable({
-                            processing: true,
-                            data: response.data, // Use the data we already fetched
+                            data: response.data,  // Use the data we already fetched
                             columns: [
                                 { "data": 0, "className": "dt-body-left" },
                                 { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
@@ -603,14 +606,31 @@ document.addEventListener('DOMContentLoaded', function() {
                             drawCallback: function (settings) {
                                 var api = this.api();
                                 $(api.table().footer()).show();
+                                console.log("DataTable draw complete");
                             }
                         });
                     } else {
-                        console.error("No data returned from API or data is empty");
+                        console.error("API returned empty data or error:", response);
                         $('#player-stats-table tbody').html(
                             '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">No player statistics available. Please calculate statistics from the admin panel.</td></tr>'
                         );
                     }
+                    
+                    // Add the setTimeout here, inside the success callback
+                    setTimeout(function() {
+                        const table = $('#player-stats-table');
+                        if (table.length > 0) {
+                            console.log("Table element exists:", table[0]);
+                            console.log("Table visibility:", table.is(":visible"));
+                            console.log("Table dimensions:", {
+                                width: table.width(),
+                                height: table.height(),
+                                offsetWidth: table[0].offsetWidth,
+                                offsetHeight: table[0].offsetHeight
+                            });
+                            console.log("Table parent visibility:", table.parent().is(":visible"));
+                        }
+                    }, 2000);
                 },
                 error: function(xhr, error, thrown) {
                     console.error("DataTables AJAX error:", error, thrown);
@@ -627,6 +647,8 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error("Player stats table element not found!");
     }
+
+
 
 
     // --- 2. Lazy Load Heatmap Data ---

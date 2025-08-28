@@ -3798,6 +3798,7 @@ def api_player_stats_table():
     """API endpoint for the main player stats table on the index page."""
     try:
         team_org_id = get_current_team_id()
+        print(f"API: Fetching player stats for team_org_id: {team_org_id}")
 
         # If there's no team ID, we can't fetch stats.
         if not team_org_id:
@@ -3805,18 +3806,25 @@ def api_player_stats_table():
             return jsonify({'data': [], 'error': 'User not associated with a team.'}), 400
 
         # This fetches the "all-time" stats for active players
-        stats_records = PlayerStats.query.join(Player).filter(
+        query = PlayerStats.query.join(Player).filter(
             Player.team_organization_id == team_org_id,
             Player.active == True,
             PlayerStats.game_id.is_(None),
             PlayerStats.tournament_id.is_(None),
             PlayerStats.season.is_(None)
-        ).all()
+        )
+        
+        # Debug the SQL query
+        print(f"API: SQL Query: {query}")
+        
+        stats_records = query.all()
+        print(f"API: Found {len(stats_records)} player stat records")
         
         data = []
         for record in stats_records:
             player = record.player
             stats = record.to_dict()
+            print(f"API: Processing player {player.name} (ID: {player.id})")
             data.append([
                 f'<a href="{url_for("stats_dashboard.player_stats", player_id=player.id)}">{player.name} <small class="text-muted">#{player.jersey_number}</small></a>',
                 stats.get('games_played', 0),
@@ -3835,10 +3843,13 @@ def api_player_stats_table():
                 f"{stats.get('per', 0):.1f}"
             ])
         
+        print(f"API: Returning {len(data)} rows of player stats data")
         return jsonify({'data': data})
 
     except Exception as e:
+        import traceback
         print(f"Error in api_player_stats_table: {str(e)}")
+        print(traceback.format_exc())
         # Return empty data array with an error message to prevent JS errors
         return jsonify({'data': [], 'error': 'An internal error occurred.'}), 500
 
