@@ -594,100 +594,7 @@
 <script src="https://cdn.datatables.net/fixedcolumns/4.1.0/js/dataTables.fixedColumns.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Test jQuery and DataTables
-    if (typeof jQuery === 'undefined') {
-        console.error('jQuery is not loaded!');
-        document.body.innerHTML = '<div class="alert alert-danger">Error: jQuery is not loaded. Please check your internet connection and try again.</div>' + document.body.innerHTML;
-        return;
-    }
-    
-    // Test DataTables
-    if (typeof $.fn.DataTable === 'undefined') {
-        console.error('DataTables is not loaded!');
-        document.body.innerHTML = '<div class="alert alert-danger">Error: DataTables is not loaded. Please check your internet connection and try again.</div>' + document.body.innerHTML;
-        return;
-    }
-    
-    console.log('jQuery and DataTables are loaded correctly');
-
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Initialize Bootstrap dropdowns explicitly
-    var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
-    var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
-        return new bootstrap.Dropdown(dropdownToggleEl);
-    });
-
-    // Player Statistics Table Initialization
-    initializePlayerStatsTable();
-    
-    // --- 2. Lazy Load Heatmap Data ---
-    if (document.getElementById('field-heatmap')) {
-        const heatmapContainer = document.getElementById('field-heatmap');
-        const loadingOverlay = heatmapContainer.querySelector('.loading-overlay');
-        if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
-    
-        fetch("/stats/api/dashboard-heatmap")
-            .then(response => response.json())
-            .then(data => {
-                if (loadingOverlay) loadingOverlay.style.display = 'none';
-                
-                // Debug the data structure
-                console.log("Heatmap data received:", data);
-                console.log("Data length:", data.length);
-                
-                // Count event types to understand what's available
-                const eventTypes = {};
-                data.forEach(point => {
-                    const type = point.type || point.event_type || point.eventType;
-                    if (type) {
-                        eventTypes[type] = (eventTypes[type] || 0) + 1;
-                    } else {
-                        console.log("Point without event type:", point);
-                    }
-                });
-                console.log("Event types in data:", eventTypes);
-                
-                initializeHeatmap(heatmapContainer, data);
-            })
-            .catch(error => {
-                console.error("Error fetching heatmap data:", error);
-                if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load heatmap data.</p>';
-            });
-    }
-
-
-    // --- 3. Lazy Load Player Connections Data ---
-    if (document.getElementById('player-connections')) {
-        const connectionsContainer = document.getElementById('player-connections');
-        const loadingOverlay = connectionsContainer.querySelector('.loading-overlay');
-        if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
-
-        fetch("/stats/api/dashboard-connections")
-            .then(response => response.json())
-            .then(data => {
-                if (loadingOverlay) loadingOverlay.style.display = 'none';
-                if (data.nodes && data.nodes.length > 0) {
-                    createNetworkGraph(connectionsContainer, data);
-                } else {
-                    connectionsContainer.innerHTML = '<p class="text-center text-muted mt-5">No connection data available.</p>';
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching connection data:", error);
-                if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load connection data.</p>';
-            });
-    }
-});
-
-// --- Visualization Helper Functions ---
 function initializeHeatmap(container, heatmapData) {
-    // Set willReadFrequently attribute on canvas to improve performance
     const existingCanvas = container.querySelector('canvas');
     if (existingCanvas) {
         existingCanvas.setAttribute('willReadFrequently', 'true');
@@ -702,7 +609,6 @@ function initializeHeatmap(container, heatmapData) {
         gradient: { '.2': '#99ccff', '.5': '#3399ff', '.8': '#0066cc', '.95': '#003366' }
     });
 
-    // After heatmap is created, set attribute on the new canvas
     const canvas = container.querySelector('canvas');
     if (canvas) {
         canvas.setAttribute('willReadFrequently', 'true');
@@ -716,20 +622,16 @@ function initializeHeatmap(container, heatmapData) {
     function updateHeatmapDisplay(filter = 'all') {
         let filteredData = heatmapData;
         
-        // Log the first data point to help debug the structure
         if (heatmapData && heatmapData.length > 0) {
             console.log("Sample heatmap data point:", heatmapData[0]);
         }
         
         if (filter !== 'all') {
-            // More flexible filtering that checks multiple possible property names
             filteredData = heatmapData.filter(point => {
-                // Check various possible property names for event type
                 const eventType = point.type || point.event_type || point.eventType;
                 
                 switch(filter) {
                     case 'throws':
-                        // Updated to match your actual data
                         return eventType === 'throw_start';
                     case 'goals':
                         return eventType === 'goal';
@@ -743,21 +645,20 @@ function initializeHeatmap(container, heatmapData) {
             });
         }
         
-        // Log how many points are being displayed
         console.log(`Displaying ${filteredData.length} points for filter: ${filter}`);
         
         const pixelData = {
-            max: 5, // Adjust this value based on data density
+            max: 5,
             data: filteredData.map(point => ({
                 x: Math.round((point.x / fieldLengthMeters) * fieldWidth),
                 y: Math.round((point.y / fieldWidthMeters) * fieldHeight),
-                value: point.value || 1 // Default to 1 if no value is provided
+                value: point.value || 1
             }))
         };
         heatmapInstance.setData(pixelData);
     }
 
-    updateHeatmapDisplay(); // Initial display
+    updateHeatmapDisplay();
     drawFieldMarkings(container, fieldWidth, fieldHeight);
 
     document.querySelectorAll('[data-filter]').forEach(button => {
@@ -869,25 +770,21 @@ function createNetworkGraph(container, data) {
 }
 
 function initializePlayerStatsTable() {
-    // Check if DataTable is already initialized
     if ($.fn.DataTable.isDataTable('#player-stats-table')) {
-        // If already initialized, destroy it first
         $('#player-stats-table').DataTable().destroy();
     }
     
-    // Show loading state
     document.getElementById('stats-table-loading').style.display = 'block';
     document.getElementById('stats-table-container').style.display = 'none';
     document.getElementById('stats-table-error').style.display = 'none';
     
-    // Fetch the player statistics data
     fetch('/stats/api/player-stats-table', {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
-        credentials: 'same-origin' // Include cookies
+        credentials: 'same-origin'
     })
     .then(response => {
         if (!response.ok) {
@@ -903,11 +800,9 @@ function initializePlayerStatsTable() {
         console.log("API response received with status: success");
         console.log("Data rows:", data.data.length);
         
-        // Hide loading, show table
         document.getElementById('stats-table-loading').style.display = 'none';
         document.getElementById('stats-table-container').style.display = 'block';
         
-        // Initialize DataTable
         const table = $('#player-stats-table').DataTable({
             data: data.data,
             columns: [
@@ -927,7 +822,7 @@ function initializePlayerStatsTable() {
                 { title: '+/-' },
                 { title: 'PER' }
             ],
-            order: [[14, 'desc']], // Sort by PER column descending
+            order: [[14, 'desc']],
             pageLength: 25,
             scrollX: true,
             scrollY: '500px',
@@ -944,18 +839,15 @@ function initializePlayerStatsTable() {
             initComplete: function() {
                 console.log('DataTable initialization complete');
                 
-                // Add event listeners for the filter buttons
                 document.querySelectorAll('.stats-filter-btn').forEach(button => {
                     button.addEventListener('click', function() {
                         const view = this.dataset.view;
                         
-                        // Update active button
                         document.querySelectorAll('.stats-filter-btn').forEach(btn => {
                             btn.classList.remove('active');
                         });
                         this.classList.add('active');
                         
-                        // Apply column visibility based on filter
                         const offensiveColumns = document.querySelectorAll('.offensive-stat');
                         const defensiveColumns = document.querySelectorAll('.defensive-stat');
                         
@@ -970,13 +862,11 @@ function initializePlayerStatsTable() {
                             defensiveColumns.forEach(col => col.style.display = '');
                         }
                         
-                        // Adjust table layout
                         table.columns.adjust().draw();
                     });
                 });
             },
             drawCallback: function() {
-                // Make sure the footer is visible
                 const footer = document.querySelector('#player-stats-table tfoot');
                 if (footer) {
                     footer.style.display = 'table-footer-group';
@@ -984,7 +874,6 @@ function initializePlayerStatsTable() {
             }
         });
         
-        // Handle window resize to adjust table columns
         window.addEventListener('resize', function() {
             if (table) {
                 table.columns.adjust();
@@ -994,19 +883,16 @@ function initializePlayerStatsTable() {
     .catch(error => {
         console.error('Error loading player statistics:', error);
         
-        // Show error message
         document.getElementById('stats-table-loading').style.display = 'none';
         document.getElementById('stats-table-error').style.display = 'block';
         document.getElementById('error-message').textContent = error.message || 'Failed to load data.';
         
-        // If it's an authentication error, add a login link
         if (error.message && error.message.includes('401')) {
             document.getElementById('error-message').innerHTML = 'Authentication error. Please <a href="/login">log in</a> and try again.';
         }
     });
 }
 
-// Add this function to handle the stats filter buttons
 function handleStatsFilter(view) {
     const table = document.querySelector('#player-stats-table');
     if (!table) return;
@@ -1026,7 +912,6 @@ function handleStatsFilter(view) {
     }
 }
 
-// Debounce function for resize handler
 function debounce(func, wait) {
     let timeout;
     return function(...args) {
@@ -1036,17 +921,97 @@ function debounce(func, wait) {
     };
 }
 
-// Resize handler
-window.addEventListener('resize', debounce(function() {
-    // This is a simplified resize handler. A full implementation would
-    // clear and redraw the visualizations.
-    console.log("Window resized. Visualizations may need to be redrawn.");
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded - initializing components');
     
-    // Get the DataTable instance if it exists
-    const playerStatsTable = $('#player-stats-table').DataTable();
-    if (playerStatsTable) {
-        playerStatsTable.columns.adjust().draw();
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded!');
+        document.body.innerHTML = '<div class="alert alert-danger">Error: jQuery is not loaded. Please check your internet connection and try again.</div>' + document.body.innerHTML;
+        return;
     }
-}, 250));
+    
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTables is not loaded!');
+        document.body.innerHTML = '<div class="alert alert-danger">Error: DataTables is not loaded. Please check your internet connection and try again.</div>' + document.body.innerHTML;
+        return;
+    }
+    
+    console.log('jQuery and DataTables are loaded correctly');
+
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+    var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+        return new bootstrap.Dropdown(dropdownToggleEl);
+    });
+
+    initializePlayerStatsTable();
+    
+    if (document.getElementById('field-heatmap')) {
+        const heatmapContainer = document.getElementById('field-heatmap');
+        const loadingOverlay = heatmapContainer.querySelector('.loading-overlay');
+        if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+    
+        fetch("/stats/api/dashboard-heatmap")
+            .then(response => response.json())
+            .then(data => {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                
+                console.log("Heatmap data received:", data);
+                console.log("Data length:", data.length);
+                
+                const eventTypes = {};
+                data.forEach(point => {
+                    const type = point.type || point.event_type || point.eventType;
+                    if (type) {
+                        eventTypes[type] = (eventTypes[type] || 0) + 1;
+                    } else {
+                        console.log("Point without event type:", point);
+                    }
+                });
+                console.log("Event types in data:", eventTypes);
+                
+                initializeHeatmap(heatmapContainer, data);
+            })
+            .catch(error => {
+                console.error("Error fetching heatmap data:", error);
+                if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load heatmap data.</p>';
+            });
+    }
+
+    if (document.getElementById('player-connections')) {
+        const connectionsContainer = document.getElementById('player-connections');
+        const loadingOverlay = connectionsContainer.querySelector('.loading-overlay');
+        if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+
+        fetch("/stats/api/dashboard-connections")
+            .then(response => response.json())
+            .then(data => {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                if (data.nodes && data.nodes.length > 0) {
+                    createNetworkGraph(connectionsContainer, data);
+                } else {
+                    connectionsContainer.innerHTML = '<p class="text-center text-muted mt-5">No connection data available.</p>';
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching connection data:", error);
+                if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load connection data.</p>';
+            });
+    }
+    
+    window.addEventListener('resize', debounce(function() {
+        console.log("Window resized. Visualizations may need to be redrawn.");
+        
+        const playerStatsTable = $('#player-stats-table').DataTable();
+        if (playerStatsTable) {
+            playerStatsTable.columns.adjust().draw();
+        }
+    }, 250));
+});
 </script>
 {% endblock %}
+

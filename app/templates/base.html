@@ -348,12 +348,6 @@
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
 
-        // Initialize dropdowns
-        var dropdownTriggerList = [].slice.call(document.querySelectorAll('.dropdown-toggle'))
-        var dropdownList = dropdownTriggerList.map(function (dropdownTriggerEl) {
-            return new bootstrap.Dropdown(dropdownTriggerEl)
-        });
-
         // Initialize DataTables with proper sorting
         if (document.getElementById('player-stats-table')) {
             $('#player-stats-table').DataTable({
