@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Stats utility functions for the application.
-"""
 from app.models.player import Player
 from app.models.game import Game
 from app.models.point import Point, LineUp
@@ -297,42 +293,42 @@ def calculate_basic_stats(player, games=None):
 
 def calculate_unadjusted_per(stats):
     """Calculate unadjusted Player Efficiency Rating (PER)."""
-    points_played = stats.get('points_played', 0)
+    points_played = stats['points_played']
     if points_played == 0:
         return 0
     
     # Base formula components
-    goals_component = (0.5) * math.pow(stats.get('goals', 0), 0.75)
-    assists_component = (0.5) * math.pow(stats.get('assists', 0), 0.75)
-    drops_component = (0.75) * math.pow(stats.get('drops', 0), 0.75)
-    throwaways_component = (0.75) * math.pow(stats.get('throwaways', 0), 0.75)
-    blocks_component = (0.75) * math.pow(stats.get('blocks', 0), 0.75)
-    stalls_component = (0.75) * math.pow(stats.get('stalls', 0), 0.75)
-    callahans_component = (1.0) * math.pow(stats.get('callahans', 0), 0.75)
+    goals_component = (0.5) * math.pow(stats['goals'], 0.75)
+    assists_component = (0.5) * math.pow(stats['assists'], 0.75)
+    drops_component = (0.75) * math.pow(stats['drops'], 0.75)
+    throwaways_component = (0.75) * math.pow(stats['throwaways'], 0.75)
+    blocks_component = (0.75) * math.pow(stats['blocks'], 0.75)
+    stalls_component = (0.75) * math.pow(stats['stalls'], 0.75)
+    callahans_component = (1.0) * math.pow(stats['callahans'], 0.75)
     
     # Completion and catch percentage components
-    completion_component = 0.05 * (math.pow(stats.get('completions', 0), 0.75) * math.pow(stats.get('completion_rate', 0) / 100, 3.0))
-    catch_component = 0.05 * (math.pow(stats.get('catches', 0), 0.75) * math.pow(stats.get('catch_rate', 0) / 100, 3.0))
+    completion_component = 0.05 * (math.pow(stats['completions'], 0.75) * math.pow(stats['completion_rate'] / 100, 3.0))
+    catch_component = 0.05 * (math.pow(stats['catches'], 0.75) * math.pow(stats['catch_rate'] / 100, 3.0))
     
     # O-line and D-line plus-minus components
     o_line_component = 0
-    if stats.get('o_line_points', 0) > 0:
-        o_line_plus_minus_per_point = stats.get('o_line_plus_minus', 0) / stats.get('o_line_points', 1)
-        o_line_component = 0.1 * stats.get('o_line_points', 0) * (o_line_plus_minus_per_point - stats.get('team_avg_o_line_plus_minus_per_point', 0))
+    if stats['o_line_points'] > 0:
+        o_line_plus_minus_per_point = stats['o_line_plus_minus'] / stats['o_line_points']
+        o_line_component = 0.1 * stats['o_line_points'] * (o_line_plus_minus_per_point - stats['team_avg_o_line_plus_minus_per_point'])
     
     d_line_component = 0
-    if stats.get('d_line_points', 0) > 0:
-        d_line_plus_minus_per_point = stats.get('d_line_plus_minus', 0) / stats.get('d_line_points', 1)
-        d_line_component = 0.1 * stats.get('d_line_points', 0) * (d_line_plus_minus_per_point - stats.get('team_avg_d_line_plus_minus_per_point', 0))
+    if stats['d_line_points'] > 0:
+        d_line_plus_minus_per_point = stats['d_line_plus_minus'] / stats['d_line_points']
+        d_line_component = 0.1 * stats['d_line_points'] * (d_line_plus_minus_per_point - stats['team_avg_d_line_plus_minus_per_point'])
     
     # Pull components
     pull_component = 0
     if points_played > 0:
-        pull_component = (stats.get('pulls', 0) / points_played) * math.pow(stats.get('pulls', 0), 0.25)
+        pull_component = (stats['pulls'] / points_played) * math.pow(stats['pulls'], 0.25)
     
     inbounds_pull_component = 0
-    if stats.get('pulls', 0) > 0:
-        inbounds_pull_ratio = stats.get('inbounds_pulls', 0) / stats.get('pulls', 1)
+    if stats['pulls'] > 0:
+        inbounds_pull_ratio = stats['inbounds_pulls'] / stats['pulls']
         inbounds_pull_component = inbounds_pull_ratio * inbounds_pull_ratio * inbounds_pull_ratio
     
     # Combine all components
@@ -550,3 +546,86 @@ def generate_player_connections(events):
         'nodes': node_data,
         'links': links
     }
+
+def calculate_unadjusted_per(stats):
+    """Calculate unadjusted Player Efficiency Rating (PER)."""
+    points_played = stats['points_played']
+    if points_played == 0:
+        return 0
+    
+    # Base formula components
+    goals_component = (0.5) * math.pow(stats['goals'], 0.75)
+    assists_component = (0.5) * math.pow(stats['assists'], 0.75)
+    drops_component = (0.75) * math.pow(stats['drops'], 0.75)
+    throwaways_component = (0.75) * math.pow(stats['throwaways'], 0.75)
+    blocks_component = (0.75) * math.pow(stats['blocks'], 0.75)
+    stalls_component = (0.75) * math.pow(stats['stalls'], 0.75)
+    callahans_component = (1.0) * math.pow(stats['callahans'], 0.75)
+    
+    # Completion and catch percentage components
+    completion_component = 0.05 * (math.pow(stats['completions'], 0.75) * math.pow(stats['completion_rate'] / 100, 3.0))
+    catch_component = 0.05 * (math.pow(stats['catches'], 0.75) * math.pow(stats['catch_rate'] / 100, 3.0))
+    
+    # O-line and D-line plus-minus components
+    o_line_component = 0
+    if stats['o_line_points'] > 0:
+        o_line_plus_minus_per_point = stats['o_line_plus_minus'] / stats['o_line_points']
+        o_line_component = 0.1 * stats['o_line_points'] * (o_line_plus_minus_per_point - stats['team_avg_o_line_plus_minus_per_point'])
+    
+    d_line_component = 0
+    if stats['d_line_points'] > 0:
+        d_line_plus_minus_per_point = stats['d_line_plus_minus'] / stats['d_line_points']
+        d_line_component = 0.1 * stats['d_line_points'] * (d_line_plus_minus_per_point - stats['team_avg_d_line_plus_minus_per_point'])
+    
+    # Pull components
+    pull_component = 0
+    if points_played > 0:
+        pull_component = (stats['pulls'] / points_played) * math.pow(stats['pulls'], 0.25)
+    
+    inbounds_pull_component = 0
+    if stats['pulls'] > 0:
+        inbounds_pull_ratio = stats['inbounds_pulls'] / stats['pulls']
+        inbounds_pull_component = inbounds_pull_ratio * inbounds_pull_ratio * inbounds_pull_ratio
+    
+    # Combine all components
+    uper = (1 / points_played) * (
+        goals_component + assists_component - 
+        drops_component - throwaways_component + 
+        blocks_component - stalls_component + 
+        callahans_component + 
+        completion_component + catch_component +
+        o_line_component + d_line_component +
+        pull_component + inbounds_pull_component
+    )
+    
+    return max(0, uper)  # Ensure PER is not negative
+
+
+
+def generate_field_heatmap_data(events, field_width=37, field_length=100, grid_size=5):
+    """Generate heatmap data for events on the field."""
+    # Create grid
+    grid_width = field_width // grid_size + 1
+    grid_length = field_length // grid_size + 1
+    grid = [[0 for _ in range(grid_length)] for _ in range(grid_width)]
+    
+    # Count events in each grid cell
+    for event in events:
+        if event.field_position_x is not None and event.field_position_y is not None:
+            x = int(event.field_position_x / grid_size)
+            y = int(event.field_position_y / grid_size)
+            if 0 <= x < grid_length and 0 <= y < grid_width:
+                grid[y][x] += 1
+    
+    # Convert to format suitable for heatmap visualization
+    heatmap_data = []
+    for y in range(grid_width):
+        for x in range(grid_length):
+            if grid[y][x] > 0:
+                heatmap_data.append({
+                    'x': x * grid_size + grid_size/2,
+                    'y': y * grid_size + grid_size/2,
+                    'value': grid[y][x]
+                })
+    
+    return heatmap_data
