@@ -862,6 +862,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     function initializePlayerStatsTable() {
+        // Check if DataTable is already initialized
+        if ($.fn.DataTable.isDataTable('#player-stats-table')) {
+            // If already initialized, destroy it first
+            $('#player-stats-table').DataTable().destroy();
+        }
+        
         // Show loading state
         document.getElementById('stats-table-loading').style.display = 'block';
         document.getElementById('stats-table-container').style.display = 'none';
@@ -895,7 +901,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('stats-table-container').style.display = 'block';
             
             // Initialize DataTable
-            const table = new DataTable('#player-stats-table', {
+            const table = $('#player-stats-table').DataTable({
                 data: data.data,
                 columns: [
                     { title: 'Player' },
@@ -992,6 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
 
     // Add this function to handle the stats filter buttons
     function handleStatsFilter(view) {
