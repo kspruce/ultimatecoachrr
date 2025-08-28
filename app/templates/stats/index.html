@@ -572,7 +572,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     if (response.data && response.data.length > 0) {
                         console.log(`Initializing DataTable with ${response.data.length} rows`);
-                        
+                                                
                         const playerStatsTable = $('#player-stats-table').DataTable({
                             data: response.data,  // Use the data we already fetched
                             columns: [

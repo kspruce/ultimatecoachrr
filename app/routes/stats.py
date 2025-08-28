@@ -3816,9 +3816,6 @@ def api_player_stats_table():
             PlayerStats.season.is_(None)
         )
         
-        # Debug the SQL query
-        print(f"API: SQL Query: {query}")
-        
         stats_records = query.all()
         print(f"API: Found {len(stats_records)} player stat records")
         
@@ -3826,7 +3823,8 @@ def api_player_stats_table():
         for record in stats_records:
             player = record.player
             stats = record.to_dict()
-            print(f"API: Processing player {player.name} (ID: {player.id})")
+            
+            # Format the data as an array in the exact order expected by DataTables
             data.append([
                 f'<a href="{url_for("stats_dashboard.player_stats", player_id=player.id)}">{player.name} <small class="text-muted">#{player.jersey_number}</small></a>',
                 stats.get('games_played', 0),

@@ -66,7 +66,8 @@ class PlayerStats(db.Model):
     
     def to_dict(self):
         """Converts the PlayerStats object to a dictionary."""
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}    
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 class TeamStats(db.Model):
     id = db.Column(db.Integer, primary_key=True)
