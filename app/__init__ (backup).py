@@ -10,6 +10,9 @@ import json
 import markdown
 from flask_moment import Moment
 from app.discord_integration import init_discord_integration
+from flask import session
+from flask_login import current_user
+
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -90,6 +93,7 @@ def create_app(config_class=Config):
     import markdown
     from markupsafe import Markup
     
+   
     @app.template_filter('markdown')
     def markdown_filter(text):
         if text is None:
@@ -183,15 +187,23 @@ def create_app(config_class=Config):
     from app.discord.routes import discord_bp as discord_bp
     app.register_blueprint(discord_bp)
     
+    from app.routes.gameday import bp as gameday_bp
+    app.register_blueprint(gameday_bp)
+    
+    from app.routes.team_organization import bp as team_organization_bp
+    app.register_blueprint(team_organization_bp)
+
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,
        Event, Pull, Clip, ClipTag, ClipAnnotation,
        SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-       FitnessMetric, FitnessRecord  # Add these new models
+       FitnessMetric, FitnessRecord, 
+       LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these new models
     )
 
-
+    
     # Create upload directory in /tmp
     try:
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -211,9 +223,12 @@ def create_app(config_class=Config):
     # Create database tables
     with app.app_context():
         db.create_all()
-        ensure_default_metrics_exist(app)
+        #ensure_default_metrics_exist(app)
+        from app.context_processors import team_info_processor
+        app.context_processor(team_info_processor)
     
     init_discord_integration(app)
     
     return app
 
+from app.models import User, Player, TeamOrganization
