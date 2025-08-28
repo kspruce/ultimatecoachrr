@@ -594,11 +594,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<tr><td colspan="15" class="text-center py-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div class="mt-2">Loading player statistics...</div></td></tr>'
             );
             
-            // Make the AJAX call with explicit content type
+            // Make the AJAX call with authentication credentials included
             $.ajax({
-                url: "/stats/api/player-stats-table",
+                url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
                 method: "GET",
                 dataType: "json",
+                xhrFields: {
+                    withCredentials: true  // Include credentials (cookies) with the request
+                },
                 headers: {
                     "Accept": "application/json",
                     "X-Requested-With": "XMLHttpRequest"
@@ -657,13 +660,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             
                             console.log("DataTable initialization successful");
-                            
-                            // Add event listener for tab changes that might affect table visibility
-                            $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
-                                if (playerStatsTable) {
-                                    playerStatsTable.columns.adjust().draw();
-                                }
-                            });
                         } catch (e) {
                             console.error("Error initializing DataTable:", e);
                             $('#player-stats-table tbody').html(
@@ -681,9 +677,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error("DataTables AJAX error:", error, thrown);
                     console.error("Status:", xhr.status);
                     console.error("Response text:", xhr.responseText);
-                    $('#player-stats-table tbody').html(
-                        '<tr><td colspan="15" class="text-center text-danger">Error loading data from server. Please try again later.</td></tr>'
-                    );
+                    
+                    // Check if we got redirected to login page
+                    if (xhr.responseText && xhr.responseText.includes("Sign In")) {
+                        $('#player-stats-table tbody').html(
+                            '<tr><td colspan="15" class="text-center text-danger">Authentication error. Please <a href="/login">log in</a> and try again.</td></tr>'
+                        );
+                    } else {
+                        $('#player-stats-table tbody').html(
+                            '<tr><td colspan="15" class="text-center text-danger">Error loading data from server. Please try again later.</td></tr>'
+                        );
+                    }
                 }
             });
         } else {
@@ -692,6 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error("Player stats table element not found!");
     }
+
 
     // --- 2. Lazy Load Heatmap Data ---
     if (document.getElementById('field-heatmap')) {
