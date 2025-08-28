@@ -32,9 +32,7 @@ class UltimateCoachBot:
         self.guild_id = app.config.get('DISCORD_GUILD_ID')
         self.calendar_channel_id = app.config.get('DISCORD_CALENDAR_CHANNEL_ID')
         self.notification_channel_id = app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID')
-        # Initialize the sync_calendar task
-        self.sync_calendar = tasks.loop(hours=12)(self.sync_calendar_task)
-            
+        
         # Load team-specific Discord settings
         with app.app_context():
             try:
@@ -64,13 +62,12 @@ class UltimateCoachBot:
         self.bot.remove_command('help')
         
         # Register event handlers
-        async def on_ready(self):
-            print(f"Bot logged in as {self.user}")
-            # Check if sync_calendar attribute exists before trying to use it
-            if hasattr(self, 'sync_calendar'):
+        @self.bot.event
+        async def on_ready():
+            logger.info(f'Bot logged in as {self.bot.user}')
+            # Start background tasks
+            if not self.sync_task or not self.sync_task.is_running():
                 self.sync_calendar.start()
-            else:
-                print("Warning: sync_calendar attribute not found")
 
         
                 
@@ -743,7 +740,7 @@ class UltimateCoachBot:
             await ctx.send(embed=embed)
     
 @tasks.loop(hours=12)
-async def sync_calendar_task(self):
+async def sync_calendar(self):
     """Sync calendar events with Discord scheduled events"""
     logger.info("Starting calendar sync")
     

@@ -1,23 +1,31 @@
 from flask import Flask, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_login import LoginManager
+from config import Config
+from flask_wtf.csrf import CSRFProtect
 import os
 from flask_wtf.csrf import CSRFError
 import json
 import markdown
+from flask_moment import Moment
+from app.discord_integration import init_discord_integration
 from flask import session
 from flask_login import current_user
 
-# Import extensions from models.base
-from app.models.base import db, migrate, login, csrf, moment
 
-def create_app(config_class=None):
+db = SQLAlchemy()
+migrate = Migrate()
+login = LoginManager()
+login.login_view = 'auth.login'
+login.login_message = 'Please log in to access this page.'
+csrf = CSRFProtect()
+moment = Moment()
+
+
+def create_app(config_class=Config):
     app = Flask(__name__)
-    
-    # Configure the app
-    if config_class:
-        app.config.from_object(config_class)
-    else:
-        from config import Config
-        app.config.from_object(Config)
+    app.config.from_object(config_class)
     
     # Initialize extensions
     db.init_app(app)
@@ -185,16 +193,16 @@ def create_app(config_class=None):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
-    from app.routes.admin import admin_bp
-    app.register_blueprint(admin_bp)
     
-    # Register the admin stats blueprint
-    from app.routes.admin_stats import admin_stats_bp
-    app.register_blueprint(admin_stats_bp)
-    
-    # Register database error handlers - MOVED HERE AFTER ALL BLUEPRINTS
-    from app.utils.db_error_handlers import handle_db_errors
-    handle_db_errors(app, db)
+    # Import models
+    from app.models import (
+       User, Player, Tournament, Game, Point, LineUp,
+       Event, Pull, Clip, ClipTag, ClipAnnotation,
+       SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
+       FitnessMetric, FitnessRecord, 
+       LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats  # Add these new models
+    )
+
     
     # Create upload directory in /tmp
     try:
@@ -219,7 +227,8 @@ def create_app(config_class=None):
         from app.context_processors import team_info_processor
         app.context_processor(team_info_processor)
     
-    from app.discord_integration import init_discord_integration
     init_discord_integration(app)
     
     return app
+
+from app.models import User, Player, TeamOrganization

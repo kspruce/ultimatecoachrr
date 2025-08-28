@@ -1,4 +1,4 @@
-from app.models.base import db
+from app import db
 from datetime import datetime
 
 # Association table must be defined before the models that use it

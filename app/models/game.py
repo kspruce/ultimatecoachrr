@@ -1,4 +1,4 @@
-from app.models.base import db
+from app import db
 from datetime import datetime
 
 
@@ -25,9 +25,6 @@ class Game(db.Model):
                           cascade='all, delete-orphan', lazy='dynamic')
     assigned_players = db.relationship('GamePlayer', back_populates='game', cascade='all, delete-orphan', lazy='dynamic')
     gameday_stats = db.relationship('GameDayPlayerStats', back_populates='game', cascade='all, delete-orphan')
-    # In the Game model class
-    player_stats = db.relationship('PlayerStats', back_populates='game', cascade='all, delete-orphan')
-    team_stats = db.relationship('TeamStats', back_populates='game', cascade='all, delete-orphan', uselist=False) # One-to-one
 
     __table_args__ = (
         db.Index('idx_game_tournament', 'tournament_id'),
