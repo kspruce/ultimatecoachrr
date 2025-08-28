@@ -157,6 +157,9 @@ class EnhancedDataManager:
             except Exception as e:
                 logger.warning(f"Could not count records for {table_name}: {e}")
                 record_count = 0
+                # Important: Roll back the session if an error occurs
+                from app.models.base import db
+                db.session.rollback()
             
             model_info['models'][table_name] = {
                 'class_name': model.__name__,
@@ -166,6 +169,7 @@ class EnhancedDataManager:
             }
         
         return model_info
+
     
     def export_all_data(self, timestamp=True, custom_name=None, format='json', in_memory=False):
         """Export all data to in-memory ZIP file"""

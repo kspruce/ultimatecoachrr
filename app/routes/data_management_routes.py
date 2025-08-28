@@ -44,7 +44,7 @@ def data_management():
     """Enhanced data management interface."""
     try:
         # Ensure any previous failed transaction is rolled back
-        from app import db
+        from app.models.base import db
         db.session.rollback()
         
         manager = get_manager()  # Get the manager instance
@@ -70,7 +70,7 @@ def data_management():
         logger.error(f"Error in data management page: {e}", exc_info=True)
         
         # Roll back the session to clear any aborted transaction
-        from app import db
+        from app.models.base import db
         db.session.rollback()
         
         # Show an error message
