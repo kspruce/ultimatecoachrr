@@ -347,6 +347,17 @@
         }
     }
     
+    /* Make sure the player stats table is visible */
+    #player-stats-table {
+        width: 100% !important;
+        visibility: visible !important;
+        display: table !important;
+    }
+    
+    #player-stats-table_wrapper {
+        visibility: visible !important;
+        display: block !important;
+    }
 </style>
 {% endblock %}
 
@@ -548,6 +559,22 @@ window.addEventListener('error', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Test jQuery and DataTables
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery is not loaded!');
+        document.body.innerHTML = '<div class="alert alert-danger">Error: jQuery is not loaded. Please check your internet connection and try again.</div>' + document.body.innerHTML;
+        return;
+    }
+    
+    // Test DataTables
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTables is not loaded!');
+        document.body.innerHTML = '<div class="alert alert-danger">Error: DataTables is not loaded. Please check your internet connection and try again.</div>' + document.body.innerHTML;
+        return;
+    }
+    
+    console.log('jQuery and DataTables are loaded correctly');
+
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -569,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Make the AJAX call with explicit content type
             $.ajax({
-                url: "/stats/api/player-stats-table",  // Use direct URL instead of template
+                url: "/stats/api/player-stats-table",
                 method: "GET",
                 dataType: "json",
                 headers: {
@@ -666,14 +693,13 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error("Player stats table element not found!");
     }
 
-
     // --- 2. Lazy Load Heatmap Data ---
     if (document.getElementById('field-heatmap')) {
         const heatmapContainer = document.getElementById('field-heatmap');
         const loadingOverlay = heatmapContainer.querySelector('.loading-overlay');
         if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
     
-        fetch("{{ url_for('stats_dashboard.api_dashboard_heatmap') }}")
+        fetch("/stats/api/dashboard-heatmap")
             .then(response => response.json())
             .then(data => {
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
@@ -709,7 +735,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const loadingOverlay = connectionsContainer.querySelector('.loading-overlay');
         if (loadingOverlay) loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
 
-        fetch("{{ url_for('stats_dashboard.api_dashboard_connections') }}")
+        fetch("/stats/api/dashboard-connections")
             .then(response => response.json())
             .then(data => {
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
@@ -926,9 +952,35 @@ document.addEventListener('DOMContentLoaded', function() {
         // This is a simplified resize handler. A full implementation would
         // clear and redraw the visualizations.
         console.log("Window resized. Visualizations may need to be redrawn.");
+        
+        // Adjust DataTables columns if table exists
+        const playerStatsTable = $('#player-stats-table').DataTable();
+        if (playerStatsTable) {
+            playerStatsTable.columns.adjust().draw();
+        }
     }, 250));
+    
+    // Filter stats view based on button clicks
+    $('.stats-filter-btn').on('click', function() {
+        $('.stats-filter-btn').removeClass('active');
+        $(this).addClass('active');
+        
+        const view = $(this).data('view');
+        const table = $('#player-stats-table').DataTable();
+        
+        if (view === 'offense') {
+            $('.offensive-stat').show();
+            $('.defensive-stat').hide();
+        } else if (view === 'defense') {
+            $('.offensive-stat').hide();
+            $('.defensive-stat').show();
+        } else {
+            $('.offensive-stat, .defensive-stat').show();
+        }
+        
+        table.columns.adjust().draw();
+    });
 });
 </script>
 {% endblock %}
-
 
