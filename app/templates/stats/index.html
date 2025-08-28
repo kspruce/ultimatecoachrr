@@ -562,82 +562,100 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!$.fn.DataTable.isDataTable('#player-stats-table')) {
             console.log("DataTable not initialized yet, proceeding with initialization");
             
-            // First, make a direct AJAX call to check the API response
+            // Show loading indicator
+            $('#player-stats-table tbody').html(
+                '<tr><td colspan="15" class="text-center py-3"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div class="mt-2">Loading player statistics...</div></td></tr>'
+            );
+            
+            // Make the AJAX call with explicit content type
             $.ajax({
-                url: "{{ url_for('stats_dashboard.api_player_stats_table') }}",
+                url: "/stats/api/player-stats-table",  // Use direct URL instead of template
                 method: "GET",
                 dataType: "json",
+                headers: {
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
                 success: function(response) {
-                    console.log("API response received:", response);
+                    console.log("API response received with status:", response ? "success" : "empty");
+                    console.log("Data rows:", response && response.data ? response.data.length : 0);
                     
-                    if (response.data && response.data.length > 0) {
-                        console.log(`Initializing DataTable with ${response.data.length} rows`);
-                                                
-                        const playerStatsTable = $('#player-stats-table').DataTable({
-                            data: response.data,  // Use the data we already fetched
-                            columns: [
-                                { "data": 0, "className": "dt-body-left" },
-                                { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
-                                { "data": 5, "className": "offensive-stat" },
-                                { "data": 6, "className": "offensive-stat" },
-                                { "data": 7, "className": "offensive-stat" },
-                                { "data": 8, "className": "offensive-stat" },
-                                { "data": 9, "className": "defensive-stat" },
-                                { "data": 10, "className": "offensive-stat" },
-                                { "data": 11, "className": "offensive-stat" },
-                                { "data": 12, "className": "offensive-stat" },
-                                { "data": 13 }, { "data": 14 }
-                            ],
-                            pageLength: 25,
-                            order: [[14, "desc"]],
-                            scrollX: true,
-                            scrollY: "500px",
-                            scrollCollapse: true,
-                            paging: true,
-                            fixedColumns: {
-                                left: 1
-                            },
-                            language: {
-                                search: "Search players:",
-                                lengthMenu: "Show _MENU_ players",
-                                emptyTable: "No player statistics available for this team.",
-                                processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
-                            },
-                            drawCallback: function (settings) {
-                                var api = this.api();
-                                $(api.table().footer()).show();
-                                console.log("DataTable draw complete");
-                            }
-                        });
+                    if (response && response.data && response.data.length > 0) {
+                        // Clear any existing content
+                        $('#player-stats-table tbody').empty();
+                        
+                        try {
+                            // Initialize DataTable with the fetched data
+                            const playerStatsTable = $('#player-stats-table').DataTable({
+                                data: response.data,
+                                columns: [
+                                    { "data": 0, "className": "dt-body-left" },
+                                    { "data": 1 }, { "data": 2 }, { "data": 3 }, { "data": 4 },
+                                    { "data": 5, "className": "offensive-stat" },
+                                    { "data": 6, "className": "offensive-stat" },
+                                    { "data": 7, "className": "offensive-stat" },
+                                    { "data": 8, "className": "offensive-stat" },
+                                    { "data": 9, "className": "defensive-stat" },
+                                    { "data": 10, "className": "offensive-stat" },
+                                    { "data": 11, "className": "offensive-stat" },
+                                    { "data": 12, "className": "offensive-stat" },
+                                    { "data": 13 }, { "data": 14 }
+                                ],
+                                pageLength: 25,
+                                order: [[14, "desc"]],
+                                scrollX: true,
+                                scrollY: "500px",
+                                scrollCollapse: true,
+                                paging: true,
+                                fixedColumns: {
+                                    left: 1
+                                },
+                                language: {
+                                    search: "Search players:",
+                                    lengthMenu: "Show _MENU_ players",
+                                    emptyTable: "No player statistics available for this team.",
+                                    processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
+                                },
+                                drawCallback: function (settings) {
+                                    var api = this.api();
+                                    $(api.table().footer()).show();
+                                    console.log("DataTable draw complete");
+                                    
+                                    // Force a redraw of the table to fix any layout issues
+                                    setTimeout(function() {
+                                        $(window).trigger('resize');
+                                        api.columns.adjust().draw();
+                                    }, 100);
+                                }
+                            });
+                            
+                            console.log("DataTable initialization successful");
+                            
+                            // Add event listener for tab changes that might affect table visibility
+                            $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+                                if (playerStatsTable) {
+                                    playerStatsTable.columns.adjust().draw();
+                                }
+                            });
+                        } catch (e) {
+                            console.error("Error initializing DataTable:", e);
+                            $('#player-stats-table tbody').html(
+                                '<tr><td colspan="15" class="text-center text-danger">Error initializing table: ' + e.message + '</td></tr>'
+                            );
+                        }
                     } else {
                         console.error("API returned empty data or error:", response);
                         $('#player-stats-table tbody').html(
-                            '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">No player statistics available. Please calculate statistics from the admin panel.</td></tr>'
+                            '<tr><td colspan="15" class="text-center">No player statistics available. Please calculate statistics from the admin panel.</td></tr>'
                         );
                     }
-                    
-                    // Add the setTimeout here, inside the success callback
-                    setTimeout(function() {
-                        const table = $('#player-stats-table');
-                        if (table.length > 0) {
-                            console.log("Table element exists:", table[0]);
-                            console.log("Table visibility:", table.is(":visible"));
-                            console.log("Table dimensions:", {
-                                width: table.width(),
-                                height: table.height(),
-                                offsetWidth: table[0].offsetWidth,
-                                offsetHeight: table[0].offsetHeight
-                            });
-                            console.log("Table parent visibility:", table.parent().is(":visible"));
-                        }
-                    }, 2000);
                 },
                 error: function(xhr, error, thrown) {
                     console.error("DataTables AJAX error:", error, thrown);
                     console.error("Status:", xhr.status);
                     console.error("Response text:", xhr.responseText);
                     $('#player-stats-table tbody').html(
-                        '<tr class="odd"><td valign="top" colspan="15" class="dataTables_empty">Error loading data from server. Please try again later.</td></tr>'
+                        '<tr><td colspan="15" class="text-center text-danger">Error loading data from server. Please try again later.</td></tr>'
                     );
                 }
             });
@@ -647,6 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error("Player stats table element not found!");
     }
+
 
     // --- 2. Lazy Load Heatmap Data ---
     if (document.getElementById('field-heatmap')) {
