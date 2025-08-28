@@ -720,32 +720,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    fetch("{{ url_for('stats_dashboard.api_dashboard_heatmap') }}")
-        .then(response => response.json())
-        .then(data => {
-            if (loadingOverlay) loadingOverlay.style.display = 'none';
-            
-            // Debug the data structure
-            console.log("Heatmap data received:", data);
-            console.log("Data length:", data.length);
-            
-            // Count event types to understand what's available
-            const eventTypes = {};
-            data.forEach(point => {
-                const type = point.type || point.event_type || point.eventType;
-                if (type) {
-                    eventTypes[type] = (eventTypes[type] || 0) + 1;
-                }
-            });
-            console.log("Event types in data:", eventTypes);
-            
-            initializeHeatmap(heatmapContainer, data);
-        })
-        .catch(error => {
-            console.error("Error fetching heatmap data:", error);
-            if (loadingOverlay) loadingOverlay.innerHTML = '<p class="text-danger">Could not load heatmap data.</p>';
-        });
-
     function drawFieldMarkings(container, fieldWidth, fieldHeight) {
         const svg = d3.select(container)
             .append('svg')
