@@ -361,7 +361,7 @@
     "o_line_players": o_line_players | map(attribute='id') | list,
     "d_line_players": d_line_players | map(attribute='id') | list,
     "team_avg_stats": team_avg_stats,
-    <!"connection_data": connection_data <!-- | safe, -->
+    "connection_data": connection_data <!-- | safe, -->
     "heatmap_data": heatmap_data <!-- | safe, -->
   } | tojson | safe }}
 </script>
