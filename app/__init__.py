@@ -196,7 +196,7 @@ def create_app(config_class=Config):
     from app.error_handlers import register_error_handlers
     register_error_handlers(app)
     
-    from app.routes.stats_storage_routes import stats_storage_bp
+    from app.routes.stats_storage_routes import bp as stats_storage_bp
     app.register_blueprint(stats_storage_bp)
 
     
