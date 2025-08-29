@@ -48,15 +48,33 @@ def data_management():
         db.session.rollback()
         
         manager = get_manager()  # Get the manager instance
-        model_info = manager.get_model_info()
+        
+        try:
+            model_info = manager.get_model_info()
+        except Exception as e:
+            logger.error(f"Error getting model info: {e}", exc_info=True)
+            # Create a minimal model_info to allow the page to load
+            model_info = {
+                'models': {},
+                'total_models': 0,
+                'dependency_order': []
+            }
         
         # Get available exports with details
-        exports = manager.get_available_exports()
+        try:
+            exports = manager.get_available_exports()
+        except Exception as e:
+            logger.error(f"Error getting exports: {e}", exc_info=True)
+            exports = []
         
-        # Calculate total records
-        total_records = sum(model['record_count'] for model in model_info['models'].values())
+        # Calculate total records safely
+        try:
+            total_records = sum(model['record_count'] for model in model_info['models'].values())
+        except Exception as e:
+            logger.error(f"Error calculating total records: {e}", exc_info=True)
+            total_records = 0
         
-        # Get last export date
+        # Get last export date safely
         last_export = exports[0]['date'] if exports else None
         
         return render_template('admin/enhanced_data_management.html', 
@@ -87,6 +105,7 @@ def data_management():
                              error_message="Database error occurred. The transaction has been rolled back.",
                              back_url=url_for('main.index'),
                              debug_info=debug_info)
+
 
 
 

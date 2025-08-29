@@ -52,11 +52,22 @@ class EnhancedDataManager:
         self.dependency_order = self._determine_dependency_order()
     
     def _load_models(self):
-        """Dynamically load all SQLAlchemy models"""
+        """Dynamically load all SQLAlchemy models with better error handling"""
         models = {}
         
         # Get the app.models package
         import app.models
+        
+        # First, try to import all model modules to ensure they're registered
+        try:
+            # Explicitly import common models to ensure they're loaded
+            from app.models import User, Player, Tournament, Game, Point, LineUp
+            from app.models import Event, Pull, Clip, ClipTag, ClipAnnotation
+            from app.models import SessionPlan, SessionComponent, SavedDrill, Attendance
+            from app.models import FitnessMetric, FitnessRecord
+            from app.models import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+        except Exception as e:
+            logger.warning(f"Error pre-loading common models: {e}")
         
         # Walk through all modules in the models package
         for _, name, is_pkg in pkgutil.iter_modules(app.models.__path__, app.models.__name__ + '.'):
@@ -67,14 +78,22 @@ class EnhancedDataManager:
                     
                     # Find all SQLAlchemy models in the module
                     for attr_name in dir(module):
-                        attr = getattr(module, attr_name)
-                        if isinstance(attr, type) and hasattr(attr, '__tablename__'):
-                            # This is a SQLAlchemy model
-                            models[attr.__tablename__] = attr
+                        try:
+                            attr = getattr(module, attr_name)
+                            if isinstance(attr, type) and hasattr(attr, '__tablename__'):
+                                # This is a SQLAlchemy model
+                                tablename = attr.__tablename__
+                                models[tablename] = attr
+                                logger.info(f"Successfully loaded model {attr_name} for table {tablename}")
+                        except Exception as e:
+                            logger.warning(f"Error processing attribute {attr_name} in module {name}: {e}")
                 except ImportError as e:
                     logger.warning(f"Could not import module {name}: {e}")
         
+        logger.info(f"Loaded {len(models)} models: {', '.join(models.keys())}")
         return models
+
+
     
     def _determine_dependency_order(self):
         """Determine the order in which tables should be processed based on foreign key dependencies"""
