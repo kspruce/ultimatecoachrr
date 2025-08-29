@@ -568,3 +568,119 @@ def game_stats(game_id):
         team_totals=team_totals,
         points=points
     )
+
+@bp.route('/team-stats')
+@login_required
+@stat_taker_required
+def team_stats():
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Get all games for this team
+    games = Game.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(Game.date.desc()).all()
+    
+    # Get all player stats for this team
+    all_player_stats = GameDayPlayerStats.query.filter_by(
+        team_organization_id=team_id
+    ).all()
+    
+    # Group stats by player
+    player_stats_by_id = {}
+    for stat in all_player_stats:
+        if stat.player_id not in player_stats_by_id:
+            player_stats_by_id[stat.player_id] = {
+                'player_id': stat.player_id,
+                'games_played': 0,
+                'points_played': 0,
+                'o_points': 0,
+                'd_points': 0,
+                'goals': 0,
+                'assists': 0,
+                'blocks': 0,
+                'turns': 0,
+                'plus_minus': 0,
+                'callahans': 0,
+                'pulls': 0,
+                'pulls_ob': 0
+            }
+        
+        # Add stats
+        player_stats_by_id[stat.player_id]['games_played'] += 1
+        player_stats_by_id[stat.player_id]['points_played'] += stat.points_played or 0
+        player_stats_by_id[stat.player_id]['o_points'] += stat.o_points or 0
+        player_stats_by_id[stat.player_id]['d_points'] += stat.d_points or 0
+        player_stats_by_id[stat.player_id]['goals'] += stat.goals or 0
+        player_stats_by_id[stat.player_id]['assists'] += stat.assists or 0
+        player_stats_by_id[stat.player_id]['blocks'] += stat.blocks or 0
+        player_stats_by_id[stat.player_id]['turns'] += stat.turns or 0
+        player_stats_by_id[stat.player_id]['plus_minus'] += stat.plus_minus or 0
+        player_stats_by_id[stat.player_id]['callahans'] += stat.callahans or 0
+        player_stats_by_id[stat.player_id]['pulls'] += stat.pulls or 0
+        player_stats_by_id[stat.player_id]['pulls_ob'] += stat.pulls_ob or 0
+    
+    # Get player details
+    players = Player.query.filter(
+        Player.id.in_(player_stats_by_id.keys()),
+        Player.team_organization_id == team_id
+    ).all()
+    
+    # Add player details to stats
+    player_stats = []
+    for player in players:
+        if player.id in player_stats_by_id:
+            stats = player_stats_by_id[player.id]
+            stats['name'] = player.name
+            stats['jersey_number'] = player.jersey_number
+            stats['gender'] = player.gender
+            
+            # Calculate per-game averages
+            games_played = stats['games_played']
+            if games_played > 0:
+                stats['avg_points'] = round(stats['points_played'] / games_played, 1)
+                stats['avg_goals'] = round(stats['goals'] / games_played, 1)
+                stats['avg_assists'] = round(stats['assists'] / games_played, 1)
+                stats['avg_blocks'] = round(stats['blocks'] / games_played, 1)
+                stats['avg_turns'] = round(stats['turns'] / games_played, 1)
+                stats['avg_plus_minus'] = round(stats['plus_minus'] / games_played, 1)
+            
+            player_stats.append(stats)
+    
+    # Calculate team totals
+    team_totals = {
+        'games_played': len(games),
+        'wins': sum(1 for game in games if game.our_score > game.their_score),
+        'losses': sum(1 for game in games if game.our_score < game.their_score),
+        'points_played': sum(game.our_score + game.their_score for game in games),
+        'points_scored': sum(game.our_score for game in games),
+        'points_conceded': sum(game.their_score for game in games),
+        'goals': sum(stats['goals'] for stats in player_stats),
+        'assists': sum(stats['assists'] for stats in player_stats),
+        'blocks': sum(stats['blocks'] for stats in player_stats),
+        'turns': sum(stats['turns'] for stats in player_stats),
+        'plus_minus': sum(stats['plus_minus'] for stats in player_stats),
+        'callahans': sum(stats['callahans'] for stats in player_stats),
+        'pulls': sum(stats['pulls'] for stats in player_stats),
+        'pulls_ob': sum(stats['pulls_ob'] for stats in player_stats),
+    }
+    
+    # Calculate efficiency metrics
+    if team_totals['goals'] > 0:
+        team_totals['completion_rate'] = round(
+            (team_totals['goals'] + team_totals['assists']) / 
+            (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) * 100, 1
+        ) if (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) > 0 else 0
+    else:
+        team_totals['completion_rate'] = 0
+    
+    # Get current team
+    team = TeamOrganization.query.get(team_id)
+    
+    return render_template(
+        'gameday/team_stats.html',
+        team=team,
+        games=games,
+        player_stats=player_stats,
+        team_totals=team_totals
+    )
