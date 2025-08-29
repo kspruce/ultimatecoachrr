@@ -5,7 +5,7 @@ from app.models.stats_storage import IndexStats, TeamStats, GameStats, PlayerSta
 from app.models.team_organization import TeamOrganization
 from app.models.game import Game
 from app.models.player import Player
-from app.decorators import admin_required
+from app.utils.utils import admin_required
 import json
 from datetime import datetime
 
