@@ -1045,7 +1045,9 @@ def index():
         'team_avg_stats': {}
     }
 
-    try:
+    recalculate = request.args.get('recalculate') == 'true'
+    
+    if not recalculate:
         # Check for saved stats
         team_organization_id = get_current_team_id()
         saved_stats = check_saved_index_stats(team_organization_id)
@@ -1058,7 +1060,8 @@ def index():
                 is_coach=is_coach(current_user),
                 using_saved_stats=True
             )
-            
+
+           
         # Continue with original code if no saved stats
         # Get team name from current user's player
         team_name = None
