@@ -37,6 +37,7 @@ from app.models.team_settings import TeamSettings
 
 #Gameday Stats
 from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+from app.models.stats_storage import IndexStats, TeamStats, GameStats, PlayerStats
 
 __all__ = [
     'TeamOrganization', 'User', 'Player',
@@ -48,5 +49,6 @@ __all__ = [
     'Clip', 'ClipTag', 'ClipAnnotation', 'ScoutingReport',
     'PlayerPointStats', 'ExportLog', 'CuttingSkill',
     'FitnessMetric', 'FitnessRecord', 
-    'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats', 'TeamSettings'
+    'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats', 'TeamSettings',
+    'IndexStats', 'TeamStats', 'GameStats', 'PlayerStats'
 ]

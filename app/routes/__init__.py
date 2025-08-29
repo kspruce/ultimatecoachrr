@@ -13,6 +13,7 @@ from app.routes.stats import bp as stats_bp
 from app.routes.playbook import bp as playbook_bp
 from app.routes.scouting import bp as scouting_bp
 from app.routes.gameday import bp as gameday_bp  # Add this line
+from app.routes.stats_storage_routes import bp as stats_storage_bp 
 
 __all__ = [
     'main_bp',
@@ -28,5 +29,6 @@ __all__ = [
     'stats_bp',
     'playbook_bp',
     'scouting_bp',
-    'gameday_bp'  # Add this line
+    'gameday_bp',
+    'stats_storage_bp'# Add this line
 ]

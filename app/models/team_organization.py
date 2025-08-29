@@ -42,7 +42,12 @@ class TeamOrganization(db.Model):
     player_point_stats = db.relationship('PlayerPointStats', backref='team_organization')
     export_logs = db.relationship('ExportLog', backref='team_organization')
     tournament_rsvps = db.relationship('TournamentRSVP', backref='team_organization')
-    settings = db.relationship('TeamSettings', backref='team_organization', uselist=False)
+    
+    # Add stats storage relationships - these are defined with backref in the stats_storage.py models
+    # index_stats = db.relationship('IndexStats', backref='team_organization')
+    # team_stats = db.relationship('TeamStats', backref='team_organization')
+    # game_stats = db.relationship('GameStats', backref='team_organization')
+    # player_stats = db.relationship('PlayerStats', backref='team_organization')
     
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'
