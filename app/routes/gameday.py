@@ -510,3 +510,61 @@ def handle_error(e):
         'success': False,
         'error': str(e)
     }), 500
+
+@bp.route('/stats/<int:game_id>')
+@login_required
+@stat_taker_required
+def game_stats(game_id):
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Get the game
+    game = Game.query.filter_by(
+        id=game_id,
+        team_organization_id=team_id
+    ).first_or_404()
+    
+    # Get all player stats for this game
+    player_stats = GameDayPlayerStats.query.filter_by(
+        game_id=game_id,
+        team_organization_id=team_id
+    ).all()
+    
+    # Get player details for each stat
+    for stat in player_stats:
+        stat.player_details = Player.query.get(stat.player_id)
+    
+    # Get points for this game
+    points = Point.query.filter_by(
+        game_id=game_id,
+        team_organization_id=team_id
+    ).order_by(Point.point_number).all()
+    
+    # Calculate team totals
+    team_totals = {
+        'goals': sum(stat.goals for stat in player_stats),
+        'assists': sum(stat.assists for stat in player_stats),
+        'blocks': sum(stat.blocks for stat in player_stats),
+        'turns': sum(stat.turns for stat in player_stats),
+        'plus_minus': sum(stat.plus_minus for stat in player_stats),
+        'callahans': sum(stat.callahans for stat in player_stats),
+        'pulls': sum(stat.pulls for stat in player_stats),
+        'pulls_ob': sum(stat.pulls_ob for stat in player_stats),
+    }
+    
+    # Calculate efficiency metrics
+    if team_totals['goals'] > 0:
+        team_totals['completion_rate'] = round(
+            (team_totals['goals'] + team_totals['assists']) / 
+            (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) * 100, 1
+        ) if (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) > 0 else 0
+    else:
+        team_totals['completion_rate'] = 0
+    
+    return render_template(
+        'gameday/stats.html',
+        game=game,
+        player_stats=player_stats,
+        team_totals=team_totals,
+        points=points
+    )

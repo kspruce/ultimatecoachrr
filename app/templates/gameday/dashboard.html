@@ -84,6 +84,11 @@
       <div class="d-flex justify-content-between align-items-center">
         <h3>Score: <span id="our-score">{{ game.our_score }}</span> - <span id="their-score">{{ game.their_score }}</span></h3>
         <div>
+         <!-- In the top navigation area of dashboard.html -->
+        <div>
+          <a href="{{ url_for('gameday.game_stats', game_id=game.id) }}" class="btn btn-info me-2">
+            <i class="bi bi-bar-chart-fill"></i> View Stats
+          </a>
           <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Game
           </a>
@@ -116,13 +121,21 @@
           </div>
           
           <!-- Gender Ratio Selection -->
+          <!-- Gender Ratio Selection -->
           <div class="btn-group w-100 mb-3" role="group">
             <input type="radio" class="btn-check" name="gender_ratio" id="ratio-4-3" value="4-3" checked>
             <label class="btn btn-outline-primary" for="ratio-4-3">4 MMP - 3 FMP</label>
-            
+          
             <input type="radio" class="btn-check" name="gender_ratio" id="ratio-3-4" value="3-4">
             <label class="btn btn-outline-primary" for="ratio-3-4">3 MMP - 4 FMP</label>
+          
+            <input type="radio" class="btn-check" name="gender_ratio" id="ratio-7-0" value="7-0">
+            <label class="btn btn-outline-primary" for="ratio-7-0">Single Gender (MMP)</label>
+            
+            <input type="radio" class="btn-check" name="gender_ratio" id="ratio-0-7" value="0-7">
+            <label class="btn btn-outline-primary" for="ratio-0-7">Single Gender (FMP)</label>
           </div>
+
           
           <!-- Line Templates -->
           <div class="d-flex mb-3">
@@ -624,9 +637,26 @@ document.addEventListener('DOMContentLoaded', function() {
       const [mmpRequired, fmpRequired] = this.value.split('-').map(Number);
       document.getElementById('mmp-required').textContent = mmpRequired;
       document.getElementById('fmp-required').textContent = fmpRequired;
+      
+      // Show appropriate tab based on single gender selection
+      if (mmpRequired === 7) {
+        // Show MMP tab for single gender MMP
+        document.getElementById('mmp-tab').click();
+        document.getElementById('fmp-tab').style.display = 'none';
+      } else if (fmpRequired === 7) {
+        // Show FMP tab for single gender FMP
+        document.getElementById('fmp-tab').click();
+        document.getElementById('mmp-tab').style.display = 'none';
+      } else {
+        // Show both tabs for mixed gender
+        document.getElementById('mmp-tab').style.display = '';
+        document.getElementById('fmp-tab').style.display = '';
+      }
+    
       updatePlayerCounts();
     });
   });
+
 
   // Line type
   document.querySelectorAll('input[name="line_type"]').forEach(radio => {
