@@ -1,5 +1,5 @@
-# Example fix for team_settings.py
-from app.models.base import db
+# app/models/team_settings.py
+from app import db
 
 class TeamSettings(db.Model):
     __tablename__ = 'team_settings'
@@ -7,7 +7,6 @@ class TeamSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
-    # Add other fields here
     discord_enabled = db.Column(db.Boolean, default=False)
     discord_webhook_url = db.Column(db.String(255))
     discord_bot_token = db.Column(db.String(255))
@@ -19,5 +18,5 @@ class TeamSettings(db.Model):
     discord_notify_upcoming_events = db.Column(db.Boolean, default=False)
     discord_notify_new_items = db.Column(db.Boolean, default=False)
     
-    # Add relationship
-    team = db.relationship('TeamOrganization', back_populates='settings')
+    def __repr__(self):
+        return f'<TeamSettings id={self.id} team_id={self.team_id}>'

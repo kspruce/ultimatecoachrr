@@ -33,6 +33,7 @@ from app.models.cutting_skill import CuttingSkill
 # Statistics and Export models
 from app.models.stats import PlayerPointStats
 from app.models.export import ExportLog
+from app.models.team_settings import TeamSettings
 
 #Gameday Stats
 from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
@@ -47,5 +48,5 @@ __all__ = [
     'Clip', 'ClipTag', 'ClipAnnotation', 'ScoutingReport',
     'PlayerPointStats', 'ExportLog', 'CuttingSkill',
     'FitnessMetric', 'FitnessRecord', 
-    'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats'
+    'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats', 'TeamSettings'
 ]
