@@ -638,6 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize DataTable with improved configuration
     const playerStatsTable = $('#player-stats-table').DataTable({
+        destroy: true,
         pageLength: 25,
         order: [[14, "desc"]], // Sort by PER by default (column 14)
         dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
