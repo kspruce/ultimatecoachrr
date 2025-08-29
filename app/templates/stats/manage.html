@@ -1,0 +1,826 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Stats{% endblock %}
+
+{% block styles %}
+<style>
+    .stats-card {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .stats-header {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .stats-body {
+        padding: 15px;
+    }
+    
+    .stats-footer {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .version-badge {
+        font-size: 0.8rem;
+        padding: 3px 8px;
+        border-radius: 10px;
+        background-color: #6c757d;
+        color: white;
+    }
+    
+    .tab-content {
+        padding-top: 20px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .stats-table {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-table th {
+        background-color: #f8f9fa;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    
+    .filter-section {
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Manage Stats</h1>
+            <p class="text-muted">View, compare, and manage saved statistics</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Stats
+            </a>
+        </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs" id="statsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="index-tab" data-bs-toggle="tab" data-bs-target="#index" type="button" role="tab" aria-controls="index" aria-selected="true">
+                Dashboard Stats
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="team-tab" data-bs-toggle="tab" data-bs-target="#team" type="button" role="tab" aria-controls="team" aria-selected="false">
+                Team Stats
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="game-tab" data-bs-toggle="tab" data-bs-target="#game" type="button" role="tab" aria-controls="game" aria-selected="false">
+                Game Stats
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="player-tab" data-bs-toggle="tab" data-bs-target="#player" type="button" role="tab" aria-controls="player" aria-selected="false">
+                Player Stats
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Tab Content -->
+    <div class="tab-content" id="statsTabContent">
+        <!-- Index Stats Tab -->
+        <div class="tab-pane fade show active" id="index" role="tabpanel" aria-labelledby="index-tab">
+            <div class="filter-section">
+                <h5>Filter</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="indexVersionFilter">Version</label>
+                            <select class="form-control" id="indexVersionFilter">
+                                <option value="">All Versions</option>
+                                {% for stat in index_stats %}
+                                <option value="{{ stat.version }}">Version {{ stat.version }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="indexDateFilter">Date</label>
+                            <input type="date" class="form-control" id="indexDateFilter">
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary" id="indexFilterBtn">
+                            <i class="bi bi-filter"></i> Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {% if index_stats %}
+            <div class="table-responsive">
+                <table class="table table-striped stats-table" id="indexStatsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Version</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Filter Parameters</th>
+                            <th>Compressed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in index_stats %}
+                        <tr>
+                            <td>{{ stat.id }}</td>
+                            <td><span class="badge bg-secondary">v{{ stat.version }}</span></td>
+                            <td>{{ stat.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ stat.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if stat.filter_params %}
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#filterModal" data-filter="{{ stat.filter_params|tojson }}">
+                                    View Filters
+                                </button>
+                                {% else %}
+                                <span class="text-muted">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stat.compressed %}
+                                <span class="badge bg-success">Yes ({{ stat.compression_ratio|round(2) }}x)</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-primary view-stats-btn" data-type="index" data-id="{{ stat.id }}">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-stats-btn" data-type="index" data-id="{{ stat.id }}">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="compareDropdown{{ stat.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-arrows-angle-expand"></i> Compare
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="compareDropdown{{ stat.id }}">
+                                            {% for other_stat in index_stats %}
+                                                {% if other_stat.id != stat.id %}
+                                                <li>
+                                                    <a class="dropdown-item compare-stats-link" href="{{ url_for('stats_storage.compare_stats', stats_type='index', stats_id1=stat.id, stats_id2=other_stat.id) }}">
+                                                        With v{{ other_stat.version }} ({{ other_stat.created_at.strftime('%Y-%m-%d') }})
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No index stats have been saved yet. Visit the <a href="{{ url_for('stats_dashboard.index') }}">Stats Dashboard</a> and click "Save Stats" to store statistics.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Team Stats Tab -->
+        <div class="tab-pane fade" id="team" role="tabpanel" aria-labelledby="team-tab">
+            <div class="filter-section">
+                <h5>Filter</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="teamVersionFilter">Version</label>
+                            <select class="form-control" id="teamVersionFilter">
+                                <option value="">All Versions</option>
+                                {% for stat in team_stats %}
+                                <option value="{{ stat.version }}">Version {{ stat.version }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="teamDateFilter">Date</label>
+                            <input type="date" class="form-control" id="teamDateFilter">
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary" id="teamFilterBtn">
+                            <i class="bi bi-filter"></i> Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {% if team_stats %}
+            <div class="table-responsive">
+                <table class="table table-striped stats-table" id="teamStatsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Version</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Filter Parameters</th>
+                            <th>Compressed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in team_stats %}
+                        <tr>
+                            <td>{{ stat.id }}</td>
+                            <td><span class="badge bg-secondary">v{{ stat.version }}</span></td>
+                            <td>{{ stat.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ stat.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if stat.filter_params %}
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#filterModal" data-filter="{{ stat.filter_params|tojson }}">
+                                    View Filters
+                                </button>
+                                {% else %}
+                                <span class="text-muted">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stat.compressed %}
+                                <span class="badge bg-success">Yes ({{ stat.compression_ratio|round(2) }}x)</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-primary view-stats-btn" data-type="team" data-id="{{ stat.id }}">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-stats-btn" data-type="team" data-id="{{ stat.id }}">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="compareDropdown{{ stat.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-arrows-angle-expand"></i> Compare
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="compareDropdown{{ stat.id }}">
+                                            {% for other_stat in team_stats %}
+                                                {% if other_stat.id != stat.id %}
+                                                <li>
+                                                    <a class="dropdown-item compare-stats-link" href="{{ url_for('stats_storage.compare_stats', stats_type='team', stats_id1=stat.id, stats_id2=other_stat.id) }}">
+                                                        With v{{ other_stat.version }} ({{ other_stat.created_at.strftime('%Y-%m-%d') }})
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No team stats have been saved yet. Visit the <a href="{{ url_for('stats_dashboard.team_stats') }}">Team Stats</a> page and click "Save Stats" to store statistics.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Game Stats Tab -->
+        <div class="tab-pane fade" id="game" role="tabpanel" aria-labelledby="game-tab">
+            <div class="filter-section">
+                <h5>Filter</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="gameVersionFilter">Version</label>
+                            <select class="form-control" id="gameVersionFilter">
+                                <option value="">All Versions</option>
+                                {% for stat in game_stats %}
+                                <option value="{{ stat.version }}">Version {{ stat.version }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="gameDateFilter">Date</label>
+                            <input type="date" class="form-control" id="gameDateFilter">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="gameIdFilter">Game ID</label>
+                            <input type="number" class="form-control" id="gameIdFilter">
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary" id="gameFilterBtn">
+                            <i class="bi bi-filter"></i> Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {% if game_stats %}
+            <div class="table-responsive">
+                <table class="table table-striped stats-table" id="gameStatsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Game ID</th>
+                            <th>Version</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Filter Parameters</th>
+                            <th>Compressed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in game_stats %}
+                        <tr>
+                            <td>{{ stat.id }}</td>
+                            <td>
+                                <a href="{{ url_for('game.detail', game_id=stat.game_id) }}">
+                                    {{ stat.game_id }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-secondary">v{{ stat.version }}</span></td>
+                            <td>{{ stat.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ stat.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if stat.filter_params %}
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#filterModal" data-filter="{{ stat.filter_params|tojson }}">
+                                    View Filters
+                                </button>
+                                {% else %}
+                                <span class="text-muted">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stat.compressed %}
+                                <span class="badge bg-success">Yes ({{ stat.compression_ratio|round(2) }}x)</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-primary view-stats-btn" data-type="game" data-id="{{ stat.id }}">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-stats-btn" data-type="game" data-id="{{ stat.id }}">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="compareDropdown{{ stat.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-arrows-angle-expand"></i> Compare
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="compareDropdown{{ stat.id }}">
+                                            {% for other_stat in game_stats %}
+                                                {% if other_stat.id != stat.id and other_stat.game_id == stat.game_id %}
+                                                <li>
+                                                    <a class="dropdown-item compare-stats-link" href="{{ url_for('stats_storage.compare_stats', stats_type='game', stats_id1=stat.id, stats_id2=other_stat.id) }}">
+                                                        With v{{ other_stat.version }} ({{ other_stat.created_at.strftime('%Y-%m-%d') }})
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No game stats have been saved yet. Visit any <a href="{{ url_for('game.index') }}">Game Stats</a> page and click "Save Stats" to store statistics.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Player Stats Tab -->
+        <div class="tab-pane fade" id="player" role="tabpanel" aria-labelledby="player-tab">
+            <div class="filter-section">
+                <h5>Filter</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="playerVersionFilter">Version</label>
+                            <select class="form-control" id="playerVersionFilter">
+                                <option value="">All Versions</option>
+                                {% for stat in player_stats %}
+                                <option value="{{ stat.version }}">Version {{ stat.version }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="playerDateFilter">Date</label>
+                            <input type="date" class="form-control" id="playerDateFilter">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="playerIdFilter">Player ID</label>
+                            <input type="number" class="form-control" id="playerIdFilter">
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary" id="playerFilterBtn">
+                            <i class="bi bi-filter"></i> Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {% if player_stats %}
+            <div class="table-responsive">
+                <table class="table table-striped stats-table" id="playerStatsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Player ID</th>
+                            <th>Game ID</th>
+                            <th>Version</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Filter Parameters</th>
+                            <th>Compressed</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in player_stats %}
+                        <tr>
+                            <td>{{ stat.id }}</td>
+                            <td>
+                                <a href="{{ url_for('stats_dashboard.player_stats', player_id=stat.player_id) }}">
+                                    {{ stat.player_id }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if stat.game_id %}
+                                <a href="{{ url_for('game.detail', game_id=stat.game_id) }}">
+                                    {{ stat.game_id }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">All Games</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-secondary">v{{ stat.version }}</span></td>
+                            <td>{{ stat.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ stat.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if stat.filter_params %}
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#filterModal" data-filter="{{ stat.filter_params|tojson }}">
+                                    View Filters
+                                </button>
+                                {% else %}
+                                <span class="text-muted">None</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if stat.compressed %}
+                                <span class="badge bg-success">Yes ({{ stat.compression_ratio|round(2) }}x)</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-primary view-stats-btn" data-type="player" data-id="{{ stat.id }}">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-sm btn-danger delete-stats-btn" data-type="player" data-id="{{ stat.id }}">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="compareDropdown{{ stat.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-arrows-angle-expand"></i> Compare
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="compareDropdown{{ stat.id }}">
+                                            {% for other_stat in player_stats %}
+                                                {% if other_stat.id != stat.id and other_stat.player_id == stat.player_id and other_stat.game_id == stat.game_id %}
+                                                <li>
+                                                    <a class="dropdown-item compare-stats-link" href="{{ url_for('stats_storage.compare_stats', stats_type='player', stats_id1=stat.id, stats_id2=other_stat.id) }}">
+                                                        With v{{ other_stat.version }} ({{ other_stat.created_at.strftime('%Y-%m-%d') }})
+                                                    </a>
+                                                </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No player stats have been saved yet. Visit any <a href="{{ url_for('stats_dashboard.index') }}">Player Stats</a> page and click "Save Stats" to store statistics.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterModalLabel">Filter Parameters</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="filterContent" class="bg-light p-3 rounded"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats View Modal -->
+<div class="modal fade" id="statsViewModal" tabindex="-1" aria-labelledby="statsViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statsViewModalLabel">Stats Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="formatJsonSwitch" checked>
+                        <label class="form-check-label" for="formatJsonSwitch">Format JSON</label>
+                    </div>
+                </div>
+                <pre id="statsContent" class="bg-light p-3 rounded" style="max-height: 70vh; overflow-y: auto;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete these stats? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filter modal
+        const filterModal = document.getElementById('filterModal');
+        if (filterModal) {
+            filterModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const filterData = button.getAttribute('data-filter');
+                const filterContent = document.getElementById('filterContent');
+                
+                try {
+                    const parsedFilter = JSON.parse(filterData);
+                    filterContent.textContent = JSON.stringify(parsedFilter, null, 2);
+                } catch (e) {
+                    filterContent.textContent = filterData || 'No filter data available';
+                }
+            });
+        }
+        
+        // View stats buttons
+        document.querySelectorAll('.view-stats-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const statsType = this.getAttribute('data-type');
+                const statsId = this.getAttribute('data-id');
+                
+                // Fetch stats data from API
+                fetch(`/api/stats/check/${statsType}/${statsId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.exists) {
+                            const statsContent = document.getElementById('statsContent');
+                            const statsViewModalLabel = document.getElementById('statsViewModalLabel');
+                            
+                            statsViewModalLabel.textContent = `${statsType.charAt(0).toUpperCase() + statsType.slice(1)} Stats (ID: ${statsId})`;
+                            
+                            // Format JSON
+                            const formatJson = document.getElementById('formatJsonSwitch').checked;
+                            if (formatJson) {
+                                statsContent.textContent = JSON.stringify(data.stats_data, null, 2);
+                            } else {
+                                statsContent.textContent = JSON.stringify(data.stats_data);
+                            }
+                            
+                            // Show modal
+                            const statsViewModal = new bootstrap.Modal(document.getElementById('statsViewModal'));
+                            statsViewModal.show();
+                        } else {
+                            alert('Stats not found');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching stats:', error);
+                        alert('Error fetching stats: ' + error.message);
+                    });
+            });
+        });
+        
+        // Format JSON switch
+        document.getElementById('formatJsonSwitch').addEventListener('change', function() {
+            const statsContent = document.getElementById('statsContent');
+            const content = statsContent.textContent;
+            
+            try {
+                const parsedContent = JSON.parse(content);
+                if (this.checked) {
+                    statsContent.textContent = JSON.stringify(parsedContent, null, 2);
+                } else {
+                    statsContent.textContent = JSON.stringify(parsedContent);
+                }
+            } catch (e) {
+                console.error('Error parsing JSON:', e);
+            }
+        });
+        
+        // Delete stats buttons
+        let deleteType, deleteId;
+        
+        document.querySelectorAll('.delete-stats-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                deleteType = this.getAttribute('data-type');
+                deleteId = this.getAttribute('data-id');
+                
+                // Show confirmation modal
+                const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+                deleteConfirmModal.show();
+            });
+        });
+        
+        // Confirm delete button
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            if (deleteType && deleteId) {
+                // Send delete request
+                fetch(`/stats/delete/${deleteType}/${deleteId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+                        
+                        // Reload page
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting stats:', error);
+                    alert('Error deleting stats: ' + error.message);
+                });
+            }
+        });
+        
+        // Table filters
+        function setupTableFilter(tableId, filters) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            
+            document.getElementById(filters.buttonId).addEventListener('click', function() {
+                const versionValue = document.getElementById(filters.versionId).value.toLowerCase();
+                const dateValue = document.getElementById(filters.dateId).value;
+                const idValue = filters.idId ? document.getElementById(filters.idId).value.toLowerCase() : '';
+                
+                rows.forEach(row => {
+                    const version = row.cells[filters.versionIndex].textContent.toLowerCase();
+                    const date = row.cells[filters.dateIndex].textContent.split(' ')[0]; // Get just the date part
+                    const id = filters.idIndex !== undefined ? row.cells[filters.idIndex].textContent.toLowerCase() : '';
+                    
+                    let show = true;
+                    
+                    if (versionValue && !version.includes(versionValue)) {
+                        show = false;
+                    }
+                    
+                    if (dateValue && date !== dateValue) {
+                        show = false;
+                    }
+                    
+                    if (idValue && filters.idIndex !== undefined && !id.includes(idValue)) {
+                        show = false;
+                    }
+                    
+                    row.style.display = show ? '' : 'none';
+                });
+            });
+        }
+        
+        // Setup filters for each table
+        setupTableFilter('indexStatsTable', {
+            buttonId: 'indexFilterBtn',
+            versionId: 'indexVersionFilter',
+            dateId: 'indexDateFilter',
+            versionIndex: 1,
+            dateIndex: 2
+        });
+        
+        setupTableFilter('teamStatsTable', {
+            buttonId: 'teamFilterBtn',
+            versionId: 'teamVersionFilter',
+            dateId: 'teamDateFilter',
+            versionIndex: 1,
+            dateIndex: 2
+        });
+        
+        setupTableFilter('gameStatsTable', {
+            buttonId: 'gameFilterBtn',
+            versionId: 'gameVersionFilter',
+            dateId: 'gameDateFilter',
+            idId: 'gameIdFilter',
+            versionIndex: 2,
+            dateIndex: 3,
+            idIndex: 1
+        });
+        
+        setupTableFilter('playerStatsTable', {
+            buttonId: 'playerFilterBtn',
+            versionId: 'playerVersionFilter',
+            dateId: 'playerDateFilter',
+            idId: 'playerIdFilter',
+            versionIndex: 3,
+            dateIndex: 4,
+            idIndex: 1
+        });
+    });
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

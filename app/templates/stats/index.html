@@ -358,6 +358,11 @@
             <h1>Team Statistics Dashboard</h1>
             <p class="text-muted">Real-time analytics and performance metrics</p>
         </div>
+        {% if using_saved_stats %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
+        </div>
+        {% endif %}
         <div class="col-md-4 text-end">
             <button id="saveStatsBtn" class="btn btn-primary">
                 <i class="bi bi-save"></i> Save Stats to Database
@@ -1273,7 +1278,18 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 });
-
+document.addEventListener('DOMContentLoaded', function() {
+    const recalculateBtn = document.getElementById('recalculateStatsBtn');
+    if (recalculateBtn) {
+        recalculateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Add a parameter to force recalculation
+            const url = new URL(window.location.href);
+            url.searchParams.set('recalculate', 'true');
+            window.location.href = url.toString();
+        });
+    }
+});
 </script>
 
 <script src="{{ url_for('static', filename='js/stats_storage.js') }}"></script>

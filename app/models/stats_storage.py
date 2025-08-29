@@ -14,15 +14,22 @@ class IndexStats(db.Model):
     # Filter parameters used when generating these stats
     filter_params = db.Column(db.JSON, nullable=True)
     
+    # Version number for tracking changes
+    version = db.Column(db.Integer, default=1)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Optimization fields
+    compressed = db.Column(db.Boolean, default=False)
+    compression_ratio = db.Column(db.Float, nullable=True)
     
     # Relationships
     team_organization = db.relationship('TeamOrganization', backref='index_stats')
     
     def __repr__(self):
-        return f'<IndexStats {self.id} for {self.team_organization_id}>'
+        return f'<IndexStats {self.id} for {self.team_organization_id} (v{self.version})>'
 
 
 class TeamStats(db.Model):
@@ -36,15 +43,22 @@ class TeamStats(db.Model):
     # Filter parameters used when generating these stats
     filter_params = db.Column(db.JSON, nullable=True)
     
+    # Version number for tracking changes
+    version = db.Column(db.Integer, default=1)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Optimization fields
+    compressed = db.Column(db.Boolean, default=False)
+    compression_ratio = db.Column(db.Float, nullable=True)
     
     # Relationships
     team_organization = db.relationship('TeamOrganization', backref='team_stats')
     
     def __repr__(self):
-        return f'<TeamStats {self.id} for {self.team_organization_id}>'
+        return f'<TeamStats {self.id} for {self.team_organization_id} (v{self.version})>'
 
 
 class GameStats(db.Model):
@@ -59,16 +73,23 @@ class GameStats(db.Model):
     # Filter parameters used when generating these stats
     filter_params = db.Column(db.JSON, nullable=True)
     
+    # Version number for tracking changes
+    version = db.Column(db.Integer, default=1)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Optimization fields
+    compressed = db.Column(db.Boolean, default=False)
+    compression_ratio = db.Column(db.Float, nullable=True)
     
     # Relationships
     game = db.relationship('Game', backref='saved_stats')
     team_organization = db.relationship('TeamOrganization', backref='game_stats')
     
     def __repr__(self):
-        return f'<GameStats {self.id} for game {self.game_id}>'
+        return f'<GameStats {self.id} for game {self.game_id} (v{self.version})>'
 
 
 class PlayerStats(db.Model):
@@ -84,9 +105,16 @@ class PlayerStats(db.Model):
     # Filter parameters used when generating these stats
     filter_params = db.Column(db.JSON, nullable=True)
     
+    # Version number for tracking changes
+    version = db.Column(db.Integer, default=1)
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Optimization fields
+    compressed = db.Column(db.Boolean, default=False)
+    compression_ratio = db.Column(db.Float, nullable=True)
     
     # Relationships
     player = db.relationship('Player', backref='saved_stats')
@@ -95,4 +123,4 @@ class PlayerStats(db.Model):
     
     def __repr__(self):
         game_info = f' in game {self.game_id}' if self.game_id else ''
-        return f'<PlayerStats {self.id} for player {self.player_id}{game_info}>'
+        return f'<PlayerStats {self.id} for player {self.player_id}{game_info} (v{self.version})>'
