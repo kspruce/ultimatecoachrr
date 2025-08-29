@@ -35,37 +35,12 @@
 {% endblock %}
 
 {% block content %}
-
-<script id="stats-data-context" type="application/json">
-  {{ {
-    "team_summary": team_summary,
-    "player_stats": player_stats,
-    "performance_trends": performance_trends,
-    "o_line_players": o_line_players | map(attribute='id') | list,
-    "d_line_players": d_line_players | map(attribute='id') | list,
-    "o_line_efficiency": o_line_efficiency_json,
-    "d_line_efficiency": d_line_efficiency_json
-  } | tojson | safe }}
-</script>
-
-
-
 <div class="container">
-    {% if using_saved_stats %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
-    </div>
-    {% endif %}
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Team Statistics</h1>
         </div>
         <div class="col-md-4 text-end">
-            {% if current_user.is_admin %}
-            <button id="saveStatsBtn" class="btn btn-primary me-2">
-                <i class="bi bi-save"></i> Save Stats
-            </button>
-            {% endif %}
             <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
         </div>
     </div>
@@ -901,8 +876,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
-<script src="{{ url_for('static', filename='js/stats_storage.js') }}"></script>
 {% endblock %}
 
 

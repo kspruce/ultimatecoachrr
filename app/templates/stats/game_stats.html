@@ -144,25 +144,7 @@
 
 
 {% block content %}
-
-
-<script id="stats-data-context" type="application/json">
-  {{ {
-    "game": game_json,
-    "team_stats": team_stats,
-    "player_stats": player_stats_json,
-    "heatmap_data": heatmap_data,
-    "connections": connections
-  } | tojson | safe }}
-</script>
-
-
 <div class="container">
-    {% if using_saved_stats %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
-    </div>
-    {% endif %}
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Game Statistics: vs {{ game.opponent }}</h1>
@@ -179,11 +161,6 @@
             <div class="btn-group">
                 <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-outline-primary">Game Details</a>
                 <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
-                {% if current_user.is_admin %}
-                <button id="saveStatsBtn" class="btn btn-primary">
-                    <i class="bi bi-save"></i> Save Stats
-                </button>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -1158,8 +1135,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 
-
-<script src="{{ url_for('static', filename='js/stats_storage.js') }}"></script>
 {% endblock %}
 
 
