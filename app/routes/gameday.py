@@ -6,6 +6,7 @@ from app.models.player import Player
 from app.models.game_player import GamePlayer
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
+from app.models.team_organization import TeamOrganization  # Add this import
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
