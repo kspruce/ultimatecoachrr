@@ -19,11 +19,15 @@ def save_index_stats():
     try:
         data = request.get_json()
         
+        current_app.logger.info(f"Received save index stats request: {data.keys() if data else None}")
+        
         if not data or 'stats_data' not in data:
+            current_app.logger.error("No stats data provided in request")
             return jsonify({'error': 'No stats data provided'}), 400
             
         # Get team organization ID from current user
         team_organization_id = current_user.team_organization_id
+        current_app.logger.info(f"Saving stats for team organization ID: {team_organization_id}")
         
         # Check if stats already exist for this team organization
         existing_stats = IndexStats.query.filter_by(team_organization_id=team_organization_id).first()
@@ -32,6 +36,7 @@ def save_index_stats():
         version = data.get('version', 1)
         if existing_stats and not data.get('create_new_version', False):
             # Update existing stats
+            current_app.logger.info(f"Updating existing stats (ID: {existing_stats.id})")
             existing_stats.stats_data = data['stats_data']
             existing_stats.filter_params = data.get('filter_params')
             existing_stats.updated_at = datetime.utcnow()
@@ -40,6 +45,7 @@ def save_index_stats():
             return jsonify({'message': 'Index stats updated successfully', 'id': existing_stats.id}), 200
         else:
             # Create new stats or new version
+            current_app.logger.info("Creating new stats record")
             new_stats = IndexStats(
                 team_organization_id=team_organization_id,
                 stats_data=data['stats_data'],
@@ -48,11 +54,15 @@ def save_index_stats():
             )
             db.session.add(new_stats)
             db.session.commit()
+            current_app.logger.info(f"Created new stats with ID: {new_stats.id}")
             return jsonify({'message': 'Index stats saved successfully', 'id': new_stats.id}), 201
             
     except Exception as e:
         current_app.logger.error(f"Error saving index stats: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
 
 @bp.route('/api/stats/save/team', methods=['POST'])
 @login_required

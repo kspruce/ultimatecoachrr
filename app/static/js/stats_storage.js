@@ -926,8 +926,14 @@ function formatDate(dateString) {
  * Get CSRF token from meta tag
  */
 function getCsrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!token) {
+        console.error('CSRF token not found: https://flask-wtf.readthedocs.io/en/stable/csrf.html');
+        return '';
+    }
+    return token;
 }
+
 
 // Add a global function to recalculate stats
 document.addEventListener('DOMContentLoaded', function() {

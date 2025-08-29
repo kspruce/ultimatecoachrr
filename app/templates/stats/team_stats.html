@@ -36,16 +36,21 @@
 
 {% block content %}
 <div class="container">
+    {% if using_saved_stats %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
+    </div>
+    {% endif %}
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Team Statistics</h1>
         </div>
-        {% if using_saved_stats %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
-        </div>
-        {% endif %}
         <div class="col-md-4 text-end">
+            {% if current_user.is_admin %}
+            <button id="saveStatsBtn" class="btn btn-primary me-2">
+                <i class="bi bi-save"></i> Save Stats
+            </button>
+            {% endif %}
             <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
         </div>
     </div>
@@ -878,18 +883,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     } catch (e) {
         console.error("Error initializing charts:", e);
-    }
-});
-document.addEventListener('DOMContentLoaded', function() {
-    const recalculateBtn = document.getElementById('recalculateStatsBtn');
-    if (recalculateBtn) {
-        recalculateBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Add a parameter to force recalculation
-            const url = new URL(window.location.href);
-            url.searchParams.set('recalculate', 'true');
-            window.location.href = url.toString();
-        });
     }
 });
 </script>

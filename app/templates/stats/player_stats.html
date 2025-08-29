@@ -182,6 +182,11 @@
 
 {% block content %}
 <div class="container">
+    {% if using_saved_stats %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
+    </div>
+    {% endif %}
     {% if current_user.is_admin or current_user.is_coach or (current_user.player and current_user.player.id == player.id) %}
     <div class="row mb-4">
         <div class="col-md-8">
@@ -191,11 +196,6 @@
                 {{ player.position|capitalize if player.position else 'No position' }}
             </p>
         </div>
-        {% if using_saved_stats %}
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Using saved stats. <a href="#" id="recalculateStatsBtn" class="alert-link">Recalculate</a>
-        </div>
-        {% endif %}
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
@@ -203,6 +203,11 @@
                 <button id="printReportBtn" class="btn btn-primary">
                     <i class="bi bi-printer"></i> Print Report
                 </button>
+                {% if current_user.is_admin %}
+                <button id="saveStatsBtn" class="btn btn-success">
+                    <i class="bi bi-save"></i> Save Stats
+                </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -1069,6 +1074,7 @@
 
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/stats_storage.js') }}"></script>
 {{ super() }}
 <script>
 // Global visualization data
@@ -3065,19 +3071,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-document.addEventListener('DOMContentLoaded', function() {
-    const recalculateBtn = document.getElementById('recalculateStatsBtn');
-    if (recalculateBtn) {
-        recalculateBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Add a parameter to force recalculation
-            const url = new URL(window.location.href);
-            url.searchParams.set('recalculate', 'true');
-            window.location.href = url.toString();
-        });
-    }
-});
+
 </script>
 
-<script src="{{ url_for('static', filename='js/stats_storage.js') }}"></script>
 {% endblock %}
