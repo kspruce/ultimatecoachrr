@@ -144,6 +144,17 @@
 
 
 {% block content %}
+
+<script id="stats-data-context" type="application/json">
+  {{ {
+    "game": {"id": game.id, "opponent": game.opponent},
+    "team_stats": team_stats,
+    "player_stats": player_stats,
+    "heatmap_data": heatmap_data | safe,
+    "connections": connections | safe
+  } | tojson | safe }}
+</script>
+
 <div class="container">
     {% if using_saved_stats %}
     <div class="alert alert-info">

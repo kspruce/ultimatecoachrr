@@ -35,6 +35,19 @@
 {% endblock %}
 
 {% block content %}
+
+<script id="stats-data-context" type="application/json">
+  {{ {
+    "team_summary": team_summary,
+    "player_stats": player_stats,
+    "performance_trends": performance_trends,
+    "o_line_players": o_line_players | map(attribute='id') | list,
+    "d_line_players": d_line_players | map(attribute='id') | list,
+    "o_line_efficiency": o_line_efficiency,
+    "d_line_efficiency": d_line_efficiency
+  } | tojson | safe }}
+</script>
+
 <div class="container">
     {% if using_saved_stats %}
     <div class="alert alert-info">

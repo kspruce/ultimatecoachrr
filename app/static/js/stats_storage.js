@@ -102,8 +102,8 @@ function saveIndexStats() {
     saveBtn.disabled = true;
     
     // Collect all stats data from the page
-    const statsData = collectIndexStatsData();
-    console.log("Collected stats data:", statsData);
+    const statsData = collectStatsData(); // Use the new function
+    console.log("Collected stats data:", statsData)
     
     // Get filter parameters if any
     const filterParams = collectFilterParams();
@@ -156,8 +156,8 @@ function saveTeamStats() {
     saveBtn.disabled = true;
     
     // Collect all stats data from the page
-    const statsData = collectTeamStatsData();
-    console.log("Collected team stats data:", statsData);
+    const statsData = collectStatsData(); // Use the new function
+    console.log("Collected stats data:", statsData);
     
     // Get filter parameters if any
     const filterParams = collectFilterParams();
@@ -210,8 +210,8 @@ function saveGameStats(gameId) {
     saveBtn.disabled = true;
     
     // Collect all stats data from the page
-    const statsData = collectGameStatsData();
-    console.log("Collected game stats data:", statsData);
+    const statsData = collectStatsData(); // Use the new function
+    console.log("Collected stats data:", statsData);
     
     // Get filter parameters if any
     const filterParams = collectFilterParams();
@@ -264,8 +264,8 @@ function savePlayerStats(playerId) {
     saveBtn.disabled = true;
     
     // Collect all stats data from the page
-    const statsData = collectPlayerStatsData();
-    console.log("Collected player stats data:", statsData);
+    const statsData = collectStatsData(); // Use the new function
+    console.log("Collected stats data:", statsData);
     
     // Get filter parameters if any
     const filterParams = collectFilterParams();
@@ -505,208 +505,30 @@ function checkPlayerStats(playerId) {
     });
 }
 
-/**
- * Collect index stats data from the page
- */
-function collectIndexStatsData() {
-    console.log("Collecting index stats data");
-    const statsData = {
-        team_summary: {},
-        players: [],
-        recent_games: [],
-        team_stats: [],
-        player_stats: {},
-        o_line_players: [],
-        d_line_players: [],
-        heatmap_data: '',
-        connection_data: '',
-        team_avg_stats: {}
-    };
-    
-    try {
-        // Collect stats from stat cards
+function collectStatsData() {
+    console.log("Collecting stats data from context");
+    const dataElement = document.getElementById('stats-data-context');
+    if (!dataElement) {
+        console.error("Stats data context element not found!");
+        // Fallback to scraping just in case, but without the full HTML
+        const statsData = {};
         document.querySelectorAll('.stat-card').forEach(card => {
             const statLabel = card.querySelector('.stat-label')?.textContent.trim();
             const statValue = card.querySelector('.stat-value')?.textContent.trim();
-            
             if (statLabel && statValue) {
-                statsData.team_summary[statLabel] = statValue;
+                statsData[statLabel] = statValue;
             }
         });
-        
-        // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
-        if (mainContent) {
-            statsData.html_content = mainContent.innerHTML;
-        } else {
-            // If no main content container found, get the entire body content
-            statsData.html_content = document.body.innerHTML;
-        }
-        
-        // Collect data from tables
-        document.querySelectorAll('table').forEach((table, index) => {
-            const tableId = table.id || `table_${index}`;
-            statsData[tableId] = collectTableData(table);
-        });
-        
-    } catch (error) {
-        console.error("Error collecting index stats data:", error);
+        return { "scraped_summary": statsData };
     }
-    
-    return statsData;
-}
-
-/**
- * Collect team stats data from the page
- */
-function collectTeamStatsData() {
-    console.log("Collecting team stats data");
-    const statsData = {
-        team_summary: {},
-        player_stats: {},
-        performance_trends: {},
-        o_line_players: [],
-        d_line_players: [],
-        o_line_efficiency: {},
-        d_line_efficiency: {}
-    };
-    
     try {
-        // Collect stats from stat cards
-        document.querySelectorAll('.stat-card').forEach(card => {
-            const statLabel = card.querySelector('.stat-label')?.textContent.trim();
-            const statValue = card.querySelector('.stat-value')?.textContent.trim();
-            
-            if (statLabel && statValue) {
-                statsData.team_summary[statLabel] = statValue;
-            }
-        });
-        
-        // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
-        if (mainContent) {
-            statsData.html_content = mainContent.innerHTML;
-        } else {
-            // If no main content container found, get the entire body content
-            statsData.html_content = document.body.innerHTML;
-        }
-        
-        // Collect data from tables
-        document.querySelectorAll('table').forEach((table, index) => {
-            const tableId = table.id || `table_${index}`;
-            statsData[tableId] = collectTableData(table);
-        });
-        
-    } catch (error) {
-        console.error("Error collecting team stats data:", error);
+        const data = JSON.parse(dataElement.textContent);
+        console.log("Successfully parsed stats data:", data);
+        return data;
+    } catch (e) {
+        console.error("Error parsing stats data from context:", e);
+        return { "error": "Failed to parse stats data" };
     }
-    
-    return statsData;
-}
-
-/**
- * Collect game stats data from the page
- */
-function collectGameStatsData() {
-    console.log("Collecting game stats data");
-    const statsData = {
-        game: {},
-        team_stats: {},
-        player_stats: [],
-        heatmap_data: '',
-        connections: ''
-    };
-    
-    try {
-        // Get game info
-        const gameTitle = document.querySelector('h1')?.textContent.trim();
-        if (gameTitle) {
-            statsData.game.title = gameTitle;
-        }
-        
-        // Collect stats from stat cards
-        document.querySelectorAll('.stat-card').forEach(card => {
-            const statLabel = card.querySelector('.stat-label')?.textContent.trim();
-            const statValue = card.querySelector('.stat-value')?.textContent.trim();
-            
-            if (statLabel && statValue) {
-                statsData.team_stats[statLabel] = statValue;
-            }
-        });
-        
-        // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
-        if (mainContent) {
-            statsData.html_content = mainContent.innerHTML;
-        } else {
-            // If no main content container found, get the entire body content
-            statsData.html_content = document.body.innerHTML;
-        }
-        
-        // Collect data from tables
-        document.querySelectorAll('table').forEach((table, index) => {
-            const tableId = table.id || `table_${index}`;
-            statsData[tableId] = collectTableData(table);
-        });
-        
-    } catch (error) {
-        console.error("Error collecting game stats data:", error);
-    }
-    
-    return statsData;
-}
-
-/**
- * Collect player stats data from the page
- */
-function collectPlayerStatsData() {
-    console.log("Collecting player stats data");
-    const statsData = {
-        player: {},
-        stats: {},
-        team_summary: {},
-        player_games: [],
-        throw_vectors: [],
-        throw_stats: {}
-    };
-    
-    try {
-        // Get player info
-        const playerName = document.querySelector('h1')?.textContent.trim();
-        if (playerName) {
-            statsData.player.name = playerName;
-        }
-        
-        // Collect stats from stat cards
-        document.querySelectorAll('.stat-card').forEach(card => {
-            const statLabel = card.querySelector('.stat-label')?.textContent.trim();
-            const statValue = card.querySelector('.stat-value')?.textContent.trim();
-            
-            if (statLabel && statValue) {
-                statsData.stats[statLabel] = statValue;
-            }
-        });
-        
-        // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
-        if (mainContent) {
-            statsData.html_content = mainContent.innerHTML;
-        } else {
-            // If no main content container found, get the entire body content
-            statsData.html_content = document.body.innerHTML;
-        }
-        
-        // Collect data from tables
-        document.querySelectorAll('table').forEach((table, index) => {
-            const tableId = table.id || `table_${index}`;
-            statsData[tableId] = collectTableData(table);
-        });
-        
-    } catch (error) {
-        console.error("Error collecting player stats data:", error);
-    }
-    
-    return statsData;
 }
 
 /**

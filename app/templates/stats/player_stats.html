@@ -181,6 +181,18 @@
 {% endblock %}
 
 {% block content %}
+
+<script id="stats-data-context" type="application/json">
+  {{ {
+    "player": {"id": player.id, "name": player.name},
+    "stats": stats,
+    "team_summary": team_summary,
+    "player_games": player_games,
+    "throw_vectors": throw_vectors,
+    "throw_stats": throw_stats
+  } | tojson | safe }}
+</script>
+
 <div class="container">
     {% if using_saved_stats %}
     <div class="alert alert-info">
