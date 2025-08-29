@@ -29,6 +29,7 @@ class GameDayEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)  # Nullable for possession changes
+    thrower_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)  # Added field for thrower
     event_type = db.Column(db.String(20), nullable=False)  # catch, drop, score, throwaway, stall, block, pickup, callahan, assist, pull
     event_result = db.Column(db.String(20), nullable=True)  # For pulls: in/out
     sequence = db.Column(db.Integer, nullable=False)  # Order of events within a point
@@ -37,7 +38,9 @@ class GameDayEvent(db.Model):
     
     # Relationships
     point = db.relationship('Point', back_populates='gameday_events')
-    player = db.relationship('Player', back_populates='gameday_events')
+    player = db.relationship('Player', back_populates='gameday_events', foreign_keys=[player_id])
+    thrower = db.relationship('Player', foreign_keys=[thrower_id])  # Add relationship to thrower
+
     
     def __repr__(self):
         return f'<GameDayEvent {self.event_type} by Player {self.player_id} in Point {self.point_id}>'
