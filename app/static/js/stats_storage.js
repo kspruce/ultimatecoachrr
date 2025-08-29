@@ -1,9 +1,11 @@
 /**
- * Stats Storage JavaScript - Fixed Version
+ * Stats Storage JavaScript - Improved Version
  * Handles saving and retrieving stats to/from the database
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("Stats Storage JS loaded");
+    
     // Check if we're on a stats page with a save button
     const saveStatsBtn = document.getElementById('saveStatsBtn');
     if (saveStatsBtn) {
@@ -12,34 +14,37 @@ document.addEventListener('DOMContentLoaded', function() {
         saveStatsBtn.addEventListener('click', function() {
             console.log("Save button clicked");
             
-            // Determine which page we're on
+            // Determine which page we're on based on the URL
             const currentPath = window.location.pathname;
             console.log("Current path:", currentPath);
             
-            if (currentPath.includes('/stats')) {
-                if (currentPath.endsWith('/stats')) {
-                    // Index stats page
-                    saveIndexStats();
-                } else if (currentPath.includes('/team_stats')) {
-                    // Team stats page
-                    saveTeamStats();
-                } else if (currentPath.includes('/game_stats')) {
-                    // Game stats page
-                    const gameId = getGameIdFromUrl();
-                    if (gameId) {
-                        saveGameStats(gameId);
-                    } else {
-                        showNotification('Error: Could not determine game ID', 'danger');
-                    }
-                } else if (currentPath.includes('/player_stats')) {
-                    // Player stats page
-                    const playerId = getPlayerIdFromUrl();
-                    if (playerId) {
-                        savePlayerStats(playerId);
-                    } else {
-                        showNotification('Error: Could not determine player ID', 'danger');
-                    }
+            // More flexible URL pattern matching
+            if (currentPath.includes('index') || currentPath.endsWith('/stats')) {
+                // Index stats page
+                saveIndexStats();
+            } else if (currentPath.includes('team_stats')) {
+                // Team stats page
+                saveTeamStats();
+            } else if (currentPath.includes('game_stats')) {
+                // Game stats page
+                const gameId = getGameIdFromUrl();
+                if (gameId) {
+                    saveGameStats(gameId);
+                } else {
+                    showNotification('Error: Could not determine game ID', 'danger');
                 }
+            } else if (currentPath.includes('player_stats')) {
+                // Player stats page
+                const playerId = getPlayerIdFromUrl();
+                if (playerId) {
+                    savePlayerStats(playerId);
+                } else {
+                    showNotification('Error: Could not determine player ID', 'danger');
+                }
+            } else {
+                // Fallback for any other stats page
+                console.log("Unknown stats page type, trying to save as index stats");
+                saveIndexStats();
             }
         });
     } else {
@@ -55,7 +60,16 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function getGameIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
-    const gameId = urlParams.get('game_id');
+    let gameId = urlParams.get('game_id');
+    
+    // If not found in query params, try to extract from URL path
+    if (!gameId) {
+        const pathMatch = window.location.pathname.match(/\/game_stats\/(\d+)/);
+        if (pathMatch) {
+            gameId = pathMatch[1];
+        }
+    }
+    
     return gameId;
 }
 
@@ -64,7 +78,16 @@ function getGameIdFromUrl() {
  */
 function getPlayerIdFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
-    const playerId = urlParams.get('player_id');
+    let playerId = urlParams.get('player_id');
+    
+    // If not found in query params, try to extract from URL path
+    if (!playerId) {
+        const pathMatch = window.location.pathname.match(/\/player_stats\/(\d+)/);
+        if (pathMatch) {
+            playerId = pathMatch[1];
+        }
+    }
+    
     return playerId;
 }
 
@@ -98,7 +121,12 @@ function saveIndexStats() {
             version: 1
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             showNotification('Error: ' + data.error, 'danger');
@@ -147,7 +175,12 @@ function saveTeamStats() {
             version: 1
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             showNotification('Error: ' + data.error, 'danger');
@@ -196,7 +229,12 @@ function saveGameStats(gameId) {
             version: 1
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             showNotification('Error: ' + data.error, 'danger');
@@ -249,7 +287,12 @@ function savePlayerStats(playerId) {
             version: 1
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             showNotification('Error: ' + data.error, 'danger');
@@ -274,25 +317,24 @@ function savePlayerStats(playerId) {
 function checkForSavedStats() {
     const currentPath = window.location.pathname;
     
-    if (currentPath.includes('/stats')) {
-        if (currentPath.endsWith('/stats')) {
-            // Index stats page
-            checkIndexStats();
-        } else if (currentPath.includes('/team_stats')) {
-            // Team stats page
-            checkTeamStats();
-        } else if (currentPath.includes('/game_stats')) {
-            // Game stats page
-            const gameId = getGameIdFromUrl();
-            if (gameId) {
-                checkGameStats(gameId);
-            }
-        } else if (currentPath.includes('/player_stats')) {
-            // Player stats page
-            const playerId = getPlayerIdFromUrl();
-            if (playerId) {
-                checkPlayerStats(playerId);
-            }
+    // More flexible URL pattern matching
+    if (currentPath.includes('index') || currentPath.endsWith('/stats')) {
+        // Index stats page
+        checkIndexStats();
+    } else if (currentPath.includes('team_stats')) {
+        // Team stats page
+        checkTeamStats();
+    } else if (currentPath.includes('game_stats')) {
+        // Game stats page
+        const gameId = getGameIdFromUrl();
+        if (gameId) {
+            checkGameStats(gameId);
+        }
+    } else if (currentPath.includes('player_stats')) {
+        // Player stats page
+        const playerId = getPlayerIdFromUrl();
+        if (playerId) {
+            checkPlayerStats(playerId);
         }
     }
 }
@@ -317,7 +359,12 @@ function checkIndexStats() {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.exists) {
             // Show notification that we're using saved stats
@@ -325,9 +372,6 @@ function checkIndexStats() {
             
             // Update the save button to show "Update Stats"
             updateSaveButton('Update Stats');
-            
-            // Optionally, use the saved stats data instead of calculating again
-            // This would require modifying the page's existing JavaScript
         }
     })
     .catch(error => {
@@ -355,7 +399,12 @@ function checkTeamStats() {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.exists) {
             // Show notification that we're using saved stats
@@ -363,8 +412,6 @@ function checkTeamStats() {
             
             // Update the save button to show "Update Stats"
             updateSaveButton('Update Stats');
-            
-            // Optionally, use the saved stats data instead of calculating again
         }
     })
     .catch(error => {
@@ -392,7 +439,12 @@ function checkGameStats(gameId) {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.exists) {
             // Show notification that we're using saved stats
@@ -400,8 +452,6 @@ function checkGameStats(gameId) {
             
             // Update the save button to show "Update Stats"
             updateSaveButton('Update Stats');
-            
-            // Optionally, use the saved stats data instead of calculating again
         }
     })
     .catch(error => {
@@ -435,7 +485,12 @@ function checkPlayerStats(playerId) {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.exists) {
             // Show notification that we're using saved stats
@@ -443,8 +498,6 @@ function checkPlayerStats(playerId) {
             
             // Update the save button to show "Update Stats"
             updateSaveButton('Update Stats');
-            
-            // Optionally, use the saved stats data instead of calculating again
         }
     })
     .catch(error => {
@@ -481,168 +534,20 @@ function collectIndexStatsData() {
             }
         });
         
-        // Collect team summary data
-        const teamSummaryElement = document.getElementById('team-summary');
-        if (teamSummaryElement) {
-            // Try to get team summary data from a data attribute if available
-            const teamSummaryData = teamSummaryElement.dataset.summary;
-            if (teamSummaryData) {
-                try {
-                    statsData.team_summary = JSON.parse(teamSummaryData);
-                } catch (e) {
-                    console.error("Error parsing team summary data:", e);
-                }
-            }
+        // Get the entire HTML of the main content area
+        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
+        if (mainContent) {
+            statsData.html_content = mainContent.innerHTML;
+        } else {
+            // If no main content container found, get the entire body content
+            statsData.html_content = document.body.innerHTML;
         }
-        
-        // Collect player data
-        document.querySelectorAll('.player-card, .player-row').forEach((playerElement, index) => {
-            const playerName = playerElement.querySelector('.player-name')?.textContent.trim();
-            const playerId = playerElement.dataset.playerId;
-            
-            if (playerName) {
-                const playerData = {
-                    id: playerId || index,
-                    name: playerName
-                };
-                
-                // Collect additional player data if available
-                const jerseyNumber = playerElement.querySelector('.jersey-number')?.textContent.trim();
-                if (jerseyNumber) {
-                    playerData.jersey_number = jerseyNumber;
-                }
-                
-                statsData.players.push(playerData);
-            }
-        });
-        
-        // Collect recent games data
-        document.querySelectorAll('.game-card, .game-row').forEach((gameElement, index) => {
-            const gameTitle = gameElement.querySelector('.game-title')?.textContent.trim();
-            const gameId = gameElement.dataset.gameId;
-            
-            if (gameTitle) {
-                const gameData = {
-                    id: gameId || index,
-                    title: gameTitle
-                };
-                
-                // Collect additional game data if available
-                const gameDate = gameElement.querySelector('.game-date')?.textContent.trim();
-                if (gameDate) {
-                    gameData.date = gameDate;
-                }
-                
-                statsData.recent_games.push(gameData);
-            }
-        });
         
         // Collect data from tables
         document.querySelectorAll('table').forEach((table, index) => {
             const tableId = table.id || `table_${index}`;
             statsData[tableId] = collectTableData(table);
         });
-        
-        // Collect data from charts
-        document.querySelectorAll('.chart-container').forEach((chart, index) => {
-            const chartId = chart.id || `chart_${index}`;
-            statsData[`chart_${chartId}`] = { id: chartId };
-        });
-        
-        // Try to get heatmap data if available
-        const heatmapData = document.getElementById('heatmapData')?.textContent;
-        if (heatmapData) {
-            try {
-                statsData.heatmap_data = JSON.parse(heatmapData);
-            } catch (e) {
-                console.error("Error parsing heatmap data:", e);
-                statsData.heatmap_data = heatmapData;
-            }
-        }
-        
-        // Try to get connection data if available
-        const connectionData = document.getElementById('connectionData')?.textContent;
-        if (connectionData) {
-            try {
-                statsData.connection_data = JSON.parse(connectionData);
-            } catch (e) {
-                console.error("Error parsing connection data:", e);
-                statsData.connection_data = connectionData;
-            }
-        }
-        
-        // Try to get all variables from the page context
-        // This is a more comprehensive approach that should capture everything
-        const pageVars = {};
-        document.querySelectorAll('script').forEach(script => {
-            const content = script.textContent;
-            if (content) {
-                // Look for variable assignments in the script
-                const varMatches = content.match(/var\s+(\w+)\s*=\s*({[\s\S]*?});/g);
-                if (varMatches) {
-                    varMatches.forEach(match => {
-                        const varName = match.match(/var\s+(\w+)/)[1];
-                        try {
-                            const varValue = JSON.parse(match.match(/=\s*({[\s\S]*?});/)[1]);
-                            pageVars[varName] = varValue;
-                        } catch (e) {
-                            // Ignore parsing errors
-                        }
-                    });
-                }
-                
-                // Look for JSON data in the script
-                const jsonMatches = content.match(/JSON\.parse\('(.*?)'\)/g);
-                if (jsonMatches) {
-                    jsonMatches.forEach(match => {
-                        try {
-                            const jsonStr = match.match(/JSON\.parse\('(.*?)'\)/)[1];
-                            const jsonData = JSON.parse(jsonStr);
-                            if (typeof jsonData === 'object' && jsonData !== null) {
-                                Object.assign(pageVars, jsonData);
-                            }
-                        } catch (e) {
-                            // Ignore parsing errors
-                        }
-                    });
-                }
-            }
-        });
-        
-        // Add page variables to stats data
-        statsData.page_vars = pageVars;
-        
-        // Get all data attributes from the body element
-        const bodyDataAttrs = {};
-        const bodyElement = document.body;
-        if (bodyElement.dataset) {
-            Object.keys(bodyElement.dataset).forEach(key => {
-                try {
-                    bodyDataAttrs[key] = JSON.parse(bodyElement.dataset[key]);
-                } catch (e) {
-                    bodyDataAttrs[key] = bodyElement.dataset[key];
-                }
-            });
-        }
-        
-        statsData.body_data = bodyDataAttrs;
-        
-        // Get all global variables that might contain stats
-        const globalVars = ['team_summary', 'players', 'recent_games', 'team_stats', 'player_stats', 
-                           'o_line_players', 'd_line_players', 'heatmap_data', 'connection_data', 
-                           'team_avg_stats', 'performance_trends'];
-        
-        globalVars.forEach(varName => {
-            if (window[varName] !== undefined) {
-                statsData[varName] = window[varName];
-            }
-        });
-        
-        // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid');
-        if (mainContent) {
-            statsData.html_content = mainContent.innerHTML;
-        }
         
     } catch (error) {
         console.error("Error collecting index stats data:", error);
@@ -667,7 +572,6 @@ function collectTeamStatsData() {
     };
     
     try {
-        // Similar approach to collectIndexStatsData
         // Collect stats from stat cards
         document.querySelectorAll('.stat-card').forEach(card => {
             const statLabel = card.querySelector('.stat-label')?.textContent.trim();
@@ -679,19 +583,18 @@ function collectTeamStatsData() {
         });
         
         // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid');
+        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
         if (mainContent) {
             statsData.html_content = mainContent.innerHTML;
+        } else {
+            // If no main content container found, get the entire body content
+            statsData.html_content = document.body.innerHTML;
         }
         
-        // Get all global variables that might contain stats
-        const globalVars = ['team_summary', 'player_stats', 'performance_trends', 'o_line_players', 
-                           'd_line_players', 'o_line_efficiency', 'd_line_efficiency'];
-        
-        globalVars.forEach(varName => {
-            if (window[varName] !== undefined) {
-                statsData[varName] = window[varName];
-            }
+        // Collect data from tables
+        document.querySelectorAll('table').forEach((table, index) => {
+            const tableId = table.id || `table_${index}`;
+            statsData[tableId] = collectTableData(table);
         });
         
     } catch (error) {
@@ -732,18 +635,18 @@ function collectGameStatsData() {
         });
         
         // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid');
+        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
         if (mainContent) {
             statsData.html_content = mainContent.innerHTML;
+        } else {
+            // If no main content container found, get the entire body content
+            statsData.html_content = document.body.innerHTML;
         }
         
-        // Get all global variables that might contain stats
-        const globalVars = ['game', 'team_stats', 'player_stats', 'heatmap_data', 'connections'];
-        
-        globalVars.forEach(varName => {
-            if (window[varName] !== undefined) {
-                statsData[varName] = window[varName];
-            }
+        // Collect data from tables
+        document.querySelectorAll('table').forEach((table, index) => {
+            const tableId = table.id || `table_${index}`;
+            statsData[tableId] = collectTableData(table);
         });
         
     } catch (error) {
@@ -784,25 +687,19 @@ function collectPlayerStatsData() {
             }
         });
         
-        // Collect PER value if present
-        const perValue = document.getElementById('perValue')?.textContent.trim();
-        if (perValue) {
-            statsData.stats.perValue = perValue;
-        }
-        
         // Get the entire HTML of the main content area
-        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid');
+        const mainContent = document.querySelector('main') || document.querySelector('.container-fluid') || document.querySelector('.container');
         if (mainContent) {
             statsData.html_content = mainContent.innerHTML;
+        } else {
+            // If no main content container found, get the entire body content
+            statsData.html_content = document.body.innerHTML;
         }
         
-        // Get all global variables that might contain stats
-        const globalVars = ['player', 'stats', 'team_summary', 'player_games', 'throw_vectors', 'throw_stats'];
-        
-        globalVars.forEach(varName => {
-            if (window[varName] !== undefined) {
-                statsData[varName] = window[varName];
-            }
+        // Collect data from tables
+        document.querySelectorAll('table').forEach((table, index) => {
+            const tableId = table.id || `table_${index}`;
+            statsData[tableId] = collectTableData(table);
         });
         
     } catch (error) {
@@ -923,17 +820,42 @@ function formatDate(dateString) {
 }
 
 /**
- * Get CSRF token from meta tag
+ * Get CSRF token from meta tag or cookie
  */
 function getCsrfToken() {
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    // Try to get from meta tag
+    let token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    // If not found in meta tag, try to get from cookie
     if (!token) {
-        console.error('CSRF token not found: https://flask-wtf.readthedocs.io/en/stable/csrf.html');
+        token = getCookie('csrf_token') || getCookie('_csrf_token');
+    }
+    
+    // If still not found, look for a hidden input field
+    if (!token) {
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        if (csrfInput) {
+            token = csrfInput.value;
+        }
+    }
+    
+    if (!token) {
+        console.error('CSRF token not found');
         return '';
     }
+    
     return token;
 }
 
+/**
+ * Get cookie value by name
+ */
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
 
 // Add a global function to recalculate stats
 document.addEventListener('DOMContentLoaded', function() {
