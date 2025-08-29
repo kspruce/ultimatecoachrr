@@ -1312,15 +1312,23 @@ def player_stats(player_id):
     tournaments = Tournament.query.filter_by(team_organization_id=team_organization_id).order_by(Tournament.start_date.desc()).all()
 
     # --- Create JSON Serializable Versions ---
-    player_games_json = [{'game': g['game'], 'stats': g['stats']} for g in player_games]
+    player_games_json = []
+    for pg in player_games:
+        game_obj = pg['game']
+        game_dict = {
+            'id': game_obj.id,
+            'opponent': game_obj.opponent,
+            'date': game_obj.date.strftime('%Y-%m-%d') if game_obj.date else 'N/A'
+        }
+        player_games_json.append({'game': game_dict, 'stats': pg['stats']})
 
     return render_template(
         'stats/player_stats.html',
-        player=player,  # Pass the full object for HTML
+        player=player,
         stats=stats,
-        team_summary=team_summary,
-        player_games=player_games, # Pass full objects for HTML
-        tournaments=tournaments, # Pass full objects for HTML
+        team_summary=team_summary, 
+        player_games=player_games,
+        tournaments=tournaments,
         selected_tournament=tournament_id,
         selected_game=game_id,
         throw_vectors=stats.get('throw_vectors', []),
@@ -1341,9 +1349,10 @@ def player_stats(player_id):
         most_common_throwaway_location=most_common_throwaway_location,
         throwaway_direction_data=throwaway_direction_data,
         using_saved_stats=saved_stats_exist,
-        # Pass JSON-safe versions for the script tag
+        # Pass the new JSON-safe variable
         player_games_json=player_games_json
     )
+
 
 
 # You will also need to add these two new helper functions to stats.py
@@ -1448,15 +1457,15 @@ def game_stats(game_id):
     connection_data = generate_player_connections(team_name=team_name, min_connections=2, point_ids=point_ids)
     team_stats.update(calculate_additional_team_metrics([game]))
 
-    # Create JSON-safe versions
+    # --- Create JSON Serializable Versions ---
     game_json = {'id': game.id, 'opponent': game.opponent, 'date': game.date.strftime('%Y-%m-%d') if game.date else 'N/A'}
     player_stats_json = [{'player': {'id': item['player'].id, 'name': item['player'].name}, 'stats': item['stats']} for item in player_stats_list]
 
     return render_template(
         'stats/game_stats.html',
-        game=game, # Pass full object for HTML
+        game=game,
         team_stats=team_stats,
-        player_stats=player_stats_list, # Pass list with full objects for HTML
+        player_stats=player_stats_list,
         heatmap_data=heatmap_data,
         connections=connection_data,
         calculate_impact_score=calculate_impact_score,
@@ -1480,7 +1489,6 @@ def calculate_impact_score(stats):
 @bp.route('/team')
 @login_required
 def team_stats():
-    # ... (filter logic and data calculation remains the same) ...
     team_organization_id = get_current_team_id()
     season = request.args.get('season', '')
     tournament_id = request.args.get('tournament_id', type=int)
@@ -1526,7 +1534,7 @@ def team_stats():
     
     for player_id, stats in player_stats_dict.items():
         if stats.get('points_played', 0) > 0:
-            stats['per'] = calculate_per_from_stats(stats, team_avgs)
+            stats['per'] = calculate_per_from_stats(stats, player_stats_dict.get(player_id, {}), team_avgs)
 
     o_line_candidates = [p for p in players if player_stats_dict.get(p.id, {}).get('o_line_points_played', 0) > 0]
     d_line_candidates = [p for p in players if player_stats_dict.get(p.id, {}).get('d_line_points_played', 0) > 0]
@@ -1547,7 +1555,7 @@ def team_stats():
     tournaments = Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
     seasons_tuples = db.session.query(Tournament.season).filter_by(team_organization_id=get_current_team_id()).distinct().all()
 
-    # Create JSON-safe versions
+    # --- Create JSON Serializable Versions ---
     o_line_efficiency_json = {p.id: eff for p, eff in o_line_efficiency}
     d_line_efficiency_json = {p.id: eff for p, eff in d_line_efficiency}
 
@@ -1573,6 +1581,7 @@ def team_stats():
         o_line_efficiency_json=o_line_efficiency_json,
         d_line_efficiency_json=d_line_efficiency_json
     )
+
 
 
 # --- Helper functions for visualization data ---
