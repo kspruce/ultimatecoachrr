@@ -254,6 +254,12 @@
 {% endblock %}
 
 {% block content %}
+{% if current_user.is_authenticated and team_name %}
+<div class="alert alert-info mb-4">
+  <i class="bi bi-info-circle me-2"></i>
+  Showing data for team: <strong>{{ team_name }}</strong>
+</div>
+{% endif %}
 {% if current_user.is_authenticated %}
 <!-- Player Dashboard at the top (if user has a linked player) -->
 {% if current_user.player %}
