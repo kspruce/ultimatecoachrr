@@ -151,12 +151,16 @@ class EnhancedDataManager:
                     }
                     foreign_keys.append(fk_info)
             
-            # Count records
+            # Count records - MODIFIED TO HANDLE MISSING TABLES
             try:
                 record_count = model.query.count()
             except Exception as e:
-                logger.warning(f"Could not count records for {table_name}: {e}")
+                import logging
+                logging.warning(f"Could not count records for {table_name}: {e}")
                 record_count = 0
+                # Skip adding this model to the info if the table doesn't exist
+                if "relation" in str(e) and "does not exist" in str(e):
+                    continue
             
             model_info['models'][table_name] = {
                 'class_name': model.__name__,
@@ -166,6 +170,7 @@ class EnhancedDataManager:
             }
         
         return model_info
+
     
     def export_all_data(self, timestamp=True, custom_name=None, format='json', in_memory=False):
         """Export all data to in-memory ZIP file"""

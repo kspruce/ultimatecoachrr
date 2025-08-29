@@ -2,21 +2,25 @@
 ├── __pycache__
 │   ├── config.cpython-39.pyc
 │   └── run.cpython-39.pyc
+├── add_team.py
 ├── app
 │   ├── __init__ (backup).py
 │   ├── __init__.py
 │   ├── __pycache__
 │   │   ├── __init__.cpython-312.pyc
 │   │   └── __init__.cpython-39.pyc
+│   ├── context_processors.py
 │   ├── discord
 │   │   ├── __init__.py
 │   │   ├── bot.py
+│   │   ├── bot_fix.py
 │   │   ├── config.py
 │   │   ├── events.py
 │   │   ├── notifications.py
 │   │   ├── routes.py
 │   │   └── webhooks.py
 │   ├── discord_integration.py
+│   ├── error_handlers.py
 │   ├── forms
 │   │   ├── __pycache__
 │   │   │   ├── annotation.cpython-39.pyc
@@ -42,6 +46,7 @@
 │   │   ├── session.py
 │   │   ├── stat.py
 │   │   ├── team.py
+│   │   ├── team_organization.py
 │   │   ├── theory.py
 │   │   └── tournament.py
 │   ├── models
@@ -65,6 +70,7 @@
 │   │   │   ├── tournament.cpython-39.pyc
 │   │   │   └── user.cpython-39.pyc
 │   │   ├── annotation.py
+│   │   ├── base.py
 │   │   ├── clip.py
 │   │   ├── cutting_skill.py
 │   │   ├── discord_user.py
@@ -74,12 +80,15 @@
 │   │   ├── fitness.py
 │   │   ├── game.py
 │   │   ├── game_player.py
+│   │   ├── gameday.py
 │   │   ├── playbook.py
 │   │   ├── player.py
 │   │   ├── point.py
 │   │   ├── scouting.py
 │   │   ├── session.py
 │   │   ├── stats.py
+│   │   ├── team_organization.py
+│   │   ├── team_settings.py
 │   │   ├── theory.py
 │   │   ├── throws.py
 │   │   ├── tournament.py
@@ -111,6 +120,7 @@
 │   │   ├── drill_routes.py
 │   │   ├── fitness.py
 │   │   ├── game.py
+│   │   ├── gameday.py
 │   │   ├── main.py
 │   │   ├── playbook.py
 │   │   ├── point.py
@@ -120,6 +130,7 @@
 │   │   ├── stats(backup).py
 │   │   ├── stats.py
 │   │   ├── team.py
+│   │   ├── team_organization.py
 │   │   ├── theory.py
 │   │   └── tournament.py
 │   ├── static
@@ -127,6 +138,7 @@
 │   │   │   ├── calendar.css
 │   │   │   ├── drill_editor.css
 │   │   │   ├── drill_viewer.css
+│   │   │   ├── gameday.css
 │   │   │   ├── main.css
 │   │   │   └── session_styles.css
 │   │   ├── images
@@ -139,13 +151,16 @@
 │   │   │   ├── playbook.js
 │   │   │   ├── session.js
 │   │   │   └── session_scripts.js
+│   │   ├── offline.html
 │   │   └── uploads
 │   │       └── drills
 │   ├── templates
 │   │   ├── about.html
 │   │   ├── admin
 │   │   │   ├── data_management.html
-│   │   │   └── enhanced_data_management.html
+│   │   │   ├── enhanced_data_management.html
+│   │   │   ├── error.html
+│   │   │   └── index.html
 │   │   ├── auth
 │   │   │   ├── link_player.html
 │   │   │   ├── login.html
@@ -188,6 +203,10 @@
 │   │   │   ├── detail.html
 │   │   │   ├── form.html
 │   │   │   └── index.html
+│   │   ├── gameday
+│   │   │   ├── dashboard.html
+│   │   │   ├── stats.html
+│   │   │   └── team_stats.html
 │   │   ├── how_to_use.html
 │   │   ├── index.html
 │   │   ├── partials
@@ -232,6 +251,7 @@
 │   │   ├── stats
 │   │   │   ├── debug_line_plus_minus.html
 │   │   │   ├── debug_per.html
+│   │   │   ├── debug_radar_stats.html
 │   │   │   ├── debug_throws.html
 │   │   │   ├── game_stats.html
 │   │   │   ├── index.html
@@ -257,6 +277,9 @@
 │   │   │   ├── player_detail.html
 │   │   │   ├── player_form.html
 │   │   │   └── roster.html
+│   │   ├── team_organization
+│   │   │   ├── form.html
+│   │   │   └── index.html
 │   │   ├── theory
 │   │   │   ├── index.html
 │   │   │   ├── section.html
@@ -278,20 +301,25 @@
 │       │   ├── stats.cpython-39.pyc
 │       │   ├── storage.cpython-39.pyc
 │       │   └── utils.cpython-39.pyc
+│       ├── base_blueprint.py
 │       ├── data_manager.py
 │       ├── enhanced_data_manager.py
 │       ├── per_calculator.py
+│       ├── query_helpers.py
 │       ├── s3_utils.py
 │       ├── stat_utils.py
 │       ├── storage.py
+│       ├── team_filter.py
 │       └── utils.py
 ├── app.db
 ├── app.db.bak
 ├── app.json
+├── backfill.py
 ├── commands.py
 ├── config.py
 ├── create_admin.py
 ├── db_manager.py
+├── db_reset.py
 ├── file_structure.py
 ├── generate_mock_data.py
 ├── init_db.py
@@ -309,4 +337,6 @@
 │       └── __pycache__
 │           └── 443f4ea75519_add_video_source_field_to_clips.cpython-39.pyc
 ├── requirements.txt
-└── reset_database.sql
+├── reset_database.sql
+├── run.py
+└── structure.txt
