@@ -1218,12 +1218,7 @@ def index():
             is_coach=is_coach(current_user)
         )
 
-    except Exception as e:
-        print(f"Error in index route: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        flash(f"An error occurred: {str(e)}", "danger")
-        return render_template('stats/index.html', **default_context)
+    
 
 # Add these helper functions:
 
