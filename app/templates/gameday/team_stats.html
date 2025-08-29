@@ -143,14 +143,12 @@
                   <th data-sort="number" class="stat-total">Assists</th>
                   <th data-sort="number" class="stat-total">Blocks</th>
                   <th data-sort="number" class="stat-total">Turns</th>
-                  <th data-sort="number" class="stat-total">Comp %</th>
                   <th data-sort="number" class="stat-total">+/-</th>
                   <th data-sort="number" class="stat-avg" style="display:none;">Pts/G</th>
                   <th data-sort="number" class="stat-avg" style="display:none;">Goals/G</th>
                   <th data-sort="number" class="stat-avg" style="display:none;">Ast/G</th>
                   <th data-sort="number" class="stat-avg" style="display:none;">Blk/G</th>
                   <th data-sort="number" class="stat-avg" style="display:none;">Turn/G</th>
-                  <th data-sort="number" class="stat-avg" style="display:none;">Comp %</th>
                   <th data-sort="number" class="stat-avg" style="display:none;">+/-/G</th>
                 </tr>
               </thead>
@@ -167,7 +165,6 @@
                   <td class="stat-total">{{ stat.assists }}</td>
                   <td class="stat-total">{{ stat.blocks }}</td>
                   <td class="stat-total">{{ stat.turns }}</td>
-                  <td class="stat-total">{{ stat.completion_rate }}%</td>
                   <td class="stat-total {{ 'text-success' if stat.plus_minus > 0 else 'text-danger' if stat.plus_minus < 0 else '' }}">
                     {{ stat.plus_minus }}
                   </td>
@@ -176,7 +173,6 @@
                   <td class="stat-avg" style="display:none;">{{ stat.avg_assists }}</td>
                   <td class="stat-avg" style="display:none;">{{ stat.avg_blocks }}</td>
                   <td class="stat-avg" style="display:none;">{{ stat.avg_turns }}</td>
-                  <td class="stat-avg" style="display:none;">{{ stat.completion_rate }}%</td>
                   <td class="stat-avg {{ 'text-success' if stat.avg_plus_minus > 0 else 'text-danger' if stat.avg_plus_minus < 0 else '' }}" style="display:none;">
                     {{ stat.avg_plus_minus }}
                   </td>
@@ -386,7 +382,6 @@
   });
 
   function makeTableSortable(table) {
-  function makeTableSortable(table) {
     const headers = table.querySelectorAll('th');
     const tableBody = table.querySelector('tbody');
     const rows = tableBody.querySelectorAll('tr');
@@ -396,15 +391,14 @@
       header.addEventListener('click', () => {
         const sortType = header.getAttribute('data-sort') || 'string';
         const columnIndex = Array.from(header.parentNode.children).indexOf(header);
-      
+        
         // Remove sort classes from all headers
         headers.forEach(h => {
           h.classList.remove('asc', 'desc');
         });
-      
+        
         // Determine sort direction
-        // If header has desc class or neither class, sort ascending; otherwise sort descending
-        const isAscending = header.classList.contains('desc') || (!header.classList.contains('asc') && !header.classList.contains('desc'));
+        const isAscending = !header.classList.contains('asc');
         header.classList.add(isAscending ? 'asc' : 'desc');
         
         // Sort the rows

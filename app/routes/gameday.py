@@ -171,30 +171,15 @@ def record_point():
                     # Skip events for players not in the current team
                     continue
             
-
-            # Add thrower information if available
-            thrower_id = event.get('thrower_id')
-            if thrower_id:
-                # Verify thrower belongs to current team
-                thrower = Player.query.filter_by(
-                    id=thrower_id,
-                    team_organization_id=team_id
-                ).first()
-                
-                if not thrower:
-                    thrower_id = None
-            
             gameday_event = GameDayEvent(
                 point_id=point.id,
                 player_id=player_id,
-                thrower_id=thrower_id,  # Add thrower ID
                 event_type=event['type'],
                 event_result=event.get('result'),
                 sequence=sequence,
-                team_organization_id=team_id
+                team_organization_id=team_id  # Add team ID
             )
             db.session.add(gameday_event)
-
         
         # Update game score
         if outcome == 'scored':
@@ -680,33 +665,6 @@ def team_stats():
         'pulls': sum(stats['pulls'] for stats in player_stats),
         'pulls_ob': sum(stats['pulls_ob'] for stats in player_stats),
     }
-    
-    # Inside the team_stats function, after calculating other player stats
-    # For each player, calculate completion rate
-    for player_id, stats in player_stats_by_id.items():
-        # Count successful throws (catches where this player was the thrower)
-        successful_throws = GameDayEvent.query.filter(
-            GameDayEvent.thrower_id == player_id,
-            GameDayEvent.event_type.in_(['catch', 'score']),
-            GameDayEvent.team_organization_id == team_id
-        ).count()
-        
-        # Count unsuccessful throws (throwaways and stalls)
-        unsuccessful_throws = GameDayEvent.query.filter(
-            GameDayEvent.player_id == player_id,
-            GameDayEvent.event_type.in_(['throwaway', 'stall']),
-            GameDayEvent.team_organization_id == team_id
-        ).count()
-        
-        # Total throws = successful + unsuccessful
-        total_throws = successful_throws + unsuccessful_throws
-        
-        # Calculate completion rate
-        if total_throws > 0:
-            stats['completion_rate'] = round((successful_throws / total_throws) * 100, 1)
-        else:
-            stats['completion_rate'] = 100  # 100% if no throws attempted
-
     
     # Calculate efficiency metrics
     if team_totals['goals'] > 0:

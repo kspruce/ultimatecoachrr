@@ -472,8 +472,6 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedPlayers = [];
   let pointEvents = [];
   let lastThrower = null;
-  let currentDiscPossessor = null;  
-
 
   // Make player cards clickable
   document.querySelectorAll('.player-card').forEach(card => {
@@ -543,78 +541,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-    function addEventToLog(event) {
-      const logContainer = document.getElementById('event-log');
-      const eventElement = document.createElement('div');
-      eventElement.className = 'event-item';
-      let eventText = '';
-    
-      switch (event.type) {
-        case 'catch': 
-          eventText = event.thrower_name ? 
-            `${event.thrower_name} threw to ${event.player_name}` : 
-            `${event.player_name} caught the disc`; 
-          eventElement.className += ' text-primary'; 
-          break;
-        case 'drop': 
-          eventText = `${event.player_name} dropped the disc`; 
-          eventElement.className += ' text-danger'; 
-          break;
-        case 'score': 
-          eventText = event.thrower_name ? 
-            `${event.thrower_name} threw a goal to ${event.player_name}` : 
-            `${event.player_name} scored!`; 
-          eventElement.className += ' text-success fw-bold'; 
-          break;
-        case 'throwaway': 
-          eventText = `${event.player_name} threw the disc away`; 
-          eventElement.className += ' text-danger'; 
-          break;
-        case 'stall': 
-          eventText = `${event.player_name} got stalled`; 
-          eventElement.className += ' text-danger'; 
-          break;
-        case 'block': 
-          eventText = `${event.player_name} got a block!`; 
-          eventElement.className += ' text-success'; 
-          break;
-        case 'pickup': 
-          eventText = `${event.player_name} picked up the disc`; 
-          eventElement.className += ' text-primary'; 
-          break;
-        case 'callahan': 
-          eventText = `${event.player_name} scored a Callahan!`; 
-          eventElement.className += ' text-success fw-bold'; 
-          break;
-        case 'assist': 
-          eventText = `${event.player_name} threw an assist`; 
-          eventElement.className += ' text-success'; 
-          break;
-        case 'pull': 
-          eventText = `${event.player_name} pulled (${event.result})`; 
-          eventElement.className += ' text-secondary'; 
-          break;
-        case 'possession_change': 
-          eventText = event.description; 
-          eventElement.className += ' text-info fst-italic'; 
-          break;
-        case 'timeout': 
-          eventText = `Timeout called (${event.timeout_type})`; 
-          if (event.notes) eventText += `: ${event.notes}`; 
-          eventElement.className += ' text-warning'; 
-          break;
-        case 'substitution': 
-          eventText = `Sub: ${event.player_out_name} → ${event.player_in_name}`; 
-          eventElement.className += ' text-info'; 
-          break;
-        default: 
-          eventText = `${event.type}: ${event.player_name}`;
-      }
-      
-      eventElement.textContent = eventText;
-      logContainer.prepend(eventElement); // Prepend to show newest at the top
-    }
+  function addEventToLog(event) {
+    const logContainer = document.getElementById('event-log');
+    const eventElement = document.createElement('div');
+    eventElement.className = 'event-item';
+    let eventText = '';
 
+    switch (event.type) {
+      case 'catch': eventText = `${event.player_name} caught the disc`; eventElement.className += ' text-primary'; break;
+      case 'drop': eventText = `${event.player_name} dropped the disc`; eventElement.className += ' text-danger'; break;
+      case 'score': eventText = `${event.player_name} scored!`; eventElement.className += ' text-success fw-bold'; break;
+      case 'throwaway': eventText = `${event.player_name} threw the disc away`; eventElement.className += ' text-danger'; break;
+      case 'stall': eventText = `${event.player_name} got stalled`; eventElement.className += ' text-danger'; break;
+      case 'block': eventText = `${event.player_name} got a block!`; eventElement.className += ' text-success'; break;
+      case 'pickup': eventText = `${event.player_name} picked up the disc`; eventElement.className += ' text-primary'; break;
+      case 'callahan': eventText = `${event.player_name} scored a Callahan!`; eventElement.className += ' text-success fw-bold'; break;
+      case 'assist': eventText = `${event.player_name} threw an assist`; eventElement.className += ' text-success'; break;
+      case 'pull': eventText = `${event.player_name} pulled (${event.result})`; eventElement.className += ' text-secondary'; break;
+      case 'possession_change': eventText = event.description; eventElement.className += ' text-info fst-italic'; break;
+      case 'timeout': eventText = `Timeout called (${event.timeout_type})`; if (event.notes) eventText += `: ${event.notes}`; eventElement.className += ' text-warning'; break;
+      case 'substitution': eventText = `Sub: ${event.player_out_name} → ${event.player_in_name}`; eventElement.className += ' text-info'; break;
+      default: eventText = `${event.type}: ${event.player_name}`;
+    }
+    
+    eventElement.textContent = eventText;
+    logContainer.prepend(eventElement); // Prepend to show newest at the top
+  }
 
   function endPoint(outcome) {
     pointEvents.push({ type: 'point_outcome', outcome: outcome, timestamp: new Date().toISOString() });
@@ -814,13 +766,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }).catch(err => console.error('Error saving template:', err));
   });
 
-    // Start point
-    document.getElementById('start-point').addEventListener('click', function() {
-      selectedPlayers = Array.from(document.querySelectorAll('.player-checkbox:checked')).map(cb => {
-        const label = cb.nextElementSibling;
-        const jersey = label.querySelector('.badge').textContent;
-        return { id: cb.value, name: label.textContent.replace(jersey, '').trim(), jersey: jersey, gender: cb.dataset.gender };
-      });
+  // Start point
+  document.getElementById('start-point').addEventListener('click', function() {
+    selectedPlayers = Array.from(document.querySelectorAll('.player-checkbox:checked')).map(cb => {
+      const label = cb.nextElementSibling;
+      const jersey = label.querySelector('.badge').textContent;
+      return { id: cb.value, name: label.textContent.replace(jersey, '').trim(), jersey: jersey, gender: cb.dataset.gender };
+    });
 
     // Populate player chips
     document.getElementById('active-players').innerHTML = selectedPlayers.map(p => 
@@ -870,109 +822,60 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('event-log').innerHTML = '';
     pointEvents = [];
     lastThrower = null;
-    currentDiscPossessor = null;  // Reset disc possessor
-  });    
-    
+  });
 
-    // Event buttons
-    document.querySelectorAll('.event-btn').forEach(button => {
-      button.addEventListener('click', function() {
-        const eventType = this.dataset.event;
-        const playerId = document.getElementById('event-player-buttons').dataset.selectedPlayerId;
-        
-        if (!playerId) {
-          alert('Please select a player first');
-          return;
+  // Event buttons
+  document.querySelectorAll('.event-btn').forEach(button => {
+    button.addEventListener('click', function() {
+      const eventType = this.dataset.event;
+      const playerId = document.getElementById('event-player-buttons').dataset.selectedPlayerId;
+      
+      if (!playerId) {
+        alert('Please select a player first');
+        return;
+      }
+      
+      const player = selectedPlayers.find(p => p.id === playerId);
+      const event = { 
+        type: eventType, 
+        player_id: playerId, 
+        player_name: player ? `#${player.jersey} ${player.name}` : 'Unknown', 
+        timestamp: new Date().toISOString() 
+      };
+      
+      if (eventType === 'score' || eventType === 'callahan') {
+        if (lastThrower && eventType === 'score') {
+          pointEvents.push({ 
+            type: 'assist', 
+            player_id: lastThrower.id, 
+            player_name: lastThrower.name, 
+            timestamp: new Date().toISOString() 
+          });
+          addEventToLog(pointEvents[pointEvents.length - 1]);
         }
-        
-        const player = selectedPlayers.find(p => p.id === playerId);
-        const event = { 
-          type: eventType, 
-          player_id: playerId, 
-          player_name: player ? `#${player.jersey} ${player.name}` : 'Unknown', 
-          timestamp: new Date().toISOString() 
+        setTimeout(() => document.getElementById('we-scored').click(), 100);
+      }
+      
+      if (['throwaway', 'stall', 'drop', 'block', 'pickup'].includes(eventType)) {
+        currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
+        updateEventButtons();
+      }
+      
+      if (eventType === 'catch') {
+        lastThrower = { 
+          id: playerId, 
+          name: player ? `#${player.jersey} ${player.name}` : 'Unknown' 
         };
-        
-        // Handle catch events - track who has the disc
-        if (eventType === 'catch') {
-          // If someone had the disc before (was the thrower), record that information
-          if (currentDiscPossessor) {
-            event.thrower_id = currentDiscPossessor.id;
-            event.thrower_name = currentDiscPossessor.name;
-          }
-          
-          // Update the current disc possessor to the player who caught it
-          currentDiscPossessor = { 
-            id: playerId, 
-            name: player ? `#${player.jersey} ${player.name}` : 'Unknown' 
-          };
-          
-          // Keep lastThrower for backward compatibility
-          lastThrower = currentDiscPossessor;
-        }
-        // Handle score events - similar to catch but also records an assist
-        else if (eventType === 'score') {
-          if (currentDiscPossessor) {
-            event.thrower_id = currentDiscPossessor.id;
-            event.thrower_name = currentDiscPossessor.name;
-            
-            // Add an assist event
-            pointEvents.push({ 
-              type: 'assist', 
-              player_id: currentDiscPossessor.id, 
-              player_name: currentDiscPossessor.name, 
-              timestamp: new Date().toISOString() 
-            });
-            addEventToLog(pointEvents[pointEvents.length - 1]);
-          }
-          
-          setTimeout(() => document.getElementById('we-scored').click(), 100);
-        }
-        // Handle callahan events
-        else if (eventType === 'callahan') {
-          // No thrower for callahan (defensive score)
-          setTimeout(() => document.getElementById('we-scored').click(), 100);
-        }
-        // Handle turnover events - clear the disc possessor
-        else if (['throwaway', 'stall', 'drop'].includes(eventType)) {
-          if (['throwaway', 'stall'].includes(eventType) && currentDiscPossessor) {
-            // For throwaway and stall, the current possessor is the one who turned it
-            event.thrower_id = currentDiscPossessor.id;
-            event.thrower_name = currentDiscPossessor.name;
-          }
-          
-          currentDiscPossessor = null;  // No one has the disc after a turnover
-          currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
-          updateEventButtons();
-        }
-        // Handle block events - the blocker now has the disc
-        else if (eventType === 'block') {
-          currentDiscPossessor = { 
-            id: playerId, 
-            name: player ? `#${player.jersey} ${player.name}` : 'Unknown' 
-          };
-          currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
-          updateEventButtons();
-        }
-        // Handle pickup events - the player now has the disc
-        else if (eventType === 'pickup') {
-          currentDiscPossessor = { 
-            id: playerId, 
-            name: player ? `#${player.jersey} ${player.name}` : 'Unknown' 
-          };
-          currentPossession = currentPossession === 'offense' ? 'defense' : 'offense';
-          updateEventButtons();
-        }
-        
-        pointEvents.push(event);
-        addEventToLog(event);
-        
-        // Clear player selection
-        document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('event-player-buttons').dataset.selectedPlayerId = '';
-      });
+      }
+      
+      pointEvents.push(event);
+      addEventToLog(event);
+      
+      // Clear player selection
+      document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('event-player-buttons').dataset.selectedPlayerId = '';
     });
-
+  });
 
   // Management buttons
   document.getElementById('toggle-possession').addEventListener('click', () => {
