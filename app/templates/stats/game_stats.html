@@ -148,13 +148,14 @@
 
 <script id="stats-data-context" type="application/json">
   {{ {
-    "game": game,
+    "game": game_json,
     "team_stats": team_stats,
-    "player_stats": player_stats,
+    "player_stats": player_stats_json,
     "heatmap_data": heatmap_data,
     "connections": connections
   } | tojson | safe }}
 </script>
+
 
 <div class="container">
     {% if using_saved_stats %}

@@ -43,10 +43,11 @@
     "performance_trends": performance_trends,
     "o_line_players": o_line_players | map(attribute='id') | list,
     "d_line_players": d_line_players | map(attribute='id') | list,
-    "o_line_efficiency": o_line_efficiency,
-    "d_line_efficiency": d_line_efficiency
+    "o_line_efficiency": o_line_efficiency_json,
+    "d_line_efficiency": d_line_efficiency_json
   } | tojson | safe }}
 </script>
+
 
 
 <div class="container">

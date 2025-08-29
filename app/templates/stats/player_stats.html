@@ -184,10 +184,10 @@
 
 <script id="stats-data-context" type="application/json">
   {{ {
-    "player": player,
+    "player": {"id": player.id, "name": player.name},
     "stats": stats,
     "team_summary": team_summary,
-    "player_games": player_games,
+    "player_games": player_games_json,  {# Use the JSON-safe version #}
     "throw_vectors": throw_vectors,
     "throw_stats": throw_stats,
     "cutting_data": cutting_data,
@@ -196,6 +196,7 @@
     "throwaway_direction_data": throwaway_direction_data
   } | tojson | safe }}
 </script>
+
 
 <div class="container">
     {% if using_saved_stats %}
