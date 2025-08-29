@@ -1211,8 +1211,8 @@ def index():
             d_line_men=d_line_men,
             o_line_efficiency=dict(o_line_efficiency),
             d_line_efficiency=dict(d_line_efficiency),
-            heatmap_data=json.dumps(heatmap_data),
-            connection_data=json.dumps(connection_data),
+            #heatmap_data=json.dumps(heatmap_data),
+            #connection_data=json.dumps(connection_data),
             team_avg_stats=team_avg_stats,
             is_admin=is_admin(current_user),
             is_coach=is_coach(current_user)
