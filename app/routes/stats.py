@@ -38,15 +38,7 @@ def is_coach(user):
 
 #save stats helper
 
-def check_saved_index_stats(team_organization_id):
-    """Check if there are saved index stats for the current team organization"""
-    saved_stats = IndexStats.query.filter_by(
-        team_organization_id=team_organization_id
-    ).order_by(IndexStats.version.desc()).first()
-    
-    if saved_stats:
-        return saved_stats.stats_data
-    return None
+
 
 def check_saved_team_stats(team_organization_id, filter_params=None):
     """Check if there are saved team stats for the current team organization"""
@@ -1020,203 +1012,135 @@ def debug_throws():
 def index():
     # Default values for all required variables
     default_context = {
-        'team_summary': {
-            'wins': 0,
-            'losses': 0,
-            'ties': 0,
-            'total_points': 0,
-            'o_line_points': 0,
-            'o_line_conversions': 0,
-            'd_line_points': 0,
-            'd_line_conversions': 0,
-            'breaks': 0,
-            'win_percentage': 0,
-            'o_line_conversion_rate': 0,
-            'd_line_conversion_rate': 0
-        },
-        'players': [],
-        'recent_games': [],
-        'team_stats': [],
-        'player_stats': {},
-        'o_line_players': [],
-        'd_line_players': [],
-        'heatmap_data': [],
-        'connection_data': {'nodes': [], 'links': []},
-        'team_avg_stats': {}
+        'team_summary': {'wins': 0, 'losses': 0, 'ties': 0, 'total_points': 0, 'o_line_points': 0, 'o_line_conversions': 0, 'd_line_points': 0, 'd_line_conversions': 0, 'breaks': 0, 'win_percentage': 0, 'o_line_conversion_rate': 0, 'd_line_conversion_rate': 0},
+        'players': [], 'recent_games': [], 'team_stats': [], 'player_stats': {}, 'o_line_players': [], 'd_line_players': [], 'heatmap_data': [], 'connection_data': {'nodes': [], 'links': []}, 'team_avg_stats': {}
     }
 
+    team_organization_id = get_current_team_id()
     recalculate = request.args.get('recalculate') == 'true'
     
+    # Check if saved stats exist to decide if we show the banner
+    saved_stats_exist = False
     if not recalculate:
-        # Check for saved stats
-        team_organization_id = get_current_team_id()
-        saved_stats = check_saved_index_stats(team_organization_id)
-        if saved_stats:
-            # Use saved stats
-            return render_template(
-                'stats/index.html',
-                **saved_stats,
-                is_admin=is_admin(current_user),
-                is_coach=is_coach(current_user),
-                using_saved_stats=True
-            )
+        if IndexStats.query.filter_by(team_organization_id=team_organization_id).first():
+            saved_stats_exist = True
 
-           
-        # Continue with original code if no saved stats
-        # Get team name from current user's player
-        team_name = None
-        if hasattr(current_user, 'player') and current_user.player:
-            team_name = current_user.player.team
+    # --- ALWAYS CALCULATE THE FULL CONTEXT FOR THE TEMPLATE ---
+    
+    # Get team name from current user's player
+    team_name = None
+    if hasattr(current_user, 'player') and current_user.player:
+        team_name = current_user.player.team
 
-        # Get active players with eager loading
-        players_query = Player.query.filter_by(
-            active=True,
-            team_organization_id=get_current_team_id()
-        )
-        if team_name:
-            players_query = players_query.filter_by(team=team_name)
-        players = players_query.all()
+    # Get active players with eager loading
+    players_query = Player.query.filter_by(active=True, team_organization_id=get_current_team_id())
+    if team_name:
+        players_query = players_query.filter_by(team=team_name)
+    players = players_query.all()
 
-        if not players:
-            flash("No active players found", "warning")
-            return render_template('stats/index.html', **default_context)
+    if not players:
+        flash("No active players found", "warning")
+        return render_template('stats/index.html', **default_context)
 
+    # Get recent games with eager loading for tournament only
+    recent_games = Game.query.filter_by(team_organization_id=get_current_team_id()).options(db.joinedload(Game.tournament)).order_by(Game.date.desc()).all()
+    
+    # For each game, explicitly load points to handle dynamic relationship
+    for game in recent_games:
+        if hasattr(game.points, 'all'):
+            _ = game.points.all()
 
-        # Get recent games with eager loading for tournament only
-        recent_games = Game.query.filter_by(
-            team_organization_id=get_current_team_id()
-        ).options(
-            db.joinedload(Game.tournament)
-        ).order_by(Game.date.desc()).all()
-        
-        # For each game, explicitly load points to handle dynamic relationship
-        for game in recent_games:
-            # Force loading of points
-            if hasattr(game.points, 'all'):
-                _ = game.points.all()
+    if not recent_games:
+        return render_template('stats/index.html', **default_context)
 
-
-        
-        if not recent_games:
-            return render_template('stats/index.html', **default_context)
-
-        # Start timing the expensive operations
-        import time
-        start_time = time.time()
-        
-        # Calculate team summary stats - SAME AS TEAM_STATS ROUTE
-        team_summary = calculate_team_summary(recent_games)
-        
-        # Add additional metrics for radar charts - SAME AS TEAM_STATS ROUTE
-        team_summary.update(calculate_additional_team_metrics(recent_games))
-        
-        # Calculate previous period stats for comparison - SAME AS TEAM_STATS ROUTE
-        # For index, we don't have filters, so we'll get previous games based on dates
-        prev_games = recent_games[1:] if len(recent_games) > 1 else []
-        prev_summary = calculate_team_summary(prev_games)
-        prev_metrics = calculate_additional_team_metrics(prev_games)
-        
-        # Add previous metrics with 'prev_' prefix - SAME AS TEAM_STATS ROUTE
-        for key, value in prev_metrics.items():
+    # Start timing the expensive operations
+    import time
+    start_time = time.time()
+    
+    # Calculate team summary stats
+    team_summary = calculate_team_summary(recent_games)
+    team_summary.update(calculate_additional_team_metrics(recent_games))
+    
+    # Calculate previous period stats for comparison
+    prev_games = recent_games[1:] if len(recent_games) > 1 else []
+    prev_summary = calculate_team_summary(prev_games)
+    prev_metrics = calculate_additional_team_metrics(prev_games)
+    
+    for key, value in prev_metrics.items():
+        team_summary[f'prev_{key}'] = value
+    for key, value in prev_summary.items():
+        if key not in team_summary:
             team_summary[f'prev_{key}'] = value
-        for key, value in prev_summary.items():
-            if key not in team_summary:
-                team_summary[f'prev_{key}'] = value
-        
-        # Calculate game stats
-        team_stats = []
-        for game in recent_games[:5]:  # Limit to most recent 5 games for performance
-            try:
-                stats = calculate_game_stats(game)
-                team_stats.append({'stats': stats})
-            except Exception as e:
-                print(f"Error calculating stats for game {game.id}: {str(e)}")
-                continue
-                
-        # Calculate team averages once for all players
-        print("Calculating team averages...")
-        team_avgs = get_cached_team_averages(recent_games)
-        
-        # Calculate player stats in batch
-        print("Calculating player stats in batch...")
-        player_stats = get_players_base_stats(players, recent_games)
-        
-        # Calculate PER for each player using the preloaded stats
-        print("Calculating PER for each player...")
-        for player_id, stats in player_stats.items():
-            if stats['points_played'] > 0:
-                stats['per'] = calculate_per_from_stats(stats, team_avgs)
+    
+    # Calculate game stats
+    team_stats = []
+    for game in recent_games[:5]:
+        try:
+            stats = calculate_game_stats(game)
+            team_stats.append({'stats': stats})
+        except Exception as e:
+            print(f"Error calculating stats for game {game.id}: {str(e)}")
+            continue
+            
+    # Calculate team averages once for all players
+    print("Calculating team averages...")
+    team_avgs = get_cached_team_averages(recent_games)
+    
+    # Calculate player stats in batch
+    print("Calculating player stats in batch...")
+    player_stats = get_players_base_stats(players, recent_games)
+    
+    # Calculate PER for each player using the preloaded stats
+    print("Calculating PER for each player...")
+    for player_id, stats in player_stats.items():
+        if stats['points_played'] > 0:
+            stats['per'] = calculate_per_from_stats(stats, team_avgs)
 
-        
-        print(f"Stats calculation took {time.time() - start_time:.2f} seconds")
-        
-        # Determine O-line and D-line players based on point participation
-        # This part is already optimized by using the preloaded player stats
-        o_line_candidates = []
-        d_line_candidates = []
+    print(f"Stats calculation took {time.time() - start_time:.2f} seconds")
+    
+    # Determine O-line and D-line players
+    o_line_candidates = [p for p in players if player_stats.get(p.id, {}).get('o_line_points_played', 0) > 0]
+    d_line_candidates = [p for p in players if player_stats.get(p.id, {}).get('d_line_points_played', 0) > 0]
 
-        for player in players:
-            if player.id in player_stats:
-                stats = player_stats[player.id]
-                o_line_points = stats.get('o_line_points_played', 0)
-                d_line_points = stats.get('d_line_points_played', 0)
-                
-                if o_line_points > 0:
-                    o_line_candidates.append(player)
-                if d_line_points > 0:
-                    d_line_candidates.append(player)
+    o_line_efficiency = calculate_optimized_line_efficiency(o_line_candidates, player_stats, is_offensive=True)
+    d_line_efficiency = calculate_optimized_line_efficiency(d_line_candidates, player_stats, is_offensive=False)
+    
+    o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
+    o_line_men = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
+    d_line_women = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
+    d_line_men = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
+    
+    o_line_players = o_line_women + o_line_men if o_line_women or o_line_men else [p for p, _ in o_line_efficiency][:7]
+    d_line_players = d_line_women + d_line_men if d_line_women or d_line_men else [p for p, _ in d_line_efficiency][:7]
+    
+    team_avg_stats = calculate_team_avg_stats(player_stats)
+    
+    heatmap_data = process_heatmap_data(team_name=team_name, limit=1000)
+    connection_data = generate_player_connections(team_name=team_name, min_connections=2)
 
-        # Calculate line efficiency with gender separation
-        # This function should be optimized to use the preloaded player stats
-        o_line_efficiency = calculate_optimized_line_efficiency(o_line_candidates, player_stats, is_offensive=True)
-        d_line_efficiency = calculate_optimized_line_efficiency(d_line_candidates, player_stats, is_offensive=False)
-        
-        # Separate players by gender with fallback
-        o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
-        o_line_men = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
-        d_line_women = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
-        d_line_men = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
-        
-        # If we don't have enough players with gender data, fall back to the original method
-        if not o_line_women and not o_line_men:
-            o_line_players = [player for player, _ in o_line_efficiency][:7]
-        else:
-            o_line_players = o_line_women + o_line_men
-        
-        if not d_line_women and not d_line_men:
-            d_line_players = [player for player, _ in d_line_efficiency][:7]
-        else:
-            d_line_players = d_line_women + d_line_men
-        
-        # Calculate team average stats
-        team_avg_stats = calculate_team_avg_stats(player_stats)
-        
-        # Generate heatmap and connection data
-        # Consider limiting the amount of data processed here
-        heatmap_data = process_heatmap_data(team_name=team_name, limit=1000)  # Limit to 1000 data points
-        connection_data = generate_player_connections(team_name=team_name, min_connections=2)  # Only include connections with at least 2 throws
-
-        return render_template(
-            'stats/index.html',
-            team_summary=team_summary,
-            players=players,
-            recent_games=recent_games,
-            team_stats=team_stats,
-            player_stats=player_stats,
-            o_line_players=o_line_players,
-            d_line_players=d_line_players,
-            o_line_women=o_line_women,
-            o_line_men=o_line_men,
-            d_line_women=d_line_women,
-            d_line_men=d_line_men,
-            o_line_efficiency=dict(o_line_efficiency),
-            d_line_efficiency=dict(d_line_efficiency),
-            #heatmap_data=json.dumps(heatmap_data),
-            #connection_data=json.dumps(connection_data),
-            team_avg_stats=team_avg_stats,
-            is_admin=is_admin(current_user),
-            is_coach=is_coach(current_user)
-        )
+    # ALWAYS RENDER WITH THE FULLY CALCULATED CONTEXT
+    return render_template(
+        'stats/index.html',
+        team_summary=team_summary,
+        players=players,
+        recent_games=recent_games,
+        team_stats=team_stats,
+        player_stats=player_stats,
+        o_line_players=o_line_players,
+        d_line_players=d_line_players,
+        o_line_women=o_line_women,
+        o_line_men=o_line_men,
+        d_line_women=d_line_women,
+        d_line_men=d_line_men,
+        o_line_efficiency=dict(o_line_efficiency),
+        d_line_efficiency=dict(d_line_efficiency),
+        heatmap_data=heatmap_data,
+        connection_data=connection_data,
+        team_avg_stats=team_avg_stats,
+        is_admin=is_admin(current_user),
+        is_coach=is_coach(current_user),
+        using_saved_stats=saved_stats_exist
+    )
 
     
 
