@@ -1279,6 +1279,7 @@ def player_stats(player_id):
     # Get filter parameters
     tournament_id = request.args.get('tournament_id', type=int)
     game_id = request.args.get('game_id', type=int)
+    recalculate = request.args.get('recalculate') == 'true'
     
     # Check for saved stats
     team_organization_id = get_current_team_id()
@@ -1286,6 +1287,11 @@ def player_stats(player_id):
     if tournament_id:
         filter_params['tournament_id'] = tournament_id
     
+    saved_stats_exist = False
+    if not recalculate:
+        if IndexStats.query.filter_by(team_organization_id=team_organization_id).first():
+            saved_stats_exist = True
+        
     saved_stats = check_saved_player_stats(player_id, team_organization_id, game_id, filter_params if filter_params else None)
     if saved_stats:
         # Use saved stats
@@ -1451,32 +1457,36 @@ def player_stats(player_id):
     point_ids_list = [p_id for p_id in point_ids] if point_ids else []
     print(f"DEBUG: point_ids = {point_ids_list}")
 
+    tournaments_serializable = [{'id': t.id, 'name': t.name} for t in tournaments]
+    player_serializable = {'id': player.id, 'name': player.name, 'jersey_number': player.jersey_number, 'position': player.position}
+
     return render_template(
         'stats/player_stats.html',
-        player=player,
+        player=player_serializable,
         stats=stats,
         team_summary=team_summary, 
         player_games=player_games,
-        tournaments=tournaments,
+        tournaments=tournaments_serializable,
         selected_tournament=tournament_id,
         selected_game=game_id,
-        throw_vectors=stats['throw_vectors'],
+        throw_vectors=stats.get('throw_vectors', []),
         throwaway_locations=[],
         throw_stats={
-            'total_throws': stats['throws'],
-            'completions': stats['completions'],
-            'assists': stats['assists'],
-            'hockey_assists': stats['hockey_assists'],
-            'average_distance': stats['avg_throw_distance']
+            'total_throws': stats.get('throws', 0),
+            'completions': stats.get('completions', 0),
+            'assists': stats.get('assists', 0),
+            'hockey_assists': stats.get('hockey_assists', 0),
+            'average_distance': stats.get('avg_throw_distance', 0)
         },
-        total_throw_distance=stats['total_throw_distance'],
-        avg_throw_distance=stats['avg_throw_distance'],
-        throw_directions=stats['throw_directions'],
-        completion_by_direction=stats['completion_by_direction'],
+        total_throw_distance=stats.get('total_throw_distance', 0),
+        avg_throw_distance=stats.get('avg_throw_distance', 0),
+        throw_directions=stats.get('throw_directions', {}),
+        completion_by_direction=stats.get('completion_by_direction', {}),
         cutting_data=cutting_data,
         cutting_stats=cutting_stats,
         most_common_throwaway_location=most_common_throwaway_location,
-        throwaway_direction_data=throwaway_direction_data
+        throwaway_direction_data=throwaway_direction_data,
+        using_saved_stats=saved_stats_exist # Pass the flag
     )
 
 # You will also need to add these two new helper functions to stats.py
@@ -1537,12 +1547,20 @@ def get_player_game_history(player, tournament_id, game_id):
     for game in games_query.order_by(Game.date.desc()).all():
         if LineUp.query.join(Point).filter(LineUp.player_id == player.id, Point.game_id == game.id).first():
             game_stats_dict = get_players_base_stats([player], [game])
-            game_stats = game_stats_dict[player.id]
+            game_stats = game_stats_dict.get(player.id, {})
             game_team_avgs = get_cached_team_averages([game])
             game_stats['per'] = calculate_per_from_stats(game_stats, game_team_avgs)
-            player_games.append({'game': game, 'stats': game_stats})
+            
+            # Create a serializable dictionary for the game
+            game_info = {
+                'id': game.id,
+                'opponent': game.opponent,
+                'date': game.date.strftime('%Y-%m-%d') if game.date else 'N/A'
+            }
+            player_games.append({'game': game_info, 'stats': game_stats})
             
     return player_games
+
 
 
 @bp.route('/game/<int:game_id>')
@@ -1551,93 +1569,56 @@ def game_stats(game_id):
     """
     Comprehensive game statistics and visualizations
     """
-    # Check for saved stats
     team_organization_id = get_current_team_id()
-    saved_stats = check_saved_game_stats(game_id, team_organization_id)
-    if saved_stats:
-        # Get the game object
-        game = Game.query.filter_by(
-            id=game_id,
-            team_organization_id=team_organization_id
-        ).first_or_404()
-        
-        # Use saved stats
-        return render_template(
-            'stats/game_stats.html',
-            game=game,
-            **saved_stats,
-            calculate_impact_score=calculate_impact_score,
-            is_admin=is_admin,
-            is_coach=is_coach,
-            using_saved_stats=True
-        )
     
-    # Continue with original code if no saved stats
-    game = Game.query.filter_by(
-        id=game_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
+    # Check for saved stats
+    saved_stats_exist = False
+    if PlayerStats.query.filter_by(game_id=game_id, team_organization_id=team_organization_id).first():
+        saved_stats_exist = True
+
+    game = Game.query.filter_by(id=game_id, team_organization_id=team_organization_id).first_or_404()
     
-    # Calculate team statistics
     team_stats = calculate_game_stats(game)
     
-    # Get all players who participated in this game
-    player_ids = db.session.query(LineUp.player_id).join(Point).filter(
-        Point.game_id == game_id,
-        LineUp.team_organization_id == get_current_team_id(),
-        Point.team_organization_id == get_current_team_id()
-    ).distinct().all()
+    player_ids_in_game = [lu.player_id for p in game.points for lu in p.lineups]
+    players = Player.query.filter(Player.id.in_(player_ids_in_game)).all()
     
-    player_ids = [pid[0] for pid in player_ids]
-    players = Player.query.filter(
-        Player.id.in_(player_ids),
-        Player.team_organization_id == get_current_team_id()
-    ).all()
-    
-    # Calculate team averages for this game
     team_avgs = get_cached_team_averages([game])
-    
-    # Get player stats in batch
     player_stats_dict = get_players_base_stats(players, [game])
     
-    # Format player stats for template
-    player_stats = []
+    # Serialize player stats for the template
+    player_stats_serializable = []
     for player in players:
         if player.id in player_stats_dict:
             stats = player_stats_dict[player.id]
-            stats['per'] = calculate_per(player, [game], team_avgs)
-            player_stats.append({
-                'player': player,
+            stats['per'] = calculate_per_from_stats(stats, team_avgs)
+            player_stats_serializable.append({
+                'player': {'id': player.id, 'name': player.name},
                 'stats': stats
             })
     
-    # Sort by points played
-    player_stats.sort(key=lambda x: x['stats']['points_played'], reverse=True)
+    player_stats_serializable.sort(key=lambda x: x['stats']['points_played'], reverse=True)
     
-    # Get team name from the first player (assuming all players are on the same team)
-    team_name = None
-    if players:
-        first_player = players[0]
-        team_name = first_player.team
-    
-    # Generate visualization data
+    team_name = players[0].team if players else None
     point_ids = [p.id for p in game.points]
     heatmap_data = process_heatmap_data(team_name=team_name, point_ids=point_ids)
     connection_data = generate_player_connections(team_name=team_name, min_connections=2, point_ids=point_ids)
     
-    # Add additional team metrics
     team_stats.update(calculate_additional_team_metrics([game]))
     
+    game_serializable = {'id': game.id, 'opponent': game.opponent, 'date': game.date.strftime('%Y-%m-%d') if game.date else 'N/A', 'tournament_name': game.tournament.name if game.tournament else 'N/A', 'is_win': game.is_win, 'is_loss': game.is_loss, 'our_score': game.our_score, 'their_score': game.their_score}
+
     return render_template(
         'stats/game_stats.html',
-        game=game,
+        game=game_serializable,
         team_stats=team_stats,
-        player_stats=player_stats,
-        heatmap_data=json.dumps(heatmap_data),
-        connections=json.dumps(connection_data),
+        player_stats=player_stats_serializable,
+        heatmap_data=heatmap_data,
+        connections=connection_data,
         calculate_impact_score=calculate_impact_score,
-        is_admin=is_admin,
-        is_coach=is_coach
+        is_admin=is_admin(current_user),
+        is_coach=is_coach(current_user),
+        using_saved_stats=saved_stats_exist
     )
 
 
@@ -1654,156 +1635,86 @@ def team_stats():
     """
     Team-level statistics and analysis
     """
-    # Get filter parameters
+    # ... (filter logic is the same) ...
+    team_organization_id = get_current_team_id()
     season = request.args.get('season', '')
     tournament_id = request.args.get('tournament_id', type=int)
-    
-    # Check for saved stats
-    team_organization_id = get_current_team_id()
-    filter_params = {}
-    if season:
-        filter_params['season'] = season
-    if tournament_id:
-        filter_params['tournament_id'] = tournament_id
-    
-    saved_stats = check_saved_team_stats(team_organization_id, filter_params if filter_params else None)
-    if saved_stats:
-        # Use saved stats
-        return render_template(
-            'stats/team_stats.html',
-            **saved_stats,
-            tournaments=Tournament.query.filter_by(team_organization_id=team_organization_id).order_by(Tournament.start_date.desc()).all(),
-            seasons=db.session.query(Tournament.season).filter_by(team_organization_id=team_organization_id).distinct().all(),
-            selected_tournament=tournament_id,
-            selected_season=season,
-            using_saved_stats=True
-        )
-    
-    # Continue with original code if no saved stats
-    # Get filtered games
+
+    saved_stats_exist = False
+    if TeamStats.query.filter_by(team_organization_id=team_organization_id).first():
+        saved_stats_exist = True
+
+    # ... (games_query logic is the same) ...
     games_query = Game.query.filter_by(team_organization_id=get_current_team_id())
     if tournament_id:
         games_query = games_query.filter_by(tournament_id=tournament_id)
     elif season:
-        tournament_ids = [t.id for t in Tournament.query.filter_by(
-            season=season,
-            team_organization_id=get_current_team_id()
-        ).all()]
+        tournament_ids = [t.id for t in Tournament.query.filter_by(season=season, team_organization_id=get_current_team_id()).all()]
         games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
     
-    # Use eager loading for related data
-    # Use eager loading for tournament only
-    games_query = games_query.options(
-        db.joinedload(Game.tournament)
-    )
+    games = games_query.options(db.joinedload(Game.tournament)).order_by(Game.date).all()
     
-    games = games_query.order_by(Game.date).all()
-    
-    # For each game, explicitly load points to handle dynamic relationship
     for game in games:
-        # Force loading of points
         if hasattr(game.points, 'all'):
             _ = game.points.all()
 
-    
-  
-    # Calculate team summary stats
     team_summary = calculate_team_summary(games)
-    
-    # Add additional metrics for radar charts
     team_summary.update(calculate_additional_team_metrics(games))
     
-    # Calculate previous period stats for comparison
-    # (e.g., previous season or previous tournament)
+    # ... (previous period logic is the same) ...
     prev_games = get_previous_period_games(season, tournament_id)
     prev_summary = calculate_team_summary(prev_games)
     prev_metrics = calculate_additional_team_metrics(prev_games)
-    
-    # Add previous metrics with 'prev_' prefix
     for key, value in prev_metrics.items():
         team_summary[f'prev_{key}'] = value
     for key, value in prev_summary.items():
         if key not in team_summary:
             team_summary[f'prev_{key}'] = value
+
+    team_name = current_user.player.team if hasattr(current_user, 'player') and current_user.player else None
     
-    # Get team name from current user's player
-    team_name = None
-    if hasattr(current_user, 'player') and current_user.player:
-        team_name = current_user.player.team
-    
-    # Calculate player statistics
-    players_query = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    )
+    players_query = Player.query.filter_by(active=True, team_organization_id=get_current_team_id())
     if team_name:
         players_query = players_query.filter_by(team=team_name)
     players = players_query.all()
     
-    # Get cached team averages
     team_avgs = get_cached_team_averages(games)
-    
-    # Get player stats in batch
     player_stats_dict = get_players_base_stats(players, games)
     
-    # Format player stats for template
-    player_stats = []
+    # Serialize player stats
+    player_stats_serializable = []
     for player in players:
         if player.id in player_stats_dict:
             stats = player_stats_dict[player.id]
             if stats['points_played'] > 0:
-                stats['per'] = calculate_per(player, games, team_avgs)
-                player_stats.append({
-                    'player': player,
-                    'stats': stats
-                })
+                stats['per'] = calculate_per_from_stats(stats, team_avgs)
+                player_stats_serializable.append({'player': {'id': player.id, 'name': player.name, 'gender': player.gender, 'position': player.position}, 'stats': stats})
     
-    # Sort by PER
-    player_stats.sort(key=lambda x: x['stats']['per'], reverse=True)
+    player_stats_serializable.sort(key=lambda x: x['stats']['per'], reverse=True)
     
-    # Calculate line efficiency with gender separation
-    o_line_candidates = [p for p in players if player_stats_dict.get(p.id, {}).get('o_line_points_played', 0) > 0]
-    d_line_candidates = [p for p in players if player_stats_dict.get(p.id, {}).get('d_line_points_played', 0) > 0]
+    # Serialize efficiency data
+    o_line_efficiency = {p.id: eff for p, eff in calculate_optimized_line_efficiency([p for p in players if player_stats_dict.get(p.id, {}).get('o_line_points_played', 0) > 0], player_stats_dict, is_offensive=True)}
+    d_line_efficiency = {p.id: eff for p, eff in calculate_optimized_line_efficiency([p for p in players if player_stats_dict.get(p.id, {}).get('d_line_points_played', 0) > 0], player_stats_dict, is_offensive=False)}
     
-    o_line_efficiency = calculate_optimized_line_efficiency(o_line_candidates, player_stats_dict, is_offensive=True)
-    d_line_efficiency = calculate_optimized_line_efficiency(d_line_candidates, player_stats_dict, is_offensive=False)
-    
-    # Separate players by gender
-    o_line_women = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
-    o_line_men = [player for player, _ in o_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
-    d_line_women = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'female'][:4]
-    d_line_men = [player for player, _ in d_line_efficiency if getattr(player, 'gender', '') == 'male'][:4]
-    
-    # If we don't have enough players with gender data, fall back to the original method
-    if not o_line_women and not o_line_men:
-        o_line_players = [player for player, _ in o_line_efficiency][:7]
-    else:
-        o_line_players = o_line_women + o_line_men
-    
-    if not d_line_women and not d_line_men:
-        d_line_players = [player for player, _ in d_line_efficiency][:7]
-    else:
-        d_line_players = d_line_women + d_line_men
-    
-    # Calculate performance trends
+    o_line_players = sorted([p for p in players if p.id in o_line_efficiency], key=lambda p: o_line_efficiency[p.id], reverse=True)
+    d_line_players = sorted([p for p in players if p.id in d_line_efficiency], key=lambda p: d_line_efficiency[p.id], reverse=True)
+
+    o_line_women = [p for p in o_line_players if p.gender == 'female'][:4]
+    o_line_men = [p for p in o_line_players if p.gender == 'male'][:4]
+    d_line_women = [p for p in d_line_players if p.gender == 'female'][:4]
+    d_line_men = [p for p in d_line_players if p.gender == 'male'][:4]
+
     performance_trends = calculate_performance_trends(games)
     
-    # Get filter options
-    tournaments = Tournament.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(Tournament.start_date.desc()).all()
-    
-    seasons = db.session.query(Tournament.season).filter_by(
-        team_organization_id=get_current_team_id()
-    ).distinct().all()
-    seasons = [s[0] for s in seasons if s[0]]
+    tournaments = Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
+    seasons_tuples = db.session.query(Tournament.season).filter_by(team_organization_id=get_current_team_id()).distinct().all()
     
     return render_template(
         'stats/team_stats.html',
-        player_stats=player_stats_dict,
+        player_stats=player_stats_dict, # Keep this for the table
         team_summary=team_summary,
-        tournaments=tournaments,
-        seasons=seasons,
+        tournaments=[{'id': t.id, 'name': t.name} for t in tournaments],
+        seasons=[s[0] for s in seasons_tuples if s[0]],
         selected_tournament=tournament_id,
         selected_season=season,
         o_line_players=o_line_players,
@@ -1812,10 +1723,12 @@ def team_stats():
         o_line_men=o_line_men,
         d_line_women=d_line_women,
         d_line_men=d_line_men,
-        o_line_efficiency=dict(o_line_efficiency),
-        d_line_efficiency=dict(d_line_efficiency),
-        performance_trends=performance_trends
+        o_line_efficiency=o_line_efficiency,
+        d_line_efficiency=d_line_efficiency,
+        performance_trends=performance_trends,
+        using_saved_stats=saved_stats_exist
     )
+
 
 # --- Helper functions for visualization data ---
 

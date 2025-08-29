@@ -184,12 +184,16 @@
 
 <script id="stats-data-context" type="application/json">
   {{ {
-    "player": {"id": player.id, "name": player.name},
+    "player": player,
     "stats": stats,
     "team_summary": team_summary,
     "player_games": player_games,
     "throw_vectors": throw_vectors,
-    "throw_stats": throw_stats
+    "throw_stats": throw_stats,
+    "cutting_data": cutting_data,
+    "cutting_stats": cutting_stats,
+    "most_common_throwaway_location": most_common_throwaway_location,
+    "throwaway_direction_data": throwaway_direction_data
   } | tojson | safe }}
 </script>
 
@@ -1036,7 +1040,7 @@
                                     <tbody>
                                         {% for game_data in player_games %}
                                         <tr>
-                                            <td>{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else 'No date' }}</td>
+                                            <td>{{ game_data.game.date }}</td>
                                             <td>
                                                 <a href="{{ url_for('game.detail', game_id=game_data.game.id) }}">
                                                     vs {{ game_data.game.opponent }}
