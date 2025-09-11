@@ -1657,3 +1657,22 @@ def import_sample_workouts():
         flash(f'Error importing sample workouts: {str(e)}', 'danger')
     
     return redirect(url_for('off_season.admin'))
+
+@off_season.route('/off-season/manage-phases')
+@login_required
+@admin_required  # If you have this decorator, otherwise use the admin check inside the function
+def manage_phases():
+    """Admin interface for managing training phases"""
+    if not current_user.is_admin:
+        flash('You do not have permission to view this page.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    phases = OffSeasonPhase.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonPhase.start_date).all()
+    
+    today = date.today()
+    
+    return render_template('off_season/manage_phases.html', 
+                           phases=phases,
+                           today=today)
