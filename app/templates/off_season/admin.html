@@ -606,13 +606,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${workout.exercises_count}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('off_season.edit_workout', workout_id=0) }}".replace('0', workout.id) class="btn btn-outline-primary">
+                                    <a href="${"{{ url_for('off_season.edit_workout', workout_id=0) }}".replace('0', workout.id)}" class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a href="{{ url_for('off_season.workout_detail', workout_id=0) }}".replace('0', workout.id) class="btn btn-outline-secondary">
+                                    <a href="${"{{ url_for('off_season.workout_detail', workout_id=0) }}".replace('0', workout.id)}" class="btn btn-outline-secondary">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{{ url_for('off_season.manage_exercises', workout_id=0) }}".replace('0', workout.id) class="btn btn-outline-success">
+                                    <a href="${"{{ url_for('off_season.manage_exercises', workout_id=0) }}".replace('0', workout.id)}" class="btn btn-outline-success">
                                         <i class="bi bi-list-check"></i>
                                     </a>
                                     <button type="button" class="btn btn-outline-danger" 
@@ -640,7 +640,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
     }
+
     
+
     // Load goal templates
     function loadGoalTemplates() {
         fetch("{{ url_for('off_season.get_goal_templates') }}")
@@ -669,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${goal.measurement_type}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('off_season.edit_goal_template', goal_id=0) }}".replace('0', goal.id) class="btn btn-outline-primary">
+                                    <a href="${"{{ url_for('off_season.edit_goal_template', goal_id=0) }}".replace('0', goal.id)}" class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <button type="button" class="btn btn-outline-danger" 
@@ -697,6 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
     }
+
     
     // Delete workout function
     window.deleteWorkout = function(workoutId, workoutTitle) {
