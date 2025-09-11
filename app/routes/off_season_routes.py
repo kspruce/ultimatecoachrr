@@ -14,11 +14,22 @@ import json
 # Create blueprint
 off_season = Blueprint('off_season', __name__)
 
-# Helper function to get current team ID
+# Store team_id in g for each request
+@off_season.before_request
+def before_request():
+    from flask import g, session
+    from flask_login import current_user
+    
+    if current_user.is_authenticated:
+        if current_user.is_admin:
+            g.current_team_id = session.get('current_team_id', current_user.current_team_id)
+        else:
+            g.current_team_id = current_user.team_organization_id
+
+# Then define your helper function
 def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id',  get_current_team_id())
-    return  get_current_team_id()
+    from flask import g
+    return getattr(g, 'current_team_id', None)
 
 @off_season.route('/off-season')
 @login_required
