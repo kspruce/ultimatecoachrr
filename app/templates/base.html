@@ -48,48 +48,6 @@
                             {% endif %}
                         </ul>
                     </li>
-                    
-                    <!-- Training dropdown -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="trainingDropdown" 
-                           role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                           data-bs-toggle="tooltip" data-bs-placement="bottom" 
-                           title="Training and development resources">
-                            <i class="bi bi-lightning-fill"></i> Training
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="trainingDropdown">
-                            <!-- Off-Season Training Section -->
-                            <li><h6 class="dropdown-header">Off-Season Training</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('off_season.index') }}"><i class="bi bi-calendar-check"></i> Off-Season Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('off_season.phases') }}"><i class="bi bi-calendar-range"></i> Training Phases</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('off_season.workouts') }}"><i class="bi bi-activity"></i> Browse Workouts</a></li>
-                            {% if current_user.player %}
-                            <li><a class="dropdown-item" href="{{ url_for('off_season.my_progress') }}"><i class="bi bi-graph-up"></i> My Progress</a></li>
-                            {% endif %}
-                            <li><a class="dropdown-item" href="{{ url_for('off_season.training_guide') }}"><i class="bi bi-book"></i> Training Guide</a></li>
-                            
-                            <li><hr class="dropdown-divider"></li>
-                            
-                            <!-- Fitness Section -->
-                            <li><h6 class="dropdown-header">Fitness Tracking</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('fitness.index') }}"><i class="bi bi-speedometer2"></i> Fitness Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('fitness.team_leaderboard') }}"><i class="bi bi-trophy"></i> Leaderboards</a></li>
-                            {% if current_user.player %}
-                            <li><a class="dropdown-item" href="{{ url_for('fitness.player_fitness', player_id=current_user.player.id) }}"><i class="bi bi-person-check"></i> My Fitness Profile</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id) }}"><i class="bi bi-plus-circle"></i> Record New Data</a></li>
-                            {% endif %}
-                            {% if current_user.is_admin %}
-                            <li><a class="dropdown-item" href="{{ url_for('fitness.manage_metrics') }}"><i class="bi bi-gear"></i> Manage Metrics</a></li>
-                            {% endif %}
-                            
-                            <li><hr class="dropdown-divider"></li>
-                            
-                            <!-- Practice Planning -->
-                            <li><h6 class="dropdown-header">Practice Planning</h6></li>
-                            <li><a class="dropdown-item" href="{{ url_for('session.index') }}"><i class="bi bi-calendar2-check"></i> Practice Sessions</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('session.components') }}"><i class="bi bi-grid-3x3-gap"></i> Session Components</a></li>
-                        </ul>
-                    </li>
                     <!-- New Calendar Nav Item -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('calendar.index') }}"
