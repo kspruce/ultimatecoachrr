@@ -211,7 +211,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Push-Ups</h5>
                                         <p class="card-text">Measures upper body strength and endurance.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Push-Ups') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Push-Ups') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -220,7 +220,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Pull-Ups</h5>
                                         <p class="card-text">Measures upper body pulling strength.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Pull-Ups') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Pull-Ups') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -229,7 +229,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Squat Endurance</h5>
                                         <p class="card-text">Measures lower body strength and endurance.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Squat Endurance') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Squat Endurance') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -239,7 +239,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">20-Yard Sprint</h5>
                                         <p class="card-text">Measures short-burst acceleration.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='20-Yard Sprint') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='20-Yard Sprint') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -248,7 +248,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">5-10-5 Shuttle</h5>
                                         <p class="card-text">Measures agility and change of direction.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='5-10-5 Shuttle/Pro Agility') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='5-10-5 Shuttle/Pro Agility') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -257,7 +257,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Lateral Quickness</h5>
                                         <p class="card-text">Measures defensive footwork ability.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Lateral Quickness Drill') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Lateral Quickness Drill') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -267,7 +267,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Beep Test</h5>
                                         <p class="card-text">Measures aerobic capacity.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Beep Test/Yo-Yo Test') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Beep Test/Yo-Yo Test') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -276,7 +276,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">1-Mile Run</h5>
                                         <p class="card-text">Measures sustained running capacity.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='1-Mile Run') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='1-Mile Run') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -285,7 +285,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Recovery Heart Rate</h5>
                                         <p class="card-text">Measures cardiovascular recovery.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Recovery Heart Rate') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Recovery Heart Rate') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -295,7 +295,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Vertical Jump</h5>
                                         <p class="card-text">Measures lower body power.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Vertical Jump') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Vertical Jump') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -304,7 +304,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Broad Jump</h5>
                                         <p class="card-text">Measures horizontal power.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Broad Jump') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Broad Jump') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -313,7 +313,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Box Jump</h5>
                                         <p class="card-text">Measures explosive leg power.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Box Jump') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Box Jump') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -323,7 +323,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Maximum Pull Distance</h5>
                                         <p class="card-text">Measures throwing power.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Maximum Pull Distance') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Maximum Pull Distance') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -332,7 +332,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Throwing Accuracy</h5>
                                         <p class="card-text">Measures throwing precision.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Throwing Accuracy') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Throwing Accuracy') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -342,7 +342,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Ultimate-Specific Conditioning</h5>
                                         <p class="card-text">Measures sport-specific endurance.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Ultimate-Specific Conditioning Test') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Ultimate-Specific Conditioning Test') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
@@ -351,7 +351,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">Jump & Reach</h5>
                                         <p class="card-text">Measures disc-catching ability.</p>
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Jump & Reach') }}" class="btn btn-sm btn-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Jump & Reach') }}" class="btn btn-sm btn-primary">Record</a>
                                     </div>
                                 </div>
                             </div>
