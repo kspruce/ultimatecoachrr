@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Goal Templates{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Manage SMART Goal Templates</h1>
+    
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Goal Template Management</h5>
+                </div>
+                <div class="card-body">
+                    <p>This page allows you to manage SMART goal templates for your off-season training program. Players can use these templates to create their own personalized goals.</p>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('off_season.admin_dashboard') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Admin Dashboard
+                        </a>
+                        <a href="{{ url_for('off_season.add_goal_template') }}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Add New Goal Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if phases %}
+        {% for phase in phases %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ phase.name }} Phase Goal Templates</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Phase Duration:</strong> {{ phase.start_date.strftime('%b %d, %Y') }} to {{ phase.end_date.strftime('%b %d, %Y') }}</p>
+                    
+                    {% set phase_templates = goal_templates|selectattr('phase_id', 'equalto', phase.id)|list %}
+                    
+                    {% if phase_templates %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Description</th>
+                                        <th>Category</th>
+                                        <th>Measurement</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for template in phase_templates %}
+                                        <tr>
+                                            <td>{{ template.title }}</td>
+                                            <td>{{ template.description|truncate(50) }}</td>
+                                            <td>
+                                                <span class="badge bg-{{ template.category|lower }}">
+                                                    {{ template.category }}
+                                                </span>
+                                            </td>
+                                            <td>{{ template.measurement_type }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('off_season.edit_goal_template', goal_id=template.id) }}" class="btn btn-sm btn-primary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTemplateModal{{ template.id }}">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Delete Template Modal -->
+                                                <div class="modal fade" id="deleteTemplateModal{{ template.id }}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-danger text-white">
+                                                                <h5 class="modal-title">Delete Goal Template</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete the goal template <strong>{{ template.title }}</strong>?</p>
+                                                                <p>This will not affect any player goals that have already been created from this template.</p>
+                                                                <p>This action cannot be undone.</p>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <a href="{{ url_for('off_season.delete_goal_template', goal_id=template.id) }}" class="btn btn-danger">Delete</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> No goal templates found for this phase.
+                        </div>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('off_season.add_goal_template') }}?phase_id={{ phase.id }}" class="btn btn-success mt-2">
+                        <i class="bi bi-plus-circle"></i> Add Goal Template to {{ phase.name }} Phase
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i> No training phases found. Please create phases first.
+            <a href="{{ url_for('off_season.manage_phases') }}" class="btn btn-sm btn-primary ms-2">
+                <i class="bi bi-plus-circle"></i> Manage Phases
+            </a>
+        </div>
+    {% endif %}
+    
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">SMART Goal Guidelines</h5>
+        </div>
+        <div class="card-body">
+            <p>When creating goal templates, follow the SMART criteria:</p>
+            <ul>
+                <li><strong>S</strong>pecific: Clear, well-defined goals that players can understand</li>
+                <li><strong>M</strong>easurable: Include metrics to track progress</li>
+                <li><strong>A</strong>chievable: Challenging but attainable within the phase timeframe</li>
+                <li><strong>R</strong>elevant: Aligned with the phase focus and ultimate frisbee skills</li>
+                <li><strong>T</strong>ime-bound: Set within the phase timeframe</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
