@@ -393,6 +393,13 @@ def admin():
                            progress_entries=progress_entries,
                            today=today)
 
+# Alias for admin_dashboard to match the URL in the navigation
+@off_season.route('/off-season/admin-dashboard')
+@login_required
+def admin_dashboard():
+    """Alias for admin dashboard"""
+    return admin()
+
 @off_season.route('/off-season/initialize', methods=['POST'])
 @login_required 
 def initialize_off_season():
@@ -409,7 +416,7 @@ def initialize_off_season():
     
     if existing_phases > 0:
         flash('Off-season phases already exist. Delete existing data before initializing.', 'warning')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     # Create default phases
     for phase_data in DEFAULT_PHASES:
@@ -428,7 +435,7 @@ def initialize_off_season():
     
     db.session.commit()
     flash('Off-season training phases have been initialized!', 'success')
-    return redirect(url_for('off_season.admin'))
+    return redirect(url_for('off_season.admin_dashboard'))
 
 # New routes for managing phases, workouts, exercises, and goals
 
@@ -438,7 +445,7 @@ def add_phase():
     """Add a new training phase"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     try:
         # Create new phase
@@ -460,7 +467,7 @@ def add_phase():
         db.session.rollback()
         flash(f'Error adding phase: {str(e)}', 'danger')
     
-    return redirect(url_for('off_season.admin'))
+    return redirect(url_for('off_season.admin_dashboard'))
 
 @off_season.route('/off-season/edit-phase/<int:phase_id>', methods=['GET', 'POST'])
 @login_required
@@ -468,7 +475,7 @@ def edit_phase(phase_id):
     """Edit an existing training phase"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     phase = OffSeasonPhase.query.filter_by(
         id=phase_id,
@@ -488,7 +495,7 @@ def edit_phase(phase_id):
             
             db.session.commit()
             flash('Training phase updated successfully!', 'success')
-            return redirect(url_for('off_season.admin'))
+            return redirect(url_for('off_season.admin_dashboard'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating phase: {str(e)}', 'danger')
@@ -501,7 +508,7 @@ def delete_phase(phase_id):
     """Delete a training phase"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     phase = OffSeasonPhase.query.filter_by(
         id=phase_id,
@@ -530,7 +537,7 @@ def delete_phase(phase_id):
         db.session.rollback()
         flash(f'Error deleting phase: {str(e)}', 'danger')
     
-    return redirect(url_for('off_season.admin'))
+    return redirect(url_for('off_season.admin_dashboard'))
 
 @off_season.route('/off-season/add-workout', methods=['POST'])
 @login_required
@@ -538,7 +545,7 @@ def add_workout():
     """Add a new workout"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     try:
         # Create new workout
@@ -563,7 +570,7 @@ def add_workout():
         db.session.rollback()
         flash(f'Error adding workout: {str(e)}', 'danger')
     
-    return redirect(url_for('off_season.admin'))
+    return redirect(url_for('off_season.admin_dashboard'))
 
 @off_season.route('/off-season/edit-workout/<int:workout_id>', methods=['GET', 'POST'])
 @login_required
@@ -571,7 +578,7 @@ def edit_workout(workout_id):
     """Edit an existing workout"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     workout = OffSeasonWorkout.query.filter_by(
         id=workout_id,
@@ -595,7 +602,7 @@ def edit_workout(workout_id):
             
             db.session.commit()
             flash('Workout updated successfully!', 'success')
-            return redirect(url_for('off_season.admin'))
+            return redirect(url_for('off_season.admin_dashboard'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating workout: {str(e)}', 'danger')
@@ -676,7 +683,7 @@ def manage_exercises(workout_id):
     """Manage exercises for a workout"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     workout = OffSeasonWorkout.query.filter_by(
         id=workout_id,
@@ -695,7 +702,7 @@ def add_exercise(workout_id):
     """Add a new exercise to a workout"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     workout = OffSeasonWorkout.query.filter_by(
         id=workout_id,
@@ -735,7 +742,7 @@ def edit_exercise(workout_id, exercise_id):
     """Edit an existing exercise"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     exercise = OffSeasonExercise.query.filter_by(
         id=exercise_id,
@@ -893,7 +900,7 @@ def add_goal_template():
     """Add a new SMART goal template"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     try:
         # Create new goal template
@@ -914,7 +921,7 @@ def add_goal_template():
         db.session.rollback()
         flash(f'Error adding goal template: {str(e)}', 'danger')
     
-    return redirect(url_for('off_season.admin'))
+    return redirect(url_for('off_season.admin_dashboard'))
 
 @off_season.route('/off-season/edit-goal-template/<int:goal_id>', methods=['GET', 'POST'])
 @login_required
@@ -922,7 +929,7 @@ def edit_goal_template(goal_id):
     """Edit an existing goal template"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     template = OffSeasonGoalTemplate.query.filter_by(
         id=goal_id,
@@ -945,7 +952,7 @@ def edit_goal_template(goal_id):
             
             db.session.commit()
             flash('Goal template updated successfully!', 'success')
-            return redirect(url_for('off_season.admin'))
+            return redirect(url_for('off_season.admin_dashboard'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating goal template: {str(e)}', 'danger')
@@ -1167,13 +1174,96 @@ def add_goal_from_template():
     
     return redirect(url_for('off_season.my_goals'))
 
+@off_season.route('/off-season/manage-workouts')
+@login_required
+def manage_workouts():
+    """Admin interface for managing workouts"""
+    if not current_user.is_admin:
+        flash('You do not have permission to view this page.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    phases = OffSeasonPhase.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonPhase.start_date).all()
+    
+    workouts = OffSeasonWorkout.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonWorkout.phase_id, OffSeasonWorkout.name).all()
+    
+    return render_template('off_season/manage_workouts.html',
+                          phases=phases,
+                          workouts=workouts)
+
+@off_season.route('/off-season/manage-exercises')
+@login_required
+def manage_exercises():
+    """Admin interface for managing exercises across all workouts"""
+    if not current_user.is_admin:
+        flash('You do not have permission to view this page.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    workouts = OffSeasonWorkout.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonWorkout.phase_id, OffSeasonWorkout.name).all()
+    
+    # Get all exercises organized by workout
+    workout_exercises = {}
+    for workout in workouts:
+        workout_exercises[workout.id] = OffSeasonExercise.query.filter_by(
+            workout_id=workout.id
+        ).order_by(OffSeasonExercise.order).all()
+    
+    return render_template('off_season/manage_all_exercises.html',
+                          workouts=workouts,
+                          workout_exercises=workout_exercises)
+
+@off_season.route('/off-season/manage-goal-templates')
+@login_required
+def manage_goal_templates():
+    """Admin interface for managing goal templates"""
+    if not current_user.is_admin:
+        flash('You do not have permission to view this page.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    phases = OffSeasonPhase.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonPhase.start_date).all()
+    
+    goal_templates = OffSeasonGoalTemplate.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonGoalTemplate.phase_id, OffSeasonGoalTemplate.title).all()
+    
+    return render_template('off_season/manage_goal_templates.html',
+                          phases=phases,
+                          goal_templates=goal_templates)
+
+@off_season.route('/off-season/import-sample-content')
+@login_required
+def import_sample_content():
+    """Page for importing sample content"""
+    if not current_user.is_admin:
+        flash('You do not have permission to view this page.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    return render_template('off_season/import_content.html')
+
+@off_season.route('/off-season/import-sample-content')
+@login_required
+def import_sample_content():
+    """Page for importing sample content"""
+    if not current_user.is_admin:
+        flash('You do not have permission to view this page.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    return render_template('off_season/import_content.html')
+
 @off_season.route('/off-season/import-sample-workouts', methods=['POST'])
 @login_required
 def import_sample_workouts():
     """Import sample workouts for each phase"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     # Check if workouts already exist
     existing_workouts = OffSeasonWorkout.query.filter_by(
@@ -1182,7 +1272,7 @@ def import_sample_workouts():
     
     if existing_workouts > 0:
         flash('Workouts already exist. Delete existing workouts before importing samples.', 'warning')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     # Get phases
     phases = OffSeasonPhase.query.filter_by(
@@ -1191,7 +1281,7 @@ def import_sample_workouts():
     
     if not phases:
         flash('No phases found. Initialize phases before importing workouts.', 'warning')
-        return redirect(url_for('off_season.admin'))
+        return redirect(url_for('off_season.admin_dashboard'))
     
     try:
         # Sample workouts for each phase
@@ -1656,7 +1746,7 @@ def import_sample_workouts():
         db.session.rollback()
         flash(f'Error importing sample workouts: {str(e)}', 'danger')
     
-    return redirect(url_for('off_season.admin'))
+    return redirect(url_for('off_season.admin_dashboard'))
 
 @off_season.route('/off-season/manage-phases')
 @login_required
