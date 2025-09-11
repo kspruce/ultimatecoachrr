@@ -1762,3 +1762,216 @@ def manage_phases():
     return render_template('off_season/manage_phases.html', 
                            phases=phases,
                            today=today)
+
+@off_season.route('/off-season/import-sample-goal-templates', methods=['POST'])
+@login_required
+def import_sample_goal_templates():
+    """Import sample goal templates for each phase"""
+    if not current_user.is_admin:
+        flash('You do not have permission to perform this action.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    # Get current team ID
+    team_id = get_current_team_id()
+    
+    # Get all phases for this team
+    phases = OffSeasonPhase.query.filter_by(team_organization_id=team_id).all()
+    
+    # If no phases exist, create them first
+    if not phases:
+        flash('Please create training phases first before importing goal templates.', 'warning')
+        return redirect(url_for('off_season.manage_phases'))
+    
+    # Create a dictionary to map phase names to IDs
+    phase_map = {phase.name.lower(): phase.id for phase in phases}
+    
+    # Sample goal templates for each phase
+    sample_templates = [
+        # Foundation Phase
+        {
+            'phase_name': 'foundation',
+            'templates': [
+                {
+                    'title': 'Establish Consistent Training Routine',
+                    'description': 'Develop a consistent training schedule to build a strong foundation.',
+                    'category': 'Habit',
+                    'measurement_type': 'Frequency',
+                    'target_value': '4 sessions per week'
+                },
+                {
+                    'title': 'Improve Core Stability',
+                    'description': 'Strengthen core muscles to improve overall stability and prevent injuries.',
+                    'category': 'Physical',
+                    'measurement_type': 'Time',
+                    'target_value': '3 minutes plank hold'
+                },
+                {
+                    'title': 'Develop Aerobic Base',
+                    'description': 'Build cardiovascular endurance through consistent aerobic training.',
+                    'category': 'Physical',
+                    'measurement_type': 'Distance',
+                    'target_value': '5km continuous run'
+                }
+            ]
+        },
+        # Strength Phase
+        {
+            'phase_name': 'strength',
+            'templates': [
+                {
+                    'title': 'Increase Lower Body Strength',
+                    'description': 'Build leg strength to improve jumping and cutting abilities.',
+                    'category': 'Physical',
+                    'measurement_type': 'Weight',
+                    'target_value': 'Squat 1.5x bodyweight'
+                },
+                {
+                    'title': 'Improve Upper Body Power',
+                    'description': 'Develop throwing power through upper body strength training.',
+                    'category': 'Physical',
+                    'measurement_type': 'Repetitions',
+                    'target_value': '10 pull-ups with proper form'
+                },
+                {
+                    'title': 'Enhance Throwing Mechanics',
+                    'description': 'Refine throwing technique while building strength.',
+                    'category': 'Skill',
+                    'measurement_type': 'Accuracy',
+                    'target_value': '80% completion rate at 40 yards'
+                }
+            ]
+        },
+        # Recovery Phase
+        {
+            'phase_name': 'recovery',
+            'templates': [
+                {
+                    'title': 'Improve Sleep Quality',
+                    'description': 'Establish consistent sleep patterns to enhance recovery.',
+                    'category': 'Lifestyle',
+                    'measurement_type': 'Time',
+                    'target_value': '8 hours of quality sleep per night'
+                },
+                {
+                    'title': 'Increase Flexibility',
+                    'description': 'Improve range of motion through dedicated stretching routines.',
+                    'category': 'Physical',
+                    'measurement_type': 'Range',
+                    'target_value': 'Touch toes with straight legs'
+                },
+                {
+                    'title': 'Develop Mindfulness Practice',
+                    'description': 'Incorporate meditation to improve mental recovery and focus.',
+                    'category': 'Mental',
+                    'measurement_type': 'Time',
+                    'target_value': '10 minutes daily meditation'
+                }
+            ]
+        },
+        # Power/Speed Phase
+        {
+            'phase_name': 'power/speed',
+            'templates': [
+                {
+                    'title': 'Improve Sprint Speed',
+                    'description': 'Enhance acceleration and top speed for field coverage.',
+                    'category': 'Physical',
+                    'measurement_type': 'Time',
+                    'target_value': 'Sub-3 second 20-yard dash'
+                },
+                {
+                    'title': 'Develop Explosive Jumping',
+                    'description': 'Build vertical leap for defensive blocks and offensive skies.',
+                    'category': 'Physical',
+                    'measurement_type': 'Height',
+                    'target_value': 'Increase vertical jump by 3 inches'
+                },
+                {
+                    'title': 'Enhance Cutting Agility',
+                    'description': 'Improve change of direction speed for better cutting on the field.',
+                    'category': 'Skill',
+                    'measurement_type': 'Time',
+                    'target_value': 'Complete 5-10-5 drill in under 5 seconds'
+                }
+            ]
+        },
+        # Integration Phase
+        {
+            'phase_name': 'integration',
+            'templates': [
+                {
+                    'title': 'Combine Skills Under Fatigue',
+                    'description': 'Maintain skill execution while physically tired.',
+                    'category': 'Skill',
+                    'measurement_type': 'Completion Rate',
+                    'target_value': '70% throw completion after sprint intervals'
+                },
+                {
+                    'title': 'Game-Specific Conditioning',
+                    'description': 'Build stamina for full-game performance.',
+                    'category': 'Physical',
+                    'measurement_type': 'Time',
+                    'target_value': 'Complete 10 full-field sprints with 30-second rest'
+                },
+                {
+                    'title': 'Position-Specific Skills',
+                    'description': 'Refine skills specific to your playing position.',
+                    'category': 'Skill',
+                    'measurement_type': 'Performance',
+                    'target_value': 'Master 3 position-specific drills'
+                }
+            ]
+        }
+    ]
+    
+    # Import templates
+    templates_added = 0
+    
+    for phase_data in sample_templates:
+        phase_name = phase_data['phase_name'].lower()
+        
+        # Find matching phase ID
+        phase_id = None
+        for name, id in phase_map.items():
+            if phase_name in name or name in phase_name:
+                phase_id = id
+                break
+        
+        if not phase_id:
+            continue
+            
+        # Add templates for this phase
+        for template_data in phase_data['templates']:
+            template = OffSeasonGoalTemplate(
+                title=template_data['title'],
+                description=template_data['description'],
+                category=template_data['category'],
+                measurement_type=template_data['measurement_type'],
+                target_value=template_data['target_value'],
+                phase_id=phase_id,
+                team_organization_id=team_id
+            )
+            db.session.add(template)
+            templates_added += 1
+    
+    db.session.commit()
+    
+    flash(f'Successfully imported {templates_added} goal templates!', 'success')
+    return redirect(url_for('off_season.admin_dashboard'))
+
+@off_season.route('/off-season/import-all-sample-content', methods=['POST'])
+@login_required
+def import_all_sample_content():
+    """Import all sample content (workouts and goal templates)"""
+    if not current_user.is_admin:
+        flash('You do not have permission to perform this action.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    # Import workouts
+    import_sample_workouts()
+    
+    # Import goal templates
+    import_sample_goal_templates()
+    
+    flash('All sample content has been imported successfully!', 'success')
+    return redirect(url_for('off_season.admin_dashboard'))
