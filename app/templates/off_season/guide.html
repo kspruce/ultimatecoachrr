@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Training Guide</li>
+                </ol>
+            </nav>
+            <h1>Ultimate Frisbee Off-Season Training Guide</h1>
+            <p class="text-muted">Mid-September to February</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.phases') }}" class="btn btn-primary">
+                <i class="bi bi-calendar-range"></i> View Training Phases
+            </a>
+            <a href="{{ url_for('off_season.workouts') }}" class="btn btn-success">
+                <i class="bi bi-activity"></i> Browse Workouts
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <!-- Table of Contents Sidebar -->
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-list-ul"></i> Table of Contents</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="toc">
+                        <!-- JavaScript will populate this -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <!-- Main Content -->
+            <div class="card">
+                <div class="card-body guide-content">
+                    {{ content|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.guide-content {
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.guide-content h1, 
+.guide-content h2, 
+.guide-content h3, 
+.guide-content h4, 
+.guide-content h5, 
+.guide-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.guide-content h1 {
+    font-size: 2.2rem;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 0.5rem;
+}
+
+.guide-content h2 {
+    font-size: 1.8rem;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 0.3rem;
+}
+
+.guide-content h3 {
+    font-size: 1.5rem;
+}
+
+.guide-content h4 {
+    font-size: 1.3rem;
+}
+
+.guide-content p {
+    margin-bottom: 1rem;
+}
+
+.guide-content ul, 
+.guide-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.guide-content li {
+    margin-bottom: 0.5rem;
+}
+
+.guide-content blockquote {
+    border-left: 4px solid #0d6efd;
+    padding-left: 1rem;
+    color: #6c757d;
+    margin: 1.5rem 0;
+}
+
+.guide-content table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+
+.guide-content table th,
+.guide-content table td {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+}
+
+.guide-content table th {
+    background-color: #f8f9fa;
+}
+
+.guide-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 1rem 0;
+}
+
+.guide-content hr {
+    margin: 2rem 0;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Table of Contents styling */
+#toc a {
+    padding: 0.75rem 1.25rem;
+    border-radius: 0;
+}
+
+#toc a.h2 {
+    padding-left: 2rem;
+    font-size: 0.95rem;
+}
+
+#toc a.h3 {
+    padding-left: 3rem;
+    font-size: 0.9rem;
+}
+
+#toc a.h4 {
+    padding-left: 4rem;
+    font-size: 0.85rem;
+}
+
+#toc a.active {
+    background-color: #e9ecef;
+    border-left: 3px solid #0d6efd;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate table of contents
+    const toc = document.getElementById('toc');
+    const headings = document.querySelectorAll('.guide-content h1, .guide-content h2, .guide-content h3, .guide-content h4');
+    
+    headings.forEach(function(heading, index) {
+        // Create an ID for the heading if it doesn't have one
+        if (!heading.id) {
+            heading.id = 'heading-' + index;
+        }
+        
+        // Create a link for the TOC
+        const link = document.createElement('a');
+        link.href = '#' + heading.id;
+        link.textContent = heading.textContent;
+        link.className = 'list-group-item list-group-item-action ' + heading.tagName.toLowerCase();
+        
+        toc.appendChild(link);
+    });
+    
+    // Highlight active section in TOC when scrolling
+    const tocLinks = document.querySelectorAll('#toc a');
+    
+    window.addEventListener('scroll', function() {
+        let currentSection = '';
+        
+        headings.forEach(function(heading) {
+            const sectionTop = heading.offsetTop;
+            
+            if (window.scrollY >= sectionTop - 100) {
+                currentSection = heading.id;
+            }
+        });
+        
+        tocLinks.forEach(function(link) {
+            link.classList.remove('active');
+            
+            if (link.getAttribute('href') === '#' + currentSection) {
+                link.classList.add('active');
+            }
+        });
+    });
+    
+    // Smooth scrolling for TOC links
+    tocLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            
+            window.scrollTo({
+                top: targetElement.offsetTop - 80,
+                behavior: 'smooth'
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

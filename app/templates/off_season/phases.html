@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Training Phases</li>
+                </ol>
+            </nav>
+            <h1>Off-Season Training Phases</h1>
+            <p class="text-muted">A systematic approach to building athletic performance for ultimate frisbee</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.training_guide') }}" class="btn btn-primary">
+                <i class="bi bi-book"></i> Full Training Guide
+            </a>
+        </div>
+    </div>
+
+    <!-- Phase Timeline -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-calendar-range"></i> Off-Season Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-container">
+                        <div class="timeline">
+                            {% for phase in phases %}
+                                <div class="timeline-item {{ 'active' if phase.start_date <= today and phase.end_date >= today else '' }}">
+                                    <div class="timeline-dot {{ 'bg-success' if phase.start_date <= today and phase.end_date >= today else 'bg-secondary' }}"></div>
+                                    <div class="timeline-date">{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d') }}</div>
+                                    <div class="timeline-content">
+                                        <h4>{{ phase.name }}</h4>
+                                        <p>{{ phase.primary_focus }}</p>
+                                        <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Cards -->
+    <div class="row">
+        {% for phase in phases %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 {{ 'border-success' if phase.start_date <= today and phase.end_date >= today else '' }}">
+                    <div class="card-header {{ 'bg-success text-white' if phase.start_date <= today and phase.end_date >= today else 'bg-light' }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ phase.name }}</h5>
+                            <span class="badge {{ 'bg-light text-dark' if phase.start_date <= today and phase.end_date >= today else 'bg-secondary' }}">
+                                {{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ phase.description }}</p>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6><i class="bi bi-bullseye"></i> Primary Focus</h6>
+                                <p class="small">{{ phase.primary_focus }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="bi bi-lightning"></i> Training Emphasis</h6>
+                                <p class="small">{{ phase.training_emphasis }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <h6><i class="bi bi-speedometer"></i> Volume/Intensity</h6>
+                                <p class="small">{{ phase.volume_intensity }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="bi bi-trophy"></i> Key Outcome</h6>
+                                <p class="small">{{ phase.key_outcome }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-primary">
+                            <i class="bi bi-eye"></i> View Phase Details
+                        </a>
+                        
+                        {% if phase.start_date <= today and phase.end_date >= today %}
+                            <span class="badge bg-success float-end mt-2">Current Phase</span>
+                        {% elif phase.start_date > today %}
+                            <span class="badge bg-secondary float-end mt-2">Upcoming</span>
+                        {% else %}
+                            <span class="badge bg-secondary float-end mt-2">Completed</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Phase Transition Tips -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Phase Transition Tips</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Moving Between Phases</h6>
+                            <ul>
+                                <li>Complete a performance assessment at the end of each phase to track progress</li>
+                                <li>Take 2-3 days of active recovery between phases</li>
+                                <li>Review your goals and adjust as needed for the upcoming phase</li>
+                                <li>Prepare equipment and schedule for the new phase's requirements</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Adapting the Program</h6>
+                            <ul>
+                                <li>If you're behind schedule, don't skip ahead—continue with the current phase</li>
+                                <li>If you're excelling, focus on quality over quantity rather than rushing ahead</li>
+                                <li>Adjust workout intensity based on your recovery capacity</li>
+                                <li>Maintain consistent communication with your coach about your progress</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Timeline styling */
+.timeline-container {
+    padding: 20px 0;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.timeline {
+    position: relative;
+    display: flex;
+    min-width: 800px;
+    margin: 0 20px;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #dee2e6;
+    z-index: 1;
+}
+
+.timeline-item {
+    position: relative;
+    width: 20%;
+    padding: 0 10px;
+    z-index: 2;
+}
+
+.timeline-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6c757d;
+    margin: 12px auto;
+}
+
+.timeline-date {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-item.active .timeline-content {
+    background: #d1e7dd;
+    border-left: 4px solid #198754;
+}
+</style>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

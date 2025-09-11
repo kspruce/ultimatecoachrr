@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.phase_detail', phase_id=workout.phase_id) }}">{{ workout.phase.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}">{{ workout.title }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Record Progress</li>
+                </ol>
+            </nav>
+            <h1>Record Workout Completion</h1>
+            <h4>{{ workout.title }}</h4>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Workout
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-check-circle"></i> {{ 'Update Progress' if existing else 'Record Completion' }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Completion Date</label>
+                            <input type="text" class="form-control" value="{{ existing.completion_date.strftime('%Y-%m-%d') if existing else now().strftime('%Y-%m-%d') }}" readonly>
+                            <div class="form-text">Today's date is automatically recorded.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rating" class="form-label">How would you rate this workout? (1-5)</label>
+                            <div class="rating-stars">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rating" id="rating1" value="1" {{ 'checked' if existing and existing.rating == 1 else '' }}>
+                                    <label class="form-check-label" for="rating1">1 <i class="bi bi-star-fill text-warning"></i></label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rating" id="rating2" value="2" {{ 'checked' if existing and existing.rating == 2 else '' }}>
+                                    <label class="form-check-label" for="rating2">2 <i class="bi bi-star-fill text-warning"></i></label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rating" id="rating3" value="3" {{ 'checked' if existing and existing.rating == 3 else '' }}>
+                                    <label class="form-check-label" for="rating3">3 <i class="bi bi-star-fill text-warning"></i></label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rating" id="rating4" value="4" {{ 'checked' if existing and existing.rating == 4 else '' }}>
+                                    <label class="form-check-label" for="rating4">4 <i class="bi bi-star-fill text-warning"></i></label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rating" id="rating5" value="5" {{ 'checked' if existing and existing.rating == 5 else '' }}>
+                                    <label class="form-check-label" for="rating5">5 <i class="bi bi-star-fill text-warning"></i></label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="difficulty" class="form-label">How difficult was this workout for you?</label>
+                            <select class="form-select" id="difficulty" name="difficulty">
+                                <option value="Too Easy" {{ 'selected' if existing and existing.difficulty_feedback == 'Too Easy' else '' }}>Too Easy - I could have done more</option>
+                                <option value="Just Right" {{ 'selected' if existing and existing.difficulty_feedback == 'Just Right' else '' }}>Just Right - Challenging but doable</option>
+                                <option value="Too Hard" {{ 'selected' if existing and existing.difficulty_feedback == 'Too Hard' else '' }}>Too Hard - I struggled to complete it</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes (optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Share your experience, modifications made, or any other feedback...">{{ existing.notes if existing else '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> {{ 'Update Progress' if existing else 'Mark as Complete' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fitness Integration -->
+    <div class="row mt-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5><i class="bi bi-speedometer2"></i> Track Your Progress</h5>
+                            <p class="mb-0">Record your fitness metrics to track your improvement over the off-season.</p>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('fitness.index') }}" class="btn btn-outline-primary">
+                                Record Fitness Metrics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

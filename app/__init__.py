@@ -196,7 +196,9 @@ def create_app(config_class=Config):
     from app.error_handlers import register_error_handlers
     register_error_handlers(app)
 
-    
+    from app.routes.off_season_routes import off_season
+    app.register_blueprint(off_season)
+        
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Workouts</li>
+                </ol>
+            </nav>
+            <h1>Off-Season Workouts</h1>
+            <p class="text-muted">Browse and filter workouts across all training phases</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.phases') }}" class="btn btn-secondary">
+                <i class="bi bi-calendar-range"></i> View Phases
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-funnel"></i> Filter Workouts</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('off_season.workouts') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="phase_id" class="form-label">Training Phase</label>
+                            <select class="form-select" id="phase_id" name="phase_id">
+                                <option value="">All Phases</option>
+                                {% for phase in phases %}
+                                    <option value="{{ phase.id }}" {{ 'selected' if selected_phase == phase.id else '' }}>
+                                        {{ phase.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="type" class="form-label">Workout Type</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">All Types</option>
+                                {% for type in workout_types %}
+                                    <option value="{{ type }}" {{ 'selected' if selected_type == type else '' }}>
+                                        {{ type }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="difficulty" class="form-label">Difficulty Level</label>
+                            <select class="form-select" id="difficulty" name="difficulty">
+                                <option value="">All Levels</option>
+                                {% for level in difficulty_levels %}
+                                    <option value="{{ level }}" {{ 'selected' if selected_difficulty == level else '' }}>
+                                        {{ level }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-12 text-center">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Apply Filters
+                            </button>
+                            <a href="{{ url_for('off_season.workouts') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Clear Filters
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workouts Grid -->
+    <div class="row mb-4">
+        {% if workouts %}
+            {% for workout in workouts %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{{ workout.title }}</h5>
+                            <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                {{ workout.difficulty_level }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ workout.description }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-secondary">{{ workout.workout_type }}</span>
+                                <span class="text-muted"><i class="bi bi-clock"></i> {{ workout.duration }}</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Phase: {{ workout.phase.name }}</small>
+                                <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-sm btn-primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle"></i> No Workouts Found</h5>
+                    <p>No workouts match your current filter criteria. Try adjusting your filters or check back later for new workouts.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Workout Type Guide -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5><i class="bi bi-info-circle"></i> Workout Types Guide</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-lightning text-primary"></i> Strength</h5>
+                                    <p class="card-text">Focuses on building raw strength and muscle development. These workouts typically involve resistance training with weights, bands, or bodyweight exercises.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-speedometer2 text-danger"></i> Speed</h5>
+                                    <p class="card-text">Designed to improve acceleration, top speed, and running mechanics. These workouts include sprint drills, technique work, and high-velocity movements.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-arrow-up-right text-success"></i> Power</h5>
+                                    <p class="card-text">Combines strength and speed to develop explosive movements. These workouts focus on plyometrics, Olympic lifts, and other explosive exercises.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-heart-pulse text-info"></i> Endurance</h5>
+                                    <p class="card-text">Builds cardiovascular capacity and stamina. These workouts include interval training, tempo runs, and other sustained effort activities.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-arrow-left-right text-warning"></i> Agility</h5>
+                                    <p class="card-text">Improves change of direction, footwork, and reaction time. These workouts include ladder drills, cone patterns, and reactive movements.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="bi bi-disc text-secondary"></i> Throwing</h5>
+                                    <p class="card-text">Focuses on disc skills, throwing mechanics, and accuracy. These workouts include various throwing drills, progressions, and technique work.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

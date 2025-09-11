@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">My Progress</li>
+                </ol>
+            </nav>
+            <h1>My Off-Season Progress</h1>
+            <h5 class="text-muted">{{ player.name }}{% if player.jersey_number %} #{{ player.jersey_number }}{% endif %}</h5>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-primary">
+                <i class="bi bi-graph-up"></i> My Fitness Metrics
+            </a>
+        </div>
+    </div>
+
+    <!-- Progress Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-bar-chart"></i> Training Progress Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for phase in phases %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">{{ phase.name }}</h5>
+                                        <small class="text-muted">{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</small>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="progress mb-3" style="height: 25px;">
+                                            <div class="progress-bar {{ 'bg-success' if progress_data[phase.id]['completion_percentage'] >= 75 else 'bg-warning' if progress_data[phase.id]['completion_percentage'] >= 25 else 'bg-danger' }}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ progress_data[phase.id]['completion_percentage'] }}%;" 
+                                                 aria-valuenow="{{ progress_data[phase.id]['completion_percentage'] }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ progress_data[phase.id]['completion_percentage'] }}%
+                                            </div>
+                                        </div>
+                                        
+                                        <p>
+                                            <strong>Completed:</strong> 
+                                            {{ progress_data[phase.id]['completed_workouts']|length }} of {{ progress_data[phase.id]['all_workouts']|length }} workouts
+                                        </p>
+                                        
+                                        {% if phase.start_date <= today and phase.end_date >= today %}
+                                            <span class="badge bg-success">Current Phase</span>
+                                        {% elif phase.start_date > today %}
+                                            <span class="badge bg-secondary">Upcoming</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Completed</span>
+                                        {% endif %}
+                                        
+                                        <div class="mt-3">
+                                            <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-sm btn-outline-primary">
+                                                View Phase Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Workouts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="bi bi-check-circle"></i> Recently Completed Workouts</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_progress %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Workout</th>
+                                        <th>Phase</th>
+                                        <th>Rating</th>
+                                        <th>Difficulty</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for progress in recent_progress %}
+                                        <tr>
+                                            <td>{{ progress.completion_date.strftime('%b %d, %Y') }}</td>
+                                            <td>
+                                                <a href="{{ url_for('off_season.workout_detail', workout_id=progress.workout_id) }}">
+                                                    {{ progress.workout.title }}
+                                                </a>
+                                            </td>
+                                            <td>{{ progress.phase.name }}</td>
+                                            <td>
+                                                {% if progress.rating %}
+                                                    {% for i in range(progress.rating) %}
+                                                        <i class="bi bi-star-fill text-warning"></i>
+                                                    {% endfor %}
+                                                    {% for i in range(5 - progress.rating) %}
+                                                        <i class="bi bi-star text-muted"></i>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">Not rated</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ 'success' if progress.difficulty_feedback == 'Too Easy' else 'warning' if progress.difficulty_feedback == 'Just Right' else 'danger' }}">
+                                                    {{ progress.difficulty_feedback or 'Not specified' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('off_season.record_progress', workout_id=progress.workout_id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil"></i> Update
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>You haven't completed any workouts yet. Start your off-season training by selecting a workout from the current phase!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommended Workouts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-lightning"></i> Recommended Workouts</h5>
+                </div>
+                <div class="card-body">
+                    {% set current_phase = None %}
+                    {% for phase in phases %}
+                        {% if phase.start_date <= today and phase.end_date >= today %}
+                            {% set current_phase = phase %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if current_phase %}
+                        <h5>Current Phase: {{ current_phase.name }}</h5>
+                        <p>Based on your progress, here are some recommended workouts to complete next:</p>
+                        
+                        <div class="row mt-3">
+                            {% set incomplete_workouts = [] %}
+                            {% for workout in progress_data[current_phase.id]['all_workouts'] %}
+                                {% if workout not in progress_data[current_phase.id]['completed_workouts'] %}
+                                    {% set incomplete_workouts = incomplete_workouts + [workout] %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if incomplete_workouts %}
+                                {% for workout in incomplete_workouts[:3] %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ workout.title }}</h5>
+                                                <p class="card-text text-truncate">{{ workout.description }}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                                        {{ workout.difficulty_level }}
+                                                    </span>
+                                                    <span class="text-muted">{{ workout.duration }}</span>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-primary">
+                                                        View Workout
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <div class="alert alert-success">
+                                        <p>Congratulations! You've completed all workouts in the current phase.</p>
+                                        <a href="{{ url_for('off_season.phase_detail', phase_id=current_phase.id) }}" class="btn btn-sm btn-success mt-2">
+                                            Review Phase
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>There is no active phase at this time. Please check back when the off-season training begins.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fitness Integration -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5><i class="bi bi-arrow-repeat"></i> Connect with Fitness Tracking</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p>Track your physical development throughout the off-season by recording your fitness metrics regularly. This helps you see how your training is translating to measurable improvements.</p>
+                            <p>We recommend recording your key metrics at least once every 2-3 weeks during the off-season.</p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-primary">
+                                <i class="bi bi-speedometer2"></i> View My Fitness Profile
+                            </a>
+                            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-outline-primary mt-2">
+                                <i class="bi bi-plus-circle"></i> Record New Metrics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Off-Season Training</h1>
+            <p class="text-muted">Mid-September to February: Build your foundation for the upcoming season</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.phases') }}" class="btn btn-primary">
+                <i class="bi bi-calendar-range"></i> View All Phases
+            </a>
+            <a href="{{ url_for('off_season.workouts') }}" class="btn btn-success">
+                <i class="bi bi-activity"></i> Browse Workouts
+            </a>
+        </div>
+    </div>
+
+    <!-- Current Phase Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Current Training Phase</h5>
+                        {% if current_phase %}
+                            <span class="badge bg-light text-dark">{{ current_phase.start_date.strftime('%b %d') }} - {{ current_phase.end_date.strftime('%b %d, %Y') }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if current_phase %}
+                        <h3>{{ current_phase.name }}</h3>
+                        <p>{{ current_phase.description }}</p>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h5>Primary Focus</h5>
+                                <p>{{ current_phase.primary_focus }}</p>
+                                
+                                <h5>Training Emphasis</h5>
+                                <p>{{ current_phase.training_emphasis }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Volume/Intensity Balance</h5>
+                                <p>{{ current_phase.volume_intensity }}</p>
+                                
+                                <h5>Key Outcome</h5>
+                                <p>{{ current_phase.key_outcome }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('off_season.phase_detail', phase_id=current_phase.id) }}" class="btn btn-primary">
+                                View Phase Details & Workouts
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <h4>No Active Phase</h4>
+                            <p>There is no active off-season training phase at this time. Please check back later or contact your coach for more information.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Off-Season Overview -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="bi bi-info-circle"></i> Off-Season Program Overview</h5>
+                </div>
+                <div class="card-body">
+                    <p>The off-season training program spans approximately 20 weeks, from mid-September to February, and is structured to systematically develop the athletic qualities and skills necessary for ultimate frisbee performance.</p>
+                    
+                    <h5>Program Phases:</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for phase in all_phases %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ phase.name }}</strong>
+                                    <small class="d-block text-muted">{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d') }}</small>
+                                </div>
+                                <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('off_season.training_guide') }}" class="btn btn-outline-dark">
+                            <i class="bi bi-book"></i> View Complete Training Guide
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="bi bi-lightning"></i> Recent Workouts</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_workouts %}
+                        <div class="list-group">
+                            {% for workout in recent_workouts %}
+                                <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ workout.title }}</h6>
+                                        <small>{{ workout.workout_type }}</small>
+                                    </div>
+                                    <p class="mb-1 text-truncate">{{ workout.description }}</p>
+                                    <small class="text-muted">
+                                        <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                            {{ workout.difficulty_level }}
+                                        </span>
+                                        <span class="ms-2">{{ workout.duration }}</span>
+                                    </small>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-light">
+                            <p>No workouts have been added yet.</p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('off_season.workouts') }}" class="btn btn-outline-success">
+                            <i class="bi bi-grid"></i> Browse All Workouts
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Progress Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="bi bi-graph-up"></i> My Off-Season Progress</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_user.player %}
+                        {% if player_progress %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Workout</th>
+                                            <th>Phase</th>
+                                            <th>Rating</th>
+                                            <th>Difficulty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for progress in player_progress %}
+                                            <tr>
+                                                <td>{{ progress.completion_date.strftime('%b %d, %Y') }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('off_season.workout_detail', workout_id=progress.workout_id) }}">
+                                                        {{ progress.workout.title }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ progress.phase.name }}</td>
+                                                <td>
+                                                    {% if progress.rating %}
+                                                        {% for i in range(progress.rating) %}
+                                                            <i class="bi bi-star-fill text-warning"></i>
+                                                        {% endfor %}
+                                                        {% for i in range(5 - progress.rating) %}
+                                                            <i class="bi bi-star text-muted"></i>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <span class="text-muted">Not rated</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-{{ 'success' if progress.difficulty_feedback == 'Too Easy' else 'warning' if progress.difficulty_feedback == 'Just Right' else 'danger' }}">
+                                                        {{ progress.difficulty_feedback or 'Not specified' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <a href="{{ url_for('off_season.my_progress') }}" class="btn btn-info">
+                                    <i class="bi bi-person-check"></i> View My Complete Progress
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-light">
+                                <h5>No Progress Recorded Yet</h5>
+                                <p>You haven't recorded any workout completions yet. Start your off-season training by selecting a workout from the current phase!</p>
+                                
+                                {% if current_phase %}
+                                    <a href="{{ url_for('off_season.phase_detail', phase_id=current_phase.id) }}" class="btn btn-primary mt-2">
+                                        <i class="bi bi-play-circle"></i> Start Training Now
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <h5>Player Profile Not Linked</h5>
+                            <p>To track your off-season progress, you need to link your account to your player profile.</p>
+                            <a href="{{ url_for('auth.link_player') }}" class="btn btn-warning mt-2">
+                                <i class="bi bi-link"></i> Link Player Profile
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration with Fitness Tracking -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h4><i class="bi bi-arrow-repeat"></i> Track Your Fitness Progress</h4>
+                            <p class="mb-0">Monitor your athletic development throughout the off-season by recording your fitness metrics.</p>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('fitness.index') }}" class="btn btn-primary">
+                                <i class="bi bi-speedometer2"></i> Go to Fitness Tracking
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
