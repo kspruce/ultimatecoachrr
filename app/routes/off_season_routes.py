@@ -22,7 +22,7 @@ def before_request():
     
     if current_user.is_authenticated:
         if current_user.is_admin:
-            g.current_team_id = session.get('current_team_id', current_user.current_team_id)
+            g.current_team_id = session.get('current_team_id', current_user.team_organization_id)
         else:
             g.current_team_id = current_user.team_organization_id
 
