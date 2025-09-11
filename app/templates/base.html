@@ -75,6 +75,16 @@
                             <li><a class="dropdown-item" href="{{ url_for('off_season.my_progress') }}"><i class="bi bi-graph-up"></i> My Progress</a></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('off_season.training_guide') }}"><i class="bi bi-book"></i> Training Guide</a></li>
+                            {% if current_user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Admin - Off-Season</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('off_season.admin_dashboard') }}"><i class="bi bi-gear"></i> Admin Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('off_season.manage_phases') }}"><i class="bi bi-calendar-plus"></i> Manage Phases</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('off_season.manage_workouts') }}"><i class="bi bi-plus-circle"></i> Manage Workouts</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('off_season.manage_exercises') }}"><i class="bi bi-list-check"></i> Manage Exercises</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('off_season.manage_goal_templates') }}"><i class="bi bi-bullseye"></i> Manage Goal Templates</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('off_season.import_sample_content') }}"><i class="bi bi-download"></i> Import Sample Content</a></li>
+                            {% endif %}
                             
                             <li><hr class="dropdown-divider"></li>
                             

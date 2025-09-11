@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.admin') }}">Admin</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Edit Workout</li>
+                </ol>
+            </nav>
+            <h1>Edit Workout</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.admin') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Admin
+            </a>
+            <a href="{{ url_for('off_season.manage_exercises', workout_id=workout.id) }}" class="btn btn-primary">
+                <i class="bi bi-list-check"></i> Manage Exercises
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-activity"></i> Edit Workout</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('off_season.edit_workout', workout_id=workout.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="workout-title" class="form-label">Workout Title</label>
+                                <input type="text" class="form-control" id="workout-title" name="title" value="{{ workout.title }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="workout-phase" class="form-label">Training Phase</label>
+                                <select class="form-select" id="workout-phase" name="phase_id" required>
+                                    {% for phase in phases %}
+                                        <option value="{{ phase.id }}" {% if phase.id == workout.phase_id %}selected{% endif %}>{{ phase.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="workout-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="workout-description" name="description" rows="3" required>{{ workout.description }}</textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="workout-type" class="form-label">Workout Type</label>
+                                <select class="form-select" id="workout-type" name="workout_type" required>
+                                    <option value="Strength" {% if workout.workout_type == 'Strength' %}selected{% endif %}>Strength</option>
+                                    <option value="Speed" {% if workout.workout_type == 'Speed' %}selected{% endif %}>Speed</option>
+                                    <option value="Power" {% if workout.workout_type == 'Power' %}selected{% endif %}>Power</option>
+                                    <option value="Endurance" {% if workout.workout_type == 'Endurance' %}selected{% endif %}>Endurance</option>
+                                    <option value="Agility" {% if workout.workout_type == 'Agility' %}selected{% endif %}>Agility</option>
+                                    <option value="Throwing" {% if workout.workout_type == 'Throwing' %}selected{% endif %}>Throwing</option>
+                                    <option value="Mobility" {% if workout.workout_type == 'Mobility' %}selected{% endif %}>Mobility</option>
+                                    <option value="Recovery" {% if workout.workout_type == 'Recovery' %}selected{% endif %}>Recovery</option>
+                                    <option value="Sport-Specific" {% if workout.workout_type == 'Sport-Specific' %}selected{% endif %}>Sport-Specific</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="workout-difficulty" class="form-label">Difficulty Level</label>
+                                <select class="form-select" id="workout-difficulty" name="difficulty_level" required>
+                                    <option value="Beginner" {% if workout.difficulty_level == 'Beginner' %}selected{% endif %}>Beginner</option>
+                                    <option value="Intermediate" {% if workout.difficulty_level == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+                                    <option value="Advanced" {% if workout.difficulty_level == 'Advanced' %}selected{% endif %}>Advanced</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="workout-duration" class="form-label">Duration</label>
+                                <input type="text" class="form-control" id="workout-duration" name="duration" value="{{ workout.duration }}" placeholder="e.g., 45-60 minutes" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="workout-equipment" class="form-label">Equipment Needed</label>
+                            <textarea class="form-control" id="workout-equipment" name="equipment_needed" rows="2" placeholder="List any equipment needed for this workout">{{ workout.equipment_needed }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="workout-instructions" class="form-label">General Instructions</label>
+                            <textarea class="form-control" id="workout-instructions" name="instructions" rows="3" placeholder="General instructions for the workout">{{ workout.instructions }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-10 mx-auto">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5><i class="bi bi-info-circle"></i> Workout Design Tips</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul>
+                                <li>Ensure the workout aligns with the phase objectives</li>
+                                <li>Include a proper warm-up and cool-down in your instructions</li>
+                                <li>Specify rest periods between exercises and sets</li>
+                                <li>Consider progression options for different skill levels</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul>
+                                <li>Balance volume and intensity appropriately for the phase</li>
+                                <li>Include specific technique cues in exercise descriptions</li>
+                                <li>Consider how exercises flow together in the workout</li>
+                                <li>Provide clear safety guidelines for complex movements</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.admin') }}">Admin</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Edit Phase</li>
+                </ol>
+            </nav>
+            <h1>Edit Training Phase</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.admin') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Admin
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-calendar-range"></i> Edit Training Phase</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('off_season.edit_phase', phase_id=phase.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="phase-name" class="form-label">Phase Name</label>
+                                <input type="text" class="form-control" id="phase-name" name="name" value="{{ phase.name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phase-dates" class="form-label">Date Range</label>
+                                <div class="input-group">
+                                    <input type="date" class="form-control" id="phase-start-date" name="start_date" value="{{ phase.start_date.strftime('%Y-%m-%d') }}" required>
+                                    <span class="input-group-text">to</span>
+                                    <input type="date" class="form-control" id="phase-end-date" name="end_date" value="{{ phase.end_date.strftime('%Y-%m-%d') }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="phase-description" class="form-label">Description</label>
+                            <textarea class="form-control" id="phase-description" name="description" rows="3" required>{{ phase.description }}</textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="phase-primary-focus" class="form-label">Primary Focus</label>
+                                <input type="text" class="form-control" id="phase-primary-focus" name="primary_focus" value="{{ phase.primary_focus }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phase-training-emphasis" class="form-label">Training Emphasis</label>
+                                <input type="text" class="form-control" id="phase-training-emphasis" name="training_emphasis" value="{{ phase.training_emphasis }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="phase-volume-intensity" class="form-label">Volume/Intensity Balance</label>
+                                <input type="text" class="form-control" id="phase-volume-intensity" name="volume_intensity" value="{{ phase.volume_intensity }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phase-key-outcome" class="form-label">Key Outcome</label>
+                                <input type="text" class="form-control" id="phase-key-outcome" name="key_outcome" value="{{ phase.key_outcome }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-10 mx-auto">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5><i class="bi bi-info-circle"></i> Phase Design Guidelines</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Phase Structure</h6>
+                            <ul>
+                                <li>Each phase should have a clear, distinct focus</li>
+                                <li>Phases should build progressively on each other</li>
+                                <li>Consider appropriate duration (typically 4-6 weeks)</li>
+                                <li>Ensure smooth transitions between phases</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Content Development</h6>
+                            <ul>
+                                <li>Balance volume and intensity appropriately</li>
+                                <li>Include specific, measurable outcomes</li>
+                                <li>Consider recovery needs within the phase</li>
+                                <li>Align with seasonal periodization principles</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
