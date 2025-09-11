@@ -1194,9 +1194,9 @@ def manage_workouts():
                           phases=phases,
                           workouts=workouts)
 
-@off_season.route('/off-season/manage-exercises')
+@off_season.route('/off-season/manage-all-exercises')
 @login_required
-def manage_exercises():
+def manage_all_exercises():
     """Admin interface for managing exercises across all workouts"""
     if not current_user.is_admin:
         flash('You do not have permission to view this page.', 'danger')
@@ -1246,10 +1246,6 @@ def import_sample_content():
         return redirect(url_for('off_season.index'))
     
     return render_template('off_season/import_content.html')
-
-@off_season.route('/off-season/import-sample-content')
-@login_required
-def import_sample_content():
     """Page for importing sample content"""
     if not current_user.is_admin:
         flash('You do not have permission to view this page.', 'danger')
