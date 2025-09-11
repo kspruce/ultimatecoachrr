@@ -26,7 +26,7 @@
         {% for workout in workouts %}
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ workout.name }}</h5>
+                    <h5 class="mb-0">{{ workout.title }}</h5>
                     <a href="{{ url_for('off_season.manage_exercises', workout_id=workout.id) }}" class="btn btn-light btn-sm">
                         <i class="bi bi-pencil"></i> Manage Exercises
                     </a>
