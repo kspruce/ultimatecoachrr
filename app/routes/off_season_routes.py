@@ -4,7 +4,6 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.off_season import OffSeasonPhase, OffSeasonWorkout, OffSeasonExercise, PlayerOffSeasonProgress, DEFAULT_PHASES
 from app.models.player import Player
-from app.utils.team_filter import team_required
 from datetime import datetime, date
 from sqlalchemy import func
 import markdown
@@ -16,7 +15,6 @@ off_season = Blueprint('off_season', __name__)
 
 @off_season.route('/off-season')
 @login_required
-@team_required
 def index():
     """Main off-season training page"""
     # Get current phase based on date
@@ -60,7 +58,6 @@ def index():
 
 @off_season.route('/off-season/phases')
 @login_required
-@team_required
 def phases():
     """View all off-season phases"""
     phases = OffSeasonPhase.query.filter_by(
@@ -71,7 +68,6 @@ def phases():
 
 @off_season.route('/off-season/phase/<int:phase_id>')
 @login_required
-@team_required
 def phase_detail(phase_id):
     """View details of a specific phase"""
     phase = OffSeasonPhase.query.filter_by(
@@ -88,8 +84,7 @@ def phase_detail(phase_id):
     return render_template('off_season/phase_detail.html', phase=phase, workouts=workouts)
 
 @off_season.route('/off-season/workouts')
-@login_required
-@team_required
+@login_required 
 def workouts():
     """View all workouts across all phases"""
     # Get filter parameters
@@ -134,8 +129,7 @@ def workouts():
                            selected_difficulty=difficulty)
 
 @off_season.route('/off-season/workout/<int:workout_id>')
-@login_required
-@team_required
+@login_required 
 def workout_detail(workout_id):
     """View details of a specific workout"""
     workout = OffSeasonWorkout.query.filter_by(
@@ -162,8 +156,7 @@ def workout_detail(workout_id):
                            completed=completed)
 
 @off_season.route('/off-season/player-progress')
-@login_required
-@team_required
+@login_required 
 def player_progress():
     """View progress for all players"""
     # Only admins can view all player progress
@@ -210,8 +203,7 @@ def player_progress():
                            progress_data=progress_data)
 
 @off_season.route('/off-season/my-progress')
-@login_required
-@team_required
+@login_required 
 def my_progress():
     """View current user's progress"""
     # Check if user has a linked player
@@ -265,8 +257,7 @@ def my_progress():
                            recent_progress=recent_progress)
 
 @off_season.route('/off-season/record-progress/<int:workout_id>', methods=['GET', 'POST'])
-@login_required
-@team_required
+@login_required 
 def record_progress(workout_id):
     """Record completion of a workout"""
     # Check if user has a linked player
@@ -322,8 +313,7 @@ def record_progress(workout_id):
                            existing=existing)
 
 @off_season.route('/off-season/guide')
-@login_required
-@team_required
+@login_required 
 def training_guide():
     """View the full off-season training guide"""
     # Read the markdown file
@@ -342,8 +332,7 @@ def training_guide():
 # Admin routes for managing off-season content
 
 @off_season.route('/off-season/admin')
-@login_required
-@team_required
+@login_required 
 def admin():
     """Admin dashboard for off-season training"""
     # Only admins can access this page
@@ -376,8 +365,7 @@ def admin():
                            progress_entries=progress_entries)
 
 @off_season.route('/off-season/initialize', methods=['POST'])
-@login_required
-@team_required
+@login_required 
 def initialize_off_season():
     """Initialize off-season data from defaults"""
     # Only admins can initialize data
@@ -413,4 +401,3 @@ def initialize_off_season():
     flash('Off-season training phases have been initialized!', 'success')
     return redirect(url_for('off_season.admin'))
 
-# Add more admin routes for CRUD operations on phases, workouts, and exercises
