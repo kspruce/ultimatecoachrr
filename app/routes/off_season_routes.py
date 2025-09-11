@@ -9,7 +9,7 @@ from sqlalchemy import func
 import markdown
 import os
 import json
-
+from app.utils.utils import admin_required
 
 # Create blueprint
 off_season = Blueprint('off_season', __name__)
