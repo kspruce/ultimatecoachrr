@@ -167,67 +167,67 @@
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Beep Test/Yo-Yo Test
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Beep Test/Yo-Yo Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Beep Test/Yo-Yo Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Plank Hold
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Plank Hold') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Plank Hold') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Push-Ups
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Push-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Push-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                 </ul>
                             {% elif phase.name == 'Strength Development Phase' %}
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Squat Endurance
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Squat Endurance') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Squat Endurance') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Pull-Ups
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Pull-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Pull-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Broad Jump
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Broad Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Broad Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                 </ul>
                             {% elif phase.name == 'Power/Speed Phase' %}
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Vertical Jump
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Vertical Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Vertical Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         20-Yard Sprint
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='20-Yard Sprint') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='20-Yard Sprint') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         5-10-5 Shuttle/Pro Agility
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='5-10-5 Shuttle/Pro Agility') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='5-10-5 Shuttle/Pro Agility') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                 </ul>
                             {% elif phase.name == 'Integration Phase' %}
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Ultimate-Specific Conditioning Test
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Ultimate-Specific Conditioning Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Ultimate-Specific Conditioning Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Throwing Accuracy
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Throwing Accuracy') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Throwing Accuracy') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Lateral Quickness Drill
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Lateral Quickness Drill') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Lateral Quickness Drill') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                 </ul>
                             {% else %}
                                 <ul class="list-group">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
                                         Recovery Heart Rate
-                                        <a href="{{ url_for('fitness.record_fitness', metric_name='Recovery Heart Rate') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Recovery Heart Rate') }}" class="btn btn-sm btn-outline-primary">Record</a>
                                     </li>
                                 </ul>
                             {% endif %}
