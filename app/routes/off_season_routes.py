@@ -1,5 +1,5 @@
 # app/routes/off_season_routes.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
 from flask_login import login_required, current_user
 from app import db
 from app.models.off_season import OffSeasonPhase, OffSeasonWorkout, OffSeasonExercise, PlayerOffSeasonProgress, DEFAULT_PHASES
@@ -10,8 +10,15 @@ import markdown
 import os
 import json
 
+
 # Create blueprint
 off_season = Blueprint('off_season', __name__)
+
+# Helper function to get current team ID
+def get_current_team_id():
+    if current_user.is_admin:
+        return session.get('current_team_id',  get_current_team_id())
+    return  get_current_team_id()
 
 @off_season.route('/off-season')
 @login_required
@@ -22,24 +29,24 @@ def index():
     current_phase = OffSeasonPhase.query.filter(
         OffSeasonPhase.start_date <= today,
         OffSeasonPhase.end_date >= today,
-        OffSeasonPhase.team_organization_id == current_user.current_team_id
+        OffSeasonPhase.team_organization_id ==  get_current_team_id()
     ).first()
     
     # If no current phase, get the next upcoming phase
     if not current_phase:
         current_phase = OffSeasonPhase.query.filter(
             OffSeasonPhase.start_date > today,
-            OffSeasonPhase.team_organization_id == current_user.current_team_id
+            OffSeasonPhase.team_organization_id ==  get_current_team_id()
         ).order_by(OffSeasonPhase.start_date).first()
     
     # Get all phases for navigation
     all_phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
     # Get recent workouts
     recent_workouts = OffSeasonWorkout.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonWorkout.created_at.desc()).limit(5).all()
     
     # Get player progress if player is linked
@@ -47,7 +54,7 @@ def index():
     if hasattr(current_user, 'player') and current_user.player:
         player_progress = PlayerOffSeasonProgress.query.filter_by(
             player_id=current_user.player.id,
-            team_organization_id=current_user.current_team_id
+            team_organization_id= get_current_team_id()
         ).order_by(PlayerOffSeasonProgress.completion_date.desc()).limit(10).all()
     
     return render_template('off_season/index.html', 
@@ -61,7 +68,7 @@ def index():
 def phases():
     """View all off-season phases"""
     phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
     return render_template('off_season/phases.html', phases=phases)
@@ -72,13 +79,13 @@ def phase_detail(phase_id):
     """View details of a specific phase"""
     phase = OffSeasonPhase.query.filter_by(
         id=phase_id,
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).first_or_404()
     
     # Get workouts for this phase
     workouts = OffSeasonWorkout.query.filter_by(
         phase_id=phase_id,
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonWorkout.title).all()
     
     return render_template('off_season/phase_detail.html', phase=phase, workouts=workouts)
@@ -93,7 +100,7 @@ def workouts():
     difficulty = request.args.get('difficulty')
     
     # Base query
-    query = OffSeasonWorkout.query.filter_by(team_organization_id=current_user.current_team_id)
+    query = OffSeasonWorkout.query.filter_by(team_organization_id= get_current_team_id())
     
     # Apply filters
     if phase_id:
@@ -108,15 +115,15 @@ def workouts():
     
     # Get phases for filter dropdown
     phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
     # Get unique workout types and difficulty levels for filter dropdowns
     workout_types = db.session.query(OffSeasonWorkout.workout_type).filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).distinct().all()
     difficulty_levels = db.session.query(OffSeasonWorkout.difficulty_level).filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).distinct().all()
     
     return render_template('off_season/workouts.html', 
@@ -134,7 +141,7 @@ def workout_detail(workout_id):
     """View details of a specific workout"""
     workout = OffSeasonWorkout.query.filter_by(
         id=workout_id,
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).first_or_404()
     
     # Get exercises for this workout
@@ -166,12 +173,12 @@ def player_progress():
     
     # Get all players
     players = Player.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).all()
     
     # Get phases
     phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
     # Get progress data
@@ -188,7 +195,7 @@ def player_progress():
             # Count total workouts in this phase
             total_count = OffSeasonWorkout.query.filter_by(
                 phase_id=phase.id,
-                team_organization_id=current_user.current_team_id
+                team_organization_id= get_current_team_id()
             ).count()
             
             progress_data[player.id][phase.id] = {
@@ -215,7 +222,7 @@ def my_progress():
     
     # Get phases
     phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
     # Get progress data
@@ -232,7 +239,7 @@ def my_progress():
         # Get all workouts in this phase
         all_workouts = OffSeasonWorkout.query.filter_by(
             phase_id=phase.id,
-            team_organization_id=current_user.current_team_id
+            team_organization_id= get_current_team_id()
         ).all()
         
         # Calculate completion percentage
@@ -247,7 +254,7 @@ def my_progress():
     # Get recent progress entries
     recent_progress = PlayerOffSeasonProgress.query.filter_by(
         player_id=player.id,
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(PlayerOffSeasonProgress.completion_date.desc()).limit(10).all()
     
     return render_template('off_season/my_progress.html', 
@@ -267,7 +274,7 @@ def record_progress(workout_id):
     
     workout = OffSeasonWorkout.query.filter_by(
         id=workout_id,
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).first_or_404()
     
     if request.method == 'POST':
@@ -294,7 +301,7 @@ def record_progress(workout_id):
                 notes=request.form.get('notes', ''),
                 rating=request.form.get('rating', type=int),
                 difficulty_feedback=request.form.get('difficulty'),
-                team_organization_id=current_user.current_team_id
+                team_organization_id= get_current_team_id()
             )
             db.session.add(progress)
             db.session.commit()
@@ -341,21 +348,21 @@ def admin():
         return redirect(url_for('off_season.index'))
     
     phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
     workouts_count = OffSeasonWorkout.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).count()
     
     exercises_count = db.session.query(func.count(OffSeasonExercise.id)).join(
         OffSeasonWorkout
     ).filter(
-        OffSeasonWorkout.team_organization_id == current_user.current_team_id
+        OffSeasonWorkout.team_organization_id ==  get_current_team_id()
     ).scalar()
     
     progress_entries = PlayerOffSeasonProgress.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).count()
     
     return render_template('off_season/admin.html',
@@ -375,7 +382,7 @@ def initialize_off_season():
     
     # Check if phases already exist
     existing_phases = OffSeasonPhase.query.filter_by(
-        team_organization_id=current_user.current_team_id
+        team_organization_id= get_current_team_id()
     ).count()
     
     if existing_phases > 0:
@@ -393,7 +400,7 @@ def initialize_off_season():
             training_emphasis=phase_data['training_emphasis'],
             volume_intensity=phase_data['volume_intensity'],
             key_outcome=phase_data['key_outcome'],
-            team_organization_id=current_user.current_team_id
+            team_organization_id= get_current_team_id()
         )
         db.session.add(phase)
     
