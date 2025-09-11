@@ -56,7 +56,7 @@
                                 <tbody>
                                     {% for workout in phase_workouts %}
                                         <tr>
-                                            <td>{{ workout.name }}</td>
+                                            <td>{{ workout.title }}</td>
                                             <td>{{ workout.description|truncate(50) }}</td>
                                             <td>{{ workout.duration }} minutes</td>
                                             <td>
@@ -92,7 +92,7 @@
                                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                             </div>
                                                             <div class="modal-body">
-                                                                <p>Are you sure you want to delete the workout <strong>{{ workout.name }}</strong>?</p>
+                                                                <p>Are you sure you want to delete the workout <strong>{{ workout.title }}</strong>?</p>
                                                                 <p>This will also delete all exercises and progress records associated with this workout.</p>
                                                                 <p>This action cannot be undone.</p>
                                                             </div>

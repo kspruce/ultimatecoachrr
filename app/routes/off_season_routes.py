@@ -1186,13 +1186,15 @@ def manage_workouts():
         team_organization_id=get_current_team_id()
     ).order_by(OffSeasonPhase.start_date).all()
     
+    # Change OffSeasonWorkout.name to OffSeasonWorkout.title
     workouts = OffSeasonWorkout.query.filter_by(
         team_organization_id=get_current_team_id()
-    ).order_by(OffSeasonWorkout.phase_id, OffSeasonWorkout.name).all()
+    ).order_by(OffSeasonWorkout.phase_id, OffSeasonWorkout.title).all()
     
     return render_template('off_season/manage_workouts.html',
                           phases=phases,
                           workouts=workouts)
+
 
 @off_season.route('/off-season/manage-all-exercises')
 @login_required
@@ -1204,7 +1206,7 @@ def manage_all_exercises():
     
     workouts = OffSeasonWorkout.query.filter_by(
         team_organization_id=get_current_team_id()
-    ).order_by(OffSeasonWorkout.phase_id, OffSeasonWorkout.name).all()
+    ).order_by(OffSeasonWorkout.phase_id, OffSeasonWorkout.title).all()
     
     # Get all exercises organized by workout
     workout_exercises = {}
