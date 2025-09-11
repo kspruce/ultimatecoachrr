@@ -1949,7 +1949,8 @@ def import_sample_goal_templates():
                 description=template_data['description'],
                 category=template_data['category'],
                 measurement_type=template_data['measurement_type'],
-                target_value=template_data['target_value'],
+                example=template_data['target_value'],  # Change to example
+                tips="",  # Add empty tips if needed
                 phase_id=phase_id,
                 team_organization_id=team_id
             )

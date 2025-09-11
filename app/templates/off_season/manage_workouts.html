@@ -58,17 +58,11 @@
                                         <tr>
                                             <td>{{ workout.title }}</td>
                                             <td>{{ workout.description|truncate(50) }}</td>
-                                            <td>{{ workout.duration }} minutes</td>
+                                            <td>{{ workout.duration }} minutes</td>                                     
                                             <td>
-                                                <div class="difficulty-indicator">
-                                                    {% for i in range(1, 6) %}
-                                                        {% if i <= workout.difficulty %}
-                                                            <i class="bi bi-star-fill text-warning"></i>
-                                                        {% else %}
-                                                            <i class="bi bi-star text-muted"></i>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                </div>
+                                                <span class="badge {% if workout.difficulty_level == 'Beginner' %}bg-success{% elif workout.difficulty_level == 'Intermediate' %}bg-warning{% else %}bg-danger{% endif %}">
+                                                    {{ workout.difficulty_level }}
+                                                </span>
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
