@@ -10,6 +10,7 @@ class WeeklyWorkoutCompletion(db.Model):
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phase.id'), nullable=False)
     template_id = db.Column(db.Integer, db.ForeignKey('weekly_schedule_template.id'), nullable=False)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Week identification
     week_number = db.Column(db.Integer, nullable=False)  # Week number within the phase
@@ -48,43 +49,30 @@ class WeeklyWorkoutCompletion(db.Model):
     completion_percentage = db.Column(db.Float, default=0.0)  # Calculated percentage of completed workouts
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     player = db.relationship('Player', backref='weekly_completions')
-    phase = db.relationship('OffSeasonPhase')
-    template = db.relationship('WeeklyScheduleTemplate')
+    phase = db.relationship('OffSeasonPhase', backref='weekly_completions')
+    template = db.relationship('WeeklyScheduleTemplate', backref='weekly_completions')
     
     def __repr__(self):
-        return f'<WeeklyWorkoutCompletion Player {self.player_id} Week {self.week_number}>'
-    
+        return f'<WeeklyWorkoutCompletion Week {self.week_number} - Player {self.player_id}>'
+        
     def calculate_completion_percentage(self):
-        """Calculate the percentage of completed workouts for this week"""
-        total_slots = 0
+        """Calculate the completion percentage based on completed workouts"""
+        total_slots = 14  # 7 days * 2 slots per day
         completed_slots = 0
         
-        # Check each day's morning and evening slots
+        # Count completed slots
         for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']:
-            # Get the template values for this day
-            morning_workout = getattr(self.template, f'{day}_morning')
-            evening_workout = getattr(self.template, f'{day}_evening')
+            morning_field = f"{day}_morning_completed"
+            evening_field = f"{day}_evening_completed"
             
-            # Count morning slot if it has a workout
-            if morning_workout:
-                total_slots += 1
-                if getattr(self, f'{day}_morning_completed'):
-                    completed_slots += 1
-            
-            # Count evening slot if it has a workout
-            if evening_workout:
-                total_slots += 1
-                if getattr(self, f'{day}_evening_completed'):
-                    completed_slots += 1
+            if getattr(self, morning_field):
+                completed_slots += 1
+            if getattr(self, evening_field):
+                completed_slots += 1
         
         # Calculate percentage
-        if total_slots > 0:
-            self.completion_percentage = (completed_slots / total_slots) * 100
-        else:
-            self.completion_percentage = 0
-            
+        self.completion_percentage = (completed_slots / total_slots) * 100
         return self.completion_percentage
