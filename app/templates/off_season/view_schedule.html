@@ -33,7 +33,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for day_index, day_name in enumerate(days) %}
+                    {% for day_index, day_name in enumerated_days %}
                     <tr>
                         <td class="align-middle">{{ day_name }}</td>
                         {% if sessions_by_day[day_index] %}

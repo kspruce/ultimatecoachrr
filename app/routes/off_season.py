@@ -360,13 +360,15 @@ def view_schedule(schedule_id):
     for session in sessions:
         sessions_by_day[session.day_of_week] = session
     
+
     return render_template(
         'off_season/view_schedule.html',
         schedule=schedule,
         phase=phase,
         sessions=sessions,
         sessions_by_day=sessions_by_day,
-        days=days
+        days=days,
+        enumerated_days=enumerate(days)  # Add this line
     )
 
 @bp.route('/schedules/<int:schedule_id>/delete', methods=['POST'])
