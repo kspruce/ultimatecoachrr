@@ -39,13 +39,13 @@
                                     <div class="col-md-6">
                                         <label for="{{ day }}_morning" class="form-label">Morning Workout</label>
                                         <input type="text" class="form-control" id="{{ day }}_morning" name="{{ day }}_morning" 
-                                               value="{{ getattr(template, day + '_morning') or '' }}">
+                                               value="{{ template[day + '_morning'] or '' }}">
                                         <small class="form-text text-muted">Leave blank if no workout scheduled</small>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="{{ day }}_evening" class="form-label">Evening Workout</label>
                                         <input type="text" class="form-control" id="{{ day }}_evening" name="{{ day }}_evening" 
-                                               value="{{ getattr(template, day + '_evening') or '' }}">
+                                               value="{{ template[day + '_evening'] or '' }}">
                                         <small class="form-text text-muted">Leave blank if no workout scheduled</small>
                                     </div>
                                 </div>
@@ -53,12 +53,12 @@
                                     <div class="col-md-6">
                                         <label for="{{ day }}_duration" class="form-label">Duration</label>
                                         <input type="text" class="form-control" id="{{ day }}_duration" name="{{ day }}_duration" 
-                                               value="{{ getattr(template, day + '_duration') or '' }}" placeholder="e.g., 45-60 minutes">
+                                               value="{{ template[day + '_duration'] or '' }}" placeholder="e.g., 45-60 minutes">
                                     </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="{{ day }}_description" class="form-label">Description/Notes</label>
-                                    <textarea class="form-control" id="{{ day }}_description" name="{{ day }}_description" rows="2">{{ getattr(template, day + '_description') or '' }}</textarea>
+                                    <textarea class="form-control" id="{{ day }}_description" name="{{ day }}_description" rows="2">{{ template[day + '_description'] or '' }}</textarea>
                                 </div>
                             </div>
                         </div>
