@@ -1,14 +1,18 @@
 {% extends "off_season/base.html" %}
 
 {% block breadcrumb %}
+{% if schedule %}
 <li class="breadcrumb-item"><a href="{{ url_for('off_season.view_phase', phase_id=schedule.phase.id) }}">{{ schedule.phase.name }}</a></li>
 <li class="breadcrumb-item"><a href="{{ url_for('off_season.view_schedule', schedule_id=schedule.id) }}">{{ schedule.schedule_type.value|capitalize }} Schedule</a></li>
-<li class="breadcrumb-item active">{{ 'Edit Session' if session else 'Add Session' }}</li>
+{% endif %}
+<li class="breadcrumb-item active">{% if workout_session %}Edit{% else %}Add{% endif %} Session</li>
 {% endblock %}
 
-{% block page_title %}{{ 'Edit Training Session' if session else 'Add Training Session' }}{% endblock %}
+{% block page_title %}{% if workout_session %}Edit{% else %}Add{% endif %} Training Session{% endblock %}
 
 {% block off_season_content %}
+
+
 <div class="card">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if session else 'plus-circle' }}"></i> {{ 'Edit Training Session' if session else 'Add Training Session' }}</h5>
