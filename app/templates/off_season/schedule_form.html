@@ -1,0 +1,145 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}">{{ phase.name }}</a></li>
+<li class="breadcrumb-item active">Add Schedule</li>
+{% endblock %}
+
+{% block page_title %}Add Training Schedule{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar-week"></i> Add Training Schedule to {{ phase.name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <p><i class="bi bi-info-circle"></i> Each phase can have up to three different schedule types:</p>
+            <ul class="mb-0">
+                <li><strong>Standard Schedule:</strong> Designed for athletes with moderate experience and average time availability</li>
+                <li><strong>Minimal Schedule:</strong> Designed for beginners or those with limited time availability</li>
+                <li><strong>High Volume Schedule:</strong> Designed for advanced athletes or those with more time to dedicate to training</li>
+            </ul>
+        </div>
+        
+        <form method="POST" action="{{ url_for('off_season.add_schedule', phase_id=phase.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="schedule_type" class="form-label">Schedule Type <span class="text-danger">*</span></label>
+                        <select class="form-select {% if form.schedule_type.errors %}is-invalid{% endif %}" 
+                                id="schedule_type" name="schedule_type" required>
+                            {% for value, label in form.schedule_type.choices %}
+                            <option value="{{ value }}" {% if form.schedule_type.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.schedule_type.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.schedule_type.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="schedule-type-info">
+                        <div class="card" id="standard-info">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Standard Schedule Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>The standard schedule is designed for athletes who can commit to a regular training routine with balanced volume and intensity.</p>
+                                <ul>
+                                    <li><strong>Typical Sessions:</strong> 3-4 per week</li>
+                                    <li><strong>Session Duration:</strong> 45-75 minutes</li>
+                                    <li><strong>Intensity:</strong> Moderate to high</li>
+                                    <li><strong>Ideal For:</strong> Athletes with some training experience and moderate time availability</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card d-none" id="minimal-info">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Minimal Schedule Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>The minimal schedule is designed for athletes with limited time, focusing on the most essential training elements to maintain progress.</p>
+                                <ul>
+                                    <li><strong>Typical Sessions:</strong> 2-3 per week</li>
+                                    <li><strong>Session Duration:</strong> 30-45 minutes</li>
+                                    <li><strong>Intensity:</strong> Moderate</li>
+                                    <li><strong>Ideal For:</strong> Beginners, athletes with limited time, or those returning from injury</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card d-none" id="high-volume-info">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">High Volume Schedule Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>The high volume schedule is designed for athletes who can commit to additional training sessions and want to maximize their development during this phase.</p>
+                                <ul>
+                                    <li><strong>Typical Sessions:</strong> 5-6 per week</li>
+                                    <li><strong>Session Duration:</strong> 60-90 minutes</li>
+                                    <li><strong>Intensity:</strong> Moderate to very high</li>
+                                    <li><strong>Ideal For:</strong> Advanced athletes, those with significant training experience, or athletes with more available time</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Phase
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Create Schedule
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scheduleTypeSelect = document.getElementById('schedule_type');
+    const standardInfo = document.getElementById('standard-info');
+    const minimalInfo = document.getElementById('minimal-info');
+    const highVolumeInfo = document.getElementById('high-volume-info');
+    
+    function updateScheduleInfo() {
+        const selectedValue = scheduleTypeSelect.value;
+        
+        // Hide all info cards
+        standardInfo.classList.add('d-none');
+        minimalInfo.classList.add('d-none');
+        highVolumeInfo.classList.add('d-none');
+        
+        // Show the selected info card
+        if (selectedValue === 'standard') {
+            standardInfo.classList.remove('d-none');
+        } else if (selectedValue === 'minimal') {
+            minimalInfo.classList.remove('d-none');
+        } else if (selectedValue === 'high_volume') {
+            highVolumeInfo.classList.remove('d-none');
+        }
+    }
+    
+    // Initial update
+    updateScheduleInfo();
+    
+    // Update on change
+    scheduleTypeSelect.addEventListener('change', updateScheduleInfo);
+});
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

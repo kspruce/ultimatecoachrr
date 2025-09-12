@@ -1,0 +1,333 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}">{{ phase.name }}</a></li>
+<li class="breadcrumb-item active">{{ 'Edit Workout' if workout else 'Add Workout' }}</li>
+{% endblock %}
+
+{% block page_title %}{{ 'Edit Workout Plan' if workout else 'Add Workout Plan' }}{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if workout else 'plus-circle' }}"></i> {{ 'Edit Workout Plan' if workout else 'Add Workout Plan' }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('off_season.edit_workout', workout_id=workout.id) if workout else url_for('off_season.add_workout', phase_id=phase.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="name" class="form-label">Workout Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.name.errors %}is-invalid{% endif %}" 
+                               id="name" name="name" value="{{ form.name.data or '' }}" required>
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.name.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                        <select class="form-select {% if form.category.errors %}is-invalid{% endif %}" 
+                                id="category" name="category" required>
+                            {% for value, label in form.category.choices %}
+                            <option value="{{ value }}" {% if form.category.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.category.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.category.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="level" class="form-label">Level <span class="text-danger">*</span></label>
+                        <select class="form-select {% if form.level.errors %}is-invalid{% endif %}" 
+                                id="level" name="level" required>
+                            {% for value, label in form.level.choices %}
+                            <option value="{{ value }}" {% if form.level.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.level.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.level.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                  id="description" name="description" rows="3">{{ form.description.data or '' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.description.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Provide a brief description of this workout plan.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="content" class="form-label">Workout Content (Markdown) <span class="text-danger">*</span></label>
+                        <div class="alert alert-info">
+                            <p class="mb-1"><strong>Markdown Tips:</strong></p>
+                            <ul class="mb-0">
+                                <li>Use # for headings (# Heading 1, ## Heading 2)</li>
+                                <li>Use * or - for bullet points</li>
+                                <li>Use 1. 2. 3. for numbered lists</li>
+                                <li>Use **bold** for bold text</li>
+                                <li>Use *italic* for italic text</li>
+                                <li>Use [link text](URL) for links</li>
+                                <li>Use tables with | Column 1 | Column 2 | and ----- separators</li>
+                            </ul>
+                        </div>
+                        <textarea class="form-control {% if form.content.errors %}is-invalid{% endif %}" 
+                                  id="content" name="content" rows="15" required>{{ form.content.data or '' }}</textarea>
+                        {% if form.content.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.content.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Phase
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ 'Save Changes' if workout else 'Create Workout' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Workout Plan Examples</h5>
+    </div>
+    <div class="card-body">
+        <div class="accordion" id="exampleAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        Strength Workout Example
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#exampleAccordion">
+                    <div class="accordion-body">
+                        <pre class="bg-light p-3">
+# Lower Body Strength Workout
+
+## Warm-up (10 minutes)
+- 5 minutes light cardio (jogging, jumping jacks, etc.)
+- Dynamic stretching
+- Activation exercises (glute bridges, bodyweight squats)
+
+## Main Workout
+
+### Strength Circuit (3-4 rounds)
+1. **Squats** - 3 sets of 8-12 reps
+   - Focus on proper form with knees tracking over toes
+   - Rest 60-90 seconds between sets
+
+2. **Romanian Deadlifts** - 3 sets of 8-12 reps
+   - Focus on hip hinge movement and flat back
+   - Rest 60-90 seconds between sets
+
+3. **Walking Lunges** - 3 sets of 10-12 reps per leg
+   - Take long strides and keep torso upright
+   - Rest 60 seconds between sets
+
+4. **Calf Raises** - 3 sets of 15-20 reps
+   - Full range of motion, pause at top
+   - Rest 45 seconds between sets
+
+### Core Finisher
+- Plank: 3 sets of 30-45 seconds
+- Russian Twists: 3 sets of 15-20 reps per side
+- Supermans: 3 sets of 10-12 reps
+
+## Cool Down (5 minutes)
+- Static stretching for all major muscle groups
+- Focus on hamstrings, quads, calves, and lower back
+
+## Notes
+- Adjust weights based on your current strength level
+- Proper form is more important than heavy weight
+- If you don't have access to weights, use bodyweight variations
+                        </pre>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Skills Workout Example
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#exampleAccordion">
+                    <div class="accordion-body">
+                        <pre class="bg-light p-3">
+# Throwing Technique Workout
+
+## Warm-up (10 minutes)
+- Light jog (5 minutes)
+- Dynamic stretching focusing on shoulders, arms, and core
+- Wrist mobility exercises
+
+## Throwing Progression
+
+### Basic Technique (15 minutes)
+1. **Grip Practice** - 5 minutes
+   - Backhand: practice proper grip and wrist snap
+   - Forehand: practice proper grip and wrist flick
+
+2. **Short Throws** - 10 minutes
+   - Partner up at 5-10 yards distance
+   - Focus on clean release and spin
+   - 50 backhands, 50 forehands
+
+### Intermediate Throws (20 minutes)
+1. **Medium Distance** - 10 minutes
+   - Increase to 15-20 yards
+   - Focus on maintaining proper form with increased power
+   - 30 backhands, 30 forehands
+
+2. **Throwing on the Move** - 10 minutes
+   - Practice throwing while moving laterally
+   - Practice pivoting and throwing
+   - 20 reps each direction
+
+### Advanced Techniques (15 minutes)
+Choose 2-3 of these to focus on:
+- Inside-out throws
+- Outside-in throws
+- Hammers
+- Scoobers
+- High-release backhands
+
+## Accuracy Drills (15 minutes)
+1. **Target Practice**
+   - Set up targets or use cones
+   - Practice hitting specific spots from various distances
+   - 10 attempts per target
+
+2. **Throwing Windows**
+   - Have a partner create "windows" with arms
+   - Practice throwing through the windows
+   - Vary height and width of windows
+
+## Cool Down (5 minutes)
+- Light stretching
+- Wrist and shoulder recovery exercises
+
+## Notes
+- Focus on quality over quantity
+- Record yourself to analyze form if possible
+- If working alone, use targets or throw against a wall
+                        </pre>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        Conditioning Workout Example
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#exampleAccordion">
+                    <div class="accordion-body">
+                        <pre class="bg-light p-3">
+# Ultimate-Specific Conditioning Workout
+
+## Warm-up (10 minutes)
+- Light jog (3 minutes)
+- Dynamic stretching (3 minutes)
+- Movement preparation (4 minutes):
+  - High knees
+  - Butt kicks
+  - Lateral shuffles
+  - Carioca
+  - Acceleration/deceleration practice
+
+## Main Workout
+
+### Interval Training (20 minutes)
+**Shuttle Sprints**
+- Set up cones at 5, 10, and 20 yards
+- Sprint to each cone and back to start
+- Rest 30 seconds between sets
+- Complete 6-8 sets
+
+**Change of Direction Drills**
+- Set up a zigzag pattern with cones
+- Sprint through pattern focusing on sharp cuts
+- Rest 45 seconds between sets
+- Complete 6 sets
+
+### Ultimate-Specific Conditioning (15 minutes)
+**Cutting Patterns**
+- Practice various cutting patterns at full speed:
+  - In-cuts
+  - Out-cuts
+  - Deep cuts
+  - Clearing cuts
+- 30 seconds work, 30 seconds rest
+- 10 total rounds
+
+### Endurance Finisher (10 minutes)
+**"The 120s"**
+- 20 seconds sprint
+- 10 seconds rest
+- 20 seconds sprint
+- 10 seconds rest
+- 20 seconds sprint
+- 10 seconds rest
+- 20 seconds sprint
+- 10 seconds rest
+- Repeat for 2 total rounds with 1 minute rest between rounds
+
+## Cool Down (5 minutes)
+- Light jogging (2 minutes)
+- Static stretching (3 minutes)
+
+## Notes
+- Adjust work/rest ratios based on your fitness level
+- Focus on quality of movement and proper cutting technique
+- Track your recovery between intervals to monitor progress
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

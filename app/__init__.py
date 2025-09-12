@@ -196,6 +196,8 @@ def create_app(config_class=Config):
     from app.error_handlers import register_error_handlers
     register_error_handlers(app)
 
+    from app.routes.off_season import bp as off_season_bp
+    app.register_blueprint(off_season_bp)
     
     # Import models
     from app.models import (

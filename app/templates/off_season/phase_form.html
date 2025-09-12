@@ -1,0 +1,178 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.phases') }}">Manage Phases</a></li>
+<li class="breadcrumb-item active">{{ 'Edit Phase' if phase else 'Add Phase' }}</li>
+{% endblock %}
+
+{% block page_title %}{{ 'Edit Phase' if phase else 'Add New Phase' }}{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if phase else 'plus-circle' }}"></i> {{ 'Edit Phase' if phase else 'Add New Phase' }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('off_season.edit_phase', phase_id=phase.id) if phase else url_for('off_season.add_phase') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="name" class="form-label">Phase Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.name.errors %}is-invalid{% endif %}" 
+                               id="name" name="name" value="{{ form.name.data or '' }}" required>
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.name.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control {% if form.start_date.errors %}is-invalid{% endif %}" 
+                               id="start_date" name="start_date" value="{{ form.start_date.data.strftime('%Y-%m-%d') if form.start_date.data else '' }}" required>
+                        {% if form.start_date.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.start_date.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control {% if form.end_date.errors %}is-invalid{% endif %}" 
+                               id="end_date" name="end_date" value="{{ form.end_date.data.strftime('%Y-%m-%d') if form.end_date.data else '' }}" required>
+                        {% if form.end_date.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.end_date.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="primary_focus" class="form-label">Primary Focus <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.primary_focus.errors %}is-invalid{% endif %}" 
+                               id="primary_focus" name="primary_focus" value="{{ form.primary_focus.data or '' }}" required>
+                        {% if form.primary_focus.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.primary_focus.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Example: "General strength, mobility, aerobic capacity, fundamental skills"</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="training_emphasis" class="form-label">Training Emphasis <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.training_emphasis.errors %}is-invalid{% endif %}" 
+                               id="training_emphasis" name="training_emphasis" value="{{ form.training_emphasis.data or '' }}" required>
+                        {% if form.training_emphasis.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.training_emphasis.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Example: "Movement quality, technique development, work capacity"</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="volume_intensity" class="form-label">Volume/Intensity <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.volume_intensity.errors %}is-invalid{% endif %}" 
+                               id="volume_intensity" name="volume_intensity" value="{{ form.volume_intensity.data or '' }}" required>
+                        {% if form.volume_intensity.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.volume_intensity.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Example: "Moderate volume, lower intensity"</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="key_outcome" class="form-label">Key Outcome <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.key_outcome.errors %}is-invalid{% endif %}" 
+                               id="key_outcome" name="key_outcome" value="{{ form.key_outcome.data or '' }}" required>
+                        {% if form.key_outcome.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.key_outcome.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Example: "Establishing physical and technical foundation for later phases"</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                  id="description" name="description" rows="4">{{ form.description.data or '' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.description.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Provide a detailed description of this phase and its objectives.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="order" class="form-label">Display Order</label>
+                        <input type="number" class="form-control {% if form.order.errors %}is-invalid{% endif %}" 
+                               id="order" name="order" value="{{ form.order.data or 0 }}">
+                        {% if form.order.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.order.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Lower numbers appear first.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.phases') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Phases
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ 'Save Changes' if phase else 'Create Phase' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

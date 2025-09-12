@@ -1,0 +1,407 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Progress Tracking</li>
+{% endblock %}
+
+{% block page_title %}Off-Season Progress{% endblock %}
+
+{% block off_season_content %}
+<div class="row">
+    <!-- Completed Sessions -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Completed Training Sessions</h5>
+            </div>
+            <div class="card-body">
+                {% if completions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Training Focus</th>
+                                <th>Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for completion in completions %}
+                            <tr>
+                                <td>{{ completion.completed_date.strftime('%b %d, %Y') }}</td>
+                                <td>{{ completion.session.training_focus }}</td>
+                                <td>
+                                    {% if completion.rating %}
+                                    <div class="text-warning">
+                                        {% for i in range(completion.rating) %}
+                                        <i class="bi bi-star-fill"></i>
+                                        {% endfor %}
+                                        {% for i in range(5 - completion.rating) %}
+                                        <i class="bi bi-star"></i>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">Not rated</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Training Stats -->
+                <div class="mt-4">
+                    <h6>Training Statistics</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ completions|length }}</h3>
+                                    <p class="mb-0">Total Sessions</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    {% set total_minutes = 0 %}
+                                    {% for completion in completions %}
+                                        {% set total_minutes = total_minutes + completion.session.duration_minutes %}
+                                    {% endfor %}
+                                    <h3>{{ total_minutes }}</h3>
+                                    <p class="mb-0">Total Minutes</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    {% set avg_rating = 0 %}
+                                    {% set rated_count = 0 %}
+                                    {% for completion in completions %}
+                                        {% if completion.rating %}
+                                            {% set avg_rating = avg_rating + completion.rating %}
+                                            {% set rated_count = rated_count + 1 %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if rated_count > 0 %}
+                                        {% set avg_rating = (avg_rating / rated_count)|round(1) %}
+                                    {% endif %}
+                                    <h3>{{ avg_rating if rated_count > 0 else 'N/A' }}</h3>
+                                    <p class="mb-0">Avg Rating</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-light">
+                    <p>You haven't completed any training sessions yet.</p>
+                    <p>Start tracking your progress by completing sessions from your training schedule!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Completed Goals -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-trophy"></i> Completed Goals</h5>
+            </div>
+            <div class="card-body">
+                {% if completed_goals %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Goal</th>
+                                <th>Category</th>
+                                <th>Completed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for goal in completed_goals %}
+                            <tr>
+                                <td>
+                                    <strong>{{ goal.title }}</strong>
+                                    {% if goal.description %}
+                                    <p class="text-muted mb-0 small">{{ goal.description }}</p>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-secondary">{{ goal.category }}</span></td>
+                                <td>{{ goal.completed_date.strftime('%b %d, %Y') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Goal Stats -->
+                <div class="mt-4">
+                    <h6>Goal Statistics</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3>{{ completed_goals|length }}</h3>
+                                    <p class="mb-0">Goals Achieved</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    {% set categories = {} %}
+                                    {% for goal in completed_goals %}
+                                        {% if goal.category in categories %}
+                                            {% set _ = categories.update({goal.category: categories[goal.category] + 1}) %}
+                                        {% else %}
+                                            {% set _ = categories.update({goal.category: 1}) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set top_category = {'name': 'None', 'count': 0} %}
+                                    {% for category, count in categories.items() %}
+                                        {% if count > top_category.count %}
+                                            {% set top_category = {'name': category, 'count': count} %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    <h3>{{ top_category.name }}</h3>
+                                    <p class="mb-0">Top Category</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-light">
+                    <p>You haven't completed any goals yet.</p>
+                    <p>Set and achieve SMART goals to track your progress!</p>
+                    <a href="{{ url_for('off_season.add_goal') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Create Goal
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fitness Progress -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-graph-up"></i> Fitness Metrics Progress</h5>
+    </div>
+    <div class="card-body">
+        {% if player and fitness_records %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Latest Value</th>
+                                <th>Previous Value</th>
+                                <th>Change</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set metrics = {} %}
+                            {% for record in fitness_records %}
+                                {% if record.metric.id not in metrics %}
+                                    {% set _ = metrics.update({record.metric.id: {'metric': record.metric, 'records': []}}) %}
+                                {% endif %}
+                                {% set _ = metrics[record.metric.id]['records'].append(record) %}
+                            {% endfor %}
+                            
+                            {% for metric_id, data in metrics.items() %}
+                                {% set metric = data.metric %}
+                                {% set records = data.records|sort(attribute='date_recorded', reverse=true) %}
+                                {% if records|length >= 1 %}
+                                    {% set latest = records[0] %}
+                                    {% set previous = records[1] if records|length > 1 else None %}
+                                    {% set change = (latest.value - previous.value) if previous else 0 %}
+                                    {% set change_percent = ((change / previous.value) * 100)|round(1) if previous and previous.value != 0 else 0 %}
+                                    <tr>
+                                        <td>{{ metric.name }}</td>
+                                        <td>{{ latest.value }} {{ metric.unit }}</td>
+                                        <td>{{ previous.value if previous else 'N/A' }} {{ metric.unit if previous else '' }}</td>
+                                        <td>
+                                            {% if previous %}
+                                                {% if (change > 0 and metric.higher_is_better) or (change < 0 and not metric.higher_is_better) %}
+                                                    <span class="text-success">
+                                                        <i class="bi bi-arrow-up"></i> {{ change|abs }} {{ metric.unit }} ({{ change_percent|abs }}%)
+                                                    </span>
+                                                {% elif (change < 0 and metric.higher_is_better) or (change > 0 and not metric.higher_is_better) %}
+                                                    <span class="text-danger">
+                                                        <i class="bi bi-arrow-down"></i> {{ change|abs }} {{ metric.unit }} ({{ change_percent|abs }}%)
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">No change</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('fitness.player_metric_history', player_id=player.id, metric_id=metric.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-graph-up"></i> History
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-outline-warning text-dark">
+                        <i class="bi bi-speedometer2"></i> View All Fitness Data
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-light">
+            <p>No fitness metrics data available.</p>
+            {% if player %}
+            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-warning text-dark">
+                <i class="bi bi-plus-circle"></i> Record Fitness Metrics
+            </a>
+            {% else %}
+            <p>You need to be linked to a player profile to track fitness metrics.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Monthly Activity Calendar -->
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar3"></i> Monthly Activity</h5>
+    </div>
+    <div class="card-body">
+        {% if completions %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="activity-calendar">
+                    {% set current_month = today.month %}
+                    {% set current_year = today.year %}
+                    {% set days_in_month = 31 if current_month in [1, 3, 5, 7, 8, 10, 12] else 30 if current_month in [4, 6, 9, 11] else 29 if current_year % 4 == 0 and (current_year % 100 != 0 or current_year % 400 == 0) else 28 %}
+                    {% set first_day = today.replace(day=1).weekday() %}
+                    
+                    <h6 class="text-center mb-3">{{ today.strftime('%B %Y') }}</h6>
+                    
+                    <div class="calendar-grid">
+                        <div class="calendar-header">Mon</div>
+                        <div class="calendar-header">Tue</div>
+                        <div class="calendar-header">Wed</div>
+                        <div class="calendar-header">Thu</div>
+                        <div class="calendar-header">Fri</div>
+                        <div class="calendar-header">Sat</div>
+                        <div class="calendar-header">Sun</div>
+                        
+                        {% for i in range(first_day) %}
+                        <div class="calendar-day empty"></div>
+                        {% endfor %}
+                        
+                        {% for day in range(1, days_in_month + 1) %}
+                        {% set current_date = today.replace(day=day) %}
+                        {% set has_completion = false %}
+                        {% set completion_count = 0 %}
+                        {% for completion in completions %}
+                            {% if completion.completed_date.year == current_date.year and completion.completed_date.month == current_date.month and completion.completed_date.day == current_date.day %}
+                                {% set has_completion = true %}
+                                {% set completion_count = completion_count + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div class="calendar-day {{ 'today' if current_date.day == today.day else '' }} {{ 'has-activity' if has_completion else '' }}">
+                            <div class="day-number">{{ day }}</div>
+                            {% if has_completion %}
+                            <div class="activity-marker" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ completion_count }} session{% if completion_count != 1 %}s{% endif %} completed">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-light">
+            <p>No activity data available for this month.</p>
+            <p>Complete training sessions to see your activity calendar!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.calendar-header {
+    text-align: center;
+    font-weight: bold;
+    padding: 5px;
+    background-color: #f8f9fa;
+}
+
+.calendar-day {
+    height: 60px;
+    border: 1px solid #dee2e6;
+    padding: 5px;
+    position: relative;
+}
+
+.calendar-day.empty {
+    background-color: #f8f9fa;
+    border: 1px solid #f8f9fa;
+}
+
+.calendar-day.today {
+    background-color: #e8f4f8;
+    border: 2px solid #0dcaf0;
+}
+
+.calendar-day.has-activity {
+    background-color: #d1e7dd;
+}
+
+.day-number {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    font-size: 0.9rem;
+}
+
+.activity-marker {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    color: #198754;
+    font-size: 1.2rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

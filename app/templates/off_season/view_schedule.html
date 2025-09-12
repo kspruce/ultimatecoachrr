@@ -1,0 +1,162 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}">{{ phase.name }}</a></li>
+<li class="breadcrumb-item active">{{ schedule.schedule_type.value|capitalize }} Schedule</li>
+{% endblock %}
+
+{% block page_title %}{{ schedule.schedule_type.value|capitalize }} Schedule{% endblock %}
+
+{% block page_actions %}
+{% if current_user.is_admin %}
+<a href="{{ url_for('off_season.add_session', schedule_id=schedule.id) }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Add Session
+</a>
+{% endif %}
+{% endblock %}
+
+{% block off_season_content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar-week"></i> Weekly Schedule - {{ phase.name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Day</th>
+                        <th>Training Focus</th>
+                        <th>Duration</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day_index, day_name in enumerate(days) %}
+                    <tr>
+                        <td class="align-middle">{{ day_name }}</td>
+                        {% if sessions_by_day[day_index] %}
+                        {% set session = sessions_by_day[day_index] %}
+                        <td class="align-middle">{{ session.training_focus }}</td>
+                        <td class="align-middle">{{ session.duration_minutes }} min</td>
+                        <td class="align-middle">
+                            {% if session.description %}
+                            {{ session.description }}
+                            {% else %}
+                            <span class="text-muted">No description</span>
+                            {% endif %}
+                            
+                            {% if session.workout_plans %}
+                            <div class="mt-2">
+                                <strong>Workout Plans:</strong>
+                                <ul class="mb-0">
+                                    {% for workout in session.workout_plans %}
+                                    <li>
+                                        <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}">
+                                            {{ workout.name }} ({{ workout.level.value|capitalize }})
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            <div class="btn-group btn-group-sm">
+                                {% if current_user.is_admin %}
+                                <a href="{{ url_for('off_season.edit_session', session_id=session.id) }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteSessionModal{{ session.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% else %}
+                                <a href="{{ url_for('off_season.complete_session', session_id=session.id) }}" class="btn btn-outline-success">
+                                    <i class="bi bi-check-circle"></i> Complete
+                                </a>
+                                {% endif %}
+                            </div>
+                            
+                            {% if current_user.is_admin %}
+                            <!-- Delete Session Modal -->
+                            <div class="modal fade" id="deleteSessionModal{{ session.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the {{ day_name }} training session?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('off_season.delete_session', session_id=session.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% else %}
+                        <td class="text-muted align-middle" colspan="3">No training scheduled</td>
+                        <td class="align-middle">
+                            {% if current_user.is_admin %}
+                            <a href="{{ url_for('off_season.add_session', schedule_id=schedule.id) }}?day={{ day_index }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-plus-circle"></i> Add Session
+                            </a>
+                            {% else %}
+                            <span class="text-muted">Rest day</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Schedule Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Phase:</strong> {{ phase.name }}</p>
+                <p><strong>Schedule Type:</strong> {{ schedule.schedule_type.value|capitalize }}</p>
+                <p><strong>Training Sessions:</strong> {{ sessions|length }} per week</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Phase Dates:</strong> {{ phase.start_date.strftime('%b %d, %Y') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</p>
+                <p><strong>Primary Focus:</strong> {{ phase.primary_focus }}</p>
+                <p><strong>Volume/Intensity:</strong> {{ phase.volume_intensity }}</p>
+            </div>
+        </div>
+        
+        <div class="alert alert-light mt-3">
+            <h6>About {{ schedule.schedule_type.value|capitalize }} Schedule</h6>
+            {% if schedule.schedule_type.value == 'standard' %}
+            <p>The standard schedule is designed for athletes who can commit to a regular training routine with balanced volume and intensity.</p>
+            {% elif schedule.schedule_type.value == 'minimal' %}
+            <p>The minimal schedule is designed for athletes with limited time, focusing on the most essential training elements to maintain progress.</p>
+            {% elif schedule.schedule_type.value == 'high_volume' %}
+            <p>The high volume schedule is designed for athletes who can commit to additional training sessions and want to maximize their development during this phase.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Phase
+    </a>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

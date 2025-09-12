@@ -1,0 +1,153 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}">{{ phase.name }}</a></li>
+<li class="breadcrumb-item active">Add Recommended Metric</li>
+{% endblock %}
+
+{% block page_title %}Add Recommended Metric{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Add Recommended Metric to {{ phase.name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <p><i class="bi bi-info-circle"></i> Recommended metrics help players understand which fitness metrics they should focus on during this phase.</p>
+            <p>You can optionally set target values that players should aim to achieve by the end of the phase.</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('off_season.add_phase_metric', phase_id=phase.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label for="metric_id" class="form-label">Fitness Metric <span class="text-danger">*</span></label>
+                        <select class="form-select {% if form.metric_id.errors %}is-invalid{% endif %}" 
+                                id="metric_id" name="metric_id" required>
+                            <option value="">Select a metric</option>
+                            {% for value, label in form.metric_id.choices %}
+                            <option value="{{ value }}" {% if form.metric_id.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.metric_id.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.metric_id.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="target_value" class="form-label">Target Value (Optional)</label>
+                        <input type="number" step="any" class="form-control {% if form.target_value.errors %}is-invalid{% endif %}" 
+                               id="target_value" name="target_value" value="{{ form.target_value.data or '' }}">
+                        {% if form.target_value.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.target_value.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">The target value players should aim to achieve by the end of this phase.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.view_phase', phase_id=phase.id) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Phase
+                </a>
+                <button type="submit" class="btn btn-warning text-dark">
+                    <i class="bi bi-plus-circle"></i> Add Metric
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Recommended Metrics by Phase</h5>
+    </div>
+    <div class="card-body">
+        <div class="accordion" id="phaseMetricsAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        Foundation Phase (Mid-September to Late October)
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#phaseMetricsAccordion">
+                    <div class="accordion-body">
+                        <ul>
+                            <li><strong>Aerobic Capacity:</strong> 12-minute Cooper Test, 1-mile run time</li>
+                            <li><strong>Mobility:</strong> Overhead squat assessment, shoulder mobility</li>
+                            <li><strong>Core Strength:</strong> Plank hold time, side plank hold time</li>
+                            <li><strong>Movement Quality:</strong> Functional movement screen scores</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Strength Development Phase (November to Mid-December)
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#phaseMetricsAccordion">
+                    <div class="accordion-body">
+                        <ul>
+                            <li><strong>Maximal Strength:</strong> Squat 1RM, Deadlift 1RM, Bench Press 1RM</li>
+                            <li><strong>Relative Strength:</strong> Pull-ups, Push-ups, Dips</li>
+                            <li><strong>Core Strength:</strong> Advanced plank variations, anti-rotation exercises</li>
+                            <li><strong>Power Development:</strong> Medicine ball throws, jump height</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        Power/Speed Phase (January)
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#phaseMetricsAccordion">
+                    <div class="accordion-body">
+                        <ul>
+                            <li><strong>Vertical Jump:</strong> Standing vertical jump height</li>
+                            <li><strong>Horizontal Jump:</strong> Standing broad jump distance</li>
+                            <li><strong>Sprint Speed:</strong> 10m, 20m, 40m sprint times</li>
+                            <li><strong>Agility:</strong> Pro-agility test, T-test times</li>
+                            <li><strong>Reactive Strength:</strong> Depth jump performance, reactive strength index</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFour">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        Integration Phase (February)
+                    </button>
+                </h2>
+                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#phaseMetricsAccordion">
+                    <div class="accordion-body">
+                        <ul>
+                            <li><strong>Sport-Specific Conditioning:</strong> Beep test, 300-yard shuttle run</li>
+                            <li><strong>Repeated Sprint Ability:</strong> 6x40m sprint with 20s recovery</li>
+                            <li><strong>Change of Direction Speed:</strong> Illinois agility test</li>
+                            <li><strong>Throwing Accuracy:</strong> Target hitting percentage at various distances</li>
+                            <li><strong>Game Endurance:</strong> Heart rate recovery between points</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

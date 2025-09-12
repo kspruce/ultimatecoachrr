@@ -1,0 +1,163 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Dashboard</a></li>
+<li class="breadcrumb-item active">Complete Session</li>
+{% endblock %}
+
+{% block page_title %}Complete Training Session{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-check-circle"></i> Mark Session as Completed</h5>
+    </div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="alert alert-light">
+                    <h5>{{ session.training_focus }}</h5>
+                    <p><strong>Duration:</strong> {{ session.duration_minutes }} minutes</p>
+                    {% if session.description %}
+                    <p>{{ session.description }}</p>
+                    {% endif %}
+                    
+                    {% if session.workout_plans %}
+                    <div class="mt-3">
+                        <h6>Workout Plans:</h6>
+                        <ul class="list-group">
+                            {% for workout in session.workout_plans %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ workout.name }}</strong>
+                                    <span class="badge bg-{{ 'primary' if workout.category.value == 'strength' else ('success' if workout.category.value == 'skills' else 'warning') }} ms-2">{{ workout.category.value|capitalize }}</span>
+                                    <span class="badge bg-secondary">{{ workout.level.value|capitalize }}</span>
+                                </div>
+                                <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <form method="POST" action="{{ url_for('off_season.complete_session', session_id=session.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="notes" class="form-label">Session Notes</label>
+                        <textarea class="form-control {% if form.notes.errors %}is-invalid{% endif %}" 
+                                  id="notes" name="notes" rows="4" placeholder="How did the session go? Any challenges or achievements?">{{ form.notes.data or '' }}</textarea>
+                        {% if form.notes.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.notes.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <label class="form-label">How would you rate this session?</label>
+                    <div class="rating-container">
+                        {% for value, label in form.rating.choices %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="rating" id="rating{{ value }}" value="{{ value }}" {% if form.rating.data == value %}checked{% endif %}>
+                            <label class="form-check-label" for="rating{{ value }}">
+                                {{ value }} - {{ label.split(' - ')[1] }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if form.rating.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.rating.errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.index') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Mark as Completed
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Training Tips</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Before Training</h6>
+                <ul>
+                    <li>Ensure you're properly hydrated</li>
+                    <li>Have a light meal 1-2 hours before training</li>
+                    <li>Prepare your equipment and space</li>
+                    <li>Review the workout plan before starting</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>During Training</h6>
+                <ul>
+                    <li>Focus on proper form over weight/speed</li>
+                    <li>Stay hydrated throughout the session</li>
+                    <li>Listen to your body - modify as needed</li>
+                    <li>Take appropriate rest between sets</li>
+                </ul>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <h6>After Training</h6>
+                <ul>
+                    <li>Cool down properly</li>
+                    <li>Stretch the worked muscle groups</li>
+                    <li>Rehydrate and refuel within 30 minutes</li>
+                    <li>Note any observations for future sessions</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Recovery</h6>
+                <ul>
+                    <li>Ensure adequate sleep (7-9 hours)</li>
+                    <li>Consider foam rolling or massage</li>
+                    <li>Monitor soreness levels</li>
+                    <li>Plan rest days appropriately</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.rating-container {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.form-check-inline {
+    margin-right: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,0 +1,275 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.goals') }}">SMART Goals</a></li>
+<li class="breadcrumb-item active">{{ 'Edit Goal' if goal else 'Add Goal' }}</li>
+{% endblock %}
+
+{% block page_title %}{{ 'Edit Goal' if goal else 'Create SMART Goal' }}{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if goal else 'plus-circle' }}"></i> {{ 'Edit Goal' if goal else 'Create SMART Goal' }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('off_season.edit_goal', goal_id=goal.id) if goal else url_for('off_season.add_goal') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label for="title" class="form-label">Goal Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.title.errors %}is-invalid{% endif %}" 
+                               id="title" name="title" value="{{ form.title.data or '' }}" required>
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.title.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">A clear, concise title for your goal.</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                        <select class="form-select {% if form.category.errors %}is-invalid{% endif %}" 
+                                id="category" name="category" required>
+                            {% for value, label in form.category.choices %}
+                            <option value="{{ value }}" {% if form.category.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.category.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.category.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                  id="description" name="description" rows="2">{{ form.description.data or '' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.description.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Optional brief description of your goal.</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="target_date" class="form-label">Target Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control {% if form.target_date.errors %}is-invalid{% endif %}" 
+                               id="target_date" name="target_date" value="{{ form.target_date.data.strftime('%Y-%m-%d') if form.target_date.data else '' }}" required>
+                        {% if form.target_date.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.target_date.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">When do you aim to achieve this goal?</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">SMART Criteria</h5>
+                    <small class="text-muted">Make your goal Specific, Measurable, Achievable, Relevant, and Time-bound</small>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="specific" class="form-label">
+                                    <span class="badge bg-primary">S</span> Specific <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control {% if form.specific.errors %}is-invalid{% endif %}" 
+                                          id="specific" name="specific" rows="3" required>{{ form.specific.data or '' }}</textarea>
+                                {% if form.specific.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.specific.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">What exactly will be accomplished?</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="measurable" class="form-label">
+                                    <span class="badge bg-primary">M</span> Measurable <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control {% if form.measurable.errors %}is-invalid{% endif %}" 
+                                          id="measurable" name="measurable" rows="3" required>{{ form.measurable.data or '' }}</textarea>
+                                {% if form.measurable.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.measurable.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">How will you measure progress and success?</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="achievable" class="form-label">
+                                    <span class="badge bg-primary">A</span> Achievable <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control {% if form.achievable.errors %}is-invalid{% endif %}" 
+                                          id="achievable" name="achievable" rows="3" required>{{ form.achievable.data or '' }}</textarea>
+                                {% if form.achievable.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.achievable.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Is this goal realistic with your available resources?</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="relevant" class="form-label">
+                                    <span class="badge bg-primary">R</span> Relevant <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control {% if form.relevant.errors %}is-invalid{% endif %}" 
+                                          id="relevant" name="relevant" rows="3" required>{{ form.relevant.data or '' }}</textarea>
+                                {% if form.relevant.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.relevant.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Why is this goal important to your development?</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="time_bound" class="form-label">
+                                    <span class="badge bg-primary">T</span> Time-bound <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control {% if form.time_bound.errors %}is-invalid{% endif %}" 
+                                          id="time_bound" name="time_bound" rows="3" required>{{ form.time_bound.data or '' }}</textarea>
+                                {% if form.time_bound.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.time_bound.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">What's your timeline for achieving this goal?</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.goals') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Goals
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ 'Save Changes' if goal else 'Create Goal' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">SMART Goal Examples</h5>
+    </div>
+    <div class="card-body">
+        <div class="accordion" id="exampleAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        Fitness Goal Example
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#exampleAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Title:</strong> Improve Vertical Jump</p>
+                        <p><strong>Category:</strong> Fitness</p>
+                        <p><strong>Target Date:</strong> 3 months from now</p>
+                        <ul>
+                            <li><strong>Specific:</strong> Increase my vertical jump height by 4 inches.</li>
+                            <li><strong>Measurable:</strong> I will measure my progress weekly using the vertical jump test against a wall.</li>
+                            <li><strong>Achievable:</strong> I will follow a specific plyometric training program 3 times per week and maintain proper nutrition.</li>
+                            <li><strong>Relevant:</strong> Improving my vertical jump will help me contest more discs in the air during games.</li>
+                            <li><strong>Time-bound:</strong> I will achieve this goal within 12 weeks by following a progressive training schedule.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Skills Goal Example
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#exampleAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Title:</strong> Master Forehand Huck</p>
+                        <p><strong>Category:</strong> Skills</p>
+                        <p><strong>Target Date:</strong> 2 months from now</p>
+                        <ul>
+                            <li><strong>Specific:</strong> Develop a consistent forehand huck that can accurately reach targets 40+ yards downfield.</li>
+                            <li><strong>Measurable:</strong> I will track my completion percentage during practice, aiming for 70% accuracy at 40+ yards.</li>
+                            <li><strong>Achievable:</strong> I will practice forehand throws for 20 minutes daily, focusing on form and distance control.</li>
+                            <li><strong>Relevant:</strong> Adding a reliable forehand huck to my throwing arsenal will make me a more versatile offensive threat.</li>
+                            <li><strong>Time-bound:</strong> I will achieve this goal within 8 weeks by following a structured throwing progression.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        Mental Goal Example
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#exampleAccordion">
+                    <div class="accordion-body">
+                        <p><strong>Title:</strong> Develop Pre-Game Mental Routine</p>
+                        <p><strong>Category:</strong> Mental</p>
+                        <p><strong>Target Date:</strong> 1 month from now</p>
+                        <ul>
+                            <li><strong>Specific:</strong> Create and consistently implement a 15-minute pre-game mental preparation routine.</li>
+                            <li><strong>Measurable:</strong> I will track my adherence to the routine before each practice and game, and rate my mental focus on a scale of 1-10.</li>
+                            <li><strong>Achievable:</strong> I will research effective mental preparation techniques and develop a personalized routine that includes visualization, breathing exercises, and positive affirmations.</li>
+                            <li><strong>Relevant:</strong> A consistent mental preparation routine will help me perform more consistently under pressure.</li>
+                            <li><strong>Time-bound:</strong> I will develop the routine within 2 weeks and then practice it consistently for the following 2 weeks before every training session and game.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

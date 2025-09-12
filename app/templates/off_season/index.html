@@ -1,0 +1,284 @@
+{% extends "off_season/base.html" %}
+
+{% block page_title %}Off-Season Dashboard{% endblock %}
+
+{% block off_season_content %}
+<div class="row">
+    <div class="col-md-12">
+        {% if current_phase %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Current Phase: {{ current_phase.name }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Dates:</strong> {{ current_phase.start_date.strftime('%b %d, %Y') }} - {{ current_phase.end_date.strftime('%b %d, %Y') }}</p>
+                        <p><strong>Primary Focus:</strong> {{ current_phase.primary_focus }}</p>
+                        <p><strong>Training Emphasis:</strong> {{ current_phase.training_emphasis }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Volume/Intensity:</strong> {{ current_phase.volume_intensity }}</p>
+                        <p><strong>Key Outcome:</strong> {{ current_phase.key_outcome }}</p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('off_season.view_phase', phase_id=current_phase.id) }}" class="btn btn-outline-primary">
+                                <i class="bi bi-eye"></i> View Phase Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <h5>No Active Phase</h5>
+            <p>There is currently no active off-season training phase.</p>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('off_season.add_phase') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Phase
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Today's Training -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Today's Training</h5>
+            </div>
+            <div class="card-body">
+                {% if today_schedule %}
+                <h5>{{ today_schedule.session.training_focus }}</h5>
+                <p><strong>Duration:</strong> {{ today_schedule.session.duration_minutes }} minutes</p>
+                <p>{{ today_schedule.session.description }}</p>
+                
+                {% if today_schedule.session.workout_plans %}
+                <h6>Workout Plans:</h6>
+                <ul class="list-group mb-3">
+                    {% for workout in today_schedule.session.workout_plans %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}">
+                            {{ workout.name }}
+                        </a>
+                        <span class="badge bg-primary rounded-pill">{{ workout.category.value }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                
+                {% if today_schedule.completed %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill"></i> You've completed today's session!
+                </div>
+                {% else %}
+                <a href="{{ url_for('off_season.complete_session', session_id=today_schedule.session.id) }}" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Mark as Completed
+                </a>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-light">
+                    <p>No training scheduled for today.</p>
+                    <p>Use this as a recovery day or work on your SMART goals!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- SMART Goals -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-bullseye"></i> SMART Goals</h5>
+                <a href="{{ url_for('off_season.add_goal') }}" class="btn btn-sm btn-light">
+                    <i class="bi bi-plus-circle"></i> Add Goal
+                </a>
+            </div>
+            <div class="card-body">
+                {% if goals %}
+                <div class="list-group">
+                    {% for goal in goals[:3] %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ goal.title }}</h6>
+                            <small>{{ goal.target_date.strftime('%b %d') }}</small>
+                        </div>
+                        <p class="mb-1">{{ goal.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ goal.category }}</small>
+                            <form method="POST" action="{{ url_for('off_season.complete_goal', goal_id=goal.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-check-circle"></i> Complete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if goals|length > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('off_season.goals') }}" class="btn btn-outline-info btn-sm">
+                        View All Goals ({{ goals|length }})
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-light">
+                    <p>No active SMART goals.</p>
+                    <a href="{{ url_for('off_season.add_goal') }}" class="btn btn-outline-info">
+                        <i class="bi bi-plus-circle"></i> Create Your First Goal
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Off-Season Progress -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Off-Season Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Phase Progress</h6>
+                    {% if current_phase %}
+                    {% set total_days = (current_phase.end_date - current_phase.start_date).days %}
+                    {% set elapsed_days = (today - current_phase.start_date).days %}
+                    {% set progress_percent = (elapsed_days / total_days * 100)|round|int if total_days > 0 else 0 %}
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ progress_percent }}%;" 
+                             aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ progress_percent }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">Day {{ elapsed_days }} of {{ total_days }}</small>
+                    {% else %}
+                    <div class="alert alert-light">No active phase</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <h6>Recent Activity</h6>
+                    {% if completed_sessions %}
+                    <div class="list-group">
+                        {% for completion in completed_sessions[:3] %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ completion.session.training_focus }}</h6>
+                                <small>{{ completion.completed_date.strftime('%b %d') }}</small>
+                            </div>
+                            {% if completion.rating %}
+                            <div class="text-warning">
+                                {% for i in range(completion.rating) %}
+                                <i class="bi bi-star-fill"></i>
+                                {% endfor %}
+                                {% for i in range(5 - completion.rating) %}
+                                <i class="bi bi-star"></i>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('off_season.progress') }}" class="btn btn-outline-primary btn-sm">
+                            View All Activity
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light">
+                        <p>No recent activity.</p>
+                        <p>Complete your first training session to track your progress!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Upcoming Phases -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar3"></i> Phase Timeline</h5>
+            </div>
+            <div class="card-body">
+                {% if phases %}
+                <div class="timeline">
+                    {% for phase in phases %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker {% if phase == current_phase %}active{% endif %}"></div>
+                        <div class="timeline-content">
+                            <h6>{{ phase.name }}</h6>
+                            <p class="text-muted">{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</p>
+                            <p>{{ phase.primary_focus }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('off_season.timeline') }}" class="btn btn-outline-secondary btn-sm">
+                        View Full Timeline
+                    </a>
+                </div>
+                {% else %}
+                <div class="alert alert-light">
+                    <p>No phases have been created yet.</p>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('off_season.add_phase') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-plus-circle"></i> Create First Phase
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline:before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ccc;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ccc;
+    border: 3px solid white;
+}
+.timeline-marker.active {
+    background: #0d6efd;
+}
+.timeline-content {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+</style>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,0 +1,122 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.view_phase', phase_id=schedule.phase.id) }}">{{ schedule.phase.name }}</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.view_schedule', schedule_id=schedule.id) }}">{{ schedule.schedule_type.value|capitalize }} Schedule</a></li>
+<li class="breadcrumb-item active">{{ 'Edit Session' if session else 'Add Session' }}</li>
+{% endblock %}
+
+{% block page_title %}{{ 'Edit Training Session' if session else 'Add Training Session' }}{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if session else 'plus-circle' }}"></i> {{ 'Edit Training Session' if session else 'Add Training Session' }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('off_season.edit_session', session_id=session.id) if session else url_for('off_season.add_session', schedule_id=schedule.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="day_of_week" class="form-label">Day of Week <span class="text-danger">*</span></label>
+                        <select class="form-select {% if form.day_of_week.errors %}is-invalid{% endif %}" 
+                                id="day_of_week" name="day_of_week" required>
+                            {% for value, label in form.day_of_week.choices %}
+                            <option value="{{ value }}" {% if form.day_of_week.data == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.day_of_week.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.day_of_week.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="form-group">
+                        <label for="training_focus" class="form-label">Training Focus <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control {% if form.training_focus.errors %}is-invalid{% endif %}" 
+                               id="training_focus" name="training_focus" value="{{ form.training_focus.data or '' }}" required>
+                        {% if form.training_focus.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.training_focus.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Example: "Lower Body Strength" or "Throwing Technique"</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="duration_minutes" class="form-label">Duration (minutes) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control {% if form.duration_minutes.errors %}is-invalid{% endif %}" 
+                               id="duration_minutes" name="duration_minutes" value="{{ form.duration_minutes.data or '' }}" required min="1">
+                        {% if form.duration_minutes.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.duration_minutes.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                  id="description" name="description" rows="3">{{ form.description.data or '' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.description.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Provide a brief description of this training session.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="workout_plans" class="form-label">Workout Plans</label>
+                        <select class="form-select {% if form.workout_plans.errors %}is-invalid{% endif %}" 
+                                id="workout_plans" name="workout_plans" multiple size="6">
+                            {% for value, label in form.workout_plans.choices %}
+                            <option value="{{ value }}" {% if value in form.workout_plans.data %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.workout_plans.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.workout_plans.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple workout plans.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.view_schedule', schedule_id=schedule.id) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Schedule
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ 'Save Changes' if session else 'Add Session' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
