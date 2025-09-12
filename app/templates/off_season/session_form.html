@@ -14,7 +14,7 @@
         <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if session else 'plus-circle' }}"></i> {{ 'Edit Training Session' if session else 'Add Training Session' }}</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('off_season.edit_session', session_id=session.id) if session else url_for('off_season.add_session', schedule_id=schedule.id) }}">
+        <form method="POST" action="{{ url_for('off_season.edit_session', session_id=workout_session.id) if workout_session is defined else url_for('off_season.add_session', schedule_id=schedule.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div class="row mb-3">
