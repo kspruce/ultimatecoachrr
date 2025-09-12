@@ -122,12 +122,12 @@ class SessionCompletionForm(FlaskForm):
 def index():
     """Main off-season dashboard"""
     team_id = get_current_team_id()
+    today = date.today()
     
     # Get all phases ordered by start date
     phases = OffSeasonPhase.query.filter_by(team_organization_id=team_id).order_by(OffSeasonPhase.start_date).all()
     
     # Find the current phase
-    today = date.today()
     current_phase = None
     for phase in phases:
         if phase.start_date <= today <= phase.end_date:
@@ -140,8 +140,8 @@ def index():
         if upcoming_phases:
             current_phase = min(upcoming_phases, key=lambda p: p.start_date)
     
-    # Get user's preferred schedule type (default to standard)
-    preferred_schedule_type = ScheduleType.STANDARD
+    # Get user's preferred schedule type from session or user preferences
+    preferred_schedule_type = session.get('preferred_schedule_type', ScheduleType.STANDARD.value)
     
     # Get user's SMART goals
     goals = SMARTGoal.query.filter_by(
@@ -160,17 +160,30 @@ def index():
     
     # Get today's schedule if current phase exists
     today_schedule = None
+    available_schedules = []
+    
     if current_phase:
-        # Find the schedule for the user's preferred type
-        schedule = PhaseSchedule.query.filter_by(
+        # Get all schedules for this phase
+        schedules = PhaseSchedule.query.filter_by(
             phase_id=current_phase.id,
-            schedule_type=preferred_schedule_type,
             team_organization_id=team_id
-        ).first()
+        ).all()
+        
+        # Store available schedules for the dropdown
+        available_schedules = schedules
+        
+        # Find the schedule for the user's preferred type
+        schedule = None
+        for s in schedules:
+            if s.schedule_type.value == preferred_schedule_type:
+                schedule = s
+                break
         
         if schedule:
             # Get today's session
-            today_day_of_week = today.weekday()  # 0=Monday, 6=Sunday
+            # Convert from Python's 0-6 weekday to our 1-7 indexing
+            today_day_of_week = today.weekday() + 1  # Convert 0-6 to 1-7
+            
             today_session = ScheduleSession.query.filter_by(
                 schedule_id=schedule.id,
                 day_of_week=today_day_of_week,
@@ -188,7 +201,8 @@ def index():
                 
                 today_schedule = {
                     'session': today_session,
-                    'completed': completion is not None
+                    'completed': completion is not None,
+                    'schedule': schedule  # Add the schedule object
                 }
     
     return render_template(
@@ -198,8 +212,11 @@ def index():
         goals=goals,
         completed_sessions=completed_sessions,
         today_schedule=today_schedule,
-        today=today  # Add this line
+        today=today,
+        available_schedules=available_schedules,
+        preferred_schedule_type=preferred_schedule_type
     )
+
 
 @bp.route('/phases')
 @login_required
@@ -888,3 +905,13 @@ def guide():
     """View the off-season guide"""
     # This route would display the off-season guide content
     return render_template('off_season/guide.html')
+
+@bp.route('/set-schedule', methods=['POST'])
+@login_required
+def set_schedule():
+    """Set the user's preferred schedule type"""
+    schedule_type = request.form.get('schedule_type')
+    if schedule_type in [st.value for st in ScheduleType]:
+        session['preferred_schedule_type'] = schedule_type
+        flash('Your preferred schedule has been updated.', 'success')
+    return redirect(url_for('off_season.index'))
