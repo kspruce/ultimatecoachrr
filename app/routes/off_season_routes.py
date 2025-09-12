@@ -556,7 +556,7 @@ def delete_phase(phase_id):
     
     return redirect(url_for('off_season.admin_dashboard'))
 
-@off_season.route('/off-season/add-workout', methods=['GET', 'POST'])
+@off_season.route('/off-season/add-workout', methods=['POST'])
 @login_required
 def add_workout():
     """Add a new workout"""
@@ -565,14 +565,21 @@ def add_workout():
         return redirect(url_for('off_season.admin_dashboard'))
     
     try:
+        # Validate required fields
+        required_fields = ['title', 'description', 'workout_type', 'difficulty_level', 'duration', 'phase_id']
+        for field in required_fields:
+            if not request.form.get(field):
+                flash(f'Error: {field.replace("_", " ").title()} is required', 'danger')
+                return redirect(url_for('off_season.add_workout_form'))
+        
         # Create new workout
         workout = OffSeasonWorkout(
             title=request.form.get('title'),
             description=request.form.get('description'),
             workout_type=request.form.get('workout_type'),
-            instructions=request.form.get('instructions'),
+            instructions=request.form.get('instructions', ''),
             duration=request.form.get('duration'),
-            equipment_needed=request.form.get('equipment_needed'),
+            equipment_needed=request.form.get('equipment_needed', ''),
             difficulty_level=request.form.get('difficulty_level'),
             phase_id=request.form.get('phase_id', type=int),
             team_organization_id=get_current_team_id()
@@ -586,8 +593,12 @@ def add_workout():
     except Exception as e:
         db.session.rollback()
         flash(f'Error adding workout: {str(e)}', 'danger')
-    
-    return redirect(url_for('off_season.admin_dashboard'))
+        # Get phases for the form to redisplay
+        phases = OffSeasonPhase.query.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(OffSeasonPhase.start_date).all()
+        return render_template('off_season/add_workout.html', phases=phases)
+
 
 @off_season.route('/off-season/edit-workout/<int:workout_id>', methods=['GET', 'POST'])
 @login_required
@@ -2060,3 +2071,20 @@ def edit_schedule_template(phase_id, template_type):
                           template_type=template_type,
                           form=form)  # Pass the form to the template
 
+@off_season.route('/off-season/add-workout-form')
+@login_required
+def add_workout_form():
+    """Display the form to add a new workout"""
+    if not current_user.is_admin:
+        flash('You do not have permission to perform this action.', 'danger')
+        return redirect(url_for('off_season.admin_dashboard'))
+    
+    # Get phases for the form
+    phases = OffSeasonPhase.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(OffSeasonPhase.start_date).all()
+    
+    # Pre-select phase if provided in query parameter
+    selected_phase_id = request.args.get('phase_id', type=int)
+    
+    return render_template('off_season/add_workout.html', phases=phases, selected_phase_id=selected_phase_id)

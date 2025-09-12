@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.admin') }}">Admin</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Add Workout</li>
+                </ol>
+            </nav>
+            <h1>Add New Workout</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.admin') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Admin
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="bi bi-activity"></i> Add New Workout</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('off_season.add_workout') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="title" class="form-label">Workout Title</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="phase_id" class="form-label">Training Phase</label>
+                                <select class="form-select" id="phase_id" name="phase_id" required>
+                                    <option value="">Select a phase...</option>
+                                    {% for phase in phases %}
+                                        <option value="{{ phase.id }}" {% if selected_phase_id and selected_phase_id == phase.id %}selected{% endif %}>{{ phase.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="workout_type" class="form-label">Workout Type</label>
+                                <select class="form-select" id="workout_type" name="workout_type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="Strength">Strength</option>
+                                    <option value="Speed">Speed</option>
+                                    <option value="Power">Power</option>
+                                    <option value="Endurance">Endurance</option>
+                                    <option value="Agility">Agility</option>
+                                    <option value="Throwing">Throwing</option>
+                                    <option value="Mobility">Mobility</option>
+                                    <option value="Recovery">Recovery</option>
+                                    <option value="Sport-Specific">Sport-Specific</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="difficulty_level" class="form-label">Difficulty Level</label>
+                                <select class="form-select" id="difficulty_level" name="difficulty_level" required>
+                                    <option value="">Select difficulty...</option>
+                                    <option value="Beginner">Beginner</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Advanced">Advanced</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="duration" class="form-label">Duration</label>
+                                <input type="text" class="form-control" id="duration" name="duration" placeholder="e.g., 45-60 minutes" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="equipment_needed" class="form-label">Equipment Needed</label>
+                            <textarea class="form-control" id="equipment_needed" name="equipment_needed" rows="2" placeholder="List any equipment needed for this workout"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="instructions" class="form-label">General Instructions</label>
+                            <textarea class="form-control" id="instructions" name="instructions" rows="3" placeholder="General instructions for the workout"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Create Workout
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-10 mx-auto">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5><i class="bi bi-info-circle"></i> Workout Design Tips</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul>
+                                <li>Ensure the workout aligns with the phase objectives</li>
+                                <li>Include a proper warm-up and cool-down in your instructions</li>
+                                <li>Specify rest periods between exercises and sets</li>
+                                <li>Consider progression options for different skill levels</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul>
+                                <li>Balance volume and intensity appropriately for the phase</li>
+                                <li>Include specific technique cues in exercise descriptions</li>
+                                <li>Consider how exercises flow together in the workout</li>
+                                <li>Provide clear safety guidelines for complex movements</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -18,7 +18,7 @@
                         <a href="{{ url_for('off_season.admin_dashboard') }}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back to Admin Dashboard
                         </a>
-                        <a href="{{ url_for('off_season.add_workout') }}" class="btn btn-success">
+                        <a href="{{ url_for('off_season.add_workout_form') }}" class="btn btn-success">
                             <i class="bi bi-plus-circle"></i> Add New Workout
                         </a>
                     </div>
@@ -92,7 +92,10 @@
                                                             </div>
                                                             <div class="modal-footer">
                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                <a href="{{ url_for('off_season.delete_workout', workout_id=workout.id) }}" class="btn btn-danger">Delete</a>
+                                                                <form action="{{ url_for('off_season.delete_workout', workout_id=workout.id) }}" method="POST" style="display: inline;">
+                                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                                </form>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -109,7 +112,7 @@
                         </div>
                     {% endif %}
                     
-                    <a href="{{ url_for('off_season.add_workout') }}?phase_id={{ phase.id }}" class="btn btn-success mt-2">
+                    <a href="{{ url_for('off_season.add_workout_form') }}?phase_id={{ phase.id }}" class="btn btn-success mt-2">
                         <i class="bi bi-plus-circle"></i> Add Workout to {{ phase.name }} Phase
                     </a>
                 </div>
