@@ -52,7 +52,7 @@ class PhaseMetric(db.Model):
     phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)
     metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metrics.id'), nullable=False)
     target_value = db.Column(db.Float)  # Optional target value for this metric in this phase
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     phase = db.relationship('OffSeasonPhase', back_populates='recommended_metrics')
@@ -68,7 +68,7 @@ class PhaseSchedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)
     schedule_type = db.Column(db.Enum(ScheduleType), nullable=False)
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     phase = db.relationship('OffSeasonPhase', back_populates='schedules')
@@ -87,7 +87,7 @@ class ScheduleSession(db.Model):
     training_focus = db.Column(db.String(100))
     duration_minutes = db.Column(db.Integer)
     description = db.Column(db.Text)
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     schedule = db.relationship('PhaseSchedule', back_populates='sessions')
@@ -113,7 +113,7 @@ class WorkoutPlan(db.Model):
     category = db.Column(db.Enum(TrainingCategory), nullable=False)
     level = db.Column(db.Enum(TrainingLevel), nullable=False)
     content = db.Column(db.Text)  # Markdown content with the workout details
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     phase = db.relationship('OffSeasonPhase', back_populates='workout_plans')
@@ -131,7 +131,7 @@ class UserSessionCompletion(db.Model):
     completed_date = db.Column(db.Date, default=datetime.utcnow)
     notes = db.Column(db.Text)
     rating = db.Column(db.Integer)  # Optional rating (1-5)
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     user = db.relationship('User')
@@ -158,7 +158,7 @@ class SMARTGoal(db.Model):
     completed = db.Column(db.Boolean, default=False)
     completed_date = db.Column(db.Date)
     category = db.Column(db.String(50))  # e.g., "Fitness", "Skills", etc.
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     user = db.relationship('User')
