@@ -1995,3 +1995,56 @@ def import_all_sample_content():
     
     flash('All sample content has been imported successfully!', 'success')
     return redirect(url_for('off_season.admin_dashboard'))
+
+@off_season.route('/off-season/edit-schedule-template/<int:phase_id>/<string:template_type>', methods=['GET', 'POST'])
+@login_required
+@admin_required  # If you have this decorator, otherwise use the admin check inside the function
+def edit_schedule_template(phase_id, template_type):
+    """Edit or create a weekly schedule template"""
+    if not current_user.is_admin:
+        flash('You do not have permission to perform this action.', 'danger')
+        return redirect(url_for('off_season.index'))
+    
+    phase = OffSeasonPhase.query.filter_by(
+        id=phase_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    # Check if template exists
+    template = WeeklyScheduleTemplate.query.filter_by(
+        phase_id=phase_id,
+        template_type=template_type,
+        team_organization_id=get_current_team_id()
+    ).first()
+    
+    # If no template exists, create a new one
+    if not template:
+        template = WeeklyScheduleTemplate(
+            phase_id=phase_id,
+            template_type=template_type,
+            team_organization_id=get_current_team_id()
+        )
+        db.session.add(template)
+        db.session.commit()
+        flash(f'New {template_type} schedule template created. Please fill in the details.', 'info')
+    
+    if request.method == 'POST':
+        try:
+            # Update template with form data
+            for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']:
+                setattr(template, f'{day}_morning', request.form.get(f'{day}_morning', ''))
+                setattr(template, f'{day}_evening', request.form.get(f'{day}_evening', ''))
+                setattr(template, f'{day}_duration', request.form.get(f'{day}_duration', ''))
+                setattr(template, f'{day}_description', request.form.get(f'{day}_description', ''))
+            
+            db.session.commit()
+            flash(f'{template_type.capitalize()} schedule template updated successfully!', 'success')
+            return redirect(url_for('off_season.phase_detail', phase_id=phase_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating template: {str(e)}', 'danger')
+    
+    return render_template('off_season/edit_schedule_template.html', 
+                          phase=phase, 
+                          template=template,
+                          template_type=template_type)
