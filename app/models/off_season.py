@@ -4,6 +4,8 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Boolean, Date, ForeignKey, Float, Enum
 from sqlalchemy.orm import relationship
 import enum
+from app.models.user import User
+
 
 class TrainingLevel(enum.Enum):
     BEGINNER = "beginner"
@@ -126,7 +128,7 @@ class UserSessionCompletion(db.Model):
     __tablename__ = 'user_session_completions'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     session_id = db.Column(db.Integer, db.ForeignKey('schedule_sessions.id'), nullable=False)
     completed_date = db.Column(db.Date, default=datetime.utcnow)
     notes = db.Column(db.Text)
@@ -145,7 +147,7 @@ class SMARTGoal(db.Model):
     __tablename__ = 'smart_goals'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     specific = db.Column(db.Text)  # What exactly will be accomplished?
