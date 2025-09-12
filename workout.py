@@ -5,10 +5,10 @@ from datetime import datetime
 # Disable Discord integration if needed
 os.environ['DISCORD_ENABLED'] = 'False'
 
-# Import app and models using the same pattern as db_manager.py
+# Import app and models using the correct path
 from app import create_app, db
-# Import the OffSeasonWorkout model - adjust the import path as needed
-from app.models.workout import OffSeasonWorkout  # Modify this path based on your actual model location
+# Import the OffSeasonWorkout model from the correct location
+from app.models.off_season import OffSeasonWorkout
 
 # Create app instance
 app = create_app()
