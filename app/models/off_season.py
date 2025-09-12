@@ -34,7 +34,7 @@ class OffSeasonPhase(db.Model):
     volume_intensity = db.Column(db.String(100))
     key_outcome = db.Column(db.String(200))
     order = db.Column(db.Integer, default=0)  # For ordering phases
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organizations.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
     schedules = db.relationship('PhaseSchedule', back_populates='phase', cascade='all, delete-orphan')
