@@ -8,105 +8,101 @@
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('off_season.phases') }}">Phases</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ phase.name }}</li>
+                    <li class="breadcrumb-item active">{{ phase.name }}</li>
                 </ol>
             </nav>
             <h1>{{ phase.name }}</h1>
-            <p class="text-muted">{{ phase.start_date.strftime('%b %d, %Y') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</p>
+            <p class="text-muted">{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('off_season.phases') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> All Phases
+                <i class="bi bi-arrow-left"></i> Back to Phases
             </a>
         </div>
     </div>
 
-    <!-- Phase Overview -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5><i class="bi bi-info-circle"></i> Phase Overview</h5>
+                    <h3 class="mb-0">Phase Overview</h3>
                 </div>
                 <div class="card-body">
-                    <p class="lead">{{ phase.description }}</p>
-                    
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <h5>Primary Focus</h5>
-                                </div>
-                                <div class="card-body">
-                                    <p>{{ phase.primary_focus }}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <h5>Training Emphasis</h5>
-                                </div>
-                                <div class="card-body">
-                                    <p>{{ phase.training_emphasis }}</p>
-                                </div>
-                            </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Primary Focus:</strong>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <h5>Volume/Intensity Balance</h5>
-                                </div>
-                                <div class="card-body">
-                                    <p>{{ phase.volume_intensity }}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <h5>Key Outcome</h5>
-                                </div>
-                                <div class="card-body">
-                                    <p>{{ phase.key_outcome }}</p>
-                                </div>
-                            </div>
+                        <div class="col-md-8">
+                            {{ phase.primary_focus }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Training Emphasis:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ phase.training_emphasis }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Volume/Intensity:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ phase.volume_intensity }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Key Outcome:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ phase.key_outcome }}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Description:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ phase.description }}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Phase Workouts -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="bi bi-activity"></i> Phase Workouts</h5>
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Workouts</h3>
                 </div>
                 <div class="card-body">
                     {% if workouts %}
-                        <div class="row">
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
                             {% for workout in workouts %}
-                                <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="col">
                                     <div class="card h-100">
-                                        <div class="card-header bg-light">
+                                        <div class="card-header">
                                             <h5 class="card-title mb-0">{{ workout.title }}</h5>
                                         </div>
                                         <div class="card-body">
                                             <p class="card-text">{{ workout.description }}</p>
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
-                                                    {{ workout.difficulty_level }}
-                                                </span>
-                                                <span class="text-muted">{{ workout.duration }}</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="badge bg-secondary">{{ workout.workout_type }}</span>
-                                                <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-sm btn-primary">
-                                                    View Details
-                                                </a>
-                                            </div>
+                                            <ul class="list-group list-group-flush mb-3">
+                                                <li class="list-group-item d-flex justify-content-between">
+                                                    <span>Type:</span>
+                                                    <span class="badge bg-primary">{{ workout.workout_type }}</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between">
+                                                    <span>Duration:</span>
+                                                    <span>{{ workout.duration }}</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between">
+                                                    <span>Difficulty:</span>
+                                                    <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                                        {{ workout.difficulty_level }}
+                                                    </span>
+                                                </li>
+                                            </ul>
+                                            <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-primary">View Details</a>
                                         </div>
                                     </div>
                                 </div>
@@ -115,128 +111,385 @@
                     {% else %}
                         <div class="alert alert-info">
                             <p>No workouts have been added to this phase yet.</p>
-                            {% if current_user.is_admin %}
-                                <a href="{{ url_for('off_season.admin') }}" class="btn btn-sm btn-primary mt-2">
-                                    <i class="bi bi-plus-circle"></i> Add Workouts
-                                </a>
-                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Phase Goal Tracker -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="bi bi-bullseye"></i> Phase Goal Tracker</h5>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Phase Status</h3>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Set Your Phase Goals</h5>
-                            <p>Define specific, measurable goals for this training phase to track your progress.</p>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Physical Goals</label>
-                                <textarea class="form-control" rows="3" placeholder="Example: Increase vertical jump by 2 inches"></textarea>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Technical Goals</label>
-                                <textarea class="form-control" rows="3" placeholder="Example: Improve forehand accuracy to 80%"></textarea>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Consistency Goals</label>
-                                <textarea class="form-control" rows="3" placeholder="Example: Complete 3 workouts per week"></textarea>
-                            </div>
-                            
-                            <button class="btn btn-primary" disabled>Save Goals</button>
-                            <small class="text-muted d-block mt-2">Goal tracking feature coming soon!</small>
+                    {% if today < phase.start_date %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-calendar-event"></i> This phase starts in {{ (phase.start_date - today).days }} days.
+                        </div>
+                    {% elif today > phase.end_date %}
+                        <div class="alert alert-secondary">
+                            <i class="bi bi-calendar-check"></i> This phase has ended.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-calendar-check"></i> This phase is currently active!
+                        </div>
+                        {% set days_passed = (today - phase.start_date).days %}
+                        {% set total_days = (phase.end_date - phase.start_date).days %}
+                        {% set progress_percent = (days_passed / total_days * 100)|int %}
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">{{ progress_percent }}%</div>
+                        </div>
+                        <p>Day {{ days_passed + 1 }} of {{ total_days }}</p>
+                        
+                        <!-- New Weekly Schedule Button -->
+                        <div class="d-grid gap-2 mt-3">
+                            <a href="{{ url_for('weekly_workout.my_weekly_schedule') }}" class="btn btn-success">
+                                <i class="bi bi-calendar-week"></i> View My Weekly Schedule
+                            </a>
+                            <a href="{{ url_for('weekly_workout.view_weekly_progress') }}" class="btn btn-outline-primary">
+                                <i class="bi bi-bar-chart-line"></i> View My Weekly Progress
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Recommended Fitness Metrics</h3>
+                </div>
+                <div class="card-body">
+                    <p>Track these metrics during this phase:</p>
+                    
+                    {% if phase.name == 'Foundation Phase' %}
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Beep Test/Yo-Yo Test
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Beep Test/Yo-Yo Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Plank Hold
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Plank Hold') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Push-Ups
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Push-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                        </ul>
+                    {% elif phase.name == 'Strength Development Phase' %}
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Squat Endurance
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Squat Endurance') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Pull-Ups
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Pull-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Broad Jump
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Broad Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                        </ul>
+                    {% elif phase.name == 'Power/Speed Phase' %}
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Vertical Jump
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Vertical Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                20-Yard Sprint
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='20-Yard Sprint') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                5-10-5 Shuttle/Pro Agility
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='5-10-5 Shuttle/Pro Agility') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                        </ul>
+                    {% elif phase.name == 'Integration Phase' %}
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Ultimate-Specific Conditioning Test
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Ultimate-Specific Conditioning Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Throwing Accuracy
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Throwing Accuracy') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Lateral Quickness Drill
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Lateral Quickness Drill') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Recovery Heart Rate
+                                <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Recovery Heart Rate') }}" class="btn btn-sm btn-outline-primary">Record</a>
+                            </li>
+                        </ul>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('fitness.index') }}" class="btn btn-info">
+                            <i class="bi bi-speedometer2"></i> View All Fitness Metrics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Schedule Templates Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Weekly Schedule Templates</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="scheduleTemplatesTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="standard-tab" data-bs-toggle="tab" data-bs-target="#standard" type="button" role="tab" aria-controls="standard" aria-selected="true">Standard Schedule (4-5 sessions)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="minimal-tab" data-bs-toggle="tab" data-bs-target="#minimal" type="button" role="tab" aria-controls="minimal" aria-selected="false">Minimal Schedule (3 sessions)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="high-volume-tab" data-bs-toggle="tab" data-bs-target="#high-volume" type="button" role="tab" aria-controls="high-volume" aria-selected="false">High-Volume Schedule (6-7 sessions)</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3" id="scheduleTemplatesContent">
+                        <!-- Standard Schedule Tab -->
+                        <div class="tab-pane fade show active" id="standard" role="tabpanel" aria-labelledby="standard-tab">
+                            {% if schedule_templates.standard %}
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Day</th>
+                                                <th>Training Focus</th>
+                                                <th>Duration</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Monday</strong></td>
+                                                <td>{{ schedule_templates.standard.monday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.monday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.monday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Tuesday</strong></td>
+                                                <td>{{ schedule_templates.standard.tuesday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.tuesday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.tuesday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Wednesday</strong></td>
+                                                <td>{{ schedule_templates.standard.wednesday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.wednesday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.wednesday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Thursday</strong></td>
+                                                <td>{{ schedule_templates.standard.thursday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.thursday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.thursday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Friday</strong></td>
+                                                <td>{{ schedule_templates.standard.friday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.friday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.friday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Saturday</strong></td>
+                                                <td>{{ schedule_templates.standard.saturday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.saturday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.saturday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Sunday</strong></td>
+                                                <td>{{ schedule_templates.standard.sunday_morning }}</td>
+                                                <td>{{ schedule_templates.standard.sunday_duration }}</td>
+                                                <td>{{ schedule_templates.standard.sunday_description }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% if current_user.is_admin %}
+                                <div class="mt-3">
+                                    <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='standard') }}" class="btn btn-primary">
+                                        <i class="bi bi-pencil"></i> Edit Standard Schedule
+                                    </a>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <p>No standard schedule template has been created for this phase yet.</p>
+                                    {% if current_user.is_admin %}
+                                    <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='standard') }}" class="btn btn-primary mt-2">
+                                        <i class="bi bi-plus-circle"></i> Create Standard Schedule
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
                         </div>
                         
-                        <div class="col-md-6">
-                            <h5>Connect with Fitness Metrics</h5>
-                            <p>Track your progress on key fitness metrics relevant to this phase:</p>
-                            
-                            {% if phase.name == 'Foundation Phase' %}
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Beep Test/Yo-Yo Test
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Beep Test/Yo-Yo Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Plank Hold
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Plank Hold') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Push-Ups
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Push-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                </ul>
-                            {% elif phase.name == 'Strength Development Phase' %}
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Squat Endurance
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Squat Endurance') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Pull-Ups
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Pull-Ups') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Broad Jump
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Broad Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                </ul>
-                            {% elif phase.name == 'Power/Speed Phase' %}
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Vertical Jump
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Vertical Jump') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        20-Yard Sprint
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='20-Yard Sprint') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        5-10-5 Shuttle/Pro Agility
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='5-10-5 Shuttle/Pro Agility') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                </ul>
-                            {% elif phase.name == 'Integration Phase' %}
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Ultimate-Specific Conditioning Test
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Ultimate-Specific Conditioning Test') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Throwing Accuracy
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Throwing Accuracy') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Lateral Quickness Drill
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Lateral Quickness Drill') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                </ul>
+                        <!-- Minimal Schedule Tab -->
+                        <div class="tab-pane fade" id="minimal" role="tabpanel" aria-labelledby="minimal-tab">
+                            {% if schedule_templates.minimal %}
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Day</th>
+                                                <th>Training Focus</th>
+                                                <th>Duration</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Monday</strong></td>
+                                                <td>{{ schedule_templates.minimal.monday_morning }}</td>
+                                                <td>{{ schedule_templates.minimal.monday_duration }}</td>
+                                                <td>{{ schedule_templates.minimal.monday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Wednesday</strong></td>
+                                                <td>{{ schedule_templates.minimal.wednesday_morning }}</td>
+                                                <td>{{ schedule_templates.minimal.wednesday_duration }}</td>
+                                                <td>{{ schedule_templates.minimal.wednesday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Friday/Saturday</strong></td>
+                                                <td>{{ schedule_templates.minimal.friday_morning }}</td>
+                                                <td>{{ schedule_templates.minimal.friday_duration }}</td>
+                                                <td>{{ schedule_templates.minimal.friday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>All Other Days</strong></td>
+                                                <td>{{ schedule_templates.minimal.sunday_morning }}</td>
+                                                <td>{{ schedule_templates.minimal.sunday_duration }}</td>
+                                                <td>{{ schedule_templates.minimal.sunday_description }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% if current_user.is_admin %}
+                                <div class="mt-3">
+                                    <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='minimal') }}" class="btn btn-primary">
+                                        <i class="bi bi-pencil"></i> Edit Minimal Schedule
+                                    </a>
+                                </div>
+                                {% endif %}
                             {% else %}
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Recovery Heart Rate
-                                        <a href="{{ url_for('fitness.record_fitness', player_id=current_user.player.id, metric_name='Recovery Heart Rate') }}" class="btn btn-sm btn-outline-primary">Record</a>
-                                    </li>
-                                </ul>
+                                <div class="alert alert-info">
+                                    <p>No minimal schedule template has been created for this phase yet.</p>
+                                    {% if current_user.is_admin %}
+                                    <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='minimal') }}" class="btn btn-primary mt-2">
+                                        <i class="bi bi-plus-circle"></i> Create Minimal Schedule
+                                    </a>
+                                    {% endif %}
+                                </div>
                             {% endif %}
-                            
-                            <div class="mt-3">
-                                <a href="{{ url_for('fitness.index') }}" class="btn btn-info">
-                                    <i class="bi bi-speedometer2"></i> View All Fitness Metrics
-                                </a>
-                            </div>
+                        </div>
+                        
+                        <!-- High-Volume Schedule Tab -->
+                        <div class="tab-pane fade" id="high-volume" role="tabpanel" aria-labelledby="high-volume-tab">
+                            {% if schedule_templates.high_volume %}
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Day</th>
+                                                <th>Morning</th>
+                                                <th>Evening</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Monday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.monday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.monday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.monday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Tuesday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.tuesday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.tuesday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.tuesday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Wednesday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.wednesday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.wednesday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.wednesday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Thursday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.thursday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.thursday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.thursday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Friday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.friday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.friday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.friday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Saturday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.saturday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.saturday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.saturday_description }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Sunday</strong></td>
+                                                <td>{{ schedule_templates.high_volume.sunday_morning }}</td>
+                                                <td>{{ schedule_templates.high_volume.sunday_evening }}</td>
+                                                <td>{{ schedule_templates.high_volume.sunday_description }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% if current_user.is_admin %}
+                                <div class="mt-3">
+                                    <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='high_volume') }}" class="btn btn-primary">
+                                        <i class="bi bi-pencil"></i> Edit High-Volume Schedule
+                                    </a>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <p>No high-volume schedule template has been created for this phase yet.</p>
+                                    {% if current_user.is_admin %}
+                                    <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='high_volume') }}" class="btn btn-primary mt-2">
+                                        <i class="bi bi-plus-circle"></i> Create High-Volume Schedule
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- New Weekly Schedule Button -->
+                    <div class="mt-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Track your weekly workouts!</strong> Use the weekly schedule to mark workouts as complete and monitor your progress.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('weekly_workout.my_weekly_schedule') }}" class="btn btn-success btn-lg">
+                                <i class="bi bi-calendar-check"></i> Go to My Weekly Schedule
+                            </a>
                         </div>
                     </div>
                 </div>

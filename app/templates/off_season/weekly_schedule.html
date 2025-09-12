@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.phase_detail', phase_id=current_phase.id) }}">{{ current_phase.name }}</a></li>
+                    <li class="breadcrumb-item active">My Weekly Schedule</li>
+                </ol>
+            </nav>
+            <h1>My Weekly Schedule</h1>
+            <p class="text-muted">Week {{ current_week }} ({{ week_start_date.strftime('%b %d') }} - {{ (week_start_date + timedelta(days=6)).strftime('%b %d, %Y') }})</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('weekly_workout.view_weekly_progress') }}" class="btn btn-primary">
+                <i class="bi bi-bar-chart-line"></i> View All Weekly Progress
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">{{ current_phase.name }} - Week {{ current_week }}</h3>
+                    <div>
+                        <div class="dropdown d-inline-block">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="scheduleTypeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                {{ selected_type.capitalize() }} Schedule
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="scheduleTypeDropdown">
+                                {% for type_key, type_name in template_types.items() %}
+                                <li><a class="dropdown-item {% if type_key == selected_type %}active{% endif %}" href="{{ url_for('weekly_workout.my_weekly_schedule', template_type=type_key) }}">{{ type_name }} Schedule</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> This is your personalized weekly schedule based on the {{ selected_type }} template. Check off workouts as you complete them to track your progress.
+                    </div>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ weekly_completion.completion_percentage }}%" aria-valuenow="{{ weekly_completion.completion_percentage }}" aria-valuemin="0" aria-valuemax="100">{{ weekly_completion.completion_percentage|round|int }}% Complete</div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 15%">Day</th>
+                                    <th style="width: 35%">Morning</th>
+                                    <th style="width: 35%">Evening</th>
+                                    <th style="width: 15%">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] %}
+                                {% set day_date = week_dates[day] %}
+                                {% set is_today = day_date == today %}
+                                {% set morning_workout = getattr(template, day + '_morning') %}
+                                {% set evening_workout = getattr(template, day + '_evening') %}
+                                {% set morning_completed = getattr(weekly_completion, day + '_morning_completed') %}
+                                {% set evening_completed = getattr(weekly_completion, day + '_evening_completed') %}
+                                {% set notes = getattr(weekly_completion, day + '_notes') %}
+                                
+                                <tr {% if is_today %}class="table-primary"{% endif %}>
+                                    <td class="align-middle">
+                                        <strong>{{ day|capitalize }}</strong>
+                                        <div class="small text-muted">{{ day_date.strftime('%b %d') }}</div>
+                                        {% if is_today %}<span class="badge bg-primary">Today</span>{% endif %}
+                                    </td>
+                                    
+                                    <td class="align-middle">
+                                        {% if morning_workout %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="form-check me-2">
+                                                <input class="form-check-input workout-checkbox" type="checkbox" 
+                                                       data-completion-id="{{ weekly_completion.id }}"
+                                                       data-day="{{ day }}"
+                                                       data-time="morning"
+                                                       {% if morning_completed %}checked{% endif %}>
+                                            </div>
+                                            <div>
+                                                <strong>{{ morning_workout }}</strong>
+                                                <div class="small text-muted">{{ getattr(template, day + '_duration') }}</div>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">No scheduled workout</span>
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <td class="align-middle">
+                                        {% if evening_workout %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="form-check me-2">
+                                                <input class="form-check-input workout-checkbox" type="checkbox" 
+                                                       data-completion-id="{{ weekly_completion.id }}"
+                                                       data-day="{{ day }}"
+                                                       data-time="evening"
+                                                       {% if evening_completed %}checked{% endif %}>
+                                            </div>
+                                            <div>
+                                                <strong>{{ evening_workout }}</strong>
+                                                <div class="small text-muted">{{ getattr(template, day + '_duration') }}</div>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">No scheduled workout</span>
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <td class="align-middle">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary notes-btn"
+                                                data-completion-id="{{ weekly_completion.id }}"
+                                                data-day="{{ day }}"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#notesModal">
+                                            <i class="bi bi-pencil"></i> 
+                                            {% if notes %}Edit{% else %}Add{% endif %}
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Workout Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="workoutDetailsAccordion">
+                        {% for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] %}
+                        {% set morning_workout = getattr(template, day + '_morning') %}
+                        {% set evening_workout = getattr(template, day + '_evening') %}
+                        {% set description = getattr(template, day + '_description') %}
+                        
+                        {% if morning_workout or evening_workout %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ day|capitalize }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ day|capitalize }}" aria-expanded="false" aria-controls="collapse{{ day|capitalize }}">
+                                    {{ day|capitalize }} Workouts
+                                </button>
+                            </h2>
+                            <div id="collapse{{ day|capitalize }}" class="accordion-collapse collapse" aria-labelledby="heading{{ day|capitalize }}" data-bs-parent="#workoutDetailsAccordion">
+                                <div class="accordion-body">
+                                    {% if description %}
+                                    <p>{{ description }}</p>
+                                    {% endif %}
+                                    
+                                    {% if morning_workout %}
+                                    <h5>Morning: {{ morning_workout }}</h5>
+                                    <p>Duration: {{ getattr(template, day + '_duration') }}</p>
+                                    {% endif %}
+                                    
+                                    {% if evening_workout %}
+                                    <h5>Evening: {{ evening_workout }}</h5>
+                                    <p>Duration: {{ getattr(template, day + '_duration') }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="mt-3">
+                                        <a href="{{ url_for('off_season.workouts', type=morning_workout) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-search"></i> Find Similar Workouts
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notes Modal -->
+<div class="modal fade" id="notesModal" tabindex="-1" aria-labelledby="notesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="notesModalLabel">Workout Notes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="notesForm">
+                    <input type="hidden" id="notes-completion-id">
+                    <input type="hidden" id="notes-day">
+                    <input type="hidden" id="notes-time">
+                    
+                    <div class="mb-3">
+                        <label for="workout-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="workout-notes" rows="4" placeholder="How did the workout feel? Any modifications made?"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="save-notes-btn">Save Notes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle workout checkbox changes
+        const workoutCheckboxes = document.querySelectorAll('.workout-checkbox');
+        workoutCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const completionId = this.dataset.completionId;
+                const day = this.dataset.day;
+                const time = this.dataset.time;
+                
+                // Send AJAX request to toggle completion status
+                fetch('{{ url_for("weekly_workout.toggle_workout_completion") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        completion_id: completionId,
+                        day: day,
+                        time_of_day: time
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update progress bar
+                        const progressBar = document.querySelector('.progress-bar');
+                        progressBar.style.width = data.completion_percentage + '%';
+                        progressBar.setAttribute('aria-valuenow', data.completion_percentage);
+                        progressBar.textContent = Math.round(data.completion_percentage) + '% Complete';
+                        
+                        // Show success toast
+                        const status = data.completed ? 'completed' : 'uncompleted';
+                        showToast(`Workout ${status} successfully!`, 'success');
+                    } else {
+                        // Show error toast and revert checkbox
+                        showToast('Error updating workout status: ' + data.message, 'danger');
+                        this.checked = !this.checked;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('An error occurred. Please try again.', 'danger');
+                    this.checked = !this.checked;
+                });
+            });
+        });
+        
+        // Handle notes modal
+        const notesModal = document.getElementById('notesModal');
+        const notesButtons = document.querySelectorAll('.notes-btn');
+        const notesForm = document.getElementById('notesForm');
+        const notesCompletionId = document.getElementById('notes-completion-id');
+        const notesDay = document.getElementById('notes-day');
+        const notesTextarea = document.getElementById('workout-notes');
+        const saveNotesBtn = document.getElementById('save-notes-btn');
+        
+        notesButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const completionId = this.dataset.completionId;
+                const day = this.dataset.day;
+                
+                // Set form values
+                notesCompletionId.value = completionId;
+                notesDay.value = day;
+                
+                // Get current notes for this day
+                const notes = '{{ weekly_completion.monday_notes }}'.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+                notesTextarea.value = notes;
+                
+                // Update modal title
+                document.getElementById('notesModalLabel').textContent = day.charAt(0).toUpperCase() + day.slice(1) + ' Workout Notes';
+            });
+        });
+        
+        saveNotesBtn.addEventListener('click', function() {
+            const completionId = notesCompletionId.value;
+            const day = notesDay.value;
+            const notes = notesTextarea.value;
+            
+            // Send AJAX request to save notes
+            fetch('{{ url_for("weekly_workout.toggle_workout_completion") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    completion_id: completionId,
+                    day: day,
+                    time_of_day: 'morning', // Doesn't matter for notes
+                    notes: notes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(notesModal);
+                    modal.hide();
+                    
+                    // Show success toast
+                    showToast('Notes saved successfully!', 'success');
+                } else {
+                    // Show error toast
+                    showToast('Error saving notes: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred. Please try again.', 'danger');
+            });
+        });
+        
+        // Helper function to show toast notifications
+        function showToast(message, type) {
+            const toastContainer = document.createElement('div');
+            toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '5';
+            
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.innerHTML = toastHtml;
+            document.body.appendChild(toastContainer);
+            
+            const toastElement = toastContainer.querySelector('.toast');
+            const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 3000 });
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                document.body.removeChild(toastContainer);
+            });
+        }
+    });
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

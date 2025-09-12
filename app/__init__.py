@@ -198,7 +198,10 @@ def create_app(config_class=Config):
 
     from app.routes.off_season_routes import off_season
     app.register_blueprint(off_season)
-        
+    
+    from app.routes.weekly_workout_routes import weekly_workout
+    app.register_blueprint(weekly_workout)
+    
     # Import models
     from app.models import (
        User, Player, Tournament, Game, Point, LineUp,

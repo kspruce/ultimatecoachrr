@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.phase_detail', phase_id=current_phase.id) }}">{{ current_phase.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('weekly_workout.my_weekly_schedule') }}">My Weekly Schedule</a></li>
+                    <li class="breadcrumb-item active">Weekly Progress</li>
+                </ol>
+            </nav>
+            <h1>My Weekly Training Progress</h1>
+            <p class="text-muted">{{ current_phase.name }} ({{ current_phase.start_date.strftime('%b %d') }} - {{ current_phase.end_date.strftime('%b %d, %Y') }})</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('weekly_workout.my_weekly_schedule') }}" class="btn btn-primary">
+                <i class="bi bi-calendar-week"></i> Current Week Schedule
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Overall Progress</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center">
+                            <div class="progress-circle mx-auto" data-value="{{ total_percentage|round|int }}">
+                                <span class="progress-circle-left">
+                                    <span class="progress-circle-bar"></span>
+                                </span>
+                                <span class="progress-circle-right">
+                                    <span class="progress-circle-bar"></span>
+                                </span>
+                                <div class="progress-circle-value">
+                                    <div>
+                                        {{ total_percentage|round|int }}%<br>
+                                        <span>Complete</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h4>{{ current_phase.name }} Progress</h4>
+                            <p>{{ current_phase.description }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    <strong>Phase Status:</strong>
+                                    {% if today < current_phase.start_date %}
+                                        <span class="badge bg-info">Upcoming</span>
+                                    {% elif today > current_phase.end_date %}
+                                        <span class="badge bg-secondary">Completed</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div>
+                                    <strong>Weeks Tracked:</strong>
+                                    <span class="badge bg-primary">{{ weekly_completions|length }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Weekly Breakdown</h3>
+                </div>
+                <div class="card-body">
+                    {% if weekly_completions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Week</th>
+                                        <th>Date Range</th>
+                                        <th>Template</th>
+                                        <th>Completion</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for completion in weekly_completions %}
+                                    <tr>
+                                        <td>Week {{ completion.week_number }}</td>
+                                        <td>{{ completion.week_start_date.strftime('%b %d') }} - {{ (completion.week_start_date + timedelta(days=6)).strftime('%b %d') }}</td>
+                                        <td>{{ completion.template.template_type|capitalize }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar {% if completion.completion_percentage >= 80 %}bg-success{% elif completion.completion_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ completion.completion_percentage }}%" 
+                                                     aria-valuenow="{{ completion.completion_percentage }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ completion.completion_percentage|round|int }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-primary view-details-btn" data-bs-toggle="modal" data-bs-target="#weekDetailsModal" data-week="{{ completion.week_number }}" data-completion-id="{{ completion.id }}">
+                                                <i class="bi bi-eye"></i> Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> No weekly progress data available yet. Start tracking your workouts in the <a href="{{ url_for('weekly_workout.my_weekly_schedule') }}">weekly schedule</a>.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Training Insights</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Consistency Analysis</h5>
+                            <div id="consistencyChart" style="height: 300px;"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Training Tips</h5>
+                            <ul class="list-group">
+                                {% if total_percentage >= 80 %}
+                                <li class="list-group-item list-group-item-success">
+                                    <i class="bi bi-trophy"></i> <strong>Excellent work!</strong> Your consistency is outstanding. Consider increasing workout intensity.
+                                </li>
+                                {% elif total_percentage >= 60 %}
+                                <li class="list-group-item list-group-item-primary">
+                                    <i class="bi bi-star"></i> <strong>Good progress!</strong> You're on track with your training. Focus on maintaining consistency.
+                                </li>
+                                {% elif total_percentage >= 40 %}
+                                <li class="list-group-item list-group-item-warning">
+                                    <i class="bi bi-exclamation-triangle"></i> <strong>Room for improvement.</strong> Try to increase your weekly workout completion.
+                                </li>
+                                {% else %}
+                                <li class="list-group-item list-group-item-danger">
+                                    <i class="bi bi-exclamation-circle"></i> <strong>Attention needed!</strong> Your training consistency is low. Consider adjusting your schedule.
+                                </li>
+                                {% endif %}
+                                
+                                <li class="list-group-item">
+                                    <i class="bi bi-calendar-check"></i> Schedule workouts at consistent times to build habits.
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="bi bi-graph-up"></i> Track your progress to stay motivated and see improvements.
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="bi bi-people"></i> Find a training partner to increase accountability.
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="bi bi-lightning"></i> Remember that consistency beats intensity for long-term results.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Week Details Modal -->
+<div class="modal fade" id="weekDetailsModal" tabindex="-1" aria-labelledby="weekDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="weekDetailsModalLabel">Week Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="weekDetailsContent">
+                <!-- Content will be loaded dynamically -->
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block styles %}
+<style>
+    /* Progress Circle Styles */
+    .progress-circle {
+        position: relative;
+        height: 150px;
+        width: 150px;
+        border-radius: 50%;
+        background-color: #f0f0f0;
+    }
+    
+    .progress-circle-bar {
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        background: #f0f0f0;
+        border-radius: 50%;
+    }
+    
+    .progress-circle-left, .progress-circle-right {
+        position: absolute;
+        height: 100%;
+        width: 50%;
+        top: 0;
+        overflow: hidden;
+    }
+    
+    .progress-circle-left {
+        left: 0;
+    }
+    
+    .progress-circle-right {
+        right: 0;
+    }
+    
+    .progress-circle-value {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: white;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .progress-circle-value span {
+        font-size: 14px;
+        font-weight: normal;
+    }
+    
+    .progress-circle[data-value="0"] .progress-circle-right .progress-circle-bar {
+        transform: rotate(0deg);
+    }
+    
+    .progress-circle[data-value="100"] .progress-circle-right .progress-circle-bar {
+        transform: rotate(180deg);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize progress circles
+        initProgressCircles();
+        
+        // Initialize consistency chart
+        initConsistencyChart();
+        
+        // Handle week details modal
+        const weekDetailsModal = document.getElementById('weekDetailsModal');
+        const weekDetailsContent = document.getElementById('weekDetailsContent');
+        const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+        
+        viewDetailsButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const weekNumber = this.dataset.week;
+                const completionId = this.dataset.completionId;
+                
+                // Update modal title
+                document.getElementById('weekDetailsModalLabel').textContent = `Week ${weekNumber} Details`;
+                
+                // Load week details
+                weekDetailsContent.innerHTML = `
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading week details...</p>
+                    </div>
+                `;
+                
+                // Simulate loading details (in a real app, you'd fetch this from the server)
+                setTimeout(() => {
+                    // Find the completion data for this week
+                    const completion = {{ weekly_completions|tojson }}.find(c => c.id === parseInt(completionId));
+                    
+                    if (completion) {
+                        let daysHtml = '';
+                        
+                        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+                            const morningCompleted = completion[`${day}_morning_completed`];
+                            const eveningCompleted = completion[`${day}_evening_completed`];
+                            const notes = completion[`${day}_notes`];
+                            
+                            daysHtml += `
+                                <tr>
+                                    <td>${day.charAt(0).toUpperCase() + day.slice(1)}</td>
+                                    <td>
+                                        ${morningCompleted ? 
+                                            '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
+                                            '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
+                                    </td>
+                                    <td>
+                                        ${eveningCompleted ? 
+                                            '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
+                                            '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
+                                    </td>
+                                    <td>${notes || '-'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        weekDetailsContent.innerHTML = `
+                            <div class="mb-3">
+                                <strong>Week ${completion.week_number}</strong> (${new Date(completion.week_start_date).toLocaleDateString()} - ${new Date(new Date(completion.week_start_date).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString()})
+                            </div>
+                            
+                            <div class="progress mb-3">
+                                <div class="progress-bar ${completion.completion_percentage >= 80 ? 'bg-success' : completion.completion_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                                     role="progressbar" 
+                                     style="width: ${completion.completion_percentage}%" 
+                                     aria-valuenow="${completion.completion_percentage}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    ${Math.round(completion.completion_percentage)}% Complete
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Day</th>
+                                            <th>Morning</th>
+                                            <th>Evening</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${daysHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    } else {
+                        weekDetailsContent.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> Could not load details for Week ${weekNumber}.
+                            </div>
+                        `;
+                    }
+                }, 500);
+            });
+        });
+        
+        // Initialize progress circles
+        function initProgressCircles() {
+            document.querySelectorAll('.progress-circle').forEach(circle => {
+                const value = parseInt(circle.getAttribute('data-value'));
+                const leftTransform = value <= 50 ? `rotate(${value * 3.6}deg)` : 'rotate(180deg)';
+                const rightTransform = value <= 50 ? 'rotate(0deg)' : `rotate(${(value - 50) * 3.6}deg)`;
+                
+                // Set the color based on the value
+                let color;
+                if (value >= 80) color = '#28a745'; // success
+                else if (value >= 50) color = '#ffc107'; // warning
+                else color = '#dc3545'; // danger
+                
+                // Apply styles
+                circle.querySelector('.progress-circle-left .progress-circle-bar').style.transform = leftTransform;
+                circle.querySelector('.progress-circle-left .progress-circle-bar').style.backgroundColor = color;
+                circle.querySelector('.progress-circle-right .progress-circle-bar').style.transform = rightTransform;
+                circle.querySelector('.progress-circle-right .progress-circle-bar').style.backgroundColor = color;
+            });
+        }
+        
+        // Initialize consistency chart
+        function initConsistencyChart() {
+            const ctx = document.getElementById('consistencyChart');
+            
+            // Extract data from weekly completions
+            const weeklyCompletions = {{ weekly_completions|tojson }};
+            const labels = weeklyCompletions.map(completion => `Week ${completion.week_number}`);
+            const data = weeklyCompletions.map(completion => completion.completion_percentage);
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Weekly Completion %',
+                        data: data,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Completion %'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Week'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Completion: ${Math.round(context.parsed.y)}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

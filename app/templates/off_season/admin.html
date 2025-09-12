@@ -7,106 +7,113 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Admin Dashboard</li>
+                    <li class="breadcrumb-item active">Admin Dashboard</li>
                 </ol>
             </nav>
             <h1>Off-Season Training Admin</h1>
-            <p class="text-muted">Manage phases, workouts, exercises, and SMART goals</p>
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('off_season.index') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Dashboard
+                <i class="bi bi-arrow-left"></i> Back to Off-Season Home
             </a>
         </div>
     </div>
 
-    <!-- Overview Cards -->
     <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white mb-4">
                 <div class="card-body">
-                    <h1 class="display-4">{{ phases|length }}</h1>
-                    <h5>Training Phases</h5>
+                    <h2 class="card-title">{{ phases|length }}</h2>
+                    <p class="card-text">Training Phases</p>
                 </div>
-                <div class="card-footer bg-transparent">
-                    <a href="#phases-section" class="btn btn-sm btn-primary">Manage Phases</a>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="#phases-section">View Details</a>
+                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
+        <div class="col-md-3">
+            <div class="card bg-success text-white mb-4">
                 <div class="card-body">
-                    <h1 class="display-4">{{ workouts_count }}</h1>
-                    <h5>Workouts</h5>
+                    <h2 class="card-title">{{ workouts_count }}</h2>
+                    <p class="card-text">Workouts</p>
                 </div>
-                <div class="card-footer bg-transparent">
-                    <a href="#workouts-section" class="btn btn-sm btn-primary">Manage Workouts</a>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="#workouts-section">View Details</a>
+                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
+        <div class="col-md-3">
+            <div class="card bg-warning text-white mb-4">
                 <div class="card-body">
-                    <h1 class="display-4">{{ exercises_count }}</h1>
-                    <h5>Exercises</h5>
+                    <h2 class="card-title">{{ exercises_count }}</h2>
+                    <p class="card-text">Exercises</p>
                 </div>
-                <div class="card-footer bg-transparent">
-                    <a href="#exercises-section" class="btn btn-sm btn-primary">Manage Exercises</a>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="#exercises-section">View Details</a>
+                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card text-center h-100">
+        <div class="col-md-3">
+            <div class="card bg-info text-white mb-4">
                 <div class="card-body">
-                    <h1 class="display-4">{{ progress_entries }}</h1>
-                    <h5>Progress Entries</h5>
+                    <h2 class="card-title">{{ progress_entries }}</h2>
+                    <p class="card-text">Progress Entries</p>
                 </div>
-                <div class="card-footer bg-transparent">
-                    <a href="{{ url_for('off_season.player_progress') }}" class="btn btn-sm btn-primary">View Progress</a>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('off_season.player_progress') }}">View Details</a>
+                    <div class="small text-white"><i class="bi bi-chevron-right"></i></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Initialize Section -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+                    <h3 class="mb-0">Quick Actions</h3>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Content Management</h5>
+                                </div>
                                 <div class="card-body">
-                                    <h5 class="card-title">Initialize Off-Season Data</h5>
-                                    <p class="card-text">Create the default training phases based on the off-season guide.</p>
-                                    <form action="{{ url_for('off_season.initialize_off_season') }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-primary" {% if phases|length > 0 %}disabled{% endif %}>
-                                            <i class="bi bi-play-fill"></i> Initialize Phases
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPhaseModal">
+                                            <i class="bi bi-plus-circle"></i> Add New Phase
                                         </button>
-                                        {% if phases|length > 0 %}
-                                            <small class="text-muted d-block mt-2">Phases already initialized</small>
-                                        {% endif %}
-                                    </form>
+                                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addWorkoutModal">
+                                            <i class="bi bi-plus-circle"></i> Add New Workout
+                                        </button>
+                                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addGoalTemplateModal">
+                                            <i class="bi bi-plus-circle"></i> Add Goal Template
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Sample Content</h5>
+                                </div>
                                 <div class="card-body">
-                                    <h5 class="card-title">Import Sample Workouts</h5>
-                                    <p class="card-text">Import a set of sample workouts for each training phase.</p>
-                                    <form action="{{ url_for('off_season.import_sample_workouts') }}" method="POST">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-primary" {% if workouts_count > 0 %}disabled{% endif %}>
-                                            <i class="bi bi-cloud-download"></i> Import Workouts
+                                    <p>Import sample content to quickly set up your off-season training program.</p>
+                                    <form action="{{ url_for('off_season.import_sample_workouts') }}" method="post" class="mb-2">
+                                        <button type="submit" class="btn btn-outline-primary w-100">
+                                            <i class="bi bi-cloud-download"></i> Import Sample Workouts
                                         </button>
-                                        {% if workouts_count > 0 %}
-                                            <small class="text-muted d-block mt-2">Workouts already imported</small>
-                                        {% endif %}
+                                    </form>
+                                    <form action="{{ url_for('off_season.initialize_off_season') }}" method="post">
+                                        <button type="submit" class="btn btn-outline-secondary w-100">
+                                            <i class="bi bi-calendar-plus"></i> Initialize Default Phases
+                                        </button>
                                     </form>
                                 </div>
                             </div>
@@ -117,12 +124,52 @@
         </div>
     </div>
 
-    <!-- Phases Section -->
+    <!-- Weekly Progress Tracking Section (NEW) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Weekly Progress Tracking</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Player Weekly Progress</h5>
+                                    <p class="card-text">View and analyze player progress on weekly workout schedules.</p>
+                                    <a href="{{ url_for('weekly_workout.admin_player_weekly_progress') }}" class="btn btn-primary">
+                                        <i class="bi bi-bar-chart-line"></i> View Player Weekly Progress
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Weekly Schedule Templates</h5>
+                                    <p class="card-text">Manage weekly schedule templates for each training phase.</p>
+                                    <div class="d-grid gap-2">
+                                        {% for phase in phases %}
+                                        <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}#scheduleTemplatesTabs" class="btn btn-outline-primary">
+                                            <i class="bi bi-calendar-week"></i> {{ phase.name }} Templates
+                                        </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row mb-4" id="phases-section">
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-calendar-range"></i> Training Phases</h5>
+                    <h3 class="mb-0">Training Phases</h3>
                     <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addPhaseModal">
                         <i class="bi bi-plus-circle"></i> Add Phase
                     </button>
@@ -135,7 +182,6 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Date Range</th>
-                                        <th>Primary Focus</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -145,31 +191,48 @@
                                         <tr>
                                             <td>{{ phase.name }}</td>
                                             <td>{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</td>
-                                            <td>{{ phase.primary_focus }}</td>
                                             <td>
-                                                {% if phase.start_date <= today and phase.end_date >= today %}
-                                                    <span class="badge bg-success">Current</span>
-                                                {% elif phase.start_date > today %}
-                                                    <span class="badge bg-secondary">Upcoming</span>
-                                                {% else %}
+                                                {% if today < phase.start_date %}
+                                                    <span class="badge bg-info">Upcoming</span>
+                                                {% elif today > phase.end_date %}
                                                     <span class="badge bg-secondary">Completed</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Active</span>
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <a href="{{ url_for('off_season.edit_phase', phase_id=phase.id) }}" class="btn btn-outline-primary">
-                                                        <i class="bi bi-pencil"></i>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-eye"></i> View
                                                     </a>
-                                                    <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-outline-secondary">
-                                                        <i class="bi bi-eye"></i>
+                                                    <a href="{{ url_for('off_season.edit_phase', phase_id=phase.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-pencil"></i> Edit
                                                     </a>
-                                                    <button type="button" class="btn btn-outline-danger" 
-                                                            data-bs-toggle="modal" 
-                                                            data-bs-target="#deletePhaseModal" 
-                                                            data-phase-id="{{ phase.id }}"
-                                                            data-phase-name="{{ phase.name }}">
-                                                        <i class="bi bi-trash"></i>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletePhaseModal{{ phase.id }}">
+                                                        <i class="bi bi-trash"></i> Delete
                                                     </button>
+                                                </div>
+                                                
+                                                <!-- Delete Phase Modal -->
+                                                <div class="modal fade" id="deletePhaseModal{{ phase.id }}" tabindex="-1" aria-labelledby="deletePhaseModalLabel{{ phase.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="deletePhaseModalLabel{{ phase.id }}">Confirm Delete</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete the phase <strong>{{ phase.name }}</strong>?</p>
+                                                                <p class="text-danger">This will also delete all workouts, exercises, and progress data associated with this phase.</p>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <form action="{{ url_for('off_season.delete_phase', phase_id=phase.id) }}" method="post">
+                                                                    <button type="submit" class="btn btn-danger">Delete Phase</button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -179,7 +242,15 @@
                         </div>
                     {% else %}
                         <div class="alert alert-info">
-                            <p>No training phases have been created yet. Click "Initialize Phases" to create the default phases or "Add Phase" to create a custom phase.</p>
+                            <p>No training phases have been created yet.</p>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPhaseModal">
+                                <i class="bi bi-plus-circle"></i> Add First Phase
+                            </button>
+                            <form action="{{ url_for('off_season.initialize_off_season') }}" method="post" class="d-inline-block">
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="bi bi-calendar-plus"></i> Initialize Default Phases
+                                </button>
+                            </form>
                         </div>
                     {% endif %}
                 </div>
@@ -187,124 +258,127 @@
         </div>
     </div>
 
-    <!-- Workouts Section -->
     <div class="row mb-4" id="workouts-section">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-activity"></i> Workouts</h5>
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Workouts</h3>
                     <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addWorkoutModal">
                         <i class="bi bi-plus-circle"></i> Add Workout
                     </button>
                 </div>
                 <div class="card-body">
-                    {% if workouts_count > 0 %}
-                        <div class="mb-3">
-                            <form class="row g-3" method="GET" action="{{ url_for('off_season.admin') }}">
-                                <div class="col-md-4">
-                                    <select class="form-select" name="phase_filter" id="phase-filter">
-                                        <option value="">All Phases</option>
-                                        {% for phase in phases %}
-                                            <option value="{{ phase.id }}" {% if request.args.get('phase_filter')|int == phase.id %}selected{% endif %}>
-                                                {{ phase.name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <select class="form-select" name="type_filter" id="type-filter">
-                                        <option value="">All Types</option>
-                                        <option value="Strength" {% if request.args.get('type_filter') == 'Strength' %}selected{% endif %}>Strength</option>
-                                        <option value="Speed" {% if request.args.get('type_filter') == 'Speed' %}selected{% endif %}>Speed</option>
-                                        <option value="Power" {% if request.args.get('type_filter') == 'Power' %}selected{% endif %}>Power</option>
-                                        <option value="Endurance" {% if request.args.get('type_filter') == 'Endurance' %}selected{% endif %}>Endurance</option>
-                                        <option value="Agility" {% if request.args.get('type_filter') == 'Agility' %}selected{% endif %}>Agility</option>
-                                        <option value="Throwing" {% if request.args.get('type_filter') == 'Throwing' %}selected{% endif %}>Throwing</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="d-grid">
-                                        <button type="submit" class="btn btn-primary">Filter</button>
-                                    </div>
-                                </div>
-                            </form>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <select class="form-select" id="phaseFilter">
+                                <option value="">All Phases</option>
+                                {% for phase in phases %}
+                                    <option value="{{ phase.id }}">{{ phase.name }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Phase</th>
-                                        <th>Type</th>
-                                        <th>Difficulty</th>
-                                        <th>Exercises</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="workouts-table-body">
-                                    <!-- JavaScript will populate this based on filters -->
-                                    <tr>
-                                        <td colspan="6" class="text-center">
-                                            <div class="spinner-border text-primary" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="col-md-4">
+                            <select class="form-select" id="typeFilter">
+                                <option value="">All Types</option>
+                                <option value="Strength">Strength</option>
+                                <option value="Conditioning">Conditioning</option>
+                                <option value="Mobility">Mobility</option>
+                                <option value="Recovery">Recovery</option>
+                                <option value="Power">Power</option>
+                                <option value="Sport-Specific">Sport-Specific</option>
+                            </select>
                         </div>
-                    {% else %}
-                        <div class="alert alert-info">
-                            <p>No workouts have been created yet. Click "Import Workouts" to import sample workouts or "Add Workout" to create a custom workout.</p>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-primary w-100" id="filterWorkoutsBtn">
+                                <i class="bi bi-funnel"></i> Filter Workouts
+                            </button>
                         </div>
-                    {% endif %}
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="workoutsTable">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Phase</th>
+                                    <th>Type</th>
+                                    <th>Difficulty</th>
+                                    <th>Exercises</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p>Loading workouts...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SMART Goals Section -->
+    <div class="row mb-4" id="exercises-section">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Exercises</h3>
+                </div>
+                <div class="card-body">
+                    <p>Select a workout to manage its exercises:</p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <select class="form-select" id="workoutSelect">
+                                <option value="">Select a workout...</option>
+                                <!-- Options will be loaded dynamically -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-primary w-100" id="manageExercisesBtn" disabled>
+                                <i class="bi bi-list-check"></i> Manage Exercises
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row mb-4" id="goals-section">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-bullseye"></i> SMART Goals</h5>
-                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addGoalModal">
-                        <i class="bi bi-plus-circle"></i> Add Goal Template
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">SMART Goal Templates</h3>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addGoalTemplateModal">
+                        <i class="bi bi-plus-circle"></i> Add Template
                     </button>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info">
-                        <h5>SMART Goal Templates</h5>
-                        <p>Create goal templates that players can use to set their own SMART goals for each phase:</p>
-                        <ul>
-                            <li><strong>Specific</strong> - Clear, concrete objectives</li>
-                            <li><strong>Measurable</strong> - Quantifiable metrics for tracking progress</li>
-                            <li><strong>Achievable</strong> - Challenging but realistic</li>
-                            <li><strong>Relevant</strong> - Aligned with ultimate frisbee performance</li>
-                            <li><strong>Time-bound</strong> - Set within the phase timeframe</li>
-                        </ul>
-                    </div>
-                    
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover" id="goalTemplatesTable">
                             <thead>
                                 <tr>
-                                    <th>Goal Template</th>
+                                    <th>Title</th>
                                     <th>Phase</th>
                                     <th>Category</th>
                                     <th>Measurement</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="goals-table-body">
-                                <!-- JavaScript will populate this -->
+                            <tbody>
                                 <tr>
                                     <td colspan="5" class="text-center">
                                         <div class="spinner-border text-primary" role="status">
                                             <span class="visually-hidden">Loading...</span>
                                         </div>
+                                        <p>Loading goal templates...</p>
                                     </td>
                                 </tr>
                             </tbody>
@@ -320,58 +394,54 @@
 <div class="modal fade" id="addPhaseModal" tabindex="-1" aria-labelledby="addPhaseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="addPhaseModalLabel">Add Training Phase</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPhaseModalLabel">Add New Training Phase</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('off_season.add_phase') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form action="{{ url_for('off_season.add_phase') }}" method="post">
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="phase-name" class="form-label">Phase Name</label>
-                            <input type="text" class="form-control" id="phase-name" name="name" required>
+                            <label for="phaseName" class="form-label">Phase Name</label>
+                            <input type="text" class="form-control" id="phaseName" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="phase-dates" class="form-label">Date Range</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="phase-start-date" name="start_date" required>
-                                <span class="input-group-text">to</span>
-                                <input type="date" class="form-control" id="phase-end-date" name="end_date" required>
-                            </div>
+                            <label for="primaryFocus" class="form-label">Primary Focus</label>
+                            <input type="text" class="form-control" id="primaryFocus" name="primary_focus" required>
                         </div>
                     </div>
-                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="trainingEmphasis" class="form-label">Training Emphasis</label>
+                            <input type="text" class="form-control" id="trainingEmphasis" name="training_emphasis" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="volumeIntensity" class="form-label">Volume/Intensity</label>
+                            <input type="text" class="form-control" id="volumeIntensity" name="volume_intensity" required>
+                        </div>
+                    </div>
                     <div class="mb-3">
-                        <label for="phase-description" class="form-label">Description</label>
-                        <textarea class="form-control" id="phase-description" name="description" rows="3" required></textarea>
+                        <label for="keyOutcome" class="form-label">Key Outcome</label>
+                        <input type="text" class="form-control" id="keyOutcome" name="key_outcome" required>
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="phase-primary-focus" class="form-label">Primary Focus</label>
-                            <input type="text" class="form-control" id="phase-primary-focus" name="primary_focus" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="phase-training-emphasis" class="form-label">Training Emphasis</label>
-                            <input type="text" class="form-control" id="phase-training-emphasis" name="training_emphasis" required>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="phase-volume-intensity" class="form-label">Volume/Intensity Balance</label>
-                            <input type="text" class="form-control" id="phase-volume-intensity" name="volume_intensity" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="phase-key-outcome" class="form-label">Key Outcome</label>
-                            <input type="text" class="form-control" id="phase-key-outcome" name="key_outcome" required>
-                        </div>
+                    <div class="mb-3">
+                        <label for="phaseDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="phaseDescription" name="description" rows="3" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Phase</button>
+                    <button type="submit" class="btn btn-primary">Add Phase</button>
                 </div>
             </form>
         </div>
@@ -382,75 +452,70 @@
 <div class="modal fade" id="addWorkoutModal" tabindex="-1" aria-labelledby="addWorkoutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="addWorkoutModalLabel">Add Workout</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="addWorkoutModalLabel">Add New Workout</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('off_season.add_workout') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form action="{{ url_for('off_season.add_workout') }}" method="post">
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-8">
-                            <label for="workout-title" class="form-label">Workout Title</label>
-                            <input type="text" class="form-control" id="workout-title" name="title" required>
+                            <label for="workoutTitle" class="form-label">Workout Title</label>
+                            <input type="text" class="form-control" id="workoutTitle" name="title" required>
                         </div>
                         <div class="col-md-4">
-                            <label for="workout-phase" class="form-label">Training Phase</label>
-                            <select class="form-select" id="workout-phase" name="phase_id" required>
-                                <option value="" selected disabled>Select Phase</option>
+                            <label for="workoutPhase" class="form-label">Phase</label>
+                            <select class="form-select" id="workoutPhase" name="phase_id" required>
+                                <option value="">Select a phase...</option>
                                 {% for phase in phases %}
                                     <option value="{{ phase.id }}">{{ phase.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="workout-description" class="form-label">Description</label>
-                        <textarea class="form-control" id="workout-description" name="description" rows="3" required></textarea>
-                    </div>
-                    
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label for="workout-type" class="form-label">Workout Type</label>
-                            <select class="form-select" id="workout-type" name="workout_type" required>
-                                <option value="" selected disabled>Select Type</option>
+                            <label for="workoutType" class="form-label">Workout Type</label>
+                            <select class="form-select" id="workoutType" name="workout_type" required>
+                                <option value="">Select type...</option>
                                 <option value="Strength">Strength</option>
-                                <option value="Speed">Speed</option>
+                                <option value="Conditioning">Conditioning</option>
+                                <option value="Mobility">Mobility</option>
+                                <option value="Recovery">Recovery</option>
                                 <option value="Power">Power</option>
-                                <option value="Endurance">Endurance</option>
-                                <option value="Agility">Agility</option>
-                                <option value="Throwing">Throwing</option>
+                                <option value="Sport-Specific">Sport-Specific</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="workout-difficulty" class="form-label">Difficulty Level</label>
-                            <select class="form-select" id="workout-difficulty" name="difficulty_level" required>
-                                <option value="" selected disabled>Select Difficulty</option>
+                            <label for="workoutDifficulty" class="form-label">Difficulty Level</label>
+                            <select class="form-select" id="workoutDifficulty" name="difficulty_level" required>
+                                <option value="">Select difficulty...</option>
                                 <option value="Beginner">Beginner</option>
                                 <option value="Intermediate">Intermediate</option>
                                 <option value="Advanced">Advanced</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="workout-duration" class="form-label">Duration</label>
-                            <input type="text" class="form-control" id="workout-duration" name="duration" placeholder="e.g., 45-60 minutes" required>
+                            <label for="workoutDuration" class="form-label">Duration</label>
+                            <input type="text" class="form-control" id="workoutDuration" name="duration" placeholder="e.g., 45-60 minutes" required>
                         </div>
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="workout-equipment" class="form-label">Equipment Needed</label>
-                        <textarea class="form-control" id="workout-equipment" name="equipment_needed" rows="2" placeholder="List any equipment needed for this workout"></textarea>
+                        <label for="workoutDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="workoutDescription" name="description" rows="2" required></textarea>
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="workout-instructions" class="form-label">General Instructions</label>
-                        <textarea class="form-control" id="workout-instructions" name="instructions" rows="3" placeholder="General instructions for the workout"></textarea>
+                        <label for="workoutInstructions" class="form-label">Instructions</label>
+                        <textarea class="form-control" id="workoutInstructions" name="instructions" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="workoutEquipment" class="form-label">Equipment Needed</label>
+                        <input type="text" class="form-control" id="workoutEquipment" name="equipment_needed" placeholder="e.g., Dumbbells, Resistance bands, etc.">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save Workout</button>
+                    <button type="submit" class="btn btn-primary">Add Workout</button>
                 </div>
             </form>
         </div>
@@ -458,263 +523,256 @@
 </div>
 
 <!-- Add Goal Template Modal -->
-<div class="modal fade" id="addGoalModal" tabindex="-1" aria-labelledby="addGoalModalLabel" aria-hidden="true">
+<div class="modal fade" id="addGoalTemplateModal" tabindex="-1" aria-labelledby="addGoalTemplateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="addGoalModalLabel">Add SMART Goal Template</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="addGoalTemplateModalLabel">Add SMART Goal Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('off_season.add_goal_template') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <form action="{{ url_for('off_season.add_goal_template') }}" method="post">
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-8">
-                            <label for="goal-title" class="form-label">Goal Template Title</label>
-                            <input type="text" class="form-control" id="goal-title" name="title" required>
+                            <label for="goalTitle" class="form-label">Template Title</label>
+                            <input type="text" class="form-control" id="goalTitle" name="title" required>
                         </div>
                         <div class="col-md-4">
-                            <label for="goal-phase" class="form-label">Training Phase</label>
-                            <select class="form-select" id="goal-phase" name="phase_id" required>
-                                <option value="" selected disabled>Select Phase</option>
+                            <label for="goalPhase" class="form-label">Phase</label>
+                            <select class="form-select" id="goalPhase" name="phase_id" required>
+                                <option value="">Select a phase...</option>
                                 {% for phase in phases %}
                                     <option value="{{ phase.id }}">{{ phase.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
-                    
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="goal-category" class="form-label">Category</label>
-                            <select class="form-select" id="goal-category" name="category" required>
-                                <option value="" selected disabled>Select Category</option>
+                            <label for="goalCategory" class="form-label">Category</label>
+                            <select class="form-select" id="goalCategory" name="category" required>
+                                <option value="">Select category...</option>
                                 <option value="Physical">Physical</option>
                                 <option value="Technical">Technical</option>
                                 <option value="Tactical">Tactical</option>
                                 <option value="Mental">Mental</option>
                                 <option value="Consistency">Consistency</option>
+                                <option value="Habit">Habit</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="goal-measurement" class="form-label">Measurement Type</label>
-                            <select class="form-select" id="goal-measurement" name="measurement_type" required>
-                                <option value="" selected disabled>Select Measurement</option>
-                                <option value="Numeric">Numeric (e.g., increase by X)</option>
-                                <option value="Percentage">Percentage (e.g., improve by X%)</option>
-                                <option value="Frequency">Frequency (e.g., X times per week)</option>
-                                <option value="Binary">Binary (e.g., achieved/not achieved)</option>
+                            <label for="goalMeasurement" class="form-label">Measurement Type</label>
+                            <select class="form-select" id="goalMeasurement" name="measurement_type" required>
+                                <option value="">Select measurement type...</option>
+                                <option value="Numeric">Numeric</option>
+                                <option value="Percentage">Percentage</option>
+                                <option value="Frequency">Frequency</option>
+                                <option value="Binary">Binary (Yes/No)</option>
+                                <option value="Time">Time</option>
+                                <option value="Distance">Distance</option>
                             </select>
                         </div>
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="goal-description" class="form-label">Description</label>
-                        <textarea class="form-control" id="goal-description" name="description" rows="3" required></textarea>
-                        <div class="form-text">Describe the goal template. Use {X} as a placeholder for the value the player will set.</div>
+                        <label for="goalDescription" class="form-label">Description Template</label>
+                        <textarea class="form-control" id="goalDescription" name="description" rows="2" placeholder="Use {X} as a placeholder for the player's specific target value" required></textarea>
+                        <small class="form-text text-muted">Example: "Increase vertical jump height by {X} inches by the end of the phase"</small>
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="goal-example" class="form-label">Example</label>
-                        <input type="text" class="form-control" id="goal-example" name="example" required>
-                        <div class="form-text">Provide an example of a completed goal using this template.</div>
+                        <label for="goalExample" class="form-label">Example</label>
+                        <input type="text" class="form-control" id="goalExample" name="example" placeholder="A complete example of this goal" required>
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="goal-tips" class="form-label">Tips for Success</label>
-                        <textarea class="form-control" id="goal-tips" name="tips" rows="2"></textarea>
+                        <label for="goalTips" class="form-label">Tips for Achievement</label>
+                        <textarea class="form-control" id="goalTips" name="tips" rows="2" placeholder="Tips to help players achieve this goal"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-info">Save Goal Template</button>
+                    <button type="submit" class="btn btn-primary">Add Goal Template</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Delete Phase Modal -->
-<div class="modal fade" id="deletePhaseModal" tabindex="-1" aria-labelledby="deletePhaseModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deletePhaseModalLabel">Delete Training Phase</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the phase "<span id="delete-phase-name"></span>"?</p>
-                <p class="text-danger"><strong>Warning:</strong> This will also delete all workouts, exercises, and progress data associated with this phase.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="delete-phase-form" action="" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">Delete Phase</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set up delete phase modal
-    const deletePhaseModal = document.getElementById('deletePhaseModal');
-    if (deletePhaseModal) {
-        deletePhaseModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const phaseId = button.getAttribute('data-phase-id');
-            const phaseName = button.getAttribute('data-phase-name');
-            
-            document.getElementById('delete-phase-name').textContent = phaseName;
-            document.getElementById('delete-phase-form').action = "{{ url_for('off_season.delete_phase', phase_id=0) }}".replace('0', phaseId);
-        });
-    }
-    
-    // Load workouts based on filters
-    function loadWorkouts() {
-        const phaseFilter = document.getElementById('phase-filter').value;
-        const typeFilter = document.getElementById('type-filter').value;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load workouts on page load
+        loadWorkouts();
         
-        fetch(`{{ url_for('off_season.get_workouts') }}?phase_id=${phaseFilter}&type=${typeFilter}`)
-            .then(response => response.json())
-            .then(data => {
-                const tableBody = document.getElementById('workouts-table-body');
-                tableBody.innerHTML = '';
-                
-                if (data.workouts.length === 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td colspan="6" class="text-center">
-                            <p class="my-3">No workouts match the selected filters.</p>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                } else {
-                    data.workouts.forEach(workout => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${workout.title}</td>
-                            <td>${workout.phase_name}</td>
-                            <td>${workout.workout_type}</td>
-                            <td>
-                                <span class="badge bg-${workout.difficulty_level === 'Beginner' ? 'success' : workout.difficulty_level === 'Intermediate' ? 'warning' : 'danger'}">
-                                    ${workout.difficulty_level}
-                                </span>
-                            </td>
-                            <td>${workout.exercises_count}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="${"{{ url_for('off_season.edit_workout', workout_id=0) }}".replace('0', workout.id)}" class="btn btn-outline-primary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a href="${"{{ url_for('off_season.workout_detail', workout_id=0) }}".replace('0', workout.id)}" class="btn btn-outline-secondary">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="${"{{ url_for('off_season.manage_exercises', workout_id=0) }}".replace('0', workout.id)}" class="btn btn-outline-success">
-                                        <i class="bi bi-list-check"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-outline-danger" 
-                                            onclick="deleteWorkout(${workout.id}, '${workout.title}')">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+        // Load goal templates on page load
+        loadGoalTemplates();
+        
+        // Filter workouts button click
+        document.getElementById('filterWorkoutsBtn').addEventListener('click', function() {
+            loadWorkouts();
+        });
+        
+        // Workout select change
+        const workoutSelect = document.getElementById('workoutSelect');
+        const manageExercisesBtn = document.getElementById('manageExercisesBtn');
+        
+        workoutSelect.addEventListener('change', function() {
+            if (this.value) {
+                manageExercisesBtn.disabled = false;
+                manageExercisesBtn.href = "{{ url_for('off_season.manage_exercises', workout_id=0) }}".replace('0', this.value);
+            } else {
+                manageExercisesBtn.disabled = true;
+            }
+        });
+        
+        // Initialize manage exercises button
+        manageExercisesBtn.addEventListener('click', function() {
+            if (workoutSelect.value) {
+                window.location.href = "{{ url_for('off_season.manage_exercises', workout_id=0) }}".replace('0', workoutSelect.value);
+            }
+        });
+        
+        // Function to load workouts
+        function loadWorkouts() {
+            const phaseFilter = document.getElementById('phaseFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            const workoutsTable = document.getElementById('workoutsTable').querySelector('tbody');
+            
+            // Show loading state
+            workoutsTable.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading workouts...</p>
+                    </td>
+                </tr>
+            `;
+            
+            // Build URL with query parameters
+            let url = "{{ url_for('off_season.get_workouts') }}";
+            const params = [];
+            
+            if (phaseFilter) {
+                params.push(`phase_id=${phaseFilter}`);
+            }
+            
+            if (typeFilter) {
+                params.push(`type=${typeFilter}`);
+            }
+            
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            // Fetch workouts
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Clear workout select options
+                        workoutSelect.innerHTML = '<option value="">Select a workout...</option>';
+                        
+                        // Update workouts table
+                        if (data.workouts.length > 0) {
+                            let tableHtml = '';
+                            
+                            data.workouts.forEach(workout => {
+                                // Add to table
+                                tableHtml += `
+                                    <tr>
+                                        <td>${workout.title}</td>
+                                        <td>${workout.phase_name}</td>
+                                        <td>${workout.workout_type}</td>
+                                        <td>
+                                            <span class="badge bg-${workout.difficulty_level === 'Beginner' ? 'success' : workout.difficulty_level === 'Intermediate' ? 'warning' : 'danger'}">
+                                                ${workout.difficulty_level}
+                                            </span>
+                                        </td>
+                                        <td>${workout.exercises_count}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('off_season.workout_detail', workout_id=0) }}".replace('0', workout.id) class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-eye"></i> View
+                                                </a>
+                                                <a href="{{ url_for('off_season.edit_workout', workout_id=0) }}".replace('0', workout.id) class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                                <a href="{{ url_for('off_season.manage_exercises', workout_id=0) }}".replace('0', workout.id) class="btn btn-sm btn-outline-warning">
+                                                    <i class="bi bi-list-check"></i> Exercises
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-workout-btn" data-workout-id="${workout.id}">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                                
+                                // Add to workout select
+                                const option = document.createElement('option');
+                                option.value = workout.id;
+                                option.textContent = `${workout.title} (${workout.phase_name})`;
+                                workoutSelect.appendChild(option);
+                            });
+                            
+                            workoutsTable.innerHTML = tableHtml;
+                            
+                            // Add event listeners to delete buttons
+                            document.querySelectorAll('.delete-workout-btn').forEach(button => {
+                                button.addEventListener('click', function() {
+                                    if (confirm('Are you sure you want to delete this workout? This will also delete all exercises and progress data associated with it.')) {
+                                        deleteWorkout(this.dataset.workoutId);
+                                    }
+                                });
+                            });
+                        } else {
+                            workoutsTable.innerHTML = `
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <p>No workouts found matching the selected filters.</p>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    } else {
+                        workoutsTable.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="alert alert-danger">
+                                        <p>Error loading workouts: ${data.message}</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    workoutsTable.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <div class="alert alert-danger">
+                                    <p>An error occurred while loading workouts. Please try again.</p>
                                 </div>
                             </td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error loading workouts:', error);
-                const tableBody = document.getElementById('workouts-table-body');
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center">
-                            <div class="alert alert-danger">
-                                Error loading workouts. Please try again.
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-    }
-
-    
-
-    // Load goal templates
-    function loadGoalTemplates() {
-        fetch("{{ url_for('off_season.get_goal_templates') }}")
-            .then(response => response.json())
-            .then(data => {
-                const tableBody = document.getElementById('goals-table-body');
-                tableBody.innerHTML = '';
-                
-                if (data.goals.length === 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td colspan="5" class="text-center">
-                            <p class="my-3">No goal templates have been created yet.</p>
-                        </td>
+                        </tr>
                     `;
-                    tableBody.appendChild(row);
-                } else {
-                    data.goals.forEach(goal => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${goal.title}</td>
-                            <td>${goal.phase_name}</td>
-                            <td>
-                                <span class="badge bg-secondary">${goal.category}</span>
-                            </td>
-                            <td>${goal.measurement_type}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="${"{{ url_for('off_season.edit_goal_template', goal_id=0) }}".replace('0', goal.id)}" class="btn btn-outline-primary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-outline-danger" 
-                                            onclick="deleteGoalTemplate(${goal.id}, '${goal.title}')">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error loading goal templates:', error);
-                const tableBody = document.getElementById('goals-table-body');
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center">
-                            <div class="alert alert-danger">
-                                Error loading goal templates. Please try again.
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-    }
-
-    
-    // Delete workout function
-    window.deleteWorkout = function(workoutId, workoutTitle) {
-        if (confirm(`Are you sure you want to delete the workout "${workoutTitle}"? This will also delete all exercises and progress data associated with this workout.`)) {
+                });
+        }
+        
+        // Function to delete a workout
+        function deleteWorkout(workoutId) {
             fetch("{{ url_for('off_season.delete_workout', workout_id=0) }}".replace('0', workoutId), {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}"
+                    'Content-Type': 'application/json'
                 }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Workout deleted successfully!');
+                    // Reload workouts
                     loadWorkouts();
                 } else {
                     alert('Error deleting workout: ' + data.message);
@@ -722,25 +780,113 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while deleting the workout.');
+                alert('An error occurred while deleting the workout. Please try again.');
             });
         }
-    };
-    
-    // Delete goal template function
-    window.deleteGoalTemplate = function(goalId, goalTitle) {
-        if (confirm(`Are you sure you want to delete the goal template "${goalTitle}"?`)) {
+        
+        // Function to load goal templates
+        function loadGoalTemplates() {
+            const goalTemplatesTable = document.getElementById('goalTemplatesTable').querySelector('tbody');
+            
+            // Show loading state
+            goalTemplatesTable.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading goal templates...</p>
+                    </td>
+                </tr>
+            `;
+            
+            // Fetch goal templates
+            fetch("{{ url_for('off_season.get_goal_templates') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update goal templates table
+                        if (data.goals.length > 0) {
+                            let tableHtml = '';
+                            
+                            data.goals.forEach(goal => {
+                                tableHtml += `
+                                    <tr>
+                                        <td>${goal.title}</td>
+                                        <td>${goal.phase_name}</td>
+                                        <td>${goal.category}</td>
+                                        <td>${goal.measurement_type}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('off_season.edit_goal_template', goal_id=0) }}".replace('0', goal.id) class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-goal-btn" data-goal-id="${goal.id}">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+                            
+                            goalTemplatesTable.innerHTML = tableHtml;
+                            
+                            // Add event listeners to delete buttons
+                            document.querySelectorAll('.delete-goal-btn').forEach(button => {
+                                button.addEventListener('click', function() {
+                                    if (confirm('Are you sure you want to delete this goal template?')) {
+                                        deleteGoalTemplate(this.dataset.goalId);
+                                    }
+                                });
+                            });
+                        } else {
+                            goalTemplatesTable.innerHTML = `
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <p>No goal templates found.</p>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    } else {
+                        goalTemplatesTable.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    <div class="alert alert-danger">
+                                        <p>Error loading goal templates: ${data.message}</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    goalTemplatesTable.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="alert alert-danger">
+                                    <p>An error occurred while loading goal templates. Please try again.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+        }
+        
+        // Function to delete a goal template
+        function deleteGoalTemplate(goalId) {
             fetch("{{ url_for('off_season.delete_goal_template', goal_id=0) }}".replace('0', goalId), {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() }}"
+                    'Content-Type': 'application/json'
                 }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Goal template deleted successfully!');
+                    // Reload goal templates
                     loadGoalTemplates();
                 } else {
                     alert('Error deleting goal template: ' + data.message);
@@ -748,24 +894,10 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while deleting the goal template.');
+                alert('An error occurred while deleting the goal template. Please try again.');
             });
         }
-    };
-    
-    // Initial load
-    if (document.getElementById('workouts-table-body')) {
-        loadWorkouts();
-        
-        // Set up filter change handlers
-        document.getElementById('phase-filter').addEventListener('change', loadWorkouts);
-        document.getElementById('type-filter').addEventListener('change', loadWorkouts);
-    }
-    
-    if (document.getElementById('goals-table-body')) {
-        loadGoalTemplates();
-    }
-});
+    });
 </script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
