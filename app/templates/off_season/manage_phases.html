@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.index') }}">Off-Season Training</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('off_season.admin_dashboard') }}">Admin</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Manage Phases</li>
+                </ol>
+            </nav>
+            <h1>Manage Training Phases</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('off_season.admin_dashboard') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Admin Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-calendar-range"></i> Training Phase Management</h5>
+                        <div>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPhaseModal">
+                                <i class="bi bi-plus-circle"></i> Add New Phase
+                            </button>
+                            <form action="{{ url_for('off_season.initialize_off_season') }}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-outline-secondary">
+                                    <i class="bi bi-calendar-plus"></i> Initialize Default Phases
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phases Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Training Phases</h3>
+                </div>
+                <div class="card-body">
+                    {% if phases %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Date Range</th>
+                                        <th>Primary Focus</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for phase in phases %}
+                                        <tr>
+                                            <td>{{ phase.name }}</td>
+                                            <td>{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</td>
+                                            <td>{{ phase.primary_focus }}</td>
+                                            <td>
+                                                {% if today < phase.start_date %}
+                                                    <span class="badge bg-info">Upcoming</span>
+                                                {% elif today > phase.end_date %}
+                                                    <span class="badge bg-secondary">Completed</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{{ url_for('off_season.phase_detail', phase_id=phase.id) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </a>
+                                                    <a href="{{ url_for('off_season.edit_phase', phase_id=phase.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-pencil"></i> Edit
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletePhaseModal{{ phase.id }}">
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Delete Phase Modal -->
+                                                <div class="modal fade" id="deletePhaseModal{{ phase.id }}" tabindex="-1" aria-labelledby="deletePhaseModalLabel{{ phase.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="deletePhaseModalLabel{{ phase.id }}">Confirm Delete</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete the phase <strong>{{ phase.name }}</strong>?</p>
+                                                                <p class="text-danger">This will also delete all workouts, exercises, and progress data associated with this phase.</p>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <form action="{{ url_for('off_season.delete_phase', phase_id=phase.id) }}" method="post">
+                                                                    <button type="submit" class="btn btn-danger">Delete Phase</button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>No training phases have been created yet.</p>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPhaseModal">
+                                <i class="bi bi-plus-circle"></i> Add First Phase
+                            </button>
+                            <form action="{{ url_for('off_season.initialize_off_season') }}" method="post" class="d-inline-block">
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="bi bi-calendar-plus"></i> Initialize Default Phases
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Schedule Templates Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Weekly Schedule Templates</h3>
+                </div>
+                <div class="card-body">
+                    {% if phases %}
+                        <p>Manage weekly schedule templates for each training phase:</p>
+                        <div class="list-group">
+                            {% for phase in phases %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <h5 class="mb-1">{{ phase.name }}</h5>
+                                        <span class="badge {{ 'bg-success' if phase.start_date <= today and phase.end_date >= today else 'bg-secondary' }}">
+                                            {{ 'Active' if phase.start_date <= today and phase.end_date >= today else 'Inactive' }}
+                                        </span>
+                                    </div>
+                                    <p class="mb-1">{{ phase.start_date.strftime('%b %d') }} - {{ phase.end_date.strftime('%b %d, %Y') }}</p>
+                                    <div class="mt-2">
+                                        <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='standard') }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-calendar-week"></i> Standard Template
+                                        </a>
+                                        <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='minimal') }}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-calendar-week"></i> Minimal Template
+                                        </a>
+                                        <a href="{{ url_for('off_season.edit_schedule_template', phase_id=phase.id, template_type='high_volume') }}" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-calendar-week"></i> High-Volume Template
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <p>Create training phases first to manage weekly schedule templates.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Planning Guidelines -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Phase Planning Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Effective Phase Structure</h6>
+                            <ul>
+                                <li>Each phase should have a clear, distinct focus</li>
+                                <li>Phases should build progressively on each other</li>
+                                <li>Consider appropriate duration (typically 4-6 weeks)</li>
+                                <li>Ensure smooth transitions between phases</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Content Development</h6>
+                            <ul>
+                                <li>Balance volume and intensity appropriately</li>
+                                <li>Include specific, measurable outcomes</li>
+                                <li>Consider recovery needs within the phase</li>
+                                <li>Align with seasonal periodization principles</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Phase Modal -->
+<div class="modal fade" id="addPhaseModal" tabindex="-1" aria-labelledby="addPhaseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPhaseModalLabel">Add New Training Phase</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('off_season.add_phase') }}" method="post">
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="phaseName" class="form-label">Phase Name</label>
+                            <input type="text" class="form-control" id="phaseName" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="primaryFocus" class="form-label">Primary Focus</label>
+                            <input type="text" class="form-control" id="primaryFocus" name="primary_focus" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="trainingEmphasis" class="form-label">Training Emphasis</label>
+                            <input type="text" class="form-control" id="trainingEmphasis" name="training_emphasis" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="volumeIntensity" class="form-label">Volume/Intensity</label>
+                            <input type="text" class="form-control" id="volumeIntensity" name="volume_intensity" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="keyOutcome" class="form-label">Key Outcome</label>
+                        <input type="text" class="form-control" id="keyOutcome" name="key_outcome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phaseDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="phaseDescription" name="description" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Phase</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date pickers with default values
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        if (startDateInput && !startDateInput.value) {
+            const today = new Date();
+            startDateInput.valueAsDate = today;
+        }
+        
+        if (endDateInput && !endDateInput.value) {
+            const today = new Date();
+            const sixWeeksLater = new Date(today);
+            sixWeeksLater.setDate(today.getDate() + 42); // 6 weeks
+            endDateInput.valueAsDate = sixWeeksLater;
+        }
+        
+        // Validate end date is after start date
+        if (startDateInput && endDateInput) {
+            startDateInput.addEventListener('change', function() {
+                if (endDateInput.value && startDateInput.value > endDateInput.value) {
+                    alert('End date must be after start date');
+                    startDateInput.value = '';
+                }
+            });
+            
+            endDateInput.addEventListener('change', function() {
+                if (startDateInput.value && startDateInput.value > endDateInput.value) {
+                    alert('End date must be after start date');
+                    endDateInput.value = '';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
