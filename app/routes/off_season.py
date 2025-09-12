@@ -52,13 +52,13 @@ class ScheduleForm(FlaskForm):
 
 class SessionForm(FlaskForm):
     day_of_week = SelectField('Day of Week', choices=[
-        (0, 'Monday'),
-        (1, 'Tuesday'),
-        (2, 'Wednesday'),
-        (3, 'Thursday'),
-        (4, 'Friday'),
-        (5, 'Saturday'),
-        (6, 'Sunday')
+        (1, 'Monday'),
+        (2, 'Tuesday'),
+        (3, 'Wednesday'),
+        (4, 'Thursday'),
+        (5, 'Friday'),
+        (6, 'Saturday'),
+        (7, 'Sunday')
     ], coerce=int, validators=[DataRequired()])
     training_focus = StringField('Training Focus', validators=[DataRequired(), Length(max=100)])
     duration_minutes = IntegerField('Duration (minutes)', validators=[DataRequired(), NumberRange(min=1)])
@@ -398,7 +398,8 @@ def add_session(schedule_id):
     # Get the day from query parameter if provided
     day = request.args.get('day', type=int)
     if day is not None:
-        form.day_of_week.data = int(day)  # Make sure it's an integer
+        # Add 1 to convert from 0-based to 1-based indexing
+        form.day_of_week.data = day + 1
     
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
