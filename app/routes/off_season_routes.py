@@ -1996,14 +1996,23 @@ def import_all_sample_content():
     flash('All sample content has been imported successfully!', 'success')
     return redirect(url_for('off_season.admin_dashboard'))
 
+from flask_wtf import FlaskForm
+
+# Create a simple form class just for CSRF protection
+class ScheduleTemplateForm(FlaskForm):
+    pass
+
 @off_season.route('/off-season/edit-schedule-template/<int:phase_id>/<string:template_type>', methods=['GET', 'POST'])
 @login_required
-@admin_required  # If you have this decorator, otherwise use the admin check inside the function
+@admin_required  # If you have this decorator
 def edit_schedule_template(phase_id, template_type):
     """Edit or create a weekly schedule template"""
     if not current_user.is_admin:
         flash('You do not have permission to perform this action.', 'danger')
         return redirect(url_for('off_season.index'))
+    
+    # Create a form instance for CSRF protection
+    form = ScheduleTemplateForm()
     
     phase = OffSeasonPhase.query.filter_by(
         id=phase_id,
@@ -2028,7 +2037,8 @@ def edit_schedule_template(phase_id, template_type):
         db.session.commit()
         flash(f'New {template_type} schedule template created. Please fill in the details.', 'info')
     
-    if request.method == 'POST':
+    # Use validate_on_submit() to check if the form was submitted and valid (includes CSRF check)
+    if form.validate_on_submit():
         try:
             # Update template with form data
             for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']:
@@ -2047,4 +2057,6 @@ def edit_schedule_template(phase_id, template_type):
     return render_template('off_season/edit_schedule_template.html', 
                           phase=phase, 
                           template=template,
-                          template_type=template_type)
+                          template_type=template_type,
+                          form=form)  # Pass the form to the template
+
