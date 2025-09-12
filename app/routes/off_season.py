@@ -197,7 +197,8 @@ def index():
         current_phase=current_phase,
         goals=goals,
         completed_sessions=completed_sessions,
-        today_schedule=today_schedule
+        today_schedule=today_schedule,
+        today=today  # Add this line
     )
 
 @bp.route('/phases')
