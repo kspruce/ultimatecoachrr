@@ -106,7 +106,7 @@
                         <td class="text-muted align-middle" colspan="3">No training scheduled</td>
                         <td class="align-middle">
                             {% if current_user.is_admin %}
-                            <a href="{{ url_for('off_season.add_session', schedule_id=schedule.id) }}?day={{ day_index }}" class="btn btn-sm btn-outline-primary">
+                            <a href="{{ url_for('off_season.add_session', schedule_id=schedule.id) }}?day={{ day_index - 1 }}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-plus-circle"></i> Add Session
                             </a>
                             {% else %}

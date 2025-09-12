@@ -351,16 +351,15 @@ def view_schedule(schedule_id):
     phase = schedule.phase
     
     # Get sessions for this schedule
-    sessions = ScheduleSession.query.filter_by(schedule_id=schedule.id, team_organization_id=team_id).order_by(ScheduleSession.day_of_week).all()
+    sessions = ScheduleSession.query.filter_by(schedule_id=schedule.id, team_organization_id=team_id).all()
     
-    # Organize sessions by day of week
+    # Organize sessions by day of week (now using 1-7 indexing)
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    sessions_by_day = {i: None for i in range(7)}
+    sessions_by_day = {i+1: None for i in range(7)}  # Use 1-7 indexing
     
     for session in sessions:
         sessions_by_day[session.day_of_week] = session
     
-
     return render_template(
         'off_season/view_schedule.html',
         schedule=schedule,
@@ -368,8 +367,9 @@ def view_schedule(schedule_id):
         sessions=sessions,
         sessions_by_day=sessions_by_day,
         days=days,
-        enumerated_days=enumerate(days)  # Add this line
+        enumerated_days=[(i+1, day) for i, day in enumerate(days)]  # Use 1-7 indexing
     )
+
 
 @bp.route('/schedules/<int:schedule_id>/delete', methods=['POST'])
 @login_required
