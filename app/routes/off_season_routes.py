@@ -556,7 +556,7 @@ def delete_phase(phase_id):
     
     return redirect(url_for('off_season.admin_dashboard'))
 
-@off_season.route('/off-season/add-workout', methods=['POST'])
+@off_season.route('/off-season/add-workout', methods=['GET', 'POST'])
 @login_required
 def add_workout():
     """Add a new workout"""
