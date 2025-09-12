@@ -438,7 +438,8 @@ def add_session(schedule_id):
         flash('Session added successfully!', 'success')
         return redirect(url_for('off_season.view_schedule', schedule_id=schedule.id))
     
-    return render_template('off_season/session_form.html', form=form, workout_session=session)
+    return render_template('off_season/session_form.html', form=form, schedule=schedule)
+
 
 @bp.route('/sessions/<int:session_id>/edit', methods=['GET', 'POST'])
 @login_required
