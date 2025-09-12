@@ -441,6 +441,7 @@ def add_session(schedule_id):
     return render_template('off_season/session_form.html', form=form, schedule=schedule)
 
 
+
 @bp.route('/sessions/<int:session_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -537,6 +538,7 @@ def add_workout(phase_id):
     
     return render_template('off_season/workout_form.html', form=form, phase=phase)
 
+
 @bp.route('/workouts/<int:workout_id>')
 @login_required
 def view_workout(workout_id):
@@ -562,6 +564,9 @@ def edit_workout(workout_id):
     workout = WorkoutPlan.query.filter_by(id=workout_id, team_organization_id=team_id).first_or_404()
     form = WorkoutPlanForm(obj=workout)
     
+    # Get the phase for the workout
+    phase = workout.phase  # Add this line to get the phase
+    
     if form.validate_on_submit():
         workout.name = form.name.data
         workout.description = form.description.data
@@ -574,7 +579,9 @@ def edit_workout(workout_id):
         flash(f'Workout plan "{workout.name}" updated successfully!', 'success')
         return redirect(url_for('off_season.view_workout', workout_id=workout.id))
     
-    return render_template('off_season/workout_form.html', form=form, workout=workout)
+    # Pass the phase to the template
+    return render_template('off_season/workout_form.html', form=form, workout=workout, phase=phase)
+
 
 @bp.route('/workouts/<int:workout_id>/delete', methods=['POST'])
 @login_required
