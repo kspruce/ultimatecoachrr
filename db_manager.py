@@ -10,7 +10,7 @@ from app.models.clip import Clip, ClipTag
 from app.models.session import SessionPlan, SessionComponent, Attendance
 from app.models.cutting_skill import CuttingSkill
 from app.models.theory import TheorySection
-from app.models.fitness import FitnessMetric, FitnessRecord
+from app.models.fitness import Fitness_Metric, FitnessRecord
 from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
 from app.models.team_organization import TeamOrganization  # Add this import
 from app.models.drill import SavedDrill  # Make sure this is imported correctly

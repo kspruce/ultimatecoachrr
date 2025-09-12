@@ -49,8 +49,8 @@ class PhaseMetric(db.Model):
     __tablename__ = 'phase_metrics'
     
     id = db.Column(db.Integer, primary_key=True)
-    phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)
-    metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metrics.id'), nullable=False)
+    phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)   
+    metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metric.id'), nullable=False)
     target_value = db.Column(db.Float)  # Optional target value for this metric in this phase
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
