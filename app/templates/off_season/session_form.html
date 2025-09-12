@@ -92,7 +92,7 @@
                         <select class="form-select {% if form.workout_plans.errors %}is-invalid{% endif %}" 
                                 id="workout_plans" name="workout_plans" multiple size="6">
                             {% for value, label in form.workout_plans.choices %}
-                            <option value="{{ value }}" {% if value in form.workout_plans.data %}selected{% endif %}>{{ label }}</option>
+                            <option value="{{ value }}" {% if form.workout_plans.data and value in form.workout_plans.data %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                         {% if form.workout_plans.errors %}

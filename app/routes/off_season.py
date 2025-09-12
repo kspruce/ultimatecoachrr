@@ -395,12 +395,21 @@ def add_session(schedule_id):
     schedule = PhaseSchedule.query.filter_by(id=schedule_id, team_organization_id=team_id).first_or_404()
     form = SessionForm()
     
+    # Get the day from query parameter if provided
+    day = request.args.get('day', type=int)
+    if day is not None:
+        form.day_of_week.data = day
+    
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
         phase_id=schedule.phase_id,
         team_organization_id=team_id
     ).all()
     form.workout_plans.choices = [(wp.id, f"{wp.name} ({wp.category.value.capitalize()} - {wp.level.value.capitalize()})") for wp in workout_plans]
+    
+    # Initialize form.workout_plans.data as an empty list if it's None
+    if form.workout_plans.data is None:
+        form.workout_plans.data = []
     
     if form.validate_on_submit():
         # Check if a session already exists for this day
