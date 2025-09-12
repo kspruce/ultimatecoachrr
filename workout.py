@@ -1,5 +1,8 @@
-from app import app, db
-from app.models.off_season import OffSeasonWorkout
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from off_season import app, db, OffSeasonWorkout
 
 def categorize_workouts():
     with app.app_context():
