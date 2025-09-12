@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.off_season import OffSeasonPhase, OffSeasonWorkout, OffSeasonExercise, PlayerOffSeasonProgress, DEFAULT_PHASES
 from app.models.player import Player
+from app.models.weekly_schedule_template import WeeklyScheduleTemplate
 from datetime import datetime, date
 from sqlalchemy import func
 import markdown
@@ -104,7 +105,23 @@ def phase_detail(phase_id):
     
     today = date.today()
     
-    return render_template('off_season/phase_detail.html', phase=phase, workouts=workouts, today=today)
+    # Get schedule templates for this phase
+    schedule_templates = {}
+    template_types = ['standard', 'minimal', 'high_volume']
+    
+    for template_type in template_types:
+        template = WeeklyScheduleTemplate.query.filter_by(
+            phase_id=phase_id,
+            template_type=template_type,
+            team_organization_id=get_current_team_id()
+        ).first()
+        schedule_templates[template_type] = template
+    
+    return render_template('off_season/phase_detail.html', 
+                          phase=phase, 
+                          workouts=workouts, 
+                          today=today,
+                          schedule_templates=schedule_templates)
 
 @off_season.route('/off-season/workouts')
 @login_required
