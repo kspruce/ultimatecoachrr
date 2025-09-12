@@ -5,10 +5,9 @@ from datetime import datetime
 # Disable Discord integration if needed
 os.environ['DISCORD_ENABLED'] = 'False'
 
-# Import app and models using the correct path
+# Import app and models
 from app import create_app, db
-# Import the OffSeasonWorkout model from the correct location
-from app.models.off_season import OffSeasonWorkout
+from sqlalchemy import text
 
 # Create app instance
 app = create_app()
@@ -17,41 +16,24 @@ def print_status(message):
     """Helper function to print status messages"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
-def categorize_workouts():
-    """Categorize workouts that don't have a category assigned"""
+def add_workout_category_column():
+    """Add workout_category column to off_season_workout table"""
     with app.app_context():
         try:
-            print_status("Starting workout categorization...")
+            print_status("Adding workout_category column to off_season_workout table...")
             
-            # Get all workouts without a category
-            workouts = OffSeasonWorkout.query.filter(OffSeasonWorkout.workout_category == None).all()
+            # Add the column if it doesn't exist
+            db.session.execute(
+                text("ALTER TABLE off_season_workout ADD COLUMN IF NOT EXISTS workout_category VARCHAR(50)")
+            )
             
-            if not workouts:
-                print_status("No uncategorized workouts found.")
-                return
-                
-            print_status(f"Found {len(workouts)} uncategorized workouts.")
-            
-            for workout in workouts:
-                # Categorize based on workout_type
-                if workout.workout_type in ['Strength', 'Power']:
-                    workout.workout_category = 'Strength'
-                elif workout.workout_type in ['Throwing', 'Technical']:
-                    workout.workout_category = 'Skills'
-                elif workout.workout_type in ['Endurance', 'Speed', 'Agility', 'Recovery']:
-                    workout.workout_category = 'Conditioning'
-                else:
-                    # Default category
-                    workout.workout_category = 'Strength'
-            
-            # Commit changes
             db.session.commit()
-            print_status(f"Successfully categorized {len(workouts)} workouts")
+            print_status("Successfully added workout_category column")
             
         except Exception as e:
-            print_status(f"Error during workout categorization: {str(e)}")
+            print_status(f"Error adding column: {str(e)}")
             db.session.rollback()
             sys.exit(1)
 
 if __name__ == "__main__":
-    categorize_workouts()
+    add_workout_category_column()
