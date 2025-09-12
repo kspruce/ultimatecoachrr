@@ -398,7 +398,7 @@ def add_session(schedule_id):
     # Get the day from query parameter if provided
     day = request.args.get('day', type=int)
     if day is not None:
-        form.day_of_week.data = day
+        form.day_of_week.data = int(day)  # Make sure it's an integer
     
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
@@ -459,6 +459,8 @@ def edit_session(session_id):
     team_id = get_current_team_id()
     session = ScheduleSession.query.filter_by(id=session_id, team_organization_id=team_id).first_or_404()
     form = SessionForm(obj=session)
+    # Get the schedule for the breadcrumb
+    schedule = session.schedule  # Add this line
     
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
@@ -502,7 +504,7 @@ def edit_session(session_id):
         flash('Session updated successfully!', 'success')
         return redirect(url_for('off_season.view_schedule', schedule_id=session.schedule_id))
     
-    return render_template('off_season/session_form.html', form=form, session=session)
+    return render_template('off_season/session_form.html', form=form, workout_session=session, schedule=schedule)
 
 @bp.route('/sessions/<int:session_id>/delete', methods=['POST'])
 @login_required
