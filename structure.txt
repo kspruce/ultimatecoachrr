@@ -81,6 +81,7 @@
 │   │   ├── game.py
 │   │   ├── game_player.py
 │   │   ├── gameday.py
+│   │   ├── off_season.py
 │   │   ├── playbook.py
 │   │   ├── player.py
 │   │   ├── point.py
@@ -93,7 +94,9 @@
 │   │   ├── throws.py
 │   │   ├── tournament.py
 │   │   ├── tournament_rsvp.py
-│   │   └── user.py
+│   │   ├── user.py
+│   │   ├── weekly_schedule_template.py
+│   │   └── weekly_workout_completion.py
 │   ├── routes
 │   │   ├── __init__.py
 │   │   ├── __pycache__
@@ -122,6 +125,7 @@
 │   │   ├── game.py
 │   │   ├── gameday.py
 │   │   ├── main.py
+│   │   ├── off_season_routes.py
 │   │   ├── playbook.py
 │   │   ├── point.py
 │   │   ├── scouting.py
@@ -132,7 +136,8 @@
 │   │   ├── team.py
 │   │   ├── team_organization.py
 │   │   ├── theory.py
-│   │   └── tournament.py
+│   │   ├── tournament.py
+│   │   └── weekly_workout_routes.py
 │   ├── static
 │   │   ├── css
 │   │   │   ├── calendar.css
@@ -141,6 +146,8 @@
 │   │   │   ├── gameday.css
 │   │   │   ├── main.css
 │   │   │   └── session_styles.css
+│   │   ├── docs
+│   │   │   └── ultimate_frisbee_off_season_guide.md
 │   │   ├── images
 │   │   │   ├── drills
 │   │   │   └── theory
@@ -188,6 +195,7 @@
 │   │   │   └── settings.html
 │   │   ├── drills
 │   │   │   └── view.html
+│   │   ├── error.html
 │   │   ├── fitness
 │   │   │   ├── batch_record.html
 │   │   │   ├── batch_select_metric.html
@@ -209,6 +217,29 @@
 │   │   │   └── team_stats.html
 │   │   ├── how_to_use.html
 │   │   ├── index.html
+│   │   ├── off_season
+│   │   │   ├── admin.html
+│   │   │   ├── admin_weekly_progress.html
+│   │   │   ├── edit_goal_template.html
+│   │   │   ├── edit_phase.html
+│   │   │   ├── edit_schedule_template.html
+│   │   │   ├── edit_workout.html
+│   │   │   ├── guide.html
+│   │   │   ├── import_content.html
+│   │   │   ├── index.html
+│   │   │   ├── manage_all_exercises.html
+│   │   │   ├── manage_exercises.html
+│   │   │   ├── manage_goal_templates.html
+│   │   │   ├── manage_workouts.html
+│   │   │   ├── my_progress.html
+│   │   │   ├── phase_detail.html
+│   │   │   ├── phases.html
+│   │   │   ├── player_goals.html
+│   │   │   ├── record_progress.html
+│   │   │   ├── weekly_progress.html
+│   │   │   ├── weekly_schedule.html
+│   │   │   ├── workout_detail.html
+│   │   │   └── workouts.html
 │   │   ├── partials
 │   │   │   └── breadcrumbs.html
 │   │   ├── playbook

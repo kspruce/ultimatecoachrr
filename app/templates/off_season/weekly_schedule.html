@@ -119,6 +119,7 @@
                                         <button type="button" class="btn btn-sm btn-outline-secondary notes-btn"
                                                 data-completion-id="{{ weekly_completion.id }}"
                                                 data-day="{{ day }}"
+                                                data-notes="{{ notes|default('', true)|e }}"
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#notesModal">
                                             <i class="bi bi-pencil"></i> 
@@ -200,7 +201,7 @@
                 <form id="notesForm">
                     <input type="hidden" id="notes-completion-id">
                     <input type="hidden" id="notes-day">
-                    <input type="hidden" id="notes-time">
+                    <input type="hidden" id="notes-time" value="morning">
                     
                     <div class="mb-3">
                         <label for="workout-notes" class="form-label">Notes</label>
@@ -281,13 +282,11 @@
             button.addEventListener('click', function() {
                 const completionId = this.dataset.completionId;
                 const day = this.dataset.day;
+                const notes = this.dataset.notes || '';
                 
                 // Set form values
                 notesCompletionId.value = completionId;
                 notesDay.value = day;
-                
-                // Get current notes for this day
-                const notes = '{{ weekly_completion.monday_notes }}'.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
                 notesTextarea.value = notes;
                 
                 // Update modal title
@@ -320,6 +319,13 @@
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(notesModal);
                     modal.hide();
+                    
+                    // Update the button text and data attribute
+                    const noteBtn = document.querySelector(`.notes-btn[data-day="${day}"][data-completion-id="${completionId}"]`);
+                    if (noteBtn) {
+                        noteBtn.dataset.notes = notes;
+                        noteBtn.innerHTML = `<i class="bi bi-pencil"></i> ${notes ? 'Edit' : 'Add'}`;
+                    }
                     
                     // Show success toast
                     showToast('Notes saved successfully!', 'success');

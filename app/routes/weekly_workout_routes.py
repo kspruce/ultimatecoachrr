@@ -124,7 +124,7 @@ def toggle_workout_completion():
     time_of_day = data.get('time_of_day')
     notes = data.get('notes', '')
     
-    if not all([completion_id, day, time_of_day]):
+    if not all([completion_id, day]):
         return jsonify({'success': False, 'message': 'Missing required parameters'})
     
     # Get the weekly completion record
@@ -138,34 +138,78 @@ def toggle_workout_completion():
         return jsonify({'success': False, 'message': 'Completion record not found'})
     
     try:
-        # Toggle the completion status
-        field_name = f"{day}_{time_of_day}_completed"
-        notes_field = f"{day}_notes"
-        
-        # Check if the field exists
-        if hasattr(completion, field_name):
-            current_value = getattr(completion, field_name)
-            setattr(completion, field_name, not current_value)
-            
-            # Update notes if provided
-            if notes:
+        # If notes are provided, just update the notes field
+        if notes is not None:
+            notes_field = f"{day}_notes"
+            if hasattr(completion, notes_field):
                 setattr(completion, notes_field, notes)
+                db.session.commit()
+                return jsonify({
+                    'success': True,
+                    'notes_updated': True
+                })
+        
+        # Toggle the completion status
+        if time_of_day:
+            field_name = f"{day}_{time_of_day}_completed"
             
-            # Recalculate completion percentage
-            completion.calculate_completion_percentage()
-            
-            db.session.commit()
-            
-            return jsonify({
-                'success': True, 
-                'completed': not current_value,
-                'completion_percentage': completion.completion_percentage
-            })
+            # Check if the field exists
+            if hasattr(completion, field_name):
+                current_value = getattr(completion, field_name)
+                setattr(completion, field_name, not current_value)
+                
+                # Recalculate completion percentage
+                completion.calculate_completion_percentage()
+                
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True, 
+                    'completed': not current_value,
+                    'completion_percentage': completion.completion_percentage
+                })
+            else:
+                return jsonify({'success': False, 'message': f'Invalid field: {field_name}'})
         else:
-            return jsonify({'success': False, 'message': f'Invalid field: {field_name}'})
+            return jsonify({'success': False, 'message': 'Missing time_of_day parameter'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
+
+@weekly_workout.route('/off-season/weekly-completion/<int:completion_id>/details')
+@login_required
+def weekly_completion_details(completion_id):
+    """Get details for a specific weekly completion record"""
+    # Check if user has a linked player
+    if not hasattr(current_user, 'player') or not current_user.player:
+        return jsonify({'success': False, 'message': 'Player profile not linked'})
+    
+    # Get the weekly completion record
+    completion = WeeklyWorkoutCompletion.query.filter_by(
+        id=completion_id,
+        player_id=current_user.player.id,
+        team_organization_id=get_current_team_id()
+    ).first()
+    
+    if not completion:
+        return jsonify({'success': False, 'message': 'Completion record not found'})
+    
+    # Format the completion data for JSON response
+    completion_data = {
+        'id': completion.id,
+        'week_number': completion.week_number,
+        'week_start_date': completion.week_start_date.strftime('%Y-%m-%d'),
+        'completion_percentage': completion.completion_percentage,
+        'template_type': completion.template.template_type,
+    }
+    
+    # Add day-specific data
+    for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']:
+        completion_data[f'{day}_morning_completed'] = getattr(completion, f'{day}_morning_completed')
+        completion_data[f'{day}_evening_completed'] = getattr(completion, f'{day}_evening_completed')
+        completion_data[f'{day}_notes'] = getattr(completion, f'{day}_notes')
+    
+    return jsonify({'success': True, 'completion': completion_data})
 
 @weekly_workout.route('/off-season/view-weekly-progress')
 @login_required

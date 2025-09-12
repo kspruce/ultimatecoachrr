@@ -34,6 +34,7 @@ class OffSeasonWorkout(db.Model):
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     workout_type = db.Column(db.String(50))  # Strength, Speed, Endurance, etc.
+    workout_category = db.Column(db.String(50))  # New field: Strength, Skills, Conditioning
     instructions = db.Column(db.Text)
     duration = db.Column(db.String(50))  # e.g., "45-60 minutes"
     equipment_needed = db.Column(db.Text)

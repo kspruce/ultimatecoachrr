@@ -71,48 +71,193 @@
                 </div>
             </div>
 
+            <!-- New Workout Categories Section -->
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h3 class="mb-0">Workouts</h3>
+                    <h3 class="mb-0">Training Categories</h3>
                 </div>
                 <div class="card-body">
-                    {% if workouts %}
-                        <div class="row row-cols-1 row-cols-md-2 g-4">
-                            {% for workout in workouts %}
-                                <div class="col">
-                                    <div class="card h-100">
-                                        <div class="card-header">
-                                            <h5 class="card-title mb-0">{{ workout.title }}</h5>
+                    <ul class="nav nav-tabs" id="workoutCategoryTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="strength-tab" data-bs-toggle="tab" data-bs-target="#strength" type="button" role="tab" aria-controls="strength" aria-selected="true">
+                                <i class="bi bi-lightning"></i> Strength Training
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills" type="button" role="tab" aria-controls="skills" aria-selected="false">
+                                <i class="bi bi-disc"></i> Skills Training
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="conditioning-tab" data-bs-toggle="tab" data-bs-target="#conditioning" type="button" role="tab" aria-controls="conditioning" aria-selected="false">
+                                <i class="bi bi-heart-pulse"></i> Conditioning
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3" id="workoutCategoryContent">
+                        <!-- Strength Training Tab -->
+                        <div class="tab-pane fade show active" id="strength" role="tabpanel" aria-labelledby="strength-tab">
+                            <div class="mb-3">
+                                <div class="btn-group" role="group" aria-label="Difficulty filter">
+                                    <button type="button" class="btn btn-outline-primary active difficulty-filter" data-difficulty="all">All Levels</button>
+                                    <button type="button" class="btn btn-outline-success difficulty-filter" data-difficulty="Beginner">Beginner</button>
+                                    <button type="button" class="btn btn-outline-warning difficulty-filter" data-difficulty="Intermediate">Intermediate</button>
+                                    <button type="button" class="btn btn-outline-danger difficulty-filter" data-difficulty="Advanced">Advanced</button>
+                                </div>
+                            </div>
+                            
+                            <div class="row row-cols-1 row-cols-md-2 g-4 strength-workouts">
+                                {% for workout in workouts %}
+                                    {% if workout.workout_category == 'Strength' or workout.workout_type == 'Strength' %}
+                                        <div class="col workout-card" data-difficulty="{{ workout.difficulty_level }}">
+                                            <div class="card h-100">
+                                                <div class="card-header">
+                                                    <h5 class="card-title mb-0">{{ workout.title }}</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="card-text">{{ workout.description }}</p>
+                                                    <ul class="list-group list-group-flush mb-3">
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Type:</span>
+                                                            <span class="badge bg-primary">{{ workout.workout_type }}</span>
+                                                        </li>
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Duration:</span>
+                                                            <span>{{ workout.duration }}</span>
+                                                        </li>
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Difficulty:</span>
+                                                            <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                                                {{ workout.difficulty_level }}
+                                                            </span>
+                                                        </li>
+                                                    </ul>
+                                                    <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-primary">View Details</a>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="card-body">
-                                            <p class="card-text">{{ workout.description }}</p>
-                                            <ul class="list-group list-group-flush mb-3">
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>Type:</span>
-                                                    <span class="badge bg-primary">{{ workout.workout_type }}</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>Duration:</span>
-                                                    <span>{{ workout.duration }}</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>Difficulty:</span>
-                                                    <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
-                                                        {{ workout.difficulty_level }}
-                                                    </span>
-                                                </li>
-                                            </ul>
-                                            <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-primary">View Details</a>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if not workouts|selectattr('workout_category', 'equalto', 'Strength')|list and not workouts|selectattr('workout_type', 'equalto', 'Strength')|list %}
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <p>No strength training workouts have been added to this phase yet.</p>
                                         </div>
                                     </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Skills Training Tab -->
+                        <div class="tab-pane fade" id="skills" role="tabpanel" aria-labelledby="skills-tab">
+                            <div class="mb-3">
+                                <div class="btn-group" role="group" aria-label="Difficulty filter">
+                                    <button type="button" class="btn btn-outline-primary active difficulty-filter" data-difficulty="all">All Levels</button>
+                                    <button type="button" class="btn btn-outline-success difficulty-filter" data-difficulty="Beginner">Beginner</button>
+                                    <button type="button" class="btn btn-outline-warning difficulty-filter" data-difficulty="Intermediate">Intermediate</button>
+                                    <button type="button" class="btn btn-outline-danger difficulty-filter" data-difficulty="Advanced">Advanced</button>
                                 </div>
-                            {% endfor %}
+                            </div>
+                            
+                            <div class="row row-cols-1 row-cols-md-2 g-4 skills-workouts">
+                                {% for workout in workouts %}
+                                    {% if workout.workout_category == 'Skills' or workout.workout_type == 'Throwing' or workout.workout_type == 'Technical' %}
+                                        <div class="col workout-card" data-difficulty="{{ workout.difficulty_level }}">
+                                            <div class="card h-100">
+                                                <div class="card-header">
+                                                    <h5 class="card-title mb-0">{{ workout.title }}</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="card-text">{{ workout.description }}</p>
+                                                    <ul class="list-group list-group-flush mb-3">
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Type:</span>
+                                                            <span class="badge bg-primary">{{ workout.workout_type }}</span>
+                                                        </li>
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Duration:</span>
+                                                            <span>{{ workout.duration }}</span>
+                                                        </li>
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Difficulty:</span>
+                                                            <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                                                {{ workout.difficulty_level }}
+                                                            </span>
+                                                        </li>
+                                                    </ul>
+                                                    <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-primary">View Details</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if not workouts|selectattr('workout_category', 'equalto', 'Skills')|list and not workouts|selectattr('workout_type', 'equalto', 'Throwing')|list and not workouts|selectattr('workout_type', 'equalto', 'Technical')|list %}
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <p>No skills training workouts have been added to this phase yet.</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% else %}
-                        <div class="alert alert-info">
-                            <p>No workouts have been added to this phase yet.</p>
+                        
+                        <!-- Conditioning Tab -->
+                        <div class="tab-pane fade" id="conditioning" role="tabpanel" aria-labelledby="conditioning-tab">
+                            <div class="mb-3">
+                                <div class="btn-group" role="group" aria-label="Difficulty filter">
+                                    <button type="button" class="btn btn-outline-primary active difficulty-filter" data-difficulty="all">All Levels</button>
+                                    <button type="button" class="btn btn-outline-success difficulty-filter" data-difficulty="Beginner">Beginner</button>
+                                    <button type="button" class="btn btn-outline-warning difficulty-filter" data-difficulty="Intermediate">Intermediate</button>
+                                    <button type="button" class="btn btn-outline-danger difficulty-filter" data-difficulty="Advanced">Advanced</button>
+                                </div>
+                            </div>
+                            
+                            <div class="row row-cols-1 row-cols-md-2 g-4 conditioning-workouts">
+                                {% for workout in workouts %}
+                                    {% if workout.workout_category == 'Conditioning' or workout.workout_type == 'Endurance' or workout.workout_type == 'Speed' or workout.workout_type == 'Agility' %}
+                                        <div class="col workout-card" data-difficulty="{{ workout.difficulty_level }}">
+                                            <div class="card h-100">
+                                                <div class="card-header">
+                                                    <h5 class="card-title mb-0">{{ workout.title }}</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <p class="card-text">{{ workout.description }}</p>
+                                                    <ul class="list-group list-group-flush mb-3">
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Type:</span>
+                                                            <span class="badge bg-primary">{{ workout.workout_type }}</span>
+                                                        </li>
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Duration:</span>
+                                                            <span>{{ workout.duration }}</span>
+                                                        </li>
+                                                        <li class="list-group-item d-flex justify-content-between">
+                                                            <span>Difficulty:</span>
+                                                            <span class="badge bg-{{ 'success' if workout.difficulty_level == 'Beginner' else 'warning' if workout.difficulty_level == 'Intermediate' else 'danger' }}">
+                                                                {{ workout.difficulty_level }}
+                                                            </span>
+                                                        </li>
+                                                    </ul>
+                                                    <a href="{{ url_for('off_season.workout_detail', workout_id=workout.id) }}" class="btn btn-primary">View Details</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if not workouts|selectattr('workout_category', 'equalto', 'Conditioning')|list and not workouts|selectattr('workout_type', 'equalto', 'Endurance')|list and not workouts|selectattr('workout_type', 'equalto', 'Speed')|list and not workouts|selectattr('workout_type', 'equalto', 'Agility')|list %}
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <p>No conditioning workouts have been added to this phase yet.</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -143,7 +288,7 @@
                         </div>
                         <p>Day {{ days_passed + 1 }} of {{ total_days }}</p>
                         
-                        <!-- New Weekly Schedule Button -->
+                        <!-- Weekly Schedule Button -->
                         <div class="d-grid gap-2 mt-3">
                             <a href="{{ url_for('weekly_workout.my_weekly_schedule') }}" class="btn btn-success">
                                 <i class="bi bi-calendar-week"></i> View My Weekly Schedule
@@ -480,7 +625,7 @@
                         </div>
                     </div>
                     
-                    <!-- New Weekly Schedule Button -->
+                    <!-- Weekly Schedule Button -->
                     <div class="mt-4">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i> 
@@ -497,5 +642,43 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle difficulty filtering
+        const difficultyButtons = document.querySelectorAll('.difficulty-filter');
+        
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Get the parent tab pane
+                const tabPane = this.closest('.tab-pane');
+                
+                // Remove active class from all buttons in this tab
+                tabPane.querySelectorAll('.difficulty-filter').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Get selected difficulty
+                const difficulty = this.dataset.difficulty;
+                
+                // Filter workout cards in this tab
+                const workoutCards = tabPane.querySelectorAll('.workout-card');
+                
+                workoutCards.forEach(card => {
+                    if (difficulty === 'all' || card.dataset.difficulty === difficulty) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -309,79 +309,170 @@
                     </div>
                 `;
                 
-                // Simulate loading details (in a real app, you'd fetch this from the server)
-                setTimeout(() => {
-                    // Find the completion data for this week
-                    const completion = {{ weekly_completions|tojson }}.find(c => c.id === parseInt(completionId));
-                    
-                    if (completion) {
-                        let daysHtml = '';
-                        
-                        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
-                            const morningCompleted = completion[`${day}_morning_completed`];
-                            const eveningCompleted = completion[`${day}_evening_completed`];
-                            const notes = completion[`${day}_notes`];
-                            
-                            daysHtml += `
-                                <tr>
-                                    <td>${day.charAt(0).toUpperCase() + day.slice(1)}</td>
-                                    <td>
-                                        ${morningCompleted ? 
-                                            '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
-                                            '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
-                                    </td>
-                                    <td>
-                                        ${eveningCompleted ? 
-                                            '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
-                                            '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
-                                    </td>
-                                    <td>${notes || '-'}</td>
-                                </tr>
-                            `;
-                        });
-                        
-                        weekDetailsContent.innerHTML = `
-                            <div class="mb-3">
-                                <strong>Week ${completion.week_number}</strong> (${new Date(completion.week_start_date).toLocaleDateString()} - ${new Date(new Date(completion.week_start_date).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString()})
-                            </div>
-                            
-                            <div class="progress mb-3">
-                                <div class="progress-bar ${completion.completion_percentage >= 80 ? 'bg-success' : completion.completion_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
-                                     role="progressbar" 
-                                     style="width: ${completion.completion_percentage}%" 
-                                     aria-valuenow="${completion.completion_percentage}" 
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100">
-                                    ${Math.round(completion.completion_percentage)}% Complete
-                                </div>
-                            </div>
-                            
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Day</th>
-                                            <th>Morning</th>
-                                            <th>Evening</th>
-                                            <th>Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${daysHtml}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
-                    } else {
-                        weekDetailsContent.innerHTML = `
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle"></i> Could not load details for Week ${weekNumber}.
-                            </div>
-                        `;
-                    }
-                }, 500);
+                // Fetch week details from server
+                fetch(`/off-season/weekly-completion/${completionId}/details`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            renderWeekDetails(data.completion);
+                        } else {
+                            throw new Error(data.message || 'Failed to load week details');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Fallback to client-side rendering if API fails
+                        renderWeekDetailsFromDOM(weekNumber, completionId);
+                    });
             });
         });
+        
+        // Render week details from server data
+        function renderWeekDetails(completion) {
+            let daysHtml = '';
+            
+            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+                const morningCompleted = completion[`${day}_morning_completed`];
+                const eveningCompleted = completion[`${day}_evening_completed`];
+                const notes = completion[`${day}_notes`] || '-';
+                
+                daysHtml += `
+                    <tr>
+                        <td>${day.charAt(0).toUpperCase() + day.slice(1)}</td>
+                        <td>
+                            ${morningCompleted ? 
+                                '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
+                                '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
+                        </td>
+                        <td>
+                            ${eveningCompleted ? 
+                                '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
+                                '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
+                        </td>
+                        <td>${notes}</td>
+                    </tr>
+                `;
+            });
+            
+            const weekStartDate = new Date(completion.week_start_date);
+            const weekEndDate = new Date(weekStartDate);
+            weekEndDate.setDate(weekStartDate.getDate() + 6);
+            
+            weekDetailsContent.innerHTML = `
+                <div class="mb-3">
+                    <strong>Week ${completion.week_number}</strong> (${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()})
+                </div>
+                
+                <div class="progress mb-3">
+                    <div class="progress-bar ${completion.completion_percentage >= 80 ? 'bg-success' : completion.completion_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                         role="progressbar" 
+                         style="width: ${completion.completion_percentage}%" 
+                         aria-valuenow="${completion.completion_percentage}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        ${Math.round(completion.completion_percentage)}% Complete
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Day</th>
+                                <th>Morning</th>
+                                <th>Evening</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${daysHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        // Fallback function to render week details from DOM data
+        function renderWeekDetailsFromDOM(weekNumber, completionId) {
+            // Find the completion data for this week
+            const completions = {{ weekly_completions|tojson }};
+            const completion = completions.find(c => c.id === parseInt(completionId));
+            
+            if (completion) {
+                let daysHtml = '';
+                
+                ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+                    const morningCompleted = completion[`${day}_morning_completed`];
+                    const eveningCompleted = completion[`${day}_evening_completed`];
+                    const notes = completion[`${day}_notes`] || '-';
+                    
+                    daysHtml += `
+                        <tr>
+                            <td>${day.charAt(0).toUpperCase() + day.slice(1)}</td>
+                            <td>
+                                ${morningCompleted ? 
+                                    '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
+                                    '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
+                            </td>
+                            <td>
+                                ${eveningCompleted ? 
+                                    '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>' : 
+                                    '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> Not Completed</span>'}
+                            </td>
+                            <td>${notes}</td>
+                        </tr>
+                    `;
+                });
+                
+                const weekStartDate = new Date(completion.week_start_date);
+                const weekEndDate = new Date(weekStartDate);
+                weekEndDate.setDate(weekStartDate.getDate() + 6);
+                
+                weekDetailsContent.innerHTML = `
+                    <div class="mb-3">
+                        <strong>Week ${completion.week_number}</strong> (${weekStartDate.toLocaleDateString()} - ${weekEndDate.toLocaleDateString()})
+                    </div>
+                    
+                    <div class="progress mb-3">
+                        <div class="progress-bar ${completion.completion_percentage >= 80 ? 'bg-success' : completion.completion_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                             role="progressbar" 
+                             style="width: ${completion.completion_percentage}%" 
+                             aria-valuenow="${completion.completion_percentage}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            ${Math.round(completion.completion_percentage)}% Complete
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Day</th>
+                                    <th>Morning</th>
+                                    <th>Evening</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${daysHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                weekDetailsContent.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Could not load details for Week ${weekNumber}.
+                    </div>
+                `;
+            }
+        }
         
         // Initialize progress circles
         function initProgressCircles() {
@@ -410,52 +501,58 @@
             
             // Extract data from weekly completions
             const weeklyCompletions = {{ weekly_completions|tojson }};
-            const labels = weeklyCompletions.map(completion => `Week ${completion.week_number}`);
-            const data = weeklyCompletions.map(completion => completion.completion_percentage);
             
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Weekly Completion %',
-                        data: data,
-                        borderColor: '#0d6efd',
-                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                        tension: 0.1,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            title: {
-                                display: true,
-                                text: 'Completion %'
+            if (weeklyCompletions && weeklyCompletions.length > 0) {
+                const labels = weeklyCompletions.map(completion => `Week ${completion.week_number}`);
+                const data = weeklyCompletions.map(completion => completion.completion_percentage);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Weekly Completion %',
+                            data: data,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Completion %'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Week'
+                                }
                             }
                         },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Week'
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `Completion: ${Math.round(context.parsed.y)}%`;
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Completion: ${Math.round(context.parsed.y)}%`;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            } else {
+                // No data available
+                ctx.innerHTML = '<div class="alert alert-info">No weekly data available yet.</div>';
+            }
         }
     });
 </script>
