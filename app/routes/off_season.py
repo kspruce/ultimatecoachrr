@@ -820,6 +820,9 @@ def progress():
     """View user's progress"""
     team_id = get_current_team_id()
     
+    # Define today
+    today = date.today()  # Add this line if it's not already there
+    
     # Get all completed sessions
     completions = UserSessionCompletion.query.filter_by(
         user_id=current_user.id,
@@ -850,8 +853,10 @@ def progress():
         completions=completions,
         completed_goals=completed_goals,
         fitness_records=fitness_records,
-        player=player
+        player=player,
+        today=today  # Add this line
     )
+
 
 @bp.route('/timeline')
 @login_required
