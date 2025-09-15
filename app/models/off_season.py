@@ -169,7 +169,7 @@ class SMARTGoal(db.Model):
     __tablename__ = 'smart_goals'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     specific = db.Column(db.Text)  # What exactly will be accomplished?
