@@ -7,6 +7,8 @@ from app.models.off_season import (
     UserSessionCompletion, SMARTGoal, TrainingCategory, TrainingLevel, ScheduleType,
     PhaseMetric
 )
+from app.models.session import SessionPlan
+from app.models.phase_session import PhaseSessionSuggestion
 from app.models.fitness import FitnessMetric, FitnessRecord
 from app.models.player import Player
 from app.utils.utils import admin_required
@@ -49,6 +51,12 @@ class ScheduleForm(FlaskForm):
         (ScheduleType.HIGH_VOLUME.value, 'High Volume')
     ], validators=[DataRequired()])
     submit = SubmitField('Save Schedule')
+    
+class SessionSuggestionForm(FlaskForm):
+    session_id = SelectField('Session Plan', coerce=int, validators=[DataRequired()])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    order = IntegerField('Order', validators=[Optional()])
+    submit = SubmitField('Add Session Suggestion')
 
 class SessionForm(FlaskForm):
     day_of_week = SelectField('Day of Week', choices=[
@@ -314,13 +322,21 @@ def view_phase(phase_id):
     # Get recommended metrics for this phase
     metrics = PhaseMetric.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
     
+    # Get suggested sessions for this phase
+    suggested_sessions = PhaseSessionSuggestion.query.filter_by(
+        phase_id=phase.id, 
+        team_organization_id=team_id
+    ).order_by(PhaseSessionSuggestion.order).all()
+    
     return render_template(
         'off_season/view_phase.html',
         phase=phase,
         schedules=schedules,
         workout_plans=workout_plans,
-        metrics=metrics
+        metrics=metrics,
+        suggested_sessions=suggested_sessions
     )
+
 
 @bp.route('/phases/<int:phase_id>/schedules/add', methods=['GET', 'POST'])
 @login_required
@@ -915,3 +931,91 @@ def set_schedule():
         session['preferred_schedule_type'] = schedule_type
         flash('Your preferred schedule has been updated.', 'success')
     return redirect(url_for('off_season.index'))
+
+@bp.route('/phases/<int:phase_id>/sessions/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_phase_session(phase_id):
+    """Add a suggested session to a phase"""
+    team_id = get_current_team_id()
+    phase = OffSeasonPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first_or_404()
+    form = SessionSuggestionForm()
+    
+    # Populate session choices
+    sessions = SessionPlan.query.filter_by(team_organization_id=team_id).order_by(SessionPlan.title).all()
+    form.session_id.choices = [(s.id, f"{s.title} ({s.session_type_display})") for s in sessions]
+    
+    if form.validate_on_submit():
+        # Check if this session is already added to this phase
+        existing = PhaseSessionSuggestion.query.filter_by(
+            phase_id=phase.id,
+            session_id=form.session_id.data,
+            team_organization_id=team_id
+        ).first()
+        
+        if existing:
+            flash(f'This session is already added to this phase!', 'danger')
+            return redirect(url_for('off_season.view_phase', phase_id=phase.id))
+        
+        # Find the highest order and add 1
+        highest_order = db.session.query(db.func.max(PhaseSessionSuggestion.order)).filter_by(
+            phase_id=phase.id
+        ).scalar() or 0
+        next_order = highest_order + 1
+        
+        suggestion = PhaseSessionSuggestion(
+            phase_id=phase.id,
+            session_id=form.session_id.data,
+            notes=form.notes.data,
+            order=form.order.data or next_order,
+            team_organization_id=team_id
+        )
+        
+        db.session.add(suggestion)
+        db.session.commit()
+        
+        flash('Session added to phase successfully!', 'success')
+        return redirect(url_for('off_season.view_phase', phase_id=phase.id))
+    
+    return render_template('off_season/phase_session_form.html', form=form, phase=phase)
+
+@bp.route('/phase-sessions/<int:suggestion_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_phase_session(suggestion_id):
+    """Delete a phase session suggestion"""
+    team_id = get_current_team_id()
+    suggestion = PhaseSessionSuggestion.query.filter_by(id=suggestion_id, team_organization_id=team_id).first_or_404()
+    phase_id = suggestion.phase_id
+    
+    db.session.delete(suggestion)
+    db.session.commit()
+    
+    flash('Session removed from phase successfully!', 'success')
+    return redirect(url_for('off_season.view_phase', phase_id=phase_id))
+
+@bp.route('/phase-sessions/<int:suggestion_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_phase_session(suggestion_id):
+    """Edit a phase session suggestion"""
+    team_id = get_current_team_id()
+    suggestion = PhaseSessionSuggestion.query.filter_by(id=suggestion_id, team_organization_id=team_id).first_or_404()
+    phase = suggestion.phase
+    form = SessionSuggestionForm(obj=suggestion)
+    
+    # Populate session choices
+    sessions = SessionPlan.query.filter_by(team_organization_id=team_id).order_by(SessionPlan.title).all()
+    form.session_id.choices = [(s.id, f"{s.title} ({s.session_type_display})") for s in sessions]
+    
+    if form.validate_on_submit():
+        suggestion.session_id = form.session_id.data
+        suggestion.notes = form.notes.data
+        suggestion.order = form.order.data
+        
+        db.session.commit()
+        
+        flash('Session suggestion updated successfully!', 'success')
+        return redirect(url_for('off_season.view_phase', phase_id=phase.id))
+    
+    return render_template('off_season/phase_session_form.html', form=form, phase=phase, suggestion=suggestion)

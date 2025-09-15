@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Date, ForeignKey,
 from sqlalchemy.orm import relationship
 import enum
 from app.models.user import User
-
+from app.models.phase_session import PhaseSessionSuggestion
 
 class TrainingLevel(enum.Enum):
     BEGINNER = "beginner"
@@ -42,6 +42,7 @@ class OffSeasonPhase(db.Model):
     schedules = db.relationship('PhaseSchedule', back_populates='phase', cascade='all, delete-orphan')
     workout_plans = db.relationship('WorkoutPlan', back_populates='phase', cascade='all, delete-orphan')
     recommended_metrics = db.relationship('PhaseMetric', back_populates='phase', cascade='all, delete-orphan')
+    suggested_sessions = db.relationship('PhaseSessionSuggestion', back_populates='phase', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<OffSeasonPhase {self.name}>'

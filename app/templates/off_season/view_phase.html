@@ -411,6 +411,99 @@
         {% endif %}
     </div>
 </div>
+<!-- Suggested Sessions -->
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Suggested Sessions</h5>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('off_season.add_phase_session', phase_id=phase.id) }}" class="btn btn-sm btn-light">
+            <i class="bi bi-plus-circle"></i> Add Session
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if suggested_sessions %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Session</th>
+                        <th>Type</th>
+                        <th>Focus Area</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for suggestion in suggested_sessions %}
+                    <tr>
+                        <td>{{ suggestion.session.title }}</td>
+                        <td><span class="badge bg-primary">{{ suggestion.session.session_type_display }}</span></td>
+                        <td>{{ suggestion.session.focus_area }}</td>
+                        <td>
+                            {% if suggestion.notes %}
+                            {{ suggestion.notes }}
+                            {% else %}
+                            <span class="text-muted">No notes</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('session.detail', session_id=suggestion.session.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if current_user.is_admin %}
+                                <a href="{{ url_for('off_season.edit_phase_session', suggestion_id=suggestion.id) }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteSessionSuggestionModal{{ suggestion.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            {% if current_user.is_admin %}
+                            <!-- Delete Session Suggestion Modal -->
+                            <div class="modal fade" id="deleteSessionSuggestionModal{{ suggestion.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to remove the session "{{ suggestion.session.title }}" from this phase?</p>
+                                            <p class="text-muted">This will only remove the suggestion, not delete the actual session plan.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('off_season.delete_phase_session', suggestion_id=suggestion.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-danger">Remove</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-light">
+            <p>No session plans have been suggested for this phase yet.</p>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('off_season.add_phase_session', phase_id=phase.id) }}" class="btn btn-danger">
+                <i class="bi bi-plus-circle"></i> Add Suggested Session
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
 
 {% if current_user.is_admin %}
 <!-- Delete Phase Modal -->
