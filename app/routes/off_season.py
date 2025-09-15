@@ -829,12 +829,15 @@ def progress():
             team_organization_id=team_id
         ).order_by(FitnessRecord.date_recorded.desc()).all()
     
+    today = date.today()
+    
     return render_template(
         'off_season/progress.html',
         completions=completions,
         completed_goals=completed_goals,
         fitness_records=fitness_records,
-        player=player
+        player=player,
+        today = today
     )
 
 @bp.route('/timeline')
