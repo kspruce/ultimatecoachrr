@@ -154,12 +154,15 @@ class UserSessionCompletion(db.Model):
     rating = db.Column(db.Integer)  # Optional rating (1-5)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
-    # Updated relationships
-    user = db.relationship('User', foreign_keys=[user_id])
+    # Updated relationship with explicit primaryjoin
+    user = db.relationship('User', 
+                          primaryjoin="UserSessionCompletion.user_id == User.id",
+                          foreign_keys=[user_id])
     session = db.relationship('ScheduleSession')
     
     def __repr__(self):
         return f'<UserSessionCompletion {self.user_id}:{self.session_id}>'
+
 
 class SMARTGoal(db.Model):
     """Model for SMART goals (Specific, Measurable, Achievable, Relevant, Time-bound)"""
