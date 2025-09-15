@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Boolean, Date, ForeignKey, Float, Enum
 from sqlalchemy.orm import relationship
 import enum
+from app.models.fitness import FitnessMetric
 
 class TrackWorkoutWeek(db.Model):
     """Model representing a week in the track workout plan"""
@@ -73,10 +74,12 @@ class PhaseMetric(db.Model):
     
     # Relationships
     phase = db.relationship('OffSeasonPhase', back_populates='recommended_metrics')
-    metric = db.relationship('FitnessMetric')
+    # Update this relationship with explicit foreign_keys parameter
+    metric = db.relationship('FitnessMetric', back_populates='phase_metrics', foreign_keys=[metric_id])
     
     def __repr__(self):
         return f'<PhaseMetric {self.phase_id}:{self.metric_id}>'
+
 
 class PhaseSchedule(db.Model):
     """Model representing a training schedule for a phase"""

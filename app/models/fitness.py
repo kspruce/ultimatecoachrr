@@ -180,6 +180,7 @@ class FitnessMetric(db.Model):
     
     # Use string reference for the relationship
     records = db.relationship('FitnessRecord', back_populates='metric', lazy='dynamic')
+    phase_metrics = db.relationship('PhaseMetric', back_populates='metric')
     
     def __repr__(self):
         return f'<FitnessMetric {self.name}>'
