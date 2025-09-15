@@ -1,0 +1,131 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.track_workout') }}">Track Workout Plan</a></li>
+<li class="breadcrumb-item active">Manage Plan</li>
+{% endblock %}
+
+{% block page_title %}Manage Track Workout Plan{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('off_season.add_track_workout_week') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Add Week
+</a>
+{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-stopwatch"></i> Track Workout Weeks</h5>
+    </div>
+    <div class="card-body">
+        {% if weeks %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Week #</th>
+                        <th>Title</th>
+                        <th>Session Plan</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in weeks %}
+                    <tr>
+                        <td>{{ week.week_number }}</td>
+                        <td>{{ week.title }}</td>
+                        <td>
+                            {% if week.session_plan %}
+                            <a href="{{ url_for('session.detail', session_id=week.session_plan.id) }}" target="_blank">
+                                {{ week.session_plan.title }}
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('off_season.track_workout_week', week_id=week.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('off_season.edit_track_workout_week', week_id=week.id) }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteWeekModal{{ week.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Delete Week Modal -->
+                            <div class="modal fade" id="deleteWeekModal{{ week.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete Week {{ week.week_number }}: {{ week.title }}?</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('off_season.delete_track_workout_week', week_id=week.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <h5>No Track Workout Weeks</h5>
+            <p>There are currently no track workout weeks defined.</p>
+            <a href="{{ url_for('off_season.add_track_workout_week') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create First Week
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Track Workout Plan Management</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="bi bi-info-circle"></i> About the Track Workout Plan</h6>
+                <p>The track workout plan is a 12-week program designed to improve speed, agility, and conditioning for ultimate frisbee players during the off-season.</p>
+                <p>Each week can be linked to a session plan from your session library, allowing players to access detailed workout instructions.</p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="bi bi-lightbulb"></i> Tips for Creating Effective Workouts</h6>
+                <ul>
+                    <li>Ensure progressive overload throughout the 12 weeks</li>
+                    <li>Include a mix of linear speed, lateral movement, and change of direction drills</li>
+                    <li>Incorporate sport-specific conditioning elements</li>
+                    <li>Provide clear instructions and technique cues in session plans</li>
+                    <li>Consider creating beginner, intermediate, and advanced variations</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Track Workout Plan
+    </a>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,0 +1,163 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.track_workout') }}">Track Workout Plan</a></li>
+<li class="breadcrumb-item active">Week {{ week.week_number }}</li>
+{% endblock %}
+
+{% block page_title %}Week {{ week.week_number }}: {{ week.title }}{% endblock %}
+
+{% block page_actions %}
+{% if current_user.is_admin %}
+<div class="btn-group">
+    <a href="{{ url_for('off_season.edit_track_workout_week', week_id=week.id) }}" class="btn btn-outline-primary">
+        <i class="bi bi-pencil"></i> Edit
+    </a>
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteWeekModal">
+        <i class="bi bi-trash"></i> Delete
+    </button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block off_season_content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-stopwatch"></i> Week {{ week.week_number }} Workout</h5>
+    </div>
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h4>{{ week.title }}</h4>
+                {% if week.description %}
+                <p class="lead">{{ week.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if session_plan %}
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Session Plan: {{ session_plan.title }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Date:</strong> {{ session_plan.date.strftime('%b %d, %Y') }}</p>
+                        <p><strong>Duration:</strong> {{ session_plan.duration }} minutes</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Focus Area:</strong> {{ session_plan.focus_area }}</p>
+                        <p><strong>Session Type:</strong> {{ session_plan.session_type }}</p>
+                    </div>
+                </div>
+                
+                {% if session_plan.description %}
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h6>Description</h6>
+                        <p>{{ session_plan.description }}</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if components %}
+                <h6>Session Components</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Component</th>
+                                <th>Duration</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for component in components %}
+                            <tr>
+                                <td>{{ component.order }}</td>
+                                <td>{{ component.title }}</td>
+                                <td>{{ component.duration }} min</td>
+                                <td>{{ component.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-light">
+                    <p>No components defined for this session.</p>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('session.detail', session_id=session_plan.id) }}" class="btn btn-outline-success" target="_blank">
+                        <i class="bi bi-box-arrow-up-right"></i> View Full Session Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <p><i class="bi bi-info-circle"></i> No session plan is attached to this week. The workout description above contains all the necessary information.</p>
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Implementation Tips</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-thermometer-half"></i> Warm-Up</h6>
+                        <p>Always begin with a thorough warm-up including dynamic stretching and movement preparation exercises specific to the workout.</p>
+                        
+                        <h6><i class="bi bi-lightning"></i> Intensity</h6>
+                        <p>Focus on quality over quantity. Maintain proper form throughout all exercises and adjust intensity based on your current fitness level.</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-arrow-repeat"></i> Recovery</h6>
+                        <p>Take adequate rest between sets and exercises. Stay hydrated and listen to your body - modify as needed.</p>
+                        
+                        <h6><i class="bi bi-heart-pulse"></i> Progression</h6>
+                        <p>Track your performance to monitor progress. Gradually increase intensity as your fitness improves.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Track Workout Plan
+    </a>
+</div>
+
+{% if current_user.is_admin %}
+<!-- Delete Week Modal -->
+<div class="modal fade" id="deleteWeekModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete Week {{ week.week_number }}: {{ week.title }}?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('off_season.delete_track_workout_week', week_id=week.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,0 +1,122 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.track_workout') }}">Track Workout Plan</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('off_season.manage_track_workout') }}">Manage Plan</a></li>
+<li class="breadcrumb-item active">{{ 'Edit Week' if week else 'Add Week' }}</li>
+{% endblock %}
+
+{% block page_title %}{{ 'Edit Week' if week else 'Add Track Workout Week' }}{% endblock %}
+
+{% block off_season_content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-{{ 'pencil' if week else 'plus-circle' }}"></i> {{ 'Edit Week' if week else 'Add Track Workout Week' }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('off_season.edit_track_workout_week', week_id=week.id) if week else url_for('off_season.add_track_workout_week') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="week_number" class="form-label">Week Number <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="week_number" name="week_number" 
+                               value="{{ week.week_number if week else next_week }}" min="1" max="12" required>
+                        <small class="form-text text-muted">Enter a number between 1 and 12</small>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="form-group">
+                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{{ week.title if week else '' }}" required>
+                        <small class="form-text text-muted">Example: "Speed Development" or "Agility Focus"</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4">{{ week.description if week else '' }}</textarea>
+                        <small class="form-text text-muted">Provide a brief description of this week's focus and objectives</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label for="session_plan_id" class="form-label">Link to Session Plan</label>
+                        <select class="form-select" id="session_plan_id" name="session_plan_id">
+                            <option value="">-- No Session Plan --</option>
+                            {% for plan in session_plans %}
+                            <option value="{{ plan.id }}" {% if week and week.session_plan_id == plan.id %}selected{% endif %}>
+                                {{ plan.date.strftime('%Y-%m-%d') }} - {{ plan.title }} ({{ plan.focus_area }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Optional: Link this week to an existing session plan</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('off_season.manage_track_workout') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ 'Update Week' if week else 'Add Week' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Tips for Creating Effective Track Workouts</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="bi bi-lightning"></i> Speed Development</h6>
+                <ul>
+                    <li>Include acceleration drills (10-30m sprints)</li>
+                    <li>Add maximum velocity work (flying 20s)</li>
+                    <li>Incorporate resisted and assisted sprints</li>
+                    <li>Focus on proper sprint mechanics</li>
+                </ul>
+                
+                <h6><i class="bi bi-arrow-left-right"></i> Agility Training</h6>
+                <ul>
+                    <li>Use cone drills for change of direction</li>
+                    <li>Practice lateral movement patterns</li>
+                    <li>Include reactive agility drills</li>
+                    <li>Work on deceleration and reacceleration</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="bi bi-heart-pulse"></i> Conditioning</h6>
+                <ul>
+                    <li>Implement interval training (work:rest ratios)</li>
+                    <li>Use shuttle runs and tempo runs</li>
+                    <li>Add sport-specific conditioning drills</li>
+                    <li>Progress volume and intensity gradually</li>
+                </ul>
+                
+                <h6><i class="bi bi-arrow-repeat"></i> Recovery</h6>
+                <ul>
+                    <li>Include proper warm-up and cool-down protocols</li>
+                    <li>Balance high-intensity days with recovery days</li>
+                    <li>Consider active recovery options</li>
+                    <li>Provide mobility work recommendations</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

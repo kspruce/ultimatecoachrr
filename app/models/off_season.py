@@ -4,8 +4,23 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, Boolean, Date, ForeignKey, Float, Enum
 from sqlalchemy.orm import relationship
 import enum
-from app.models.user import User
 
+class TrackWorkoutWeek(db.Model):
+    """Model representing a week in the track workout plan"""
+    __tablename__ = 'track_workout_weeks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    week_number = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    session_plan_id = db.Column(db.Integer, db.ForeignKey('session_plans.id'))
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    
+    # Relationships
+    session_plan = db.relationship('SessionPlan')
+    
+    def __repr__(self):
+        return f'<TrackWorkoutWeek {self.week_number}: {self.title}>'
 
 class TrainingLevel(enum.Enum):
     BEGINNER = "beginner"
@@ -51,8 +66,8 @@ class PhaseMetric(db.Model):
     __tablename__ = 'phase_metrics'
     
     id = db.Column(db.Integer, primary_key=True)
-    phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)   
-    metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metric.id'), nullable=False)
+    phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)
+    metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metrics.id'), nullable=False)
     target_value = db.Column(db.Float)  # Optional target value for this metric in this phase
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
@@ -128,7 +143,7 @@ class UserSessionCompletion(db.Model):
     __tablename__ = 'user_session_completions'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     session_id = db.Column(db.Integer, db.ForeignKey('schedule_sessions.id'), nullable=False)
     completed_date = db.Column(db.Date, default=datetime.utcnow)
     notes = db.Column(db.Text)
@@ -147,7 +162,7 @@ class SMARTGoal(db.Model):
     __tablename__ = 'smart_goals'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     specific = db.Column(db.Text)  # What exactly will be accomplished?

@@ -5,8 +5,9 @@ from app import db
 from app.models.off_season import (
     OffSeasonPhase, PhaseSchedule, ScheduleSession, WorkoutPlan, 
     UserSessionCompletion, SMARTGoal, TrainingCategory, TrainingLevel, ScheduleType,
-    PhaseMetric
+    PhaseMetric, TrackWorkoutWeek
 )
+from app.models.session import SessionPlan, SessionComponent
 from app.models.fitness import FitnessMetric, FitnessRecord
 from app.models.player import Player
 from app.utils.utils import admin_required
@@ -52,13 +53,13 @@ class ScheduleForm(FlaskForm):
 
 class SessionForm(FlaskForm):
     day_of_week = SelectField('Day of Week', choices=[
-        (1, 'Monday'),
-        (2, 'Tuesday'),
-        (3, 'Wednesday'),
-        (4, 'Thursday'),
-        (5, 'Friday'),
-        (6, 'Saturday'),
-        (7, 'Sunday')
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday')
     ], coerce=int, validators=[DataRequired()])
     training_focus = StringField('Training Focus', validators=[DataRequired(), Length(max=100)])
     duration_minutes = IntegerField('Duration (minutes)', validators=[DataRequired(), NumberRange(min=1)])
@@ -122,12 +123,12 @@ class SessionCompletionForm(FlaskForm):
 def index():
     """Main off-season dashboard"""
     team_id = get_current_team_id()
-    today = date.today()
     
     # Get all phases ordered by start date
     phases = OffSeasonPhase.query.filter_by(team_organization_id=team_id).order_by(OffSeasonPhase.start_date).all()
     
     # Find the current phase
+    today = date.today()
     current_phase = None
     for phase in phases:
         if phase.start_date <= today <= phase.end_date:
@@ -140,8 +141,8 @@ def index():
         if upcoming_phases:
             current_phase = min(upcoming_phases, key=lambda p: p.start_date)
     
-    # Get user's preferred schedule type from session or user preferences
-    preferred_schedule_type = session.get('preferred_schedule_type', ScheduleType.STANDARD.value)
+    # Get user's preferred schedule type (default to standard)
+    preferred_schedule_type = ScheduleType.STANDARD
     
     # Get user's SMART goals
     goals = SMARTGoal.query.filter_by(
@@ -160,30 +161,17 @@ def index():
     
     # Get today's schedule if current phase exists
     today_schedule = None
-    available_schedules = []
-    
     if current_phase:
-        # Get all schedules for this phase
-        schedules = PhaseSchedule.query.filter_by(
-            phase_id=current_phase.id,
-            team_organization_id=team_id
-        ).all()
-        
-        # Store available schedules for the dropdown
-        available_schedules = schedules
-        
         # Find the schedule for the user's preferred type
-        schedule = None
-        for s in schedules:
-            if s.schedule_type.value == preferred_schedule_type:
-                schedule = s
-                break
+        schedule = PhaseSchedule.query.filter_by(
+            phase_id=current_phase.id,
+            schedule_type=preferred_schedule_type,
+            team_organization_id=team_id
+        ).first()
         
         if schedule:
             # Get today's session
-            # Convert from Python's 0-6 weekday to our 1-7 indexing
-            today_day_of_week = today.weekday() + 1  # Convert 0-6 to 1-7
-            
+            today_day_of_week = today.weekday()  # 0=Monday, 6=Sunday
             today_session = ScheduleSession.query.filter_by(
                 schedule_id=schedule.id,
                 day_of_week=today_day_of_week,
@@ -201,8 +189,7 @@ def index():
                 
                 today_schedule = {
                     'session': today_session,
-                    'completed': completion is not None,
-                    'schedule': schedule  # Add the schedule object
+                    'completed': completion is not None
                 }
     
     return render_template(
@@ -211,12 +198,8 @@ def index():
         current_phase=current_phase,
         goals=goals,
         completed_sessions=completed_sessions,
-        today_schedule=today_schedule,
-        today=today,
-        available_schedules=available_schedules,
-        preferred_schedule_type=preferred_schedule_type
+        today_schedule=today_schedule
     )
-
 
 @bp.route('/phases')
 @login_required
@@ -368,11 +351,11 @@ def view_schedule(schedule_id):
     phase = schedule.phase
     
     # Get sessions for this schedule
-    sessions = ScheduleSession.query.filter_by(schedule_id=schedule.id, team_organization_id=team_id).all()
+    sessions = ScheduleSession.query.filter_by(schedule_id=schedule.id, team_organization_id=team_id).order_by(ScheduleSession.day_of_week).all()
     
-    # Organize sessions by day of week (now using 1-7 indexing)
+    # Organize sessions by day of week
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    sessions_by_day = {i+1: None for i in range(7)}  # Use 1-7 indexing
+    sessions_by_day = {i: None for i in range(7)}
     
     for session in sessions:
         sessions_by_day[session.day_of_week] = session
@@ -383,10 +366,8 @@ def view_schedule(schedule_id):
         phase=phase,
         sessions=sessions,
         sessions_by_day=sessions_by_day,
-        days=days,
-        enumerated_days=[(i+1, day) for i, day in enumerate(days)]  # Use 1-7 indexing
+        days=days
     )
-
 
 @bp.route('/schedules/<int:schedule_id>/delete', methods=['POST'])
 @login_required
@@ -412,22 +393,12 @@ def add_session(schedule_id):
     schedule = PhaseSchedule.query.filter_by(id=schedule_id, team_organization_id=team_id).first_or_404()
     form = SessionForm()
     
-    # Get the day from query parameter if provided
-    day = request.args.get('day', type=int)
-    if day is not None:
-        # Add 1 to convert from 0-based to 1-based indexing
-        form.day_of_week.data = day + 1
-    
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
         phase_id=schedule.phase_id,
         team_organization_id=team_id
     ).all()
     form.workout_plans.choices = [(wp.id, f"{wp.name} ({wp.category.value.capitalize()} - {wp.level.value.capitalize()})") for wp in workout_plans]
-    
-    # Initialize form.workout_plans.data as an empty list if it's None
-    if form.workout_plans.data is None:
-        form.workout_plans.data = []
     
     if form.validate_on_submit():
         # Check if a session already exists for this day
@@ -467,8 +438,6 @@ def add_session(schedule_id):
     
     return render_template('off_season/session_form.html', form=form, schedule=schedule)
 
-
-
 @bp.route('/sessions/<int:session_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -477,8 +446,6 @@ def edit_session(session_id):
     team_id = get_current_team_id()
     session = ScheduleSession.query.filter_by(id=session_id, team_organization_id=team_id).first_or_404()
     form = SessionForm(obj=session)
-    # Get the schedule for the breadcrumb
-    schedule = session.schedule  # Add this line
     
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
@@ -522,7 +489,7 @@ def edit_session(session_id):
         flash('Session updated successfully!', 'success')
         return redirect(url_for('off_season.view_schedule', schedule_id=session.schedule_id))
     
-    return render_template('off_season/session_form.html', form=form, workout_session=session, schedule=schedule)
+    return render_template('off_season/session_form.html', form=form, session=session)
 
 @bp.route('/sessions/<int:session_id>/delete', methods=['POST'])
 @login_required
@@ -567,7 +534,6 @@ def add_workout(phase_id):
     
     return render_template('off_season/workout_form.html', form=form, phase=phase)
 
-
 @bp.route('/workouts/<int:workout_id>')
 @login_required
 def view_workout(workout_id):
@@ -593,9 +559,6 @@ def edit_workout(workout_id):
     workout = WorkoutPlan.query.filter_by(id=workout_id, team_organization_id=team_id).first_or_404()
     form = WorkoutPlanForm(obj=workout)
     
-    # Get the phase for the workout
-    phase = workout.phase  # Add this line to get the phase
-    
     if form.validate_on_submit():
         workout.name = form.name.data
         workout.description = form.description.data
@@ -608,9 +571,7 @@ def edit_workout(workout_id):
         flash(f'Workout plan "{workout.name}" updated successfully!', 'success')
         return redirect(url_for('off_season.view_workout', workout_id=workout.id))
     
-    # Pass the phase to the template
-    return render_template('off_season/workout_form.html', form=form, workout=workout, phase=phase)
-
+    return render_template('off_season/workout_form.html', form=form, workout=workout)
 
 @bp.route('/workouts/<int:workout_id>/delete', methods=['POST'])
 @login_required
@@ -837,9 +798,6 @@ def progress():
     """View user's progress"""
     team_id = get_current_team_id()
     
-    # Define today
-    today = date.today()  # Add this line if it's not already there
-    
     # Get all completed sessions
     completions = UserSessionCompletion.query.filter_by(
         user_id=current_user.id,
@@ -870,10 +828,8 @@ def progress():
         completions=completions,
         completed_goals=completed_goals,
         fitness_records=fitness_records,
-        player=player,
-        today=today  # Add this line
+        player=player
     )
-
 
 @bp.route('/timeline')
 @login_required
@@ -906,12 +862,176 @@ def guide():
     # This route would display the off-season guide content
     return render_template('off_season/guide.html')
 
-@bp.route('/set-schedule', methods=['POST'])
+# Track Workout Plan Routes
+@bp.route('/track-workout')
 @login_required
-def set_schedule():
-    """Set the user's preferred schedule type"""
-    schedule_type = request.form.get('schedule_type')
-    if schedule_type in [st.value for st in ScheduleType]:
-        session['preferred_schedule_type'] = schedule_type
-        flash('Your preferred schedule has been updated.', 'success')
-    return redirect(url_for('off_season.index'))
+def track_workout():
+    """Display the 12-week track workout plan"""
+    team_id = get_current_team_id()
+    
+    # Get all track workout weeks
+    weeks = TrackWorkoutWeek.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(TrackWorkoutWeek.week_number).all()
+    
+    # Get current phase for context
+    current_phase = OffSeasonPhase.query.filter(
+        OffSeasonPhase.team_organization_id == team_id,
+        OffSeasonPhase.start_date <= date.today(),
+        OffSeasonPhase.end_date >= date.today()
+    ).first()
+    
+    return render_template('off_season/track_workout.html', 
+                          weeks=weeks, 
+                          current_phase=current_phase)
+
+@bp.route('/track-workout/week/<int:week_id>')
+@login_required
+def track_workout_week(week_id):
+    """Display a specific week in the track workout plan"""
+    team_id = get_current_team_id()
+    
+    # Get the week
+    week = TrackWorkoutWeek.query.filter_by(
+        id=week_id,
+        team_organization_id=team_id
+    ).first_or_404()
+    
+    # Get the associated session plan if it exists
+    session_plan = None
+    components = []
+    if week.session_plan_id:
+        session_plan = SessionPlan.query.filter_by(
+            id=week.session_plan_id,
+            team_organization_id=team_id
+        ).first()
+        
+        if session_plan:
+            components = session_plan.components.filter_by(
+                team_organization_id=team_id
+            ).order_by(SessionComponent.order).all()
+    
+    return render_template('off_season/track_workout_week.html', 
+                          week=week, 
+                          session_plan=session_plan,
+                          components=components)
+
+@bp.route('/track-workout/manage')
+@login_required
+@admin_required
+def manage_track_workout():
+    """Admin page to manage the track workout plan"""
+    team_id = get_current_team_id()
+    
+    # Get all track workout weeks
+    weeks = TrackWorkoutWeek.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(TrackWorkoutWeek.week_number).all()
+    
+    # Get all session plans for selection
+    session_plans = SessionPlan.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(SessionPlan.date.desc()).all()
+    
+    return render_template('off_season/manage_track_workout.html', 
+                          weeks=weeks,
+                          session_plans=session_plans)
+
+@bp.route('/track-workout/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_track_workout_week():
+    """Add a new track workout week"""
+    team_id = get_current_team_id()
+    
+    if request.method == 'POST':
+        week_number = request.form.get('week_number', type=int)
+        title = request.form.get('title')
+        description = request.form.get('description')
+        session_plan_id = request.form.get('session_plan_id', type=int)
+        
+        if not week_number or not title:
+            flash('Week number and title are required', 'danger')
+            return redirect(url_for('off_season.manage_track_workout'))
+        
+        # Create new track workout week
+        week = TrackWorkoutWeek(
+            week_number=week_number,
+            title=title,
+            description=description,
+            session_plan_id=session_plan_id if session_plan_id else None,
+            team_organization_id=team_id
+        )
+        
+        db.session.add(week)
+        db.session.commit()
+        
+        flash(f'Week {week_number} added successfully', 'success')
+        return redirect(url_for('off_season.manage_track_workout'))
+    
+    # Get all session plans for selection
+    session_plans = SessionPlan.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(SessionPlan.date.desc()).all()
+    
+    # Determine next week number
+    next_week = db.session.query(db.func.max(TrackWorkoutWeek.week_number)).filter_by(
+        team_organization_id=team_id
+    ).scalar() or 0
+    next_week += 1
+    
+    return render_template('off_season/track_workout_form.html',
+                          session_plans=session_plans,
+                          next_week=next_week)
+
+@bp.route('/track-workout/edit/<int:week_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_track_workout_week(week_id):
+    """Edit a track workout week"""
+    team_id = get_current_team_id()
+    
+    week = TrackWorkoutWeek.query.filter_by(
+        id=week_id,
+        team_organization_id=team_id
+    ).first_or_404()
+    
+    if request.method == 'POST':
+        week.week_number = request.form.get('week_number', type=int)
+        week.title = request.form.get('title')
+        week.description = request.form.get('description')
+        week.session_plan_id = request.form.get('session_plan_id', type=int) or None
+        
+        db.session.commit()
+        
+        flash(f'Week {week.week_number} updated successfully', 'success')
+        return redirect(url_for('off_season.manage_track_workout'))
+    
+    # Get all session plans for selection
+    session_plans = SessionPlan.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(SessionPlan.date.desc()).all()
+    
+    return render_template('off_season/track_workout_form.html',
+                          week=week,
+                          session_plans=session_plans)
+
+@bp.route('/track-workout/delete/<int:week_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_track_workout_week(week_id):
+    """Delete a track workout week"""
+    team_id = get_current_team_id()
+    
+    week = TrackWorkoutWeek.query.filter_by(
+        id=week_id,
+        team_organization_id=team_id
+    ).first_or_404()
+    
+    week_number = week.week_number
+    
+    db.session.delete(week)
+    db.session.commit()
+    
+    flash(f'Week {week_number} deleted successfully', 'success')
+    return redirect(url_for('off_season.manage_track_workout'))

@@ -89,7 +89,7 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <p>Are you sure you want to delete the {{ schedule.schedule_type.value }} schedule?</p>
+                                        <p>Are you sure you want to delete the {{ schedule.schedule_type.value|capitalize }} Schedule?</p>
                                         <p class="text-danger">This will also delete all sessions associated with this schedule.</p>
                                     </div>
                                     <div class="modal-footer">
@@ -109,11 +109,11 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="alert alert-light">
-            <p>No training schedules have been created for this phase yet.</p>
+        <div class="alert alert-info">
+            <p>No schedules have been created for this phase yet.</p>
             {% if current_user.is_admin %}
-            <a href="{{ url_for('off_season.add_schedule', phase_id=phase.id) }}" class="btn btn-success">
-                <i class="bi bi-plus-circle"></i> Create Schedule
+            <a href="{{ url_for('off_season.add_schedule', phase_id=phase.id) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Schedule
             </a>
             {% endif %}
         </div>
@@ -123,7 +123,7 @@
 
 <!-- Workout Plans -->
 <div class="card mb-4">
-    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-journal-text"></i> Workout Plans</h5>
         {% if current_user.is_admin %}
         <a href="{{ url_for('off_season.add_workout', phase_id=phase.id) }}" class="btn btn-sm btn-light">
@@ -134,189 +134,38 @@
     <div class="card-body">
         {% if workout_plans %}
         <div class="row">
-            <div class="col-md-12">
-                <ul class="nav nav-tabs" id="workoutTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all" aria-selected="true">All</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="strength-tab" data-bs-toggle="tab" data-bs-target="#strength" type="button" role="tab" aria-controls="strength" aria-selected="false">Strength</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="skills-tab" data-bs-toggle="tab" data-bs-target="#skills" type="button" role="tab" aria-controls="skills" aria-selected="false">Skills</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="conditioning-tab" data-bs-toggle="tab" data-bs-target="#conditioning" type="button" role="tab" aria-controls="conditioning" aria-selected="false">Conditioning</button>
-                    </li>
-                </ul>
-                <div class="tab-content pt-3" id="workoutTabContent">
-                    <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Category</th>
-                                        <th>Level</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for workout in workout_plans %}
-                                    <tr>
-                                        <td>{{ workout.name }}</td>
-                                        <td><span class="badge bg-{{ 'primary' if workout.category.value == 'strength' else ('success' if workout.category.value == 'skills' else 'warning') }}">{{ workout.category.value|capitalize }}</span></td>
-                                        <td><span class="badge bg-secondary">{{ workout.level.value|capitalize }}</span></td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}" class="btn btn-outline-primary">
-                                                    <i class="bi bi-eye"></i>
-                                                </a>
-                                                {% if current_user.is_admin %}
-                                                <a href="{{ url_for('off_season.edit_workout', workout_id=workout.id) }}" class="btn btn-outline-secondary">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteWorkoutModal{{ workout.id }}">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                                {% endif %}
-                                            </div>
-                                            
-                                            {% if current_user.is_admin %}
-                                            <!-- Delete Workout Modal -->
-                                            <div class="modal fade" id="deleteWorkoutModal{{ workout.id }}" tabindex="-1" aria-hidden="true">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Confirm Delete</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <p>Are you sure you want to delete the workout plan "{{ workout.name }}"?</p>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                            <form method="POST" action="{{ url_for('off_season.delete_workout', workout_id=workout.id) }}">
-                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                                <button type="submit" class="btn btn-danger">Delete</button>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+            {% for category, plans in workout_plans|groupby('category') %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-{{ 'primary' if category.value == 'strength' else ('success' if category.value == 'skills' else 'warning') }} {{ 'text-white' if category.value != 'conditioning' else 'text-dark' }}">
+                        <h5 class="mb-0">{{ category.value|capitalize }}</h5>
                     </div>
-                    
-                    <!-- Strength Tab -->
-                    <div class="tab-pane fade" id="strength" role="tabpanel" aria-labelledby="strength-tab">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Level</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for workout in workout_plans if workout.category.value == 'strength' %}
-                                    <tr>
-                                        <td>{{ workout.name }}</td>
-                                        <td><span class="badge bg-secondary">{{ workout.level.value|capitalize }}</span></td>
-                                        <td>
-                                            <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% else %}
-                                    <tr>
-                                        <td colspan="3" class="text-center">No strength workouts available</td>
-                                    </tr>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for level, level_plans in plans|groupby('level') %}
+                            <div class="list-group-item">
+                                <h6>{{ level.value|capitalize }}</h6>
+                                <div class="list-group list-group-flush">
+                                    {% for plan in level_plans %}
+                                    <a href="{{ url_for('off_season.view_workout', workout_id=plan.id) }}" class="list-group-item list-group-item-action">
+                                        {{ plan.name }}
+                                    </a>
                                     {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Skills Tab -->
-                    <div class="tab-pane fade" id="skills" role="tabpanel" aria-labelledby="skills-tab">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Level</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for workout in workout_plans if workout.category.value == 'skills' %}
-                                    <tr>
-                                        <td>{{ workout.name }}</td>
-                                        <td><span class="badge bg-secondary">{{ workout.level.value|capitalize }}</span></td>
-                                        <td>
-                                            <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% else %}
-                                    <tr>
-                                        <td colspan="3" class="text-center">No skills workouts available</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Conditioning Tab -->
-                    <div class="tab-pane fade" id="conditioning" role="tabpanel" aria-labelledby="conditioning-tab">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Level</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for workout in workout_plans if workout.category.value == 'conditioning' %}
-                                    <tr>
-                                        <td>{{ workout.name }}</td>
-                                        <td><span class="badge bg-secondary">{{ workout.level.value|capitalize }}</span></td>
-                                        <td>
-                                            <a href="{{ url_for('off_season.view_workout', workout_id=workout.id) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% else %}
-                                    <tr>
-                                        <td colspan="3" class="text-center">No conditioning workouts available</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
         {% else %}
-        <div class="alert alert-light">
+        <div class="alert alert-info">
             <p>No workout plans have been created for this phase yet.</p>
             {% if current_user.is_admin %}
-            <a href="{{ url_for('off_season.add_workout', phase_id=phase.id) }}" class="btn btn-info">
-                <i class="bi bi-plus-circle"></i> Create Workout Plan
+            <a href="{{ url_for('off_season.add_workout', phase_id=phase.id) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Workout
             </a>
             {% endif %}
         </div>
@@ -324,10 +173,41 @@
     </div>
 </div>
 
-<!-- Recommended Fitness Metrics -->
+<!-- Session Plans -->
 <div class="card mb-4">
-    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Recommended Fitness Metrics</h5>
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Related Session Plans</h5>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('session.add') }}" class="btn btn-sm btn-light" target="_blank">
+            <i class="bi bi-plus-circle"></i> Create Session Plan
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <p><i class="bi bi-info-circle"></i> Session plans are detailed practice plans that can be used during this phase. They can be linked to specific weeks in the track workout plan.</p>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <a href="{{ url_for('session.index') }}" class="btn btn-outline-info" target="_blank">
+                    <i class="bi bi-box-arrow-up-right"></i> Browse Session Plans
+                </a>
+                
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-stopwatch"></i> Track Workout Plan
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommended Metrics -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Recommended Metrics</h5>
         {% if current_user.is_admin %}
         <a href="{{ url_for('off_season.add_phase_metric', phase_id=phase.id) }}" class="btn btn-sm btn-light">
             <i class="bi bi-plus-circle"></i> Add Metric
@@ -342,69 +222,53 @@
                     <tr>
                         <th>Metric</th>
                         <th>Unit</th>
-                        <th>Target Value</th>
+                        <th>Target</th>
+                        <th>Direction</th>
+                        {% if current_user.is_admin %}
                         <th>Actions</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% for metric in metrics %}
+                    {% for phase_metric in metrics %}
                     <tr>
-                        <td>{{ metric.metric.name }}</td>
-                        <td>{{ metric.metric.unit }}</td>
+                        <td>{{ phase_metric.metric.name }}</td>
+                        <td>{{ phase_metric.metric.unit }}</td>
                         <td>
-                            {% if metric.target_value %}
-                            {{ metric.target_value }} {{ metric.metric.unit }}
+                            {% if phase_metric.target_value %}
+                            {{ phase_metric.target_value }}
                             {% else %}
-                            <span class="text-muted">No target set</span>
+                            <span class="text-muted">Not specified</span>
                             {% endif %}
                         </td>
                         <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('fitness.player_metric_history', player_id=current_user.player.id, metric_id=metric.metric.id) if current_user.player else '#' }}" class="btn btn-outline-primary {% if not current_user.player %}disabled{% endif %}">
-                                    <i class="bi bi-graph-up"></i> History
-                                </a>
-                                {% if current_user.is_admin %}
-                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteMetricModal{{ metric.id }}">
+                            {% if phase_metric.metric.higher_is_better %}
+                            <span class="badge bg-success">Higher is better</span>
+                            {% else %}
+                            <span class="badge bg-info">Lower is better</span>
+                            {% endif %}
+                        </td>
+                        {% if current_user.is_admin %}
+                        <td>
+                            <form method="POST" action="{{ url_for('off_season.delete_phase_metric', metric_id=phase_metric.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-trash"></i>
                                 </button>
-                                {% endif %}
-                            </div>
-                            
-                            {% if current_user.is_admin %}
-                            <!-- Delete Metric Modal -->
-                            <div class="modal fade" id="deleteMetricModal{{ metric.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to remove the metric "{{ metric.metric.name }}" from this phase?</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form method="POST" action="{{ url_for('off_season.delete_phase_metric', metric_id=metric.id) }}">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-danger">Remove</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
+                            </form>
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         {% else %}
-        <div class="alert alert-light">
-            <p>No recommended fitness metrics have been added to this phase yet.</p>
+        <div class="alert alert-info">
+            <p>No recommended metrics have been added for this phase yet.</p>
             {% if current_user.is_admin %}
-            <a href="{{ url_for('off_season.add_phase_metric', phase_id=phase.id) }}" class="btn btn-warning text-dark">
-                <i class="bi bi-plus-circle"></i> Add Recommended Metric
+            <a href="{{ url_for('off_season.add_phase_metric', phase_id=phase.id) }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Metric
             </a>
             {% endif %}
         </div>
@@ -422,7 +286,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the phase "{{ phase.name }}"?</p>
+                <p>Are you sure you want to delete the phase <strong>{{ phase.name }}</strong>?</p>
                 <p class="text-danger">This will also delete all schedules, sessions, and workout plans associated with this phase.</p>
             </div>
             <div class="modal-footer">
