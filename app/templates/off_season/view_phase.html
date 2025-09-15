@@ -134,7 +134,7 @@
     <div class="card-body">
         {% if workout_plans %}
         <div class="row">
-            {% for category, plans in workout_plans|sort(attribute='category.value')|groupby('category') %}
+            {% for category, plans in workout_plans|groupby('category') %}
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-header bg-{{ 'primary' if category.value == 'strength' else ('success' if category.value == 'skills' else 'warning') }} {{ 'text-white' if category.value != 'conditioning' else 'text-dark' }}">

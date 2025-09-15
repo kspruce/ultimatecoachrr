@@ -292,8 +292,11 @@ def view_phase(phase_id):
     # Get schedules for this phase
     schedules = PhaseSchedule.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
     
-    # Get workout plans for this phase
-    workout_plans = WorkoutPlan.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
+    # Get workout plans for this phase and sort them by category value
+    workout_plans = sorted(
+        WorkoutPlan.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all(),
+        key=lambda x: x.category.value
+    )
     
     # Get recommended metrics for this phase
     metrics = PhaseMetric.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
@@ -305,6 +308,8 @@ def view_phase(phase_id):
         workout_plans=workout_plans,
         metrics=metrics
     )
+
+
 
 @bp.route('/phases/<int:phase_id>/schedules/add', methods=['GET', 'POST'])
 @login_required
