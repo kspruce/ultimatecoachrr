@@ -13,7 +13,7 @@ class TrackWorkoutWeek(db.Model):
     week_number = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    session_plan_id = db.Column(db.Integer, db.ForeignKey('session_plans.id'))
+    session_plan_id = db.Column(db.Integer, db.ForeignKey('session_plan.id'))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Relationships
