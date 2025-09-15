@@ -4,7 +4,7 @@
 <li class="breadcrumb-item active">Track Workout Plan</li>
 {% endblock %}
 
-{% block page_title %}12-Week Track Workout Plan{% endblock %}
+{% block page_title %}10-Week Speed and Agility Workout Plan{% endblock %}
 
 {% block page_actions %}
 {% if current_user.is_admin %}
@@ -12,16 +12,16 @@
     <i class="bi bi-gear"></i> Manage Plan
 </a>
 {% endif %}
-<a href="{{ url_for('off_season.track_workout_standard') }}" class="btn btn-success">
-    <i class="bi bi-clipboard-check"></i> View Standardized Plan
-</a>
 {% endblock %}
 
 {% block off_season_content %}
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="bi bi-stopwatch"></i> Track Workout Plan Overview</h5>
-    </div>
+        <h5 class="mb-0"><i class="bi bi-stopwatch"></i> Speed and Agility Plan Overview</h5>
+        <a href="{{ url_for('off_season.track_workout_guide') }}" class="btn btn-sm btn-light">
+            <i class="bi bi-book"></i> Track Conditioning Guide
+        </a>
+    </div>   
     <div class="card-body">
         <p>This 12-week track workout plan is designed to improve your speed, agility, and conditioning for ultimate frisbee. 
         Each week focuses on specific aspects of athletic development that complement the off-season training phases.</p>
@@ -46,7 +46,7 @@
                 </div>
                 <div class="card-body">
                     {% if week.description %}
-                    <p>{{ week.description }}</p>
+                    <div>{{ week.description|markdown|safe }}</div>
                     {% else %}
                     <p class="text-muted">No description available.</p>
                     {% endif %}
@@ -108,4 +108,3 @@
     </div>
 </div>
 {% endblock %}
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

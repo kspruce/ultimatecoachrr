@@ -81,15 +81,13 @@
         <i class="bi bi-stopwatch"></i> Manage Track Workout
     </a>
 </div>
-{% endif %}
+{% else %}
 <div class="mt-4 text-center">
-    <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-primary me-2">
+    <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-primary">
         <i class="bi bi-stopwatch"></i> View Track Workout Plan
     </a>
-    <a href="{{ url_for('off_season.track_workout_standard') }}" class="btn btn-success">
-        <i class="bi bi-clipboard-check"></i> Standardized Track Plan
-    </a>
 </div>
+{% endif %}
 
 <style>
 .timeline-container {
