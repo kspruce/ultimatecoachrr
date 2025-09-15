@@ -198,8 +198,7 @@ def index():
         current_phase=current_phase,
         goals=goals,
         completed_sessions=completed_sessions,
-        today_schedule=today_schedule,
-        today=today, 
+        today_schedule=today_schedule
     )
 
 @bp.route('/phases')
@@ -292,11 +291,8 @@ def view_phase(phase_id):
     # Get schedules for this phase
     schedules = PhaseSchedule.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
     
-    # Get workout plans for this phase and sort them by category value
-    workout_plans = sorted(
-        WorkoutPlan.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all(),
-        key=lambda x: x.category.value
-    )
+    # Get workout plans for this phase
+    workout_plans = WorkoutPlan.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
     
     # Get recommended metrics for this phase
     metrics = PhaseMetric.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
@@ -308,8 +304,6 @@ def view_phase(phase_id):
         workout_plans=workout_plans,
         metrics=metrics
     )
-
-
 
 @bp.route('/phases/<int:phase_id>/schedules/add', methods=['GET', 'POST'])
 @login_required
@@ -829,15 +823,12 @@ def progress():
             team_organization_id=team_id
         ).order_by(FitnessRecord.date_recorded.desc()).all()
     
-    today = date.today()
-    
     return render_template(
         'off_season/progress.html',
         completions=completions,
         completed_goals=completed_goals,
         fitness_records=fitness_records,
-        player=player,
-        today = today
+        player=player
     )
 
 @bp.route('/timeline')
@@ -893,6 +884,12 @@ def track_workout():
     return render_template('off_season/track_workout.html', 
                           weeks=weeks, 
                           current_phase=current_phase)
+
+@bp.route('/track-workout/standard')
+@login_required
+def track_workout_standard():
+    """Display the standardized track workout plan."""
+    return render_template('off_season/track_workout_standard.html')
 
 @bp.route('/track-workout/week/<int:week_id>')
 @login_required
@@ -1044,9 +1041,3 @@ def delete_track_workout_week(week_id):
     
     flash(f'Week {week_number} deleted successfully', 'success')
     return redirect(url_for('off_season.manage_track_workout'))
-
-@bp.route('/track-workout-guide')
-@login_required
-def track_workout_guide():
-    """Display the track workout guide with detailed descriptions"""
-    return render_template('off_season/track_workout_guide.html')
