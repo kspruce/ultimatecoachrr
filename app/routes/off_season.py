@@ -1044,3 +1044,9 @@ def delete_track_workout_week(week_id):
     
     flash(f'Week {week_number} deleted successfully', 'success')
     return redirect(url_for('off_season.manage_track_workout'))
+
+@bp.route('/track-workout-guide')
+@login_required
+def track_workout_guide():
+    """Display the track workout guide with detailed descriptions"""
+    return render_template('off_season/track_workout_guide.html')

@@ -1,0 +1,368 @@
+{% extends "off_season/base.html" %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Track Workout Guide</li>
+{% endblock %}
+
+{% block page_title %}Track Workout Guide{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('off_season.track_workout') }}" class="btn btn-primary">
+    <i class="bi bi-calendar-week"></i> View Weekly Plan
+</a>
+{% endblock %}
+
+{% block off_season_content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-stopwatch"></i> Track Workout Types</h5>
+    </div>
+    <div class="card-body">
+        <p>This guide explains the different types of track workouts in our training plan. Each workout type targets specific aspects of your athletic development for ultimate frisbee.</p>
+    </div>
+</div>
+
+<!-- Intervals Section -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Intervals</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <h6>Description</h6>
+            <div class="markdown-content">
+                {{ "We're using intervals to improve your base aerobic fitness and to teach your body to work hard - you've almost always got more in the tank than you think, it's just your mind that insists on holding a bit back for useless things like fighting off wolves and being able to walk tomorrow.
+
+You can vary the work and recovery periods depending on your level, and as the \"on\" period decreases you should be looking to pick up the pace. Initially you're looking for improvements in your consistency across the \"on\" periods, i.e.being able to maintain a similar pace throughout all of them. Once you see an improvement here you should again think about picking up the pace
+
+**On** - A pace that will challenge you but you think you can maintain, a fast run rather than a sprint.  
+**Active Recovery** - You don't get to stop/walk; a slow jog that picks up during the time should be your benchmark."|markdown|safe }}
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Format</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0-1</td>
+                        <td>4 x (2min on, 2min active recovery)</td>
+                    </tr>
+                    <tr>
+                        <td>2-4</td>
+                        <td>6 x (90sec on, 90sec active recovery)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Walk-Jog-Run Section -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-lightning"></i> Walk-Jog-Run</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <h6>Description</h6>
+            <div class="markdown-content">
+                {{ "Time for some faster runs over a shorter distance. If you're not quite up to \"Sprinting\" yet, a fast run is acceptable, just try to push it harder than you were in the ON periods of your intervals. 
+
+These sessions aim to focus on upping the speed and building strength for fast running before we embark on some more technical sprint work. For now, when you're in the sprint stage you want to be thinking about having a good upright posture, high knees, and relaxed shoulders while at speed.
+
+**Walk** - duh.  
+**Jog** - You don't get to stop/walk; a slow jog that picks up during the time should be your benchmark.  
+**Run** - Try for an early-in-the-season sprint, if you're not there yet a fast run is fine but definitely faster than your intervals pace."|markdown|safe }}
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Format</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>5</td>
+                        <td>7 x (walk 50m, jog 200m, run 100m)</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>8 x (walk 50m, jog 200m, run 100m)</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>9 x (walk 50m, jog 200m, run 100m)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Hills Section -->
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Hills</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <h6>Description</h6>
+            <div class="markdown-content">
+                {{ "## Hill Sprints/Runs
+
+Hill running will really help to develop your power, which you can later convert to speed. 
+Ask someone to time you or do it roughly yourself.
+Your first assault on the hill should be 20* seconds of running - use the point you get to as your marker and try to hit that for the rest of your runs.
+Run up the hill 7 times in total (6 if you're not ready yet), however the 4th one should be all the way to the top of the hill (may depend on the hill).
+Between runs you should walk back down, aiming to be recovered by the time you reach the bottom and ready to go again.
+
+You can go as slowly down the hill to recover as you like but try not to rest at the bottom. As soon as you get back to the start point you should turn and go. Think of this as the point just after you've shut your man down on D and they've stopped running. You thought you were about to get a rest but suddenly they start cutting again - the ability to just suck it up and go as opposed to that pause you want to have is what will allow you to shut them down again.
+
+*15 if you need. There are advocates of hill sprints that say they should only be 8-10 seconds and that has its place as well for absolute top speed, feel free to try these as the weeks progress. This slightly longer version we do has a bit more to do with strength/power/mental toughness. The \"middle\" run to the top won't be found in running programmes, it's pretty much all mental toughness/shared misery we think it's worthwhile putting you through.
+
+## Deadmill Sprints
+
+Alternatively, if you don't have a hill handy/conditions are treacherous outside, you can do something similar with a treadmill called Deadmill Sprints:
+- You may need to hold on to the handholds.
+- Harder than it sounds.
+- Start the treadmill at walking pace and set the incline to maximum.
+- Once incline reaches maximum flip the emergency stop and it should stay in that position but the tread will still move with a bit of effort from your legs.
+- Complete 7 2 minute blocks, each starting with 20-30 seconds of \"sprint\" and the rest on recovery, either on or off the treadmill.
+
+Harder than it sounds."|markdown|safe }}
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Format</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>8-11</td>
+                        <td>Hill sprints or Deadmill sprints as described above</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Sprints Section -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Sprint Work</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <h6>Introduction</h6>
+            <div class="markdown-content">
+                {{ "So far we've built up our base level, added some endurance, increased our power, and now we're looking to channel that work into getting the most out of our speed. This will consist of some sprint drills and acceleration work. You will likely find this less tiring than previous sessions. It's important that you maintain/increase the endurance and power you've already built up outside of these sessions. Schedule some time to do an extra set of hills/intervals/fartlek etc."|markdown|safe }}
+            </div>
+        </div>
+        
+        <div class="accordion" id="sprintAccordion">
+            <!-- Accelerations -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Accelerations (Week 12)
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#sprintAccordion">
+                    <div class="accordion-body">
+                        <div class="markdown-content">
+                            {{ "This is about using your power to get up to speed quickly. Each of the accelerations should be done at maximal effort so it's important to give yourself enough time between each to make sure you are still being explosive.
+
+Mark out a 20m flat straight
+Start from a low running position; lean forward into the course and push off once you feel the need to move one of your feet to stabilise yourself. Make sure to lean with your whole body, don't just bend at the waist.
+Stay low initially and take shorter first few steps in piston-like action rather than cyclical, heel recovery action. Drive your arms with an exaggerated initial arm action to get you moving.
+Make sure to drive your knee forward rather than thinking about moving your feet.
+As you speed up your head/shoulders should naturally start to straighten and you will assume a more upright position, most likely somewhere between 10 and 20 metres.
+Decelerate once you hit your 20m marker.
+Give yourself at least 30 seconds rest between each acceleration, and 5 minutes between sets.
+
+**Format:** 2 sets of 8 accelerations"|markdown|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lead-Ins -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Lead-Ins (Week 13)
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#sprintAccordion">
+                    <div class="accordion-body">
+                        <div class="markdown-content">
+                            {{ "Mark out a 40m flat, straight course with a marker at 20m
+Use the first 20m as a lead in to get up to speed from standing (i.e. not an explosive acceleration start).
+From the 20m point the aim is to sprint the next 20m at full speed with good technique (see pointers below)
+Rest for 2-3 minutes between sets (e.g. 4 sets of 3) to ensure you are doing them at maximum speed.
+
+Points on running at full speed:
+- Focus on staying tall and relaxed. Stay fluid in the shoulders, avoid tensing them/hunching over. Engage your core/glutes to keep you stable through your middle.
+- When your foot strikes the ground it should ideally be aligned roughly below your knee. If it is further forward, i.e. the angle between your knee and your foot is less than 90 degrees, you are creating a slight braking force every time you hit the ground and are likely to be landing on your heels.
+- Once you bring your foot off the ground, try to drive your knee through to a position that puts your thigh parallel to the ground before bringing it back down. At this point your foot should be parallel/slightly raised also, i.e. your toes should not be pointing at the ground. 
+- Strike the ground with the middle of the ball of your foot.
+- If you do the above step correctly this should happen anyway, but try to avoid flicking your heels up behind you. Your heels will come up but if you are driving your knee through into the correct position the movement should be up towards your body from below rather than flicking backwards towards your bum with your knee pointing down.
+
+**Format:** 4 sets of 3 lead-ins"|markdown|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pyramids -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        Pyramids (Week 14)
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#sprintAccordion">
+                    <div class="accordion-body">
+                        <div class="markdown-content">
+                            {{ "Full sprint start, working through Acceleration/Drive phase into upright full-speed coasting.
+After each sprint, walk slowly back to the start, you should aim to be recovered by the time you get back.
+Whatever the start and end distances are, work up from the lower distance to the upper one and back down again in 10m increments/decrements, e.g. 30-80m:
+30m, 40m, 50m, 60m, 70m, 80m, 70m, 60m, 50m, 40m, 30m
+
+**Format:** 30-80m Pyramid"|markdown|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Full Sprints -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFour">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        Full Sprints (Week 15)
+                    </button>
+                </h2>
+                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#sprintAccordion">
+                    <div class="accordion-body">
+                        <div class="markdown-content">
+                            {{ "Apply all the techniques you've learned in the previous sprint sessions.
+Focus on maximum effort with proper form.
+Full recovery between sprints.
+
+**Format:** 7 x 100m sprints"|markdown|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Table -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-table"></i> Complete Track Workout Schedule</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Phase</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>0-1</td>
+                        <td>Intervals</td>
+                        <td>4 x (2m on, 2 min active recovery)</td>
+                    </tr>
+                    <tr>
+                        <td>2-4</td>
+                        <td>Intervals</td>
+                        <td>6 x (90s on, 90s min active recovery)</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>Walk-Jog-Run</td>
+                        <td>7 x (walk 50m, jog 200m, run 100m)</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Walk-Jog-Run</td>
+                        <td>8 x (walk 50m, jog 200m, run 100m)</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>Walk-Jog-Run</td>
+                        <td>9 x (walk 50m, jog 200m, run 100m)</td>
+                    </tr>
+                    <tr>
+                        <td>8-11</td>
+                        <td>Hills</td>
+                        <td>Hill sprints or Deadmill sprints</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Sprints</td>
+                        <td>Accelerations - 2 sets of 8</td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td>Sprints</td>
+                        <td>Lead-ins - 4 sets of 3</td>
+                    </tr>
+                    <tr>
+                        <td>14</td>
+                        <td>Sprints</td>
+                        <td>30-80m Pyramid</td>
+                    </tr>
+                    <tr>
+                        <td>15</td>
+                        <td>Sprints</td>
+                        <td>7 x 100m sprints</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.markdown-content {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.markdown-content h2 {
+    font-size: 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+}
+.markdown-content ul, .markdown-content ol {
+    padding-left: 20px;
+}
+.markdown-content p {
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
