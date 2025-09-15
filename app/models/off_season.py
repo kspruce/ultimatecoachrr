@@ -5,6 +5,7 @@ from sqlalchemy import Column, Integer, String, Text, Boolean, Date, ForeignKey,
 from sqlalchemy.orm import relationship
 import enum
 from app.models.fitness import FitnessMetric
+from app.models.user import User
 
 class TrackWorkoutWeek(db.Model):
     """Model representing a week in the track workout plan"""
@@ -153,8 +154,8 @@ class UserSessionCompletion(db.Model):
     rating = db.Column(db.Integer)  # Optional rating (1-5)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
-    # Relationships
-    user = db.relationship('User')
+    # Updated relationships
+    user = db.relationship('User', foreign_keys=[user_id])
     session = db.relationship('ScheduleSession')
     
     def __repr__(self):
