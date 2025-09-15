@@ -134,17 +134,17 @@
     <div class="card-body">
         {% if workout_plans %}
         <div class="row">
-            {% for category_value, plans in workout_plans|groupby('category.value') %}
+            {% for category, plans in workout_plans|groupby('category') %}
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
-                    <div class="card-header bg-{{ 'primary' if category_value == 'strength' else ('success' if category_value == 'skills' else 'warning') }} {{ 'text-white' if category_value != 'conditioning' else 'text-dark' }}">
-                        <h5 class="mb-0">{{ category_value|capitalize }}</h5>
+                    <div class="card-header bg-{{ 'primary' if category.value == 'strength' else ('success' if category.value == 'skills' else 'warning') }} {{ 'text-white' if category.value != 'conditioning' else 'text-dark' }}">
+                        <h5 class="mb-0">{{ category.value|capitalize }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="list-group">
-                            {% for level, level_plans in plans|groupby('level.value') %}
+                            {% for level, level_plans in plans|groupby('level') %}
                             <div class="list-group-item">
-                                <h6>{{ level|capitalize }}</h6>
+                                <h6>{{ level.value|capitalize }}</h6>
                                 <div class="list-group list-group-flush">
                                     {% for plan in level_plans %}
                                     <a href="{{ url_for('off_season.view_workout', workout_id=plan.id) }}" class="list-group-item list-group-item-action">
@@ -170,7 +170,6 @@
             {% endif %}
         </div>
         {% endif %}
-
     </div>
 </div>
 
@@ -179,7 +178,7 @@
     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Related Session Plans</h5>
         {% if current_user.is_admin %}
-        <a href="{{ url_for('session.add_session') }}" class="btn btn-sm btn-light" target="_blank">
+        <a href="{{ url_for('session.add') }}" class="btn btn-sm btn-light" target="_blank">
             <i class="bi bi-plus-circle"></i> Create Session Plan
         </a>
         {% endif %}
@@ -195,9 +194,13 @@
                     <i class="bi bi-box-arrow-up-right"></i> Browse Session Plans
                 </a>
                 
-                {% if current_user.is_admin %}
                 <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-stopwatch"></i> Track Workout Plan
+                    <i class="bi bi-stopwatch"></i> View Track Workout Plan
+                </a>
+                
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('off_season.manage_track_workout') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-gear"></i> Manage Track Workout
                 </a>
                 {% endif %}
             </div>

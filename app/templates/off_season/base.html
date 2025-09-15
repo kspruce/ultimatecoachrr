@@ -43,6 +43,9 @@
                 <a href="{{ url_for('off_season.guide') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'off_season.guide' %}active{% endif %}">
                     <i class="bi bi-book"></i> Training Guide
                 </a>
+                <a href="{{ url_for('off_season.track_workout') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'off_season.track_workout' %}active{% endif %}">
+                    <i class="bi bi-stopwatch"></i> Track Workout Plan
+                </a>
                 {% if current_user.is_admin %}
                 <div class="list-group-item list-group-item-secondary">Admin</div>
                 <a href="{{ url_for('off_season.phases') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'off_season.phases' %}active{% endif %}">
