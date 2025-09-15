@@ -43,7 +43,7 @@
                 </div>
                 <div class="card-body">
                     {% if week.description %}
-                    <p>{{ week.description }}</p>
+                    <div>{{ week.description|markdown|safe }}</div>
                     {% else %}
                     <p class="text-muted">No description available.</p>
                     {% endif %}
@@ -105,4 +105,3 @@
     </div>
 </div>
 {% endblock %}
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
