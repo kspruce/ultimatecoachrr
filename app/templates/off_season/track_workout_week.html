@@ -5,6 +5,41 @@
 <li class="breadcrumb-item active">Week {{ week.week_number }}</li>
 {% endblock %}
 
+{% block head %}
+{{ super() }}
+<style>
+    /* Control markdown image sizing specifically for track workout week */
+    .markdown-content img {
+        max-width: 100% !important;
+        max-height: 250px !important;
+        height: auto !important;
+        display: block !important;
+        margin: 10px 0 !important;
+        border-radius: 3px !important;
+        object-fit: contain !important;
+    }
+    
+    /* Additional control for session plan description */
+    .session-plan .markdown-content img {
+        max-height: 200px !important;
+    }
+    
+    /* Ensure table cells with markdown content don't overflow */
+    td.markdown-content {
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-break: break-word;
+    }
+    
+    /* Force images in table cells to be even more constrained */
+    td.markdown-content img {
+        max-width: 100% !important;
+        max-height: 150px !important;
+    }
+</style>
+{% endblock %}
+
+
 {% block page_title %}Week {{ week.week_number }}: {{ week.title }}{% endblock %}
 
 {% block page_actions %}
@@ -36,7 +71,7 @@
         </div>
         
         {% if session_plan %}
-        <div class="card mb-4">
+        <div class="card mb-4 session-plan">
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Session Plan: {{ session_plan.title }}</h5>
             </div>
@@ -161,4 +196,41 @@
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Process all images in markdown content
+    const markdownImages = document.querySelectorAll('.markdown-content img');
+    
+    markdownImages.forEach(img => {
+        // Add expandable class
+        img.classList.add('expandable-img');
+        
+        // Store original src
+        const originalSrc = img.src;
+        
+        // Make image clickable
+        img.addEventListener('click', function() {
+            window.open(originalSrc, '_blank');
+        });
+        
+        // Force inline styles for maximum control
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '250px';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '10px 0';
+        img.style.objectFit = 'contain';
+    });
+    
+    // Special handling for table cell images
+    const tableCellImages = document.querySelectorAll('td.markdown-content img');
+    tableCellImages.forEach(img => {
+        img.style.maxHeight = '150px';
+    });
+});
+</script>
 {% endblock %}
