@@ -61,35 +61,37 @@
                 </div>
                 {% endif %}
                 
-                {% if components %}
-                <h6>Session Components</h6>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Order</th>
-                                <th>Component</th>
-                                <th>Duration</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for component in components %}
-                            <tr>
-                                <td>{{ component.order }}</td>
-                                <td>{{ component.title }}</td>
-                                <td>{{ component.duration }} min</td>
-                                <td class="markdown-content">{{ component.description|markdown|safe }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="alert alert-light">
-                    <p>No components defined for this session.</p>
-                </div>
-                {% endif %}
+				<!-- Replace the table section (around line 70) with this -->
+				{% if components %}
+				<h6>Session Components</h6>
+				<div class="table-responsive">
+					<table class="table table-hover">
+						<thead>
+							<tr>
+								<th>#</th>
+								<th>Component</th>
+								<th>Time</th>
+								<th>Description</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for component in components %}
+							<tr>
+								<td>{{ component.order }}</td>
+								<td>{{ component.title }}</td>
+								<td>{{ component.duration }} min</td>
+								<td class="markdown-content">{{ component.description|markdown|safe }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				{% else %}
+				<div class="alert alert-light">
+					<p>No components defined for this session.</p>
+				</div>
+				{% endif %}
+
                 
                 <div class="mt-3">
                     <a href="{{ url_for('session.detail', session_id=session_plan.id) }}" class="btn btn-outline-success" target="_blank">

@@ -2,50 +2,82 @@
 
 {% block head %}
 <style>
+    /* Responsive image handling for markdown content */
+    .card-body img,
+    .table td img {
+        max-width: 100%;
+        max-height: 300px; /* Limit height to prevent excessive scrolling */
+        height: auto;
+        display: block;
+        margin: 10px 0;
+        border-radius: 3px;
+        object-fit: contain; /* Ensures image maintains aspect ratio */
+    }
 
-	/* Responsive image handling for markdown content */
-	.card-body img,
-	.table td img {
-		max-width: 100%;
-		max-height: 300px; /* Limit height to prevent excessive scrolling */
-		height: auto;
-		display: block;
-		margin: 10px 0;
-		border-radius: 3px;
-		object-fit: contain; /* Ensures image maintains aspect ratio */
-	}
+    /* Special handling for table cells with images */
+    .table td {
+        max-width: 400px;
+        overflow-wrap: break-word;
+        word-break: break-word; /* Helps with long words */
+    }
 
-	/* Special handling for table cells with images */
-	.table td {
-		max-width: 400px;
-		overflow-wrap: break-word;
-	}
+    /* Add a class for clickable/expandable images */
+    .expandable-img {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
 
-	/* Add a class for clickable/expandable images */
-	.expandable-img {
-		cursor: pointer;
-		transition: transform 0.2s;
-	}
+    /* Optional: Add hover effect for expandable images */
+    .expandable-img:hover {
+        opacity: 0.9;
+    }
 
-	/* Optional: Add hover effect for expandable images */
-	.expandable-img:hover {
-		opacity: 0.9;
-	}
+    /* Enhanced markdown content handling */
+    .markdown-content {
+        max-width: 100%; /* Changed from 400px to 100% */
+        overflow-wrap: break-word;
+        word-break: break-word;
+        overflow-x: hidden; /* Prevent horizontal scrolling */
+    }
 
-
-	.markdown-content {
-		max-width: 400px;
-		overflow-wrap: break-word;
-	}
-
-	.markdown-content img {
-		max-width: 100%;
-		height: auto;
-	}
-
-
+    .markdown-content img {
+        max-width: 100%;
+        height: auto;
+        max-height: 300px;
+    }
+    
+    /* Fix for table responsiveness */
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    /* Ensure table cells don't force horizontal scrolling */
+    .table-responsive table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    
+    /* Make description column wider */
+    .table-responsive table th:nth-child(4),
+    .table-responsive table td:nth-child(4) {
+        width: 50%; /* Allocate half the table width to description */
+    }
+    
+    /* Make other columns narrower */
+    .table-responsive table th:nth-child(1),
+    .table-responsive table td:nth-child(1),
+    .table-responsive table th:nth-child(3),
+    .table-responsive table td:nth-child(3) {
+        width: 10%;
+    }
+    
+    .table-responsive table th:nth-child(2),
+    .table-responsive table td:nth-child(2) {
+        width: 30%;
+    }
 </style>
 {% endblock %}
+
 
 
 {% block content %}
@@ -116,10 +148,42 @@
 
 {% block scripts %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+
+<!-- Add Bootstrap Modal for image viewing -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Expanded image">
+            </div>
+            <div class="modal-footer">
+                <a id="openInNewTab" href="#" target="_blank" class="btn btn-primary">Open in New Tab</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Find all images in markdown content
     const markdownImages = document.querySelectorAll('.card-body img, .table td img');
+    
+    // Check if Bootstrap is available
+    const useModal = typeof bootstrap !== 'undefined';
+    let imageModal;
+    let modalImage;
+    let openInNewTab;
+    
+    if (useModal) {
+        imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        modalImage = document.getElementById('modalImage');
+        openInNewTab = document.getElementById('openInNewTab');
+    }
     
     markdownImages.forEach(img => {
         // Add expandable class
@@ -128,11 +192,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Store original src
         const originalSrc = img.src;
         
-        // Make image clickable to open in new tab or modal
+        // Make image clickable
         img.addEventListener('click', function() {
-            window.open(originalSrc, '_blank');
+            if (useModal) {
+                modalImage.src = originalSrc;
+                openInNewTab.href = originalSrc;
+                imageModal.show();
+            } else {
+                window.open(originalSrc, '_blank');
+            }
         });
     });
 });
 </script>
 {% endblock %}
+
