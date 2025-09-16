@@ -202,6 +202,18 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if Bootstrap is available for modal functionality
+    const useModal = typeof bootstrap !== 'undefined';
+    let imageModal;
+    let modalImage;
+    let openInNewTab;
+    
+    if (useModal) {
+        imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        modalImage = document.getElementById('modalImage');
+        openInNewTab = document.getElementById('openInNewTab');
+    }
+    
     // Process all images in markdown content
     const markdownImages = document.querySelectorAll('.markdown-content img');
     
@@ -212,9 +224,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Store original src
         const originalSrc = img.src;
         
-        // Make image clickable
-        img.addEventListener('click', function() {
-            window.open(originalSrc, '_blank');
+        // Make image clickable to open modal instead of new tab
+        img.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (useModal) {
+                modalImage.src = originalSrc;
+                openInNewTab.href = originalSrc;
+                imageModal.show();
+            } else {
+                // Fallback if modal isn't available
+                window.open(originalSrc, '_blank');
+            }
         });
         
         // Force inline styles for maximum control
@@ -224,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
         img.style.display = 'block';
         img.style.margin = '10px 0';
         img.style.objectFit = 'contain';
+        img.style.cursor = 'pointer'; // Add pointer cursor to indicate clickability
     });
     
     // Special handling for table cell images
@@ -234,3 +255,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
