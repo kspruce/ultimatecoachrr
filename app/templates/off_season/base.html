@@ -7,22 +7,31 @@
 	.card-body img,
 	.table td img {
 		max-width: 100%;
+		max-height: 300px; /* Limit height to prevent excessive scrolling */
 		height: auto;
 		display: block;
 		margin: 10px 0;
 		border-radius: 3px;
+		object-fit: contain; /* Ensures image maintains aspect ratio */
 	}
 
 	/* Special handling for table cells with images */
 	.table td {
-		max-width: 400px; /* Adjust based on your layout needs */
+		max-width: 400px;
 		overflow-wrap: break-word;
 	}
 
-	/* For the session components table specifically */
-	.table td:nth-child(4) img {  /* 4th column - Description column */
-		max-width: 100%;
+	/* Add a class for clickable/expandable images */
+	.expandable-img {
+		cursor: pointer;
+		transition: transform 0.2s;
 	}
+
+	/* Optional: Add hover effect for expandable images */
+	.expandable-img:hover {
+		opacity: 0.9;
+	}
+
 
 	.markdown-content {
 		max-width: 400px;
@@ -102,4 +111,28 @@
     </div>
 </div>
 {% endblock %}
+
+
+
+{% block scripts %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Find all images in markdown content
+    const markdownImages = document.querySelectorAll('.card-body img, .table td img');
+    
+    markdownImages.forEach(img => {
+        // Add expandable class
+        img.classList.add('expandable-img');
+        
+        // Store original src
+        const originalSrc = img.src;
+        
+        // Make image clickable to open in new tab or modal
+        img.addEventListener('click', function() {
+            window.open(originalSrc, '_blank');
+        });
+    });
+});
+</script>
+{% endblock %}
