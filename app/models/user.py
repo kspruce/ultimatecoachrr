@@ -32,21 +32,22 @@ class User(UserMixin, db.Model):
         return self.player_profile
         
     # Add role-based properties
+
     @property
     def is_admin(self):
-        return self.role == 'admin' or self.is_admin_flag
-        
+        # Use the column value directly instead of is_admin_flag
+        return self.role == 'admin' or self._is_admin
+
     @is_admin.setter
     def is_admin(self, value):
-        # When setting is_admin, update both role and is_admin_flag
         if value:
             self.role = 'admin'
-            self.is_admin_flag = True
+            self._is_admin = True
         else:
             if self.role == 'admin':
-                self.role = 'player'  # Default to player if admin is removed
-            self.is_admin_flag = False
-        
+                self.role = 'player'
+            self._is_admin = False
+
     @property
     def is_coach(self):
         return self.role == 'coach' or self.is_admin
