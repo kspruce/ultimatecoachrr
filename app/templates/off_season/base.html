@@ -2,16 +2,27 @@
 
 {% block head %}
 <style>
-    /* Extremely restrictive image handling for markdown content */
-    .card-body img,
-    .table td img {
-        max-width: 250px !important; /* Force smaller width */
-        max-height: 200px !important; /* Force smaller height */
+    /* General image handling */
+    .card-body img {
+        max-width: 100%;
+        max-height: 300px;
         height: auto;
         display: block;
         margin: 10px 0;
         border-radius: 3px;
-        object-fit: contain; /* Ensures image maintains aspect ratio */
+        object-fit: contain;
+    }
+
+    /* Extremely restrictive image handling for table cells */
+    .table td img {
+        max-width: 100% !important; /* Force to respect parent width */
+        width: 100% !important; /* Force to take exactly parent width */
+        max-height: 150px !important; /* Force smaller height */
+        height: auto;
+        display: block;
+        margin: 5px 0;
+        border-radius: 3px;
+        object-fit: contain;
     }
 
     /* Special handling for table cells with images */
@@ -19,13 +30,14 @@
         max-width: 400px;
         overflow-wrap: break-word;
         word-break: break-word;
+        vertical-align: top;
     }
 
     /* Add a class for clickable/expandable images */
     .expandable-img {
         cursor: pointer;
         transition: transform 0.2s;
-        border: 1px solid #ddd; /* Add border to indicate it's clickable */
+        border: 1px solid #ddd;
     }
 
     /* Optional: Add hover effect for expandable images */
@@ -35,16 +47,21 @@
 
     /* Enhanced markdown content handling */
     .markdown-content {
-        max-width: 100%;
+        width: 100%;
         overflow-wrap: break-word;
         word-break: break-word;
         overflow-x: hidden; /* Prevent horizontal scrolling */
     }
 
-    .markdown-content img {
-        max-width: 250px !important; /* Force smaller width */
-        max-height: 200px !important; /* Force smaller height */
-        height: auto;
+    /* Specific handling for markdown content in table cells */
+    td.markdown-content {
+        width: 100%;
+        padding: 8px;
+    }
+
+    td.markdown-content img {
+        max-width: 100% !important;
+        width: 100% !important;
     }
     
     /* Fix for table responsiveness */
@@ -77,9 +94,15 @@
         width: 30%;
     }
     
-    /* Add a thumbnail indicator */
-    .expandable-img::after {
-        content: "🔍";
+    /* Image container for better control */
+    .img-container {
+        width: 100%;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    /* Zoom indicator */
+    .zoom-indicator {
         position: absolute;
         bottom: 5px;
         right: 5px;
@@ -88,9 +111,11 @@
         padding: 2px 5px;
         border-radius: 3px;
         font-size: 12px;
+        z-index: 1;
     }
 </style>
 {% endblock %}
+
 
 
 
@@ -183,10 +208,32 @@
     </div>
 </div>
 
+{% block scripts %}
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+
+<!-- Add Bootstrap Modal for image viewing -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Expanded image">
+            </div>
+            <div class="modal-footer">
+                <a id="openInNewTab" href="#" target="_blank" class="btn btn-primary">Open in New Tab</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Find all images in markdown content
-    const markdownImages = document.querySelectorAll('.card-body img, .table td img');
+    // Process table cell images specifically
+    const tableCellImages = document.querySelectorAll('.table td img');
     
     // Check if Bootstrap is available
     const useModal = typeof bootstrap !== 'undefined';
@@ -200,36 +247,55 @@ document.addEventListener('DOMContentLoaded', function() {
         openInNewTab = document.getElementById('openInNewTab');
     }
     
-    markdownImages.forEach(img => {
+    tableCellImages.forEach(img => {
+        // Get the parent cell
+        const cell = img.closest('td');
+        
+        // Create a container div
+        const container = document.createElement('div');
+        container.className = 'img-container';
+        
+        // Store original src
+        const originalSrc = img.src;
+        
+        // Add zoom indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'zoom-indicator';
+        indicator.innerHTML = '🔍';
+        
+        // Replace the image with our container
+        img.parentNode.insertBefore(container, img);
+        container.appendChild(img);
+        container.appendChild(indicator);
+        
+        // Add expandable class to image
+        img.classList.add('expandable-img');
+        
+        // Make container clickable
+        container.style.cursor = 'pointer';
+        container.addEventListener('click', function() {
+            if (useModal) {
+                modalImage.src = originalSrc;
+                openInNewTab.href = originalSrc;
+                imageModal.show();
+            } else {
+                window.open(originalSrc, '_blank');
+            }
+        });
+    });
+    
+    // Process other images in card bodies
+    const cardBodyImages = document.querySelectorAll('.card-body img:not(.table td img)');
+    
+    cardBodyImages.forEach(img => {
         // Add expandable class
         img.classList.add('expandable-img');
         
         // Store original src
         const originalSrc = img.src;
         
-        // Add a wrapper div with position relative
-        const wrapper = document.createElement('div');
-        wrapper.style.position = 'relative';
-        wrapper.style.display = 'inline-block';
-        wrapper.style.maxWidth = '250px';
-        img.parentNode.insertBefore(wrapper, img);
-        wrapper.appendChild(img);
-        
-        // Add a thumbnail indicator
-        const indicator = document.createElement('span');
-        indicator.textContent = '🔍';
-        indicator.style.position = 'absolute';
-        indicator.style.bottom = '5px';
-        indicator.style.right = '5px';
-        indicator.style.background = 'rgba(0,0,0,0.5)';
-        indicator.style.color = 'white';
-        indicator.style.padding = '2px 5px';
-        indicator.style.borderRadius = '3px';
-        indicator.style.fontSize = '12px';
-        wrapper.appendChild(indicator);
-        
         // Make image clickable
-        wrapper.addEventListener('click', function() {
+        img.addEventListener('click', function() {
             if (useModal) {
                 modalImage.src = originalSrc;
                 openInNewTab.href = originalSrc;
@@ -242,5 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
 
 
