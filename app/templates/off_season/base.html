@@ -2,11 +2,11 @@
 
 {% block head %}
 <style>
-    /* Responsive image handling for markdown content */
+    /* Extremely restrictive image handling for markdown content */
     .card-body img,
     .table td img {
-        max-width: 100%;
-        max-height: 300px; /* Limit height to prevent excessive scrolling */
+        max-width: 250px !important; /* Force smaller width */
+        max-height: 200px !important; /* Force smaller height */
         height: auto;
         display: block;
         margin: 10px 0;
@@ -18,13 +18,14 @@
     .table td {
         max-width: 400px;
         overflow-wrap: break-word;
-        word-break: break-word; /* Helps with long words */
+        word-break: break-word;
     }
 
     /* Add a class for clickable/expandable images */
     .expandable-img {
         cursor: pointer;
         transition: transform 0.2s;
+        border: 1px solid #ddd; /* Add border to indicate it's clickable */
     }
 
     /* Optional: Add hover effect for expandable images */
@@ -34,16 +35,16 @@
 
     /* Enhanced markdown content handling */
     .markdown-content {
-        max-width: 100%; /* Changed from 400px to 100% */
+        max-width: 100%;
         overflow-wrap: break-word;
         word-break: break-word;
         overflow-x: hidden; /* Prevent horizontal scrolling */
     }
 
     .markdown-content img {
-        max-width: 100%;
+        max-width: 250px !important; /* Force smaller width */
+        max-height: 200px !important; /* Force smaller height */
         height: auto;
-        max-height: 300px;
     }
     
     /* Fix for table responsiveness */
@@ -60,7 +61,7 @@
     /* Make description column wider */
     .table-responsive table th:nth-child(4),
     .table-responsive table td:nth-child(4) {
-        width: 50%; /* Allocate half the table width to description */
+        width: 50%;
     }
     
     /* Make other columns narrower */
@@ -75,8 +76,22 @@
     .table-responsive table td:nth-child(2) {
         width: 30%;
     }
+    
+    /* Add a thumbnail indicator */
+    .expandable-img::after {
+        content: "🔍";
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background: rgba(0,0,0,0.5);
+        color: white;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 12px;
+    }
 </style>
 {% endblock %}
+
 
 
 
@@ -192,8 +207,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // Store original src
         const originalSrc = img.src;
         
+        // Add a wrapper div with position relative
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.maxWidth = '250px';
+        img.parentNode.insertBefore(wrapper, img);
+        wrapper.appendChild(img);
+        
+        // Add a thumbnail indicator
+        const indicator = document.createElement('span');
+        indicator.textContent = '🔍';
+        indicator.style.position = 'absolute';
+        indicator.style.bottom = '5px';
+        indicator.style.right = '5px';
+        indicator.style.background = 'rgba(0,0,0,0.5)';
+        indicator.style.color = 'white';
+        indicator.style.padding = '2px 5px';
+        indicator.style.borderRadius = '3px';
+        indicator.style.fontSize = '12px';
+        wrapper.appendChild(indicator);
+        
         // Make image clickable
-        img.addEventListener('click', function() {
+        wrapper.addEventListener('click', function() {
             if (useModal) {
                 modalImage.src = originalSrc;
                 openInNewTab.href = originalSrc;
@@ -206,4 +242,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
 
