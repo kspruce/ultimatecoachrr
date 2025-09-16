@@ -209,9 +209,31 @@ document.addEventListener('DOMContentLoaded', function() {
     let openInNewTab;
     
     if (useModal) {
-        imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        // Get the modal element
+        const modalElement = document.getElementById('imageModal');
+        
+        // Initialize the modal with backdrop: 'static' to prevent closing on backdrop click
+        imageModal = new bootstrap.Modal(modalElement, {
+            backdrop: true,
+            keyboard: true
+        });
+        
         modalImage = document.getElementById('modalImage');
         openInNewTab = document.getElementById('openInNewTab');
+        
+        // Add event listener for when modal is hidden
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            // Force removal of modal backdrop
+            const modalBackdrops = document.getElementsByClassName('modal-backdrop');
+            while(modalBackdrops.length > 0){
+                modalBackdrops[0].parentNode.removeChild(modalBackdrops[0]);
+            }
+            
+            // Reset body classes
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        });
     }
     
     // Process all images in markdown content
