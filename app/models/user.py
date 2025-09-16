@@ -33,20 +33,23 @@ class User(UserMixin, db.Model):
         
     # Add role-based properties
 
+
     @property
     def is_admin(self):
-        # Use the column value directly instead of is_admin_flag
-        return self.role == 'admin' or self._is_admin
+        # Safe access to potentially missing attribute
+        return self.role == 'admin' or getattr(self, 'is_admin_flag', False)
 
     @is_admin.setter
     def is_admin(self, value):
+        # When setting is_admin, update both role and is_admin_flag
         if value:
             self.role = 'admin'
-            self._is_admin = True
+            # Use setattr to safely set the attribute
+            setattr(self, 'is_admin_flag', True)
         else:
             if self.role == 'admin':
-                self.role = 'player'
-            self._is_admin = False
+                self.role = 'player'  # Default to player if admin is removed
+            setattr(self, 'is_admin_flag', False)
 
     @property
     def is_coach(self):
