@@ -615,18 +615,13 @@ def rsvp(session_id):
             existing_rsvp.notes = form.notes.data
             flash('Your RSVP has been updated!', 'success')
         else:
-            # Find the highest existing RSVP ID and add 1
-            highest_id = db.session.query(db.func.max(SessionRSVP.id)).scalar() or 0
-            next_id = highest_id + 1
-            
-            # Create new RSVP
+            # Create new RSVP - WITHOUT explicitly setting the ID
             rsvp = SessionRSVP(
-                id=next_id,  # Explicitly set the ID to avoid conflicts
                 session_id=session_id,
                 player_id=player.id,
                 status=form.status.data,
                 notes=form.notes.data,
-                team_organization_id=get_current_team_id()  # Add team organization ID
+                team_organization_id=get_current_team_id()
             )
             db.session.add(rsvp)
             flash('Your RSVP has been submitted!', 'success')
@@ -635,6 +630,7 @@ def rsvp(session_id):
         return redirect(url_for('session.detail', session_id=session_id))
     
     return render_template('session/rsvp.html', form=form, session=session_plan, existing_rsvp=existing_rsvp)
+
 
 @bp.route('/<int:session_id>/rsvps')
 @login_required
