@@ -141,8 +141,25 @@ def index():
         if upcoming_phases:
             current_phase = min(upcoming_phases, key=lambda p: p.start_date)
     
+    # Get available schedules for the current phase
+    available_schedules = []
+    if current_phase:
+        available_schedules = PhaseSchedule.query.filter_by(
+            phase_id=current_phase.id,
+            team_organization_id=team_id
+        ).all()
+    
     # Get user's preferred schedule type (default to standard)
-    preferred_schedule_type = ScheduleType.STANDARD
+    preferred_schedule_type = ScheduleType.STANDARD.value
+    if current_phase:
+        preference = UserSchedulePreference.query.filter_by(
+            user_id=current_user.id,
+            phase_id=current_phase.id,
+            team_organization_id=team_id
+        ).first()
+        
+        if preference:
+            preferred_schedule_type = preference.schedule_type.value
     
     # Get user's SMART goals
     goals = SMARTGoal.query.filter_by(
@@ -161,13 +178,9 @@ def index():
     
     # Get today's schedule if current phase exists
     today_schedule = None
-    if current_phase:
+    if current_phase and available_schedules:
         # Find the schedule for the user's preferred type
-        schedule = PhaseSchedule.query.filter_by(
-            phase_id=current_phase.id,
-            schedule_type=preferred_schedule_type,
-            team_organization_id=team_id
-        ).first()
+        schedule = next((s for s in available_schedules if s.schedule_type.value == preferred_schedule_type), available_schedules[0])
         
         if schedule:
             # Get today's session
@@ -189,6 +202,7 @@ def index():
                 
                 today_schedule = {
                     'session': today_session,
+                    'schedule': schedule,
                     'completed': completion is not None
                 }
     
@@ -199,8 +213,11 @@ def index():
         goals=goals,
         completed_sessions=completed_sessions,
         today_schedule=today_schedule,
-        today=today, 
+        today=today,
+        available_schedules=available_schedules,
+        preferred_schedule_type=preferred_schedule_type
     )
+
 
 @bp.route('/phases')
 @login_required
@@ -1094,3 +1111,62 @@ def delete_track_workout_week(week_id):
 def track_workout_guide():
     """Display the track workout guide with detailed descriptions"""
     return render_template('off_season/track_workout_guide.html')
+
+@bp.route('/set_schedule', methods=['POST'])
+@login_required
+def set_schedule():
+    """Set user's preferred schedule type"""
+    team_id = get_current_team_id()
+    
+    # Get the current phase
+    today = date.today()
+    current_phase = OffSeasonPhase.query.filter(
+        OffSeasonPhase.team_organization_id == team_id,
+        OffSeasonPhase.start_date <= today,
+        OffSeasonPhase.end_date >= today
+    ).first()
+    
+    if not current_phase:
+        flash('No active phase found.', 'warning')
+        return redirect(url_for('off_season.index'))
+    
+    # Get the selected schedule type
+    schedule_type_value = request.form.get('schedule_type', ScheduleType.STANDARD.value)
+    try:
+        schedule_type = ScheduleType(schedule_type_value)
+    except ValueError:
+        schedule_type = ScheduleType.STANDARD
+    
+    # Check if the schedule exists for this phase
+    schedule = PhaseSchedule.query.filter_by(
+        phase_id=current_phase.id,
+        schedule_type=schedule_type,
+        team_organization_id=team_id
+    ).first()
+    
+    if not schedule:
+        flash(f'The {schedule_type.value} schedule is not available for the current phase.', 'warning')
+        return redirect(url_for('off_season.index'))
+    
+    # Update or create user preference
+    preference = UserSchedulePreference.query.filter_by(
+        user_id=current_user.id,
+        phase_id=current_phase.id,
+        team_organization_id=team_id
+    ).first()
+    
+    if preference:
+        preference.schedule_type = schedule_type
+    else:
+        preference = UserSchedulePreference(
+            user_id=current_user.id,
+            phase_id=current_phase.id,
+            schedule_type=schedule_type,
+            team_organization_id=team_id
+        )
+        db.session.add(preference)
+    
+    db.session.commit()
+    
+    flash(f'Your schedule preference has been updated to {schedule_type.value}.', 'success')
+    return redirect(url_for('off_season.index'))

@@ -189,3 +189,21 @@ class SMARTGoal(db.Model):
     
     def __repr__(self):
         return f'<SMARTGoal {self.title}>'
+        
+
+class UserSchedulePreference(db.Model):
+    """Model for storing user's preferred schedule type"""
+    __tablename__ = 'user_schedule_preferences'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    phase_id = db.Column(db.Integer, db.ForeignKey('off_season_phases.id'), nullable=False)
+    schedule_type = db.Column(db.Enum(ScheduleType), nullable=False, default=ScheduleType.STANDARD)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    
+    # Relationships
+    user = db.relationship('User')
+    phase = db.relationship('OffSeasonPhase')
+    
+    def __repr__(self):
+        return f'<UserSchedulePreference {self.user_id}:{self.phase_id}:{self.schedule_type.value}>'
