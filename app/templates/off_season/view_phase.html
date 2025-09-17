@@ -132,44 +132,43 @@
         {% endif %}
     </div>
     <div class="card-body">
-        {% if workout_plans %}
-        <div class="row">
-            {% for category, plans in workout_plans|groupby('category.value') %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-{{ 'primary' if category.value == 'strength' else ('success' if category.value == 'skills' else 'warning') }} {{ 'text-white' if category.value != 'conditioning' else 'text-dark' }}">
-                        <h5 class="mb-0">{{ category.value|capitalize }}</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group">
-                            {% for level, level_plans in plans|groupby('level') %}
-                            <div class="list-group-item">
-                                <h6>{{ level.value|capitalize }}</h6>
-                                <div class="list-group list-group-flush">
-                                    {% for plan in level_plans %}
-                                    <a href="{{ url_for('off_season.view_workout', workout_id=plan.id) }}" class="list-group-item list-group-item-action">
-                                        {{ plan.name }}
-                                    </a>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="alert alert-info">
-            <p>No workout plans have been created for this phase yet.</p>
-            {% if current_user.is_admin %}
-            <a href="{{ url_for('off_season.add_workout', phase_id=phase.id) }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Add Workout
-            </a>
-            {% endif %}
-        </div>
-        {% endif %}
+		{% if workout_plans %}
+		<div class="row">
+			{% for category, plans in workout_plans.items() %}
+			<div class="col-md-4 mb-4">
+				<div class="card h-100">
+					<div class="card-header bg-{{ 'primary' if category.value == 'strength' else ('success' if category.value == 'skills' else 'warning') }} {{ 'text-white' if category.value != 'conditioning' else 'text-dark' }}">
+						<h5 class="mb-0">{{ category.value|capitalize }}</h5>
+					</div>
+					<div class="card-body">
+						<div class="list-group">
+							{% for plan in plans %}
+							<div class="list-group-item">
+								<h6>{{ plan.level.value|capitalize }}</h6>
+								<div class="list-group list-group-flush">
+									<a href="{{ url_for('off_season.view_workout', workout_id=plan.id) }}" class="list-group-item list-group-item-action">
+										{{ plan.name }}
+									</a>
+								</div>
+							</div>
+							{% endfor %}
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+		{% else %}
+		<div class="alert alert-info">
+			<p>No workout plans have been created for this phase yet.</p>
+			{% if current_user.is_admin %}
+			<a href="{{ url_for('off_season.add_workout', phase_id=phase.id) }}" class="btn btn-primary">
+				<i class="bi bi-plus-circle"></i> Add Workout
+			</a>
+			{% endif %}
+		</div>
+		{% endif %}
+
     </div>
 </div>
 

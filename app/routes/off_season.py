@@ -295,6 +295,19 @@ def view_phase(phase_id):
     # Get workout plans for this phase
     workout_plans = WorkoutPlan.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
     
+    # Group workout plans by category
+    from itertools import groupby
+    
+    # Sort by category value first
+    workout_plans.sort(key=lambda x: x.category.value)
+    
+    # Create a dictionary where each key is a category and value is a list of plans
+    grouped_plans = {}
+    for category, items in groupby(workout_plans, key=lambda x: x.category):
+        # Convert groupby iterator to list
+        plans_list = list(items)
+        grouped_plans[category] = plans_list
+    
     # Get recommended metrics for this phase
     metrics = PhaseMetric.query.filter_by(phase_id=phase.id, team_organization_id=team_id).all()
     
@@ -302,9 +315,10 @@ def view_phase(phase_id):
         'off_season/view_phase.html',
         phase=phase,
         schedules=schedules,
-        workout_plans=workout_plans,  # Pass as workout_plans to match template
+        workout_plans=grouped_plans,  # Pass the pre-grouped data
         metrics=metrics
     )
+
 
 
 
