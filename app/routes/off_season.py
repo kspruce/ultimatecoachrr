@@ -384,6 +384,7 @@ def view_schedule(schedule_id):
     
     # Organize sessions by day of week
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    enumerated_days = list(enumerate(days, 1))  # Start enumeration from 1
     sessions_by_day = {i: None for i in range(7)}
     
     for session in sessions:
@@ -395,8 +396,10 @@ def view_schedule(schedule_id):
         phase=phase,
         sessions=sessions,
         sessions_by_day=sessions_by_day,
-        days=days
+        days=days,
+        enumerated_days=enumerated_days
     )
+
 
 @bp.route('/schedules/<int:schedule_id>/delete', methods=['POST'])
 @login_required
