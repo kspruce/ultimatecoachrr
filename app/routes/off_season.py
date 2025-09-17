@@ -5,7 +5,7 @@ from app import db
 from app.models.off_season import (
     OffSeasonPhase, PhaseSchedule, ScheduleSession, WorkoutPlan, 
     UserSessionCompletion, SMARTGoal, TrainingCategory, TrainingLevel, ScheduleType,
-    PhaseMetric, TrackWorkoutWeek
+    PhaseMetric, TrackWorkoutWeek, UserSchedulePreference
 )
 from app.models.session import SessionPlan, SessionComponent
 from app.models.fitness import FitnessMetric, FitnessRecord
