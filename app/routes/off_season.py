@@ -615,11 +615,25 @@ def delete_workout(workout_id):
     workout = WorkoutPlan.query.filter_by(id=workout_id, team_organization_id=team_id).first_or_404()
     phase_id = workout.phase_id
     
+    # Find all sessions that reference this workout plan
+    sessions = db.session.query(ScheduleSession).filter(
+        ScheduleSession.workout_plans.any(id=workout_id)
+    ).all()
+    
+    # Remove the workout from each session's workout_plans collection
+    for session in sessions:
+        session.workout_plans.remove(workout)
+    
+    # Commit these changes first
+    db.session.commit()
+    
+    # Now delete the workout
     db.session.delete(workout)
     db.session.commit()
     
     flash(f'Workout plan "{workout.name}" deleted successfully!', 'success')
     return redirect(url_for('off_season.view_phase', phase_id=phase_id))
+
 
 @bp.route('/phases/<int:phase_id>/metrics/add', methods=['GET', 'POST'])
 @login_required
