@@ -92,21 +92,19 @@ class SessionPlan(db.Model):
 
 
 
-# In session.py
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session_plan.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     status = db.Column(db.String(20), default='present')  # present, absent, late, excused
+    notes = db.Column(db.Text, nullable=True)  # Add this line
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
-    # Fix this relationship - change 'attendance' to 'attendances'
     session = relationship('SessionPlan', back_populates='attendances')
-    player = relationship('Player', back_populates='attendances')  # Also check this one
-
+    player = relationship('Player', back_populates='attendances')
 
 class SessionRSVP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
