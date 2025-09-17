@@ -257,6 +257,60 @@
         </div>
     </div>
     
+    <!-- Speed and Agility Workout Plan -->
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-stopwatch"></i> Speed and Agility Workout Plan</h5>
+                <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-sm btn-light">
+                    <i class="bi bi-eye"></i> View Full Plan
+                </a>
+            </div>
+            <div class="card-body">
+                {% if track_workout_weeks %}
+                <div class="row">
+                    {% for week in track_workout_weeks[:6] %}
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Week {{ week.week_number }}</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text small">{{ week.title }}</p>
+                                <a href="{{ url_for('off_season.track_workout_week', week_id=week.id) }}" class="btn btn-sm btn-outline-success w-100">
+                                    <i class="bi bi-calendar-check"></i> View
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if track_workout_weeks|length > 6 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-outline-success">
+                        View All {{ track_workout_weeks|length }} Weeks
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="alert alert-light">
+                    <p>No speed and agility workout plan has been created yet.</p>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('off_season.manage_track_workout') }}" class="btn btn-outline-success">
+                        <i class="bi bi-plus-circle"></i> Create Workout Plan
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+	
+	
     <!-- Upcoming Phases -->
     <div class="col-md-6">
         <div class="card mb-4">
@@ -330,6 +384,20 @@
 .timeline-content {
     padding-bottom: 10px;
     border-bottom: 1px solid #eee;
+}
+/* Speed and Agility Panel Styles */
+.card-header h6 {
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.card .card-text {
+	height: 40px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 </style>
 {% endblock %}

@@ -176,6 +176,11 @@ def index():
         UserSessionCompletion.completed_date >= thirty_days_ago
     ).all()
     
+    # Get track workout weeks for the speed and agility panel
+    track_workout_weeks = TrackWorkoutWeek.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(TrackWorkoutWeek.week_number).all()
+    
     # Get today's schedule if current phase exists
     today_schedule = None
     if current_phase and available_schedules:
@@ -215,7 +220,8 @@ def index():
         today_schedule=today_schedule,
         today=today,
         available_schedules=available_schedules,
-        preferred_schedule_type=preferred_schedule_type
+        preferred_schedule_type=preferred_schedule_type,
+        track_workout_weeks=track_workout_weeks
     )
 
 
