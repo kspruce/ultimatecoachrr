@@ -134,7 +134,7 @@
     <div class="card-body">
 		{% if workout_plans %}
 		<div class="row">
-			{% for category, plans in workout_plans.items() %}
+			{% for category, level_groups in workout_plans.items() %}
 			<div class="col-md-4 mb-4">
 				<div class="card h-100">
 					<div class="card-header bg-{{ 'primary' if category.value == 'strength' else ('success' if category.value == 'skills' else 'warning') }} {{ 'text-white' if category.value != 'conditioning' else 'text-dark' }}">
@@ -142,13 +142,15 @@
 					</div>
 					<div class="card-body">
 						<div class="list-group">
-							{% for plan in plans %}
+							{% for level, plans in level_groups.items() %}
 							<div class="list-group-item">
-								<h6>{{ plan.level.value|capitalize }}</h6>
+								<h6>{{ level.value|capitalize }}</h6>
 								<div class="list-group list-group-flush">
+									{% for plan in plans %}
 									<a href="{{ url_for('off_season.view_workout', workout_id=plan.id) }}" class="list-group-item list-group-item-action">
 										{{ plan.name }}
 									</a>
+									{% endfor %}
 								</div>
 							</div>
 							{% endfor %}
@@ -168,7 +170,6 @@
 			{% endif %}
 		</div>
 		{% endif %}
-
     </div>
 </div>
 
