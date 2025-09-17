@@ -588,6 +588,9 @@ def edit_workout(workout_id):
     workout = WorkoutPlan.query.filter_by(id=workout_id, team_organization_id=team_id).first_or_404()
     form = WorkoutPlanForm(obj=workout)
     
+    # Get the phase associated with this workout
+    phase = workout.phase  # This line is needed to pass the phase to the template
+    
     if form.validate_on_submit():
         workout.name = form.name.data
         workout.description = form.description.data
@@ -600,7 +603,8 @@ def edit_workout(workout_id):
         flash(f'Workout plan "{workout.name}" updated successfully!', 'success')
         return redirect(url_for('off_season.view_workout', workout_id=workout.id))
     
-    return render_template('off_season/workout_form.html', form=form, workout=workout)
+    return render_template('off_season/workout_form.html', form=form, workout=workout, phase=phase)  # Add phase here
+
 
 @bp.route('/workouts/<int:workout_id>/delete', methods=['POST'])
 @login_required
