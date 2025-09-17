@@ -496,6 +496,9 @@ def edit_session(session_id):
     session = ScheduleSession.query.filter_by(id=session_id, team_organization_id=team_id).first_or_404()
     form = SessionForm(obj=session)
     
+    # Get the schedule associated with this session
+    schedule = session.schedule  # Add this line to get the schedule
+    
     # Populate workout plans choices
     workout_plans = WorkoutPlan.query.filter_by(
         phase_id=session.schedule.phase_id,
@@ -538,7 +541,11 @@ def edit_session(session_id):
         flash('Session updated successfully!', 'success')
         return redirect(url_for('off_season.view_schedule', schedule_id=session.schedule_id))
     
-    return render_template('off_season/session_form.html', form=form, session=session)
+    return render_template('off_season/session_form.html', 
+                          form=form, 
+                          workout_session=session,  # Use workout_session instead of session to avoid name conflict
+                          schedule=schedule)  # Pass the schedule to the template
+
 
 @bp.route('/sessions/<int:session_id>/delete', methods=['POST'])
 @login_required
