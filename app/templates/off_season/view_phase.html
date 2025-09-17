@@ -173,40 +173,6 @@
     </div>
 </div>
 
-<!-- Session Plans -->
-<div class="card mb-4">
-    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-clipboard-check"></i> Related Session Plans</h5>
-        {% if current_user.is_admin %}
-        <a href="{{ url_for('session.add_session') }}" class="btn btn-sm btn-light" target="_blank">
-            <i class="bi bi-plus-circle"></i> Create Session Plan
-        </a>
-        {% endif %}
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info">
-            <p><i class="bi bi-info-circle"></i> Session plans are detailed practice plans that can be used during this phase. They can be linked to specific weeks in the track workout plan.</p>
-        </div>
-        
-        <div class="row mb-3">
-            <div class="col-md-12">
-                <a href="{{ url_for('session.index') }}" class="btn btn-outline-info" target="_blank">
-                    <i class="bi bi-box-arrow-up-right"></i> Browse Session Plans
-                </a>
-                
-                <a href="{{ url_for('off_season.track_workout') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-stopwatch"></i> View Track Workout Plan
-                </a>
-                
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('off_season.manage_track_workout') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-gear"></i> Manage Track Workout
-                </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Recommended Metrics -->
 <div class="card mb-4">
