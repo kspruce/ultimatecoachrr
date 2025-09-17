@@ -287,10 +287,36 @@ def add_team_organization():
             db.session.rollback()
             sys.exit(1)
 
+def add_attendance_notes_column():
+    """Add notes column to attendance table if it doesn't exist"""
+    with app.app_context():
+        try:
+            print_status("Checking for notes column in attendance table...")
+            
+            # Check if the column exists
+            has_notes_column = check_column_exists('attendance', 'notes')
+            
+            if not has_notes_column:
+                print_status("Adding notes column to attendance table...")
+                # Add the notes column
+                db.session.execute(text("""
+                ALTER TABLE "attendance" ADD COLUMN notes TEXT
+                """))
+                db.session.commit()
+                print_status("Successfully added notes column to attendance table")
+            else:
+                print_status("Notes column already exists in attendance table")
+                
+        except Exception as e:
+            print_status(f"Error adding notes column to attendance table: {str(e)}")
+            db.session.rollback()
+            sys.exit(1)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Database management tool')
-    parser.add_argument('action', choices=['reset', 'upgrade', 'add_stat_taker', 'add_team_org'], 
-                      help='Action to perform: reset (full database reset), upgrade (migrate user roles), add_stat_taker (add stat taker role), or add_team_org (add team organization)')
+    parser.add_argument('action', choices=['reset', 'upgrade', 'add_stat_taker', 'add_team_org', 'add_attendance_notes'], 
+                      help='Action to perform: reset (full database reset), upgrade (migrate user roles), add_stat_taker (add stat taker role), add_team_org (add team organization), or add_attendance_notes (add notes column to attendance table)')
     
     args = parser.parse_args()
     
@@ -298,8 +324,11 @@ if __name__ == "__main__":
         reset_database()
     elif args.action == 'upgrade':
         migrate_user_roles()
-        add_team_organization()  # Add this line to include team organization setup during upgrade
+        add_team_organization()
     elif args.action == 'add_stat_taker':
         add_stat_taker_role()
     elif args.action == 'add_team_org':
         add_team_organization()
+    elif args.action == 'add_attendance_notes':
+        add_attendance_notes_column()
+
