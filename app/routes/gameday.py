@@ -686,3 +686,29 @@ def team_stats():
         player_stats=player_stats,
         team_totals=team_totals
     )
+
+@bp.route('/admin/reset_point_sequence', methods=['GET'])
+@login_required
+@admin_required
+def reset_point_sequence():
+    """Reset the point table's ID sequence to the maximum ID value"""
+    try:
+        # Execute raw SQL to reset the sequence
+        result = db.session.execute(
+            "SELECT setval(pg_get_serial_sequence('point', 'id'), (SELECT COALESCE(MAX(id), 1) FROM point))"
+        )
+        db.session.commit()
+        
+        # Get the new sequence value
+        new_val = result.scalar()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Point ID sequence reset to {new_val}'
+        })
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print("Error resetting point sequence:", str(e))
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
