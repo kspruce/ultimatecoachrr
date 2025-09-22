@@ -135,7 +135,8 @@ def record_point():
         db.session.add(point)
         db.session.flush()  # Get point ID without committing
         
-        # Add players to lineup
+
+        # Add players to lineup without relying on auto-incrementing IDs
         for player_id in players:
             # Verify player belongs to current team
             player = Player.query.filter_by(
@@ -144,12 +145,20 @@ def record_point():
             ).first()
             
             if player:
-                lineup = LineUp(
+                # Check if a lineup entry already exists for this point and player
+                existing_lineup = LineUp.query.filter_by(
                     point_id=point.id,
-                    player_id=player_id,
-                    team_organization_id=team_id  # Add team ID
-                )
-                db.session.add(lineup)
+                    player_id=player_id
+                ).first()
+                
+                if not existing_lineup:
+                    lineup = LineUp(
+                        point_id=point.id,
+                        player_id=player_id,
+                        team_organization_id=team_id
+                    )
+                    db.session.add(lineup)
+
         
         # Process events
         sequence = 0
@@ -695,13 +704,16 @@ from sqlalchemy import text  # Add this import at the top of your file
 def reset_sequences():
     """Reset ID sequences for multiple tables"""
     results = {}
-    tables = ['point', 'line_up', 'gameday_event', 'gameday_player_stats', 'line_template', 'line_template_player']
+    tables = ['point', 'line_up']  # Start with just these two tables
     
     try:
         for table in tables:
-            sql = text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), (SELECT COALESCE(MAX(id), 1) FROM {table}))")
-            result = db.session.execute(sql)
-            results[table] = result.scalar()
+            try:
+                sql = text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), (SELECT COALESCE(MAX(id), 1) FROM {table}))")
+                result = db.session.execute(sql)
+                results[table] = result.scalar()
+            except Exception as table_error:
+                results[table] = f"Error: {str(table_error)}"
         
         db.session.commit()
         
