@@ -689,28 +689,30 @@ def team_stats():
 
 from sqlalchemy import text  # Add this import at the top of your file
 
-@bp.route('/admin/reset_point_sequence', methods=['GET'])
+@bp.route('/admin/reset_sequences', methods=['GET'])
 @login_required
 @admin_required
-def reset_point_sequence():
-    """Reset the point table's ID sequence to the maximum ID value"""
+def reset_sequences():
+    """Reset ID sequences for multiple tables"""
+    results = {}
+    tables = ['point', 'line_up', 'gameday_event', 'gameday_player_stats', 'line_template', 'line_template_player']
+    
     try:
-        # Execute raw SQL to reset the sequence using text() wrapper
-        result = db.session.execute(
-            text("SELECT setval(pg_get_serial_sequence('point', 'id'), (SELECT COALESCE(MAX(id), 1) FROM point))")
-        )
-        db.session.commit()
+        for table in tables:
+            sql = text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), (SELECT COALESCE(MAX(id), 1) FROM {table}))")
+            result = db.session.execute(sql)
+            results[table] = result.scalar()
         
-        # Get the new sequence value
-        new_val = result.scalar()
+        db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': f'Point ID sequence reset to {new_val}'
+            'message': 'Sequences reset successfully',
+            'results': results
         })
     except Exception as e:
         db.session.rollback()
         import traceback
-        print("Error resetting point sequence:", str(e))
+        print("Error resetting sequences:", str(e))
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
