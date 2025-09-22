@@ -128,8 +128,9 @@ def record_point():
             starting_position='offense' if line_type == 'O-line' else 'defense',
             point_outcome=outcome,
             gender_ratio=gender_ratio,
-            team_organization_id=team_id  # Add team ID
+            team_organization_id=team_id
         )
+
         
         db.session.add(point)
         db.session.flush()  # Get point ID without committing
