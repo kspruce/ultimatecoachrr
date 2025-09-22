@@ -698,20 +698,45 @@ def team_stats():
 
 from sqlalchemy import text  # Add this import at the top of your file
 
-@bp.route('/admin/reset_sequences', methods=['GET'])
+@bp.route('/admin/reset_all_sequences', methods=['GET'])
 @login_required
 @admin_required
-def reset_sequences():
-    """Reset ID sequences for multiple tables"""
+def reset_all_sequences():
+    """Reset ID sequences for all tables that might have issues"""
     results = {}
-    tables = ['point', 'line_up']  # Start with just these two tables
     
     try:
+        # Get list of all tables in the database
+        table_list_query = text("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema='public' 
+            AND table_type='BASE TABLE'
+        """)
+        
+        tables = [row[0] for row in db.session.execute(table_list_query)]
+        
+        # For each table, check if it has an ID column and reset its sequence
         for table in tables:
             try:
-                sql = text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), (SELECT COALESCE(MAX(id), 1) FROM {table}))")
-                result = db.session.execute(sql)
-                results[table] = result.scalar()
+                # Check if table has an id column
+                has_id_query = text(f"""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name='{table}' AND column_name='id'
+                """)
+                
+                has_id = db.session.execute(has_id_query).fetchone()
+                
+                if has_id:
+                    # Reset the sequence for this table
+                    reset_query = text(f"""
+                        SELECT setval(pg_get_serial_sequence('{table}', 'id'), 
+                                     (SELECT COALESCE(MAX(id), 1) FROM {table}))
+                    """)
+                    
+                    result = db.session.execute(reset_query)
+                    results[table] = result.scalar()
             except Exception as table_error:
                 results[table] = f"Error: {str(table_error)}"
         
@@ -719,7 +744,7 @@ def reset_sequences():
         
         return jsonify({
             'success': True,
-            'message': 'Sequences reset successfully',
+            'message': 'All sequences reset successfully',
             'results': results
         })
     except Exception as e:
