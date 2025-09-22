@@ -223,18 +223,24 @@ def record_events(point_id):
             stats = PlayerPointStats.query.filter_by(
                 player_id=event.player_id,
                 point_id=point_id,
-                team_organization_id=get_current_team_id()  # Add team ID
+                team_organization_id=get_current_team_id()
             ).first()
-            
+
             if not stats:
+                # Get the next available ID for PlayerPointStats
+                result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM player_point_stats"))
+                next_stats_id = result.scalar()
+                
                 stats = PlayerPointStats(
+                    id=next_stats_id,  # Explicitly set the ID
                     player_id=event.player_id,
                     point_id=point_id,
                     o_line_plus_minus=0.0,
                     d_line_plus_minus=0.0,
-                    team_organization_id=get_current_team_id()  # Add team ID
+                    team_organization_id=get_current_team_id()
                 )
                 db.session.add(stats)
+
 
             # Update stats based on event type
             if point.our_line_type == 'O-line':
@@ -474,16 +480,22 @@ def finish_point(point_id):
             stats = PlayerPointStats.query.filter_by(
                 player_id=lineup.player_id,
                 point_id=point_id,
-                team_organization_id=get_current_team_id()  # Add team ID
+                team_organization_id=get_current_team_id()
             ).first()
             
             if not stats:
+                # Get the next available ID for PlayerPointStats
+                result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM player_point_stats"))
+                next_stats_id = result.scalar()
+                
                 stats = PlayerPointStats(
+                    id=next_stats_id,  # Explicitly set the ID
                     player_id=lineup.player_id,
                     point_id=point_id,
-                    team_organization_id=get_current_team_id()  # Add team ID
+                    team_organization_id=get_current_team_id()
                 )
                 db.session.add(stats)
+
 
         throws_without_distance = Throw.query.filter_by(
             point_id=point_id,
@@ -1137,3 +1149,40 @@ def fix_missing_team_ids():
         print(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+from sqlalchemy import text
+
+@bp.route('/admin/reset_all_sequences', methods=['GET'])
+@login_required
+@admin_required
+def reset_all_sequences():
+    """Reset ID sequences for all tables"""
+    results = {}
+    tables = [
+        'point', 'line_up', 'player_point_stats', 'event', 'throw', 
+        'cutting_skill', 'gameday_event', 'gameday_player_stats'
+    ]
+    
+    try:
+        for table in tables:
+            try:
+                sql = text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), (SELECT COALESCE(MAX(id), 1) FROM {table}))")
+                result = db.session.execute(sql)
+                results[table] = result.scalar()
+            except Exception as table_error:
+                results[table] = f"Error: {str(table_error)}"
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'All sequences reset successfully',
+            'results': results
+        })
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print("Error resetting sequences:", str(e))
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
