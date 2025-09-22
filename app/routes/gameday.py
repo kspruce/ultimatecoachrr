@@ -687,15 +687,17 @@ def team_stats():
         team_totals=team_totals
     )
 
+from sqlalchemy import text  # Add this import at the top of your file
+
 @bp.route('/admin/reset_point_sequence', methods=['GET'])
 @login_required
 @admin_required
 def reset_point_sequence():
     """Reset the point table's ID sequence to the maximum ID value"""
     try:
-        # Execute raw SQL to reset the sequence
+        # Execute raw SQL to reset the sequence using text() wrapper
         result = db.session.execute(
-            "SELECT setval(pg_get_serial_sequence('point', 'id'), (SELECT COALESCE(MAX(id), 1) FROM point))"
+            text("SELECT setval(pg_get_serial_sequence('point', 'id'), (SELECT COALESCE(MAX(id), 1) FROM point))")
         )
         db.session.commit()
         
