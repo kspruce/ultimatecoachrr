@@ -16,13 +16,24 @@ from datetime import datetime
 import math
 from flask import current_app
 # New imports for Season Reset
-#from app.models.base import db
 from app.models.player import Player
 from app.models.game import Game
-from app.models.point import Point
+from app.models.point import Point, LineUp
 from app.models.tournament import Tournament
-from app.models.clip import Clip
-from sqlalchemy import and_
+from app.models.clip import Clip, ClipTag
+from app.models.annotation import ClipAnnotation
+from app.models.event import Event, Pull
+
+# Optional, only if present
+try:
+    from app.models.throws import Throw
+except Exception:
+    Throw = None
+
+from sqlalchemy import and_, or_
+
+
+from sqlalchemy import and_, or_
 
 # Optional relationship models (import if present)
 try:
@@ -57,7 +68,7 @@ def _safe_delete(func, desc, counters=None, counter_key=None):
     Run a delete operation safely in a nested transaction so that a failure
     doesn't abort the whole transaction. If it fails, rollback savepoint and continue.
     """
-    from app import db  # use the single app-bound instance
+    from app import db  # single, app-bound instance
     try:
         with db.session.begin_nested():  # savepoint
             cnt = func()
@@ -71,6 +82,7 @@ def _safe_delete(func, desc, counters=None, counter_key=None):
             pass
         logger.warning(f"[Season Reset] {desc} failed: {e}")
         return 0, e
+
 
 def _delete_by_id_column(manager, column_name, id_list, exclude_models=None, counters=None, counter_key=None):
     """
@@ -282,8 +294,9 @@ def season_reset():
                 counter_key='clip_children'
             )
 
-        # 2) Children with point_id
+        # 2) Children with point_id and then Event→Throw chain
         if point_ids:
+            # First delete child tables that have point_id (e.g., LineUp, Pull, etc.)
             _delete_by_id_column(
                 manager=manager,
                 column_name='point_id',
@@ -292,6 +305,48 @@ def season_reset():
                 counters=deleted,
                 counter_key='by_point_id'
             )
+        
+            # Find events in those points
+            from app import db
+            event_ids = [row[0] for row in db.session.query(Event.id).filter(Event.point_id.in_(point_ids)).all()]
+        
+            if event_ids:
+                # Delete any rows referencing those events via *_event_id or event_id (e.g., Throw)
+                for table_name, model in manager.models.items():
+                    if model is Event:
+                        continue
+                    cols = _column_names(model)
+                    # Collect columns that reference events by naming convention
+                    event_cols = [c for c in cols if c == 'event_id' or c.endswith('_event_id')]
+                    if event_cols:
+                        for col in event_cols:
+                            _safe_delete(
+                                lambda m=model, colname=col: m.query.filter(getattr(m, colname).in_(event_ids)).delete(synchronize_session=False),
+                                f"DELETE {table_name} WHERE {col} IN (event_ids)",
+                                deleted, 'by_point_id'
+                            )
+        
+                # Explicitly handle Throw if present (build OR over all *_event_id columns)
+                if Throw:
+                    throw_cols = [c.name for c in Throw.__table__.columns if c.name == 'event_id' or c.name.endswith('_event_id')]
+                    if throw_cols:
+                        predicate = None
+                        for col in throw_cols:
+                            cond = getattr(Throw, col).in_(event_ids)
+                            predicate = cond if predicate is None else or_(predicate, cond)
+                        _safe_delete(
+                            lambda: Throw.query.filter(predicate).delete(synchronize_session=False),
+                            "DELETE throws referencing events",
+                            deleted, 'by_point_id'
+                        )
+        
+                # Now delete the events themselves
+                _safe_delete(
+                    lambda: Event.query.filter(Event.id.in_(event_ids)).delete(synchronize_session=False),
+                    "DELETE events in points",
+                    deleted, 'by_point_id'
+                )
+
 
         # 3) Children with game_id
         if game_ids:
@@ -315,13 +370,35 @@ def season_reset():
                 counter_key='by_player_id'
             )
 
-        # 5) Delete game-linked clips (non-game clips preserved)
+        # 5) Clip children then game-linked clips (non-game clips preserved)
         if game_clip_ids:
+            # Explicitly delete clip annotations and tags first
+            _safe_delete(
+                lambda: ClipAnnotation.query.filter(ClipAnnotation.clip_id.in_(game_clip_ids)).delete(synchronize_session=False),
+                "DELETE clip annotations for game clips",
+                deleted, 'clip_children'
+            )
+            _safe_delete(
+                lambda: ClipTag.query.filter(ClipTag.clip_id.in_(game_clip_ids)).delete(synchronize_session=False),
+                "DELETE clip tags for game clips",
+                deleted, 'clip_children'
+            )
+            # Also sweep any other table with clip_id generically
+            _delete_by_id_column(
+                manager=manager,
+                column_name='clip_id',
+                id_list=game_clip_ids,
+                exclude_models={Clip, ClipAnnotation, ClipTag},
+                counters=deleted,
+                counter_key='clip_children'
+            )
+            # Now delete the clips
             _safe_delete(
                 lambda: Clip.query.filter(Clip.id.in_(game_clip_ids)).delete(synchronize_session=False),
                 "DELETE game-linked clips",
                 deleted, 'game_clips'
             )
+        
 
         # 6) Stats tables
         if StatModel:
@@ -347,33 +424,41 @@ def season_reset():
                 deleted, 'game_players'
             )
 
-        # 8) Points
+
+        # 8) Points (ensure LineUp is gone first)
+        if point_ids:
+            _safe_delete(
+                lambda: LineUp.query.filter(LineUp.point_id.in_(point_ids)).delete(synchronize_session=False),
+                "DELETE lineups by point_id",
+                deleted, 'by_point_id'
+            )
         _safe_delete(
             lambda: Point.query.delete(synchronize_session=False),
             "DELETE points",
             deleted, 'points'
         )
 
-        # 9) Tournament RSVPs
+
+        # 9) Tournament RSVPs first (child)
         if TournamentRSVP:
             _safe_delete(
                 lambda: TournamentRSVP.query.delete(synchronize_session=False),
                 "DELETE tournament_rsvp",
                 deleted, 'tournament_rsvps'
             )
-
-        # 10) Tournaments
-        _safe_delete(
-            lambda: Tournament.query.delete(synchronize_session=False),
-            "DELETE tournaments",
-            deleted, 'tournaments'
-        )
-
-        # 11) Games
+        
+        # 10) Games (must be before tournaments because game.tournament_id FK)
         _safe_delete(
             lambda: Game.query.delete(synchronize_session=False),
             "DELETE games",
             deleted, 'games'
+        )
+        
+        # 11) Tournaments
+        _safe_delete(
+            lambda: Tournament.query.delete(synchronize_session=False),
+            "DELETE tournaments",
+            deleted, 'tournaments'
         )
 
         # 12) Players
