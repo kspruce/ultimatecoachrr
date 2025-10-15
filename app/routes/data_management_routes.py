@@ -103,193 +103,325 @@ def get_manager():
         manager = EnhancedDataManager(export_dir=export_dir)
     return manager
 
+# Add near the top with your other imports
+from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
+from sqlalchemy import text
+
+# Helpers (add once in this file)
+def _column_names(model):
+    return {c.name for c in model.__table__.columns}
+
+def _get_ids(query):
+    # returns flat list of ids from a query for Model.id
+    return [row[0] for row in query]
+
+def _safe_delete(func, desc, counters=None, counter_key=None):
+    """
+    Run a delete operation safely in a nested transaction so that a failure
+    doesn't abort the whole transaction. If it fails, rollback savepoint and continue.
+    """
+    from app.models.base import db
+    try:
+        with db.session.begin_nested():  # savepoint
+            cnt = func()
+            if counters is not None and counter_key is not None:
+                counters[counter_key] = counters.get(counter_key, 0) + (cnt or 0)
+            return cnt or 0, None
+    except Exception as e:
+        # This savepoint rollback clears the failed state for subsequent steps
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.warning(f"[Season Reset] {desc} failed: {e}")
+        return 0, e
+
+def _delete_by_id_column(manager, column_name, id_list, exclude_models=None, counters=None, counter_key=None):
+    """
+    For every model that has <column_name>, delete rows where <column_name> IN (id_list).
+    Skips models in exclude_models set.
+    Runs each table delete inside its own savepoint.
+    """
+    if not id_list:
+        return 0
+    total = 0
+    exclude_models = exclude_models or set()
+    for table_name, model in manager.models.items():
+        if model in exclude_models:
+            continue
+        cols = _column_names(model)
+        if column_name in cols:
+            cnt, err = _safe_delete(
+                lambda m=model: m.query.filter(getattr(m, column_name).in_(id_list)).delete(synchronize_session=False),
+                f"DELETE {table_name} WHERE {column_name} IN (...)",
+                counters, counter_key
+            )
+            total += cnt
+    return total
+
+def _get_admin_player_id():
+    from app.models.player import Player
+    try:
+        return Player.query.filter_by(user_id=current_user.id).with_entities(Player.id).scalar()
+    except Exception:
+        return None
+
 @bp.route('/season-reset', methods=['POST'])
 @login_required
 @admin_required
 def season_reset():
     """
-    Reset season data while preserving off-season content, session plans,
-    non-game clip library, scouting reports, theory, playbook, drills, and admin account.
+    Reset season data with per-step savepoints to avoid 'current transaction is aborted' poisoning.
+    Order:
+      - identify ids
+      - delete clip children of game clips
+      - delete any table rows with point_id for those points (children first)
+      - delete any table rows with game_id for those games (children first)
+      - delete any table rows with player_id for players to be removed (children first)
+      - delete game-linked clips
+      - delete stats-like, RSVPs, points, games, tournaments
+      - delete players (except admin), optional users
+      - optionally reset sequences
+    Preserves admin, non-game clips, sessions, scouting, theory, playbook, drills, off-season.
     """
+    from app.models.base import db
+    from app.models.user import User
+    from app.models.player import Player
+    from app.models.game import Game
+    from app.models.point import Point
+    from app.models.tournament import Tournament
+    from app.models.clip import Clip
+
+    # optional models
+    try:
+        from app.models.game_player import GamePlayer
+    except Exception:
+        GamePlayer = None
+
+    try:
+        from app.models.tournament_rsvp import TournamentRSVP
+    except Exception:
+        TournamentRSVP = None
+
+    # Stats model(s) may vary; we handle both directly and via fallback matching
+    try:
+        from app.models.stats import Stat as StatModel
+    except Exception:
+        StatModel = None
+
     confirm_text = request.form.get('confirm_text', '').strip()
     also_delete_non_admin_users = request.form.get('delete_non_admin_users') == 'on'
     reset_sequences_after = request.form.get('reset_sequences_after') == 'on'
-    
+
     if confirm_text != 'RESET SEASON':
         flash('❌ Please type "RESET SEASON" exactly to confirm.', 'error')
         return redirect(url_for('data_management.data_management'))
-    
-    # Start reset
+
     try:
+        # Rollback any prior dangling state before starting
+        db.session.rollback()
+
         logger.info("[Season Reset] Starting...")
-        
+        manager = get_manager()
+
         admin_user_id = current_user.id
         admin_player_id = _get_admin_player_id()
-        
-        # 1) Determine players to keep/delete
-        players_q = Player.query
-        players_to_delete = []
+
+        # Build ids upfront
+        game_ids = _get_ids(db.session.query(Game.id))
+        point_ids = _get_ids(db.session.query(Point.id))
+
+        # Players to delete (exclude admin's player if exists)
         if admin_player_id:
-            players_to_delete = [p.id for p in players_q.filter(Player.id != admin_player_id).all()]
+            players_to_delete = _get_ids(db.session.query(Player.id).filter(Player.id != admin_player_id))
         else:
-            # No admin-linked player exists; delete all players
-            players_to_delete = [p.id for p in players_q.all()]
-        
-        deleted_counters = {
+            players_to_delete = _get_ids(db.session.query(Player.id))
+
+        deleted = {
             'clip_children': 0,
             'game_clips': 0,
+            'by_point_id': 0,
+            'by_game_id': 0,
+            'by_player_id': 0,
             'stats': 0,
-            'points': 0,
             'game_players': 0,
+            'points': 0,
             'games': 0,
             'tournament_rsvps': 0,
             'tournaments': 0,
-            'by_player_id': 0,
             'players': 0,
-            'users': 0
+            'users': 0,
         }
 
-        
-        # 2. Delete all rows in any model with clip_id -> game-linked clips (annotations, tags, etc.)
-        try:
-            # Get IDs of clips that are linked to games
-            game_clip_ids = [row[0] for row in db.session.query(Clip.id).filter(Clip.game_id.isnot(None)).all()]
-            if game_clip_ids:
-                # Loop through all models and delete rows where clip_id in those IDs
-                for table_name, model in get_manager().models.items():
-                    # Skip the Clip model itself here; we’ll delete game clips in the next step
-                    if model is Clip:
-                        continue
-                    cols = _column_names(model)
-                    if 'clip_id' in cols:
-                        try:
-                            cnt = model.query.filter(model.clip_id.in_(game_clip_ids)).delete(synchronize_session=False)
-                            if cnt:
-                                logger.info(f"[Season Reset] Deleted {cnt} records from {table_name} with clip_id in game clips")
-                                deleted_counters['clip_children'] = deleted_counters.get('clip_children', 0) + cnt
-                        except Exception as e:
-                            logger.warning(f"[Season Reset] Skipped {table_name} clip child cleanup: {e}")
-        except Exception as e:
-            logger.warning(f"[Season Reset] Skipping clip child cleanup: {e}")
-           
-        # 3) Delete game-linked clips only (preserve clip library not tied to games)
-        try:
-            deleted_counters['game_clips'] += Clip.query.filter(Clip.game_id.isnot(None)).delete(synchronize_session=False)
-        except Exception as e:
-            logger.warning(f"[Season Reset] Skipping game Clip cleanup: {e}")
-        
-        # 4) Delete stats before points/games to respect FKs
+        # 1) Clip children of game clips
+        game_clip_ids = _get_ids(db.session.query(Clip.id).filter(Clip.game_id.isnot(None)))
+        if game_clip_ids:
+            # Delete all rows in any model with 'clip_id' pointing to these clips (exclude Clip itself)
+            _delete_by_id_column(
+                manager=manager,
+                column_name='clip_id',
+                id_list=game_clip_ids,
+                exclude_models={Clip},
+                counters=deleted,
+                counter_key='clip_children'
+            )
+
+        # 2) Children with point_id before deleting points
+        if point_ids:
+            _delete_by_id_column(
+                manager=manager,
+                column_name='point_id',
+                id_list=point_ids,
+                exclude_models={Point},
+                counters=deleted,
+                counter_key='by_point_id'
+            )
+
+        # 3) Children with game_id before deleting games
+        if game_ids:
+            # Exclude Game and Point and Clip (Clip handled separately)
+            _delete_by_id_column(
+                manager=manager,
+                column_name='game_id',
+                id_list=game_ids,
+                exclude_models={Game, Point, Clip},
+                counters=deleted,
+                counter_key='by_game_id'
+            )
+
+        # 4) Children with player_id for players we're removing
+        if players_to_delete:
+            _delete_by_id_column(
+                manager=manager,
+                column_name='player_id',
+                id_list=players_to_delete,
+                exclude_models={Player},
+                counters=deleted,
+                counter_key='by_player_id'
+            )
+
+        # 5) Delete game-linked clips (non-game clips preserved)
+        if game_clip_ids:
+            _safe_delete(
+                lambda: Clip.query.filter(Clip.id.in_(game_clip_ids)).delete(synchronize_session=False),
+                "DELETE game-linked clips",
+                deleted, 'game_clips'
+            )
+
+        # 6) Delete stats (try direct model, otherwise any table with 'stat' in name)
         if StatModel:
-            try:
-                deleted_counters['stats'] += StatModel.query.delete(synchronize_session=False)
-            except Exception as e:
-                logger.warning(f"[Season Reset] Skipping Stat cleanup: {e}")
+            _safe_delete(
+                lambda: StatModel.query.delete(synchronize_session=False),
+                "DELETE stats (StatModel)",
+                deleted, 'stats'
+            )
         else:
-            # Fallback: try to delete any table with 'stat' in name (safe-ish)
-            try:
-                manager = get_manager()
-                for table_name, model in manager.models.items():
-                    if 'stat' in table_name.lower():
-                        try:
-                            cnt = model.query.delete(synchronize_session=False)
-                            deleted_counters['stats'] += cnt
-                            logger.info(f"[Season Reset] Deleted {cnt} from {table_name}")
-                        except Exception as e:
-                            logger.warning(f"[Season Reset] Skipped {table_name} cleanup: {e}")
-            except Exception as e:
-                logger.warning(f"[Season Reset] Could not enumerate stat-like models: {e}")
-        
-        # 5) Delete game-player rows (if model exists)
+            # fallback: iterate any model with 'stat' in table name
+            for table_name, model in manager.models.items():
+                if 'stat' in table_name.lower():
+                    _safe_delete(
+                        lambda m=model: m.query.delete(synchronize_session=False),
+                        f"DELETE stats-like table {table_name}",
+                        deleted, 'stats'
+                    )
+
+        # 7) GamePlayer if exists (extra safety even though by_game_id/by_player_id likely handled most)
         if GamePlayer:
-            try:
-                deleted_counters['game_players'] += GamePlayer.query.delete(synchronize_session=False)
-            except Exception as e:
-                logger.warning(f"[Season Reset] Skipping GamePlayer cleanup: {e}")
-        
-        # 6) Delete points
-        try:
-            deleted_counters['points'] += Point.query.delete(synchronize_session=False)
-        except Exception as e:
-            logger.warning(f"[Season Reset] Skipping Point cleanup: {e}")
-        
-        # 7) Tournament RSVPs (if model exists)
+            _safe_delete(
+                lambda: GamePlayer.query.delete(synchronize_session=False),
+                "DELETE game_player",
+                deleted, 'game_players'
+            )
+
+        # 8) Points
+        _safe_delete(
+            lambda: Point.query.delete(synchronize_session=False),
+            "DELETE points",
+            deleted, 'points'
+        )
+
+        # 9) Tournament RSVPs first (child)
         if TournamentRSVP:
-            try:
-                deleted_counters['tournament_rsvps'] += TournamentRSVP.query.delete(synchronize_session=False)
-            except Exception as e:
-                logger.warning(f"[Season Reset] Skipping TournamentRSVP cleanup: {e}")
-        
-        # 8) Delete tournaments
-        try:
-            deleted_counters['tournaments'] += Tournament.query.delete(synchronize_session=False)
-        except Exception as e:
-            logger.warning(f"[Season Reset] Skipping Tournament cleanup: {e}")
-        
-        # 9) Delete games
-        try:
-            deleted_counters['games'] += Game.query.delete(synchronize_session=False)
-        except Exception as e:
-            logger.warning(f"[Season Reset] Skipping Game cleanup: {e}")
-        
-        # 10) Clean all tables that have player_id for players being removed
-        deleted_counters['by_player_id'] += _delete_records_by_player_ids(players_to_delete)
-        
-        # 11) Delete players (preserve admin's player if exists)
-        try:
-            if admin_player_id:
-                deleted_counters['players'] += Player.query.filter(Player.id != admin_player_id).delete(synchronize_session=False)
-            else:
-                deleted_counters['players'] += Player.query.delete(synchronize_session=False)
-        except Exception as e:
-            logger.warning(f"[Season Reset] Skipping Player cleanup: {e}")
-        
-        # 12) Optionally delete non-admin users (you asked to preserve admin; this is optional)
+            _safe_delete(
+                lambda: TournamentRSVP.query.delete(synchronize_session=False),
+                "DELETE tournament_rsvp",
+                deleted, 'tournament_rsvps'
+            )
+
+        # 10) Tournaments
+        _safe_delete(
+            lambda: Tournament.query.delete(synchronize_session=False),
+            "DELETE tournaments",
+            deleted, 'tournaments'
+        )
+
+        # 11) Games (after children)
+        _safe_delete(
+            lambda: Game.query.delete(synchronize_session=False),
+            "DELETE games",
+            deleted, 'games'
+        )
+
+        # 12) Players (preserve admin-linked player if exists)
+        if admin_player_id:
+            _safe_delete(
+                lambda: Player.query.filter(Player.id != admin_player_id).delete(synchronize_session=False),
+                "DELETE players (excluding admin player)",
+                deleted, 'players'
+            )
+        else:
+            _safe_delete(
+                lambda: Player.query.delete(synchronize_session=False),
+                "DELETE all players (no admin player linked)",
+                deleted, 'players'
+            )
+
+        # 13) Users (optional; preserve admin)
         if also_delete_non_admin_users:
-            try:
-                from app.models.user import User
-                deleted_counters['users'] += User.query.filter(User.id != admin_user_id).delete(synchronize_session=False)
-            except Exception as e:
-                logger.warning(f"[Season Reset] Skipping User cleanup: {e}")
-        
-        # Commit all deletions
+            _safe_delete(
+                lambda: User.query.filter(User.id != admin_user_id).delete(synchronize_session=False),
+                "DELETE non-admin users",
+                deleted, 'users'
+            )
+
+        # Try final commit
         db.session.commit()
         logger.info("[Season Reset] Committed database changes")
-        
-        # 13) Optionally reset sequences
+
+        # Optional sequences reset
         if reset_sequences_after:
             try:
-                results = get_manager().reset_sequences()
-                # Count successful resets
+                results = manager.reset_sequences()
                 success_count = sum(1 for result in results.values()
                                     if not str(result).startswith("Error") and not str(result).startswith("Skipped"))
                 flash(f"✅ Database sequences reset for {success_count} tables.", "success")
             except Exception as e:
                 logger.warning(f"[Season Reset] Failed to reset sequences: {e}")
                 flash(f"⚠️ Season reset complete, but failed to reset sequences: {e}", "warning")
-        
-        # Build human-readable summary
+
+        # Summary
         summary_lines = [
             "✅ Season reset completed.",
-            f"- Players deleted (excluding admin): {deleted_counters['players']}",
-            f"- Games deleted: {deleted_counters['games']}",
-            f"- Tournaments deleted: {deleted_counters['tournaments']}",
-            f"- Tournament RSVPs deleted: {deleted_counters['tournament_rsvps']}",
-            f"- Points deleted: {deleted_counters['points']}",
-            f"- Stats deleted: {deleted_counters['stats']}",
-            f"- Game clips deleted: {deleted_counters['game_clips']}",
-            f"- Clip-related child records deleted (annotations/tags/etc.): {deleted_counters.get('clip_children', 0)}",
-            f"- Game-player links deleted: {deleted_counters['game_players']}",
-            f"- Other player-linked records deleted: {deleted_counters['by_player_id']}",
+            f"- Players deleted (excluding admin): {deleted['players']}",
+            f"- Games deleted: {deleted['games']}",
+            f"- Tournaments deleted: {deleted['tournaments']}",
+            f"- Tournament RSVPs deleted: {deleted['tournament_rsvps']}",
+            f"- Points deleted: {deleted['points']}",
+            f"- Stats deleted: {deleted['stats']}",
+            f"- Game clips deleted: {deleted['game_clips']}",
+            f"- Clip-related child records deleted (annotations/tags/etc.): {deleted['clip_children']}",
+            f"- Game-related child records deleted (game_id=...): {deleted['by_game_id']}",
+            f"- Point-related child records deleted (point_id=...): {deleted['by_point_id']}",
+            f"- Player-related child records deleted (player_id=...): {deleted['by_player_id']}",
         ]
         if also_delete_non_admin_users:
-            summary_lines.append(f"- Non-admin users deleted: {deleted_counters['users']}")
-        
+            summary_lines.append(f"- Non-admin users deleted: {deleted['users']}")
         summary_lines.append("")
         summary_lines.append("Preserved: admin account, session plans, non-game clip library, scouting reports, theory, playbook, drills, off-season content.")
-        
+
         flash("<br>".join(summary_lines), "success")
         return redirect(url_for('data_management.data_management'))
-    
+
     except Exception as e:
         logger.error(f"[Season Reset] Error: {e}", exc_info=True)
         db.session.rollback()
