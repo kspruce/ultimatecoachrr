@@ -170,6 +170,37 @@ def get_manager():
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 from sqlalchemy import text
 
+# Helper to resolve the target team to reset
+def _resolve_target_team_id():
+    """
+    Determine which TeamOrganization to reset.
+    - Admins: allow explicit form selection; fallback to session or admin's own team.
+    - Non-admins: force use of their own team.
+    """
+    from flask import session
+    from app.models.team_organization import TeamOrganization
+
+    team_id = None
+    if getattr(current_user, 'is_admin', False):
+        # Admins can choose; fallback to current session team or their own
+        raw = request.form.get('team_id', '').strip()
+        team_id = int(raw) if raw.isdigit() else None
+        if not team_id:
+            team_id = session.get('current_team_id') or getattr(current_user, 'team_organization_id', None)
+    else:
+        # Non-admins: always use their team
+        team_id = getattr(current_user, 'team_organization_id', None)
+
+    if not team_id:
+        flash('❌ No team selected or associated with your account.', 'error')
+        return None, None
+
+    team = TeamOrganization.query.get(team_id)
+    if not team:
+        flash('❌ Selected team does not exist.', 'error')
+        return None, None
+
+    return team_id, team
 
 
 def _get_admin_player_id():
@@ -184,34 +215,45 @@ def _get_admin_player_id():
 @admin_required
 def season_reset():
     """
-    Reset season data with per-step savepoints to avoid 'current transaction is aborted'.
-    Deletes children first (clip_id/point_id/game_id/player_id) then parents.
-    Preserves: admin, non-game clips, session plans, scouting, theory, playbook, drills, off-season.
-    """
-    # Import db INSIDE the route so it’s bound to the current app context
-    from app import db
+    Team-scoped Season Reset.
+    Deletes in-season data ONLY for the selected team_organization_id, in FK-safe order, with per-step savepoints.
 
+    Removes (for selected team):
+      - Game/Point chain: GamePlayer, Points (LineUp, Event, Pull, Throw, CuttingSkill, GameDayEvent, PlayerPointStats), Games
+      - Tournaments and TournamentRSVP
+      - Clips linked to those Games/Points (ClipAnnotation + clip_tag_relation + clip_player)
+      - Player-linked rows for players being removed (Attendance, SessionRSVP, FitnessRecord, GameDay*, Stats, CuttingSkill, Pull, Throw)
+      - Players (except admin player in that team)
+      - Optionally: non-admin Users in that team
+
+    Preserves:
+      - Admin user and admin player (for the selected team)
+      - Session plans, drills, playbook, theory, scouting, off-season content
+      - Clip library not linked to a game/point for this team
+    """
+    from app import db
+    from sqlalchemy import or_
+
+    # Core models
     from app.models.user import User
     from app.models.player import Player
+    from app.models.team_organization import TeamOrganization
     from app.models.game import Game
-    from app.models.point import Point
+    from app.models.point import Point, LineUp
     from app.models.tournament import Tournament
-    from app.models.clip import Clip
+    from app.models.tournament_rsvp import TournamentRSVP
+    from app.models.event import Event, Pull
+    from app.models.throws import Throw
+    from app.models.clip import Clip, ClipTag, clip_tag_relation, clip_player
+    from app.models.annotation import ClipAnnotation
 
-    try:
-        from app.models.game_player import GamePlayer
-    except Exception:
-        GamePlayer = None
-
-    try:
-        from app.models.tournament_rsvp import TournamentRSVP
-    except Exception:
-        TournamentRSVP = None
-
-    try:
-        from app.models.stats import Stat as StatModel
-    except Exception:
-        StatModel = None
+    # Player/point/game-linked models
+    from app.models.stats import PlayerPointStats
+    from app.models.cutting_skill import CuttingSkill
+    from app.models.game_player import GamePlayer
+    from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplatePlayer
+    from app.models.session import Attendance, SessionRSVP
+    from app.models.fitness import FitnessRecord
 
     confirm_text = request.form.get('confirm_text', '').strip()
     also_delete_non_admin_users = request.form.get('delete_non_admin_users') == 'on'
@@ -221,276 +263,245 @@ def season_reset():
         flash('❌ Please type "RESET SEASON" exactly to confirm.', 'error')
         return redirect(url_for('data_management.data_management'))
 
+    # Resolve target team (admins can choose, users use their team)
+    team_id, team = _resolve_target_team_id()
+    if not team_id:
+        return redirect(url_for('data_management.data_management'))
+
+    # Savepoint helper using the single app-bound db instance
+    def _safe_delete(func, desc, counters=None, counter_key=None):
+        try:
+            with db.session.begin_nested():  # savepoint
+                cnt = func()
+                if counters is not None and counter_key is not None:
+                    counters[counter_key] = counters.get(counter_key, 0) + (cnt or 0)
+                return cnt or 0
+        except Exception as e:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            logger.warning(f"[Season Reset] {desc} failed: {e}")
+            return 0
+
+    def _ids(query):
+        return [row[0] for row in query]
+
+    deleted = {
+        'clip_children': 0,
+        'game_clips': 0,
+        'by_point_id': 0,
+        'by_game_id': 0,
+        'by_player_id': 0,
+        'stats': 0,
+        'game_players': 0,
+        'points': 0,
+        'games': 0,
+        'tournament_rsvps': 0,
+        'tournaments': 0,
+        'players': 0,
+        'users': 0,
+    }
+
     try:
-        # Clear any dangling state
-        db.session.rollback()
+        db.session.rollback()  # clear pending state
+        logger.info(f"[Season Reset] Starting for team_id={team_id} ({team.name})")
 
-        logger.info("[Season Reset] Starting...")
-        manager = get_manager()
-
-        def _column_names(model):
-            return {c.name for c in model.__table__.columns}
-
-        def _get_ids(query):
-            return [row[0] for row in query]
-
-        def _delete_by_id_column(manager, column_name, id_list, exclude_models=None, counters=None, counter_key=None):
-            if not id_list:
-                return 0
-            total = 0
-            exclude_models = exclude_models or set()
-            for table_name, model in manager.models.items():
-                if model in exclude_models:
-                    continue
-                cols = _column_names(model)
-                if column_name in cols:
-                    cnt, _ = _safe_delete(
-                        lambda m=model: m.query.filter(getattr(m, column_name).in_(id_list)).delete(synchronize_session=False),
-                        f"DELETE {table_name} WHERE {column_name} IN (...)",
-                        counters, counter_key
-                    )
-                    total += cnt
-            return total
-
-        def _get_admin_player_id():
-            return Player.query.filter_by(user_id=current_user.id).with_entities(Player.id).scalar()
-
+        # Identify admin player in this team to keep
         admin_user_id = current_user.id
-        admin_player_id = _get_admin_player_id()
+        admin_player_id = Player.query.filter_by(user_id=admin_user_id, team_organization_id=team_id)\
+                                      .with_entities(Player.id).scalar()
 
-        game_ids = _get_ids(db.session.query(Game.id))
-        point_ids = _get_ids(db.session.query(Point.id))
+        # Collect IDs scoped to team
+        game_ids = _ids(db.session.query(Game.id).filter(Game.team_organization_id == team_id))
+        point_ids = _ids(db.session.query(Point.id).filter(Point.team_organization_id == team_id))
+        event_ids = _ids(db.session.query(Event.id).filter(Event.point_id.in_(point_ids))) if point_ids else []
 
+        # Clips linked to those games/points (team-scoped implicitly by game/point)
+        clip_ids_game = _ids(db.session.query(Clip.id).filter(Clip.game_id.in_(game_ids)))
+        clip_ids_point = _ids(db.session.query(Clip.id).filter(Clip.point_id.in_(point_ids))) if point_ids else []
+        clip_ids_all = list(set(clip_ids_game + clip_ids_point))
+
+        # Players in this team to delete (exclude admin player for this team)
         if admin_player_id:
-            players_to_delete = _get_ids(db.session.query(Player.id).filter(Player.id != admin_player_id))
+            players_to_delete = _ids(db.session.query(Player.id)
+                                     .filter(Player.team_organization_id == team_id,
+                                             Player.id != admin_player_id))
         else:
-            players_to_delete = _get_ids(db.session.query(Player.id))
+            players_to_delete = _ids(db.session.query(Player.id)
+                                     .filter(Player.team_organization_id == team_id))
 
-        deleted = {
-            'clip_children': 0,
-            'game_clips': 0,
-            'by_point_id': 0,
-            'by_game_id': 0,
-            'by_player_id': 0,
-            'stats': 0,
-            'game_players': 0,
-            'points': 0,
-            'games': 0,
-            'tournament_rsvps': 0,
-            'tournaments': 0,
-            'players': 0,
-            'users': 0,
-        }
-
-        # 1) Clip children for game-linked clips
-        game_clip_ids = _get_ids(db.session.query(Clip.id).filter(Clip.game_id.isnot(None)))
-        if game_clip_ids:
-            _delete_by_id_column(
-                manager=manager,
-                column_name='clip_id',
-                id_list=game_clip_ids,
-                exclude_models={Clip},
-                counters=deleted,
-                counter_key='clip_children'
+        # --- 1) Clip children/associations for team’s game/point clips ---
+        if clip_ids_all:
+            deleted['clip_children'] += _safe_delete(
+                lambda: ClipAnnotation.query.filter(ClipAnnotation.clip_id.in_(clip_ids_all)).delete(synchronize_session=False),
+                "DELETE ClipAnnotation by clip_id"
+            )
+            deleted['clip_children'] += _safe_delete(
+                lambda: db.session.execute(clip_tag_relation.delete().where(clip_tag_relation.c.clip_id.in_(clip_ids_all))).rowcount,
+                "DELETE clip_tag_relation by clip_id"
+            )
+            deleted['clip_children'] += _safe_delete(
+                lambda: db.session.execute(clip_player.delete().where(clip_player.c.clip_id.in_(clip_ids_all))).rowcount,
+                "DELETE clip_player by clip_id"
             )
 
-        # 2) Children with point_id and then Event→Throw chain
+        # --- 2) Point chain children (team-scoped) ---
         if point_ids:
-            # First delete child tables that have point_id (e.g., LineUp, Pull, etc.)
-            _delete_by_id_column(
-                manager=manager,
-                column_name='point_id',
-                id_list=point_ids,
-                exclude_models={Point},
-                counters=deleted,
-                counter_key='by_point_id'
+            deleted['by_point_id'] += _safe_delete(
+                lambda: CuttingSkill.query.filter(CuttingSkill.point_id.in_(point_ids)).delete(synchronize_session=False),
+                "DELETE CuttingSkill by point_id"
             )
-        
-            # Find events in those points
-            from app import db
-            event_ids = [row[0] for row in db.session.query(Event.id).filter(Event.point_id.in_(point_ids)).all()]
-        
+            deleted['by_point_id'] += _safe_delete(
+                lambda: GameDayEvent.query.filter(GameDayEvent.point_id.in_(point_ids)).delete(synchronize_session=False),
+                "DELETE GameDayEvent by point_id"
+            )
+            deleted['by_point_id'] += _safe_delete(
+                lambda: PlayerPointStats.query.filter(PlayerPointStats.point_id.in_(point_ids)).delete(synchronize_session=False),
+                "DELETE PlayerPointStats by point_id"
+            )
             if event_ids:
-                # Delete any rows referencing those events via *_event_id or event_id (e.g., Throw)
-                for table_name, model in manager.models.items():
-                    if model is Event:
-                        continue
-                    cols = _column_names(model)
-                    # Collect columns that reference events by naming convention
-                    event_cols = [c for c in cols if c == 'event_id' or c.endswith('_event_id')]
-                    if event_cols:
-                        for col in event_cols:
-                            _safe_delete(
-                                lambda m=model, colname=col: m.query.filter(getattr(m, colname).in_(event_ids)).delete(synchronize_session=False),
-                                f"DELETE {table_name} WHERE {col} IN (event_ids)",
-                                deleted, 'by_point_id'
-                            )
-        
-                # Explicitly handle Throw if present (build OR over all *_event_id columns)
-                if Throw:
-                    throw_cols = [c.name for c in Throw.__table__.columns if c.name == 'event_id' or c.name.endswith('_event_id')]
-                    if throw_cols:
-                        predicate = None
-                        for col in throw_cols:
-                            cond = getattr(Throw, col).in_(event_ids)
-                            predicate = cond if predicate is None else or_(predicate, cond)
-                        _safe_delete(
-                            lambda: Throw.query.filter(predicate).delete(synchronize_session=False),
-                            "DELETE throws referencing events",
-                            deleted, 'by_point_id'
-                        )
-        
-                # Now delete the events themselves
-                _safe_delete(
-                    lambda: Event.query.filter(Event.id.in_(event_ids)).delete(synchronize_session=False),
-                    "DELETE events in points",
-                    deleted, 'by_point_id'
+                # Throw rows referencing Events (throwing/receiving_event_id)
+                throw_event_pred = None
+                for col in ['throwing_event_id', 'receiving_event_id']:
+                    cond = getattr(Throw, col).in_(event_ids)
+                    throw_event_pred = cond if throw_event_pred is None else or_(throw_event_pred, cond)
+                deleted['by_point_id'] += _safe_delete(
+                    lambda: Throw.query.filter(throw_event_pred).delete(synchronize_session=False),
+                    "DELETE Throw by *_event_id"
                 )
 
-
-        # 3) Children with game_id
-        if game_ids:
-            _delete_by_id_column(
-                manager=manager,
-                column_name='game_id',
-                id_list=game_ids,
-                exclude_models={Game, Point, Clip},
-                counters=deleted,
-                counter_key='by_game_id'
+            deleted['by_point_id'] += _safe_delete(
+                lambda: Throw.query.filter(Throw.point_id.in_(point_ids)).delete(synchronize_session=False),
+                "DELETE Throw by point_id"
             )
-
-        # 4) Children with player_id (for players to be removed)
-        if players_to_delete:
-            _delete_by_id_column(
-                manager=manager,
-                column_name='player_id',
-                id_list=players_to_delete,
-                exclude_models={Player},
-                counters=deleted,
-                counter_key='by_player_id'
+            deleted['by_point_id'] += _safe_delete(
+                lambda: Pull.query.filter(Pull.point_id.in_(point_ids)).delete(synchronize_session=False),
+                "DELETE Pull by point_id"
             )
-
-        # 5) Clip children then game-linked clips (non-game clips preserved)
-        if game_clip_ids:
-            # Explicitly delete clip annotations and tags first
-            _safe_delete(
-                lambda: ClipAnnotation.query.filter(ClipAnnotation.clip_id.in_(game_clip_ids)).delete(synchronize_session=False),
-                "DELETE clip annotations for game clips",
-                deleted, 'clip_children'
-            )
-            _safe_delete(
-                lambda: ClipTag.query.filter(ClipTag.clip_id.in_(game_clip_ids)).delete(synchronize_session=False),
-                "DELETE clip tags for game clips",
-                deleted, 'clip_children'
-            )
-            # Also sweep any other table with clip_id generically
-            _delete_by_id_column(
-                manager=manager,
-                column_name='clip_id',
-                id_list=game_clip_ids,
-                exclude_models={Clip, ClipAnnotation, ClipTag},
-                counters=deleted,
-                counter_key='clip_children'
-            )
-            # Now delete the clips
-            _safe_delete(
-                lambda: Clip.query.filter(Clip.id.in_(game_clip_ids)).delete(synchronize_session=False),
-                "DELETE game-linked clips",
-                deleted, 'game_clips'
-            )
-        
-
-        # 6) Stats tables
-        if StatModel:
-            _safe_delete(
-                lambda: StatModel.query.delete(synchronize_session=False),
-                "DELETE stats (StatModel)",
-                deleted, 'stats'
-            )
-        else:
-            for table_name, model in manager.models.items():
-                if 'stat' in table_name.lower():
-                    _safe_delete(
-                        lambda m=model: m.query.delete(synchronize_session=False),
-                        f"DELETE stats-like table {table_name}",
-                        deleted, 'stats'
-                    )
-
-        # 7) GamePlayer, if present
-        if GamePlayer:
-            _safe_delete(
-                lambda: GamePlayer.query.delete(synchronize_session=False),
-                "DELETE game_player",
-                deleted, 'game_players'
-            )
-
-
-        # 8) Points (ensure LineUp is gone first)
-        if point_ids:
-            _safe_delete(
+            deleted['by_point_id'] += _safe_delete(
                 lambda: LineUp.query.filter(LineUp.point_id.in_(point_ids)).delete(synchronize_session=False),
-                "DELETE lineups by point_id",
-                deleted, 'by_point_id'
+                "DELETE LineUp by point_id"
             )
-        _safe_delete(
-            lambda: Point.query.delete(synchronize_session=False),
-            "DELETE points",
-            deleted, 'points'
-        )
+            if event_ids:
+                deleted['by_point_id'] += _safe_delete(
+                    lambda: Event.query.filter(Event.id.in_(event_ids)).delete(synchronize_session=False),
+                    "DELETE Event by ids"
+                )
 
-
-        # 9) Tournament RSVPs first (child)
-        if TournamentRSVP:
-            _safe_delete(
-                lambda: TournamentRSVP.query.delete(synchronize_session=False),
-                "DELETE tournament_rsvp",
-                deleted, 'tournament_rsvps'
+        # --- 3) Delete team’s game/point-linked Clips themselves ---
+        if clip_ids_all:
+            deleted['game_clips'] += _safe_delete(
+                lambda: Clip.query.filter(Clip.id.in_(clip_ids_all)).delete(synchronize_session=False),
+                "DELETE Clips linked to games/points"
             )
-        
-        # 10) Games (must be before tournaments because game.tournament_id FK)
-        _safe_delete(
-            lambda: Game.query.delete(synchronize_session=False),
-            "DELETE games",
-            deleted, 'games'
-        )
-        
-        # 11) Tournaments
-        _safe_delete(
-            lambda: Tournament.query.delete(synchronize_session=False),
-            "DELETE tournaments",
-            deleted, 'tournaments'
+
+        # --- 4) Points (team only) ---
+        deleted['points'] += _safe_delete(
+            lambda: Point.query.filter(Point.team_organization_id == team_id).delete(synchronize_session=False),
+            "DELETE Points (team)"
         )
 
-        # 12) Players
+        # --- 5) Game-level children and Games (team only) ---
+        deleted['game_players'] += _safe_delete(
+            lambda: GamePlayer.query.filter(GamePlayer.game_id.in_(game_ids)).delete(synchronize_session=False),
+            "DELETE GamePlayer (team)"
+        )
+        deleted['by_game_id'] += _safe_delete(
+            lambda: GameDayPlayerStats.query.filter(GameDayPlayerStats.game_id.in_(game_ids)).delete(synchronize_session=False),
+            "DELETE GameDayPlayerStats (team)"
+        )
+        deleted['games'] += _safe_delete(
+            lambda: Game.query.filter(Game.team_organization_id == team_id).delete(synchronize_session=False),
+            "DELETE Games (team)"
+        )
+
+        # --- 6) Tournaments chain (team only) ---
+        deleted['tournament_rsvps'] += _safe_delete(
+            lambda: TournamentRSVP.query.filter(TournamentRSVP.team_organization_id == team_id).delete(synchronize_session=False),
+            "DELETE TournamentRSVP (team)"
+        )
+        deleted['tournaments'] += _safe_delete(
+            lambda: Tournament.query.filter(Tournament.team_organization_id == team_id).delete(synchronize_session=False),
+            "DELETE Tournaments (team)"
+        )
+
+        # --- 7) Player-linked rows for players being removed (team only) ---
+        if players_to_delete:
+            deleted['by_player_id'] += _safe_delete(
+                lambda: db.session.execute(clip_player.delete().where(clip_player.c.player_id.in_(players_to_delete))).rowcount,
+                "DELETE clip_player by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: Attendance.query.filter(Attendance.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE Attendance by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: SessionRSVP.query.filter(SessionRSVP.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE SessionRSVP by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: FitnessRecord.query.filter(FitnessRecord.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE FitnessRecord by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: LineTemplatePlayer.query.filter(LineTemplatePlayer.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE LineTemplatePlayer by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: GameDayEvent.query.filter(GameDayEvent.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE GameDayEvent by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: GameDayPlayerStats.query.filter(GameDayPlayerStats.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE GameDayPlayerStats by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: PlayerPointStats.query.filter(PlayerPointStats.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE PlayerPointStats by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: CuttingSkill.query.filter(CuttingSkill.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE CuttingSkill by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: Pull.query.filter(Pull.player_id.in_(players_to_delete)).delete(synchronize_session=False),
+                "DELETE Pull by player_id"
+            )
+            deleted['by_player_id'] += _safe_delete(
+                lambda: Throw.query.filter(or_(Throw.thrower_id.in_(players_to_delete),
+                                               Throw.receiver_id.in_(players_to_delete))).delete(synchronize_session=False),
+                "DELETE Throw by thrower/receiver player_id"
+            )
+
+        # --- 8) Players (team only; preserve admin's player on this team) ---
         if admin_player_id:
-            _safe_delete(
-                lambda: Player.query.filter(Player.id != admin_player_id).delete(synchronize_session=False),
-                "DELETE players (excluding admin player)",
-                deleted, 'players'
+            deleted['players'] += _safe_delete(
+                lambda: Player.query.filter(Player.team_organization_id == team_id,
+                                            Player.id != admin_player_id).delete(synchronize_session=False),
+                "DELETE Players (team, excluding admin)"
             )
         else:
-            _safe_delete(
-                lambda: Player.query.delete(synchronize_session=False),
-                "DELETE all players (no admin player linked)",
-                deleted, 'players'
+            deleted['players'] += _safe_delete(
+                lambda: Player.query.filter(Player.team_organization_id == team_id).delete(synchronize_session=False),
+                "DELETE Players (team)"
             )
 
-        # 13) Users (optional)
+        # --- 9) Optionally delete non-admin Users in this team only ---
         if also_delete_non_admin_users:
-            _safe_delete(
-                lambda: User.query.filter(User.id != admin_user_id).delete(synchronize_session=False),
-                "DELETE non-admin users",
-                deleted, 'users'
+            deleted['users'] += _safe_delete(
+                lambda: User.query.filter(User.team_organization_id == team_id,
+                                          User.id != admin_user_id).delete(synchronize_session=False),
+                "DELETE non-admin Users (team)"
             )
 
-        # Commit all successful deletes
         db.session.commit()
         logger.info("[Season Reset] Committed database changes")
 
-        # Optional: reset sequences
+        # Optional sequence reset (affects whole DB; safe but global)
         if reset_sequences_after:
             try:
-                results = manager.reset_sequences()
+                results = get_manager().reset_sequences()
                 success_count = sum(1 for result in results.values()
                                     if not str(result).startswith("Error") and not str(result).startswith("Skipped"))
                 flash(f"✅ Database sequences reset for {success_count} tables.", "success")
@@ -500,21 +511,20 @@ def season_reset():
 
         # Summary
         summary_lines = [
-            "✅ Season reset completed.",
+            f"✅ Season reset completed for team: {team.name}.",
             f"- Players deleted (excluding admin): {deleted['players']}",
             f"- Games deleted: {deleted['games']}",
             f"- Tournaments deleted: {deleted['tournaments']}",
             f"- Tournament RSVPs deleted: {deleted['tournament_rsvps']}",
             f"- Points deleted: {deleted['points']}",
-            f"- Stats deleted: {deleted['stats']}",
-            f"- Game clips deleted: {deleted['game_clips']}",
-            f"- Clip-related child records deleted (annotations/tags/etc.): {deleted['clip_children']}",
-            f"- Game-related child records deleted (game_id=...): {deleted['by_game_id']}",
-            f"- Point-related child records deleted (point_id=...): {deleted['by_point_id']}",
-            f"- Player-related child records deleted (player_id=...): {deleted['by_player_id']}",
+            f"- Game/Point clips deleted: {deleted['game_clips']}",
+            f"- Clip child rows deleted (annotations/tags/associations): {deleted['clip_children']}",
+            f"- Game-player links deleted: {deleted['game_players']}",
+            f"- Point-related child rows deleted: {deleted['by_point_id']}",
+            f"- Player-related child rows deleted: {deleted['by_player_id']}",
         ]
         if also_delete_non_admin_users:
-            summary_lines.append(f"- Non-admin users deleted: {deleted['users']}")
+            summary_lines.append(f"- Non-admin users deleted (team): {deleted['users']}")
         summary_lines.append("")
         summary_lines.append("Preserved: admin account, session plans, non-game clip library, scouting reports, theory, playbook, drills, off-season content.")
 

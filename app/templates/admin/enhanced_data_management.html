@@ -585,6 +585,31 @@
                                         <i class="fas fa-sync me-1"></i>Reset database sequences after reset
                                     </label>
                                 </div>
+                                <!-- Team selection (admin) or hidden team_id (non-admin) -->
+                                {% if current_user.is_admin %}
+                                  <div class="mb-3">
+                                    <label for="team_id" class="form-label">
+                                      Team to reset
+                                    </label>
+                                    <select class="form-select" id="team_id" name="team_id" required>
+                                      <option value="">Choose a team...</option>
+                                      {% for t in available_teams %}
+                                        <option value="{{ t.id }}" {% if current_team and t.id == current_team.id %}selected{% endif %}>
+                                          {{ t.name }}
+                                        </option>
+                                      {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                      Only the selected team's in-season data will be reset. Other teams are unaffected.
+                                    </div>
+                                  </div>
+                                {% else %}
+                                  <input type="hidden" name="team_id" value="{{ current_user.team_organization_id }}">
+                                  <div class="alert alert-secondary">
+                                    Reset will be applied to your team only.
+                                  </div>
+                                {% endif %}
+        
         
                                 <div class="mb-3">
                                     <label for="confirm_text" class="form-label">
