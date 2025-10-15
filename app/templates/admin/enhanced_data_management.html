@@ -132,6 +132,11 @@
                 <i class="fas fa-table me-2"></i>Models Overview
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-content" type="button" role="tab">
+                <i class="fas fa-redo me-2"></i>Season Reset
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content" id="dataTabsContent">
@@ -451,6 +456,9 @@
             </div>
         </div>
 
+        
+
+
         <!-- Available Exports Tab -->
         <div class="tab-pane fade" id="exports-content" role="tabpanel">
             <div class="card">
@@ -513,7 +521,94 @@
                 </div>
             </div>
         </div>
-
+        <!-- Season Reset Tab -->
+        <div class="tab-pane fade" id="reset-content" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Season Reset
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> This action permanently deletes in-season data.
+                                Please export a backup first (Export tab).
+                            </div>
+        
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-danger">This will remove:</h6>
+                                    <ul class="list-group mb-3">
+                                        <li class="list-group-item list-group-item-danger"><i class="fas fa-users me-2"></i>All players (except your admin player)</li>
+                                        <li class="list-group-item list-group-item-danger"><i class="fas fa-chart-bar me-2"></i>All player statistics</li>
+                                        <li class="list-group-item list-group-item-danger"><i class="fas fa-gamepad me-2"></i>All games and points</li>
+                                        <li class="list-group-item list-group-item-danger"><i class="fas fa-trophy me-2"></i>All tournaments and RSVPs</li>
+                                        <li class="list-group-item list-group-item-danger"><i class="fas fa-video me-2"></i>Game-related clips and annotations</li>
+                                        <li class="list-group-item list-group-item-danger"><i class="fas fa-link me-2"></i>Other records linked to deleted players</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-success">This will preserve:</h6>
+                                    <ul class="list-group mb-3">
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-user-shield me-2"></i>Your admin account and player</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-calendar-alt me-2"></i>Session plans</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-video me-2"></i>Clip library (non-game clips)</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-search me-2"></i>Scouting reports</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-book me-2"></i>Theory</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-play me-2"></i>Playbook</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-running me-2"></i>Drills</li>
+                                        <li class="list-group-item list-group-item-success"><i class="fas fa-snowflake me-2"></i>Off-season content</li>
+                                    </ul>
+                                </div>
+                            </div>
+        
+                            <form method="POST" action="{{ url_for('data_management.season_reset') }}" id="seasonResetForm" onsubmit="return verifySeasonReset();">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="delete_non_admin_users" name="delete_non_admin_users">
+                                    <label class="form-check-label text-danger" for="delete_non_admin_users">
+                                        <i class="fas fa-user-times me-1"></i>Also delete non-admin user accounts
+                                    </label>
+                                    <div class="form-text">Leave unchecked to keep user logins (players will still be removed).</div>
+                                </div>
+        
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="reset_sequences_after" name="reset_sequences_after" checked>
+                                    <label class="form-check-label" for="reset_sequences_after">
+                                        <i class="fas fa-sync me-1"></i>Reset database sequences after reset
+                                    </label>
+                                </div>
+        
+                                <div class="mb-3">
+                                    <label for="confirm_text" class="form-label">
+                                        Type <code>RESET SEASON</code> to confirm:
+                                    </label>
+                                    <input type="text" class="form-control" id="confirm_text" name="confirm_text" placeholder="RESET SEASON" required>
+                                </div>
+        
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('data_management.data_management') }}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-1"></i>Back
+                                    </a>
+                                    <button type="submit" class="btn btn-danger" id="seasonResetBtn" disabled>
+                                        <i class="fas fa-trash-alt me-1"></i>Reset Season
+                                    </button>
+                                </div>
+                            </form>
+        
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Tip: Use “Download All Tables (JSON Format)” in the Export tab to take a restorable backup before you reset.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Models Overview Tab -->
         <div class="tab-pane fade" id="models-content" role="tabpanel">
             <div class="card">
@@ -1295,6 +1390,20 @@
     document.addEventListener('DOMContentLoaded', function() {
         addLogEntry('Enhanced data management interface initialized', 'success');
     });
+    // Season Reset validation
+    function verifySeasonReset() {
+        const input = document.getElementById('confirm_text').value.trim();
+        if (input !== 'RESET SEASON') {
+            addLogEntry('Season reset confirmation text does not match.', 'error');
+            return false;
+        }
+        return true;
+    }
+    
+    document.getElementById('confirm_text').addEventListener('input', function() {
+        document.getElementById('seasonResetBtn').disabled = (this.value.trim() !== 'RESET SEASON');
+    });
+
 </script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
