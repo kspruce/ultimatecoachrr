@@ -16,7 +16,7 @@ from datetime import datetime
 import math
 from flask import current_app
 # New imports for Season Reset
-from app.models.base import db
+#from app.models.base import db
 from app.models.player import Player
 from app.models.game import Game
 from app.models.point import Point
@@ -171,20 +171,13 @@ def _get_admin_player_id():
 @admin_required
 def season_reset():
     """
-    Reset season data with per-step savepoints to avoid 'current transaction is aborted' poisoning.
-    Order:
-      - identify ids
-      - delete clip children of game clips
-      - delete any table rows with point_id for those points (children first)
-      - delete any table rows with game_id for those games (children first)
-      - delete any table rows with player_id for players to be removed (children first)
-      - delete game-linked clips
-      - delete stats-like, RSVPs, points, games, tournaments
-      - delete players (except admin), optional users
-      - optionally reset sequences
-    Preserves admin, non-game clips, sessions, scouting, theory, playbook, drills, off-season.
+    Reset season data with per-step savepoints to avoid 'current transaction is aborted'.
+    Deletes children first (clip_id/point_id/game_id/player_id) then parents.
+    Preserves: admin, non-game clips, session plans, scouting, theory, playbook, drills, off-season.
     """
+    # Import db INSIDE the route so it’s bound to the current app context
     from app.models.base import db
+
     from app.models.user import User
     from app.models.player import Player
     from app.models.game import Game
@@ -192,7 +185,6 @@ def season_reset():
     from app.models.tournament import Tournament
     from app.models.clip import Clip
 
-    # optional models
     try:
         from app.models.game_player import GamePlayer
     except Exception:
@@ -203,7 +195,6 @@ def season_reset():
     except Exception:
         TournamentRSVP = None
 
-    # Stats model(s) may vary; we handle both directly and via fallback matching
     try:
         from app.models.stats import Stat as StatModel
     except Exception:
@@ -218,20 +209,45 @@ def season_reset():
         return redirect(url_for('data_management.data_management'))
 
     try:
-        # Rollback any prior dangling state before starting
+        # Clear any dangling state
         db.session.rollback()
 
         logger.info("[Season Reset] Starting...")
         manager = get_manager()
 
+        def _column_names(model):
+            return {c.name for c in model.__table__.columns}
+
+        def _get_ids(query):
+            return [row[0] for row in query]
+
+        def _delete_by_id_column(manager, column_name, id_list, exclude_models=None, counters=None, counter_key=None):
+            if not id_list:
+                return 0
+            total = 0
+            exclude_models = exclude_models or set()
+            for table_name, model in manager.models.items():
+                if model in exclude_models:
+                    continue
+                cols = _column_names(model)
+                if column_name in cols:
+                    cnt, _ = _safe_delete(
+                        lambda m=model: m.query.filter(getattr(m, column_name).in_(id_list)).delete(synchronize_session=False),
+                        f"DELETE {table_name} WHERE {column_name} IN (...)",
+                        counters, counter_key
+                    )
+                    total += cnt
+            return total
+
+        def _get_admin_player_id():
+            return Player.query.filter_by(user_id=current_user.id).with_entities(Player.id).scalar()
+
         admin_user_id = current_user.id
         admin_player_id = _get_admin_player_id()
 
-        # Build ids upfront
         game_ids = _get_ids(db.session.query(Game.id))
         point_ids = _get_ids(db.session.query(Point.id))
 
-        # Players to delete (exclude admin's player if exists)
         if admin_player_id:
             players_to_delete = _get_ids(db.session.query(Player.id).filter(Player.id != admin_player_id))
         else:
@@ -253,10 +269,9 @@ def season_reset():
             'users': 0,
         }
 
-        # 1) Clip children of game clips
+        # 1) Clip children for game-linked clips
         game_clip_ids = _get_ids(db.session.query(Clip.id).filter(Clip.game_id.isnot(None)))
         if game_clip_ids:
-            # Delete all rows in any model with 'clip_id' pointing to these clips (exclude Clip itself)
             _delete_by_id_column(
                 manager=manager,
                 column_name='clip_id',
@@ -266,7 +281,7 @@ def season_reset():
                 counter_key='clip_children'
             )
 
-        # 2) Children with point_id before deleting points
+        # 2) Children with point_id
         if point_ids:
             _delete_by_id_column(
                 manager=manager,
@@ -277,9 +292,8 @@ def season_reset():
                 counter_key='by_point_id'
             )
 
-        # 3) Children with game_id before deleting games
+        # 3) Children with game_id
         if game_ids:
-            # Exclude Game and Point and Clip (Clip handled separately)
             _delete_by_id_column(
                 manager=manager,
                 column_name='game_id',
@@ -289,7 +303,7 @@ def season_reset():
                 counter_key='by_game_id'
             )
 
-        # 4) Children with player_id for players we're removing
+        # 4) Children with player_id (for players to be removed)
         if players_to_delete:
             _delete_by_id_column(
                 manager=manager,
@@ -308,7 +322,7 @@ def season_reset():
                 deleted, 'game_clips'
             )
 
-        # 6) Delete stats (try direct model, otherwise any table with 'stat' in name)
+        # 6) Stats tables
         if StatModel:
             _safe_delete(
                 lambda: StatModel.query.delete(synchronize_session=False),
@@ -316,7 +330,6 @@ def season_reset():
                 deleted, 'stats'
             )
         else:
-            # fallback: iterate any model with 'stat' in table name
             for table_name, model in manager.models.items():
                 if 'stat' in table_name.lower():
                     _safe_delete(
@@ -325,7 +338,7 @@ def season_reset():
                         deleted, 'stats'
                     )
 
-        # 7) GamePlayer if exists (extra safety even though by_game_id/by_player_id likely handled most)
+        # 7) GamePlayer, if present
         if GamePlayer:
             _safe_delete(
                 lambda: GamePlayer.query.delete(synchronize_session=False),
@@ -340,7 +353,7 @@ def season_reset():
             deleted, 'points'
         )
 
-        # 9) Tournament RSVPs first (child)
+        # 9) Tournament RSVPs
         if TournamentRSVP:
             _safe_delete(
                 lambda: TournamentRSVP.query.delete(synchronize_session=False),
@@ -355,14 +368,14 @@ def season_reset():
             deleted, 'tournaments'
         )
 
-        # 11) Games (after children)
+        # 11) Games
         _safe_delete(
             lambda: Game.query.delete(synchronize_session=False),
             "DELETE games",
             deleted, 'games'
         )
 
-        # 12) Players (preserve admin-linked player if exists)
+        # 12) Players
         if admin_player_id:
             _safe_delete(
                 lambda: Player.query.filter(Player.id != admin_player_id).delete(synchronize_session=False),
@@ -376,7 +389,7 @@ def season_reset():
                 deleted, 'players'
             )
 
-        # 13) Users (optional; preserve admin)
+        # 13) Users (optional)
         if also_delete_non_admin_users:
             _safe_delete(
                 lambda: User.query.filter(User.id != admin_user_id).delete(synchronize_session=False),
@@ -384,11 +397,11 @@ def season_reset():
                 deleted, 'users'
             )
 
-        # Try final commit
+        # Commit all successful deletes
         db.session.commit()
         logger.info("[Season Reset] Committed database changes")
 
-        # Optional sequences reset
+        # Optional: reset sequences
         if reset_sequences_after:
             try:
                 results = manager.reset_sequences()
