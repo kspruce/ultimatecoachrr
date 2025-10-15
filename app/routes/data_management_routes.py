@@ -22,7 +22,6 @@ from app.models.game import Game
 from app.models.point import Point
 from app.models.tournament import Tournament
 from app.models.clip import Clip
-from app.models.annotation import Annotation  # Clip annotations
 from sqlalchemy import and_
 
 # Optional relationship models (import if present)
@@ -42,6 +41,10 @@ try:
     from app.models.stats import Stat as StatModel
 except Exception:
     StatModel = None
+
+def _column_names(model):
+    return {c.name for c in model.__table__.columns}
+
 
 def _get_admin_player_id():
     """Return current admin's Player.id if linked, else None."""
@@ -133,7 +136,7 @@ def season_reset():
             players_to_delete = [p.id for p in players_q.all()]
         
         deleted_counters = {
-            'annotations': 0,
+            'clip_children': 0,
             'game_clips': 0,
             'stats': 0,
             'points': 0,
@@ -145,17 +148,30 @@ def season_reset():
             'players': 0,
             'users': 0
         }
+
         
-        # 2) Delete clip annotations associated with game clips (preserve non-game clips)
+        # 2. Delete all rows in any model with clip_id -> game-linked clips (annotations, tags, etc.)
         try:
-            game_clip_ids = [c.id for c in Clip.query.filter(Clip.game_id.isnot(None)).all()]
+            # Get IDs of clips that are linked to games
+            game_clip_ids = [row[0] for row in db.session.query(Clip.id).filter(Clip.game_id.isnot(None)).all()]
             if game_clip_ids:
-                deleted_counters['annotations'] += Annotation.query.filter(
-                    Annotation.clip_id.in_(game_clip_ids)
-                ).delete(synchronize_session=False)
+                # Loop through all models and delete rows where clip_id in those IDs
+                for table_name, model in get_manager().models.items():
+                    # Skip the Clip model itself here; we’ll delete game clips in the next step
+                    if model is Clip:
+                        continue
+                    cols = _column_names(model)
+                    if 'clip_id' in cols:
+                        try:
+                            cnt = model.query.filter(model.clip_id.in_(game_clip_ids)).delete(synchronize_session=False)
+                            if cnt:
+                                logger.info(f"[Season Reset] Deleted {cnt} records from {table_name} with clip_id in game clips")
+                                deleted_counters['clip_children'] = deleted_counters.get('clip_children', 0) + cnt
+                        except Exception as e:
+                            logger.warning(f"[Season Reset] Skipped {table_name} clip child cleanup: {e}")
         except Exception as e:
-            logger.warning(f"[Season Reset] Skipping Annotation cleanup: {e}")
-        
+            logger.warning(f"[Season Reset] Skipping clip child cleanup: {e}")
+           
         # 3) Delete game-linked clips only (preserve clip library not tied to games)
         try:
             deleted_counters['game_clips'] += Clip.query.filter(Clip.game_id.isnot(None)).delete(synchronize_session=False)
@@ -261,7 +277,7 @@ def season_reset():
             f"- Points deleted: {deleted_counters['points']}",
             f"- Stats deleted: {deleted_counters['stats']}",
             f"- Game clips deleted: {deleted_counters['game_clips']}",
-            f"- Clip annotations deleted: {deleted_counters['annotations']}",
+            f"- Clip-related child records deleted (annotations/tags/etc.): {deleted_counters.get('clip_children', 0)}",
             f"- Game-player links deleted: {deleted_counters['game_players']}",
             f"- Other player-linked records deleted: {deleted_counters['by_player_id']}",
         ]
