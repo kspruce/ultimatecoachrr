@@ -111,9 +111,9 @@
     </div>
 
     <!-- Main Content Tabs -->
-    <ul class="nav nav-tabs mb-4" id="dataTabs" role="tablist">
+    <ul class="nav nav-tabs mb-4" id="dataTabs" role="tablist" style="flex-wrap: wrap;">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-content" type="button" role="tab">
+            <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-content" type="button" role="tab">
                 <i class="fas fa-upload me-2"></i>Export Data
             </button>
         </li>
@@ -133,15 +133,16 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-content" type="button" role="tab">
+            <button class="nav-link active" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-content" type="button" role="tab">
                 <i class="fas fa-redo me-2"></i>Season Reset
             </button>
         </li>
     </ul>
 
+
     <div class="tab-content" id="dataTabsContent">
         <!-- Export Tab -->
-        <div class="tab-pane fade show active" id="export-content" role="tabpanel">
+        <div class="tab-pane fade" id="export-content" role="tabpanel">
             <div class="row">
                 <div class="col-lg-8 mx-auto">
                     <div class="card">
@@ -299,43 +300,13 @@
         <div class="tab-pane fade" id="import-content" role="tabpanel">
             <div class="row">
                 <div class="col-lg-8 mx-auto">
+                    <!-- Main Import Card -->
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">
                                 <i class="fas fa-download me-2"></i>Import Data
                             </h5>
                         </div>
-                        <!-- Reset Sequences Button -->
-                        <div class="card mt-4">
-                            <div class="card-header bg-primary text-white">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-sync me-2"></i>Reset Database Sequences
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Database ID Conflict Fix:</strong> If you're getting errors about duplicate IDs or "record already exists" after importing data, use this button to fix the database counters.
-                                </div>
-                                
-                                <p>This tool resets the auto-increment counters for all tables in your database to ensure new records get correct IDs that don't conflict with imported data.</p>
-                                
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>When to use:</strong> After importing data from a backup, if you encounter errors when creating new records.
-                                </div>
-                                
-                                <form method="POST" action="{{ url_for('data_management.reset_sequences') }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <div class="d-grid">
-                                        <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-sync me-2"></i>Reset All Database Sequences
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-
                         <div class="card-body">
                             <p class="text-muted">Import data from previously exported files.</p>
                             
@@ -394,7 +365,6 @@
                                 <h6><i class="fas fa-folder me-2"></i>Import from Server Directory</h6>
                                 <form id="importForm" method="POST" action="{{ url_for('data_management.import_data_route') }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <!-- Add a hidden field to indicate this is a directory import -->
                                     <input type="hidden" name="import_type" value="directory_import">
                                     
                                     <div class="mb-3">
@@ -452,9 +422,42 @@
                             </div>
                         </div>
                     </div>
+        
+                    <!-- Reset Sequences Button (separate card) -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-sync me-2"></i>Reset Database Sequences
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Database ID Conflict Fix:</strong> If you're getting errors about duplicate IDs or "record already exists" after importing data, use this button to fix the database counters.
+                            </div>
+                            
+                            <p>This tool resets the auto-increment counters for all tables in your database to ensure new records get correct IDs that don't conflict with imported data.</p>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>When to use:</strong> After importing data from a backup, if you encounter errors when creating new records.
+                            </div>
+                            
+                            <form method="POST" action="{{ url_for('data_management.reset_sequences') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-sync me-2"></i>Reset All Database Sequences
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+        
                 </div>
             </div>
         </div>
+
 
         
 
@@ -522,7 +525,7 @@
             </div>
         </div>
         <!-- Season Reset Tab -->
-        <div class="tab-pane fade" id="reset-content" role="tabpanel">
+        <div class="tab-pane fade show active" id="reset-content" role="tabpanel">
             <div class="row">
                 <div class="col-lg-8 mx-auto">
                     <div class="card border-danger">
@@ -817,6 +820,9 @@
     .log-info { color: #17a2b8; }
     .progress-container {
         display: none;
+    }
+    .nav-tabs {
+        flex-wrap: wrap;
     }
 </style>
 {% endblock %}
@@ -1392,7 +1398,9 @@
     });
     // Season Reset validation
     function verifySeasonReset() {
-        const input = document.getElementById('confirm_text').value.trim();
+        const el = document.getElementById('confirm_text');
+        if (!el) return false;
+        const input = el.value.trim();
         if (input !== 'RESET SEASON') {
             addLogEntry('Season reset confirmation text does not match.', 'error');
             return false;
@@ -1400,9 +1408,17 @@
         return true;
     }
     
-    document.getElementById('confirm_text').addEventListener('input', function() {
-        document.getElementById('seasonResetBtn').disabled = (this.value.trim() !== 'RESET SEASON');
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmEl = document.getElementById('confirm_text');
+        const btnEl = document.getElementById('seasonResetBtn');
+        if (confirmEl && btnEl) {
+            btnEl.disabled = (confirmEl.value.trim() !== 'RESET SEASON');
+            confirmEl.addEventListener('input', function() {
+                btnEl.disabled = (this.value.trim() !== 'RESET SEASON');
+            });
+        }
     });
+
 
 </script>
 {% endblock %}
