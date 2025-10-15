@@ -1,14 +1,9 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
-from flask_moment import Moment
+# Re-export the single, app-bound extension instances created in app/__init__.py
+from app import db, migrate, login, csrf, moment
 
-# Create extensions objects here, but don't initialize them yet
-db = SQLAlchemy()
-migrate = Migrate()
-login = LoginManager()
-login.login_view = 'auth.login'
-login.login_message = 'Please log in to access this page.'
-csrf = CSRFProtect()
-moment = Moment()
+# Optional: login configuration is already set in app/__init__.py; keep here only if you rely on base.py side-effects
+# login.login_view = 'auth.login'
+# login.login_message = 'Please log in to access this page.'
+
+__all__ = ['db', 'migrate', 'login', 'csrf', 'moment']
+

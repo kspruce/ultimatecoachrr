@@ -42,8 +42,59 @@ try:
 except Exception:
     StatModel = None
 
+
+
+# Helpers (single set)
 def _column_names(model):
     return {c.name for c in model.__table__.columns}
+
+def _get_ids(query):
+    # returns flat list of ids from a query for Model.id
+    return [row[0] for row in query]
+
+def _safe_delete(func, desc, counters=None, counter_key=None):
+    """
+    Run a delete operation safely in a nested transaction so that a failure
+    doesn't abort the whole transaction. If it fails, rollback savepoint and continue.
+    """
+    from app import db  # use the single app-bound instance
+    try:
+        with db.session.begin_nested():  # savepoint
+            cnt = func()
+            if counters is not None and counter_key is not None:
+                counters[counter_key] = counters.get(counter_key, 0) + (cnt or 0)
+            return cnt or 0, None
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.warning(f"[Season Reset] {desc} failed: {e}")
+        return 0, e
+
+def _delete_by_id_column(manager, column_name, id_list, exclude_models=None, counters=None, counter_key=None):
+    """
+    For every model that has <column_name>, delete rows where <column_name> IN (id_list).
+    Skips models in exclude_models set.
+    Runs each table delete inside its own savepoint.
+    """
+    if not id_list:
+        return 0
+    total = 0
+    exclude_models = exclude_models or set()
+    for table_name, model in manager.models.items():
+        if model in exclude_models:
+            continue
+        cols = _column_names(model)
+        if column_name in cols:
+            cnt, _ = _safe_delete(
+                lambda m=model: m.query.filter(getattr(m, column_name).in_(id_list)).delete(synchronize_session=False),
+                f"DELETE {table_name} WHERE {column_name} IN (...)",
+                counters, counter_key
+            )
+            total += cnt
+    return total
+
 
 
 def _get_admin_player_id():
@@ -107,57 +158,7 @@ def get_manager():
 from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 from sqlalchemy import text
 
-# Helpers (add once in this file)
-def _column_names(model):
-    return {c.name for c in model.__table__.columns}
 
-def _get_ids(query):
-    # returns flat list of ids from a query for Model.id
-    return [row[0] for row in query]
-
-def _safe_delete(func, desc, counters=None, counter_key=None):
-    """
-    Run a delete operation safely in a nested transaction so that a failure
-    doesn't abort the whole transaction. If it fails, rollback savepoint and continue.
-    """
-    from app.models.base import db
-    try:
-        with db.session.begin_nested():  # savepoint
-            cnt = func()
-            if counters is not None and counter_key is not None:
-                counters[counter_key] = counters.get(counter_key, 0) + (cnt or 0)
-            return cnt or 0, None
-    except Exception as e:
-        # This savepoint rollback clears the failed state for subsequent steps
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
-        logger.warning(f"[Season Reset] {desc} failed: {e}")
-        return 0, e
-
-def _delete_by_id_column(manager, column_name, id_list, exclude_models=None, counters=None, counter_key=None):
-    """
-    For every model that has <column_name>, delete rows where <column_name> IN (id_list).
-    Skips models in exclude_models set.
-    Runs each table delete inside its own savepoint.
-    """
-    if not id_list:
-        return 0
-    total = 0
-    exclude_models = exclude_models or set()
-    for table_name, model in manager.models.items():
-        if model in exclude_models:
-            continue
-        cols = _column_names(model)
-        if column_name in cols:
-            cnt, err = _safe_delete(
-                lambda m=model: m.query.filter(getattr(m, column_name).in_(id_list)).delete(synchronize_session=False),
-                f"DELETE {table_name} WHERE {column_name} IN (...)",
-                counters, counter_key
-            )
-            total += cnt
-    return total
 
 def _get_admin_player_id():
     from app.models.player import Player
@@ -176,7 +177,7 @@ def season_reset():
     Preserves: admin, non-game clips, session plans, scouting, theory, playbook, drills, off-season.
     """
     # Import db INSIDE the route so it’s bound to the current app context
-    from app.models.base import db
+    from app import db
 
     from app.models.user import User
     from app.models.player import Player
@@ -449,7 +450,7 @@ def data_management():
     """Enhanced data management interface."""
     try:
         # Ensure any previous failed transaction is rolled back
-        from app.models.base import db
+        from app import db
         db.session.rollback()
         
         manager = get_manager()  # Get the manager instance
@@ -493,7 +494,7 @@ def data_management():
         logger.error(f"Error in data management page: {e}", exc_info=True)
         
         # Roll back the session to clear any aborted transaction
-        from app.models.base import db
+        from app import db
         db.session.rollback()
         
         # Show an error message
