@@ -72,6 +72,21 @@
                         <i class="bi bi-pencil"></i> Edit Clip
                     </a>
                 {% endif %}
+
+                {# Share link + Markdown export (visible to admin/coach or clip creator) #}
+                {% if current_user.is_admin or current_user.is_coach or clip.created_by_id == current_user.id %}
+                    <form id="createShareForm" method="post" action="{{ url_for('clip.create_share_link', clip_id=clip.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="expires_days" value="7">
+                        <button type="submit" class="btn btn-outline-success">
+                            <i class="bi bi-share"></i> Share
+                        </button>
+                    </form>
+                    <a href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-markdown"></i> Export MD
+                    </a>
+                {% endif %}
+
                 <a href="{{ url_for('clip.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Library
                 </a>
@@ -86,7 +101,7 @@
                 <div class="card-body">
                     {% if clip.embed_url %}
                     <div class="video-container">
-                        <!-- IMPORTANT: add enablejsapi=1 to allow reading current time -->
+                        {# IMPORTANT: add enablejsapi=1 to allow reading current time #}
                         {% set sep = '&' if '?' in clip.embed_url else '?' %}
                         <iframe id="video-player"
                                 src="{{ clip.embed_url }}{{ sep }}enablejsapi=1"
@@ -449,6 +464,7 @@
         }
     }
 
+    // Intercept the Share form to show the share URL without navigating away
     document.addEventListener('DOMContentLoaded', function() {
         wireAddAnnotationButtons();
 
@@ -462,6 +478,28 @@
 
         // Load existing segments on page load
         fetchSegments();
+
+        // Share link creation handler
+        const shareForm = document.getElementById('createShareForm');
+        if (shareForm) {
+            shareForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const resp = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+                try {
+                    const data = await resp.json();
+                    if (data.url) {
+                        // Copy to clipboard if possible
+                        try { await navigator.clipboard.writeText(data.url); } catch (err) {}
+                        alert('Share link created and copied to clipboard:\n\n' + data.url + '\n\nExpires in ' + data.expires_days + ' day(s).');
+                    } else {
+                        alert('Failed to create share link.');
+                    }
+                } catch {
+                    alert('Failed to create share link.');
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

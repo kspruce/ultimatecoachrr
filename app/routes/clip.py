@@ -18,6 +18,9 @@ import csv
 import io
 from flask import send_file
 from datetime import datetime
+from flask import current_app
+from itsdangerous import URLSafeSerializer, BadSignature
+import time
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
@@ -26,6 +29,11 @@ def get_current_team_id():
     if current_user.is_admin:
         return session.get('current_team_id')
     return current_user.team_organization_id
+
+def get_share_serializer():
+    """Serializer for generating and verifying share tokens."""
+    # Different salt for safety and future rotation
+    return URLSafeSerializer(current_app.config['SECRET_KEY'], salt='clip-share-v1')
 
 # ============================================================================
 # CLIP ROUTES
@@ -1038,6 +1046,152 @@ def api_get_annotations(clip_id):
         'notes': a.notes,
         'created_at': a.created_at.isoformat()
     } for a in annotations])
+
+@bp.route('/<int:clip_id>/share_link', methods=['POST'])
+@login_required
+def create_share_link(clip_id):
+    """
+    Create a signed, time-limited share link for a clip's annotations.
+    By default expires in 7 days. Adjust by sending form field 'expires_days'.
+    """
+    # Only allow admins/coaches or the clip creator to create share links
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+
+    if not (current_user.is_admin or getattr(current_user, 'is_coach', False) or clip.created_by_id == current_user.id):
+        return jsonify({'error': 'Not authorized'}), 403
+
+    try:
+        expires_days = int(request.form.get('expires_days', 7))
+        expires_days = max(1, min(90, expires_days))  # clamp between 1 and 90 days
+    except (ValueError, TypeError):
+        expires_days = 7
+
+    payload = {
+        'clip_id': clip.id,
+        'team_id': team_id,
+        'exp': int(time.time()) + expires_days * 86400  # unix timestamp expiry
+    }
+    s = get_share_serializer()
+    token = s.dumps(payload)
+
+    share_url = url_for('clip.shared_clip_view', token=token, _external=True)
+    return jsonify({'url': share_url, 'expires_days': expires_days})
+
+
+@bp.route('/share/<token>')
+def shared_clip_view(token):
+    """
+    Public, read-only view of a clip and its annotations, accessible via signed token.
+    No login required.
+    """
+    s = get_share_serializer()
+    try:
+        data = s.loads(token)
+    except BadSignature:
+        return render_template('errors/share_invalid.html'), 400
+
+    # Check expiry
+    if int(time.time()) > int(data.get('exp', 0)):
+        return render_template('errors/share_expired.html'), 410
+
+    clip_id = data.get('clip_id')
+    team_id = data.get('team_id')
+    if not clip_id or not team_id:
+        return render_template('errors/share_invalid.html'), 400
+
+    # Enforce team scoping
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+
+    # Which annotations to show:
+    # If you have a 'public' visibility option, uncomment to show only public:
+    # annotations = (ClipAnnotation.query
+    #                .filter_by(clip_id=clip.id, visibility='public')
+    #                .order_by(ClipAnnotation.timestamp).all())
+
+    # Otherwise, show all annotations for now (read-only). You can refine later.
+    annotations = (ClipAnnotation.query
+                   .filter_by(clip_id=clip.id)
+                   .order_by(ClipAnnotation.timestamp).all())
+
+    # Build an embed URL for YouTube/Veo if possible
+    embed_url = None
+    if clip.youtube_link:
+        yt_id = extract_youtube_id(clip.youtube_link)
+        if yt_id:
+            embed_url = f"https://www.youtube.com/embed/{yt_id}"
+    elif clip.video_source == 'veo' and clip.youtube_link:
+        # If you store Veo links in youtube_link field or another, adapt as needed
+        try:
+            embed_url = get_veo_embed_url(clip.youtube_link)
+        except Exception:
+            embed_url = None
+
+    # Human-readable expiry
+    expires_at = datetime.fromtimestamp(int(data['exp']))
+
+    return render_template(
+        'clip/shared_clip.html',
+        clip=clip,
+        annotations=annotations,
+        embed_url=embed_url,
+        expires_at=expires_at,
+        seconds_to_timestamp=seconds_to_timestamp  # pass helper for formatting
+    )
+
+
+@bp.route('/export_annotations_md/<int:clip_id>')
+@login_required
+def export_annotations_markdown(clip_id):
+    """
+    Export annotations as Markdown for easy sharing/pasting.
+    """
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+
+    annotations = (ClipAnnotation.query
+                   .filter_by(clip_id=clip.id)
+                   .order_by(ClipAnnotation.timestamp).all())
+
+    lines = []
+    lines.append(f"# {clip.title}")
+    if clip.game:
+        g_date = clip.game.date.strftime('%Y-%m-%d') if clip.game.date else ''
+        lines.append(f"- Game: vs {clip.game.opponent}{f' ({g_date})' if g_date else ''}")
+    if clip.point:
+        lines.append(f"- Point: {clip.point.point_number}")
+    if clip.youtube_link:
+        lines.append(f"- Video: {clip.youtube_link}")
+    lines.append("")  # blank line
+    lines.append("## Annotations")
+    lines.append("")
+
+    for a in annotations:
+        ts = seconds_to_timestamp(a.timestamp)
+        title = a.title or ''
+        event = (a.event_type.replace('_', ' ').title() if a.event_type else '')
+        tags_str = ', '.join([t.name for t in a.tags]) if a.tags else ''
+        players_str = ', '.join([p.name for p in a.players]) if a.players else ''
+        creator = a.created_by.username if a.created_by else 'Unknown'
+        key = " ⭐" if a.is_key_moment else ""
+        notes = a.notes or ""
+
+        lines.append(f"- [{ts}] {title}{key}")
+        meta_bits = []
+        if event: meta_bits.append(event)
+        if tags_str: meta_bits.append(f"Tags: {tags_str}")
+        if players_str: meta_bits.append(f"Players: {players_str}")
+        meta_bits.append(f"By: {creator}")
+        lines.append(f"  - " + " | ".join(meta_bits))
+        if notes:
+            # indent notes as a block
+            for line in notes.splitlines():
+                lines.append(f"  > {line}")
+        lines.append("")  # blank line between annotations
+
+    md = "\n".join(lines)
+    return current_app.response_class(md, mimetype='text/markdown')
+
 
 # ============================================================================
 # EXPORT ROUTES
