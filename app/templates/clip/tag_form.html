@@ -1,5 +1,17 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<style>
+    .color-picker-preview {
+        width: 50px;
+        height: 50px;
+        border-radius: 0.25rem;
+        border: 2px solid #dee2e6;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -7,12 +19,14 @@
             <h1>{{ title }}</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('clip.tags') }}" class="btn btn-secondary">Back to Tags</a>
+            <a href="{{ url_for('clip.tags') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Tags
+            </a>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6 offset-md-3">
+        <div class="col-md-8 offset-md-2">
             <div class="card">
                 <div class="card-body">
                     <form method="post" novalidate>
@@ -25,6 +39,53 @@
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
                         </div>
+
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select") }}
+                            <div class="form-text">Category helps organize tags in the clip library</div>
+                            {% for error in form.category.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.parent_tag_id.label(class="form-label") }}
+                            {{ form.parent_tag_id(class="form-select") }}
+                            <div class="form-text">Create hierarchical tag structure (optional)</div>
+                            {% for error in form.parent_tag_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.color.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.color(class="form-control", type="color", id="colorInput") }}
+                                <div class="color-picker-preview" id="colorPreview" onclick="document.getElementById('colorInput').click()"></div>
+                            </div>
+                            <div class="form-text">Choose a color to identify this tag</div>
+                            {% for error in form.color.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3) }}
+                            <div class="form-text">Optional description for what this tag represents</div>
+                            {% for error in form.description.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active(class="form-check-input") }}
+                                {{ form.is_active.label(class="form-check-label") }}
+                                <div class="form-text">Inactive tags won't appear in tag selection</div>
+                            </div>
+                        </div>
                         
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary") }}
@@ -35,4 +96,22 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Update color preview
+    const colorInput = document.getElementById('colorInput');
+    const colorPreview = document.getElementById('colorPreview');
+    
+    function updateColorPreview() {
+        const color = colorInput.value;
+        colorPreview.style.backgroundColor = color;
+    }
+    
+    colorInput.addEventListener('input', updateColorPreview);
+    
+    // Initialize preview on page load
+    updateColorPreview();
+</script>
 {% endblock %}

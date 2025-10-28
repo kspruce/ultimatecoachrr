@@ -39,8 +39,12 @@ def index():
 
     # Get filter parameters
     game_id = request.args.get('game_id', type=int)
-    tag_id = request.args.get('tag_id', type=int)
+    tag_ids = request.args.getlist('tags', type=int)
+    tag_category = request.args.get('tag_category', type=str)
     player_id = request.args.get('player_id', type=int)
+    video_source = request.args.get('video_source', type=str)
+    is_featured = request.args.get('is_featured', type=str)
+    sort_by = request.args.get('sort_by', default='created_desc', type=str)
 
     # Get current team ID
     team_id = get_current_team_id()
@@ -48,20 +52,84 @@ def index():
     # Build query based on filters
     query = Clip.query.filter_by(team_organization_id=team_id)
 
-    if game_id:
+    # Apply filters
+    if game_id and game_id > 0:
         query = query.filter(Clip.game_id == game_id)
-    if tag_id:
-        query = query.filter(Clip.tags.any(ClipTag.id == tag_id))
-    if player_id:
+    
+    # Multi-tag filter (AND logic - clip must have ALL selected tags)
+    if tag_ids:
+        for tag_id in tag_ids:
+            query = query.filter(Clip.tags.any(ClipTag.id == tag_id))
+    
+    # Tag category filter
+    if tag_category:
+        query = query.filter(Clip.tags.any(ClipTag.category == tag_category))
+    
+    if player_id and player_id > 0:
         query = query.filter(Clip.players.any(Player.id == player_id))
+    
+    if video_source:
+        query = query.filter(Clip.video_source == video_source)
+    
+    if is_featured == '1':
+        query = query.filter(Clip.is_featured == True)
 
-    # Get clips and sort by creation date (newest first)
-    clips = query.order_by(Clip.created_at.desc()).all()
+    # Apply sorting
+    if sort_by == 'created_desc':
+        query = query.order_by(Clip.created_at.desc())
+    elif sort_by == 'created_asc':
+        query = query.order_by(Clip.created_at.asc())
+    elif sort_by == 'title_asc':
+        query = query.order_by(Clip.title.asc())
+    elif sort_by == 'views_desc':
+        query = query.order_by(Clip.view_count.desc())
+    elif sort_by == 'annotations_desc':
+        # Sort by annotation count - requires a subquery or join
+        from sqlalchemy import func
+        from app.models.annotation import ClipAnnotation
+        query = query.outerjoin(ClipAnnotation).group_by(Clip.id).order_by(
+            func.count(ClipAnnotation.id).desc()
+        )
+
+    # Get clips
+    clips = query.all()
+    
+    # Get tag statistics for sidebar
+    tag_stats = db.session.query(
+        ClipTag.id,
+        ClipTag.name,
+        ClipTag.category,
+        ClipTag.color,
+        func.count(clip_tag_relation.c.clip_id).label('clip_count')
+    ).join(
+        clip_tag_relation, ClipTag.id == clip_tag_relation.c.tag_id
+    ).join(
+        Clip, Clip.id == clip_tag_relation.c.clip_id
+    ).filter(
+        ClipTag.team_organization_id == team_id,
+        Clip.team_organization_id == team_id,
+        ClipTag.is_active == True
+    ).group_by(
+        ClipTag.id
+    ).order_by(
+        ClipTag.category,
+        func.count(clip_tag_relation.c.clip_id).desc()
+    ).all()
 
     return render_template('clip/index.html', 
                          clips=clips, 
                          form=form, 
-                         delete_form=delete_form)
+                         delete_form=delete_form,
+                         tag_stats=tag_stats,
+                         active_filters={
+                             'game_id': game_id,
+                             'tag_ids': tag_ids,
+                             'tag_category': tag_category,
+                             'player_id': player_id,
+                             'video_source': video_source,
+                             'is_featured': is_featured,
+                             'sort_by': sort_by
+                         })
 
 @bp.route('/game/<int:game_id>')
 @login_required
@@ -496,10 +564,136 @@ def delete_annotation(annotation_id):
 @login_required
 @admin_required
 def tags():
-    """View all clip tags"""
+    """View all clip tags with statistics"""
     team_id = get_current_team_id()
-    tags = ClipTag.query.filter_by(team_organization_id=team_id).order_by(ClipTag.category, ClipTag.name).all()
-    return render_template('clip/tags.html', tags=tags)
+    
+    # Get tags with clip counts
+    from sqlalchemy import func
+    from app.models.clip import clip_tag_relation
+    
+    tags_query = db.session.query(
+        ClipTag,
+        func.count(clip_tag_relation.c.clip_id).label('clip_count')
+    ).outerjoin(
+        clip_tag_relation, ClipTag.id == clip_tag_relation.c.tag_id
+    ).filter(
+        ClipTag.team_organization_id == team_id
+    ).group_by(
+        ClipTag.id
+    ).order_by(
+        ClipTag.category,
+        ClipTag.name
+    )
+    
+    tags_with_counts = tags_query.all()
+    
+    # Group by category for display
+    tags_by_category = {}
+    for tag, count in tags_with_counts:
+        category = tag.category or 'Uncategorized'
+        if category not in tags_by_category:
+            tags_by_category[category] = []
+        tags_by_category[category].append((tag, count))
+    
+    return render_template('clip/tags.html', 
+                         tags_by_category=tags_by_category)
+
+
+@bp.route('/tags/bulk_create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def bulk_create_tags():
+    """Bulk create common tags for video organization"""
+    team_id = get_current_team_id()
+    
+    if request.method == 'POST':
+        # Define common tag structure
+        common_tags = {
+            'Video Type': [
+                ('Full Game', '#1976D2'),
+                ('Highlight Reel', '#FFA000'),
+                ('Training Session', '#388E3C'),
+                ('Drill Demonstration', '#7B1FA2'),
+                ('Team Meeting', '#0097A7'),
+                ('Individual Footage', '#5D4037')
+            ],
+            'Game Context': [
+                ('Tournament Game', '#D32F2F'),
+                ('League Game', '#C2185B'),
+                ('Scrimmage', '#7B1FA2'),
+                ('Championship', '#FFD700'),
+                ('Qualifier', '#512DA8')
+            ],
+            'Training Type': [
+                ('Offensive Practice', '#1976D2'),
+                ('Defensive Practice', '#D32F2F'),
+                ('Conditioning', '#388E3C'),
+                ('Skills Training', '#FFA000'),
+                ('Strategy Session', '#5D4037'),
+                ('Film Review', '#0097A7')
+            ],
+            'Skill Focus': [
+                ('Throwing', '#1976D2'),
+                ('Cutting', '#388E3C'),
+                ('Marking', '#D32F2F'),
+                ('Handler Movement', '#7B1FA2'),
+                ('Positioning', '#FFA000'),
+                ('Communication', '#0097A7')
+            ],
+            'Strategic Focus': [
+                ('Offensive Sets', '#1976D2'),
+                ('Defensive Sets', '#D32F2F'),
+                ('Zone Offense', '#388E3C'),
+                ('Zone Defense', '#C2185B'),
+                ('Transition', '#FFA000'),
+                ('Endzone Plays', '#7B1FA2')
+            ],
+            'Player Development': [
+                ('Rookie Training', '#4CAF50'),
+                ('Advanced Skills', '#FF5722'),
+                ('Captain Development', '#FFD700'),
+                ('Position-Specific', '#3F51B5'),
+                ('Fitness', '#8BC34A')
+            ],
+            'Analysis': [
+                ('Good Example', '#4CAF50'),
+                ('Learning Opportunity', '#FFA000'),
+                ('Key Moment', '#FFD700'),
+                ('Tactical Breakdown', '#3F51B5'),
+                ('Common Mistake', '#F44336')
+            ]
+        }
+        
+        created_count = 0
+        skipped_count = 0
+        
+        for category, tags in common_tags.items():
+            for tag_name, color in tags:
+                # Check if tag already exists
+                existing = ClipTag.query.filter_by(
+                    name=tag_name,
+                    team_organization_id=team_id
+                ).first()
+                
+                if not existing:
+                    new_tag = ClipTag(
+                        name=tag_name,
+                        category=category,
+                        color=color,
+                        team_organization_id=team_id,
+                        is_active=True
+                    )
+                    db.session.add(new_tag)
+                    created_count += 1
+                else:
+                    skipped_count += 1
+        
+        db.session.commit()
+        
+        flash(f'Created {created_count} new tags. Skipped {skipped_count} existing tags.', 'success')
+        return redirect(url_for('clip.tags'))
+    
+    return render_template('clip/bulk_create_tags.html')
 
 @bp.route('/tags/add', methods=['GET', 'POST'])
 @login_required

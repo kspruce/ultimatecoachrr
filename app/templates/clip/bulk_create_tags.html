@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-lightning-charge"></i> Quick Tag Setup</h1>
+            <p class="lead">Create a complete set of common tags for organizing your clips</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('clip.tags') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Tags
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">This will create the following tag categories:</h5>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h6><i class="bi bi-camera-video"></i> Video Type</h6>
+                    <ul>
+                        <li>Full Game</li>
+                        <li>Highlight Reel</li>
+                        <li>Training Session</li>
+                        <li>Drill Demonstration</li>
+                        <li>Team Meeting</li>
+                        <li>Individual Footage</li>
+                    </ul>
+
+                    <h6><i class="bi bi-trophy"></i> Game Context</h6>
+                    <ul>
+                        <li>Tournament Game</li>
+                        <li>League Game</li>
+                        <li>Scrimmage</li>
+                        <li>Championship</li>
+                        <li>Qualifier</li>
+                    </ul>
+
+                    <h6><i class="bi bi-person-workspace"></i> Training Type</h6>
+                    <ul>
+                        <li>Offensive Practice</li>
+                        <li>Defensive Practice</li>
+                        <li>Conditioning</li>
+                        <li>Skills Training</li>
+                        <li>Strategy Session</li>
+                        <li>Film Review</li>
+                    </ul>
+                </div>
+
+                <div class="col-md-6">
+                    <h6><i class="bi bi-bullseye"></i> Skill Focus</h6>
+                    <ul>
+                        <li>Throwing</li>
+                        <li>Cutting</li>
+                        <li>Marking</li>
+                        <li>Handler Movement</li>
+                        <li>Positioning</li>
+                        <li>Communication</li>
+                    </ul>
+
+                    <h6><i class="bi bi-diagram-3"></i> Strategic Focus</h6>
+                    <ul>
+                        <li>Offensive Sets</li>
+                        <li>Defensive Sets</li>
+                        <li>Zone Offense</li>
+                        <li>Zone Defense</li>
+                        <li>Transition</li>
+                        <li>Endzone Plays</li>
+                    </ul>
+
+                    <h6><i class="bi bi-graph-up"></i> Player Development</h6>
+                    <ul>
+                        <li>Rookie Training</li>
+                        <li>Advanced Skills</li>
+                        <li>Captain Development</li>
+                        <li>Position-Specific</li>
+                        <li>Fitness</li>
+                    </ul>
+
+                    <h6><i class="bi bi-clipboard-data"></i> Analysis</h6>
+                    <ul>
+                        <li>Good Example</li>
+                        <li>Learning Opportunity</li>
+                        <li>Key Moment</li>
+                        <li>Tactical Breakdown</li>
+                        <li>Common Mistake</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle"></i>
+                <strong>Note:</strong> Tags that already exist will be skipped. This process will only create new tags.
+            </div>
+
+            <form method="post" class="mt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-lightning-charge"></i> Create Tags
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,19 +1,41 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<style>
+    .tag-category-section {
+        margin-bottom: 2rem;
+    }
+    .tag-card {
+        border-left: 4px solid;
+        transition: all 0.2s;
+    }
+    .tag-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    .tag-color-preview {
+        width: 40px;
+        height: 40px;
+        border-radius: 0.25rem;
+        border: 2px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>Clip Tags</h1>
-            <p class="text-muted">Manage tags for organizing video clips</p>
+            <h1><i class="bi bi-tags-fill"></i> Clip Tags Management</h1>
+            <p class="lead">Organize your video library with tags and categories</p>
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 <a href="{{ url_for('clip.add_tag') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Clip Tag
+                    <i class="bi bi-plus-circle"></i> Add Tag
                 </a>
-                <a href="{{ url_for('clip.annotation_tags') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-tag"></i> Annotation Tags
+                <a href="{{ url_for('clip.bulk_create_tags') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-lightning-charge"></i> Quick Setup
                 </a>
                 <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Clips
@@ -22,115 +44,108 @@
         </div>
     </div>
 
-    <!-- Tag Type Navigation -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="alert alert-info d-flex align-items-center" role="alert">
-                <i class="bi bi-info-circle me-2" style="font-size: 1.5rem;"></i>
-                <div>
-                    <strong>Two Types of Tags:</strong>
-                    <ul class="mb-0 mt-2">
-                        <li><strong>Clip Tags</strong> (this page) - Used to categorize entire video clips</li>
-                        <li><strong>Annotation Tags</strong> - Used to categorize specific moments within clips. 
-                            <a href="{{ url_for('clip.annotation_tags') }}" class="alert-link">Manage Annotation Tags →</a>
-                        </li>
-                    </ul>
+    {% if tags_by_category %}
+        {% for category, tags_list in tags_by_category.items() %}
+        <div class="tag-category-section">
+            <h3 class="mb-3">
+                <i class="bi bi-folder"></i> {{ category }}
+                <span class="badge bg-secondary">{{ tags_list|length }}</span>
+            </h3>
+            
+            <div class="row">
+                {% for tag, clip_count in tags_list %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card tag-card h-100" style="border-left-color: {{ tag.color }};">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="tag-color-preview me-3" style="background-color: {{ tag.color }};"></div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        {{ tag.name }}
+                                        {% if not tag.is_active %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </h6>
+                                    {% if tag.description %}
+                                    <p class="small text-muted mb-2">{{ tag.description }}</p>
+                                    {% endif %}
+                                    {% if tag.parent %}
+                                    <p class="small">
+                                        <i class="bi bi-arrow-return-right"></i> 
+                                        Child of: <strong>{{ tag.parent.name }}</strong>
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="badge bg-info">
+                                    <i class="bi bi-camera-video"></i> {{ clip_count }} clip{{ 's' if clip_count != 1 else '' }}
+                                </span>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('clip.edit_tag', tag_id=tag.id) }}" 
+                                       class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal{{ tag.id }}"
+                                            title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal{{ tag.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tag.id }}" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteModalLabel{{ tag.id }}">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Are you sure you want to delete the tag <strong>"{{ tag.name }}"</strong>?</p>
+                                    {% if clip_count > 0 %}
+                                    <div class="alert alert-warning">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        This tag is used in {{ clip_count }} clip{{ 's' if clip_count != 1 else '' }}. 
+                                        Deleting it will remove the tag from all clips.
+                                    </div>
+                                    {% endif %}
+                                    {% if tag.children.count() > 0 %}
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i>
+                                        This tag has {{ tag.children.count() }} child tag{{ 's' if tag.children.count() != 1 else '' }} 
+                                        that will also be affected.
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="{{ url_for('clip.delete_tag', tag_id=tag.id) }}" method="post" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="bi bi-trash"></i> Delete Tag
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h5>All Clip Tags</h5>
-                </div>
-                <div class="card-body">
-                    {% if tags %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Tag Name</th>
-                                    <th>Clip Count</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for tag in tags %}
-                                <tr>
-                                    <td>
-                                        <span class="badge" style="background-color: {{ tag.color }}; color: white;">
-                                            {{ tag.name }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ tag.clips.count() }}</span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ url_for('clip.edit_tag', tag_id=tag.id) }}" 
-                                               class="btn btn-outline-primary"
-                                               title="Edit">
-                                                <i class="bi bi-pencil"></i> Edit
-                                            </a>
-                                            <button type="button" 
-                                                    class="btn btn-outline-danger" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#deleteModal{{ tag.id }}"
-                                                    title="Delete">
-                                                <i class="bi bi-trash"></i> Delete
-                                            </button>
-                                        </div>
-                                        
-                                        <!-- Delete Confirmation Modal -->
-                                        <div class="modal fade" id="deleteModal{{ tag.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tag.id }}" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="deleteModalLabel{{ tag.id }}">Confirm Delete</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p>Are you sure you want to delete the tag <strong>"{{ tag.name }}"</strong>?</p>
-                                                        {% if tag.clips.count() > 0 %}
-                                                        <div class="alert alert-warning mt-2">
-                                                            <i class="bi bi-exclamation-triangle"></i>
-                                                            This tag is used in <strong>{{ tag.clips.count() }}</strong> clip(s). Deleting it will remove the tag from all clips.
-                                                        </div>
-                                                        {% endif %}
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <form action="{{ url_for('clip.delete_tag', tag_id=tag.id) }}" method="post" class="d-inline">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                            <button type="submit" class="btn btn-danger">
-                                                                <i class="bi bi-trash"></i> Delete
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                        <i class="bi bi-tags" style="font-size: 3rem; color: #ccc;"></i>
-                        <p class="mt-3 text-muted">No clip tags found.</p>
-                        <a href="{{ url_for('clip.add_tag') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Create Your First Clip Tag
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            No tags found. <a href="{{ url_for('clip.add_tag') }}">Add a tag</a> or use 
+            <a href="{{ url_for('clip.bulk_create_tags') }}">Quick Setup</a> to create common tags automatically.
         </div>
-    </div>
+    {% endif %}
 </div>
 {% endblock %}
