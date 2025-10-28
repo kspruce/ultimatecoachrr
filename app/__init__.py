@@ -103,7 +103,7 @@ def create_app(config_class=Config):
             'message': f'File too large. Maximum size is {app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)}MB'
         }), 413
 
-    # Register non-Discord blueprints
+    # Register blueprints
     from app.routes.main import bp as main_bp
     app.register_blueprint(main_bp)
 
@@ -145,9 +145,6 @@ def create_app(config_class=Config):
 
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
-    
-    from app.routes.off_season import bp as off_season_bp
-    app.register_blueprint(off_season_bp)
 
     from app.routes.cutting_skill import bp as cutting_skill_bp
     app.register_blueprint(cutting_skill_bp)
@@ -163,6 +160,10 @@ def create_app(config_class=Config):
 
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
+
+    # IMPORTANT: Register off_season blueprint
+    from app.routes.off_season import bp as off_season_bp
+    app.register_blueprint(off_season_bp)
 
     # Import the models package so ALL models are registered.
     # This ensures all models are loaded into SQLAlchemy's metadata
@@ -182,7 +183,7 @@ def create_app(config_class=Config):
         app.logger.error(f"Storage initialization error: {str(e)}")
         raise
 
-    # App context: register context processors and optionally create tables
+    # App context: register context processors
     with app.app_context():
         from app.context_processors import team_info_processor
         app.context_processor(team_info_processor)
@@ -190,8 +191,6 @@ def create_app(config_class=Config):
         # Only run create_all if explicitly enabled (e.g., local dev).
         # In production and during migrations, rely on Alembic.
         if app.config.get('RUN_CREATE_ALL', False):
-            # Ensure all models are loaded into metadata
-            from app import models as app_models  # noqa: F401
             db.create_all()
 
     # Conditionally enable Discord integration (default False)
@@ -212,6 +211,8 @@ def create_app(config_class=Config):
             init_discord_integration(app)
         except Exception as e:
             app.logger.error(f"Failed to initialize Discord integration: {e}")
+            # Don't crash the app if Discord fails
+            pass
 
     # Register central error handlers last
     from app.error_handlers import register_error_handlers
