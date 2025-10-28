@@ -26,7 +26,7 @@ from app.models.fitness import FitnessMetric, FitnessRecord
 
 # Video and Analysis models
 from app.models.clip import Clip, ClipTag
-from app.models.annotation import ClipAnnotation
+from app.models.annotation import ClipAnnotation, AnnotationTag
 from app.models.scouting import ScoutingReport
 from app.models.cutting_skill import CuttingSkill
 
@@ -45,7 +45,7 @@ __all__ = [
     'TheorySection', 'TheoryTopic', 'TheoryVideo',
     'Tournament', 'Game', 'Point', 'LineUp',
     'Event', 'Pull', 'Throw', 'GamePlayer',
-    'Clip', 'ClipTag', 'ClipAnnotation', 'ScoutingReport',
+    'Clip', 'ClipTag', 'ClipAnnotation', 'AnnotationTag', 'ScoutingReport',
     'PlayerPointStats', 'ExportLog', 'CuttingSkill',
     'FitnessMetric', 'FitnessRecord', 
     'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats', 'TeamSettings'

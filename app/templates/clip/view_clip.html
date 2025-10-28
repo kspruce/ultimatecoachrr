@@ -2,639 +2,365 @@
 
 {% block styles %}
 <style>
-    /* Existing styles */
-    .annotation-list {
-        max-height: 400px;
-        overflow-y: auto;
+    .annotation-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s;
     }
-    
-    /* Enhanced styles */
-    .annotation-item {
-        cursor: pointer;
-        transition: all 0.2s;
-        border-left: 4px solid #e9ecef;
-        margin-bottom: 8px;
-        border-radius: 4px;
-    }
-    
-    .annotation-item:hover {
-        background-color: #f8f9fa;
+    .annotation-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    
-    /* Color coding by event type */
-    .event-goal { border-left: 4px solid #28a745; }
-    .event-turnover { border-left: 4px solid #dc3545; }
-    .event-block { border-left: 4px solid #fd7e14; }
-    .event-timeout { border-left: 4px solid #6c757d; }
-    .event-catch { border-left: 4px solid #17a2b8; }
-    .event-throw { border-left: 4px solid #6610f2; }
-    .event-defense { border-left: 4px solid #20c997; }
-    
-    .annotation-timestamp {
-        font-weight: bold;
-        color: #007bff;
-        min-width: 70px;
-        display: inline-block;
+    .annotation-card.key-moment {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
     }
-    
-    .annotation-event {
-        font-weight: bold;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.9rem;
-        background-color: #e9ecef;
-    }
-    
-    .annotation-score {
-        font-weight: bold;
-        margin-left: 8px;
-    }
-    
-    .annotation-notes {
-        font-style: italic;
-        color: #6c757d;
-        margin-top: 5px;
-        padding-left: 5px;
-        border-left: 2px solid #e9ecef;
-    }
-    
-    /* Timeline visualization */
-    .annotation-timeline {
-        position: relative;
-        height: 30px;
-        margin: 20px 0;
-    }
-    
-    .timeline-track {
-        position: relative;
-        height: 8px;
-        background-color: #e9ecef;
-        border-radius: 4px;
-    }
-    
-    .timeline-marker {
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        background-color: #007bff;
-        border-radius: 50%;
-        top: -2px;
-        transform: translateX(-50%);
+    .timestamp-link {
         cursor: pointer;
-        transition: transform 0.2s;
-    }
-    
-    .timeline-marker:hover {
-        transform: translateX(-50%) scale(1.5);
-        z-index: 10;
-    }
-    
-    .timeline-labels {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 5px;
-        font-size: 0.8rem;
-        color: #6c757d;
-    }
-    
-    .details-toggle {
-        background: none;
-        border: none;
-        color: #6c757d;
-        cursor: pointer;
-    }
-    
-    .details-toggle:hover {
         color: #007bff;
+        font-weight: bold;
     }
-    
-    .annotation-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 5px;
+    .timestamp-link:hover {
+        text-decoration: underline;
     }
-    
-    .meta-item {
+    .annotation-tag {
         font-size: 0.85rem;
-        padding: 2px 8px;
+        margin: 2px;
+    }
+    .creator-badge {
+        font-size: 0.75rem;
+    }
+    .video-container {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        overflow: hidden;
+    }
+    .video-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    .annotation-filters {
         background-color: #f8f9fa;
-        border-radius: 12px;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .annotation-stats {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .category-badge {
+        font-size: 0.8rem;
+        padding: 4px 8px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>{{ clip.title }}</h1>
+            <p class="lead">
+                {% if clip.game %}
+                    <span class="badge bg-secondary">vs {{ clip.game.opponent }}</span>
+                    {% if clip.game.date %}
+                        {{ clip.game.date.strftime('%B %d, %Y') }}
+                    {% endif %}
+                {% endif %}
+                {% if clip.point %}
+                    <span class="badge bg-info">Point {{ clip.point.point_number }}</span>
+                {% endif %}
+            </p>
+            {% if clip.description %}
+            <p>{{ clip.description }}</p>
+            {% endif %}
+            
+            <!-- Clip Tags -->
+            {% if clip.tag_list %}
+            <div class="mb-3">
+                <strong>Video Type:</strong>
+                {% for tag in clip.tag_list %}
+                <span class="badge" style="background-color: {{ tag.color }};">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Clip Players -->
+            {% if clip.player_list %}
+            <div class="mb-3">
+                <strong>Featured Players:</strong>
+                {% for player in clip.player_list %}
+                <span class="badge bg-secondary">{{ player.name }} #{{ player.jersey_number }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Clip Stats -->
+            <div class="annotation-stats mb-3">
+                <i class="bi bi-chat-left-text"></i> {{ clip.annotation_count }} annotations
+                {% if clip.key_moments_count > 0 %}
+                | <i class="bi bi-star-fill text-warning"></i> {{ clip.key_moments_count }} key moments
+                {% endif %}
+                {% if clip.created_by %}
+                | Created by {{ clip.created_by.username }}
+                {% endif %}
+            </div>
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">Edit Clip</a>
+                {% if current_user.is_admin or current_user.is_coach %}
+                    <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Edit Clip
+                    </a>
                 {% endif %}
-                <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">Back to Clips</a>
+                <a href="{{ url_for('clip.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Library
+                </a>
             </div>
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <div class="ratio ratio-16x9 mb-3">
-                        {% if clip.video_source == 'youtube' %}
-                            <iframe id="youtube-player" src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
-                        {% elif clip.video_source == 'veo' %}
-                            <iframe id="veo-player" src="{{ clip.veo_embed_url }}" allowfullscreen></iframe>
-                        {% endif %}
-                    </div>
-                    
-                    {% if clip.description %}
-                    <h5>Description</h5>
-                    <p>{{ clip.description }}</p>
-                    {% endif %}
-                    
-                    {% if clip.tag_list %}
-                    <h5>Tags</h5>
-                    <div class="mb-3">
-                        {% for tag in clip.tag_list %}
-                        <span class="badge bg-info">{{ tag.name }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    
-                    <h5>Video Link</h5>
-                    <p><a href="{{ clip.youtube_link }}" target="_blank">{{ clip.youtube_link }}</a></p>
-                    
-                    {% if clip.start_time or clip.end_time %}
-                    <h5>Clip Timing</h5>
-                    <p>
-                        {% if clip.start_time %}
-                        Start: {{ clip.start_time // 60 }}:{{ '%02d' % (clip.start_time % 60) }}
-                        {% endif %}
-                        {% if clip.end_time %}
-                        End: {{ clip.end_time // 60 }}:{{ '%02d' % (clip.end_time % 60) }}
-                        {% endif %}
-                    </p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
+    <div class="row">
+        <!-- Video Player -->
+        <div class="col-lg-8">
             <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Game Information</h5>
-                </div>
                 <div class="card-body">
-                    {% if clip.game %}
-                    <p><strong>Game:</strong> 
-                        <a href="{{ url_for('game.detail', game_id=clip.game.id) }}">
-                            vs {{ clip.game.opponent }}
-                        </a>
-                    </p>
-                    <p><strong>Date:</strong> {{ clip.game.date.strftime('%B %d, %Y') if clip.game.date else 'N/A' }}</p>
-                    <p><strong>Result:</strong> 
-                        <span class="badge {% if clip.game.is_win %}bg-success{% elif clip.game.is_loss %}bg-danger{% else %}bg-secondary{% endif %}">
-                            {{ clip.game.result_string }}
-                        </span>
-                    </p>
-                    {% if clip.point %}
-                    <p><strong>Point:</strong> 
-                        <a href="{{ url_for('point.point_detail', point_id=clip.point.id) }}">
-                            Point {{ clip.point.point_number }}
-                        </a>
-                    </p>
-                    <p><strong>Line:</strong> {{ clip.point.our_line_type }}</p>
-                    <p><strong>Outcome:</strong> 
-                        <span class="badge {% if clip.point.we_scored %}bg-success{% else %}bg-danger{% endif %}">
-                            {% if clip.point.we_scored %}Scored{% else %}Conceded{% endif %}
-                        </span>
-                    </p>
-                    {% endif %}
+                    {% if clip.embed_url %}
+                    <div class="video-container">
+                        <iframe id="video-player" 
+                                src="{{ clip.embed_url }}" 
+                                frameborder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen>
+                        </iframe>
+                    </div>
                     {% else %}
-                    <p>No game information available.</p>
+                    <div class="alert alert-warning">
+                        Video unavailable. Please check the video link.
+                    </div>
                     {% endif %}
                 </div>
             </div>
             
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Players</h5>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#playerListCollapse" aria-expanded="false" aria-controls="playerListCollapse">
-                        Show/Hide
-                    </button>
-                </div>
-                <div class="collapse" id="playerListCollapse">
-                    <div class="card-body">
-                        <!-- Players tagged in this clip -->
-                        {% if clip.players %}
-                        <h6>Tagged in Clip</h6>
-                        <ul class="list-group mb-3">
-                            {% for player in clip.players %}
-                            <li class="list-group-item">
-                                <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
-                                    {{ player.name }} (#{{ player.jersey_number }})
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                        
-                        <!-- Players assigned to the game -->
-                        {% if game_players %}
-                        <h6>Game Roster</h6>
-                        <ul class="list-group">
-                            {% for player in game_players %}
-                            <li class="list-group-item">
-                                <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
-                                    {{ player.name }} (#{{ player.jersey_number }})
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% elif tournament_players and clip.game and clip.game.tournament_id %}
-                        <h6>Tournament Roster</h6>
-                        <ul class="list-group">
-                            {% for player in tournament_players %}
-                            <li class="list-group-item">
-                                <a href="{{ url_for('team.player_detail', player_id=player.id) }}">
-                                    {{ player.name }} (#{{ player.jersey_number }})
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        {% elif not clip.players %}
-                        <p>No players tagged in this clip or assigned to the game.</p>
-                        {% endif %}
-                    </div>
+            <!-- Add Annotation Button -->
+            {% if current_user.is_authenticated %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <a href="{{ url_for('clip.add_annotation', clip_id=clip.id) }}" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Add New Annotation
+                    </a>
                 </div>
             </div>
-        </div>    
-    </div>
-    
-    <div class="row">
-        <div class="col-12">
+            {% endif %}
+        </div>
+
+        <!-- Annotations Sidebar -->
+        <div class="col-lg-4">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Annotations</h5>
-                    <div>
-                        <a href="{{ url_for('clip.export_annotations_csv', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary me-2">
-                            <i class="bi bi-file-earmark-text"></i> Export CSV
-                        </a>
-                        {% if current_user.is_admin %}
-                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAnnotationModal">
-                                Add Annotation
-                            </button>
-                        {% endif %}
-                    </div>
+                    <h5 class="mb-0">Annotations ({{ annotations|length }})</h5>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#annotationFilters">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
                 </div>
-
-
-                <div class="annotation-timeline mb-4">
-                    <div class="timeline-track">
-                        {% for annotation in annotations %}
-                            {% set position = (annotation.timestamp / (clip.end_time or 600)) * 100 %}
-                            {% if position > 100 %}{% set position = 100 %}{% endif %}
-                            <div class="timeline-marker" 
-                                 style="left: {{ position }}%" 
-                                 data-timestamp="{{ annotation.timestamp }}" 
-                                 data-bs-toggle="tooltip" 
-                                 title="{{ annotation.event_type|replace('_', ' ')|title }} ({{ annotation.formatted_timestamp }})"
-                                 onclick="seekToTimestamp({{ annotation.timestamp }})">
+                
+                <!-- Annotation Filters -->
+                <div class="collapse" id="annotationFilters">
+                    <div class="annotation-filters">
+                        <form method="get" action="">
+                            <div class="mb-2">
+                                <label class="form-label small">Event Type</label>
+                                <select name="event_filter" class="form-select form-select-sm">
+                                    <option value="">All Events</option>
+                                    <option value="goal">Goals</option>
+                                    <option value="turnover">Turnovers</option>
+                                    <option value="block">Blocks</option>
+                                    <option value="assist">Assists</option>
+                                </select>
                             </div>
-                        {% endfor %}
-                    </div>
-                    <div class="timeline-labels">
-                        <span class="timeline-start">0:00</span>
-                        <span class="timeline-end">{{ seconds_to_timestamp(clip.end_time or 600) }}</span>
+                            <div class="mb-2">
+                                <label class="form-label small">Creator</label>
+                                <select name="creator_filter" class="form-select form-select-sm">
+                                    <option value="">All Users</option>
+                                    {% for user in annotation_creators %}
+                                    <option value="{{ user.id }}">{{ user.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="key_only" id="keyMomentsOnly">
+                                <label class="form-check-label small" for="keyMomentsOnly">
+                                    Key Moments Only
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Apply</button>
+                        </form>
                     </div>
                 </div>
-
-                <div class="card-body">
-                    <div class="annotation-list">
-                        {% if annotations %}
-                        <div class="list-group">
-                            {% for annotation in annotations %}
-                            <div class="list-group-item annotation-item event-{{ annotation.event_type }}" 
-                                 data-timestamp="{{ annotation.timestamp }}">
-                                <div class="d-flex justify-content-between align-items-center" 
-                                     onclick="seekToTimestamp({{ annotation.timestamp }})">
-                                    <div>
-                                        <span class="annotation-timestamp">{{ annotation.formatted_timestamp }}</span>
-                                        <span class="annotation-event">{{ annotation.event_type|replace('_', ' ')|title }}</span>
-                                        {% if annotation.our_score is not none and annotation.their_score is not none %}
-                                        <span class="annotation-score badge bg-secondary">
-                                            {{ annotation.our_score }}-{{ annotation.their_score }}
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                    <div>
-                                        <button class="details-toggle" type="button" 
-                                                data-bs-toggle="collapse" 
-                                                data-bs-target="#details{{ annotation.id }}"
-                                                onclick="event.stopPropagation();">
-                                            <i class="bi bi-chevron-down"></i>
-                                        </button>
-                                        {% if current_user.is_admin %}
-                                        <button class="btn btn-sm btn-outline-secondary" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#editAnnotationModal{{ annotation.id }}"
-                                                onclick="event.stopPropagation();">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteAnnotationModal{{ annotation.id }}"
-                                                onclick="event.stopPropagation();">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
+                
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    {% if annotations %}
+                        {% for annotation in annotations %}
+                        <div class="annotation-card card mb-3 {% if annotation.is_key_moment %}key-moment{% endif %}">
+                            <div class="card-body p-3">
+                                <!-- Timestamp and Key Moment Badge -->
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="timestamp-link" onclick="seekToTime({{ annotation.timestamp }})">
+                                        <i class="bi bi-play-circle"></i> {{ annotation.formatted_timestamp }}
+                                    </span>
+                                    {% if annotation.is_key_moment %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-star-fill"></i> Key
+                                    </span>
+                                    {% endif %}
                                 </div>
                                 
-                                <div class="collapse mt-2" id="details{{ annotation.id }}">
-                                    {% if annotation.offense or annotation.defense %}
-                                    <div class="annotation-meta">
-                                        {% if annotation.offense %}
-                                        <span class="meta-item">
-                                            <strong>Offense:</strong> 
-                                            {% if annotation.offense == 'horo' %}
-                                                Horizontal
-                                            {% elif annotation.offense == 'vert' %}
-                                                Vertical
-                                            {% elif annotation.offense == 'flow' %}
-                                                Flow
-                                            {% else %}
-                                                {{ annotation.offense|title }}
-                                            {% endif %}
-                                        </span>
-                                        {% endif %}
-                                        
-                                        {% if annotation.defense %}
-                                        <span class="meta-item">
-                                            <strong>Defense:</strong> 
-                                            {% if annotation.defense == 'match_flick' %}
-                                                Match Flick
-                                            {% elif annotation.defense == 'match_backhand' %}
-                                                Match Backhand
-                                            {% elif annotation.defense == 'match_middle' %}
-                                                Match Middle
-                                            {% elif annotation.defense == 'zone' %}
-                                                Zone
-                                            {% else %}
-                                                {{ annotation.defense|title }}
-                                            {% endif %}
-                                        </span>
-                                        {% endif %}
-                                    </div>
+                                <!-- Title -->
+                                {% if annotation.title %}
+                                <h6 class="card-title">{{ annotation.title }}</h6>
+                                {% endif %}
+                                
+                                <!-- Event Type and Score -->
+                                <div class="mb-2">
+                                    {% if annotation.event_type %}
+                                    <span class="badge bg-primary">{{ annotation.event_type|title }}</span>
                                     {% endif %}
-                                    
-                                    {% if annotation.notes %}
-                                    <div class="annotation-notes">{{ annotation.notes }}</div>
+                                    {% if annotation.our_score is not none and annotation.their_score is not none %}
+                                    <span class="badge bg-secondary">{{ annotation.our_score }}-{{ annotation.their_score }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Tactical Info -->
+                                {% if annotation.offense or annotation.defense %}
+                                <div class="small mb-2">
+                                    {% if annotation.offense %}
+                                    <div><strong>O:</strong> {{ annotation.offense|replace('_', ' ')|title }}</div>
+                                    {% endif %}
+                                    {% if annotation.defense %}
+                                    <div><strong>D:</strong> {{ annotation.defense|replace('_', ' ')|title }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Tags -->
+                                {% if annotation.tags %}
+                                <div class="mb-2">
+                                    {% for tag in annotation.tags %}
+                                    <span class="badge annotation-tag" style="background-color: {{ tag.color }};">
+                                        {{ tag.name }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Players -->
+                                {% if annotation.players %}
+                                <div class="small mb-2">
+                                    <i class="bi bi-people"></i>
+                                    {% for player in annotation.players %}
+                                    <span class="badge bg-light text-dark">#{{ player.jersey_number }} {{ player.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Notes -->
+                                {% if annotation.notes %}
+                                <p class="card-text small mb-2">{{ annotation.notes }}</p>
+                                {% endif %}
+                                
+                                <!-- Creator and Actions -->
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted creator-badge">
+                                        {% if annotation.created_by %}
+                                        <i class="bi bi-person-circle"></i> {{ annotation.created_by.username }}
+                                        {% endif %}
+                                        | {{ annotation.created_at.strftime('%b %d, %Y') }}
+                                    </small>
+                                    {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('clip.edit_annotation', annotation_id=annotation.id) }}" 
+                                           class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteAnnotationModal{{ annotation.id }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
-   
-                            <!-- Edit Annotation Modal -->
-                            <div class="modal fade" id="editAnnotationModal{{ annotation.id }}" tabindex="-1" aria-labelledby="editAnnotationModalLabel{{ annotation.id }}" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="editAnnotationModalLabel{{ annotation.id }}">Edit Annotation</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <form action="{{ url_for('clip.edit_annotation', annotation_id=annotation.id) }}" method="post">
-                                            <div class="modal-body">
-                                                {{ form.hidden_tag() }}
-                                                
-                                                <div class="mb-3">
-                                                    {{ form.timestamp.label(class="form-label") }}
-                                                    {{ form.timestamp(class="form-control", value=annotation.formatted_timestamp) }}
-                                                    <div class="form-text">Enter time in HH:MM:SS, MM:SS, or SS format</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    {{ form.event_type.label(class="form-label") }}
-                                                    <select name="event_type" class="form-select">
-                                                        {% for value, label in form.event_type.choices %}
-                                                        <option value="{{ value }}" {% if value == annotation.event_type %}selected{% endif %}>{{ label }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="row mb-3">
-                                                    <div class="col-md-6">
-                                                        {{ form.our_score.label(class="form-label") }}
-                                                        {{ form.our_score(class="form-control", value=annotation.our_score) }}
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        {{ form.their_score.label(class="form-label") }}
-                                                        {{ form.their_score(class="form-control", value=annotation.their_score) }}
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="row mb-3">
-                                                    <div class="col-md-6">
-                                                        {{ form.offense.label(class="form-label") }}
-                                                        <select name="offense" class="form-select">
-                                                            <option value="" {% if not annotation.offense %}selected{% endif %}>Select...</option>
-                                                            <option value="horo" {% if annotation.offense == 'horo' %}selected{% endif %}>Horizontal</option>
-                                                            <option value="vert" {% if annotation.offense == 'vert' %}selected{% endif %}>Vertical</option>
-                                                            <option value="flow" {% if annotation.offense == 'flow' %}selected{% endif %}>Flow</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        {{ form.defense.label(class="form-label") }}
-                                                        <select name="defense" class="form-select">
-                                                            <option value="" {% if not annotation.defense %}selected{% endif %}>Select...</option>
-                                                            <option value="match_flick" {% if annotation.defense == 'match_flick' %}selected{% endif %}>Match Flick</option>
-                                                            <option value="match_backhand" {% if annotation.defense == 'match_backhand' %}selected{% endif %}>Match Backhand</option>
-                                                            <option value="match_middle" {% if annotation.defense == 'match_middle' %}selected{% endif %}>Match Middle</option>
-                                                            <option value="zone" {% if annotation.defense == 'zone' %}selected{% endif %}>Zone</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    {{ form.notes.label(class="form-label") }}
-                                                    {{ form.notes(class="form-control", rows=3, value=annotation.notes) }}
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                <button type="submit" class="btn btn-primary">Save Changes</button>
-                                            </div>
+                        </div>
+                        
+                        <!-- Delete Confirmation Modal -->
+                        {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
+                        <div class="modal fade" id="deleteAnnotationModal{{ annotation.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Delete Annotation</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Are you sure you want to delete this annotation?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <form action="{{ url_for('clip.delete_annotation', annotation_id=annotation.id) }}" method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="btn btn-danger">Delete</button>
                                         </form>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <!-- Delete Annotation Modal -->
-                            <div class="modal fade" id="deleteAnnotationModal{{ annotation.id }}" tabindex="-1" aria-labelledby="deleteAnnotationModalLabel{{ annotation.id }}" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="deleteAnnotationModalLabel{{ annotation.id }}">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            Are you sure you want to delete this annotation?
-                                            <div class="mt-2">
-                                                <strong>{{ annotation.formatted_timestamp }}</strong>: {{ annotation.event_type|replace('_', ' ')|title }}
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{{ url_for('clip.delete_annotation', annotation_id=annotation.id) }}" method="post">
-                                                <button type="submit" class="btn btn-danger">Delete</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
                         </div>
-                        {% else %}
-                        <p class="text-center">No annotations yet. Add one to mark important moments in the clip.</p>
-                        <p class="text-muted text-center">Debug info: {{ annotations|length }} annotations found.</p>
+                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-chat-left-text" style="font-size: 3rem;"></i>
+                        <p class="mt-2">No annotations yet</p>
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('clip.add_annotation', clip_id=clip.id) }}" class="btn btn-sm btn-primary">
+                            Add First Annotation
+                        </a>
                         {% endif %}
                     </div>
+                    {% endif %}
                 </div>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add Annotation Modal -->
-<div class="modal fade" id="addAnnotationModal" tabindex="-1" aria-labelledby="addAnnotationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addAnnotationModalLabel">Add Annotation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ url_for('clip.add_annotation', clip_id=clip.id) }}" method="post">
-                <div class="modal-body">
-                    {{ form.hidden_tag() }}
-                    
-                    <div class="mb-3">
-                        {{ form.timestamp.label(class="form-label") }}
-                        {{ form.timestamp(class="form-control", id="annotation-timestamp") }}
-                        <div class="form-text">Time in seconds where this annotation occurs</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        {{ form.event_type.label(class="form-label") }}
-                        {{ form.event_type(class="form-select") }}
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            {{ form.our_score.label(class="form-label") }}
-                            {{ form.our_score(class="form-control") }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.their_score.label(class="form-label") }}
-                            {{ form.their_score(class="form-control") }}
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            {{ form.offense.label(class="form-label") }}
-                            <select name="offense" class="form-select">
-                                <option value="">Select...</option>
-                                <option value="horo">Horizontal</option>
-                                <option value="vert">Vertical</option>
-                                <option value="flow">Flow</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.defense.label(class="form-label") }}
-                            <select name="defense" class="form-select">
-                                <option value="">Select...</option>
-                                <option value="match_flick">Match Flick</option>
-                                <option value="match_backhand">Match Backhand</option>
-                                <option value="match_middle">Match Middle</option>
-                                <option value="zone">Zone</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        {{ form.notes.label(class="form-label") }}
-                        {{ form.notes(class="form-control", rows=3) }}
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Annotation</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
-
 {% block scripts %}
 <script>
-    // Initialize tooltips
-    document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
+    // Function to seek video to specific timestamp
+    function seekToTime(seconds) {
+        const iframe = document.getElementById('video-player');
+        const currentSrc = iframe.src;
+        
+        // Extract video ID and build new URL with timestamp
+        if (currentSrc.includes('youtube.com')) {
+            const videoId = currentSrc.match(/embed\/([^?]+)/)[1];
+            const newSrc = `https://www.youtube.com/embed/${videoId}?start=${seconds}&autoplay=1`;
+            iframe.src = newSrc;
+        }
+    }
+    
+    // Highlight active annotation when scrolling
+    const annotationCards = document.querySelectorAll('.annotation-card');
+    annotationCards.forEach(card => {
+        card.addEventListener('click', function() {
+            annotationCards.forEach(c => c.classList.remove('border-primary'));
+            this.classList.add('border-primary');
         });
     });
-    
-    // Simple function to seek to a timestamp in the YouTube video
-    function seekToTimestamp(timestamp) {
-        // Get the iframe
-        const iframe = document.getElementById('youtube-player');
-        
-        // Extract the video ID from the src attribute
-        const src = iframe.src;
-        const videoId = extractVideoId(src);
-        
-        // Create a new URL with the timestamp
-        const newSrc = `https://www.youtube.com/embed/${videoId}?start=${timestamp}`;
-        
-        // Update the iframe src
-        iframe.src = newSrc;
-    }
-    
-    function extractVideoId(url) {
-        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[7].length === 11) ? match[7] : false;
-    }
-    
-    // Add this to your view_clip.html scripts section
-    function getCurrentVideoTime() {
-        const iframe = document.getElementById('youtube-player');
-        // You'll need to use the YouTube Player API to get the current time
-        // This is a placeholder for the actual implementation
-        const player = new YT.Player(iframe);
-        const seconds = player.getCurrentTime();
-        
-        // Convert seconds to HH:MM:SS
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-        
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    
-    // Add button to get current time
-    document.getElementById('get-current-time').addEventListener('click', function() {
-        document.getElementById('annotation-timestamp').value = getCurrentVideoTime();
-    });
-
 </script>
 {% endblock %}

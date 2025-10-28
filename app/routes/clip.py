@@ -2,18 +2,21 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from app import db
-from app.models import Clip, ClipTag, ClipAnnotation 
+from app.models import Clip, ClipTag, ClipAnnotation
+from app.models.annotation import AnnotationTag
 from app.models.game import Game
 from app.models.point import Point
 from app.models.player import Player
-from app.models import ClipAnnotation 
+from app.models.user import User
 from app.forms.annotation import AnnotationForm
 from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
+from sqlalchemy import or_
 import re
 from app.utils.utils import admin_required
 import csv
 import io
 from flask import send_file
+from datetime import datetime
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
@@ -22,6 +25,10 @@ def get_current_team_id():
     if current_user.is_admin:
         return session.get('current_team_id')
     return current_user.team_organization_id
+
+# ============================================================================
+# CLIP ROUTES
+# ============================================================================
 
 @bp.route('/')
 @login_required
@@ -38,7 +45,7 @@ def index():
     team_id = get_current_team_id()
 
     # Build query based on filters
-    query = Clip.query.filter_by(team_organization_id=team_id)  # Add team filter
+    query = Clip.query.filter_by(team_organization_id=team_id)
 
     if game_id:
         query = query.filter(Clip.game_id == game_id)
@@ -92,8 +99,6 @@ def point_clips(point_id):
     
     return render_template('clip/point_clips.html', point=point, clips=clips)
 
-
-
 @bp.route('/add_clip', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -116,21 +121,22 @@ def add_clip():
             start_time=form.start_time.data,
             end_time=form.end_time.data,
             description=form.description.data,
-            team_organization_id=team_id  # Add team ID
+            created_by_id=current_user.id,
+            team_organization_id=team_id
         )
 
-        # Add tags and players using the new relationship pattern
+        # Add tags and players
         if form.tags.data:
             tags = ClipTag.query.filter(
                 ClipTag.id.in_(form.tags.data),
-                ClipTag.team_organization_id == team_id  # Filter tags by team
+                ClipTag.team_organization_id == team_id
             ).all()
             clip.tags = tags
 
         if form.players.data:
             players = Player.query.filter(
                 Player.id.in_(form.players.data),
-                Player.team_organization_id == team_id  # Filter players by team
+                Player.team_organization_id == team_id
             ).all()
             clip.players = players
 
@@ -138,24 +144,57 @@ def add_clip():
         db.session.commit()
 
         flash(f'Clip "{clip.title}" has been added!', 'success')
-        return redirect(url_for('clip.index'))
+        return redirect(url_for('clip.view_clip', clip_id=clip.id))
     
-    # Add this return statement for GET requests or failed form validation
     return render_template('clip/clip_form.html', form=form, title='Add Clip', tags_exist=tags_exist)
 
-
-def validate_veo_link(url):
-    """Validate Veo video URL"""
-    # Add Veo-specific URL validation
-    veo_pattern = r'https?://app\.veo\.co/matches/[a-zA-Z0-9-]+'
-    return bool(re.match(veo_pattern, url))
-
-def get_veo_embed_url(url):
-    """Convert Veo URL to embed URL"""
-    # Implement Veo embed URL conversion
-    # You'll need to check Veo's documentation for proper embed URL format
-    match_id = url.split('matches/')[1]
-    return f'https://app.veo.co/embed/{match_id}'
+@bp.route('/<int:clip_id>')
+@login_required
+def view_clip(clip_id):
+    """View a single clip with all annotations"""
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    
+    # Increment view count
+    clip.view_count = (clip.view_count or 0) + 1
+    db.session.commit()
+    
+    # Get annotations with optional filtering
+    query = ClipAnnotation.query.filter_by(clip_id=clip_id)
+    
+    # Apply visibility filters
+    if not (current_user.is_admin or current_user.is_coach):
+        query = query.filter(
+            or_(
+                ClipAnnotation.visibility == 'team',
+                ClipAnnotation.user_id == current_user.id
+            )
+        )
+    
+    # Apply request filters
+    event_filter = request.args.get('event_filter')
+    if event_filter:
+        query = query.filter_by(event_type=event_filter)
+    
+    creator_filter = request.args.get('creator_filter')
+    if creator_filter:
+        query = query.filter_by(user_id=int(creator_filter))
+    
+    key_only = request.args.get('key_only')
+    if key_only:
+        query = query.filter_by(is_key_moment=True)
+    
+    annotations = query.order_by(ClipAnnotation.timestamp).all()
+    
+    # Get list of users who have created annotations for filter dropdown
+    annotation_creators = db.session.query(User).join(
+        ClipAnnotation, User.id == ClipAnnotation.user_id
+    ).filter(ClipAnnotation.clip_id == clip_id).distinct().all()
+    
+    return render_template('clip/view_clip.html', 
+                         clip=clip, 
+                         annotations=annotations,
+                         annotation_creators=annotation_creators)
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
@@ -173,7 +212,7 @@ def edit_clip(clip_id):
     tags_exist = ClipTag.query.filter_by(team_organization_id=team_id).count() > 0
     
     if request.method == 'GET':
-        # Pre-select tags and players using the new relationship pattern
+        # Pre-select tags and players
         form.tags.data = [tag.id for tag in clip.tags]
         form.players.data = [player.id for player in clip.players]
         
@@ -191,21 +230,21 @@ def edit_clip(clip_id):
         clip.end_time = form.end_time.data
         clip.description = form.description.data
         
-        # Update tags using the new relationship pattern
+        # Update tags
         if form.tags.data:
             tags = ClipTag.query.filter(
                 ClipTag.id.in_(form.tags.data),
-                ClipTag.team_organization_id == team_id  # Filter tags by team
+                ClipTag.team_organization_id == team_id
             ).all()
             clip.tags = tags
         else:
             clip.tags = []
         
-        # Update players using the new relationship pattern
+        # Update players
         if form.players.data:
             players = Player.query.filter(
                 Player.id.in_(form.players.data),
-                Player.team_organization_id == team_id  # Filter players by team
+                Player.team_organization_id == team_id
             ).all()
             clip.players = players
         else:
@@ -214,10 +253,9 @@ def edit_clip(clip_id):
         db.session.commit()
         
         flash(f'Clip "{clip.title}" has been updated!', 'success')
-        return redirect(url_for('clip.index'))
+        return redirect(url_for('clip.view_clip', clip_id=clip_id))
     
     return render_template('clip/clip_form.html', form=form, clip=clip, title='Edit Clip', tags_exist=tags_exist)
-
 
 @bp.route('/delete/<int:clip_id>', methods=['POST'])
 @login_required
@@ -230,154 +268,116 @@ def delete_clip(clip_id):
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
     
     title = clip.title
-
-    # Clear relationships
-    clip.tags = []
-    clip.players = []
-    
     db.session.delete(clip)
     db.session.commit()
-
-    flash(f'Clip "{title}" has been deleted!', 'success')
+    
+    flash(f'Clip "{title}" and all its annotations have been deleted!', 'success')
     return redirect(url_for('clip.index'))
 
-@bp.route('/view/<int:clip_id>')
+# ============================================================================
+# ANNOTATION ROUTES
+# ============================================================================
+
+@bp.route('/<int:clip_id>/annotation/add', methods=['GET', 'POST'])
 @login_required
-def view_clip(clip_id):
-    # Get current team ID
-    team_id = get_current_team_id()
-    
-    # Filter clip by team
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
-    
-    # Make sure we're explicitly querying for annotations
-    annotations = ClipAnnotation.query.filter_by(clip_id=clip.id).order_by(ClipAnnotation.timestamp).all()
-    
-    # Get players assigned to the game through GamePlayer model
-    game_players = []
-    tournament_players = []
-    
-    if clip.game:
-        # Get players assigned to the game through GamePlayer model
-        from app.models.game_player import GamePlayer
-        from app.models.player import Player
-        from app.models.tournament_rsvp import TournamentRSVP
-        from sqlalchemy import and_
-        
-        game_player_records = GamePlayer.query.filter_by(
-            game_id=clip.game.id,
-            team_organization_id=team_id  # Filter by team
-        ).all()
-        
-        if game_player_records:
-            # Get the actual Player objects
-            player_ids = [gp.player_id for gp in game_player_records]
-            game_players = Player.query.filter(
-                Player.id.in_(player_ids),
-                Player.team_organization_id == team_id  # Filter by team
-            ).all()
-        
-        # Get all players assigned to the tournament (if this game belongs to a tournament)
-        if clip.game.tournament_id:
-            tournament_players = Player.query.join(TournamentRSVP).filter(
-                and_(
-                    TournamentRSVP.tournament_id == clip.game.tournament_id,
-                    TournamentRSVP.selected_by_admin == True,
-                    TournamentRSVP.team_organization_id == team_id,  # Filter by team
-                    Player.team_organization_id == team_id  # Filter by team
-                )
-            ).all()
-    
-    # Print for debugging
-    print(f"Found {len(annotations)} annotations for clip {clip_id}")
-    
-    form = AnnotationForm()
-    return render_template('clip/view_clip.html', 
-                          clip=clip, 
-                          annotations=annotations, 
-                          form=form,
-                          game_players=game_players,
-                          tournament_players=tournament_players,
-                          seconds_to_timestamp=seconds_to_timestamp)  # Pass the function to the template
-
-
-
-
-@bp.route('/add_annotation/<int:clip_id>', methods=['POST'])
-@login_required
-@admin_required
 def add_annotation(clip_id):
-    # Get current team ID
+    """Add a new annotation to a clip"""
     team_id = get_current_team_id()
-    
-    # Filter clip by team
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
-    
     form = AnnotationForm()
     
     if form.validate_on_submit():
-        # Convert timestamp to seconds
-        seconds = timestamp_to_seconds(form.timestamp.data)
-        if seconds is None:
-            flash('Invalid timestamp format', 'danger')
-            return redirect(url_for('clip.view_clip', clip_id=clip.id))
-            
         annotation = ClipAnnotation(
-            clip_id=clip.id,
-            timestamp=seconds,  # Store as seconds in database
+            clip_id=clip_id,
+            user_id=current_user.id,
+            timestamp=form.timestamp.data,
+            title=form.title.data,
             event_type=form.event_type.data,
             our_score=form.our_score.data,
             their_score=form.their_score.data,
             offense=form.offense.data,
             defense=form.defense.data,
             notes=form.notes.data,
-            team_organization_id=team_id  # Add team ID
+            is_key_moment=form.is_key_moment.data,
+            visibility=form.visibility.data,
+            team_organization_id=team_id
         )
+        
+        # Add tags
+        if form.tags.data:
+            selected_tags = AnnotationTag.query.filter(
+                AnnotationTag.id.in_(form.tags.data),
+                AnnotationTag.team_organization_id == team_id
+            ).all()
+            annotation.tags = selected_tags
+        
+        # Add players
+        if form.players.data:
+            selected_players = Player.query.filter(
+                Player.id.in_(form.players.data),
+                Player.team_organization_id == team_id
+            ).all()
+            annotation.players = selected_players
         
         db.session.add(annotation)
         db.session.commit()
         
         flash('Annotation added successfully!', 'success')
-    else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f"{getattr(form, field).label.text}: {error}", 'danger')
+        return redirect(url_for('clip.view_clip', clip_id=clip_id))
     
-    return redirect(url_for('clip.view_clip', clip_id=clip.id))
+    return render_template('clip/add_annotation.html', form=form, clip=clip)
 
-@bp.route('/edit_annotation/<int:annotation_id>', methods=['GET', 'POST'])
+@bp.route('/annotation/<int:annotation_id>/edit', methods=['GET', 'POST'])
 @login_required
-@admin_required
 def edit_annotation(annotation_id):
-    # Get current team ID
+    """Edit an existing annotation"""
+    annotation = ClipAnnotation.query.get_or_404(annotation_id)
     team_id = get_current_team_id()
     
-    # Filter annotation by team
-    annotation = ClipAnnotation.query.filter_by(id=annotation_id).first_or_404()
-    
-    # Verify the annotation belongs to a clip in the current team
-    clip = Clip.query.filter_by(id=annotation.clip_id, team_organization_id=team_id).first_or_404()
+    # Check permissions
+    if not (current_user.id == annotation.user_id or 
+            current_user.is_admin or current_user.is_coach):
+        flash('You do not have permission to edit this annotation.', 'danger')
+        return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
     
     form = AnnotationForm(obj=annotation)
     
     if request.method == 'GET':
-        # Convert seconds to timestamp for display
-        form.timestamp.data = seconds_to_timestamp(annotation.timestamp)
+        # Pre-populate form
+        form.tags.data = [tag.id for tag in annotation.tags]
+        form.players.data = [player.id for player in annotation.players]
     
     if form.validate_on_submit():
-        # Convert timestamp to seconds
-        seconds = timestamp_to_seconds(form.timestamp.data)
-        if seconds is None:
-            flash('Invalid timestamp format', 'danger')
-            return render_template('clip/edit_annotation.html', form=form, annotation=annotation)
-            
-        annotation.timestamp = seconds
+        annotation.timestamp = form.timestamp.data
+        annotation.title = form.title.data
         annotation.event_type = form.event_type.data
         annotation.our_score = form.our_score.data
         annotation.their_score = form.their_score.data
         annotation.offense = form.offense.data
         annotation.defense = form.defense.data
         annotation.notes = form.notes.data
+        annotation.is_key_moment = form.is_key_moment.data
+        annotation.visibility = form.visibility.data
+        
+        # Update tags
+        if form.tags.data:
+            selected_tags = AnnotationTag.query.filter(
+                AnnotationTag.id.in_(form.tags.data),
+                AnnotationTag.team_organization_id == team_id
+            ).all()
+            annotation.tags = selected_tags
+        else:
+            annotation.tags = []
+        
+        # Update players
+        if form.players.data:
+            selected_players = Player.query.filter(
+                Player.id.in_(form.players.data),
+                Player.team_organization_id == team_id
+            ).all()
+            annotation.players = selected_players
+        else:
+            annotation.players = []
         
         db.session.commit()
         flash('Annotation updated successfully!', 'success')
@@ -385,46 +385,45 @@ def edit_annotation(annotation_id):
     
     return render_template('clip/edit_annotation.html', form=form, annotation=annotation)
 
-@bp.route('/delete_annotation/<int:annotation_id>', methods=['POST'])
+@bp.route('/annotation/<int:annotation_id>/delete', methods=['POST'])
 @login_required
-@admin_required
 def delete_annotation(annotation_id):
-    # Get current team ID
-    team_id = get_current_team_id()
+    """Delete an annotation"""
+    annotation = ClipAnnotation.query.get_or_404(annotation_id)
     
-    # Filter annotation by team
-    annotation = ClipAnnotation.query.filter_by(id=annotation_id).first_or_404()
-    
-    # Verify the annotation belongs to a clip in the current team
-    clip = Clip.query.filter_by(id=annotation.clip_id, team_organization_id=team_id).first_or_404()
+    # Check permissions
+    if not (current_user.id == annotation.user_id or 
+            current_user.is_admin or current_user.is_coach):
+        flash('You do not have permission to delete this annotation.', 'danger')
+        return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
     
     clip_id = annotation.clip_id
-    
     db.session.delete(annotation)
     db.session.commit()
     
     flash('Annotation deleted successfully!', 'success')
     return redirect(url_for('clip.view_clip', clip_id=clip_id))
 
+# ============================================================================
+# TAG MANAGEMENT ROUTES
+# ============================================================================
+
 @bp.route('/tags')
 @login_required
+@admin_required
 def tags():
-    # Get current team ID
+    """View all clip tags"""
     team_id = get_current_team_id()
-    
-    # Filter tags by team
-    tags = ClipTag.query.filter_by(team_organization_id=team_id).order_by(ClipTag.name).all()
-    
+    tags = ClipTag.query.filter_by(team_organization_id=team_id).order_by(ClipTag.category, ClipTag.name).all()
     return render_template('clip/tags.html', tags=tags)
 
 @bp.route('/tags/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def add_tag():
-    form = ClipTagForm()
-    
-    # Get current team ID
+    """Add a new clip tag"""
     team_id = get_current_team_id()
+    form = ClipTagForm()
     
     if form.validate_on_submit():
         # Check if tag already exists in this team
@@ -439,7 +438,7 @@ def add_tag():
         
         tag = ClipTag(
             name=form.name.data,
-            team_organization_id=team_id  # Add team ID
+            team_organization_id=team_id
         )
         db.session.add(tag)
         db.session.commit()
@@ -493,7 +492,7 @@ def delete_tag(tag_id):
     
     name = tag.name
     
-    # Clear relationships using the new pattern
+    # Clear relationships
     for clip in tag.clips:
         clip.tags.remove(tag)
     
@@ -503,10 +502,14 @@ def delete_tag(tag_id):
     flash(f'Tag "{name}" has been deleted!', 'success')
     return redirect(url_for('clip.tags'))
 
+# ============================================================================
+# AJAX/API ROUTES
+# ============================================================================
+
 @bp.route('/get_points/<int:game_id>')
 @login_required
 def get_points(game_id):
-    # Get current team ID
+    """AJAX endpoint to get points for a game"""
     team_id = get_current_team_id()
     
     # Verify the game belongs to the current team
@@ -515,52 +518,10 @@ def get_points(game_id):
     points = Point.query.filter_by(game_id=game_id).order_by(Point.point_number).all()
     return jsonify([{'id': p.id, 'name': f'Point {p.point_number}'} for p in points])
 
-def extract_youtube_id(url):
-    """Extract YouTube video ID from URL."""
-    # Regular expressions to match various YouTube URL formats
-    patterns = [
-        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/watch\?.*v=)([^&\n?#]+)',
-        r'(?:youtube\.com\/shorts\/)([^&\n?#]+)'
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-    
-    return None
-
-def seconds_to_timestamp(seconds):
-    """Convert seconds to HH:MM:SS format"""
-    if seconds is None:
-        return ""
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    seconds = seconds % 60
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-def timestamp_to_seconds(timestamp):
-    """Convert HH:MM:SS format to seconds"""
-    if not timestamp:
-        return None
-    try:
-        # Split timestamp into components
-        parts = timestamp.split(':')
-        if len(parts) == 3:
-            hours, minutes, seconds = parts
-            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
-        elif len(parts) == 2:
-            minutes, seconds = parts
-            return int(minutes) * 60 + int(seconds)
-        else:
-            return int(parts[0])
-    except (ValueError, IndexError):
-        return None
-
 @bp.route('/get_game_link/<int:game_id>')
 @login_required
 def get_game_link(game_id):
-    # Get current team ID
+    """AJAX endpoint to get YouTube link from game"""
     team_id = get_current_team_id()
     
     # Filter game by team
@@ -570,10 +531,36 @@ def get_game_link(game_id):
         'youtube_link': game.youtube_link or ''
     })
 
+@bp.route('/api/clip/<int:clip_id>/annotations')
+@login_required
+def api_get_annotations(clip_id):
+    """API endpoint to get all annotations for a clip (JSON)"""
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    
+    annotations = ClipAnnotation.query.filter_by(clip_id=clip_id).all()
+    
+    return jsonify([{
+        'id': a.id,
+        'timestamp': a.timestamp,
+        'title': a.title,
+        'event_type': a.event_type,
+        'tags': [{'id': t.id, 'name': t.name, 'color': t.color} for t in a.tags],
+        'players': [{'id': p.id, 'name': p.name, 'number': p.jersey_number} for p in a.players],
+        'creator': a.created_by.username if a.created_by else None,
+        'is_key_moment': a.is_key_moment,
+        'notes': a.notes,
+        'created_at': a.created_at.isoformat()
+    } for a in annotations])
+
+# ============================================================================
+# EXPORT ROUTES
+# ============================================================================
+
 @bp.route('/export_annotations_csv/<int:clip_id>')
 @login_required
 def export_annotations_csv(clip_id):
-    # Get current team ID
+    """Export clip annotations to CSV"""
     team_id = get_current_team_id()
     
     # Filter clip by team
@@ -601,7 +588,8 @@ def export_annotations_csv(clip_id):
     writer.writerow([])  # Empty row as separator
     
     # Write annotations header
-    writer.writerow(['Timestamp', 'Event Type', 'Our Score', 'Their Score', 'Offense', 'Defense', 'Notes'])
+    writer.writerow(['Timestamp', 'Title', 'Event Type', 'Our Score', 'Their Score', 
+                    'Offense', 'Defense', 'Tags', 'Players', 'Creator', 'Key Moment', 'Notes'])
     
     # Write annotation data
     for annotation in annotations:
@@ -629,13 +617,27 @@ def export_annotations_csv(clip_id):
         else:
             defense_display = annotation.defense or ""
         
+        # Get tags
+        tags_str = ', '.join([tag.name for tag in annotation.tags]) if annotation.tags else ''
+        
+        # Get players
+        players_str = ', '.join([f"{p.name} (#{p.jersey_number})" for p in annotation.players]) if annotation.players else ''
+        
+        # Get creator
+        creator = annotation.created_by.username if annotation.created_by else 'Unknown'
+        
         writer.writerow([
             seconds_to_timestamp(annotation.timestamp),
-            annotation.event_type.replace('_', ' ').title(),
-            annotation.our_score,
-            annotation.their_score,
+            annotation.title or '',
+            annotation.event_type.replace('_', ' ').title() if annotation.event_type else '',
+            annotation.our_score or '',
+            annotation.their_score or '',
             offense_display,
             defense_display,
+            tags_str,
+            players_str,
+            creator,
+            'Yes' if annotation.is_key_moment else 'No',
             annotation.notes or ""
         ])
     
@@ -643,10 +645,6 @@ def export_annotations_csv(clip_id):
     buffer.seek(0)
     
     # Create filename with clip title (sanitized) and date
-    from datetime import datetime
-    import re
-    
-    # Sanitize the clip title for use in filename
     safe_title = re.sub(r'[^\w\s-]', '', clip.title).strip().replace(' ', '_')
     date_str = datetime.now().strftime('%Y%m%d')
     filename = f"{safe_title}_{date_str}_annotations.csv"
@@ -658,6 +656,24 @@ def export_annotations_csv(clip_id):
         mimetype='text/csv'
     )
 
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def extract_youtube_id(url):
+    """Extract YouTube video ID from URL."""
+    patterns = [
+        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/watch\?.*v=)([^&\n?#]+)',
+        r'(?:youtube\.com\/shorts\/)([^&\n?#]+)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    
+    return None
+
 def seconds_to_timestamp(seconds):
     """Convert seconds to HH:MM:SS format"""
     if seconds is None:
@@ -666,3 +682,30 @@ def seconds_to_timestamp(seconds):
     minutes = (int(seconds) % 3600) // 60
     secs = int(seconds) % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+def timestamp_to_seconds(timestamp):
+    """Convert HH:MM:SS format to seconds"""
+    if not timestamp:
+        return None
+    try:
+        parts = timestamp.split(':')
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+            return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+        elif len(parts) == 2:
+            minutes, seconds = parts
+            return int(minutes) * 60 + int(seconds)
+        else:
+            return int(parts[0])
+    except (ValueError, IndexError):
+        return None
+
+def validate_veo_link(url):
+    """Validate Veo video URL"""
+    veo_pattern = r'https?://app\.veo\.co/matches/[a-zA-Z0-9-]+'
+    return bool(re.match(veo_pattern, url))
+
+def get_veo_embed_url(url):
+    """Convert Veo URL to embed URL"""
+    match_id = url.split('matches/')[1]
+    return f'https://app.veo.co/embed/{match_id}'

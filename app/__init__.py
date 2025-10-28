@@ -59,6 +59,8 @@ def create_app(config_class=Config):
     from commands import register_commands
     register_commands(app)    
     
+    #from app.utils.tag_management import register_commands as register_tag_commands
+    #register_tag_commands(app)
     
     @app.template_filter('initials')
     def initials_filter(name):

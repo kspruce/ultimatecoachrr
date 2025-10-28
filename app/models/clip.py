@@ -3,13 +3,14 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
-# Association tables
+# Association table for clip tags (video-level)
 clip_tag_relation = db.Table('clip_tag_relation',
     db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('clip_tag.id'), primary_key=True),
     db.Column('created_at', db.DateTime, default=datetime.utcnow)
 )
 
+# Association table for clip players
 clip_player = db.Table('clip_player',
     db.Column('clip_id', db.Integer, db.ForeignKey('clip.id'), primary_key=True),
     db.Column('player_id', db.Integer, db.ForeignKey('player.id'), primary_key=True),
@@ -23,12 +24,17 @@ class Clip(db.Model):
     title = db.Column(db.String(100))
     start_time = db.Column(db.Integer)  # in seconds
     end_time = db.Column(db.Integer)    # in seconds
-    youtube_link = db.Column(db.String(200))  # Added for YouTube functionality
-    video_source = db.Column(db.String(20), default='youtube')  # Added for multiple video sources
+    youtube_link = db.Column(db.String(200))
+    video_source = db.Column(db.String(20), default='youtube')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     description = db.Column(db.Text, nullable=True)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
+    
+    # New fields for enhanced clip management
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_featured = db.Column(db.Boolean, default=False)  # Highlight important clips
+    view_count = db.Column(db.Integer, default=0)
     
     # Relationships
     game = db.relationship('Game', back_populates='clips')
@@ -40,6 +46,7 @@ class Clip(db.Model):
                             secondary=clip_player,
                             backref=db.backref('clip_appearances', lazy='dynamic'))
     annotations = db.relationship('ClipAnnotation', back_populates='clip', cascade='all, delete-orphan')
+    created_by = db.relationship('User', backref='clips_created', foreign_keys=[created_by_id])
 
     def __repr__(self):
         return f'<Clip {self.title}>'
@@ -79,12 +86,15 @@ class Clip(db.Model):
         
         # Create embed URL with start time if available
         embed_url = f'https://www.youtube.com/embed/{video_id}'
+        params = []
+        
         if self.start_time:
-            embed_url += f'?start={self.start_time}'
-            if self.end_time:
-                embed_url += f'&end={self.end_time}'
-        elif self.end_time:
-            embed_url += f'?end={self.end_time}'
+            params.append(f'start={self.start_time}')
+        if self.end_time:
+            params.append(f'end={self.end_time}')
+        
+        if params:
+            embed_url += '?' + '&'.join(params)
         
         return embed_url
 
@@ -93,18 +103,54 @@ class Clip(db.Model):
         """Return the Veo embed URL for this clip."""
         # Implement Veo-specific embedding logic here
         return None
+    
+    @property
+    def duration(self):
+        """Return the duration of the clip in seconds"""
+        if self.end_time and self.start_time:
+            return self.end_time - self.start_time
+        return None
+    
+    @property
+    def annotation_count(self):
+        """Return the number of annotations for this clip"""
+        return len(self.annotations)
+    
+    @property
+    def key_moments_count(self):
+        """Return the number of key moment annotations"""
+        return sum(1 for ann in self.annotations if ann.is_key_moment)
 
 
 class ClipTag(db.Model):
     __tablename__ = 'clip_tag'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    category = db.Column(db.String(50))
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50))  # e.g., "Video Type", "Context"
+    parent_tag_id = db.Column(db.Integer, db.ForeignKey('clip_tag.id'), nullable=True)
+    color = db.Column(db.String(7), default='#3F51B5')  # Hex color
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
     
+    # Self-referential relationship for hierarchical tags
+    children = db.relationship('ClipTag',
+                              backref=db.backref('parent', remote_side=[id]),
+                              lazy='dynamic')
+    
     def __repr__(self):
         return f'<ClipTag {self.name}>'
-
-
+    
+    @property
+    def full_path(self):
+        """Return the full hierarchical path of this tag"""
+        if self.parent:
+            return f"{self.parent.full_path} > {self.name}"
+        return self.name
+    
+    @property
+    def clip_count(self):
+        """Return the number of clips using this tag"""
+        return self.clips.count()

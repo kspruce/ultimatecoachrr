@@ -4,6 +4,7 @@ from flask.cli import with_appcontext
 from app import db
 from app.models.user import User
 from app.utils.data_manager import DataManager
+from app.utils.tag_management import register_commands as register_tag_commands
 import json
 
 @click.command('create-admin')
@@ -134,3 +135,4 @@ def register_commands(app):
     app.cli.add_command(export_data)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
+    register_tag_commands(app)
