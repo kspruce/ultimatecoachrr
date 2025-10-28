@@ -709,29 +709,43 @@ def add_tag():
     """Add a new clip tag"""
     team_id = get_current_team_id()
     form = ClipTagForm()
-    
+
     if form.validate_on_submit():
-        # Check if tag already exists in this team
+        # Check if tag already exists in this team (by name)
         existing_tag = ClipTag.query.filter_by(
             name=form.name.data,
             team_organization_id=team_id
         ).first()
-        
+
         if existing_tag:
             flash(f'Tag "{form.name.data}" already exists!', 'danger')
             return render_template('clip/tag_form.html', form=form, title='Add Tag')
-        
+
+        # Resolve parent tag (optional, 0 means None)
+        parent_id = form.parent_tag_id.data if hasattr(form, 'parent_tag_id') else 0
+        if parent_id and parent_id > 0:
+            parent = ClipTag.query.filter_by(id=parent_id, team_organization_id=team_id).first()
+            parent_tag_id = parent.id if parent else None
+        else:
+            parent_tag_id = None
+
         tag = ClipTag(
             name=form.name.data,
+            category=form.category.data if hasattr(form, 'category') else None,
+            color=form.color.data if hasattr(form, 'color') else None,
+            description=form.description.data if hasattr(form, 'description') else None,
+            is_active=form.is_active.data if hasattr(form, 'is_active') else True,
+            parent_tag_id=parent_tag_id,
             team_organization_id=team_id
         )
         db.session.add(tag)
         db.session.commit()
-        
+
         flash(f'Tag "{tag.name}" has been added!', 'success')
         return redirect(url_for('clip.tags'))
-    
+
     return render_template('clip/tag_form.html', form=form, title='Add Tag')
+
 
 @bp.route('/tags/edit/<int:tag_id>', methods=['GET', 'POST'])
 @login_required
@@ -739,31 +753,72 @@ def add_tag():
 def edit_tag(tag_id):
     # Get current team ID
     team_id = get_current_team_id()
-    
+
     # Filter tag by team
     tag = ClipTag.query.filter_by(id=tag_id, team_organization_id=team_id).first_or_404()
-    
+
     form = ClipTagForm(obj=tag)
-    
+
     if form.validate_on_submit():
-        # Check if tag already exists in this team
+        # Check if tag already exists in this team (same name, different id)
         existing_tag = ClipTag.query.filter(
             ClipTag.name == form.name.data,
             ClipTag.id != tag_id,
             ClipTag.team_organization_id == team_id
         ).first()
-        
+
         if existing_tag:
             flash(f'Tag "{form.name.data}" already exists!', 'danger')
             return render_template('clip/tag_form.html', form=form, title='Edit Tag')
-        
+
+        # Resolve and validate parent tag (optional)
+        parent_tag_id = None
+        if hasattr(form, 'parent_tag_id'):
+            raw_parent_id = form.parent_tag_id.data
+            if raw_parent_id and raw_parent_id > 0:
+                # Cannot set itself as parent
+                if raw_parent_id == tag_id:
+                    flash('A tag cannot be its own parent.', 'danger')
+                    return render_template('clip/tag_form.html', form=form, tag=tag, title='Edit Tag')
+
+                potential_parent = ClipTag.query.filter_by(
+                    id=raw_parent_id, team_organization_id=team_id
+                ).first()
+
+                if not potential_parent:
+                    flash('Selected parent tag was not found in your team.', 'danger')
+                    return render_template('clip/tag_form.html', form=form, tag=tag, title='Edit Tag')
+
+                # Check for circular parent relationship by walking up ancestors
+                current_check = potential_parent
+                while current_check:
+                    if current_check.id == tag_id:
+                        flash('Cannot set parent tag: This would create a circular relationship!', 'danger')
+                        return render_template('clip/tag_form.html', form=form, tag=tag, title='Edit Tag')
+                    current_check = getattr(current_check, 'parent', None)
+
+                parent_tag_id = potential_parent.id
+
+        # Persist fields
         tag.name = form.name.data
+        if hasattr(form, 'category'):
+            tag.category = form.category.data
+        if hasattr(form, 'color'):
+            tag.color = form.color.data
+        if hasattr(form, 'description'):
+            tag.description = form.description.data
+        if hasattr(form, 'is_active'):
+            tag.is_active = form.is_active.data
+        if hasattr(form, 'parent_tag_id'):
+            tag.parent_tag_id = parent_tag_id
+
         db.session.commit()
-        
+
         flash(f'Tag "{tag.name}" has been updated!', 'success')
         return redirect(url_for('clip.tags'))
-    
+
     return render_template('clip/tag_form.html', form=form, tag=tag, title='Edit Tag')
+
 
 @bp.route('/tags/delete/<int:tag_id>', methods=['POST'])
 @login_required
