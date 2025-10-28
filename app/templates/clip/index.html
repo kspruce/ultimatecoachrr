@@ -1,131 +1,363 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<style>
+    .clip-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .clip-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    
+    .clip-card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.25rem;
+        border: none;
+    }
+    
+    .clip-card-header h5 {
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .clip-card-date {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+    
+    .clip-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .clip-meta i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .clip-description {
+        color: #495057;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+    
+    .tag-section {
+        margin-bottom: 0.75rem;
+    }
+    
+    .tag-section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6c757d;
+        margin-bottom: 0.4rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .clip-tag {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-right: 0.4rem;
+        margin-bottom: 0.4rem;
+        font-weight: 500;
+    }
+    
+    .player-badge {
+        display: inline-block;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 0.25rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-right: 0.4rem;
+        margin-bottom: 0.4rem;
+        color: #495057;
+    }
+    
+    .clip-stats {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 0;
+        border-top: 1px solid #e9ecef;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .clip-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    
+    .clip-card-footer {
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        padding: 0.75rem 1.25rem;
+    }
+    
+    .filter-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .filter-card .card-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        border-radius: 12px 12px 0 0;
+        padding: 1rem 1.25rem;
+    }
+    
+    .filter-card .card-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin: -1rem -15px 2rem -15px;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .page-header h1 {
+        margin: 0;
+        font-weight: 700;
+    }
+    
+    .btn-action {
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px dashed #dee2e6;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state h3 {
+        color: #6c757d;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Clip Library</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Clip
-                    </a>
-                    <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Toggle Dropdown</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">Manage Tags</h6></li>
-                        <li><a class="dropdown-item" href="{{ url_for('clip.tags') }}">
-                            <i class="bi bi-tag"></i> Clip Tags
-                        </a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('clip.annotation_tags') }}">
-                            <i class="bi bi-tags"></i> Annotation Tags
-                        </a></li>
-                    </ul>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Filter Clips</h5>
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="bi bi-collection-play me-2"></i>Clip Library</h1>
+                    <p class="mb-0 mt-2" style="opacity: 0.9;">Browse and manage your video clips</p>
                 </div>
-                <div class="card-body">
-                    <form method="get" action="{{ url_for('clip.index') }}">
-                        <div class="row">
-                            <div class="col-md-4">
-                                {{ form.game_id.label(class="form-label") }}
-                                {{ form.game_id(class="form-select") }}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.tag_id.label(class="form-label") }}
-                                {{ form.tag_id(class="form-select") }}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.player_id.label(class="form-label") }}
-                                {{ form.player_id(class="form-select") }}
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-funnel"></i> Filter
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        {% if clips %}
-            {% for clip in clips %}
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">{{ clip.title }}</h5>
-                        <span class="text-muted small">{{ clip.created_at.strftime('%Y-%m-%d') }}</span>
-                    </div>
-                    <div class="card-body">
-                        {% if clip.game %}
-                        <p><strong>Game:</strong> vs {{ clip.game.opponent }}</p>
-                        {% endif %}
-                        
-                        {% if clip.point %}
-                        <p><strong>Point:</strong> {{ clip.point.point_number }}</p>
-                        {% endif %}
-                        
-                        {% if clip.description %}
-                        <p class="card-text">{{ clip.description|truncate(100) }}</p>
-                        {% endif %}
-                        
-                        {% if clip.tag_list %}
-                        <div class="mb-2">
-                            <strong>Tags:</strong>
-                            {% for tag in clip.tag_list %}
-                            <span class="badge" style="background-color: {{ tag.color }}; color: white;">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        {% if clip.player_list %}
-                        <p><strong>Players:</strong> 
-                            {% for player in clip.player_list[:3] %}
-                            <span class="badge bg-secondary">{{ player.name }}</span>
-                            {% endfor %}
-                            {% if clip.player_list|length > 3 %}
-                            <span class="badge bg-secondary">+{{ clip.player_list|length - 3 }} more</span>
-                            {% endif %}
-                        </p>
-                        {% endif %}
-
-                        <!-- Show annotation count if exists -->
-                        {% if clip.annotation_count > 0 %}
-                        <p class="text-muted small">
-                            <i class="bi bi-chat-left-text"></i> {{ clip.annotation_count }} annotation(s)
-                        </p>
-                        {% endif %}
-                    </div>
-                    <div class="card-footer">
-                        <div class="btn-group w-100">
-                            <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-play-circle"></i> View
+                <div class="col-md-4 text-end">
+                    {% if current_user.is_admin %}
+                        <div class="btn-group">
+                            <a href="{{ url_for('clip.add_clip') }}" class="btn btn-light btn-action">
+                                <i class="bi bi-plus-circle me-1"></i> Add Clip
                             </a>
-                            {% if current_user.is_admin %}
-                                <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
+                            <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split btn-action" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header"><i class="bi bi-gear me-1"></i> Manage Tags</h6></li>
+                                <li><a class="dropdown-item" href="{{ url_for('clip.tags') }}">
+                                    <i class="bi bi-tag me-2"></i> Clip Tags
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('clip.annotation_tags') }}">
+                                    <i class="bi bi-tags me-2"></i> Annotation Tags
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Filter Card -->
+        <div class="filter-card card">
+            <div class="card-header">
+                <h5><i class="bi bi-funnel me-2"></i>Filter Clips</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{{ url_for('clip.index') }}">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            {{ form.game_id.label(class="form-label") }}
+                            {{ form.game_id(class="form-select") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.tag_id.label(class="form-label") }}
+                            {{ form.tag_id(class="form-select") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.player_id.label(class="form-label") }}
+                            {{ form.player_id(class="form-select") }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100 btn-action">
+                                <i class="bi bi-search me-1"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Clips Grid -->
+        <div class="row">
+            {% if clips %}
+                {% for clip in clips %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card clip-card h-100">
+                        <div class="clip-card-header">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="mb-0">{{ clip.title }}</h5>
+                                <span class="clip-card-date">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    {{ clip.created_at.strftime('%b %d') }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Game and Point Info -->
+                            {% if clip.game or clip.point %}
+                            <div class="clip-meta">
+                                {% if clip.game %}
+                                <i class="bi bi-trophy"></i>
+                                <span><strong>vs {{ clip.game.opponent }}</strong></span>
+                                {% endif %}
+                                {% if clip.point %}
+                                <span class="badge bg-info" style="margin-left: auto;">
+                                    <i class="bi bi-flag me-1"></i>Point {{ clip.point.point_number }}
+                                </span>
+                                {% endif %}
+                            </div>
                             {% endif %}
+                            
+                            <!-- Description -->
+                            {% if clip.description %}
+                            <p class="clip-description">{{ clip.description|truncate(120) }}</p>
+                            {% endif %}
+                            
+                            <!-- Tags -->
+                            {% if clip.tag_list %}
+                            <div class="tag-section">
+                                <div class="tag-section-title">Tags</div>
+                                <div>
+                                    {% for tag in clip.tag_list %}
+                                    <span class="clip-tag" style="background-color: {{ tag.color }}; color: white;">
+                                        {{ tag.name }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Players -->
+                            {% if clip.player_list %}
+                            <div class="tag-section">
+                                <div class="tag-section-title">Featured Players</div>
+                                <div>
+                                    {% for player in clip.player_list[:4] %}
+                                    <span class="player-badge">
+                                        <i class="bi bi-person me-1"></i>{{ player.name }}
+                                    </span>
+                                    {% endfor %}
+                                    {% if clip.player_list|length > 4 %}
+                                    <span class="player-badge">
+                                        <i class="bi bi-three-dots"></i> +{{ clip.player_list|length - 4 }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Stats -->
+                            <div class="clip-stats">
+                                {% if clip.annotation_count > 0 %}
+                                <div class="clip-stat-item">
+                                    <i class="bi bi-chat-left-text"></i>
+                                    <span>{{ clip.annotation_count }}</span>
+                                </div>
+                                {% endif %}
+                                {% if clip.key_moments_count > 0 %}
+                                <div class="clip-stat-item">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <span>{{ clip.key_moments_count }}</span>
+                                </div>
+                                {% endif %}
+                                {% if clip.view_count and clip.view_count > 0 %}
+                                <div class="clip-stat-item">
+                                    <i class="bi bi-eye"></i>
+                                    <span>{{ clip.view_count }}</span>
+                                </div>
+                                {% endif %}
+                                {% if clip.duration %}
+                                <div class="clip-stat-item ms-auto">
+                                    <i class="bi bi-clock"></i>
+                                    <span>{{ (clip.duration // 60)|int }}:{{ (clip.duration % 60)|int|string|rjust(2, '0') }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="clip-card-footer">
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-primary btn-action flex-fill">
+                                    <i class="bi bi-play-circle me-1"></i> View
+                                </a>
+                                {% if current_user.is_admin %}
+                                    <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary btn-action">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-action" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
                         </div>
                         
                         {% if current_user.is_admin %}
@@ -134,15 +366,17 @@
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">Confirm Delete</h5>
+                                            <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">
+                                                <i class="bi bi-exclamation-triangle text-warning me-2"></i>Confirm Delete
+                                            </h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <p>Are you sure you want to delete the clip "{{ clip.title }}"?</p>
+                                            <p>Are you sure you want to delete <strong>"{{ clip.title }}"</strong>?</p>
                                             {% if clip.annotations|length > 0 %}
                                             <div class="alert alert-warning">
-                                                <i class="bi bi-exclamation-triangle"></i>
-                                                This clip has {{ clip.annotations|length }} annotations that will also be deleted.
+                                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                                This clip has <strong>{{ clip.annotations|length }}</strong> annotation(s) that will also be deleted.
                                             </div>
                                             {% endif %}
                                         </div>
@@ -150,7 +384,9 @@
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                             <form action="{{ url_for('clip.delete_clip', clip_id=clip.id) }}" method="post" class="d-inline">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-danger">Delete Clip</button>
+                                                <button type="submit" class="btn btn-danger">
+                                                    <i class="bi bi-trash me-1"></i> Delete Clip
+                                                </button>
                                             </form>
                                         </div>
                                     </div>
@@ -159,17 +395,45 @@
                         {% endif %}
                     </div>
                 </div>
-            </div>
-            {% endfor %}
-        {% else %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                No clips found. 
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('clip.add_clip') }}">Add a clip</a> to get started.
-                {% else %}
-                    Contact an administrator to add clips.
-                {% endif %}
+                {% endfor %}
+            {% else %}
+                <!-- Empty State -->
+                <div class="col-12">
+                    <div class="empty-state">
+                        <i class="bi bi-film"></i>
+                        <h3>No clips found</h3>
+                        <p class="text-muted mb-3">
+                            {% if request.args %}
+                                Try adjusting your filters or 
+                                <a href="{{ url_for('clip.index') }}">clear all filters</a>
+                            {% else %}
+                                Get started by adding your first video clip
+                            {% endif %}
+                        </p>
+                        {% if current_user.is_admin and not request.args %}
+                            <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary btn-lg btn-action">
+                                <i class="bi bi-plus-circle me-2"></i> Add Your First Clip
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Clips Summary -->
+        {% if clips %}
+        <div class="row mt-4 mb-4">
+            <div class="col-12">
+                <div class="card" style="border: none; background: #f8f9fa; border-radius: 12px;">
+                    <div class="card-body text-center">
+                        <small class="text-muted">
+                            Showing <strong>{{ clips|length }}</strong> clip{{ 's' if clips|length != 1 else '' }}
+                            {% if request.args %}
+                            • <a href="{{ url_for('clip.index') }}">Clear filters</a>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
             </div>
         </div>
         {% endif %}
