@@ -741,6 +741,155 @@ def export_annotations_csv(clip_id):
     )
 
 # ============================================================================
+# ANNOTATION TAG MANAGEMENT ROUTES
+# ============================================================================
+
+@bp.route('/annotation-tags')
+@login_required
+@admin_required
+def annotation_tags():
+    """View all annotation tags"""
+    team_id = get_current_team_id()
+    tags = AnnotationTag.query.filter_by(team_organization_id=team_id).order_by(
+        AnnotationTag.category, AnnotationTag.name
+    ).all()
+    return render_template('clip/annotation_tags.html', tags=tags)
+
+@bp.route('/annotation-tags/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_annotation_tag():
+    """Add a new annotation tag"""
+    from app.forms.annotation import AnnotationTagForm
+    team_id = get_current_team_id()
+    form = AnnotationTagForm()
+    
+    # Filter parent tag choices to only show tags from current team
+    form.parent_tag_id.choices = [(0, 'None (Root Tag)')] + [
+        (t.id, t.full_path) for t in AnnotationTag.query.filter_by(
+            team_organization_id=team_id,
+            is_active=True
+        ).order_by(AnnotationTag.name).all()
+    ]
+    
+    if form.validate_on_submit():
+        # Check if tag already exists in this team
+        existing_tag = AnnotationTag.query.filter_by(
+            name=form.name.data,
+            team_organization_id=team_id
+        ).first()
+        
+        if existing_tag:
+            flash(f'Annotation tag "{form.name.data}" already exists!', 'danger')
+            return render_template('clip/annotation_tag_form.html', form=form, title='Add Annotation Tag')
+        
+        tag = AnnotationTag(
+            name=form.name.data,
+            category=form.category.data,
+            parent_tag_id=form.parent_tag_id.data if form.parent_tag_id.data > 0 else None,
+            color=form.color.data,
+            description=form.description.data,
+            is_active=form.is_active.data,
+            team_organization_id=team_id
+        )
+        db.session.add(tag)
+        db.session.commit()
+        
+        flash(f'Annotation tag "{tag.name}" has been added!', 'success')
+        return redirect(url_for('clip.annotation_tags'))
+    
+    return render_template('clip/annotation_tag_form.html', form=form, title='Add Annotation Tag')
+
+@bp.route('/annotation-tags/edit/<int:tag_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_annotation_tag(tag_id):
+    """Edit an annotation tag"""
+    from app.forms.annotation import AnnotationTagForm
+    team_id = get_current_team_id()
+    tag = AnnotationTag.query.filter_by(id=tag_id, team_organization_id=team_id).first_or_404()
+    
+    form = AnnotationTagForm(obj=tag)
+    
+    # Filter parent tag choices to only show tags from current team (excluding self)
+    form.parent_tag_id.choices = [(0, 'None (Root Tag)')] + [
+        (t.id, t.full_path) for t in AnnotationTag.query.filter(
+            AnnotationTag.team_organization_id == team_id,
+            AnnotationTag.is_active == True,
+            AnnotationTag.id != tag_id  # Don't allow tag to be its own parent
+        ).order_by(AnnotationTag.name).all()
+    ]
+    
+    if request.method == 'GET':
+        # Pre-populate form with existing data
+        if tag.parent_tag_id:
+            form.parent_tag_id.data = tag.parent_tag_id
+        else:
+            form.parent_tag_id.data = 0
+    
+    if form.validate_on_submit():
+        # Check if tag name already exists in this team (excluding current tag)
+        existing_tag = AnnotationTag.query.filter(
+            AnnotationTag.name == form.name.data,
+            AnnotationTag.id != tag_id,
+            AnnotationTag.team_organization_id == team_id
+        ).first()
+        
+        if existing_tag:
+            flash(f'Annotation tag "{form.name.data}" already exists!', 'danger')
+            return render_template('clip/annotation_tag_form.html', form=form, tag=tag, title='Edit Annotation Tag')
+        
+        # Check for circular parent relationship
+        parent_id = form.parent_tag_id.data if form.parent_tag_id.data > 0 else None
+        if parent_id:
+            # Check if the new parent is actually a descendant of this tag
+            potential_parent = AnnotationTag.query.get(parent_id)
+            current_check = potential_parent
+            while current_check:
+                if current_check.id == tag_id:
+                    flash('Cannot set parent tag: This would create a circular relationship!', 'danger')
+                    return render_template('clip/annotation_tag_form.html', form=form, tag=tag, title='Edit Annotation Tag')
+                current_check = current_check.parent
+        
+        tag.name = form.name.data
+        tag.category = form.category.data
+        tag.parent_tag_id = parent_id
+        tag.color = form.color.data
+        tag.description = form.description.data
+        tag.is_active = form.is_active.data
+        
+        db.session.commit()
+        
+        flash(f'Annotation tag "{tag.name}" has been updated!', 'success')
+        return redirect(url_for('clip.annotation_tags'))
+    
+    return render_template('clip/annotation_tag_form.html', form=form, tag=tag, title='Edit Annotation Tag')
+
+@bp.route('/annotation-tags/delete/<int:tag_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_annotation_tag(tag_id):
+    """Delete an annotation tag"""
+    team_id = get_current_team_id()
+    tag = AnnotationTag.query.filter_by(id=tag_id, team_organization_id=team_id).first_or_404()
+    
+    name = tag.name
+    
+    # Clear relationships with annotations
+    for annotation in tag.annotations:
+        annotation.tags.remove(tag)
+    
+    # Update child tags to have no parent
+    for child in tag.children:
+        child.parent_tag_id = None
+    
+    db.session.delete(tag)
+    db.session.commit()
+    
+    flash(f'Annotation tag "{name}" has been deleted!', 'success')
+    return redirect(url_for('clip.annotation_tags'))
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 

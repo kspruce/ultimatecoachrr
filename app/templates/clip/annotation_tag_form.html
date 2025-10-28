@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .color-preview {
+        width: 50px;
+        height: 50px;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .color-input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('clip.annotation_tags') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Annotation Tags
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Tag Name -->
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            <span class="text-danger">*</span>
+                            {{ form.name(class="form-control", placeholder="e.g., Deep Shot, Handler Movement, Zone Break") }}
+                            <div class="form-text">Give this tag a descriptive name</div>
+                            {% for error in form.name.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Category -->
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-control", placeholder="e.g., Offense, Defense, Skills, Team Play") }}
+                            <div class="form-text">Group tags by category for better organization</div>
+                            {% for error in form.category.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Parent Tag (Hierarchical) -->
+                        <div class="mb-3">
+                            {{ form.parent_tag_id.label(class="form-label") }}
+                            {{ form.parent_tag_id(class="form-select") }}
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> 
+                                Create hierarchical tags by selecting a parent. For example, "Handler Movement" could be a child of "Offense".
+                            </div>
+                            {% for error in form.parent_tag_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Color -->
+                        <div class="mb-3">
+                            {{ form.color.label(class="form-label") }}
+                            <div class="color-input-group">
+                                {{ form.color(class="form-control", type="color", id="color-picker", style="width: 80px;") }}
+                                {{ form.color(class="form-control", type="text", id="color-text", placeholder="#3F51B5") }}
+                                <div class="color-preview" id="color-preview"></div>
+                            </div>
+                            <div class="form-text">Pick a color to help identify this tag visually</div>
+                            {% for error in form.color.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=3, placeholder="Describe when to use this tag...") }}
+                            <div class="form-text">Optional: Add details about when to use this tag</div>
+                            {% for error in form.description.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Is Active -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.is_active(class="form-check-input", id="is-active-switch") }}
+                                {{ form.is_active.label(class="form-check-label", for="is-active-switch") }}
+                            </div>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i>
+                                Inactive tags won't appear in selection lists but existing uses remain
+                            </div>
+                            {% for error in form.is_active.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Preview -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Preview</h6>
+                                <p class="card-text">
+                                    This is how your tag will appear: 
+                                    <span class="badge ms-2" id="tag-preview" style="background-color: {{ form.color.data or '#3F51B5' }}; color: white;">
+                                        <span id="preview-name">{{ form.name.data or 'Tag Name' }}</span>
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Tagging Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Be Specific:</strong> Use descriptive names like "Break Side Cut" instead of just "Cut"</li>
+                        <li><strong>Use Categories:</strong> Group related tags (e.g., all defensive tags under "Defense")</li>
+                        <li><strong>Create Hierarchies:</strong> Use parent tags for broad concepts, child tags for specifics</li>
+                        <li><strong>Choose Distinct Colors:</strong> Make tags easy to identify at a glance</li>
+                        <li><strong>Common Categories:</strong> Offense, Defense, Skills, Set Plays, Team Play, Turnovers</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const colorPicker = document.getElementById('color-picker');
+        const colorText = document.getElementById('color-text');
+        const colorPreview = document.getElementById('color-preview');
+        const tagPreview = document.getElementById('tag-preview');
+        const nameInput = document.querySelector('input[name="name"]');
+        const previewName = document.getElementById('preview-name');
+        
+        // Sync color picker with text input
+        function updateColor(color) {
+            if (color && /^#[0-9A-F]{6}$/i.test(color)) {
+                colorPicker.value = color;
+                colorText.value = color;
+                colorPreview.style.backgroundColor = color;
+                tagPreview.style.backgroundColor = color;
+            }
+        }
+        
+        colorPicker.addEventListener('input', function() {
+            updateColor(this.value);
+        });
+        
+        colorText.addEventListener('input', function() {
+            updateColor(this.value);
+        });
+        
+        // Update preview name
+        nameInput.addEventListener('input', function() {
+            previewName.textContent = this.value || 'Tag Name';
+        });
+        
+        // Initialize
+        updateColor(colorText.value || '#3F51B5');
+    });
+</script>
+{% endblock %}

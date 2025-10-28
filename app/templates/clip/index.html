@@ -9,14 +9,27 @@
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 {% if current_user.is_admin %}
-                    <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">Add Clip</a>
-                    <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-primary">Manage Tags</a>
+                    <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Clip
+                    </a>
+                    <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Manage Tags</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('clip.tags') }}">
+                            <i class="bi bi-tag"></i> Clip Tags
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('clip.annotation_tags') }}">
+                            <i class="bi bi-tags"></i> Annotation Tags
+                        </a></li>
+                    </ul>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Filter section remains unchanged -->
+    <!-- Filter section -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
@@ -39,8 +52,10 @@
                                 {{ form.player_id(class="form-select") }}
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label"> </label>
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-funnel"></i> Filter
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -73,8 +88,9 @@
                         
                         {% if clip.tag_list %}
                         <div class="mb-2">
+                            <strong>Tags:</strong>
                             {% for tag in clip.tag_list %}
-                            <span class="badge bg-info">{{ tag.name }}</span>
+                            <span class="badge" style="background-color: {{ tag.color }}; color: white;">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                         {% endif %}
@@ -89,13 +105,26 @@
                             {% endif %}
                         </p>
                         {% endif %}
+
+                        <!-- Show annotation count if exists -->
+                        {% if clip.annotation_count > 0 %}
+                        <p class="text-muted small">
+                            <i class="bi bi-chat-left-text"></i> {{ clip.annotation_count }} annotation(s)
+                        </p>
+                        {% endif %}
                     </div>
                     <div class="card-footer">
                         <div class="btn-group w-100">
-                            <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-play-circle"></i> View
+                            </a>
                             {% if current_user.is_admin %}
-                                <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">Delete</button>
+                                <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
                             {% endif %}
                         </div>
                         
@@ -112,6 +141,7 @@
                                             <p>Are you sure you want to delete the clip "{{ clip.title }}"?</p>
                                             {% if clip.annotations|length > 0 %}
                                             <div class="alert alert-warning">
+                                                <i class="bi bi-exclamation-triangle"></i>
                                                 This clip has {{ clip.annotations|length }} annotations that will also be deleted.
                                             </div>
                                             {% endif %}
