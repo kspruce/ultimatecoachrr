@@ -275,7 +275,7 @@ def delete_clip(clip_id):
     flash(f'Clip "{title}" and all its annotations have been deleted!', 'success')
     return redirect(url_for('clip.index'))
 
-@bp.route('/clips/<int:clip_id>/segments', methods=['GET'])
+@bp.route('/<int:clip_id>/segments', methods=['GET'])
 @login_required
 def get_segments(clip_id):
     clip = _get_clip_or_404(clip_id)
@@ -290,7 +290,7 @@ def get_segments(clip_id):
         'end_time': s.end_time
     } for s in segments])
 
-@bp.route('/clips/<int:clip_id>/segments/<int:segment_id>', methods=['DELETE'])
+@bp.route('/<int:clip_id>/segments/<int:segment_id>', methods=['DELETE'])
 @login_required
 def delete_segment(clip_id, segment_id):
     # Optional: restrict to admins/coaches
@@ -301,7 +301,7 @@ def delete_segment(clip_id, segment_id):
     db.session.commit()
     return ('', 204)
 
-@bp.route('/clips/<int:clip_id>/segments/<string:action>', methods=['POST'])
+@bp.route('/<int:clip_id>/segments/<string:action>', methods=['POST'])
 @login_required
 def mark_segment(clip_id, action):
     clip = _get_clip_or_404(clip_id)

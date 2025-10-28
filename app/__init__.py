@@ -161,16 +161,23 @@ def create_app(config_class=Config):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
-    from app.routes.off_season import bp as off_season_bp
-    app.register_blueprint(off_season_bp)
-
     # Import models so Alembic/Flask sees them for migrations and shell
+    # IMPORTANT: Include ClipPointSegment so metadata includes the table.
     from app.models import (
-        User, Player, Tournament, Game, Point, LineUp,
-        Event, Pull, Clip, ClipTag, ClipAnnotation,
+        # Core/team
+        User, Player, TeamOrganization,
+        # Tournament/game/point
+        Tournament, Game, Point, LineUp,
+        Event, Pull, 
+        # Video/annotation
+        Clip, ClipTag, ClipAnnotation, ClipPointSegment, 
+        # Sessions/drills
         SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
+        # Fitness
         FitnessMetric, FitnessRecord,
+        # Gameday
         LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+        # Add more here if you add new models later
     )
 
     # Create upload directory structure
@@ -187,11 +194,25 @@ def create_app(config_class=Config):
         app.logger.error(f"Storage initialization error: {str(e)}")
         raise
 
-    # Create database tables (useful for dev; in prod rely on Alembic migrations)
+    # App context: register context processors and optionally create tables
     with app.app_context():
-        db.create_all()
         from app.context_processors import team_info_processor
         app.context_processor(team_info_processor)
+
+        # Only run create_all if explicitly enabled (e.g., local dev).
+        # In production and during migrations, rely on Alembic (flask db upgrade / db_manager.py upgrade).
+        if app.config.get('RUN_CREATE_ALL', False):
+            # Ensure all models are imported before create_all
+            from app.models import (
+                User, Player, TeamOrganization,
+                Tournament, Game, Point, LineUp,
+                Event, Pull,
+                Clip, ClipTag, ClipAnnotation, ClipPointSegment,
+                SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
+                FitnessMetric, FitnessRecord,
+                LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+            )
+            db.create_all()
 
     # Conditionally enable Discord integration (default False)
     # Set DISCORD_ENABLED=True in env or config to turn it on.
