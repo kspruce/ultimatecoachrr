@@ -76,6 +76,34 @@
         font-weight: bold;
         z-index: 10;
     }
+
+    /* Keep sidebar visible while scrolling on desktops/laptops */
+    @media (min-width: 768px) {
+        .filters-sticky {
+            position: sticky;
+            top: 1rem;
+        }
+    }
+
+    /* Tweak tag browser height on smaller screens */
+    @media (max-width: 576px) {
+        .tag-badge {
+            font-size: 0.8rem;
+        }
+        .tag-stat-badge {
+            font-size: 0.7rem;
+        }
+        .tag-browser-body {
+            max-height: 300px; /* smaller on phones */
+            overflow-y: auto;
+        }
+    }
+
+    /* Default tag browser height for larger screens */
+    .tag-browser-body {
+        max-height: 500px;
+        overflow-y: auto;
+    }
 </style>
 {% endblock %}
 
@@ -96,10 +124,16 @@
                     <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Add Clip
                     </a>
-                    <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-primary">
+                    <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-primary d-none d-sm-inline-block">
                         <i class="bi bi-tags"></i> Manage Tags
                     </a>
                 {% endif %}
+                <!-- Mobile toggle for Advanced Filters -->
+                <button class="btn btn-outline-secondary d-inline d-md-none" 
+                        data-bs-toggle="collapse" data-bs-target="#filterCollapse" 
+                        aria-expanded="false" aria-controls="filterCollapse">
+                    <i class="bi bi-funnel"></i> Filters
+                </button>
             </div>
         </div>
     </div>
@@ -107,124 +141,133 @@
     <div class="row">
         <!-- Sidebar with tag browser and filters -->
         <div class="col-md-3">
-            <!-- Active Filters Display -->
-            {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id or active_filters.video_source or active_filters.is_featured or active_filters.tag_category %}
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">Active Filters</h6>
-                    <a href="{{ url_for('clip.index') }}" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> Clear All
-                    </a>
+            <div class="filters-sticky">
+                <!-- Active Filters Display -->
+                {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id or active_filters.video_source or active_filters.is_featured or active_filters.tag_category %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Active Filters</h6>
+                        <a href="{{ url_for('clip.index') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear All
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if active_filters.tag_ids %}
+                            {% for tag_id in active_filters.tag_ids %}
+                            <span class="filter-chip">
+                                Tag #{{ tag_id }}
+                                <span class="remove-filter" onclick="removeFilter('tags', {{ tag_id }})">×</span>
+                            </span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if active_filters.tag_category %}
+                            <span class="filter-chip">
+                                {{ active_filters.tag_category }}
+                                <span class="remove-filter" onclick="removeFilter('tag_category', null)">×</span>
+                            </span>
+                        {% endif %}
+                        {% if active_filters.video_source %}
+                            <span class="filter-chip">
+                                {{ active_filters.video_source|title }}
+                                <span class="remove-filter" onclick="removeFilter('video_source', null)">×</span>
+                            </span>
+                        {% endif %}
+                        {% if active_filters.is_featured %}
+                            <span class="filter-chip">
+                                Featured Only
+                                <span class="remove-filter" onclick="removeFilter('is_featured', null)">×</span>
+                            </span>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="card-body">
-                    {% if active_filters.tag_ids %}
-                        {% for tag_id in active_filters.tag_ids %}
-                        <span class="filter-chip">
-                            Tag #{{ tag_id }}
-                            <span class="remove-filter" onclick="removeFilter('tags', {{ tag_id }})">×</span>
-                        </span>
-                        {% endfor %}
-                    {% endif %}
-                    {% if active_filters.tag_category %}
-                        <span class="filter-chip">
-                            {{ active_filters.tag_category }}
-                            <span class="remove-filter" onclick="removeFilter('tag_category', null)">×</span>
-                        </span>
-                    {% endif %}
-                    {% if active_filters.video_source %}
-                        <span class="filter-chip">
-                            {{ active_filters.video_source|title }}
-                            <span class="remove-filter" onclick="removeFilter('video_source', null)">×</span>
-                        </span>
-                    {% endif %}
-                    {% if active_filters.is_featured %}
-                        <span class="filter-chip">
-                            Featured Only
-                            <span class="remove-filter" onclick="removeFilter('is_featured', null)">×</span>
-                        </span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- Tag Browser -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-tags-fill"></i> Browse by Tag</h6>
-                </div>
-                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                    {% if tag_stats %}
-                        {% set current_category = namespace(value='') %}
-                        {% for tag_id, tag_name, category, color, clip_count in tag_stats %}
-                            {% if category != current_category.value %}
-                                {% set current_category.value = category %}
-                                <div class="tag-category-header">{{ category or 'Uncategorized' }}</div>
-                            {% endif %}
-                            <div class="tag-stat-item" onclick="filterByTag({{ tag_id }})">
-                                <span>
-                                    <span class="tag-badge" style="background-color: {{ color }};">
-                                        {{ tag_name }}
+                <!-- Tag Browser -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-tags-fill"></i> Browse by Tag</h6>
+                    </div>
+                    <div class="card-body tag-browser-body">
+                        {% if tag_stats %}
+                            {% set current_category = namespace(value='') %}
+                            {% for tag_id, tag_name, category, color, clip_count in tag_stats %}
+                                {% if category != current_category.value %}
+                                    {% set current_category.value = category %}
+                                    <div class="tag-category-header">{{ category or 'Uncategorized' }}</div>
+                                {% endif %}
+                                <div class="tag-stat-item" onclick="filterByTag({{ tag_id }})">
+                                    <span>
+                                        <span class="tag-badge" style="background-color: {{ color }};">
+                                            {{ tag_name }}
+                                        </span>
                                     </span>
-                                </span>
-                                <span class="badge bg-secondary tag-stat-badge">{{ clip_count }}</span>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-muted text-center">No tags yet</p>
-                    {% endif %}
+                                    <span class="badge bg-secondary tag-stat-badge">{{ clip_count }}</span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No tags yet</p>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
 
-            <!-- Advanced Filters -->
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-funnel"></i> Advanced Filters</h6>
-                </div>
-                <div class="card-body">
-                    <form method="get" action="{{ url_for('clip.index') }}" id="filterForm">
-                        <div class="mb-3">
-                            {{ form.game_id.label(class="form-label small") }}
-                            {{ form.game_id(class="form-select form-select-sm") }}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.tags.label(class="form-label small") }}
-                            {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
-                            <div class="form-text">Select multiple tags</div>
-                        </div>
+                <!-- Advanced Filters (collapsible) -->
+                <div class="card">
+                    <div class="card-header p-0">
+                        <button class="btn btn-link text-decoration-none w-100 d-flex justify-content-between align-items-center px-3 py-2"
+                                type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse"
+                                aria-expanded="true" aria-controls="filterCollapse">
+                            <span class="mb-0"><i class="bi bi-funnel"></i> Advanced Filters</span>
+                            <i id="filterCollapseIcon" class="bi bi-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div id="filterCollapse" class="collapse show">
+                        <div class="card-body">
+                            <form method="get" action="{{ url_for('clip.index') }}" id="filterForm">
+                                <div class="mb-3">
+                                    {{ form.game_id.label(class="form-label small") }}
+                                    {{ form.game_id(class="form-select form-select-sm") }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    {{ form.tags.label(class="form-label small") }}
+                                    {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
+                                    <div class="form-text">Select multiple tags</div>
+                                </div>
 
-                        <div class="mb-3">
-                            {{ form.tag_category.label(class="form-label small") }}
-                            {{ form.tag_category(class="form-select form-select-sm") }}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.player_id.label(class="form-label small") }}
-                            {{ form.player_id(class="form-select form-select-sm") }}
-                        </div>
+                                <div class="mb-3">
+                                    {{ form.tag_category.label(class="form-label small") }}
+                                    {{ form.tag_category(class="form-select form-select-sm") }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    {{ form.player_id.label(class="form-label small") }}
+                                    {{ form.player_id(class="form-select form-select-sm") }}
+                                </div>
 
-                        <div class="mb-3">
-                            {{ form.video_source.label(class="form-label small") }}
-                            {{ form.video_source(class="form-select form-select-sm") }}
-                        </div>
+                                <div class="mb-3">
+                                    {{ form.video_source.label(class="form-label small") }}
+                                    {{ form.video_source(class="form-select form-select-sm") }}
+                                </div>
 
-                        <div class="mb-3">
-                            {{ form.is_featured.label(class="form-label small") }}
-                            {{ form.is_featured(class="form-select form-select-sm") }}
-                        </div>
+                                <div class="mb-3">
+                                    {{ form.is_featured.label(class="form-label small") }}
+                                    {{ form.is_featured(class="form-select form-select-sm") }}
+                                </div>
 
-                        <div class="mb-3">
-                            {{ form.sort_by.label(class="form-label small") }}
-                            {{ form.sort_by(class="form-select form-select-sm") }}
+                                <div class="mb-3">
+                                    {{ form.sort_by.label(class="form-label small") }}
+                                    {{ form.sort_by(class="form-select form-select-sm") }}
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-search"></i> Apply Filters
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bi bi-search"></i> Apply Filters
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                </div>        
             </div>
         </div>
 
@@ -373,12 +416,60 @@
 <script>
     $(document).ready(function() {
         // Initialize Select2 for multi-tag selection
+        initTagsSelect2();
+
+        // Collapse state persistence for Advanced Filters
+        const collapseEl = document.getElementById('filterCollapse');
+        const iconEl = document.getElementById('filterCollapseIcon');
+
+        // Respect stored state
+        const key = 'clipFiltersCollapsed';
+        const stored = localStorage.getItem(key);
+        if (stored === 'true') {
+            collapseEl.classList.remove('show');
+        } else {
+            collapseEl.classList.add('show');
+        }
+
+        // Initialize Bootstrap Collapse without toggling immediately
+        const bsCollapse = new bootstrap.Collapse(collapseEl, { toggle: false });
+
+        const updateIcon = () => {
+            const isShown = collapseEl.classList.contains('show');
+            iconEl.classList.toggle('bi-chevron-up', isShown);
+            iconEl.classList.toggle('bi-chevron-down', !isShown);
+        };
+        updateIcon();
+
+        collapseEl.addEventListener('shown.bs.collapse', function() {
+            localStorage.setItem(key, 'false');
+            updateIcon();
+            // Re-init Select2 to ensure width is correct after becoming visible
+            reinitTagsSelect2();
+        });
+
+        collapseEl.addEventListener('hidden.bs.collapse', function() {
+            localStorage.setItem(key, 'true');
+            updateIcon();
+        });
+    });
+
+    function initTagsSelect2() {
         $('#tags-select').select2({
             theme: 'bootstrap-5',
             placeholder: 'Select tags',
-            allowClear: true
+            allowClear: true,
+            width: '100%'
         });
-    });
+    }
+
+    function reinitTagsSelect2() {
+        const $el = $('#tags-select');
+        if ($el.hasClass('select2-hidden-accessible')) {
+            $el.select2('destroy');
+        }
+        initTagsSelect2();
+    }
 
     function filterByTag(tagId) {
         // Get current URL parameters
