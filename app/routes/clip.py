@@ -605,6 +605,152 @@ def tags():
     return render_template('clip/tags.html', 
                          tags_by_category=tags_by_category)
 
+@bp.route('/annotation-tags/bulk_create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def bulk_create_annotation_tags():
+    """Bulk create common annotation tags for video analysis"""
+    team_id = get_current_team_id()
+
+    # Define common annotation tag structure
+    # Each top-level key is a category; we create a parent tag with the same name,
+    # then create child tags under it. Colors are just reasonable defaults.
+    common = {
+        'Offense': {
+            'color': '#1976D2',
+            'children': [
+                ('Handler Movement', '#1565C0'),
+                ('Reset', '#1E88E5'),
+                ('Break Side', '#42A5F5'),
+                ('Deep Shot', '#64B5F6'),
+                ('Give-and-Go', '#90CAF9'),
+                ('Endzone Offense', '#0D47A1'),
+            ]
+        },
+        'Defense': {
+            'color': '#D32F2F',
+            'children': [
+                ('Force Flick', '#C62828'),
+                ('Force Backhand', '#B71C1C'),
+                ('No Around', '#EF5350'),
+                ('Poach', '#E53935'),
+                ('Help Defense', '#F44336'),
+                ('Zone Defense', '#8E24AA'),
+            ]
+        },
+        'Throws': {
+            'color': '#388E3C',
+            'children': [
+                ('Backhand', '#2E7D32'),
+                ('Forehand', '#43A047'),
+                ('Hammer', '#66BB6A'),
+                ('Scoober', '#81C784'),
+                ('High Release', '#A5D6A7'),
+                ('Inside', '#4CAF50'),
+                ('Around', '#66BB6A'),
+            ]
+        },
+        'Cuts': {
+            'color': '#FFA000',
+            'children': [
+                ('Under', '#FB8C00'),
+                ('Deep', '#F57C00'),
+                ('Break', '#FFB300'),
+                ('Continuation', '#FFCA28'),
+                ('Upline', '#FF9800'),
+            ]
+        },
+        'Turnovers': {
+            'color': '#5D4037',
+            'children': [
+                ('Throwaway', '#6D4C41'),
+                ('Drop', '#8D6E63'),
+                ('Block', '#4E342E'),
+                ('Stall Out', '#795548'),
+                ('Misc Penalty', '#A1887F'),
+            ]
+        },
+        'Outcomes': {
+            'color': '#0097A7',
+            'children': [
+                ('Goal', '#00838F'),
+                ('Assist', '#00ACC1'),
+                ('Hockey Assist', '#26C6DA'),
+                ('Break Point', '#00BCD4'),
+                ('Hold', '#4DD0E1'),
+            ]
+        },
+        'Review': {
+            'color': '#7B1FA2',
+            'children': [
+                ('Good Example', '#6A1B9A'),
+                ('Learning Opportunity', '#8E24AA'),
+                ('Key Moment', '#AB47BC'),
+                ('Tactical Breakdown', '#BA68C8'),
+                ('Common Mistake', '#CE93D8'),
+            ]
+        }
+    }
+
+    if request.method == 'POST':
+        created_count = 0
+        skipped_count = 0
+
+        def get_or_create_parent(name, category, color):
+            existing = AnnotationTag.query.filter_by(
+                name=name, team_organization_id=team_id
+            ).first()
+            if existing:
+                return existing, False
+            obj = AnnotationTag(
+                name=name,
+                category=category,
+                parent_tag_id=None,
+                color=color,
+                description=None,
+                is_active=True,
+                team_organization_id=team_id
+            )
+            db.session.add(obj)
+            return obj, True
+
+        def get_or_create_child(name, category, color, parent_id):
+            existing = AnnotationTag.query.filter_by(
+                name=name, team_organization_id=team_id
+            ).first()
+            if existing:
+                return existing, False
+            obj = AnnotationTag(
+                name=name,
+                category=category,
+                parent_tag_id=parent_id,
+                color=color,
+                description=None,
+                is_active=True,
+                team_organization_id=team_id
+            )
+            db.session.add(obj)
+            return obj, True
+
+        # Create parents and children
+        for category, conf in common.items():
+            parent, parent_created = get_or_create_parent(category, category, conf['color'])
+            created_count += 1 if parent_created else 0
+            skipped_count += 0 if parent_created else 1
+
+            for child_name, child_color in conf['children']:
+                _, child_created = get_or_create_child(child_name, category, child_color, parent.id)
+                created_count += 1 if child_created else 0
+                skipped_count += 0 if child_created else 1
+
+        db.session.commit()
+
+        flash(f'Created {created_count} annotation tags. Skipped {skipped_count} existing.', 'success')
+        return redirect(url_for('clip.annotation_tags'))
+
+    # GET => show preview page
+    return render_template('clip/bulk_create_annotation_tags.html', common=common)
+
 
 @bp.route('/tags/bulk_create', methods=['GET', 'POST'])
 @login_required

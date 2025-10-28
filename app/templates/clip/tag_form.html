@@ -19,9 +19,17 @@
             <h1>{{ title }}</h1>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('clip.tags') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Tags
-            </a>
+            <div class="btn-group">
+                <a href="{{ url_for('clip.tags') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Clip Tags
+                </a>
+                <a href="{{ url_for('clip.annotation_tags') }}" class="btn btn-outline-primary" title="Manage Annotation Tags">
+                    <i class="bi bi-tags"></i> Annotation Tags
+                </a>
+                <a href="{{ url_for('clip.bulk_create_annotation_tags') }}" class="btn btn-outline-primary" title="Quick Setup Annotation Tags">
+                    <i class="bi bi-lightning-charge"></i> Quick Setup (Annotation)
+                </a>
+            </div>
         </div>
     </div>
 

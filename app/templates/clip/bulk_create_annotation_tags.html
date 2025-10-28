@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-lightning-charge"></i> Quick Setup: Annotation Tags</h1>
+            <p class="lead">Create a structured set of annotation tags for consistent film analysis</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('clip.annotation_tags') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Annotation Tags
+                </a>
+                <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-tags"></i> Clip Tags
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">This will create the following categories and children:</h5>
+
+            <div class="row mt-4">
+                {% for category, conf in common.items() %}
+                <div class="col-md-6 mb-4">
+                    <h6>
+                        <span class="badge" style="background-color: {{ conf.color }}; color: #fff;">
+                            {{ category }}
+                        </span>
+                    </h6>
+                    <ul class="mb-0">
+                        {% for child_name, child_color in conf.children %}
+                        <li>
+                            <span class="badge" style="background-color: {{ child_color }}; color: #fff;">
+                                {{ child_name }}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle"></i>
+                <strong>Note:</strong> Tags that already exist (by name) will be skipped. This process only creates new tags.
+            </div>
+
+            <form method="post" class="mt-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-lightning-charge"></i> Create Annotation Tags
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -32,10 +32,16 @@
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 <a href="{{ url_for('clip.add_tag') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Tag
+                    <i class="bi bi-plus-circle"></i> Add Clip Tag
                 </a>
                 <a href="{{ url_for('clip.bulk_create_tags') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-lightning-charge"></i> Quick Setup
+                    <i class="bi bi-lightning-charge"></i> Quick Setup (Clip)
+                </a>
+                <a href="{{ url_for('clip.annotation_tags') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-tags"></i> Annotation Tags
+                </a>
+                <a href="{{ url_for('clip.bulk_create_annotation_tags') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-lightning-charge"></i> Quick Setup (Annotation)
                 </a>
                 <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Clips
@@ -144,7 +150,7 @@
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i>
             No tags found. <a href="{{ url_for('clip.add_tag') }}">Add a tag</a> or use 
-            <a href="{{ url_for('clip.bulk_create_tags') }}">Quick Setup</a> to create common tags automatically.
+            <a href="{{ url_for('clip.bulk_create_tags') }}">Quick Setup (Clip)</a>.
         </div>
     {% endif %}
 </div>
