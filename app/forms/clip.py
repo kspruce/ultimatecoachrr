@@ -4,6 +4,8 @@ from wtforms.validators import DataRequired, Optional, URL, NumberRange
 from app.models.game import Game
 from app.models.player import Player
 from app.models.clip import ClipTag
+from flask_login import current_user
+from flask import session
 
 
 class ClipForm(FlaskForm):
@@ -28,23 +30,51 @@ class ClipForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(ClipForm, self).__init__(*args, **kwargs)
-        # Populate game choices
-        self.game_id.choices = [(0, 'Select Game')] + [
-            (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
-            for g in Game.query.order_by(Game.date.desc()).all()
-        ]
+        
+        # Get current team ID
+        if current_user.is_authenticated:
+            if current_user.is_admin:
+                team_id = session.get('current_team_id')
+            else:
+                team_id = current_user.team_organization_id
+        else:
+            team_id = None
+        
+        # Populate game choices - FILTERED BY TEAM
+        if team_id:
+            self.game_id.choices = [(0, 'Select Game')] + [
+                (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
+                for g in Game.query.filter_by(team_organization_id=team_id).order_by(Game.date.desc()).all()
+            ]
+        else:
+            self.game_id.choices = [(0, 'Select Game')]
+        
         # Point choices will be populated via AJAX when a game is selected
         self.point_id.choices = [(0, 'Select Point')]
-        # Populate tag choices
-        self.tags.choices = [(t.id, t.name) for t in ClipTag.query.order_by(ClipTag.name).all()]
-        # Populate player choices
-        self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
-                               for p in Player.query.filter_by(active=True).order_by(Player.name).all()]
+        
+        # Populate tag choices - FILTERED BY TEAM
+        if team_id:
+            self.tags.choices = [(t.id, t.name) for t in ClipTag.query.filter_by(
+                team_organization_id=team_id
+            ).order_by(ClipTag.name).all()]
+        else:
+            self.tags.choices = []
+        
+        # Populate player choices - FILTERED BY TEAM
+        if team_id:
+            self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
+                                   for p in Player.query.filter_by(
+                                       team_organization_id=team_id,
+                                       active=True
+                                   ).order_by(Player.name).all()]
+        else:
+            self.players.choices = []
 
 
 class ClipTagForm(FlaskForm):
     name = StringField('Tag Name', validators=[DataRequired()])
     submit = SubmitField('Save Tag')
+
 
 class ClipFilterForm(FlaskForm):
     game_id = SelectField('Game', coerce=int, validators=[Optional()])
@@ -54,13 +84,39 @@ class ClipFilterForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(ClipFilterForm, self).__init__(*args, **kwargs)
-        # Populate game choices
-        self.game_id.choices = [(0, 'All Games')] + [
-            (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
-            for g in Game.query.order_by(Game.date.desc()).all()
-        ]
-        # Populate tag choices
-        self.tag_id.choices = [(0, 'All Tags')] + [(t.id, t.name) for t in ClipTag.query.order_by(ClipTag.name).all()]
-        # Populate player choices
-        self.player_id.choices = [(0, 'All Players')] + [(p.id, f"{p.name} (#{p.jersey_number})") 
-                                for p in Player.query.filter_by(active=True).order_by(Player.name).all()]
+        
+        # Get current team ID
+        if current_user.is_authenticated:
+            if current_user.is_admin:
+                team_id = session.get('current_team_id')
+            else:
+                team_id = current_user.team_organization_id
+        else:
+            team_id = None
+        
+        # Populate game choices - FILTERED BY TEAM
+        if team_id:
+            self.game_id.choices = [(0, 'All Games')] + [
+                (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
+                for g in Game.query.filter_by(team_organization_id=team_id).order_by(Game.date.desc()).all()
+            ]
+        else:
+            self.game_id.choices = [(0, 'All Games')]
+        
+        # Populate tag choices - FILTERED BY TEAM
+        if team_id:
+            self.tag_id.choices = [(0, 'All Tags')] + [(t.id, t.name) for t in ClipTag.query.filter_by(
+                team_organization_id=team_id
+            ).order_by(ClipTag.name).all()]
+        else:
+            self.tag_id.choices = [(0, 'All Tags')]
+        
+        # Populate player choices - FILTERED BY TEAM
+        if team_id:
+            self.player_id.choices = [(0, 'All Players')] + [(p.id, f"{p.name} (#{p.jersey_number})") 
+                                    for p in Player.query.filter_by(
+                                        team_organization_id=team_id,
+                                        active=True
+                                    ).order_by(Player.name).all()]
+        else:
+            self.player_id.choices = [(0, 'All Players')]
