@@ -34,12 +34,20 @@ def get_current_team_id():
 @bp.route('/')
 @login_required
 def index():
+    from sqlalchemy import func  # ensure func is always available
+    from app.models.clip import clip_tag_relation  # needed for tag stats
+
     form = ClipFilterForm()
     delete_form = FlaskForm()
 
     # Get filter parameters
     game_id = request.args.get('game_id', type=int)
     tag_ids = request.args.getlist('tags', type=int)
+    # Support legacy ?tag_id=... links
+    legacy_tag_id = request.args.get('tag_id', type=int)
+    if legacy_tag_id and legacy_tag_id not in tag_ids:
+        tag_ids.append(legacy_tag_id)
+
     tag_category = request.args.get('tag_category', type=str)
     player_id = request.args.get('player_id', type=int)
     video_source = request.args.get('video_source', type=str)
@@ -55,22 +63,22 @@ def index():
     # Apply filters
     if game_id and game_id > 0:
         query = query.filter(Clip.game_id == game_id)
-    
+
     # Multi-tag filter (AND logic - clip must have ALL selected tags)
     if tag_ids:
         for tag_id in tag_ids:
             query = query.filter(Clip.tags.any(ClipTag.id == tag_id))
-    
+
     # Tag category filter
     if tag_category:
         query = query.filter(Clip.tags.any(ClipTag.category == tag_category))
-    
+
     if player_id and player_id > 0:
         query = query.filter(Clip.players.any(Player.id == player_id))
-    
+
     if video_source:
         query = query.filter(Clip.video_source == video_source)
-    
+
     if is_featured == '1':
         query = query.filter(Clip.is_featured == True)
 
@@ -84,52 +92,51 @@ def index():
     elif sort_by == 'views_desc':
         query = query.order_by(Clip.view_count.desc())
     elif sort_by == 'annotations_desc':
-        # Sort by annotation count - requires a subquery or join
-        from sqlalchemy import func
-        from app.models.annotation import ClipAnnotation
-        query = query.outerjoin(ClipAnnotation).group_by(Clip.id).order_by(
-            func.count(ClipAnnotation.id).desc()
-        )
+        # Sort by annotation count
+        query = (query
+                 .outerjoin(ClipAnnotation)
+                 .group_by(Clip.id)
+                 .order_by(func.count(ClipAnnotation.id).desc()))
 
     # Get clips
     clips = query.all()
-    
-    # Get tag statistics for sidebar
-    tag_stats = db.session.query(
-        ClipTag.id,
-        ClipTag.name,
-        ClipTag.category,
-        ClipTag.color,
-        func.count(clip_tag_relation.c.clip_id).label('clip_count')
-    ).join(
-        clip_tag_relation, ClipTag.id == clip_tag_relation.c.tag_id
-    ).join(
-        Clip, Clip.id == clip_tag_relation.c.clip_id
-    ).filter(
-        ClipTag.team_organization_id == team_id,
-        Clip.team_organization_id == team_id,
-        ClipTag.is_active == True
-    ).group_by(
-        ClipTag.id
-    ).order_by(
-        ClipTag.category,
-        func.count(clip_tag_relation.c.clip_id).desc()
-    ).all()
 
-    return render_template('clip/index.html', 
-                         clips=clips, 
-                         form=form, 
-                         delete_form=delete_form,
-                         tag_stats=tag_stats,
-                         active_filters={
-                             'game_id': game_id,
-                             'tag_ids': tag_ids,
-                             'tag_category': tag_category,
-                             'player_id': player_id,
-                             'video_source': video_source,
-                             'is_featured': is_featured,
-                             'sort_by': sort_by
-                         })
+    # Get tag statistics for sidebar
+    tag_stats = (db.session.query(
+                    ClipTag.id,
+                    ClipTag.name,
+                    ClipTag.category,
+                    ClipTag.color,
+                    func.count(clip_tag_relation.c.clip_id).label('clip_count')
+                 )
+                 .join(clip_tag_relation, ClipTag.id == clip_tag_relation.c.tag_id)
+                 .join(Clip, Clip.id == clip_tag_relation.c.clip_id)
+                 .filter(
+                    ClipTag.team_organization_id == team_id,
+                    Clip.team_organization_id == team_id,
+                    ClipTag.is_active == True
+                 )
+                 .group_by(ClipTag.id)
+                 .order_by(ClipTag.category, func.count(clip_tag_relation.c.clip_id).desc())
+                 .all())
+
+    return render_template(
+        'clip/index.html',
+        clips=clips,
+        form=form,
+        delete_form=delete_form,
+        tag_stats=tag_stats,
+        active_filters={
+            'game_id': game_id,
+            'tag_ids': tag_ids,
+            'tag_category': tag_category,
+            'player_id': player_id,
+            'video_source': video_source,
+            'is_featured': is_featured,
+            'sort_by': sort_by
+        }
+    )
+
 
 @bp.route('/game/<int:game_id>')
 @login_required
