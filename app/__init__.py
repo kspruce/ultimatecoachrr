@@ -161,24 +161,9 @@ def create_app(config_class=Config):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
-    # Import models so Alembic/Flask sees them for migrations and shell
-    # IMPORTANT: Include ClipPointSegment so metadata includes the table.
-    from app.models import (
-        # Core/team
-        User, Player, TeamOrganization,
-        # Tournament/game/point
-        Tournament, Game, Point, LineUp,
-        Event, Pull, 
-        # Video/annotation
-        Clip, ClipTag, ClipAnnotation, ClipPointSegment, 
-        # Sessions/drills
-        SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-        # Fitness
-        FitnessMetric, FitnessRecord,
-        # Gameday
-        LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
-        # Add more here if you add new models later
-    )
+    # Import models package so ALL models are registered (avoids mapper order issues).
+    # This ensures every model from the previous version (and future ones) are included.
+    import app.models  # IMPORTANT: app/models/__init__.py should import/export all model classes.
 
     # Create upload directory structure
     try:
@@ -200,18 +185,9 @@ def create_app(config_class=Config):
         app.context_processor(team_info_processor)
 
         # Only run create_all if explicitly enabled (e.g., local dev).
-        # In production and during migrations, rely on Alembic (flask db upgrade / db_manager.py upgrade).
+        # In production and during migrations, rely on Alembic.
         if app.config.get('RUN_CREATE_ALL', False):
-            # Ensure all models are imported before create_all
-            from app.models import (
-                User, Player, TeamOrganization,
-                Tournament, Game, Point, LineUp,
-                Event, Pull,
-                Clip, ClipTag, ClipAnnotation, ClipPointSegment,
-                SessionPlan, SessionComponent, SavedDrill, Attendance, CuttingSkill,
-                FitnessMetric, FitnessRecord,
-                LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
-            )
+            import app.models  # ensure all models are loaded into metadata
             db.create_all()
 
     # Conditionally enable Discord integration (default False)
