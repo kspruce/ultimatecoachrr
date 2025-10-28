@@ -145,6 +145,9 @@ def create_app(config_class=Config):
 
     from app.routes.theory import bp as theory_bp
     app.register_blueprint(theory_bp)
+    
+    from app.routes.off_season import bp as off_season_bp
+    app.register_blueprint(off_season_bp)
 
     from app.routes.cutting_skill import bp as cutting_skill_bp
     app.register_blueprint(cutting_skill_bp)
