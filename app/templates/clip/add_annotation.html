@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Add Annotation</h1>
+            {% if clip %}
+                <p class="text-muted mb-0">
+                    Clip: <strong>{{ clip.title }}</strong>
+                    {% if clip.game %}
+                        | vs {{ clip.game.opponent }}{% if clip.game.date %} ({{ clip.game.date.strftime('%Y-%m-%d') }}){% endif %}
+                    {% endif %}
+                    {% if clip.point %}
+                        | Point {{ clip.point.point_number }}
+                    {% endif %}
+                </p>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            {% if clip %}
+            <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-secondary">Back to Clip</a>
+            {% else %}
+            <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">Back to Library</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- Title (optional) -->
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Timestamp -->
+                        <div class="mb-3">
+                            {{ form.timestamp.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.timestamp(class="form-control", id="timestamp-seconds") }}
+                                <button class="btn btn-outline-secondary" type="button" id="btn-copy-current">Use Current Time</button>
+                            </div>
+                            <div class="form-text form-help">Time in seconds where this annotation occurs</div>
+                            {% for error in form.timestamp.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Event type -->
+                        <div class="mb-3">
+                            {{ form.event_type.label(class="form-label") }}
+                            {{ form.event_type(class="form-select") }}
+                            {% for error in form.event_type.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Score -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.our_score.label(class="form-label") }}
+                                {{ form.our_score(class="form-control") }}
+                                {% for error in form.our_score.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.their_score.label(class="form-label") }}
+                                {{ form.their_score(class="form-control") }}
+                                {% for error in form.their_score.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Tactics -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.offense.label(class="form-label") }}
+                                {{ form.offense(class="form-select") }}
+                                {% for error in form.offense.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.defense.label(class="form-label") }}
+                                {{ form.defense(class="form-select") }}
+                                {% for error in form.defense.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=3) }}
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="mb-3">
+                            {{ form.tags.label(class="form-label") }}
+                            {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
+                            <div class="form-text form-help">Select tags to categorize this annotation</div>
+                            {% for error in form.tags.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Players -->
+                        <div class="mb-3">
+                            {{ form.players.label(class="form-label") }}
+                            {{ form.players(class="form-select", id="players-select", multiple="multiple") }}
+                            <div class="form-text form-help">Select players involved in this moment</div>
+                            {% for error in form.players.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Key moment + Visibility -->
+                        <div class="row mb-3">
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="form-check">
+                                    {{ form.is_key_moment(class="form-check-input", id="is-key") }}
+                                    <label class="form-check-label" for="is-key">
+                                        {{ form.is_key_moment.label.text }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.visibility.label(class="form-label") }}
+                                {{ form.visibility(class="form-select") }}
+                                {% for error in form.visibility.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if clip and clip.embed_url %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    Reference Video
+                </div>
+                <div class="card-body">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="video-player"
+                                src="{{ clip.embed_url }}"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    // Initialize Select2 for tags and players
+    $(document).ready(function() {
+        $('#tags-select').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select tags',
+            allowClear: true
+        });
+        $('#players-select').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select players',
+            allowClear: true
+        });
+    });
+
+    // Optional: grab current playback time from the iframe (YouTube)
+    // Note: Full-featured getCurrentTime requires YouTube Iframe API.
+    // This button simply helps when you manually pause and know the time.
+    document.getElementById('btn-copy-current')?.addEventListener('click', function() {
+        // If you’re not using the YouTube Iframe API, you could rely on a manual approach:
+        // Prompt user to enter visible/current seconds, then fill the field.
+        const seconds = prompt('Enter the current video time (in seconds):');
+        if (seconds !== null && seconds.trim() !== '' && !isNaN(seconds)) {
+            document.getElementById('timestamp-seconds').value = parseInt(seconds, 10);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 import json
-import requests
+#import requests
 import logging
 from flask import current_app
 from datetime import datetime
@@ -75,6 +75,12 @@ class DiscordWebhook:
             True if successful, False otherwise
         """
         webhook_url = self.get_webhook_url(team_id)
+        
+        try:
+            import requests  # lazy import to avoid requiring it during CLI tasks
+        except Exception as e:
+            logger.error(f"requests library not available: {e}")
+            return False
         
         if not webhook_url:
             logger.error(f"Discord webhook URL not configured for team {team_id}")
