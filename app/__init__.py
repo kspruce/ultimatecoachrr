@@ -162,9 +162,8 @@ def create_app(config_class=Config):
     app.register_blueprint(team_organization_bp)
 
     # Import the models package so ALL models are registered.
-    # IMPORTANT: do NOT use "import app.models" here; it will shadow the local "app" variable.
-    # Use a safe alias import instead:
-    from app import models as app_models  # noqa: F401  (ensures all models are loaded)
+    # This ensures all models are loaded into SQLAlchemy's metadata
+    from app import models as app_models  # noqa: F401
 
     # Create upload directory structure
     try:
@@ -188,7 +187,7 @@ def create_app(config_class=Config):
         # Only run create_all if explicitly enabled (e.g., local dev).
         # In production and during migrations, rely on Alembic.
         if app.config.get('RUN_CREATE_ALL', False):
-            # Ensure all models are loaded into metadata without shadowing "app"
+            # Ensure all models are loaded into metadata
             from app import models as app_models  # noqa: F401
             db.create_all()
 
@@ -202,10 +201,10 @@ def create_app(config_class=Config):
             fix_bot_class()
 
             # Register Discord blueprint
-            from app.discord.routes import discord_bp as discord_bp
+            from app.discord.routes import discord_bp
             app.register_blueprint(discord_bp)
 
-            # Initialize Discord integration (imports done only when enabled)
+            # Initialize Discord integration
             from app.discord_integration import init_discord_integration
             init_discord_integration(app)
         except Exception as e:

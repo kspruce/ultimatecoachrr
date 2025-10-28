@@ -154,15 +154,31 @@ class ClipTag(db.Model):
     def clip_count(self):
         """Return the number of clips using this tag"""
         return self.clips.count()
-    
+
+
 class ClipPointSegment(db.Model):
+    """Model to track point segments within a clip for point-by-point analysis"""
     __tablename__ = 'clip_point_segments'
+    
     id = db.Column(db.Integer, primary_key=True)
-    clip_id = db.Column(db.Integer, db.ForeignKey('clips.id'), nullable=False)
+    clip_id = db.Column(db.Integer, db.ForeignKey('clip.id'), nullable=False)
     point_number = db.Column(db.Integer, nullable=False)
     start_time = db.Column(db.Integer, nullable=False)  # seconds
     end_time = db.Column(db.Integer, nullable=True)     # seconds or None while open
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
 
+    # Relationships
     clip = db.relationship('Clip', backref=db.backref('point_segments', cascade='all, delete-orphan', lazy='dynamic'))
+    created_by = db.relationship('User', backref='point_segments_created', foreign_keys=[created_by_id])
+    
+    def __repr__(self):
+        return f'<ClipPointSegment Point {self.point_number} in Clip {self.clip_id}>'
+    
+    @property
+    def duration(self):
+        """Return the duration of this segment in seconds"""
+        if self.end_time and self.start_time:
+            return self.end_time - self.start_time
+        return None

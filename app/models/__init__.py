@@ -6,31 +6,30 @@ from app.models.user import User
 from app.models.player import Player
 
 # Drill and Session models
-from app.models.drill import SavedDrill
+from app.models.drill import SavedDrill, Drill, DrillFrame
 from app.models.session import (
     SessionPlan,
     SessionComponent,
     Attendance,
     SessionRSVP
 )
-from app.models.playbook import Play, Formation, PlayTag
-from app.models.theory import TheorySection, TheoryTopic, TheoryVideo
+from app.models.playbook import Play, Formation, PlayTag, PlayerPosition, PlayAssignment
+from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
 
 # Game and Tournament models
 from app.models.tournament import Tournament
+from app.models.tournament_rsvp import TournamentRSVP
 from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.event import Event, Pull
-from app.models.throws import Throw
+from app.models.throws import Throw 
 from app.models.game_player import GamePlayer
-
-# Fitness models (import first; off_season imports FitnessMetric)
 from app.models.fitness import FitnessMetric, FitnessRecord
 
 # Video and Analysis models
-from app.models.clip import Clip, ClipTag, ClipPointSegment  # include ClipPointSegment
-from app.models.annotation import ClipAnnotation, AnnotationTag  # include AnnotationTag
-from app.models.scouting import ScoutingReport
+from app.models.clip import Clip, ClipTag, ClipPointSegment
+from app.models.annotation import ClipAnnotation, AnnotationTag
+from app.models.scouting import ScoutingReport, OpponentPlayer, ScoutingClip
 from app.models.cutting_skill import CuttingSkill
 
 # Statistics and Export models
@@ -41,14 +40,11 @@ from app.models.team_settings import TeamSettings
 # Gameday Stats
 from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
 
-# Off-season models (PhaseMetric is defined here)
+# Off-Season Training
 from app.models.off_season import (
     TrackWorkoutWeek,
-    TrainingLevel,
-    TrainingCategory,
-    ScheduleType,
     OffSeasonPhase,
-    PhaseMetric,            # important for FitnessMetric.phase_metrics relationship
+    PhaseMetric,
     PhaseSchedule,
     ScheduleSession,
     WorkoutPlan,
@@ -60,32 +56,31 @@ from app.models.off_season import (
 __all__ = [
     # Core
     'TeamOrganization', 'User', 'Player',
-
-    # Drills / Sessions / Playbook / Theory
-    'SavedDrill', 'SessionPlan', 'SessionComponent', 'Attendance', 'SessionRSVP',
-    'Play', 'Formation', 'PlayTag',
-    'TheorySection', 'TheoryTopic', 'TheoryVideo',
-
-    # Games
-    'Tournament', 'Game', 'Point', 'LineUp',
+    # Drills & Sessions
+    'SavedDrill', 'Drill', 'DrillFrame', 'SessionPlan', 'SessionComponent', 
+    'Attendance', 'SessionRSVP',
+    # Playbook
+    'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment',
+    # Theory
+    'TheorySection', 'TheoryTopic', 'TheoryVideo', 'TheoryTag',
+    # Tournaments & Games
+    'Tournament', 'TournamentRSVP', 'Game', 'Point', 'LineUp',
+    # Events & Actions
     'Event', 'Pull', 'Throw', 'GamePlayer',
-
-    # Video / Annotation
-    'Clip', 'ClipTag', 'ClipPointSegment', 'ClipAnnotation', 'AnnotationTag', 'ScoutingReport',
-    'CuttingSkill',
-
-    # Stats / Export / Settings
-    'PlayerPointStats', 'ExportLog', 'TeamSettings',
-
-    # Fitness (and RELATED off-season link)
-    'FitnessMetric', 'FitnessRecord',
-
-    # Gameday
-    'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats',
-
-    # Off-season
-    'TrackWorkoutWeek',
-    'TrainingLevel', 'TrainingCategory', 'ScheduleType',
-    'OffSeasonPhase', 'PhaseMetric', 'PhaseSchedule', 'ScheduleSession', 'WorkoutPlan',
-    'UserSessionCompletion', 'SMARTGoal', 'UserSchedulePreference',
+    # Video & Clips
+    'Clip', 'ClipTag', 'ClipPointSegment', 'ClipAnnotation', 'AnnotationTag',
+    # Scouting
+    'ScoutingReport', 'OpponentPlayer', 'ScoutingClip',
+    # Stats
+    'PlayerPointStats', 'CuttingSkill',
+    # Fitness
+    'FitnessMetric', 'FitnessRecord', 
+    # Game Day
+    'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats', 
+    # Settings & Export
+    'TeamSettings', 'ExportLog',
+    # Off-Season
+    'TrackWorkoutWeek', 'OffSeasonPhase', 'PhaseMetric', 'PhaseSchedule',
+    'ScheduleSession', 'WorkoutPlan', 'UserSessionCompletion', 'SMARTGoal',
+    'UserSchedulePreference'
 ]
