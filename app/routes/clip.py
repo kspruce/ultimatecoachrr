@@ -9,7 +9,8 @@ from app.models.point import Point
 from app.models.player import Player
 from app.models.user import User
 from app.forms.annotation import AnnotationForm
-from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm, ClipPointSegment
+from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
+from app.models.clip import ClipPointSegment
 from sqlalchemy import or_
 import re
 from app.utils.utils import admin_required
