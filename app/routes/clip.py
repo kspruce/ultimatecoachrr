@@ -305,6 +305,8 @@ def delete_segment(clip_id, segment_id):
 @login_required
 def mark_segment(clip_id, action):
     clip = _get_clip_or_404(clip_id)
+    team_id = get_current_team_id()
+    
     data = request.get_json(silent=True) or {}
     timestamp = data.get('timestamp', None)
     if timestamp is None:
@@ -322,8 +324,8 @@ def mark_segment(clip_id, action):
             point_number=next_num,
             start_time=int(timestamp),
             end_time=None,
-            created_by=current_user.id if current_user.is_authenticated else None,
-            team_organization_id=get_current_team_id()
+            created_by_id=current_user.id if current_user.is_authenticated else None,
+            team_organization_id=team_id
         )
         db.session.add(seg)
         db.session.commit()
