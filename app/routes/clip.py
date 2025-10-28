@@ -322,7 +322,8 @@ def mark_segment(clip_id, action):
             point_number=next_num,
             start_time=int(timestamp),
             end_time=None,
-            created_by=current_user.id if current_user.is_authenticated else None
+            created_by=current_user.id if current_user.is_authenticated else None,
+            team_organization_id=get_current_team_id()
         )
         db.session.add(seg)
         db.session.commit()
