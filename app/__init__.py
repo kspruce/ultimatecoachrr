@@ -161,9 +161,10 @@ def create_app(config_class=Config):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
-    # Import models package so ALL models are registered (avoids mapper order issues).
-    # This ensures every model from the previous version (and future ones) are included.
-    import app.models  # IMPORTANT: app/models/__init__.py should import/export all model classes.
+    # Import the models package so ALL models are registered.
+    # IMPORTANT: do NOT use "import app.models" here; it will shadow the local "app" variable.
+    # Use a safe alias import instead:
+    from app import models as app_models  # noqa: F401  (ensures all models are loaded)
 
     # Create upload directory structure
     try:
@@ -187,7 +188,8 @@ def create_app(config_class=Config):
         # Only run create_all if explicitly enabled (e.g., local dev).
         # In production and during migrations, rely on Alembic.
         if app.config.get('RUN_CREATE_ALL', False):
-            import app.models  # ensure all models are loaded into metadata
+            # Ensure all models are loaded into metadata without shadowing "app"
+            from app import models as app_models  # noqa: F401
             db.create_all()
 
     # Conditionally enable Discord integration (default False)
@@ -217,4 +219,4 @@ def create_app(config_class=Config):
 
 
 # Optional: keep these imports available at module level if elsewhere relies on them
-from app.models import User, Player, TeamOrganization
+from app.models import User, Player, TeamOrganization  # noqa: E402,F401
