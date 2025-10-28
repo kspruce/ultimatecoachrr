@@ -154,3 +154,15 @@ class ClipTag(db.Model):
     def clip_count(self):
         """Return the number of clips using this tag"""
         return self.clips.count()
+    
+class ClipPointSegment(db.Model):
+    __tablename__ = 'clip_point_segments'
+    id = db.Column(db.Integer, primary_key=True)
+    clip_id = db.Column(db.Integer, db.ForeignKey('clips.id'), nullable=False)
+    point_number = db.Column(db.Integer, nullable=False)
+    start_time = db.Column(db.Integer, nullable=False)  # seconds
+    end_time = db.Column(db.Integer, nullable=True)     # seconds or None while open
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    clip = db.relationship('Clip', backref=db.backref('point_segments', cascade='all, delete-orphan', lazy='dynamic'))

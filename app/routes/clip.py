@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from app import db
@@ -9,7 +9,7 @@ from app.models.point import Point
 from app.models.player import Player
 from app.models.user import User
 from app.forms.annotation import AnnotationForm
-from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm
+from app.forms.clip import ClipForm, ClipTagForm, ClipFilterForm, ClipPointSegment
 from sqlalchemy import or_
 import re
 from app.utils.utils import admin_required
@@ -274,6 +274,81 @@ def delete_clip(clip_id):
     flash(f'Clip "{title}" and all its annotations have been deleted!', 'success')
     return redirect(url_for('clip.index'))
 
+@bp.route('/clips/<int:clip_id>/segments', methods=['GET'])
+@login_required
+def get_segments(clip_id):
+    clip = _get_clip_or_404(clip_id)
+    segments = (ClipPointSegment.query
+                .filter_by(clip_id=clip.id)
+                .order_by(ClipPointSegment.point_number.asc())
+                .all())
+    return jsonify([{
+        'id': s.id,
+        'point_number': s.point_number,
+        'start_time': s.start_time,
+        'end_time': s.end_time
+    } for s in segments])
+
+@bp.route('/clips/<int:clip_id>/segments/<int:segment_id>', methods=['DELETE'])
+@login_required
+def delete_segment(clip_id, segment_id):
+    # Optional: restrict to admins/coaches
+    if not (current_user.is_admin or current_user.is_coach):
+        abort(403)
+    seg = ClipPointSegment.query.filter_by(id=segment_id, clip_id=clip_id).first_or_404()
+    db.session.delete(seg)
+    db.session.commit()
+    return ('', 204)
+
+@bp.route('/clips/<int:clip_id>/segments/<string:action>', methods=['POST'])
+@login_required
+def mark_segment(clip_id, action):
+    clip = _get_clip_or_404(clip_id)
+    data = request.get_json(silent=True) or {}
+    timestamp = data.get('timestamp', None)
+    if timestamp is None:
+        return ('Missing timestamp', 400)
+
+    if action == 'start':
+        # Determine the next point number (last + 1)
+        last_seg = (ClipPointSegment.query
+                    .filter_by(clip_id=clip.id)
+                    .order_by(ClipPointSegment.point_number.desc())
+                    .first())
+        next_num = (last_seg.point_number + 1) if last_seg else 1
+        seg = ClipPointSegment(
+            clip_id=clip.id,
+            point_number=next_num,
+            start_time=int(timestamp),
+            end_time=None,
+            created_by=current_user.id if current_user.is_authenticated else None
+        )
+        db.session.add(seg)
+        db.session.commit()
+        return jsonify({'status': 'started', 'id': seg.id, 'point_number': seg.point_number})
+
+    elif action == 'end':
+        # Close the most recent open segment
+        open_seg = (ClipPointSegment.query
+                    .filter_by(clip_id=clip.id, end_time=None)
+                    .order_by(ClipPointSegment.point_number.desc())
+                    .first())
+        if not open_seg:
+            return ('No open point to end. Mark a start first.', 400)
+        end_ts = int(timestamp)
+        if end_ts < open_seg.start_time:
+            return ('End time cannot be before start time.', 400)
+        open_seg.end_time = end_ts
+        db.session.commit()
+        return jsonify({'status': 'ended', 'id': open_seg.id, 'point_number': open_seg.point_number})
+
+    else:
+        return ('Invalid action', 400)
+
+def _get_clip_or_404(clip_id):
+    clip = Clip.query.get_or_404(clip_id)
+    return clip
+
 # ============================================================================
 # ANNOTATION ROUTES
 # ============================================================================
@@ -285,6 +360,11 @@ def add_annotation(clip_id):
     team_id = get_current_team_id()
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
     form = AnnotationForm()
+    
+    # Prefill from query param t
+    t = request.args.get('t', type=int)
+    if t is not None and (form.timestamp.data is None or form.timestamp.data == 0):
+        form.timestamp.data = t
     
     if form.validate_on_submit():
         annotation = ClipAnnotation(
