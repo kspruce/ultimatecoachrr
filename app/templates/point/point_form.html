@@ -1,212 +1,257 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="container-fluid">
+
+<style>
+/* ===============================
+   Modern Point Form Styling
+================================ */
+
+.section-card {
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.division-badge {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.badge-open { background:#1f2937; color:white; }
+.badge-womens { background:#be185d; color:white; }
+.badge-mixed { background:#7c3aed; color:white; }
+
+.player-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap:12px;
+}
+
+.player-card {
+    border-radius:14px;
+    padding:14px 8px;
+    text-align:center;
+    background:white;
+    border:2px solid #e5e7eb;
+    cursor:pointer;
+    transition: all 0.2s ease;
+}
+
+.player-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 6px 12px rgba(0,0,0,0.08);
+}
+
+.player-card.selected {
+    border-color:#2563eb;
+    background:#eff6ff;
+}
+
+.jersey {
+    font-weight:700;
+    font-size:1.2rem;
+}
+
+.player-name {
+    font-size:0.85rem;
+    margin-top:4px;
+}
+
+.gender-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    margin:6px auto 0;
+}
+
+.gender-male { background:#2563eb; }
+.gender-female { background:#ec4899; }
+
+.selection-bar {
+    font-weight:600;
+    margin-bottom:12px;
+}
+
+.sticky-submit {
+    position:sticky;
+    bottom:0;
+    background:white;
+    padding:15px;
+    box-shadow:0 -6px 18px rgba(0,0,0,0.08);
+    border-top:1px solid #eee;
+}
+
+@media (min-width:768px){
+    .sticky-submit {
+        position:static;
+        box-shadow:none;
+        border-top:0;
+        padding:0;
+        margin-top:20px;
+    }
+}
+</style>
+
+<div class="container py-4">
 
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">
-                {{ title }} vs {{ game.opponent }}
-                <span class="badge 
-                    {% if division == 'mixed' %}bg-primary
-                    {% elif division == 'open' %}bg-success
-                    {% else %}bg-warning text-dark{% endif %}">
-                    {{ division|capitalize }}
-                </span>
-            </h2>
-            <p class="mb-0">Score: {{ game.our_score }} - {{ game.their_score }}</p>
+            <h3 class="mb-1">{{ title }}</h3>
+            <div class="text-muted">
+                Score: {{ game.our_score }} – {{ game.their_score }}
+            </div>
         </div>
-        <a href="{{ url_for('point.game_points', game_id=game.id) }}" class="btn btn-outline-secondary mt-2 mt-md-0">
-            Back
-        </a>
+
+        <span class="division-badge badge-{{ game.team_organization.division }}">
+            {{ game.team_organization.division|capitalize }}
+        </span>
     </div>
 
-    <form method="post" id="point-form">
+    <form method="POST">
         {{ form.hidden_tag() }}
-        <input type="hidden" name="players" id="players-hidden-input">
 
-        <!-- Point Meta -->
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-                {{ form.point_number.label(class="form-label") }}
-                {{ form.point_number(class="form-control") }}
-            </div>
-            <div class="col-6 col-md-3">
-                {{ form.our_line_type.label(class="form-label") }}
-                {{ form.our_line_type(class="form-select") }}
-            </div>
-            <div class="col-6 col-md-3">
-                {{ form.starting_position.label(class="form-label") }}
-                {{ form.starting_position(class="form-select") }}
-            </div>
-            <div class="col-6 col-md-3">
-                {{ form.force_direction.label(class="form-label") }}
-                {{ form.force_direction(class="form-select") }}
-            </div>
-        </div>
+        <!-- =========================
+             SECTION 1: POINT DETAILS
+        ========================== -->
+        <div class="card section-card mb-4">
+            <div class="card-body">
+                <h6 class="mb-3 text-muted">Point Details</h6>
 
-        <!-- Gender Ratio (Mixed Only) -->
-        {% if division == "mixed" %}
-        <div class="row mb-3">
-            <div class="col-6 col-md-3">
-                {{ form.gender_ratio.label(class="form-label") }}
-                {{ form.gender_ratio(class="form-select") }}
-            </div>
-            <div class="col-6 col-md-3 d-flex align-items-end">
-                <div id="ratio-status" class="badge bg-warning p-2 w-100 text-center"></div>
-            </div>
-            <div class="col-6 col-md-3 d-flex align-items-end">
-                <div id="majority-preview" class="badge bg-dark p-2 w-100 text-center">
-                    Majority: -
+                <div class="row g-3">
+
+                    <div class="col-6 col-md-3">
+                        {{ form.point_number.label(class="form-label") }}
+                        {{ form.point_number(class="form-control") }}
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        {{ form.duration.label(class="form-label") }}
+                        {{ form.duration(class="form-control") }}
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        {{ form.our_line_type.label(class="form-label") }}
+                        {{ form.our_line_type(class="form-select") }}
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        {{ form.starting_position.label(class="form-label") }}
+                        {{ form.starting_position(class="form-select") }}
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        {{ form.force_direction.label(class="form-label") }}
+                        {{ form.force_direction(class="form-select") }}
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        {{ form.point_outcome.label(class="form-label") }}
+                        {{ form.point_outcome(class="form-select") }}
+                    </div>
+
+                    {% if game.team_organization.division == "mixed" %}
+                    <div class="col-6 col-md-3">
+                        {{ form.gender_ratio.label(class="form-label") }}
+                        {{ form.gender_ratio(class="form-select") }}
+                    </div>
+                    {% endif %}
+
                 </div>
             </div>
         </div>
-        {% endif %}
 
-        <hr>
+        <!-- =========================
+             SECTION 2: PLAYER SELECTION
+        ========================== -->
+        <div class="card section-card mb-4">
+            <div class="card-body">
 
-        <h5>Select 7 Players</h5>
-
-        <div class="row">
-
-            <!-- OPEN DIVISION → Unified Table -->
-            {% if division == "open" %}
-            <div class="col-12">
-                {% for player in all_players %}
-                <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input player-checkbox"
-                           value="{{ player.id }}"
-                           id="player-{{ player.id }}"
-                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                    <label class="form-check-label">
-                        {{ player.name }} (#{{ player.jersey_number }})
-                    </label>
+                <div class="selection-bar">
+                    Selected: <span id="selected-count">0</span> / 7
+                    {% if game.team_organization.division == "mixed" %}
+                        | Male: <span id="male-count">0</span>
+                        | Female: <span id="female-count">0</span>
+                    {% endif %}
                 </div>
-                {% endfor %}
-            </div>
-            {% endif %}
 
-            <!-- MIXED -->
-            {% if division == "mixed" %}
-            <div class="col-12 col-md-6">
-                <h6>MMP</h6>
-                {% for player in all_players if player.gender == "male" %}
-                <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input player-checkbox mmp-checkbox"
-                           value="{{ player.id }}"
-                           id="player-{{ player.id }}"
-                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                    <label class="form-check-label">
-                        {{ player.name }} (#{{ player.jersey_number }})
-                    </label>
+                <div class="player-grid" id="player-grid">
+                    {% for player in all_players %}
+                        <div class="player-card"
+                             data-player-id="{{ player.id }}"
+                             data-gender="{{ player.gender }}">
+
+                            <div class="jersey">#{{ player.jersey_number }}</div>
+                            <div class="player-name">{{ player.name }}</div>
+                            <div class="gender-dot gender-{{ player.gender }}"></div>
+                        </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
 
-            <div class="col-12 col-md-6">
-                <h6>FMP</h6>
-                {% for player in all_players if player.gender == "female" %}
-                <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input player-checkbox fmp-checkbox"
-                           value="{{ player.id }}"
-                           id="player-{{ player.id }}"
-                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                    <label class="form-check-label">
-                        {{ player.name }} (#{{ player.jersey_number }})
-                    </label>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+                <!-- Hidden field -->
+                <input type="hidden" name="players" id="players-input">
 
-            <!-- WOMENS -->
-            {% if division == "womens" %}
-            <div class="col-12">
-                {% for player in all_players if player.gender == "female" %}
-                <div class="form-check">
-                    <input type="checkbox"
-                           class="form-check-input player-checkbox"
-                           value="{{ player.id }}"
-                           id="player-{{ player.id }}"
-                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                    <label class="form-check-label">
-                        {{ player.name }} (#{{ player.jersey_number }})
-                    </label>
-                </div>
-                {% endfor %}
             </div>
-            {% endif %}
-
         </div>
 
-        <div class="mt-4">
-            {{ form.submit(class="btn btn-primary btn-lg w-100") }}
+        <!-- Sticky Submit -->
+        <div class="sticky-submit">
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+                Save Point →
+            </button>
         </div>
 
     </form>
-
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+const cards = document.querySelectorAll(".player-card");
+const playersInput = document.getElementById("players-input");
 
-    const division = "{{ division }}";
+let selected = [];
 
-    function updateHidden() {
-        const selected = [...document.querySelectorAll('.player-checkbox:checked')]
-            .map(cb => cb.value);
-        document.getElementById("players-hidden-input").value = selected.join(",");
-    }
+function updateCounts(){
+    document.getElementById("selected-count").innerText = selected.length;
 
-    function validateForm(e) {
+    let males = 0;
+    let females = 0;
 
-        const total = document.querySelectorAll('.player-checkbox:checked').length;
-
-        if (total !== 7) {
-            alert("Select exactly 7 players.");
-            e.preventDefault();
-            return false;
+    cards.forEach(card=>{
+        if(card.classList.contains("selected")){
+            if(card.dataset.gender === "male") males++;
+            if(card.dataset.gender === "female") females++;
         }
+    });
 
-        if (division === "mixed") {
+    if(document.getElementById("male-count")){
+        document.getElementById("male-count").innerText = males;
+        document.getElementById("female-count").innerText = females;
+    }
+}
 
-            const mmp = document.querySelectorAll('.mmp-checkbox:checked').length;
-            const fmp = document.querySelectorAll('.fmp-checkbox:checked').length;
-            const ratio = document.getElementById("gender_ratio").value;
-            const [reqM, reqF] = ratio.split('-').map(Number);
+cards.forEach(card=>{
+    card.addEventListener("click", function(){
 
-            document.getElementById("ratio-status").innerHTML =
-                `${mmp} MMP + ${fmp} FMP`;
+        const id = this.dataset.playerId;
 
-            const majority = mmp > fmp ? "Male Majority" : "Female Majority";
-            document.getElementById("majority-preview").innerHTML =
-                "Majority: " + majority;
-
-            if (mmp !== reqM || fmp !== reqF) {
-                alert("Gender ratio incorrect.");
-                e.preventDefault();
-                return false;
+        if(this.classList.contains("selected")){
+            this.classList.remove("selected");
+            selected = selected.filter(pid => pid !== id);
+        } else {
+            if(selected.length < 7){
+                this.classList.add("selected");
+                selected.push(id);
             }
         }
 
-        return true;
-    }
-
-    document.querySelectorAll('.player-checkbox').forEach(cb => {
-        cb.addEventListener("change", updateHidden);
+        playersInput.value = selected.join(",");
+        updateCounts();
     });
-
-    document.getElementById("point-form").addEventListener("submit", function(e) {
-        updateHidden();
-        validateForm(e);
-    });
-
 });
 </script>
+
 {% endblock %}
