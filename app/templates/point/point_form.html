@@ -1,672 +1,184 @@
 {% extends "base.html" %}
 
-{% block styles %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
-<style>
-    /* Custom styling for DataTables */
-    .dataTables_wrapper .dataTables_length select {
-        width: auto;
-        display: inline-block;
-    }
-    
-    .dataTables_wrapper .dataTables_filter input {
-        margin-left: 0.5em;
-    }
-    
-    .dataTables_wrapper .dataTables_info {
-        padding-top: 0.85em;
-    }
-    
-    /* Make sure table headers align with content */
-    #player-stats-table th.text-center {
-        text-align: center;
-    }
-    
-    /* Improve spacing in cells */
-    #player-stats-table td {
-        vertical-align: middle;
-    }
-    
-    /* Style the small text in completion rate */
-    #player-stats-table small.text-muted {
-        display: block;
-        font-size: 0.75rem;
-    }
-    
-    /* Player selection table styling */
-    #player-selection-table {
-        font-size: 0.9rem;
-    }
-    
-    /* Highlight selected players */
-    tr.selected-player {
-        background-color: rgba(25, 135, 84, 0.15) !important;
-        font-weight: 500;
-    }
-    
-    /* Gender ratio indicator */
-    #ratio-status {
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-weight: 500;
-    }
-    
-    /* Filter input styling */
-    #player-filter-container {
-        position: relative;
-        margin-bottom: 1rem;
-    }
-    
-    #player-filter-container i {
-        position: absolute;
-        left: 15px;
-        top: 10px;
-        color: #6c757d;
-    }
-    
-    #player-filter {
-        border-radius: 20px;
-        padding-left: 35px;
-    }
-
-    /* Styling for the gender-specific tables */
-    #mmp-player-table, #fmp-player-table {
-        font-size: 0.9rem;
-    }
-    
-    .card-header.bg-primary {
-        background-color: #0d6efd !important;
-    }
-    
-    .card-header.bg-info {
-        background-color: #0dcaf0 !important;
-    }
-    
-    /* Make the tables more compact */
-    .table-sm td, .table-sm th {
-        padding: 0.3rem 0.5rem;
-    }
-    
-    /* Player card styling */
-    .player-card {
-        cursor: pointer;
-        padding: 8px;
-        border-radius: 4px;
-        margin-bottom: 4px;
-        transition: background-color 0.2s;
-    }
-    
-    .player-card:hover {
-        background-color: #f0f0f0;
-    }
-    
-    .player-card.selected {
-        background-color: #e3f2fd;
-        border: 1px solid #90caf9;
-    }
-    
-    /* Hide the actual checkbox */
-    .player-card .form-check-input {
-        position: absolute;
-        opacity: 0;
-    }
-    
-    /* Make the label take up the full width */
-    .player-card .form-check-label {
-        display: block;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
-    <!-- Display flash messages -->
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
+
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>{{ title }} for Game vs {{ game.opponent }}</h1>
-            <p class="lead">
-                Current Score: {{ game.our_score }}-{{ game.their_score }}
-            </p>
+            <h1>{{ title }} vs {{ game.opponent }}</h1>
+            <p class="lead">Score: {{ game.our_score }} - {{ game.their_score }}</p>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('point.game_points', game_id=game.id) }}" class="btn btn-secondary">Back to Points</a>
+            <a href="{{ url_for('point.game_points', game_id=game.id) }}" class="btn btn-secondary">Back</a>
         </div>
     </div>
-    <!-- Point Form Card -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Point Details</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" novalidate id="point-form">
-                        {{ form.hidden_tag() }}
-                        
-                        <!-- Make sure the name attribute is set correctly -->
-                        <input type="hidden" name="players" id="players-hidden-input" value="">
 
-                        <!-- Basic Point Info -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                {{ form.point_number.label(class="form-label") }}
-                                {{ form.point_number(class="form-control") }}
-                                {% for error in form.point_number.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-4">
-                                {{ form.our_line_type.label(class="form-label") }}
-                                {{ form.our_line_type(class="form-select") }}
-                                {% for error in form.our_line_type.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-4">
-                                {{ form.starting_position.label(class="form-label") }}
-                                {{ form.starting_position(class="form-select") }}
-                                {% for error in form.starting_position.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Score and Settings -->
-                        <div class="row mb-3">
-                            <div class="col-md-2">
-                                {{ form.our_score_before.label(class="form-label") }}
-                                {{ form.our_score_before(class="form-control") }}
-                                {% for error in form.our_score_before.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-2">
-                                {{ form.their_score_before.label(class="form-label") }}
-                                {{ form.their_score_before(class="form-control") }}
-                                {% for error in form.their_score_before.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.point_outcome.label(class="form-label") }}
-                                {{ form.point_outcome(class="form-select") }}
-                                <small class="text-muted">Optional - will be determined from final event</small>
-                                {% for error in form.point_outcome.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-2">
-                                {{ form.gender_ratio.label(class="form-label") }}
-                                {{ form.gender_ratio(class="form-select") }}
-                                {% for error in form.gender_ratio.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-3">
-                                {{ form.force_direction.label(class="form-label") }}
-                                {{ form.force_direction(class="form-select") }}
-                                {% for error in form.force_direction.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <!-- Additional Info -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                {{ form.duration.label(class="form-label") }}
-                                {{ form.duration(class="form-control") }}
-                                {% for error in form.duration.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.timestamp_in_video.label(class="form-label") }}
-                                {{ form.timestamp_in_video(class="form-control") }}
-                                {% for error in form.timestamp_in_video.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <!-- Player Selection -->
-                        <div class="mb-4">
-                            <label class="form-label">Players on Line (Select exactly 7)</label>
-                            <div class="alert alert-info">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        Required ratio: <span id="required-ratio">{{ form.gender_ratio.data.replace('-', ' MMP - ') }} FMP</span>
-                                    </div>
-                                    <div id="ratio-status" class="badge bg-warning">
-                                        <span id="mmp-count">0</span> MMP + <span id="fmp-count">0</span> FMP = <span id="total-count">0</span>/7
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Player filter -->
-                            <div id="player-filter-container" class="mb-3">
-                                <i class="fas fa-search"></i>
-                                <input type="text" id="player-filter" class="form-control" placeholder="Filter players by name or jersey number...">
-                            </div>
-                            
-                            <div class="row">
-                                <!-- MMP Players Table -->
-                                <div class="col-md-6">
-                                    <div class="card mb-3">
-                                        <div class="card-header bg-primary text-white">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h5 class="mb-0">MMP Players</h5>
-                                                <span class="badge bg-light text-dark" id="mmp-selected-count">0 selected</span>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            <div class="table-responsive">
-                                                <table id="mmp-player-table" class="table table-sm table-hover mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th style="width: 60px">Jersey</th>
-                                                            <th>Name</th>
-                                                            <th style="width: 60px">Points</th>
-                                                            <th style="width: 60px">+/-</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for player in all_players %}
-                                                            {% if player.gender == "male" %}
-                                                            <tr class="player-row player-card" data-player-id="{{ player.id }}">
-                                                                <td>
-                                                                    <input class="form-check-input player-checkbox mmp-checkbox" type="checkbox" 
-                                                                           value="{{ player.id }}" id="player-{{ player.id }}"
-                                                                           data-gender="MMP"
-                                                                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                                                                    {{ player.jersey_number }}
-                                                                </td>
-                                                                <td>{{ player.name }}</td>
-                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('points_played', 0) }}</td>
-                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('plus_minus', 0) }}</td>
-                                                            </tr>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- FMP Players Table -->
-                                <div class="col-md-6">
-                                    <div class="card mb-3">
-                                        <div class="card-header bg-info text-white">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <h5 class="mb-0">FMP Players</h5>
-                                                <span class="badge bg-light text-dark" id="fmp-selected-count">0 selected</span>
-                                            </div>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            <div class="table-responsive">
-                                                <table id="fmp-player-table" class="table table-sm table-hover mb-0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th style="width: 60px">Jersey</th>
-                                                            <th>Name</th>
-                                                            <th style="width: 60px">Points</th>
-                                                            <th style="width: 60px">+/-</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for player in all_players %}
-                                                            {% if player.gender == "female" %}
-                                                            <tr class="player-row player-card" data-player-id="{{ player.id }}">
-                                                                <td>
-                                                                    <input class="form-check-input player-checkbox fmp-checkbox" type="checkbox" 
-                                                                           value="{{ player.id }}" id="player-{{ player.id }}"
-                                                                           data-gender="FMP"
-                                                                           {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
-                                                                    {{ player.jersey_number }}
-                                                                </td>
-                                                                <td>{{ player.name }}</td>
-                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('points_played', 0) }}</td>
-                                                                <td class="text-center">{{ player_stats_dict.get(player.id, {}).get('plus_minus', 0) }}</td>
-                                                            </tr>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                        <!-- Submit Button -->
-                        <div class="d-grid gap-2 mt-4">
-                            {{ form.submit(class="btn btn-primary btn-lg") }}
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <div class="card">
+        <div class="card-header">
+            <h5>Point Details</h5>
         </div>
-    </div>
-    <!-- Stats Summary Card -->
-    <div class="row mt-4 mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Game Stats So Far</h5>
-                    <div>
-                        <button class="btn btn-sm btn-outline-primary" id="toggle-stats">Show/Hide Details</button>
+        <div class="card-body">
+            <form method="post" id="point-form">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="players" id="players-hidden-input">
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        {{ form.point_number.label(class="form-label") }}
+                        {{ form.point_number(class="form-control") }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.our_line_type.label(class="form-label") }}
+                        {{ form.our_line_type(class="form-select") }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.starting_position.label(class="form-label") }}
+                        {{ form.starting_position(class="form-select") }}
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card mb-3">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title">Team Completion Rate</h6>
-                                    <p class="display-4">{{ completion_rate }}%</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <h6>Player Statistics</h6>
-                            <div class="table-responsive">
-                                <table id="player-stats-table" class="table table-sm table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Player</th>
-                                            <th class="text-center">Points</th>
-                                            <th class="text-center">Comp %</th>
-                                            <th class="text-center">Goals</th>
-                                            <th class="text-center">Assists</th>
-                                            <th class="text-center">Blocks</th>
-                                            <th class="text-center">Drops</th>
-                                            <th class="text-center">+/-</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for stat in player_stats %}
-                                        <tr>
-                                            <td>{{ stat.player_name }} (#{{ stat.jersey_number }})</td>
-                                            <td class="text-center">{{ stat.points_played }}</td>
-                                            <td class="text-center" data-order="{{ stat.completion_rate }}">
-                                                {{ stat.completion_rate }}%
-                                                <small class="text-muted">({{ stat.completions }}/{{ stat.throws }})</small>
-                                            </td>
-                                            <td class="text-center">{{ stat.goals }}</td>
-                                            <td class="text-center">{{ stat.assists }}</td>
-                                            <td class="text-center">{{ stat.blocks }}</td>
-                                            <td class="text-center">{{ stat.drops }}</td>
-                                            <td class="text-center">{{ stat.plus_minus }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-2">
+                        {{ form.our_score_before.label(class="form-label") }}
+                        {{ form.our_score_before(class="form-control") }}
+                    </div>
+                    <div class="col-md-2">
+                        {{ form.their_score_before.label(class="form-label") }}
+                        {{ form.their_score_before(class="form-control") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.point_outcome.label(class="form-label") }}
+                        {{ form.point_outcome(class="form-select") }}
+                    </div>
+
+                    {% if division == "mixed" %}
+                    <div class="col-md-2">
+                        {{ form.gender_ratio.label(class="form-label") }}
+                        {{ form.gender_ratio(class="form-select") }}
+                    </div>
+                    {% endif %}
+
+                    <div class="col-md-3">
+                        {{ form.force_direction.label(class="form-label") }}
+                        {{ form.force_direction(class="form-select") }}
                     </div>
                 </div>
-            </div>
+
+                <hr>
+
+                <h5>Select 7 Players</h5>
+
+                {% if division == "mixed" %}
+                <div class="alert alert-info">
+                    Required Ratio: <strong id="required-ratio"></strong>
+                    <span class="float-end" id="ratio-status"></span>
+                </div>
+                {% endif %}
+
+                <div class="row">
+
+                    {% if division != "womens" %}
+                    <div class="col-md-6">
+                        <h6>MMP Players</h6>
+                        {% for player in all_players if player.gender == "male" %}
+                        <div>
+                            <input type="checkbox"
+                                   class="player-checkbox mmp-checkbox"
+                                   value="{{ player.id }}"
+                                   id="player-{{ player.id }}"
+                                   {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
+                            {{ player.name }} (#{{ player.jersey_number }})
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="col-md-6">
+                        <h6>FMP Players</h6>
+                        {% for player in all_players if player.gender == "female" %}
+                        <div>
+                            <input type="checkbox"
+                                   class="player-checkbox fmp-checkbox"
+                                   value="{{ player.id }}"
+                                   id="player-{{ player.id }}"
+                                   {% if form.players.data and player.id in form.players.data %}checked{% endif %}>
+                            {{ player.name }} (#{{ player.jersey_number }})
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+                <div class="d-grid mt-4">
+                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                </div>
+            </form>
         </div>
     </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
-<!-- Make sure jQuery is loaded first -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
-    $(document).ready(function() {
-        console.log("Document ready, initializing player selection form...");
-        
-        // Initialize DataTables for stats
-        const statsTable = $('#player-stats-table').DataTable({
-            "order": [[1, "desc"]], // Sort by points played by default
-            "pageLength": 25,
-            "responsive": true,
-            "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-                  '<"row"<"col-sm-12"tr>>' +
-                  '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-            "columnDefs": [
-                { "type": "num", "targets": [1,2,3,4,5,6,7] },
-                { 
-                    "targets": 2,
-                    "render": function(data, type, row) {
-                        if (type === 'sort') {
-                            return parseFloat(data);
-                        }
-                        return data;
-                    }
-                }
-            ]
-        });
-        
-        // Initialize DataTables for player selection
-        const mmpTable = $('#mmp-player-table').DataTable({
-            "paging": false,
-            "info": false,
-            "searching": false,
-            "order": [[0, "asc"]], // Sort by jersey number
-            "columnDefs": [
-                { "orderable": false, "targets": [] }
-            ]
-        });
-        
-        const fmpTable = $('#fmp-player-table').DataTable({
-            "paging": false,
-            "info": false,
-            "searching": false,
-            "order": [[0, "asc"]], // Sort by jersey number
-            "columnDefs": [
-                { "orderable": false, "targets": [] }
-            ]
-        });
-        
-        // Toggle stats details
-        $('#toggle-stats').on('click', function() {
-            const statsBody = $(this).closest('.card').find('.card-body');
-            statsBody.toggle();
-            $(this).text(statsBody.is(':visible') ? 'Hide Details' : 'Show Details');
-        });
-        
-        // Make player rows clickable
-        $('.player-row').on('click', function(e) {
-            // Don't trigger if clicking on the checkbox directly
-            if (e.target.type === 'checkbox') return;
-            
-            const checkbox = $(this).find('.player-checkbox');
-            checkbox.prop('checked', !checkbox.prop('checked'));
-            
-            // Toggle selected class for visual feedback
-            $(this).toggleClass('selected-player', checkbox.prop('checked'));
-            
-            // Trigger change event to update counts
-            checkbox.trigger('change');
-        });
-        
-        // Player filtering
-        $('#player-filter').on('keyup', function() {
-            const searchText = $(this).val().toLowerCase();
-            
-            // Filter both tables
-            $('#mmp-player-table .player-row, #fmp-player-table .player-row').each(function() {
-                const name = $(this).find('td:eq(1)').text().toLowerCase();
-                const jersey = $(this).find('td:eq(0)').text().toLowerCase();
-                
-                if (name.includes(searchText) || jersey.includes(searchText)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        });
-        
-        // Gender ratio tracking and player selection
-        function updateGenderCounts() {
-            let mmpCount = $('.mmp-checkbox:checked').length;
-            let fmpCount = $('.fmp-checkbox:checked').length;
-            let totalSelected = mmpCount + fmpCount;
-            
-            $('#mmp-count').text(mmpCount);
-            $('#fmp-count').text(fmpCount);
-            $('#total-count').text(totalSelected);
-            
-            // Update the count badges
-            $('#mmp-selected-count').text(mmpCount + ' selected');
-            $('#fmp-selected-count').text(fmpCount + ' selected');
-            
-            // Get required ratio
-            const ratio = $('#gender_ratio').val();
-            const [requiredMMP, requiredFMP] = ratio.split('-').map(Number);
-            
-            // Update the required ratio text
-            $('#required-ratio').text(ratio.replace('-', ' MMP - ') + ' FMP');
-            
-            // Validate against ratio
-            const ratioStatus = $('#ratio-status');
-            
-            if (totalSelected > 7) {
-                ratioStatus.removeClass('bg-success bg-warning').addClass('bg-danger')
-                    .html(`${mmpCount} MMP + ${fmpCount} FMP = ${totalSelected}/7 (too many!)`);
-            } else if (totalSelected < 7) {
-                ratioStatus.removeClass('bg-success bg-danger').addClass('bg-warning')
-                    .html(`${mmpCount} MMP + ${fmpCount} FMP = ${totalSelected}/7 (need more)`);
-            } else if (mmpCount !== requiredMMP || fmpCount !== requiredFMP) {
-                ratioStatus.removeClass('bg-success bg-warning').addClass('bg-danger')
-                    .html(`${mmpCount} MMP + ${fmpCount} FMP = 7/7 (wrong ratio!)`);
-            } else {
-                ratioStatus.removeClass('bg-danger bg-warning').addClass('bg-success')
-                    .html(`${mmpCount} MMP + ${fmpCount} FMP = 7/7 (perfect!)`);
-            }
-            
-            // Update the hidden input with selected player IDs
-            const selectedPlayerIds = $('.player-checkbox:checked').map(function() {
-                return $(this).val();
-            }).get();
-            
-            // Set the value to the hidden input
-            $('#players-hidden-input').val(selectedPlayerIds.join(','));
-            
-            console.log("Selected players updated:", selectedPlayerIds.join(','));
+document.addEventListener("DOMContentLoaded", function() {
+
+    const division = "{{ division }}";
+
+    function updateHiddenPlayers() {
+        const selected = [...document.querySelectorAll('.player-checkbox:checked')]
+            .map(cb => cb.value);
+        document.getElementById("players-hidden-input").value = selected.join(",");
+    }
+
+    function validateRatio(e) {
+
+        const total = document.querySelectorAll('.player-checkbox:checked').length;
+
+        if (total !== 7) {
+            alert("You must select exactly 7 players.");
+            e.preventDefault();
+            return false;
         }
-        
-        // Update when checkboxes change
-        $(document).on('change', '.player-checkbox', function() {
-            const playerId = $(this).val();
-            const isChecked = $(this).is(':checked');
-            console.log(`Player ${playerId} checkbox ${isChecked ? 'checked' : 'unchecked'}`);
-            
-            // Toggle row highlighting
-            $(this).closest('tr').toggleClass('selected-player', isChecked);
-            
-            // Limit to 7 players
-            const totalChecked = $('.player-checkbox:checked').length;
-            if (totalChecked > 7) {
-                $(this).prop('checked', false);
-                $(this).closest('tr').removeClass('selected-player');
-                alert('You can only select 7 players for a line!');
-            }
-            
-            updateGenderCounts();
-        });
-        
-        // Update when gender ratio changes
-        $('#gender_ratio').on('change', function() {
-            console.log("Gender ratio changed");
-            updateGenderCounts();
-        });
-        
-        // Form submission validation
-        $('#point-form').on('submit', function(e) {
-            console.log("Form submission attempted");
-            
-            // Make sure the hidden input is updated one last time before submission
-            const selectedPlayerIds = $('.player-checkbox:checked').map(function() {
-                return $(this).val();
-            }).get();
-            
-            $('#players-hidden-input').val(selectedPlayerIds.join(','));
-            
-            const selectedPlayers = $('#players-hidden-input').val();
-            console.log("Form submitted, players_hidden value:", selectedPlayers);
-            
-            const totalChecked = $('.player-checkbox:checked').length;
-            
-            // If no players are selected, prevent submission
-            if (!selectedPlayers || selectedPlayers.trim() === '') {
+
+        if (division === "mixed") {
+            const mmp = document.querySelectorAll('.mmp-checkbox:checked').length;
+            const fmp = document.querySelectorAll('.fmp-checkbox:checked').length;
+            const ratio = document.getElementById("gender_ratio").value;
+            const parts = ratio.split("-");
+            const requiredM = parseInt(parts[0]);
+            const requiredF = parseInt(parts[1]);
+
+            if (mmp !== requiredM || fmp !== requiredF) {
+                alert("Gender ratio does not match required split.");
                 e.preventDefault();
-                alert("No players selected. Please select 7 players before submitting.");
-                console.log("Form submission prevented: No players selected");
                 return false;
             }
-            
-            if (totalChecked !== 7) {
-                e.preventDefault();
-                alert('You must select exactly 7 players for a line!');
-                console.log("Form submission prevented: Wrong number of players");
-                return false;
-            }
-            
-            // Get gender counts
-            const mmpCount = $('.mmp-checkbox:checked').length;
-            const fmpCount = $('.fmp-checkbox:checked').length;
-            
-            // Get required ratio
-            const ratio = $('#gender_ratio').val();
-            const [requiredMMP, requiredFMP] = ratio.split('-').map(Number);
-            
-            if (mmpCount !== requiredMMP || fmpCount !== requiredFMP) {
-                e.preventDefault();
-                alert(`Selected players don't match the required gender ratio of ${requiredMMP} MMP and ${requiredFMP} FMP.`);
-                console.log("Form submission prevented: Wrong gender ratio");
-                return false;
-            }
-            
-            // If we get here, form is valid
-            console.log("Form validation passed, submitting with players:", selectedPlayers);
-            return true;
-        });
-        
-        // Initialize player selection if form.players.data is set
-        if ({{ form.players.data|default([])|tojson|safe }}.length > 0) {
-            const initialPlayers = {{ form.players.data|default([])|tojson|safe }};
-            console.log("Initial players:", initialPlayers);
-            
-            // Check the corresponding checkboxes
-            initialPlayers.forEach(function(playerId) {
-                $('#player-' + playerId).prop('checked', true);
-                $('#player-' + playerId).closest('tr').addClass('selected-player');
-            });
-            
-            // Set the hidden input value immediately
-            $('#players-hidden-input').val(initialPlayers.join(','));
-            console.log("Hidden input initialized with:", initialPlayers.join(','));
-        } else {
-            console.log("No initial players found");
-            $('#players-hidden-input').val('');
         }
-        
-        // Update counts and highlighting
-        updateGenderCounts();
-        
-        // Log that initialization is complete
-        console.log("Player selection form initialization complete");
+
+        return true;
+    }
+
+    document.querySelectorAll('.player-checkbox').forEach(cb => {
+        cb.addEventListener("change", updateHiddenPlayers);
     });
+
+    document.getElementById("point-form").addEventListener("submit", function(e) {
+        updateHiddenPlayers();
+        validateRatio(e);
+    });
+
+});
 </script>
 {% endblock %}

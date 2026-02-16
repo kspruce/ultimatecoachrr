@@ -51,7 +51,7 @@ class PointForm(FlaskForm):
     gender_ratio = SelectField('Gender Ratio', choices=[
         ('4-3', '4 MMP - 3 FMP'),
         ('3-4', '3 MMP - 4 FMP')
-    ], validators=[DataRequired()])
+    ], validators=[Optional()])
     force_direction = SelectField('Force Direction', choices=[
         ('forehand', 'Forehand'),
         ('backhand', 'Backhand'),

@@ -1,6 +1,6 @@
 # app/forms/team_organization.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SubmitField
+from wtforms import StringField, TextAreaField, SubmitField, SelectField
 from wtforms.validators import DataRequired, ValidationError
 from app.models.team_organization import TeamOrganization
 
@@ -9,6 +9,16 @@ class TeamOrganizationForm(FlaskForm):
     slug = StringField('Slug', validators=[DataRequired()])
     description = TextAreaField('Description')
     submit = SubmitField('Save')
+    division = SelectField(
+        "Division",
+        choices=[
+            ("open", "Open"),
+            ("womens", "Womens"),
+            ("mixed", "Mixed")
+        ],
+        validators=[DataRequired()]
+    )
+
     
     def __init__(self, *args, **kwargs):
         self.team_id = kwargs.pop('team_id', None)

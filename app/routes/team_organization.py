@@ -29,8 +29,10 @@ def add():
         team = TeamOrganization(
             name=form.name.data,
             slug=form.slug.data,
-            description=form.description.data
+            description=form.description.data,
+            division=form.division.data
         )
+
         db.session.add(team)
         db.session.commit()
         flash(f'Team {team.name} has been created!', 'success')
