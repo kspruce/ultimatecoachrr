@@ -1,70 +1,119 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
 {% block content %}
-<div class="container">
-    <h1>User Management</h1>
-    
-    <!-- Team Filter -->
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <form method="GET" class="d-flex">
-                <select name="team_id" class="form-select me-2">
-                    <option value="">All Teams</option>
-                    {% for team in teams %}
-                    <option value="{{ team.id }}" {% if current_team and current_team.id == team.id %}selected{% endif %}>
-                        {{ team.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="btn btn-primary">Filter</button>
+
+<div class="container py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">User Management</h2>
+            <p class="text-muted mb-0">
+                Manage users, roles and player links
+            </p>
+        </div>
+
+        {% if current_team %}
+        <a href="{{ url_for('auth.add_user', team_id=current_team.id) }}" 
+           class="btn btn-dark">
+            + Add User
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Team Filter Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">Team</label>
+                    <select name="team_id" class="form-select">
+                        {% for team in teams %}
+                        <option value="{{ team.id }}"
+                            {% if current_team and team.id == current_team.id %}selected{% endif %}>
+                            {{ team.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-dark w-100">Filter</button>
+                </div>
             </form>
         </div>
-        <div class="col-md-6 text-end">
-			<a href="{{ url_for('auth.add_user', team_id=current_team.id if current_team else None) }}" class="btn btn-success">
-				<i class="bi bi-plus-circle"></i> Add User
-			</a>
-        </div>
     </div>
-    
-    <div class="card">
-        <div class="card-body">
-            <table class="table table-striped">
-                <thead>
+
+    <!-- Users Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0" id="usersTable">
+                <thead class="table-light">
                     <tr>
                         <th>Username</th>
                         <th>Email</th>
                         <th>Role</th>
-                        <th>Team</th>
                         <th>Linked Player</th>
-                        <th>Actions</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in users %}
+                {% for user in users %}
                     <tr>
-                        <td>{{ user.username }}</td>
+                        <td class="fw-semibold">{{ user.username }}</td>
                         <td>{{ user.email }}</td>
-                        <td>{{ user.role }}</td>
-                        <td>{{ user.team_organization.name if user.team_organization else 'None' }}</td>
-                        <td>{{ user.player.name if user.player else 'None' }}</td>
+
                         <td>
-                            <a href="{{ url_for('auth.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-pencil"></i> Edit
+                            <span class="badge bg-secondary">
+                                {{ user.role|capitalize }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if user.player %}
+                                <span class="badge bg-info text-dark">
+                                    {{ user.player.first_name }} {{ user.player.last_name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-end">
+                            <a href="{{ url_for('auth.edit_user', user_id=user.id) }}"
+                               class="btn btn-sm btn-outline-dark">
+                                Edit
                             </a>
+
                             {% if user.id != current_user.id %}
-                            <form method="POST" action="{{ url_for('auth.delete_user', user_id=user.id) }}" class="d-inline">
+                            <form method="POST"
+                                  action="{{ url_for('auth.delete_user', user_id=user.id) }}"
+                                  class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this user?')">
-                                    <i class="bi bi-trash"></i> Delete
+                                <button class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Delete this user?')">
+                                    Delete
                                 </button>
                             </form>
                             {% endif %}
                         </td>
                     </tr>
-                    {% endfor %}
+                {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
 </div>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function(){
+    $('#usersTable').DataTable({
+        paging: true,
+        searching: true,
+        info: false
+    });
+});
+</script>
+
 {% endblock %}

@@ -1,55 +1,47 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Link to Player</h1>
+
+<div class="container py-4">
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Link to Player</h5>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('auth.profile') }}" class="btn btn-secondary">Back to Profile</a>
+
+        <div class="card-body">
+            {% if players %}
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-4">
+                    <label class="form-label">Select Player</label>
+                    <select name="player_id" class="form-select select2">
+                        <option value="">Choose player...</option>
+                        {% for player in players %}
+                        <option value="{{ player.id }}"
+                            {% if current_user.player and current_user.player.id == player.id %}selected{% endif %}>
+                            {{ player.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button class="btn btn-dark">Link Player</button>
+            </form>
+            {% else %}
+                <div class="alert alert-info">
+                    All players are already linked.
+                </div>
+            {% endif %}
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Select a Player</h5>
-                </div>
-                <div class="card-body">
-                    {% if players %}
-                    <form method="post">
-                        <!-- Add CSRF Token here -->
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <div class="mb-3">
-                            <label for="player_id" class="form-label">Player</label>
-                            <select name="player_id" id="player_id" class="form-select" required>
-                                <option value="">Select a player...</option>
-                                {% for player in players %}
-                                <option value="{{ player.id }}" {% if current_user.player and current_user.player.id == player.id %}selected{% endif %}>
-                                    {{ player.name }}
-                                    {% if player.jersey_number %}
-                                    (#{{ player.jersey_number }})
-                                    {% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Link to Player</button>
-                        </div>
-                    </form>
-                    {% else %}
-                    <div class="alert alert-info">
-                        No available players found. All players are already linked to user accounts.
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
+
+<script>
+$(document).ready(function(){
+    $('.select2').select2();
+});
+</script>
+
 {% endblock %}
