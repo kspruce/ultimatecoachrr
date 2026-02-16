@@ -24,14 +24,20 @@ bp = Blueprint('auth', __name__)
 # ---------------------------------------
 
 def _get_managed_team_id():
-    """
-    Determine which team is being managed.
-    Superadmin: from query string
-    Others: from their assigned team
-    """
     if current_user.is_superadmin:
-        return request.args.get('team_id', type=int)
+        team_id = request.args.get('team_id', type=int)
+
+        if team_id:
+            return team_id
+
+        first_team = TeamOrganization.query.order_by(
+            TeamOrganization.name
+        ).first()
+
+        return first_team.id if first_team else None
+
     return current_user.team_organization_id
+
 
 
 def _populate_team_choices(form, selected_team_id):
