@@ -1,42 +1,79 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-    <h1>{{ title }}</h1>
-    
-    <div class="card">
+<div class="container py-4">
+
+    <div class="mb-4">
+        <h2 class="mb-1">{{ title }}</h2>
+        <p class="text-muted mb-0">
+            Configure team information and competition division
+        </p>
+    </div>
+
+    <div class="card shadow-sm border-0">
         <div class="card-body">
+
             <form method="POST">
                 {{ form.hidden_tag() }}
-                
-                <div class="mb-3">
-                    {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control") }}
-                    {% for error in form.name.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                    {% endfor %}
+
+                <div class="row g-4">
+
+                    <!-- Team Name -->
+                    <div class="col-md-6">
+                        {{ form.name.label(class="form-label fw-semibold") }}
+                        {{ form.name(class="form-control form-control-lg") }}
+                        {% for error in form.name.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Slug -->
+                    <div class="col-md-6">
+                        {{ form.slug.label(class="form-label fw-semibold") }}
+                        {{ form.slug(class="form-control") }}
+                        <small class="text-muted">
+                            Used in URLs (e.g. example-team)
+                        </small>
+                        {% for error in form.slug.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Division -->
+                    <div class="col-md-6">
+                        {{ form.division.label(class="form-label fw-semibold") }}
+                        {{ form.division(class="form-select form-select-lg") }}
+                        <small class="text-muted">
+                            Determines stat tracking behaviour
+                        </small>
+                        {% for error in form.division.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Description -->
+                    <div class="col-12">
+                        {{ form.description.label(class="form-label fw-semibold") }}
+                        {{ form.description(class="form-control", rows=4) }}
+                    </div>
+
                 </div>
-                
-                <div class="mb-3">
-                    {{ form.slug.label(class="form-label") }}
-                    {{ form.slug(class="form-control") }}
-                    <small class="text-muted">Used in URLs, e.g., example-team</small>
-                    {% for error in form.slug.errors %}
-                    <div class="text-danger">{{ error }}</div>
-                    {% endfor %}
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('team_organization.index') }}"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+
+                    {{ form.submit(class="btn btn-primary btn-lg px-4") }}
                 </div>
-                
-                <div class="mb-3">
-                    {{ form.description.label(class="form-label") }}
-                    {{ form.description(class="form-control", rows=5) }}
-                </div>
-                
-                <div class="mb-3">
-                    {{ form.submit(class="btn btn-primary") }}
-                    <a href="{{ url_for('team_organization.index') }}" class="btn btn-secondary">Cancel</a>
-                </div>
+
             </form>
+
         </div>
     </div>
+
 </div>
 {% endblock %}

@@ -19,7 +19,8 @@ class Point(db.Model):
     gender_ratio = db.Column(db.String(4))
     force_direction = db.Column(db.String(10))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+    majority_gender = db.Column(db.String(10))
+
     # Relationships
     game = db.relationship('Game', back_populates='points')
     lineups = db.relationship('LineUp', back_populates='point', cascade='all, delete-orphan')

@@ -265,15 +265,17 @@ def add_point(game_id):
         team_organization_id=get_current_team_id()
     ).order_by(Player.jersey_number).all()
 
-    if request.method == 'GET':
-        next_point_number = 1
-        last_point = Point.query.filter_by(
-            game_id=game_id,
-            team_organization_id=get_current_team_id()
-        ).order_by(Point.point_number.desc()).first()
+    last_point = Point.query.filter_by(
+        game_id=game_id,
+        team_organization_id=get_current_team_id()
+    ).order_by(Point.point_number.desc()).first()
 
-        if last_point:
-            next_point_number = last_point.point_number + 1
+    # ------------------------
+    # GET Defaults
+    # ------------------------
+    if request.method == 'GET':
+
+        next_point_number = 1 if not last_point else last_point.point_number + 1
 
         form.point_number.data = next_point_number
         form.our_score_before.data = game.our_score
@@ -284,27 +286,43 @@ def add_point(game_id):
         else:
             form.gender_ratio.data = None
 
+    # ------------------------
+    # Process Players on POST
+    # ------------------------
     if request.method == 'POST':
+
         selected_players_str = request.form.get('players', '')
+
         if selected_players_str:
             try:
-                form.players.data = [int(pid) for pid in selected_players_str.split(',') if pid]
+                form.players.data = [
+                    int(pid) for pid in selected_players_str.split(',') if pid
+                ]
             except ValueError:
                 form.players.data = []
         else:
             form.players.data = []
 
+    # ------------------------
+    # FORM VALIDATION
+    # ------------------------
     if form.validate_on_submit():
 
         if len(form.players.data) != 7:
             flash('You must select exactly 7 players.', 'danger')
-            return render_template('point/point_form.html',
-                                   form=form,
-                                   game=game,
-                                   division=division,
-                                   all_players=all_players)
+            return render_template(
+                'point/point_form.html',
+                form=form,
+                game=game,
+                division=division,
+                all_players=all_players
+            )
 
-        # Only enforce ratio if mixed
+        # ------------------------
+        # Mixed Ratio Enforcement
+        # ------------------------
+        majority = None
+
         if division == "mixed":
 
             male_count = 0
@@ -322,7 +340,10 @@ def add_point(game_id):
                     elif player.gender == "female":
                         female_count += 1
 
-            required_male, required_female = map(int, form.gender_ratio.data.split('-'))
+            required_male, required_female = map(
+                int,
+                form.gender_ratio.data.split('-')
+            )
 
             if male_count != required_male or female_count != required_female:
                 flash(
@@ -330,12 +351,20 @@ def add_point(game_id):
                     f'({required_male}-{required_female}).',
                     'danger'
                 )
-                return render_template('point/point_form.html',
-                                       form=form,
-                                       game=game,
-                                       division=division,
-                                       all_players=all_players)
+                return render_template(
+                    'point/point_form.html',
+                    form=form,
+                    game=game,
+                    division=division,
+                    all_players=all_players
+                )
 
+            # Calculate Majority
+            majority = "male" if male_count > female_count else "female"
+
+        # ------------------------
+        # Create Point
+        # ------------------------
         point = Point(
             game_id=game_id,
             point_number=form.point_number.data,
@@ -344,6 +373,7 @@ def add_point(game_id):
             their_score_before=form.their_score_before.data,
             starting_position=form.starting_position.data,
             gender_ratio=form.gender_ratio.data if division == "mixed" else None,
+            majority_gender=majority,
             force_direction=form.force_direction.data,
             point_outcome=form.point_outcome.data,
             duration=form.duration.data,
@@ -377,11 +407,14 @@ def add_point(game_id):
         flash(f'Point {point.point_number} has been added!', 'success')
         return redirect(url_for('stat.record_events', point_id=point.id))
 
-    return render_template('point/point_form.html',
-                           form=form,
-                           game=game,
-                           division=division,
-                           all_players=all_players)
+    return render_template(
+        'point/point_form.html',
+        form=form,
+        game=game,
+        division=division,
+        all_players=all_players
+    )
+
                            
 @bp.route('/edit/<int:point_id>', methods=['GET', 'POST'])
 @login_required
@@ -403,25 +436,22 @@ def edit_point(point_id):
 
     form = PointForm(obj=point)
 
-    # -----------------------------------
-    # Get active players
-    # -----------------------------------
     all_players = Player.query.filter_by(
         active=True,
         team_organization_id=get_current_team_id()
     ).order_by(Player.jersey_number).all()
 
-    # -----------------------------------
-    # Pre-select lineup on GET
-    # -----------------------------------
+    # ------------------------
+    # Preselect Players (GET)
+    # ------------------------
     if request.method == 'GET':
-        current_lineup_player_ids = [lineup.player_id for lineup in point.lineups]
-        form.players.data = current_lineup_player_ids
+        form.players.data = [lineup.player_id for lineup in point.lineups]
 
-    # -----------------------------------
-    # Handle POST player selection
-    # -----------------------------------
+    # ------------------------
+    # Handle POST Selection
+    # ------------------------
     if request.method == 'POST':
+
         selected_players_str = request.form.get('players', '')
 
         if selected_players_str:
@@ -432,15 +462,13 @@ def edit_point(point_id):
             except ValueError:
                 form.players.data = []
         else:
-            # Keep existing lineup if none submitted
             form.players.data = [lineup.player_id for lineup in point.lineups]
 
-    # -----------------------------------
-    # FORM VALIDATION
-    # -----------------------------------
+    # ------------------------
+    # VALIDATION
+    # ------------------------
     if form.validate_on_submit():
 
-        # Must always have exactly 7 players
         if len(form.players.data) != 7:
             flash('You must select exactly 7 players.', 'danger')
             return render_template(
@@ -452,7 +480,8 @@ def edit_point(point_id):
                 all_players=all_players
             )
 
-        # 🔥 ONLY enforce ratio if mixed division
+        majority = None
+
         if division == "mixed":
 
             male_count = 0
@@ -490,9 +519,12 @@ def edit_point(point_id):
                     all_players=all_players
                 )
 
-        # -----------------------------------
-        # Update point fields
-        # -----------------------------------
+            majority = "male" if male_count > female_count else "female"
+            point.majority_gender = majority
+        else:
+            point.majority_gender = None
+            point.gender_ratio = None
+
         point.point_number = form.point_number.data
         point.our_line_type = form.our_line_type.data
         point.our_score_before = form.our_score_before.data
@@ -503,15 +535,9 @@ def edit_point(point_id):
         point.timestamp_in_video = form.timestamp_in_video.data
         point.force_direction = form.force_direction.data
 
-        # Only save gender ratio for mixed
         if division == "mixed":
             point.gender_ratio = form.gender_ratio.data
-        else:
-            point.gender_ratio = None
 
-        # -----------------------------------
-        # Update score after
-        # -----------------------------------
         if form.point_outcome.data == 'scored':
             point.our_score_after = form.our_score_before.data + 1
             point.their_score_after = form.their_score_before.data
@@ -519,36 +545,24 @@ def edit_point(point_id):
             point.our_score_after = form.our_score_before.data
             point.their_score_after = form.their_score_before.data + 1
 
-        # -----------------------------------
-        # Update lineup if changed
-        # -----------------------------------
-        current_lineup_player_ids = [
-            lineup.player_id for lineup in point.lineups
-        ]
+        LineUp.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).delete()
 
-        if set(current_lineup_player_ids) != set(form.players.data):
-
-            LineUp.query.filter_by(
+        for player_id in form.players.data:
+            lineup = LineUp(
                 point_id=point.id,
+                player_id=player_id,
                 team_organization_id=get_current_team_id()
-            ).delete()
-
-            for player_id in form.players.data:
-                lineup = LineUp(
-                    point_id=point.id,
-                    player_id=player_id,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(lineup)
+            )
+            db.session.add(lineup)
 
         db.session.commit()
 
         flash(f'Point {point.point_number} has been updated!', 'success')
         return redirect(url_for('point.game_points', game_id=point.game_id))
 
-    # -----------------------------------
-    # Final Render
-    # -----------------------------------
     return render_template(
         'point/point_form.html',
         form=form,
@@ -557,6 +571,7 @@ def edit_point(point_id):
         division=division,
         all_players=all_players
     )
+
                            
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
