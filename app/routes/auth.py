@@ -257,6 +257,12 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     team_id = user.team_organization_id
 
+    if request.method == "POST":
+        print("FORM DATA:", request.form)
+        print("VALID:", form.validate())
+        print("ERRORS:", form.errors)
+
+
     if not can_manage_team_users(team_id):
         flash("You do not have permission.", "danger")
         return redirect(url_for("main.index"))
