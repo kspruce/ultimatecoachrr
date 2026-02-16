@@ -522,3 +522,29 @@ def update_game_players(tournament_id, game_id):
     
     flash(f'{len(selected_player_ids)} players assigned to game vs {game.opponent}', 'success')
     return redirect(url_for('tournament.assign_players', tournament_id=tournament_id))
+
+@tournament.route('/<int:tournament_id>/bulk-update', methods=['POST'])
+@login_required
+def bulk_update_game_players(tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+
+    for game in tournament.games:
+        selected_player_ids = request.form.getlist(f'game_players_{game.id}')
+
+        # Clear existing assignments
+        game.players.clear()
+
+        # Add selected players
+        if selected_player_ids:
+            players = Player.query.filter(
+                Player.id.in_(selected_player_ids)
+            ).all()
+            game.players.extend(players)
+
+    db.session.commit()
+    flash("Game assignments updated successfully.", "success")
+
+    return redirect(
+        url_for('tournament.assign_players',
+                tournament_id=tournament_id)
+    )
