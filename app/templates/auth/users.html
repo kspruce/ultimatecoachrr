@@ -20,9 +20,9 @@
             </form>
         </div>
         <div class="col-md-6 text-end">
-            <a href="{{ url_for('auth.add_user') }}" class="btn btn-success">
-                <i class="bi bi-plus-circle"></i> Add User
-            </a>
+			<a href="{{ url_for('auth.add_user', team_id=current_team.id if current_team else None) }}" class="btn btn-success">
+				<i class="bi bi-plus-circle"></i> Add User
+			</a>
         </div>
     </div>
     

@@ -8,6 +8,8 @@ import logging
 from app.models.player import Player
 from app.forms.auth import UserForm
 from app.models.team_organization import TeamOrganization  # Add this import
+from flask import abort
+from app.utils.permissions import can_manage_team_users
 
 
 
@@ -81,162 +83,196 @@ def logout():
 @bp.route('/users')
 @login_required
 def users():
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    
-    # Get team filter from query parameters
+    # Superadmin can browse all teams; others only their team
     team_id = request.args.get('team_id', type=int)
-    
-    # Get all teams for the filter dropdown
-    teams = TeamOrganization.query.order_by(TeamOrganization.name).all()
-    
-    # Filter users by team if a team is selected
-    if team_id:
+
+    if current_user.is_superadmin:
+        teams = TeamOrganization.query.order_by(TeamOrganization.name).all()
+        # Default to first team if none selected
+        if not team_id and teams:
+            team_id = teams[0].id
+    else:
+        if not current_user.team_organization_id:
+            flash('You are not assigned to a team. Ask an admin to assign you.', 'danger')
+            return redirect(url_for('main.index'))
+        team_id = int(current_user.team_organization_id)
+        teams = [TeamOrganization.query.get(team_id)]
+
+    if not team_id:
+        users = []
+        current_team = None
+    else:
+        if not can_manage_team_users(team_id):
+            flash('You do not have permission to manage users for this team.', 'danger')
+            return redirect(url_for('main.index'))
+
         users = User.query.filter_by(team_organization_id=team_id).all()
         current_team = TeamOrganization.query.get(team_id)
-    else:
-        users = User.query.all()
-        current_team = None
-    
+
     return render_template(
-        'auth/users.html', 
-        users=users, 
-        teams=teams, 
+        'auth/users.html',
+        users=users,
+        teams=teams,
         current_team=current_team
     )
+
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
 @login_required
 def add_user():
-    if not current_user.is_admin:
+    # Determine which team we are managing
+    if current_user.is_superadmin:
+        team_id = request.args.get('team_id', type=int)
+    else:
+        team_id = int(current_user.team_organization_id) if current_user.team_organization_id else None
+
+    if not team_id:
+        flash('Select a team first.', 'warning')
+        return redirect(url_for('auth.users'))
+
+    if not can_manage_team_users(team_id):
         flash('You do not have permission to access this page.', 'danger')
         return redirect(url_for('main.index'))
-    
+
     form = UserForm()
-    
-    # Populate team organization choices
-    form.team_organization_id.choices = [(0, 'None')] + [
-        (t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()
-    ]
-    
+
+    # Team choices: superadmin can choose; team admin is locked
+    if current_user.is_superadmin:
+        form.team_organization_id.choices = [(t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()]
+        form.team_organization_id.data = team_id
+    else:
+        # lock to their team
+        team = TeamOrganization.query.get(team_id)
+        form.team_organization_id.choices = [(team.id, team.name)]
+        form.team_organization_id.data = team_id
+
     if form.validate_on_submit():
         user = User(
             username=form.username.data,
             email=form.email.data,
-            role=form.role.data
+            role=form.role.data,
+            team_organization_id=form.team_organization_id.data
         )
-        
-        # Set team organization
-        if form.team_organization_id.data and form.team_organization_id.data > 0:
-            user.team_organization_id = form.team_organization_id.data
-        
+
         if form.password.data:
             user.set_password(form.password.data)
-        
+
+        # Force: only superadmin can create superadmin (we won't expose this in form)
+        user.is_superadmin = False
+
         db.session.add(user)
-        db.session.commit()  # Commit first to get user.id
-        
+        db.session.commit()
+
         # Link to player if selected
         if form.player_id.data and form.player_id.data > 0:
             player = Player.query.get(form.player_id.data)
             if player:
-                player.user_id = user.id  # Set the user_id on the player
-                
-                # If user has a team organization, assign it to the player too
-                if user.team_organization_id:
-                    player.team_organization_id = user.team_organization_id
-                    
+                # Ensure 1:1 player->user
+                if player.user_id and player.user_id != user.id:
+                    other_user = User.query.get(player.user_id)
+                    if other_user:
+                        flash(f'Player was unlinked from user {other_user.username}', 'warning')
+
+                player.user_id = user.id
+                player.team_organization_id = user.team_organization_id
                 db.session.commit()
-        
+
         flash(f'User {user.username} has been created!', 'success')
-        return redirect(url_for('auth.users'))
-    
+        return redirect(url_for('auth.users', team_id=team_id))
+
     return render_template('auth/user_form.html', form=form, title='Add User')
+
 
 
 @bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def edit_user(user_id):
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    
     user = User.query.get_or_404(user_id)
-    
-    # Pass the user object to the form
+
+    # Which team are we managing?
+    team_id = user.team_organization_id
+    if not team_id:
+        flash('This user is not assigned to a team.', 'warning')
+        return redirect(url_for('auth.users'))
+
+    if not can_manage_team_users(team_id):
+        flash('You do not have permission to edit users for this team.', 'danger')
+        return redirect(url_for('main.index'))
+
     form = UserForm(
-        obj=user,  # Pass the user object
-        original_username=user.username, 
+        obj=user,
+        original_username=user.username,
         original_email=user.email
     )
-    
+
+    # Team selector: superadmin can move users; team admin cannot
+    if current_user.is_superadmin:
+        form.team_organization_id.choices = [(t.id, t.name) for t in TeamOrganization.query.order_by(TeamOrganization.name).all()]
+    else:
+        team = TeamOrganization.query.get(team_id)
+        form.team_organization_id.choices = [(team.id, team.name)]
+        form.team_organization_id.data = team_id
+
     if form.validate_on_submit():
         user.username = form.username.data
         user.email = form.email.data
         user.role = form.role.data
-        
-        # Update team organization
-        if form.team_organization_id.data and form.team_organization_id.data > 0:
+
+        # Only superadmin can change team
+        if current_user.is_superadmin:
             user.team_organization_id = form.team_organization_id.data
-        else:
-            user.team_organization_id = None
-        
+
         if form.password.data:
             user.set_password(form.password.data)
-        
-        # Update player link
+
+        # Update player link (1:1)
         if user.player and (form.player_id.data == 0 or form.player_id.data != user.player.id):
-            # Unlink current player
             user.player.user_id = None
-        
-        if form.player_id.data > 0:
+
+        if form.player_id.data and form.player_id.data > 0:
             player = Player.query.get(form.player_id.data)
             if player:
-                # If player is already linked to another user, unlink it
                 if player.user_id and player.user_id != user.id:
                     other_user = User.query.get(player.user_id)
                     if other_user:
                         flash(f'Player was unlinked from user {other_user.username}', 'warning')
-                
+
                 player.user_id = user.id
-                
-                # If user has a team organization, assign it to the player too
-                if user.team_organization_id:
-                    player.team_organization_id = user.team_organization_id
-        
+                player.team_organization_id = user.team_organization_id
+
         db.session.commit()
-        
         flash(f'User {user.username} has been updated!', 'success')
-        return redirect(url_for('auth.users'))
-    
+        return redirect(url_for('auth.users', team_id=user.team_organization_id))
+
     return render_template('auth/user_form.html', form=form, user=user, title='Edit User')
+
 
 
 
 @bp.route('/users/delete/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    
     user = User.query.get_or_404(user_id)
-    
+
     if user.id == current_user.id:
         flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('auth.users'))
-    
-    # Unlink any associated player
+
+    team_id = user.team_organization_id
+    if not team_id or not can_manage_team_users(team_id):
+        flash('You do not have permission to delete users for this team.', 'danger')
+        return redirect(url_for('main.index'))
+
     if user.player:
         user.player.user_id = None
-    
+
     db.session.delete(user)
     db.session.commit()
-    
+
     flash(f'User {user.username} has been deleted!', 'success')
-    return redirect(url_for('auth.users'))
+    return redirect(url_for('auth.users', team_id=team_id))
+
 
 @bp.route('/profile')
 @login_required
