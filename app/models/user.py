@@ -60,6 +60,10 @@ class User(UserMixin, db.Model):
         """
         return self.is_superadmin or self.role == "admin"
 
+    @property
+    def is_coach(self):
+        return self.role == "coach"
+
     # Convenience helpers (do NOT reintroduce an is_admin property)
     def role_level(self) -> int:
         return ROLE_ORDER.get(self.role or "player", 1)
