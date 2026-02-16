@@ -2,27 +2,30 @@
 {% block content %}
 
 <div class="card">
-  <h2>Module Visibility – {{ team.name }}</h2>
+	<h2>Module Visibility – {{ team.name }}</h2>
 
-  <form method="POST">
-    <h4>Core</h4>
-    <label><input type="checkbox" name="stats_enabled" {% if team.settings.stats_enabled %}checked{% endif %}> Stats</label><br>
-    <label><input type="checkbox" name="gameday_enabled" {% if team.settings.gameday_enabled %}checked{% endif %}> Gameday</label><br>
+	<form method="POST">
+	  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <h4>Coaching</h4>
-    <label><input type="checkbox" name="playbook_enabled" {% if team.settings.playbook_enabled %}checked{% endif %}> Playbook</label><br>
-    <label><input type="checkbox" name="theory_enabled" {% if team.settings.theory_enabled %}checked{% endif %}> Theory</label><br>
-    <label><input type="checkbox" name="drills_enabled" {% if team.settings.drills_enabled %}checked{% endif %}> Drills</label><br>
-    <label><input type="checkbox" name="sessions_enabled" {% if team.settings.sessions_enabled %}checked{% endif %}> Sessions</label><br>
+	  <h4>Core</h4>
+	  <label><input type="checkbox" name="stats_enabled" {% if team.settings.stats_enabled %}checked{% endif %}> Stats</label><br>
+	  <label><input type="checkbox" name="gameday_enabled" {% if team.settings.gameday_enabled %}checked{% endif %}> Gameday</label><br>
 
-    <h4>Analysis</h4>
-    <label><input type="checkbox" name="clip_enabled" {% if team.settings.clip_enabled %}checked{% endif %}> Clips</label><br>
-    <label><input type="checkbox" name="scouting_enabled" {% if team.settings.scouting_enabled %}checked{% endif %}> Scouting</label><br>
-    <label><input type="checkbox" name="fitness_enabled" {% if team.settings.fitness_enabled %}checked{% endif %}> Fitness</label><br>
+	  <h4>Coaching</h4>
+	  <label><input type="checkbox" name="playbook_enabled" {% if team.settings.playbook_enabled %}checked{% endif %}> Playbook</label><br>
+	  <label><input type="checkbox" name="theory_enabled" {% if team.settings.theory_enabled %}checked{% endif %}> Theory</label><br>
+	  <label><input type="checkbox" name="drills_enabled" {% if team.settings.drills_enabled %}checked{% endif %}> Drills</label><br>
+	  <label><input type="checkbox" name="sessions_enabled" {% if team.settings.sessions_enabled %}checked{% endif %}> Sessions</label><br>
 
-    <br>
-    <button type="submit">Save Changes</button>
-  </form>
+	  <h4>Analysis</h4>
+	  <label><input type="checkbox" name="clip_enabled" {% if team.settings.clip_enabled %}checked{% endif %}> Clips</label><br>
+	  <label><input type="checkbox" name="scouting_enabled" {% if team.settings.scouting_enabled %}checked{% endif %}> Scouting</label><br>
+	  <label><input type="checkbox" name="fitness_enabled" {% if team.settings.fitness_enabled %}checked{% endif %}> Fitness</label><br>
+
+	  <br>
+	  <button type="submit">Save Changes</button>
+	</form>
+
 </div>
 
 {% endblock %}
