@@ -18,5 +18,19 @@ class TeamSettings(db.Model):
     discord_notify_upcoming_events = db.Column(db.Boolean, default=False)
     discord_notify_new_items = db.Column(db.Boolean, default=False)
     
+    # Feature toggles (UI modules)
+    stats_enabled = db.Column(db.Boolean, default=True)
+    gameday_enabled = db.Column(db.Boolean, default=True)
+
+    playbook_enabled = db.Column(db.Boolean, default=True)
+    theory_enabled = db.Column(db.Boolean, default=True)
+    drills_enabled = db.Column(db.Boolean, default=True)
+    sessions_enabled = db.Column(db.Boolean, default=True)
+
+    clip_enabled = db.Column(db.Boolean, default=True)
+    scouting_enabled = db.Column(db.Boolean, default=True)
+    fitness_enabled = db.Column(db.Boolean, default=True)
+
+    
     def __repr__(self):
         return f'<TeamSettings id={self.id} team_id={self.team_id}>'

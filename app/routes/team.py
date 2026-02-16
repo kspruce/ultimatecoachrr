@@ -11,6 +11,8 @@ from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from app.models.session import SessionPlan
+from app.models.team_organization import TeamOrganization
+from app.models.team_settings import TeamSettings
 from datetime import datetime
 from markupsafe import Markup
 
@@ -391,3 +393,35 @@ def update_player_goals(player_id):
         flash(f'Error updating goals: {str(e)}', 'danger')
     
     return redirect(url_for('team.player_detail', player_id=player_id))
+
+@bp.route('/settings/features', methods=['GET', 'POST'])
+@login_required
+@coach_required
+def feature_settings():
+    team_id = get_current_team_id()
+    team = TeamOrganization.query.get_or_404(team_id)
+
+    # Ensure settings row exists
+    if team.settings is None:
+        team.settings = TeamSettings(team_id=team.id)
+        db.session.add(team.settings)
+        db.session.commit()
+
+    settings = team.settings
+
+    if request.method == 'POST':
+        settings.stats_enabled = bool(request.form.get('stats_enabled'))
+        settings.gameday_enabled = bool(request.form.get('gameday_enabled'))
+        settings.playbook_enabled = bool(request.form.get('playbook_enabled'))
+        settings.theory_enabled = bool(request.form.get('theory_enabled'))
+        settings.drills_enabled = bool(request.form.get('drills_enabled'))
+        settings.sessions_enabled = bool(request.form.get('sessions_enabled'))
+        settings.clip_enabled = bool(request.form.get('clip_enabled'))
+        settings.scouting_enabled = bool(request.form.get('scouting_enabled'))
+        settings.fitness_enabled = bool(request.form.get('fitness_enabled'))
+
+        db.session.commit()
+        flash('Feature visibility updated.', 'success')
+        return redirect(url_for('team.feature_settings'))
+
+    return render_template('team/feature_settings.html', team=team)
