@@ -169,9 +169,39 @@
 {% endif %}
 
 {% if current_user.is_admin %}
+
+<li><hr class="dropdown-divider"></li>
+<li><h6 class="dropdown-header">Admin</h6></li>
+
+<li>
+<a class="dropdown-item" href="{{ url_for('auth.users') }}">
+<i class="bi bi-people"></i> User Management
+</a>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
+<i class="fas fa-database me-2"></i> Data Management
+</a>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ url_for('discord.settings') }}">
+<i class="bi bi-discord"></i> Discord Settings
+</a>
+</li>
+
+<li>
+<a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
+<i class="bi bi-gear-fill me-2"></i> Manage Teams
+</a>
+</li>
+
 <li><hr class="dropdown-divider"></li>
 <li><h6 class="dropdown-header">Team Selection</h6></li>
+
 {% for team in available_teams %}
+
 <li>
 <a class="dropdown-item" href="{{ url_for('team_organization.switch', team_id=team.id) }}">
 {{ team.name }}
