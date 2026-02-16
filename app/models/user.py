@@ -52,6 +52,14 @@ class User(UserMixin, db.Model):
     def player(self):
         return self.player_profile
 
+    @property
+    def is_admin(self):
+        """
+        Backwards compatibility property.
+        True if user is global superadmin or team admin.
+        """
+        return self.is_superadmin or self.role == "admin"
+
     # Convenience helpers (do NOT reintroduce an is_admin property)
     def role_level(self) -> int:
         return ROLE_ORDER.get(self.role or "player", 1)

@@ -12,7 +12,7 @@ def team_info_processor():
         return {'current_team': None, 'available_teams': []}
 
     try:
-        if current_user.is_admin:
+        if current_user.is_superadmin or current_user.role == "admin":
             available_teams = TeamOrganization.query.all()
             current_team_id = session.get('current_team_id')
             current_team = None

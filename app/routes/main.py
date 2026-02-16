@@ -643,7 +643,7 @@ def get_current_team_id():
     """Helper function to get the current team ID based on user role"""
     from flask import session
     
-    if current_user.is_admin:
+    if current_user.is_superadmin:
         # For admins, use the team selected in the session
         team_id = session.get('current_team_id')
         if not team_id and hasattr(current_user, 'team_organization_id') and current_user.team_organization_id:
