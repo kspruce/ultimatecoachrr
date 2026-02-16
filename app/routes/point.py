@@ -381,12 +381,28 @@ def add_point(game_id):
             team_organization_id=get_current_team_id()
         )
 
+        # Use current game score as source of truth
+        current_our_score = game.our_score or 0
+        current_their_score = game.their_score or 0
+
+        point.our_score_before = current_our_score
+        point.their_score_before = current_their_score
+
+        # Use current game score as source of truth
+        current_our_score = game.our_score or 0
+        current_their_score = game.their_score or 0
+
+        point.our_score_before = current_our_score
+        point.their_score_before = current_their_score
+
         if form.point_outcome.data == 'scored':
-            point.our_score_after = form.our_score_before.data + 1
-            point.their_score_after = form.their_score_before.data
+            point.our_score_after = current_our_score + 1
+            point.their_score_after = current_their_score
         else:
-            point.our_score_after = form.our_score_before.data
-            point.their_score_after = form.their_score_before.data + 1
+            point.our_score_after = current_our_score
+            point.their_score_after = current_their_score + 1
+
+
 
         db.session.add(point)
         db.session.commit()
@@ -527,8 +543,6 @@ def edit_point(point_id):
 
         point.point_number = form.point_number.data
         point.our_line_type = form.our_line_type.data
-        point.our_score_before = form.our_score_before.data
-        point.their_score_before = form.their_score_before.data
         point.starting_position = form.starting_position.data
         point.point_outcome = form.point_outcome.data
         point.duration = form.duration.data
