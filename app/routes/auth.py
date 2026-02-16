@@ -257,18 +257,11 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     team_id = user.team_organization_id
 
-    if request.method == "POST":
-        print("FORM DATA:", request.form)
-        print("VALID:", form.validate())
-        print("ERRORS:", form.errors)
-
-
     if not can_manage_team_users(team_id):
         flash("You do not have permission.", "danger")
         return redirect(url_for("main.index"))
 
     form = UserForm(
-        obj=user,
         original_username=user.username,
         original_email=user.email
     )
@@ -277,13 +270,17 @@ def edit_user(user_id):
     _populate_player_choices(form, team_id)
 
     if request.method == "GET":
+        form.username.data = user.username
+        form.email.data = user.email
+        form.role.data = user.role
+        form.team_organization_id.data = user.team_organization_id
         form.player_id.data = user.player.id if user.player else 0
 
     if form.validate_on_submit():
 
         user.username = form.username.data
         user.email = form.email.data
-        user.role = form.role.data
+        user.role = form.role.data.lower()
 
         if current_user.is_superadmin:
             user.team_organization_id = form.team_organization_id.data
