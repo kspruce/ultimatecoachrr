@@ -529,19 +529,24 @@ def bulk_update_game_players(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
 
     for game in tournament.games:
-        selected_player_ids = request.form.getlist(f'game_players_{game.id}')
 
-        # Clear existing assignments
-        game.players.clear()
+        selected_player_ids = request.form.getlist(
+            f'game_players_{game.id}'
+        )
 
-        # Add selected players
-        if selected_player_ids:
-            players = Player.query.filter(
-                Player.id.in_(selected_player_ids)
-            ).all()
-            game.players.extend(players)
+        # Delete existing assignments
+        GamePlayer.query.filter_by(game_id=game.id).delete()
+
+        # Create new assignments
+        for player_id in selected_player_ids:
+            assignment = GamePlayer(
+                game_id=game.id,
+                player_id=int(player_id)
+            )
+            db.session.add(assignment)
 
     db.session.commit()
+
     flash("Game assignments updated successfully.", "success")
 
     return redirect(
