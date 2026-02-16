@@ -29,7 +29,8 @@ def upgrade():
     )
 
     # Make username 'admin' global superadmin
-    op.execute("UPDATE \"user\" SET is_superadmin = 1 WHERE username = 'admin'")
+    op.execute("UPDATE \"user\" SET is_superadmin = TRUE WHERE username = 'admin'")
+
 
 
 def downgrade():
