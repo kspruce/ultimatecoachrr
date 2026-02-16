@@ -523,7 +523,7 @@ def update_game_players(tournament_id, game_id):
     flash(f'{len(selected_player_ids)} players assigned to game vs {game.opponent}', 'success')
     return redirect(url_for('tournament.assign_players', tournament_id=tournament_id))
 
-@tournament.route('/<int:tournament_id>/bulk-update', methods=['POST'])
+@bp.route('/<int:tournament_id>/bulk-update', methods=['POST'])
 @login_required
 def bulk_update_game_players(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
