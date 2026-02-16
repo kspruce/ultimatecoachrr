@@ -29,9 +29,15 @@
                     <tbody>
                         {% for team in teams %}
                         <tr>
-                            <td class="fw-semibold">
-                                {{ team.name }}
-                            </td>
+							<td>
+								<span class="badge bg-secondary">
+									{{ team.id }}
+								</span>
+							</td>
+
+							<td class="fw-semibold">
+								{{ team.name }}
+							</td>
 
                             <td class="text-muted">
                                 {{ team.slug }}
