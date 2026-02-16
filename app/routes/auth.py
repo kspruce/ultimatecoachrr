@@ -55,18 +55,17 @@ def _populate_team_choices(form, selected_team_id):
 
 
 def _populate_player_choices(form, team_id):
-    """
-    Populate player dropdown for selected team.
-    """
+
     players = Player.query.filter_by(
         team_organization_id=team_id,
         active=True
-    ).order_by(Player.first_name).all()
+    ).order_by(Player.name).all()
 
     form.player_id.choices = [(0, "No Player")] + [
-        (p.id, f"{p.first_name} {p.last_name} ({p.jersey_number or ''})")
+        (p.id, f"{p.name} ({p.jersey_number or ''})")
         for p in players
     ]
+
 
 
 def _link_player_to_user(user, player_id):
