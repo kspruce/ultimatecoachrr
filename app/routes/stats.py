@@ -877,82 +877,101 @@ def calculate_team_averages(games=None):
 
 def calculate_game_stats(game):
     """
-    Calculate comprehensive game statistics
+    Calculate per-game statistics using the SAME possession logic as team stats.
     """
-    # Safely get points
-    try:
-        if hasattr(game.points, 'all'):
-            all_points = game.points.all()
-        else:
-            all_points = game.points
-            
-        if hasattr(game.o_line_points, 'all'):
-            o_points = game.o_line_points.all()
-        else:
-            o_points = game.o_line_points
-            
-        if hasattr(game.d_line_points, 'all'):
-            d_points = game.d_line_points.all()
-        else:
-            d_points = game.d_line_points
-    except Exception as e:
-        print(f"Error getting points for game {game.id}: {str(e)}")
-        all_points = []
-        o_points = []
-        d_points = []
-    
+
+    all_points = game.points.all() if hasattr(game.points, 'all') else game.points
+
     stats = {
-        'o_line_points': len(o_points),
-        'o_line_conversions': sum(1 for p in o_points if p.we_scored),
-        'd_line_points': len(d_points),
-        'd_line_conversions': sum(1 for p in d_points if p.we_scored),
-        'breaks': sum(1 for p in all_points if p.is_break),
-        'holds': sum(1 for p in all_points if p.is_hold),
+        'points_played': len(all_points),
+        'o_line_points': 0,
+        'd_line_points': 0,
+        'o_line_conversions': 0,
+        'd_line_conversions': 0,
         'turnovers': 0,
         'possessions': 0,
-        'point_flow': []
+        'possessions_gained': 0,
+        'clean_holds': 0,
+        'clean_breaks': 0,
+        'scoring_possessions': 0,
+        'goals': 0,
     }
 
-    
-    # Calculate conversion rates
-    stats['o_line_conversion_rate'] = (stats['o_line_conversions'] / stats['o_line_points'] * 100) if stats['o_line_points'] > 0 else 0
-    stats['d_line_conversion_rate'] = (stats['d_line_conversions'] / stats['d_line_points'] * 100) if stats['d_line_points'] > 0 else 0
-    
-    # Calculate point flow data
-    for point in sorted(all_points, key=lambda p: p.point_number):
-        stats['point_flow'].append({
-            'point_number': point.point_number,
-            'our_score_before': point.our_score_before,
-            'their_score_before': point.their_score_before,
-            'our_score_after': point.our_score_after,
-            'their_score_after': point.their_score_after,
-            'our_line_type': point.our_line_type,
-            'starting_position': point.starting_position,
-            'point_outcome': point.point_outcome,
-            'is_break': point.is_break
-        })
-        
-        # Count turnovers and possessions
-        point_events = Event.query.filter_by(
-            point_id=point.id,
-            team_organization_id=get_current_team_id()
-        ).order_by(Event.timestamp).all()
-        
-        # Count OUR turnovers only
-        our_turnovers = sum(
-            1 for e in point_events
-            if e.event_type in ['throwaway','drop','stall']
-            and getattr(e, 'is_offensive', None) is True
-        )
+    for point in all_points:
+        point_events = list(point.events)
+
+        # Determine starting possession (single source of truth)
+        start_pos = get_point_starting_possession(point)
+        is_o_point = start_pos == 'offence'
+        is_d_point = start_pos == 'defence'
+
+        if is_o_point:
+            stats['o_line_points'] += 1
+        if is_d_point:
+            stats['d_line_points'] += 1
+
+        # Canonical possession analysis
+        analysis = analyze_point_possessions(point, point_events)
+        our_turnovers = analysis['our_turnovers']
+        our_possessions = analysis['our_possessions']
+        possessions_gained = analysis['possessions_gained']
 
         stats['turnovers'] += our_turnovers
+        stats['possessions'] += our_possessions
+        stats['possessions_gained'] += possessions_gained
 
-        # Count OUR possessions
-        analysis = analyze_point_possessions(point, point_events)
-        stats['possessions'] += analysis['our_possessions']
+        scored = point_we_scored(point)
 
+        if scored:
+            stats['goals'] += 1
+            stats['scoring_possessions'] += our_possessions
 
-    
+            if is_o_point:
+                stats['o_line_conversions'] += 1
+                if our_turnovers == 0:
+                    stats['clean_holds'] += 1
+
+            if is_d_point:
+                stats['d_line_conversions'] += 1
+                if our_turnovers == 0:
+                    stats['clean_breaks'] += 1
+
+    # Final derived metrics (MATCH TEAM STATS)
+    stats['o_line_conversion_rate'] = (
+        stats['o_line_conversions'] / stats['o_line_points'] * 100
+        if stats['o_line_points'] else 0
+    )
+
+    stats['d_line_conversion_rate'] = (
+        stats['d_line_conversions'] / stats['d_line_points'] * 100
+        if stats['d_line_points'] else 0
+    )
+
+    stats['clean_hold_percentage'] = (
+        stats['clean_holds'] / stats['o_line_points'] * 100
+        if stats['o_line_points'] else 0
+    )
+
+    stats['clean_break_percentage'] = (
+        stats['clean_breaks'] / stats['d_line_points'] * 100
+        if stats['d_line_points'] else 0
+    )
+
+    stats['avg_turnovers_per_point'] = (
+        stats['turnovers'] / stats['points_played']
+        if stats['points_played'] else 0
+    )
+
+    stats['possessions_per_goal'] = (
+        stats['scoring_possessions'] / stats['goals']
+        if stats['goals'] else 0
+    )
+
+    stats['avg_possessions_gained_per_point'] = (
+        stats['possessions_gained'] / stats['d_line_points']
+        if stats['d_line_points'] else 0
+    )
+
     return stats
 
 # --- Routes ---
@@ -1244,7 +1263,7 @@ def calculate_performance_trends(games):
             o_points = game.o_line_points
         
         o_points_count = len(o_points)
-        o_conversions = sum(1 for p in o_points if p.we_scored)
+        o_conversions = sum(1 for p in o_points if point_we_scored(p))
         o_line_efficiency.append((o_conversions / o_points_count * 100) if o_points_count > 0 else 0)
         
         # Calculate D-line efficiency - handle both query objects and lists
@@ -1256,7 +1275,7 @@ def calculate_performance_trends(games):
             d_points = game.d_line_points
         
         d_points_count = len(d_points)
-        d_conversions = sum(1 for p in d_points if p.we_scored)
+        d_conversions = sum(1 for p in d_points if point_we_scored(p))
         d_line_efficiency.append((d_conversions / d_points_count * 100) if d_points_count > 0 else 0)
         
         # Calculate break percentage - handle both query objects and lists
@@ -2112,9 +2131,9 @@ def calculate_team_summary(games):
         d_points = game.d_line_points
         
         summary['o_line_points'] += len(o_points)
-        summary['o_line_conversions'] += sum(1 for p in o_points if p.we_scored)
+        summary['o_line_conversions'] += sum(1 for p in o_points if point_we_scored(p))
         summary['d_line_points'] += len(d_points)
-        summary['d_line_conversions'] += sum(1 for p in d_points if p.we_scored)
+        summary['d_line_conversions'] += sum(1 for p in d_points if point_we_scored(p))
         summary['breaks'] += sum(1 for p in game.points if p.is_break)
         summary['holds'] += sum(1 for p in game.points if p.is_hold)
 
@@ -2821,7 +2840,7 @@ def calculate_additional_team_metrics(games):
     for game in games:
         d_points = game.d_line_points.all() if hasattr(game.d_line_points, 'all') else game.d_line_points
         d_points_count += len(d_points)
-        d_conversions += sum(1 for p in d_points if p.we_scored)
+        d_conversions += sum(1 for p in d_points if point_we_scored(p))
 
     # Break % = D-line conversion rate
     break_percentage = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
@@ -4193,7 +4212,7 @@ def debug_radar_stats(player_id):
     ).all()
     
     # Count how many of those points resulted in a score
-    player_o_scores = sum(1 for p in player_o_line_points if p.we_scored)
+    player_o_scores = sum(1 for p in player_o_line_points if point_we_scored(p))
     
     debug_info['o_line_conversion'] = {
         'player': {
@@ -4219,13 +4238,13 @@ def debug_radar_stats(player_id):
     ).all()
     
     # Count how many of those points resulted in a score
-    player_d_scores = sum(1 for p in player_d_line_points if p.we_scored)
+    player_d_scores = sum(1 for p in player_d_line_points if point_we_scored(p))
     
     # Print debug information to help diagnose the issue
     print(f"DEBUG: Player {player.name} - D-line points played: {len(player_d_line_points)}")
     print(f"DEBUG: Player {player.name} - D-line points scored: {player_d_scores}")
     for i, p in enumerate(player_d_line_points):
-        print(f"DEBUG: D-line point {i+1}: Point ID {p.id}, We scored: {p.we_scored}")
+        print(f"DEBUG: D-line point {i+1}: Point ID {p.id}, We scored: {point_we_scored(p)}")
     
     debug_info['d_line_conversion'] = {
         'player': {
