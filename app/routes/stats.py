@@ -1050,6 +1050,7 @@ def index():
         prev_summary = calculate_team_summary(prev_games)
         prev_metrics = calculate_additional_team_metrics(prev_games)
         
+        
         # Add previous metrics with 'prev_' prefix - SAME AS TEAM_STATS ROUTE
         for key, value in prev_metrics.items():
             team_summary[f'prev_{key}'] = value
@@ -1666,11 +1667,17 @@ def team_stats():
     # Add additional metrics for radar charts
     team_summary.update(calculate_additional_team_metrics(games))
     
+    # NEW: Add possession-based team metrics (clean hold, clean break, etc.)
+    team_summary.update(calculate_possession_based_team_metrics(games))
+    
     # Calculate previous period stats for comparison
     # (e.g., previous season or previous tournament)
     prev_games = get_previous_period_games(season, tournament_id)
     prev_summary = calculate_team_summary(prev_games)
     prev_metrics = calculate_additional_team_metrics(prev_games)
+    
+    # NEW: Previous-period possession metrics
+    prev_poss_metrics = calculate_possession_based_team_metrics(prev_games)
     
     # Add previous metrics with 'prev_' prefix
     for key, value in prev_metrics.items():
@@ -1678,6 +1685,10 @@ def team_stats():
     for key, value in prev_summary.items():
         if key not in team_summary:
             team_summary[f'prev_{key}'] = value
+    
+    # NEW: add prev possession metrics too
+    for key, value in prev_poss_metrics.items():
+        team_summary[f'prev_{key}'] = value
     
     # Get team name from current user's player
     team_name = None
@@ -1982,13 +1993,24 @@ def calculate_possession_based_team_metrics(games):
 
     # Load ALL events once
     point_ids = [p.id for p in points]
+    # Determine team_organization_id safely (avoid relying on session/current_user)
+    team_org_id = None
+    for p in points:
+        if getattr(p, "team_organization_id", None):
+            team_org_id = p.team_organization_id
+            break
+    if team_org_id is None:
+        # final fallback
+        team_org_id = get_current_team_id()
+
     all_events = (
         Event.query
-        .filter(Event.team_organization_id == get_current_team_id())
+        .filter(Event.team_organization_id == team_org_id)
         .filter(Event.point_id.in_(point_ids))
         .order_by(Event.point_id, Event.timestamp)
         .all()
     )
+
 
     events_by_point = {}
     for e in all_events:
