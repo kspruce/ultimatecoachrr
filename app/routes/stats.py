@@ -938,8 +938,18 @@ def calculate_game_stats(game):
             team_organization_id=get_current_team_id()
         ).order_by(Event.timestamp).all()
         
-        stats['turnovers'] += sum(1 for e in point_events if e.event_type in ['throwaway', 'drop', 'stall'])
-        stats['possessions'] += count_possessions(point_events)
+        # Count OUR turnovers only
+        our_turnovers = sum(
+            1 for e in point_events
+            if e.event_type in ['throwaway','drop','stall']
+            and getattr(e, 'is_offensive', None) is True
+        )
+
+        stats['turnovers'] += our_turnovers
+
+        # Count OUR possessions
+        stats['possessions'] += count_possessions(point, point_events)
+
     
     return stats
 
@@ -1029,9 +1039,8 @@ def index():
         
         # Calculate team summary stats - SAME AS TEAM_STATS ROUTE
         team_summary = calculate_team_summary(recent_games)
-        
-        # Add additional metrics for radar charts - SAME AS TEAM_STATS ROUTE
         team_summary.update(calculate_additional_team_metrics(recent_games))
+        team_summary.update(calculate_possession_based_team_metrics(recent_games))
         
         # Calculate previous period stats for comparison - SAME AS TEAM_STATS ROUTE
         # For index, we don't have filters, so we'll get previous games based on dates
@@ -1325,6 +1334,8 @@ def player_stats(player_id):
     # --- Team-level summary calculations ---
     team_summary = calculate_team_summary(games)
     team_summary.update(calculate_additional_team_metrics(games))
+    team_summary.update(calculate_possession_based_team_metrics(games))
+
 
     # --- Cutting Skills Calculations ---
     cutting_skills_query = CuttingSkill.query.filter_by(
@@ -1936,6 +1947,122 @@ def calculate_point_plus_minus(point):
     except AttributeError:
         return 0
 
+def calculate_possession_based_team_metrics(games):
+    """
+    Computes:
+    - clean_hold_pct
+    - scoring_without_turnovers_pct
+    - possessions_per_goal
+    - clean_break_pct
+    - avg_turnovers_per_point
+    """
+    if not games:
+        return {
+            'clean_hold_pct': 0,
+            'scoring_without_turnovers_pct': 0,
+            'possessions_per_goal': 0,
+            'clean_break_pct': 0,
+            'avg_turnovers_per_point': 0
+        }
+
+    # Collect point IDs + point objects
+    points = []
+    for g in games:
+        pts = g.points.all() if hasattr(g.points, 'all') else g.points
+        points.extend(list(pts))
+
+    if not points:
+        return {
+            'clean_hold_pct': 0,
+            'scoring_without_turnovers_pct': 0,
+            'possessions_per_goal': 0,
+            'clean_break_pct': 0,
+            'avg_turnovers_per_point': 0
+        }
+
+    point_ids = [p.id for p in points]
+
+    # Load ALL events for these points in one go (avoid N+1)
+    all_events = (Event.query
+        .filter(Event.team_organization_id == get_current_team_id())
+        .filter(Event.point_id.in_(point_ids))
+        .order_by(Event.point_id, Event.timestamp)
+        .all()
+    )
+
+    events_by_point = {}
+    for e in all_events:
+        events_by_point.setdefault(e.point_id, []).append(e)
+
+    # Counters
+    total_points = len(points)
+    total_our_turnovers = 0
+
+    o_points = 0
+    d_points = 0
+    clean_holds = 0
+    clean_breaks = 0
+
+    points_we_scored = 0
+    points_we_scored_no_turnovers = 0
+    our_possessions_in_scoring_points = 0
+
+    for p in points:
+        start_pos = get_point_starting_possession(p)
+        is_o_point = (start_pos == 'offence')
+        is_d_point = (start_pos == 'defence')
+
+        if is_o_point:
+            o_points += 1
+        elif is_d_point:
+            d_points += 1
+
+        p_events = events_by_point.get(p.id, [])
+        analysis = analyze_point_possessions(p, p_events)
+
+        our_turns = analysis['our_turnovers']
+        our_poss = analysis['our_possessions']
+
+        total_our_turnovers += our_turns
+
+        if getattr(p, 'we_scored', False):
+            points_we_scored += 1
+            our_possessions_in_scoring_points += our_poss
+
+            if our_turns == 0:
+                points_we_scored_no_turnovers += 1
+
+                # Clean hold: O-point + scored + 0 our turnovers
+                if is_o_point:
+                    clean_holds += 1
+
+                # Clean break: D-point + scored + 0 our turnovers
+                if is_d_point:
+                    clean_breaks += 1
+
+    clean_hold_pct = (clean_holds / o_points * 100) if o_points > 0 else 0
+    clean_break_pct = (clean_breaks / d_points * 100) if d_points > 0 else 0
+
+    scoring_without_turnovers_pct = (
+        (points_we_scored_no_turnovers / points_we_scored * 100)
+        if points_we_scored > 0 else 0
+    )
+
+    possessions_per_goal = (
+        (our_possessions_in_scoring_points / points_we_scored)
+        if points_we_scored > 0 else 0
+    )
+
+    avg_turnovers_per_point = total_our_turnovers / total_points if total_points > 0 else 0
+
+    return {
+        'clean_hold_pct': round(clean_hold_pct, 1),
+        'scoring_without_turnovers_pct': round(scoring_without_turnovers_pct, 1),
+        'possessions_per_goal': round(possessions_per_goal, 2),
+        'clean_break_pct': round(clean_break_pct, 1),
+        'avg_turnovers_per_point': round(avg_turnovers_per_point, 2)
+    }
+
 
 def calculate_team_summary(games):
     """Calculate team summary statistics"""
@@ -2028,22 +2155,132 @@ def normalize_per(value):
     """Normalize PER to a 0-30 scale"""
     return min(max(value, 0), 100)
 
-def count_possessions(events):
-    """Count number of possessions in a sequence of events"""
-    possessions = 1
-    current_team = True  # True for our team, False for opponent
+TURNOVER_EVENTS = {'throwaway', 'drop', 'stall'}
 
-    for event in events:
-        if event.event_type in ['throwaway', 'drop', 'stall']:
-            if current_team:
-                current_team = False
-                possessions += 1
-        elif event.event_type == 'block':
-            if not current_team:
-                current_team = True
-                possessions += 1
+def get_point_starting_possession(point):
+    """
+    Returns 'offence' or 'defence' for whether WE start with the disc.
 
-    return possessions
+    Prefer point.starting_position if it exists (your point_flow uses it).
+    Fall back to our_line_type (common convention: O-line starts on offence).
+    """
+    sp = getattr(point, 'starting_position', None)
+    if isinstance(sp, str) and sp.strip().lower() in ('offence', 'offense', 'defence', 'defense'):
+        sp = sp.strip().lower()
+        return 'offence' if sp in ('offence', 'offense') else 'defence'
+
+    # Fallback assumption
+    return 'offence' if getattr(point, 'our_line_type', None) == 'O-line' else 'defence'
+
+
+def analyze_point_possessions(point, events):
+    """
+    Possession-aware point analysis.
+    - Counts OUR turnovers (while we have possession)
+    - Counts OUR possessions (how many distinct times we had the disc)
+    - Counts total possessions (both teams)
+    - Works even if Event.is_offensive is missing/None (fallback uses state machine)
+    """
+    # Ensure chronological
+    events = sorted(events, key=lambda e: e.timestamp or 0)
+
+    start_pos = get_point_starting_possession(point)
+    we_have_disc = (start_pos == 'offence')
+
+    our_turnovers = 0
+    our_possessions = 1 if we_have_disc else 0
+    their_possessions = 0 if we_have_disc else 1
+    total_possessions = 1
+
+    def switch_possession(to_us: bool):
+        nonlocal we_have_disc, our_possessions, their_possessions, total_possessions
+        if we_have_disc == to_us:
+            return
+        we_have_disc = to_us
+        total_possessions += 1
+        if to_us:
+            our_possessions += 1
+        else:
+            their_possessions += 1
+
+    for e in events:
+        et = getattr(e, 'event_type', None)
+
+        # Turnovers always flip possession
+        if et in TURNOVER_EVENTS:
+            # Prefer is_offensive to decide if it was OUR turnover
+            # (If is_offensive is True, we were on offence when it happened.)
+            if getattr(e, 'is_offensive', None) is True:
+                our_turnovers += 1
+                switch_possession(to_us=False)
+            elif getattr(e, 'is_offensive', None) is False:
+                # Opponent turnover
+                switch_possession(to_us=True)
+            else:
+                # Fallback based on current state
+                if we_have_disc:
+                    our_turnovers += 1
+                    switch_possession(to_us=False)
+                else:
+                    switch_possession(to_us=True)
+
+        # Blocks also flip possession, but who blocked matters
+        elif et == 'block':
+            # If is_offensive == False, it’s logged as defensive for us -> we got the disc
+            if getattr(e, 'is_offensive', None) is False:
+                switch_possession(to_us=True)
+            elif getattr(e, 'is_offensive', None) is True:
+                # Opponent block while we had disc
+                switch_possession(to_us=False)
+            else:
+                # Fallback: a block implies the defending team gains possession
+                switch_possession(to_us=not we_have_disc)
+
+        # Goals end point; we don't need to flip possession here
+
+    return {
+        'our_turnovers': our_turnovers,
+        'our_possessions': our_possessions,
+        'their_possessions': their_possessions,
+        'total_possessions': total_possessions
+    }
+
+
+def count_possessions(point, events):
+    """
+    Counts OUR possessions only.
+    """
+    events = sorted(events, key=lambda e: e.timestamp or 0)
+
+    # Determine starting possession
+    if getattr(point, 'starting_position', None):
+        start = point.starting_position.lower()
+        we_have_disc = start in ['offence', 'offense']
+    else:
+        we_have_disc = getattr(point, 'our_line_type', None) == 'O-line'
+
+    our_possessions = 1 if we_have_disc else 0
+
+    for e in events:
+        if e.event_type in ['throwaway', 'drop', 'stall']:
+            if getattr(e, 'is_offensive', None) is True:
+                we_have_disc = False
+            elif getattr(e, 'is_offensive', None) is False:
+                we_have_disc = True
+                our_possessions += 1
+            else:
+                we_have_disc = not we_have_disc
+                if we_have_disc:
+                    our_possessions += 1
+
+        elif e.event_type == 'block':
+            # Treat block as we gain disc
+            if not we_have_disc:
+                we_have_disc = True
+                our_possessions += 1
+
+    return our_possessions
+
 
 
 
@@ -2456,7 +2693,14 @@ def calculate_additional_team_metrics(games):
     completions = sum(1 for t in throws if t.is_completion)
     
     # Count goals and assists
-    goals = sum(1 for t in throws if t.throw_type == 'assist')
+    goals_query = Event.query.filter_by(
+        event_type='goal',
+        team_organization_id=get_current_team_id()
+    ).filter(Event.point_id.in_(point_ids))
+
+    goals = goals_query.count()
+    assists = sum(1 for t in throws if t.throw_type == 'assist')
+
     
     # Count blocks
     blocks_query = Event.query.filter_by(
@@ -2478,28 +2722,22 @@ def calculate_additional_team_metrics(games):
     # Count hucks
     hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > 20)
     
-    # Calculate break percentage
-    breaks = 0
-    for game in games:
-        try:
-            points = game.points.all() if hasattr(game.points, 'all') else game.points
-            breaks += sum(1 for p in points if p.is_break)
-        except Exception as e:
-            print(f"Error calculating breaks for game {game.id}: {str(e)}")
-    break_percentage = (breaks / total_points) * 100 if total_points > 0 else 0
-    
-    # Calculate defensive efficiency
+    # Calculate D-line totals once
     d_points_count = 0
     d_conversions = 0
+
     for game in games:
-        try:
-            d_points = game.d_line_points.all() if hasattr(game.d_line_points, 'all') else game.d_line_points
-            d_points_count += len(d_points)
-            d_conversions += sum(1 for p in d_points if p.we_scored)
-        except Exception as e:
-            print(f"Error calculating d-line stats for game {game.id}: {str(e)}")
-    defensive_efficiency = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
-    
+        d_points = game.d_line_points.all() if hasattr(game.d_line_points, 'all') else game.d_line_points
+        d_points_count += len(d_points)
+        d_conversions += sum(1 for p in d_points if p.we_scored)
+
+    # Break % = D-line conversion rate
+    break_percentage = (d_conversions / d_points_count) * 100 if d_points_count > 0 else 0
+
+    # Defensive efficiency is same metric (alias)
+    defensive_efficiency = break_percentage
+
+
     # Calculate o-line points
     o_points_count = 0
     for game in games:
@@ -2515,13 +2753,13 @@ def calculate_additional_team_metrics(games):
     result = {
         'completion_rate': (completions / len(throws)) * 100 if throws else 0,
         'goals_per_point': goals / total_points,
-        'assists_per_point': goals / total_points,  # Same as goals
+        'assists_per_point': assists / total_points,
         'throws_per_point': throws_per_point,
         'hucks_per_point': hucks / total_points,
         'blocks_per_point': blocks / total_points,
         'turnovers_forced_per_point': turnovers_forced / total_points,
-        'defensive_efficiency': defensive_efficiency,
-        'break_percentage': break_percentage
+        'break_percentage': break_percentage,          
+        'defensive_efficiency': break_percentage,      # alias so templates don’t break
     }
     
     return result
