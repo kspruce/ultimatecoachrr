@@ -948,7 +948,9 @@ def calculate_game_stats(game):
         stats['turnovers'] += our_turnovers
 
         # Count OUR possessions
-        stats['possessions'] += count_possessions(point, point_events)
+        analysis = analyze_point_possessions(point, point_events)
+        stats['possessions'] += analysis['our_possessions']
+
 
     
     return stats
@@ -2150,18 +2152,36 @@ TURNOVER_EVENTS = {'throwaway', 'drop', 'stall'}
 
 def point_we_scored(point) -> bool:
     """
-    Robust 'did we score?' check.
+    Robust 'did we score?' check across schemas.
 
-    Your UI stores:
-      - "Goal For Home"  (we scored)
-      - "Goal Against Home" (they scored)
+    Current DB schema (Point model):
+      - point.point_outcome == 'scored' / 'conceded'  :contentReference[oaicite:2]{index=2}
+    Legacy / alternate schemas may use:
+      - point.outcome text ("Goal For Home")
+      - point.we_scored boolean/property
     """
-    outcome = (getattr(point, 'outcome', None) or '').strip().lower()
-    if outcome:
-        return 'goal for home' in outcome
-    # Fallback if you ever add a boolean later
-    return bool(getattr(point, 'we_scored', False))
+    # 1) Current schema
+    po = getattr(point, 'point_outcome', None)
+    if isinstance(po, str) and po.strip().lower() in ('scored', 'score', 'won'):
+        return True
+    if isinstance(po, str) and po.strip().lower() in ('conceded', 'concede', 'lost'):
+        return False
 
+    # 2) Legacy text outcome
+    outcome = getattr(point, 'outcome', None)
+    if isinstance(outcome, str) and outcome.strip():
+        s = outcome.strip().lower()
+        if 'goal for home' in s or 'home scored' in s:
+            return True
+        if 'goal against home' in s or 'away scored' in s:
+            return False
+
+    # 3) Fallback to property/boolean if present
+    ws = getattr(point, 'we_scored', None)
+    if isinstance(ws, bool):
+        return ws
+
+    return False
 
 def get_point_starting_possession(point):
     """
