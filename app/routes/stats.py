@@ -1949,29 +1949,20 @@ def calculate_point_plus_minus(point):
 
 def calculate_possession_based_team_metrics(games):
     """
-    Computes team possession metrics with keys that match team_stats.html:
-
-      Offensive section:
-        - clean_hold_percentage
-        - regain_offense_count
-        - avg_o_turnovers_per_point
-
-      Defensive section:
-        - clean_break_percentage
-        - possessions_per_goal
-        - avg_possessions_gained_per_point
+    Team possession metrics using a single, consistent possession model.
     """
+
     if not games:
         return {
             'clean_hold_percentage': 0,
+            'clean_break_percentage': 0,
             'regain_offense_count': 0,
             'avg_o_turnovers_per_point': 0,
-            'clean_break_percentage': 0,
-            'possessions_per_goal': 0,
             'avg_possessions_gained_per_point': 0,
+            'possessions_per_goal': 0,
         }
 
-    # Collect points
+    # Collect all points
     points = []
     for g in games:
         pts = g.points.all() if hasattr(g.points, 'all') else g.points
@@ -1980,17 +1971,17 @@ def calculate_possession_based_team_metrics(games):
     if not points:
         return {
             'clean_hold_percentage': 0,
+            'clean_break_percentage': 0,
             'regain_offense_count': 0,
             'avg_o_turnovers_per_point': 0,
-            'clean_break_percentage': 0,
-            'possessions_per_goal': 0,
             'avg_possessions_gained_per_point': 0,
+            'possessions_per_goal': 0,
         }
 
+    # Load ALL events once
     point_ids = [p.id for p in points]
-
-    # Load ALL events for these points (avoid N+1)
-    all_events = (Event.query
+    all_events = (
+        Event.query
         .filter(Event.team_organization_id == get_current_team_id())
         .filter(Event.point_id.in_(point_ids))
         .order_by(Event.point_id, Event.timestamp)
@@ -2007,87 +1998,61 @@ def calculate_possession_based_team_metrics(games):
 
     clean_holds = 0
     clean_breaks = 0
+    scored_after_turnover = 0
 
-    # "Scored after turnover" (label under Regained Possessions)
-    scored_after_our_turnover = 0
+    o_turnovers_total = 0
+    d_possessions_gained = 0
 
-    # For possessions/goal (ONLY goals we score)
     goals_scored = 0
-    our_possessions_in_scoring_points = 0
+    possessions_in_scoring_points = 0
 
-    # For avg turnovers on O-points
-    our_turnovers_on_o_points = 0
-
-    # For D-line turnover generation
-    possessions_gained_on_d_points = 0
-
-    for p in points:
-        start_pos = get_point_starting_possession(p)
-        is_o_point = (start_pos == 'offence')
-        is_d_point = (start_pos == 'defence')
+    for point in points:
+        start_pos = get_point_starting_possession(point)
+        is_o_point = start_pos == 'offence'
+        is_d_point = start_pos == 'defence'
 
         if is_o_point:
             o_points += 1
         elif is_d_point:
             d_points += 1
 
-        p_events = events_by_point.get(p.id, [])
-        analysis = analyze_point_possessions(p, p_events)
+        analysis = analyze_point_possessions(
+            point,
+            events_by_point.get(point.id, [])
+        )
 
-        our_turns = analysis['our_turnovers']
-        our_poss = analysis['our_possessions']
-        gained = analysis['possessions_gained']
+        our_turnovers = analysis['our_turnovers']
+        our_possessions = analysis['our_possessions']
+        possessions_gained = analysis['possessions_gained']
 
-        # O-line avg turnovers/point
         if is_o_point:
-            our_turnovers_on_o_points += our_turns
+            o_turnovers_total += our_turnovers
 
-        # D-line possession gains/point
         if is_d_point:
-            possessions_gained_on_d_points += gained
+            d_possessions_gained += possessions_gained
 
-        # Scoring logic
-        if point_we_scored(p):
+        if point_we_scored(point):
             goals_scored += 1
-            our_possessions_in_scoring_points += our_poss
+            possessions_in_scoring_points += our_possessions
 
-            # scored after we turned it at least once
-            if our_turns > 0:
-                scored_after_our_turnover += 1
+            if our_turnovers > 0:
+                scored_after_turnover += 1
 
-            # Clean hold = O-point + scored + 0 our turnovers
-            if is_o_point and our_turns == 0:
+            if is_o_point and our_turnovers == 0:
                 clean_holds += 1
 
-            # Clean break = D-point + scored + 0 our turnovers
-            if is_d_point and our_turns == 0:
+            if is_d_point and our_turnovers == 0:
                 clean_breaks += 1
 
-    clean_hold_percentage = (clean_holds / o_points * 100) if o_points > 0 else 0
-    clean_break_percentage = (clean_breaks / d_points * 100) if d_points > 0 else 0
-
-    possessions_per_goal = (
-        (our_possessions_in_scoring_points / goals_scored)
-        if goals_scored > 0 else 0
-    )
-
-    avg_o_turnovers_per_point = (
-        (our_turnovers_on_o_points / o_points)
-        if o_points > 0 else 0
-    )
-
-    avg_possessions_gained_per_point = (
-        (possessions_gained_on_d_points / d_points)
-        if d_points > 0 else 0
-    )
-
     return {
-        'clean_hold_percentage': clean_hold_percentage,
-        'regain_offense_count': scored_after_our_turnover,
-        'avg_o_turnovers_per_point': avg_o_turnovers_per_point,
-        'clean_break_percentage': clean_break_percentage,
-        'possessions_per_goal': possessions_per_goal,
-        'avg_possessions_gained_per_point': avg_possessions_gained_per_point,
+        'clean_hold_percentage': (clean_holds / o_points * 100) if o_points else 0,
+        'clean_break_percentage': (clean_breaks / d_points * 100) if d_points else 0,
+        'regain_offense_count': scored_after_turnover,
+        'avg_o_turnovers_per_point': (o_turnovers_total / o_points) if o_points else 0,
+        'avg_possessions_gained_per_point': (d_possessions_gained / d_points) if d_points else 0,
+        'possessions_per_goal': (
+            possessions_in_scoring_points / goals_scored if goals_scored else 0
+        ),
     }
 
 def calculate_team_summary(games):
