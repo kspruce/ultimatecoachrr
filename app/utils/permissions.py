@@ -18,4 +18,5 @@ def can_manage_team_users(team_id: int) -> bool:
         return False
     if int(current_user.team_organization_id) != int(team_id):
         return False
-    return ROLE_ORDER.get(current_user.role, 1) >= ROLE_ORDER["admin"]
+    return ROLE_ORDER.get(current_user.role, 1) >= ROLE_ORDER["coach"]
+

@@ -224,6 +224,10 @@ def add_user():
     _populate_team_choices(form, team_id)
     _populate_player_choices(form, team_id)
 
+    if request.method == "POST":
+        print("VALID:", form.validate())
+        print("ERRORS:", form.errors)
+
     if form.validate_on_submit():
 
         user = User(
@@ -275,6 +279,10 @@ def edit_user(user_id):
         form.role.data = user.role
         form.team_organization_id.data = user.team_organization_id
         form.player_id.data = user.player.id if user.player else 0
+
+    if request.method == "POST":
+        print("VALID:", form.validate())
+        print("ERRORS:", form.errors)
 
     if form.validate_on_submit():
 
