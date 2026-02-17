@@ -881,6 +881,8 @@ def calculate_game_stats(game):
     """
 
     all_points = game.points.all() if hasattr(game.points, 'all') else game.points
+    all_points = sorted(all_points, key=lambda p: p.point_number)
+
 
     stats = {
         'points_played': len(all_points),
@@ -889,6 +891,7 @@ def calculate_game_stats(game):
         'o_line_conversions': 0,
         'd_line_conversions': 0,
         'turnovers': 0,
+        'breaks': 0,
         'possessions': 0,
         'possessions_gained': 0,
         'clean_holds': 0,
@@ -948,8 +951,10 @@ def calculate_game_stats(game):
 
             if is_d_point:
                 stats['d_line_conversions'] += 1
+                stats['breaks'] += 1   # <-- THIS IS THE MISSING PIECE
                 if our_turnovers == 0:
                     stats['clean_breaks'] += 1
+
 
     # Final derived metrics (MATCH TEAM STATS)
     stats['o_line_conversion_rate'] = (
