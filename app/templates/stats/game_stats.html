@@ -419,11 +419,12 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         const flowCtx = document.getElementById('game-flow-chart').getContext('2d');
         if (flowCtx) {
-            const pointFlow = {{ team_stats.point_flow|tojson }};
+            const pointFlow = {{ team_stats.point_flow|default([])|tojson }};
             
             const labels = pointFlow.map(p => p.point_number);
-            const ourScores = pointFlow.map(p => p.our_score_after);
-            const theirScores = pointFlow.map(p => p.their_score_after);
+			const ourScores = pointFlow.map(p => p.our_score_after ?? null);
+			const theirScores = pointFlow.map(p => p.their_score_after ?? null);
+
             
             const gameFlowChart = new Chart(flowCtx, {
                 type: 'line',

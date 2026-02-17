@@ -895,7 +895,11 @@ def calculate_game_stats(game):
         'clean_breaks': 0,
         'scoring_possessions': 0,
         'goals': 0,
+
+        # REQUIRED by game_stats.html JS
+        'point_flow': [],
     }
+
 
     for point in all_points:
         point_events = list(point.events)
@@ -921,6 +925,17 @@ def calculate_game_stats(game):
         stats['possessions_gained'] += possessions_gained
 
         scored = point_we_scored(point)
+
+        stats['point_flow'].append({
+            'point_number': getattr(point, 'point_number', len(stats['point_flow']) + 1),
+            'our_score_after': getattr(point, 'our_score_after', None),
+            'their_score_after': getattr(point, 'their_score_after', None),
+            'scored': scored,
+            'start_possession': start_pos,
+            'turnovers': our_turnovers,
+            'possessions': our_possessions,
+        })
+
 
         if scored:
             stats['goals'] += 1
