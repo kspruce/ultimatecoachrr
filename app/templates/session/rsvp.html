@@ -1,7 +1,5 @@
 {% extends "base.html" %}
 
-DEBUG: is_admin={{ current_user.is_admin }}, has_player_id={{ form.player_id is defined }}, player={{ player }}
-
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -13,6 +11,9 @@ DEBUG: is_admin={{ current_user.is_admin }}, has_player_id={{ form.player_id is 
             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
             {% if current_user.is_admin %}
             <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-info">View All RSVPs</a>
+            {% if not show_admin_selector %}
+            <a href="{{ url_for('session.rsvp', session_id=session.id) }}?admin=1" class="btn btn-warning">RSVP for Others</a>
+            {% endif %}
             {% endif %}
         </div>
     </div>
@@ -51,7 +52,7 @@ DEBUG: is_admin={{ current_user.is_admin }}, has_player_id={{ form.player_id is 
                     <h5>
                         {% if player is defined and player %}
                             RSVP for {{ player.name }}
-                        {% elif current_user.is_admin and form.player_id is defined %}
+                        {% elif show_admin_selector %}
                             Admin RSVP - Select Player
                         {% else %}
                             Your RSVP
@@ -59,7 +60,7 @@ DEBUG: is_admin={{ current_user.is_admin }}, has_player_id={{ form.player_id is 
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if current_user.is_admin and form.player_id is defined and not player %}
+                    {% if show_admin_selector %}
                         <div class="alert alert-info">
                             As an admin, you can RSVP on behalf of any player. Select a player below.
                         </div>

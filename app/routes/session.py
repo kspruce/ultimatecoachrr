@@ -25,7 +25,7 @@ from app.utils.storage import store_file
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
-    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminSessionRSVPForm  # Add AdminSessionRSVPForm
+    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminSessionRSVPForm
 )
 
 csrf = CSRFProtect()
@@ -597,8 +597,14 @@ def rsvp(session_id, player_id=None):
         team_organization_id=get_current_team_id()
     ).first_or_404()
     
-    # Determine if admin is RSVPing on behalf of a player
+    # Check if this is an admin RSVP for a specific player
     is_admin_rsvp = current_user.is_admin and player_id is not None
+    
+    # Check if we should show admin form (admin choosing player)
+    # This happens when: admin visits /rsvp without player_id, or includes ?admin=1
+    show_admin_form = current_user.is_admin and (
+        player_id is None and request.args.get('admin') == '1'
+    )
     
     if is_admin_rsvp:
         # Admin RSVPing for a specific player
@@ -621,23 +627,23 @@ def rsvp(session_id, player_id=None):
                 existing_rsvp.notes = form.notes.data
                 flash(f'RSVP for {player.name} has been updated!', 'success')
             else:
-                rsvp = SessionRSP(
+                rsvp_record = SessionRSVP(
                     session_id=session_id,
                     player_id=player.id,
                     status=form.status.data,
                     notes=form.notes.data,
                     team_organization_id=get_current_team_id()
                 )
-                db.session.add(rsvp)
+                db.session.add(rsvp_record)
                 flash(f'RSVP for {player.name} has been submitted!', 'success')
             
             db.session.commit()
             return redirect(url_for('session.rsvps', session_id=session_id))
         
         return render_template('session/rsvp.html', form=form, session=session_plan, 
-                             existing_rsvp=existing_rsvp, player=player, is_admin=True)
+                             existing_rsvp=existing_rsvp, player=player, show_admin_selector=False)
     
-    elif current_user.is_admin:
+    elif show_admin_form:
         # Admin selecting which player to RSVP for
         form = AdminSessionRSVPForm(team_organization_id=get_current_team_id())
         
@@ -659,24 +665,27 @@ def rsvp(session_id, player_id=None):
                 existing_rsvp.notes = form.notes.data
                 flash(f'RSVP for {player.name} has been updated!', 'success')
             else:
-                rsvp = SessionRSVP(
+                rsvp_record = SessionRSVP(
                     session_id=session_id,
                     player_id=player.id,
                     status=form.status.data,
                     notes=form.notes.data,
                     team_organization_id=get_current_team_id()
                 )
-                db.session.add(rsvp)
+                db.session.add(rsvp_record)
                 flash(f'RSVP for {player.name} has been submitted!', 'success')
             
             db.session.commit()
             return redirect(url_for('session.rsvps', session_id=session_id))
         
-        return render_template('session/rsvp.html', form=form, session=session_plan, is_admin=True)
+        return render_template('session/rsvp.html', form=form, session=session_plan, show_admin_selector=True)
     
     else:
-        # Regular player RSVPing for themselves
+        # Regular player RSVPing for themselves (including admins who are also players)
         if not current_user.player:
+            # If admin without player, show admin form
+            if current_user.is_admin:
+                return redirect(url_for('session.rsvp', session_id=session_id) + '?admin=1')
             flash('You need to link your account to a player before you can RSVP.', 'warning')
             return redirect(url_for('auth.link_player'))
         
@@ -696,21 +705,23 @@ def rsvp(session_id, player_id=None):
                 existing_rsvp.notes = form.notes.data
                 flash('Your RSVP has been updated!', 'success')
             else:
-                rsvp = SessionRSVP(
+                rsvp_record = SessionRSVP(
                     session_id=session_id,
                     player_id=player.id,
                     status=form.status.data,
                     notes=form.notes.data,
                     team_organization_id=get_current_team_id()
                 )
-                db.session.add(rsvp)
+                db.session.add(rsvp_record)
                 flash('Your RSVP has been submitted!', 'success')
             
             db.session.commit()
             return redirect(url_for('session.detail', session_id=session_id))
         
         return render_template('session/rsvp.html', form=form, session=session_plan, 
-                             existing_rsvp=existing_rsvp, is_admin=False)
+                             existing_rsvp=existing_rsvp, show_admin_selector=False)
+
+
 @bp.route('/<int:session_id>/rsvps')
 @login_required
 def rsvps(session_id):
