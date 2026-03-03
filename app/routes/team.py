@@ -34,7 +34,7 @@ def index():
     line_preference = request.args.get('line_preference', '')
     gender_match = request.args.get('gender_match', '')
     team = request.args.get('team', '')
-    active_only = request.args.get('active_only', 'y')
+    active_only = 'active_only' in request.args
     
     # Set form values from query parameters
     if position:
@@ -58,7 +58,7 @@ def index():
         query = query.filter(Player.gender_match == gender_match)
     if team and hasattr(Player, 'team'):
         query = query.filter(Player.team == team)
-    if active_only != 'n':
+    if active_only:
         query = query.filter(Player.active == True)
     
     # Get players and sort by jersey number
