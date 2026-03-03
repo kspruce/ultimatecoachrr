@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+DEBUG: is_admin={{ current_user.is_admin }}, has_player_id={{ form.player_id is defined }}, player={{ player }}
+
 {% block content %}
 <div class="container">
     <div class="row mb-4">
@@ -9,7 +11,7 @@
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
-            {% if is_admin %}
+            {% if current_user.is_admin %}
             <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-info">View All RSVPs</a>
             {% endif %}
         </div>
@@ -47,25 +49,23 @@
             <div class="card mt-4">
                 <div class="card-header">
                     <h5>
-                        {% if is_admin %}
-                            {% if player is defined %}
-                                RSVP for {{ player.name }}
-                            {% else %}
-                                Admin RSVP
-                            {% endif %}
+                        {% if player is defined and player %}
+                            RSVP for {{ player.name }}
+                        {% elif current_user.is_admin and form.player_id is defined %}
+                            Admin RSVP - Select Player
                         {% else %}
                             Your RSVP
                         {% endif %}
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if is_admin and player is not defined %}
+                    {% if current_user.is_admin and form.player_id is defined and not player %}
                         <div class="alert alert-info">
-                            As an admin, you can RSVP on behalf of any player.
+                            As an admin, you can RSVP on behalf of any player. Select a player below.
                         </div>
                     {% endif %}
                     
-                    {% if existing_rsvp and player is defined %}
+                    {% if existing_rsvp and player is defined and player %}
                     <div class="alert alert-info">
                         {{ player.name }} has already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update the response below.
                     </div>
@@ -78,7 +78,7 @@
                     <form method="post" novalidate>
                         {{ form.hidden_tag() }}
                         
-                        {% if is_admin and player is not defined %}
+                        {% if form.player_id is defined %}
                         <div class="mb-3">
                             {{ form.player_id.label(class="form-label") }}
                             {{ form.player_id(class="form-select") }}
