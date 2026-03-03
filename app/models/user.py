@@ -62,7 +62,7 @@ class User(UserMixin, db.Model):
 
     @property
     def is_coach(self):
-        return self.role == "coach"
+        return self.role == "coach" or self.is_admin
 
     # Convenience helpers (do NOT reintroduce an is_admin property)
     def role_level(self) -> int:
