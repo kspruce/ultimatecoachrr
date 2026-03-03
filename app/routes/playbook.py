@@ -299,10 +299,8 @@ def delete_play(play_id):
         db.session.delete(play)
         db.session.commit()
         
-        return jsonify({
-            'success': True,
-            'message': f'Play "{title}" has been deleted!'
-        })
+        flash(f'Play "{title}" has been deleted!', 'success')
+        return redirect(url_for('playbook.index'))  
         
     except Exception as e:
         db.session.rollback()
@@ -344,10 +342,8 @@ def delete_formation(formation_id):
         db.session.delete(formation)
         db.session.commit()
         
-        return jsonify({
-            'success': True,
-            'message': f'Formation "{name}" has been deleted!'
-        })
+        flash(f'Formation "{name}" has been deleted!', 'success')
+        return redirect(url_for('playbook.index'))
         
     except Exception as e:
         db.session.rollback()
