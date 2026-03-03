@@ -193,3 +193,24 @@ class DrillSearchForm(FlaskForm):
     ], validators=[Optional()])
     focus_area = StringField('Focus Area', validators=[Optional()])
     submit = SubmitField('Search')
+
+class AdminBulkRSVPForm(FlaskForm):
+    players = SelectMultipleField('Players', coerce=int, validators=[DataRequired()])
+    status = SelectField('RSVP Status', choices=[
+        ('attending', 'Attending'),
+        ('not_attending', 'Not Attending'),
+        ('maybe', 'Maybe')
+    ], validators=[DataRequired()])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    submit = SubmitField('Save RSVPs')
+    
+    def __init__(self, team_organization_id=None, *args, **kwargs):
+        super(AdminBulkRSVPForm, self).__init__(*args, **kwargs)
+        if team_organization_id:
+            self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
+                                   for p in Player.query.filter_by(
+                                       active=True,
+                                       team_organization_id=team_organization_id
+                                   ).order_by(Player.name).all()]
+        else:
+            self.players.choices = []

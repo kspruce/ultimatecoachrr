@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Manage RSVPs</h1>
+            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Record RSVPs</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" id="rsvpTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if form.status.data == 'attending' %}active{% endif %}" 
+                                    id="attending-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#attending" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="attending" 
+                                    aria-selected="{{ 'true' if form.status.data == 'attending' else 'false' }}" 
+                                    onclick="window.location='{{ url_for('session.admin_rsvp', session_id=session.id, status='attending') }}'">
+                                Attending
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if form.status.data == 'not_attending' %}active{% endif %}" 
+                                    id="not-attending-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#not-attending" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="not-attending" 
+                                    aria-selected="{{ 'true' if form.status.data == 'not_attending' else 'false' }}" 
+                                    onclick="window.location='{{ url_for('session.admin_rsvp', session_id=session.id, status='not_attending') }}'">
+                                Not Attending
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {% if form.status.data == 'maybe' %}active{% endif %}" 
+                                    id="maybe-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#maybe" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="maybe" 
+                                    aria-selected="{{ 'true' if form.status.data == 'maybe' else 'false' }}" 
+                                    onclick="window.location='{{ url_for('session.admin_rsvp', session_id=session.id, status='maybe') }}'">
+                                Maybe
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <form method="post" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="alert alert-info">
+                            You are currently recording players as <strong>{{ form.status.data|replace('_', ' ')|title }}</strong>.
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.players.label(class="form-label") }}
+                            {{ form.players(class="form-select", id="players-select", multiple="multiple") }}
+                            <div class="form-text">Select all players who are <strong>{{ form.status.data|replace('_', ' ') }}</strong></div>
+                            {% for error in form.players.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3" style="display: none;">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-select") }}
+                            {% for error in form.status.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=2) }}
+                            <div class="form-text">Optional notes about RSVPs</div>
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary", value="Save " + form.status.data|replace('_', ' ')|title + " Players") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Current RSVPs</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6 class="text-success">Attending ({{ rsvps_by_status['attending']|length }})</h6>
+                            <ul class="list-group mb-3">
+                                {% for rsvp in rsvps_by_status['attending'] %}
+                                <li class="list-group-item">
+                                    {{ rsvp.player.name }}
+                                    {% if rsvp.notes %}
+                                    <small class="text-muted d-block">{{ rsvp.notes }}</small>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                                {% if not rsvps_by_status['attending'] %}
+                                <li class="list-group-item text-muted">No players marked as attending</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h6 class="text-danger">Not Attending ({{ rsvps_by_status['not_attending']|length }})</h6>
+                            <ul class="list-group mb-3">
+                                {% for rsvp in rsvps_by_status['not_attending'] %}
+                                <li class="list-group-item">
+                                    {{ rsvp.player.name }}
+                                    {% if rsvp.notes %}
+                                    <small class="text-muted d-block">{{ rsvp.notes }}</small>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                                {% if not rsvps_by_status['not_attending'] %}
+                                <li class="list-group-item text-muted">No players marked as not attending</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h6 class="text-warning">Maybe ({{ rsvps_by_status['maybe']|length }})</h6>
+                            <ul class="list-group">
+                                {% for rsvp in rsvps_by_status['maybe'] %}
+                                <li class="list-group-item">
+                                    {{ rsvp.player.name }}
+                                    {% if rsvp.notes %}
+                                    <small class="text-muted d-block">{{ rsvp.notes }}</small>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                                {% if not rsvps_by_status['maybe'] %}
+                                <li class="list-group-item text-muted">No players marked as maybe</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#players-select').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select players',
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

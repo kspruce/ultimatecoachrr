@@ -6,10 +6,6 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance, SessionRSVP
 from app.models.player import Player
-from app.forms.session import (
-    SessionRSVPForm, SessionPlanForm, DrillForm, 
-    SessionComponentForm, AttendanceForm, SessionFilterForm
-)
 from datetime import datetime, timedelta
 import json
 import os
@@ -25,7 +21,7 @@ from app.utils.storage import store_file
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
-    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminSessionRSVPForm
+    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm
 )
 
 csrf = CSRFProtect()
@@ -721,6 +717,87 @@ def rsvp(session_id, player_id=None):
         return render_template('session/rsvp.html', form=form, session=session_plan, 
                              existing_rsvp=existing_rsvp, show_admin_selector=False)
 
+
+@bp.route('/<int:session_id>/admin_rsvp', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_rsvp(session_id):
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    form = AdminBulkRSVPForm(team_organization_id=get_current_team_id())
+    
+    if form.validate_on_submit():
+        status = form.status.data
+        
+        # Delete existing RSVPs for the selected players
+        for player_id in form.players.data:
+            SessionRSVP.query.filter_by(
+                session_id=session_id,
+                player_id=player_id,
+                team_organization_id=get_current_team_id()
+            ).delete()
+        
+        # Create new RSVPs for the selected players
+        for player_id in form.players.data:
+            player = Player.query.filter_by(
+                id=player_id,
+                team_organization_id=get_current_team_id()
+            ).first()
+            
+            if player:
+                rsvp_record = SessionRSVP(
+                    session_id=session_id,
+                    player_id=player_id,
+                    status=status,
+                    notes=form.notes.data,
+                    team_organization_id=get_current_team_id()
+                )
+                db.session.add(rsvp_record)
+        
+        db.session.commit()
+        flash(f'RSVPs for {len(form.players.data)} players have been recorded as {status}!', 'success')
+        return redirect(url_for('session.admin_rsvp', session_id=session_id))
+    
+    # Pre-select players based on the selected status in the form
+    if request.method == 'GET':
+        status = request.args.get('status', 'attending')
+        form.status.data = status
+        
+        # Get players with the selected status
+        rsvps = SessionRSVP.query.filter_by(
+            session_id=session_id,
+            status=status,
+            team_organization_id=get_current_team_id()
+        ).all()
+        
+        form.players.data = [r.player_id for r in rsvps]
+    
+    # Get all RSVPs for this session
+    all_rsvps = SessionRSVP.query.filter_by(
+        session_id=session_id,
+        team_organization_id=get_current_team_id()
+    ).all()
+    
+    # Group RSVPs by status
+    rsvps_by_status = {
+        'attending': [],
+        'not_attending': [],
+        'maybe': []
+    }
+    
+    for rsvp in all_rsvps:
+        if rsvp.status in rsvps_by_status:
+            rsvps_by_status[rsvp.status].append(rsvp)
+    
+    return render_template(
+        'session/admin_rsvp.html',
+        session=session_plan,
+        form=form,
+        rsvps_by_status=rsvps_by_status
+    )
 
 @bp.route('/<int:session_id>/rsvps')
 @login_required
