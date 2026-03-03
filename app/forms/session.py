@@ -110,10 +110,16 @@ class AttendanceForm(FlaskForm):
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Save Attendance')
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, team_organization_id=None, *args, **kwargs):
         super(AttendanceForm, self).__init__(*args, **kwargs)
-        self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
-                               for p in Player.query.filter_by(active=True).order_by(Player.name).all()]
+        if team_organization_id:
+            self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
+                                   for p in Player.query.filter_by(
+                                       active=True, 
+                                       team_organization_id=team_organization_id
+                                   ).order_by(Player.name).all()]
+        else:
+            self.players.choices = []
 
 class SessionFilterForm(FlaskForm):
     focus_area = SelectField('Focus Area', validators=[Optional()])
@@ -153,6 +159,27 @@ class SessionRSVPForm(FlaskForm):
     ], validators=[DataRequired()])
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Submit RSVP')
+
+class AdminSessionRSVPForm(FlaskForm):
+    player_id = SelectField('Player', coerce=int, validators=[DataRequired()])
+    status = SelectField('Attendance Status', choices=[
+        ('attending', 'Will attend'),
+        ('not_attending', 'Cannot attend'),
+        ('maybe', 'Might attend')
+    ], validators=[DataRequired()])
+    notes = TextAreaField('Notes', validators=[Optional()])
+    submit = SubmitField('Submit RSVP')
+    
+    def __init__(self, team_organization_id=None, *args, **kwargs):
+        super(AdminSessionRSVPForm, self).__init__(*args, **kwargs)
+        if team_organization_id:
+            self.player_id.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
+                                     for p in Player.query.filter_by(
+                                         active=True,
+                                         team_organization_id=team_organization_id
+                                     ).order_by(Player.name).all()]
+        else:
+            self.player_id.choices = []
 
 class DrillSearchForm(FlaskForm):
     """Form for searching drills"""

@@ -9,6 +9,9 @@
         </div>
         <div class="col-md-4 text-end">
             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
+            {% if is_admin %}
+            <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-info">View All RSVPs</a>
+            {% endif %}
         </div>
     </div>
 
@@ -43,10 +46,30 @@
             
             <div class="card mt-4">
                 <div class="card-header">
-                    <h5>Your RSVP</h5>
+                    <h5>
+                        {% if is_admin %}
+                            {% if player is defined %}
+                                RSVP for {{ player.name }}
+                            {% else %}
+                                Admin RSVP
+                            {% endif %}
+                        {% else %}
+                            Your RSVP
+                        {% endif %}
+                    </h5>
                 </div>
                 <div class="card-body">
-                    {% if existing_rsvp %}
+                    {% if is_admin and player is not defined %}
+                        <div class="alert alert-info">
+                            As an admin, you can RSVP on behalf of any player.
+                        </div>
+                    {% endif %}
+                    
+                    {% if existing_rsvp and player is defined %}
+                    <div class="alert alert-info">
+                        {{ player.name }} has already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update the response below.
+                    </div>
+                    {% elif existing_rsvp %}
                     <div class="alert alert-info">
                         You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
                     </div>
@@ -54,6 +77,16 @@
                     
                     <form method="post" novalidate>
                         {{ form.hidden_tag() }}
+                        
+                        {% if is_admin and player is not defined %}
+                        <div class="mb-3">
+                            {{ form.player_id.label(class="form-label") }}
+                            {{ form.player_id(class="form-select") }}
+                            {% for error in form.player_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         
                         <div class="mb-3">
                             {{ form.status.label(class="form-label") }}
@@ -66,7 +99,7 @@
                         <div class="mb-3">
                             {{ form.notes.label(class="form-label") }}
                             {{ form.notes(class="form-control", rows=2) }}
-                            <div class="form-text">Optional notes about your attendance (e.g., arriving late, leaving early)</div>
+                            <div class="form-text">Optional notes about attendance (e.g., arriving late, leaving early)</div>
                             {% for error in form.notes.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
