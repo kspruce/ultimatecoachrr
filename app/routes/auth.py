@@ -40,18 +40,21 @@ def _get_managed_team_id():
 
 
 
-def _populate_team_choices(form, selected_team_id):
+def _populate_team_choices(form, selected_team_id, set_default=True):
     """
     Populate team dropdown based on role.
+    Only sets default value if set_default=True (for GET requests).
     """
     if current_user.is_superadmin:
         teams = TeamOrganization.query.order_by(TeamOrganization.name).all()
         form.team_organization_id.choices = [(t.id, t.name) for t in teams]
-        form.team_organization_id.data = selected_team_id
+        if set_default:
+            form.team_organization_id.data = selected_team_id
     else:
         team = TeamOrganization.query.get(selected_team_id)
         form.team_organization_id.choices = [(team.id, team.name)]
-        form.team_organization_id.data = team.id
+        if set_default:
+            form.team_organization_id.data = team.id
 
 
 def _populate_player_choices(form, team_id):
@@ -221,7 +224,8 @@ def add_user():
 
     form = UserForm()
 
-    _populate_team_choices(form, team_id)
+    # Populate choices but only set defaults on GET request
+    _populate_team_choices(form, team_id, set_default=(request.method == 'GET'))
     _populate_player_choices(form, team_id)
 
     if request.method == "POST":
@@ -270,7 +274,8 @@ def edit_user(user_id):
         original_email=user.email
     )
 
-    _populate_team_choices(form, team_id)
+    # Populate choices but only set defaults on GET request
+    _populate_team_choices(form, team_id, set_default=(request.method == 'GET'))
     _populate_player_choices(form, team_id)
 
     if request.method == "GET":

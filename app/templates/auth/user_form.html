@@ -19,27 +19,55 @@
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control") }}
+                        {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.username.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         {{ form.email.label(class="form-label") }}
-                        {{ form.email(class="form-control") }}
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.email.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control") }}
+                        {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
                         <div class="form-text">
                             Leave blank to keep current password
                         </div>
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         {{ form.confirm_password.label(class="form-label") }}
-                        {{ form.confirm_password(class="form-control") }}
+                        {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else "")) }}
+                        {% if form.confirm_password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.confirm_password.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -50,12 +78,26 @@
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         {{ form.team_organization_id.label(class="form-label") }}
-                        {{ form.team_organization_id(class="form-select") }}
+                        {{ form.team_organization_id(class="form-select" + (" is-invalid" if form.team_organization_id.errors else "")) }}
+                        {% if form.team_organization_id.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.team_organization_id.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
                         {{ form.role.label(class="form-label") }}
-                        {{ form.role(class="form-select") }}
+                        {{ form.role(class="form-select" + (" is-invalid" if form.role.errors else "")) }}
+                        {% if form.role.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.role.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -65,7 +107,14 @@
 
                 <div class="mb-4">
                     {{ form.player_id.label(class="form-label") }}
-                    {{ form.player_id(class="form-select select2") }}
+                    {{ form.player_id(class="form-select select2" + (" is-invalid" if form.player_id.errors else "")) }}
+                    {% if form.player_id.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.player_id.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <div class="d-flex justify-content-between">
@@ -92,4 +141,3 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 {% endblock %}
-
