@@ -28,7 +28,7 @@ class User(UserMixin, db.Model):
     # Your DB already has a column called "is_admin". You previously also had a @property called is_admin,
     # which broke the column. We keep the DB column but map it to a different attribute name.
     # We'll stop using it and use is_superadmin instead.
-    #is_admin_flag = db.Column("is_admin", db.Boolean, default=False, nullable=False)
+    is_admin_flag = db.Column("is_admin", db.Boolean, default=False, nullable=False)
 
     # Global superadmin (you = username 'admin')
     is_superadmin = db.Column(db.Boolean, default=False, nullable=False)
