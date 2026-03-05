@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 Add share_token columns to session_plan table
-Run this script inside your web container
 """
 
-from app import app, db
+from app import create_app, db
 from sqlalchemy import text
 
 def add_share_token_columns():
     """Add share_token and share_token_expires columns to session_plan table"""
+    
+    app = create_app()
     
     with app.app_context():
         try:
