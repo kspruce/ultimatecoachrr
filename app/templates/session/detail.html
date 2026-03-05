@@ -110,51 +110,49 @@
                         <a href="{{ url_for('session.printable_view', session_id=session.id) }}" class="btn btn-outline-primary" target="_blank">
                             <i class="bi bi-printer"></i> View Printable Page
                         </a>
-						{% if current_user.is_admin or current_user.is_coach %}
-							<hr class="my-3">
-							<h6 class="text-muted mb-2">Share with Guests</h6>
-							{% if current_user.is_admin or current_user.is_coach %}
-							<div class="card shadow-sm mb-4">
-								<div class="card-header bg-light">
-									<h5 class="mb-0">Guest Sharing</h5>
-								</div>
-								<div class="card-body">
-									<p class="text-muted small mb-3">
-										<i class="bi bi-info-circle"></i> Generate a shareable link that allows guests to view this session without logging in.
-									</p>
-									
-									<div id="share-link-container">
-										<div class="d-grid gap-2">
-											<button id="generate-share-btn" class="btn btn-outline-primary">
-												<i class="bi bi-link-45deg"></i> Generate Share Link
-											</button>
-										</div>
-									</div>
-									
-									<div id="share-link-display" style="display: none;">
-										<div class="input-group mb-2">
-											<input type="text" id="share-url-input" class="form-control" readonly>
-											<button class="btn btn-outline-secondary" type="button" id="copy-link-btn">
-												<i class="bi bi-clipboard"></i> Copy
-											</button>
-										</div>
-										
-										<div class="d-flex gap-2">
-											<button id="revoke-share-btn" class="btn btn-outline-danger btn-sm">
-												<i class="bi bi-x-circle"></i> Revoke Link
-											</button>
-											<a id="open-guest-view" href="#" target="_blank" class="btn btn-outline-info btn-sm">
-												<i class="bi bi-box-arrow-up-right"></i> Test Guest View
-											</a>
-										</div>
-									</div>
-								</div>
-							</div>
-							{% endif %}							
-						{% endif %}
                     </div>
                 </div>
             </div>
+
+            <!-- Guest Sharing Card (separate from Quick Actions) -->
+            {% if current_user.is_admin or current_user.is_coach %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-share"></i> Guest Sharing</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-info-circle"></i> Generate a shareable link that allows guests to view this session without logging in.
+                    </p>
+                    
+                    <div id="share-link-container">
+                        <div class="d-grid gap-2">
+                            <button id="generate-share-btn" class="btn btn-outline-primary">
+                                <i class="bi bi-link-45deg"></i> Generate Share Link
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="share-link-display" style="display: none;">
+                        <div class="input-group mb-2">
+                            <input type="text" id="share-url-input" class="form-control" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="copy-link-btn">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button id="revoke-share-btn" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-x-circle"></i> Revoke Link
+                            </button>
+                            <a id="open-guest-view" href="#" target="_blank" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-box-arrow-up-right"></i> Test Guest View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Session Components -->
@@ -221,14 +219,7 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p class="text-center">No components added to this session yet.</p>
-                    {% if current_user.is_admin %}
-                    <div class="d-grid">
-                        <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Add First Component
-                        </a>
-                    </div>
-                    {% endif %}
+                    <p class="text-muted">No components added yet for this session.</p>
                     {% endif %}
                 </div>
             </div>
@@ -366,6 +357,16 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
+    /* Share link input styling */
+    #share-url-input {
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+
+    .input-group .btn {
+        white-space: nowrap;
+    }
+    
     /* Mobile responsiveness */
     @media (max-width: 767.98px) {
         .timeline:before {
@@ -386,17 +387,6 @@
             margin-left: 45px;
         }
     }
-</style>
-<style>
-/* Add these styles to your detail.html styles block */
-#share-url-input {
-    font-family: monospace;
-    font-size: 0.9em;
-}
-
-.input-group .btn {
-    white-space: nowrap;
-}
 </style>
 {% endblock %}
 
@@ -422,10 +412,8 @@ document.addEventListener('DOMContentLoaded', function() {
             window.open(originalSrc, '_blank');
         });
     });
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
+    
+    // Guest share link functionality
     const generateBtn = document.getElementById('generate-share-btn');
     const revokeBtn = document.getElementById('revoke-share-btn');
     const copyBtn = document.getElementById('copy-link-btn');
@@ -434,99 +422,102 @@ document.addEventListener('DOMContentLoaded', function() {
     const shareUrlInput = document.getElementById('share-url-input');
     const openGuestViewBtn = document.getElementById('open-guest-view');
     
-    // Check if a share link already exists on page load
-    checkExistingShareLink();
-    
-    function checkExistingShareLink() {
-        fetch('{{ url_for("session.generate_share_link", session_id=session.id) }}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.share_url) {
-                    showShareLink(data.share_url);
+    // Check if elements exist (only for admin/coach)
+    if (generateBtn) {
+        // Check if a share link already exists on page load
+        checkExistingShareLink();
+        
+        function checkExistingShareLink() {
+            fetch('{{ url_for("session.generate_share_link", session_id=session.id) }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.share_url) {
+                        showShareLink(data.share_url);
+                    }
+                })
+                .catch(error => {
+                    console.log('No existing share link');
+                });
+        }
+        
+        generateBtn.addEventListener('click', function() {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Generating...';
+            
+            fetch('{{ url_for("session.generate_share_link", session_id=session.id) }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showShareLink(data.share_url);
+                    } else {
+                        alert('Failed to generate share link');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while generating the share link');
+                })
+                .finally(() => {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Generate Share Link';
+                });
+        });
+        
+        revokeBtn?.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to revoke this share link? Anyone with the link will no longer be able to access this session.')) {
+                return;
+            }
+            
+            fetch('{{ url_for("session.revoke_share_link", session_id=session.id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 }
             })
-            .catch(error => {
-                console.log('No existing share link');
-            });
-    }
-    
-    generateBtn?.addEventListener('click', function() {
-        generateBtn.disabled = true;
-        generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Generating...';
-        
-        fetch('{{ url_for("session.generate_share_link", session_id=session.id) }}')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showShareLink(data.share_url);
+                    shareDisplay.style.display = 'none';
+                    shareContainer.style.display = 'block';
+                    alert('Share link has been revoked successfully');
                 } else {
-                    alert('Failed to generate share link');
+                    alert('Failed to revoke share link');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while generating the share link');
-            })
-            .finally(() => {
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Generate Share Link';
+                alert('An error occurred while revoking the share link');
             });
-    });
-    
-    revokeBtn?.addEventListener('click', function() {
-        if (!confirm('Are you sure you want to revoke this share link? Anyone with the link will no longer be able to access this session.')) {
-            return;
-        }
-        
-        fetch('{{ url_for("session.revoke_share_link", session_id=session.id) }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                shareDisplay.style.display = 'none';
-                shareContainer.style.display = 'block';
-                alert('Share link has been revoked successfully');
-            } else {
-                alert('Failed to revoke share link');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while revoking the share link');
         });
-    });
-    
-    copyBtn?.addEventListener('click', function() {
-        shareUrlInput.select();
-        shareUrlInput.setSelectionRange(0, 99999); // For mobile devices
         
-        navigator.clipboard.writeText(shareUrlInput.value).then(() => {
-            const originalText = copyBtn.innerHTML;
-            copyBtn.innerHTML = '<i class="bi bi-check"></i> Copied!';
-            copyBtn.classList.remove('btn-outline-secondary');
-            copyBtn.classList.add('btn-success');
+        copyBtn?.addEventListener('click', function() {
+            shareUrlInput.select();
+            shareUrlInput.setSelectionRange(0, 99999); // For mobile devices
             
-            setTimeout(() => {
-                copyBtn.innerHTML = originalText;
-                copyBtn.classList.remove('btn-success');
-                copyBtn.classList.add('btn-outline-secondary');
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            alert('Failed to copy link. Please copy manually.');
+            navigator.clipboard.writeText(shareUrlInput.value).then(() => {
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+                copyBtn.classList.remove('btn-outline-secondary');
+                copyBtn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-secondary');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy link. Please copy manually.');
+            });
         });
-    });
-    
-    function showShareLink(url) {
-        shareUrlInput.value = url;
-        openGuestViewBtn.href = url;
-        shareContainer.style.display = 'none';
-        shareDisplay.style.display = 'block';
+        
+        function showShareLink(url) {
+            shareUrlInput.value = url;
+            openGuestViewBtn.href = url;
+            shareContainer.style.display = 'none';
+            shareDisplay.style.display = 'block';
+        }
     }
 });
 </script>
