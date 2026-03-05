@@ -117,7 +117,7 @@ def add_player():
                     username=form.username.data,
                     email=form.email.data,
                     role='player',
-                    is_admin=False,
+                    is_superadmin=False,
                     team_organization_id=get_current_team_id()  # Add team organization ID
                 )
                 user.set_password(form.password.data)
@@ -205,7 +205,7 @@ def edit_player(player_id):
                         username=form.username.data,
                         email=form.email.data,
                         role='player',
-                        is_admin=False,
+                        is_superadmin=False,
                         team_organization_id=get_current_team_id()  # Add team organization ID
                     )
                     user.set_password(form.password.data)
