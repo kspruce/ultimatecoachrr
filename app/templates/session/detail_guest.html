@@ -111,48 +111,6 @@
                 </div>
             </div>
 
-            <!-- Attendance Summary (Read-only) -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Attendance Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-success text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.present|length }}</h3>
-                                    <p class="mb-0">Present</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-warning text-dark">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.late|length }}</h3>
-                                    <p class="mb-0">Late</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-danger text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.absent|length }}</h3>
-                                    <p class="mb-0">Absent</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-info text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ attendance_by_status.excused|length }}</h3>
-                                    <p class="mb-0">Excused</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
