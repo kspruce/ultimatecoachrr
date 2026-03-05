@@ -23,6 +23,8 @@ from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
     SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm
 )
+from secrets import token_urlsafe
+from datetime import datetime, timedelta
 
 csrf = CSRFProtect()
 
@@ -1599,3 +1601,106 @@ def printable_view(session_id):
     )
 
         
+# Add these imports to your existing imports at the top of session.py
+from secrets import token_urlsafe
+from datetime import datetime, timedelta
+
+# Add this route to your session.py Blueprint
+
+@bp.route('/<int:session_id>/guest/<string:share_token>')
+def guest_view(session_id, share_token):
+    """View session details without authentication using a share token"""
+    session_plan = SessionPlan.query.filter_by(id=session_id).first_or_404()
+    
+    # Verify the share token matches
+    if not session_plan.share_token or session_plan.share_token != share_token:
+        abort(404)  # Return 404 instead of 403 to hide existence
+    
+    # Check if token has expired (optional - if you added expiration)
+    if hasattr(session_plan, 'share_token_expires') and session_plan.share_token_expires:
+        if session_plan.share_token_expires < datetime.utcnow():
+            abort(404)  # Token expired
+    
+    # Get components for this session
+    components = session_plan.components.filter_by(
+        team_organization_id=session_plan.team_organization_id
+    ).order_by(SessionComponent.order).all()
+    
+    # Get attendance data
+    attendances = session_plan.attendances.filter_by(
+        team_organization_id=session_plan.team_organization_id
+    ).all()
+    
+    # Group attendances by status
+    attendance_by_status = {
+        'present': [],
+        'absent': [],
+        'late': [],
+        'excused': []
+    }
+    
+    for attendance in attendances:
+        if attendance.status in attendance_by_status:
+            attendance_by_status[attendance.status].append(attendance)
+    
+    return render_template(
+        'session/detail_guest.html',
+        session=session_plan,
+        components=components,
+        attendance_by_status=attendance_by_status
+    )
+
+
+@bp.route('/<int:session_id>/generate-share-link')
+@login_required
+@coach_required
+def generate_share_link(session_id):
+    """Generate or retrieve a shareable guest link for a session"""
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    # Generate a share token if one doesn't exist
+    if not session_plan.share_token:
+        session_plan.share_token = token_urlsafe(32)
+        
+        # Optional: Set expiration date (e.g., 30 days from now)
+        # Uncomment if you added share_token_expires to your model
+        # session_plan.share_token_expires = datetime.utcnow() + timedelta(days=30)
+        
+        db.session.commit()
+    
+    # Generate the full share URL
+    share_url = url_for('session.guest_view', 
+                       session_id=session_plan.id, 
+                       share_token=session_plan.share_token, 
+                       _external=True)
+    
+    return jsonify({
+        'success': True,
+        'share_url': share_url,
+        'share_token': session_plan.share_token
+    })
+
+
+@bp.route('/<int:session_id>/revoke-share-link', methods=['POST'])
+@login_required
+@coach_required
+def revoke_share_link(session_id):
+    """Revoke the shareable guest link for a session"""
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+    
+    # Clear the share token
+    session_plan.share_token = None
+    # session_plan.share_token_expires = None  # Uncomment if you added expiration
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Share link has been revoked'
+    })

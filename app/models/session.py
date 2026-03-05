@@ -19,6 +19,8 @@ class SessionPlan(db.Model):
     recurrence_pattern = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    share_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
+    share_token_expires = db.Column(db.DateTime, nullable=True)  # Optional: for expiring links
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     # Relationships
