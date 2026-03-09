@@ -464,10 +464,14 @@ def accept_invite(token):
                 flash(e, 'danger')
             return render_template('auth/accept_invite.html', invite=invite, username=username)
 
+        # Use player's email if available, else placeholder until DB constraint is relaxed
+        player_email = invite.player.email if invite.player else None
+        resolved_email = player_email if player_email else f'{username}@no-email.placeholder'
+
         # Create the user account
         user = User(
             username=username,
-            email=invite.player.email if invite.player else None,
+            email=resolved_email,
             role='player',
             is_superadmin=False,
             team_organization_id=invite.team_organization_id,
@@ -558,10 +562,13 @@ def register_team():
         settings = TeamSettings(team_id=team.id)
         db.session.add(settings)
 
+        # Use provided email, or a unique placeholder until the DB constraint is relaxed
+        resolved_email = email if email else f'{username}@no-email.placeholder'
+
         # Create admin user
         user = User(
             username=username,
-            email=email if email else None,
+            email=resolved_email,
             role='admin',
             is_superadmin=False,
             team_organization_id=team.id,
