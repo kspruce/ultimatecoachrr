@@ -41,7 +41,7 @@ class User(UserMixin, db.Model):
 
     # Relationships
     player_profile = db.relationship("Player", back_populates="user_account", uselist=False)
-    team_organization = db.relationship("TeamOrganization", foreign_keys=[team_organization_id], lazy="select")
+    # team_organization backref is defined on TeamOrganization.users — available as user.team_organization
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
