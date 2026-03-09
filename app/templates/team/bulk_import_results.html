@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .res-header {
+    background: linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 55%,#3B82F6 100%);
+    border-radius: var(--uc-radius); padding: 2rem 2.5rem;
+    color: white; margin-bottom: 1.75rem;
+  }
+  .res-card {
+    background: white; border: 1px solid var(--uc-gray-200);
+    border-radius: var(--uc-radius); overflow: hidden;
+    box-shadow: var(--uc-shadow-sm); margin-bottom: 1.25rem;
+  }
+  .res-card-header {
+    padding: 1rem 1.375rem; border-bottom: 1px solid var(--uc-gray-100);
+    display: flex; align-items: center; gap: .625rem;
+  }
+  .res-count {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:26px; height:26px; border-radius:8px;
+    font-size:.78rem; font-weight:700; padding:0 .45rem;
+  }
+  .res-count.success { background:#ECFDF5; color:#059669; }
+  .res-count.danger  { background:#FEF2F2; color:#DC2626; }
+  .res-table { width:100%; border-collapse:collapse; }
+  .res-table th {
+    padding:.625rem 1rem; font-size:.72rem; font-weight:700;
+    letter-spacing:.07em; text-transform:uppercase;
+    color:var(--uc-gray-400); text-align:left;
+    background:var(--uc-gray-50); border-bottom:1px solid var(--uc-gray-100);
+  }
+  .res-table td {
+    padding:.75rem 1rem; font-size:.845rem; color:var(--uc-gray-800);
+    border-bottom:1px solid var(--uc-gray-100);
+  }
+  .res-table tr:last-child td { border-bottom:none; }
+  .cred-user { font-family:monospace; font-weight:600; color:var(--uc-blue); }
+  .cred-pw   { font-family:monospace; background:var(--uc-gray-100);
+                border-radius:5px; padding:.1rem .4rem; font-size:.8rem; }
+  .error-list { list-style:none; padding:0; margin:0; }
+  .error-list li {
+    padding:.625rem 1.375rem; font-size:.83rem; color:#B91C1C;
+    border-bottom:1px solid var(--uc-gray-100);
+  }
+  .error-list li:last-child { border-bottom:none; }
+  .error-list li::before { content:'⚠ '; }
+  .summary-pill {
+    display:inline-flex; align-items:center; gap:.4rem;
+    border-radius:50px; padding:.35rem 1rem; font-size:.82rem; font-weight:600;
+  }
+  .summary-pill.ok  { background:#ECFDF5; color:#059669; }
+  .summary-pill.err { background:#FEF2F2; color:#DC2626; }
+</style>
+
+<div style="max-width:900px;margin:0 auto">
+
+  <div class="res-header">
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin-bottom:.3rem">
+      Import Complete
+    </div>
+    <h1 style="font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.75rem">
+      Results
+    </h1>
+    <div class="d-flex flex-wrap gap-2">
+      {% if results %}
+      <span class="summary-pill ok">
+        <i class="bi bi-check-circle-fill"></i>
+        {{ results|length }} player{{ 's' if results|length != 1 }} added
+      </span>
+      {% if create_accounts %}
+      {% set cred_count = results | selectattr('credentials') | list | length %}
+      <span class="summary-pill ok">
+        <i class="bi bi-person-check-fill"></i>
+        {{ cred_count }} account{{ 's' if cred_count != 1 }} created
+      </span>
+      {% endif %}
+      {% endif %}
+      {% if errors %}
+      <span class="summary-pill err">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        {{ errors|length }} error{{ 's' if errors|length != 1 }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Credential warning ─────────────────────────────────── #}
+  {% if create_accounts and results | selectattr('credentials') | list %}
+  <div style="background:#FFFBEB;border:1px solid #F59E0B;border-radius:var(--uc-radius);
+              padding:1rem 1.375rem;margin-bottom:1.25rem;display:flex;gap:.75rem;align-items:flex-start">
+    <i class="bi bi-exclamation-triangle-fill" style="color:#D97706;margin-top:.15rem;flex-shrink:0"></i>
+    <div style="font-size:.845rem;color:#92400E">
+      <strong>Save these credentials now.</strong> Temporary passwords are shown once only — they
+      cannot be retrieved later. Share them with players and ask them to change their password on first login.
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Success rows ───────────────────────────────────────── #}
+  {% if results %}
+  <div class="res-card">
+    <div class="res-card-header">
+      <i class="bi bi-people-fill" style="color:var(--uc-green)"></i>
+      <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Added Players</span>
+      <span class="res-count success ms-auto">{{ results|length }}</span>
+    </div>
+    <table class="res-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>#</th>
+          <th>Email</th>
+          <th>Status</th>
+          {% if create_accounts %}<th>Login credentials</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td style="font-weight:600">{{ r.name }}</td>
+          <td style="color:var(--uc-gray-400)">{{ r.jersey or '—' }}</td>
+          <td style="color:var(--uc-gray-600);font-size:.81rem">{{ r.email }}</td>
+          <td>
+            <span style="font-size:.78rem;color:{% if r.credentials %}var(--uc-green){% else %}var(--uc-gray-400){% endif %}">
+              {{ r.note }}
+            </span>
+          </td>
+          {% if create_accounts %}
+          <td>
+            {% if r.credentials %}
+            <span class="cred-user">{{ r.credentials.username }}</span>
+            &nbsp;/&nbsp;
+            <span class="cred-pw">{{ r.credentials.password }}</span>
+            {% else %}
+            <span style="color:var(--uc-gray-400);font-size:.8rem">—</span>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {# ── Errors ─────────────────────────────────────────────── #}
+  {% if errors %}
+  <div class="res-card">
+    <div class="res-card-header">
+      <i class="bi bi-exclamation-triangle-fill" style="color:var(--uc-amber)"></i>
+      <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Skipped / Errors</span>
+      <span class="res-count danger ms-auto">{{ errors|length }}</span>
+    </div>
+    <ul class="error-list">
+      {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# ── Empty state ────────────────────────────────────────── #}
+  {% if not results and not errors %}
+  <div class="res-card" style="padding:3rem;text-align:center;color:var(--uc-gray-400)">
+    <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.75rem"></i>
+    No rows were processed. Check your CSV and try again.
+  </div>
+  {% endif %}
+
+  {# ── Actions ────────────────────────────────────────────── #}
+  <div class="d-flex gap-2 flex-wrap mb-5 mt-2">
+    <a href="{{ url_for('team.index') }}" class="btn btn-primary"
+       style="border-radius:9px;font-weight:600;font-size:.9rem;padding:.6rem 1.5rem">
+      <i class="bi bi-people-fill me-2"></i>View Roster
+    </a>
+    <a href="{{ url_for('team.bulk_import') }}" class="btn btn-outline-secondary"
+       style="border-radius:9px;font-size:.9rem">
+      <i class="bi bi-upload me-2"></i>Import More
+    </a>
+    {% if create_accounts and results | selectattr('credentials') | list %}
+    <button onclick="copyCredentials()" class="btn btn-outline-primary"
+            style="border-radius:9px;font-size:.9rem">
+      <i class="bi bi-clipboard me-2"></i>Copy All Credentials
+    </button>
+    {% endif %}
+  </div>
+
+</div>
+
+{% if create_accounts and results | selectattr('credentials') | list %}
+<script>
+function copyCredentials() {
+  const rows = [['Name','Username','Password']];
+  {% for r in results %}{% if r.credentials %}
+  rows.push(['{{ r.name }}', '{{ r.credentials.username }}', '{{ r.credentials.password }}']);
+  {% endif %}{% endfor %}
+  const text = rows.map(r => r.join('\t')).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check me-2"></i>Copied!';
+    btn.classList.add('btn-success'); btn.classList.remove('btn-outline-primary');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('btn-success'); btn.classList.add('btn-outline-primary'); }, 2000);
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

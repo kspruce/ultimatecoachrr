@@ -16,6 +16,9 @@ from app.models.team_settings import TeamSettings
 from datetime import datetime
 from markupsafe import Markup
 from app.utils.team_filter import get_current_team_id
+import re
+import random
+import string
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 
@@ -421,3 +424,143 @@ def feature_settings():
         return redirect(url_for('team.feature_settings'))
 
     return render_template('team/feature_settings.html', team=team)
+
+
+# ─────────────────────────────────────────────────────────
+# Bulk Player Import
+# ─────────────────────────────────────────────────────────
+
+VALID_POSITIONS    = {'handler', 'cutter', 'hybrid'}
+VALID_GENDER_MATCH = {'Mixed', "Women's", "Men's"}
+
+def _generate_username(name, team_id):
+    """Derive a unique username from a player's name."""
+    parts = name.strip().split()
+    base = (parts[0] + (parts[-1][0] if len(parts) > 1 else '')).lower()
+    base = re.sub(r'[^a-z0-9]', '', base) or 'player'
+    username = base
+    counter = 1
+    while User.query.filter_by(username=username).first():
+        username = f"{base}{counter}"
+        counter += 1
+    return username
+
+
+def _temp_password(length=10):
+    """Generate a readable temporary password (no ambiguous chars)."""
+    chars = 'abcdefghjkmnpqrstuvwxyz23456789'
+    return ''.join(random.choices(chars, k=length))
+
+
+@bp.route('/bulk-import', methods=['GET', 'POST'])
+@coach_required
+def bulk_import():
+    """Paste or upload a CSV of players; optionally auto-create user accounts.
+
+    CSV columns (header row optional):
+        name, jersey_number, position, email, gender_match, line_preference
+    Only 'name' is required; all other columns are optional.
+    """
+    team_id = get_current_team_id()
+
+    if request.method == 'POST':
+        raw = request.form.get('csv_data', '').strip()
+        create_accounts = 'create_accounts' in request.form
+
+        if not raw:
+            flash('No data provided — please paste your CSV above.', 'warning')
+            return redirect(url_for('team.bulk_import'))
+
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+
+        # Skip header row if present
+        if lines and lines[0].lower().lstrip('\ufeff').startswith('name'):
+            lines = lines[1:]
+
+        results = []   # dicts with keys: name, status, note, credentials
+        errors  = []
+
+        for line_no, line in enumerate(lines, 1):
+            # Support comma or tab separated
+            parts = [p.strip().strip('"') for p in re.split(r'[,\t]', line)]
+            name = parts[0] if parts else ''
+            if not name:
+                errors.append(f"Row {line_no}: empty name, skipped.")
+                continue
+
+            # Parse optional fields with sensible defaults/validation
+            try:
+                jersey = int(parts[1]) if len(parts) > 1 and parts[1] else None
+            except ValueError:
+                jersey = None
+
+            position = parts[2].lower() if len(parts) > 2 and parts[2].lower() in VALID_POSITIONS else None
+            email    = parts[3] if len(parts) > 3 and parts[3] else None
+            gm_raw   = parts[4] if len(parts) > 4 else ''
+            gender_match = gm_raw if gm_raw in VALID_GENDER_MATCH else 'Mixed'
+
+            # Check for duplicate name within team
+            existing = Player.query.filter_by(name=name, team_organization_id=team_id).first()
+            if existing:
+                errors.append(f"Row {line_no}: '{name}' already exists in roster, skipped.")
+                continue
+
+            try:
+                player = Player(
+                    name=name,
+                    jersey_number=jersey,
+                    position=position,
+                    email=email,
+                    gender_match=gender_match,
+                    active=True,
+                    team_organization_id=team_id,
+                )
+                db.session.add(player)
+                db.session.flush()   # get player.id before creating user
+
+                credentials = None
+                if create_accounts:
+                    if not email:
+                        note = 'No email — account not created'
+                    elif User.query.filter_by(email=email).first():
+                        note = 'Email already in use — account not created'
+                    else:
+                        username = _generate_username(name, team_id)
+                        temp_pw  = _temp_password()
+                        user = User(
+                            username=username,
+                            email=email,
+                            role='player',
+                            is_superadmin=False,
+                            team_organization_id=team_id,
+                        )
+                        user.set_password(temp_pw)
+                        db.session.add(user)
+                        db.session.flush()
+                        player.user_id = user.id
+                        credentials = {'username': username, 'password': temp_pw}
+                        note = 'Player + account created'
+                else:
+                    note = 'Player created'
+
+                db.session.commit()
+                results.append({
+                    'name': name,
+                    'jersey': jersey,
+                    'email': email or '—',
+                    'note': note,
+                    'credentials': credentials,
+                })
+
+            except Exception as e:
+                db.session.rollback()
+                errors.append(f"Row {line_no} ('{name}'): {e}")
+
+        return render_template(
+            'team/bulk_import_results.html',
+            results=results,
+            errors=errors,
+            create_accounts=create_accounts,
+        )
+
+    return render_template('team/bulk_import.html')

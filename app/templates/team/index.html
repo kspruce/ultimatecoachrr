@@ -154,10 +154,15 @@
         <div class="col-md-8">
             <h1>Team Roster</h1>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="col-md-4 text-end d-flex gap-2 justify-content-end flex-wrap">
+            {% if current_user.is_coach %}
+                <a href="{{ url_for('team.bulk_import') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-upload me-1"></i> Import Players
+                </a>
+            {% endif %}
             {% if current_user.is_admin %}
                 <a href="{{ url_for('team.add_player') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle me-1"></i> Add Player
+                    <i class="bi bi-plus-circle me-1"></i> Add Player
                 </a>
             {% endif %}
         </div>

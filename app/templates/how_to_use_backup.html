@@ -1,0 +1,934 @@
+{% extends "base.html" %}
+
+{% block title %}How to Use - Ultimate Coach{% endblock %}
+
+{% block styles %}
+<style>
+    /* Main styling */
+    .how-to-section {
+        margin-bottom: 3rem;
+        scroll-margin-top: 70px;
+    }
+    
+    .section-title {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .section-title:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background-color: #3498db;
+    }
+    
+    .feature-card {
+        transition: all 0.3s ease;
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        margin-bottom: 1.5rem;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    }
+    
+    .feature-card .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1rem 1.5rem;
+    }
+    
+    .feature-card .card-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    
+    .feature-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        margin-right: 0.75rem;
+        background-color: rgba(52, 152, 219, 0.1);
+        color: #3498db;
+    }
+    
+    .workflow-step {
+        position: relative;
+        padding-left: 60px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .workflow-step:before {
+        content: attr(data-step);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 40px;
+        height: 40px;
+        background-color: #3498db;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .workflow-step:after {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 40px;
+        height: calc(100% - 20px);
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .workflow-step:last-child:after {
+        display: none;
+    }
+    
+    .tip-box {
+        background-color: #f8f9fa;
+        border-left: 4px solid #3498db;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 0 0.25rem 0.25rem 0;
+    }
+    
+    .tip-box.coach {
+        border-left-color: #2ecc71;
+    }
+    
+    .tip-box.player {
+        border-left-color: #e74c3c;
+    }
+    
+    .quick-nav {
+        position: sticky;
+        top: 70px;
+        background-color: white;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 2rem;
+        z-index: 100;
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    
+    .quick-nav::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .quick-nav .btn {
+        white-space: nowrap;
+        margin-right: 0.5rem;
+    }
+    
+    .quick-nav .btn-sm {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 767.98px) {
+        .workflow-step {
+            padding-left: 50px;
+        }
+        
+        .workflow-step:before {
+            width: 35px;
+            height: 35px;
+        }
+        
+        .workflow-step:after {
+            left: 17px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">How to Use Ultimate Coach</h1>
+            <p class="lead">
+                Welcome to Ultimate Coach - your comprehensive tool for managing every aspect of your Ultimate Frisbee team. 
+                This guide will help you get started and make the most of all available features.
+            </p>
+            
+            <!-- Quick Navigation -->
+            <div class="quick-nav">
+                <a href="#getting-started" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-rocket-takeoff"></i> Getting Started
+                </a>
+                <a href="#stats" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-graph-up"></i> Statistics
+                </a>
+                <a href="#playbook" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-book"></i> Playbook
+                </a>
+                <a href="#theory" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-mortarboard"></i> Theory
+                </a>
+                <a href="#sessions" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-calendar-check"></i> Sessions
+                </a>
+                <a href="#clips" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-camera-video"></i> Clips
+                </a>
+                <a href="#scouting" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-binoculars"></i> Scouting
+                </a>
+                <a href="#workflows" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-diagram-3"></i> Workflows
+                </a>
+            </div>
+            
+            <!-- Getting Started Section -->
+            <section id="getting-started" class="how-to-section">
+                <h2 class="section-title">Getting Started</h2>
+                <div class="card feature-card">
+                    <div class="card-body">
+                        <h5 class="mb-3">First Steps for Coaches</h5>
+                        <p>To get the most out of Ultimate Coach, follow these initial setup steps:</p>
+                        
+                        <div class="workflow-step" data-step="1">
+                            <h6>Set Up Your Team</h6>
+                            <p>Create your team profile and add players to your roster.</p>
+                            <a href="{{ url_for('team.index') }}" class="btn btn-sm btn-primary">Team Management</a>
+                        </div>
+                        
+                        <div class="workflow-step" data-step="2">
+                            <h6>Create Tournaments & Games</h6>
+                            <p>Add upcoming tournaments and individual games to track results.</p>
+                            <div class="d-flex gap-2">
+                                {% if current_user.is_admin %}
+                                    <a href="{{ url_for('tournament.add') }}" class="btn btn-sm btn-primary">Add Tournament</a>
+                                    <a href="{{ url_for('game.add') }}" class="btn btn-sm btn-primary">Add Game</a>
+                                {% else %}
+                                    <a href="{{ url_for('tournament.index') }}" class="btn btn-sm btn-primary">View Tournaments</a>
+                                    <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-primary">View Games</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="workflow-step" data-step="3">
+                            <h6>Record Game Points & Stats</h6>
+                            <p>For each game, add points and record detailed statistics.</p>
+                            <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-primary">View Games</a>
+                        </div>
+                        
+                        <div class="workflow-step" data-step="4">
+                            <h6>Analyze Performance</h6>
+                            <p>Review team and player statistics to improve performance.</p>
+                            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-sm btn-primary">Stats Dashboard</a>
+                        </div>
+                        
+                        <div class="tip-box coach">
+                            <h6><i class="bi bi-lightbulb"></i> Coach Tip</h6>
+                            <p class="mb-0">Start with the core features (team setup, game tracking, and stats) before expanding to more advanced features like playbooks and theory.</p>
+                        </div>
+                        
+                        <div class="tip-box player">
+                            <h6><i class="bi bi-person"></i> Player Tip</h6>
+                            <p class="mb-0">Players can view their personal stats, attendance records, and access team resources without needing to input data.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Statistics Section -->
+            <section id="stats" class="how-to-section">
+                <h2 class="section-title">Statistics & Analysis</h2>
+                <div class="card feature-card">
+                    <div class="card-header d-flex align-items-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h5>Track and Analyze Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Recording Game Stats</h6>
+                                <ol class="mb-4">
+                                    <li>Navigate to a specific game</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Add points using the "Add Point" button</li>
+                                        <li>For each point, record:
+                                            <ul>
+                                                <li>Line (which players were on the field)</li>
+                                                <li>Point outcome (scored/conceded)</li>
+                                                <li>Individual actions (throws, catches, etc.)</li>
+                                            </ul>
+                                        </li>
+                                        <li>Save the point to update statistics</li>
+                                    {% else %}
+                                        <li>View points and their details</li>
+                                        <li>Note: Only administrators can add or edit points</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('game.index') }}" class="btn btn-outline-primary">View Games</a>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Analyzing Statistics</h6>
+                                <p>Ultimate Coach provides several views for statistical analysis:</p>
+                                <ul class="mb-4">
+                                    <li><strong>Team Stats:</strong> Overall team performance metrics</li>
+                                    <li><strong>Player Stats:</strong> Individual player performance</li>
+                                    <li><strong>Game Stats:</strong> Detailed breakdown of specific games</li>
+                                    <li><strong>Advanced Metrics:</strong> PER (Player Efficiency Rating), plus/minus, and more</li>
+                                </ul>
+                                
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-outline-primary">Stats Dashboard</a>
+                                    <a href="{{ url_for('stats_dashboard.team_stats') }}" class="btn btn-outline-primary">Team Statistics</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tip</h6>
+                            <p class="mb-0">Consistent stat tracking is key! The more games you track, the more valuable your statistical insights will become.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Playbook Section -->
+            <section id="playbook" class="how-to-section">
+                <h2 class="section-title">Playbook</h2>
+                <div class="card feature-card">
+                    <div class="card-header d-flex align-items-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-book"></i>
+                        </div>
+                        <h5>Design & Organize Team Plays</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Creating Formations</h6>
+                                <p>Formations are the starting positions for your plays:</p>
+                                <ol class="mb-4">
+                                    <li>Go to the Playbook section</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "New Formation"</li>
+                                        <li>Position players on the field diagram</li>
+                                        <li>Name and save your formation</li>
+                                    {% else %}
+                                        <li>Browse existing formations</li>
+                                        <li>Note: Only administrators can create new formations</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid">
+                                    {% if current_user.is_admin %}
+                                        <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-primary">Create Formation</a>
+                                    {% else %}
+                                        <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-primary">View Formations</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Creating Plays</h6>
+                                <p>Plays define player movements and disc progression:</p>
+                                <ol class="mb-4">
+                                    <li>Go to the Playbook section</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "New Play"</li>
+                                        <li>Choose a formation as your starting point</li>
+                                        <li>Add movement paths and throwing options</li>
+                                        <li>Name, categorize, and save your play</li>
+                                    {% else %}
+                                        <li>Browse existing plays</li>
+                                        <li>Note: Only administrators can create new plays</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid">
+                                    {% if current_user.is_admin %}
+                                        <a href="{{ url_for('playbook.add_play') }}" class="btn btn-outline-primary">Create Play</a>
+                                    {% else %}
+                                        <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-primary">View Plays</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tip</h6>
+                            <p class="mb-0">Organize your plays by categories (e.g., "Red Zone," "Endzone," "Handler Movement") to quickly find them during games and practices.</p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('playbook.index') }}" class="btn btn-primary">View Full Playbook</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Theory Section -->
+            <section id="theory" class="how-to-section">
+                <h2 class="section-title">Theory Library</h2>
+                <div class="card feature-card">
+                    <div class="card-header d-flex align-items-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-mortarboard"></i>
+                        </div>
+                        <h5>Build Your Ultimate Knowledge Base</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>The Theory section allows you to create a comprehensive knowledge base for your team, covering fundamental concepts, strategies, and techniques.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Creating Sections</h6>
+                                <p>Sections are the main categories in your theory library:</p>
+                                <ol class="mb-3">
+                                    <li>Go to the Theory hub</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "Add Section"</li>
+                                        <li>Name your section (e.g., "Defense," "Throwing")</li>
+                                        <li>Add a description and save</li>
+                                    {% else %}
+                                        <li>Browse existing sections</li>
+                                        <li>Note: Only administrators can create new sections</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid">
+                                    {% if current_user.is_admin %}
+                                        <a href="{{ url_for('theory.add_section') }}" class="btn btn-outline-primary">Add Section</a>
+                                    {% else %}
+                                        <a href="{{ url_for('theory.index') }}" class="btn btn-outline-primary">View Sections</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Adding Topics</h6>
+                                <p>Topics are specific concepts within each section:</p>
+                                <ol class="mb-3">
+                                    <li>Navigate to a section</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "Add Topic"</li>
+                                        <li>Create detailed content with text and images</li>
+                                        <li>Organize topics in a logical progression</li>
+                                    {% else %}
+                                        <li>Browse existing topics</li>
+                                        <li>Note: Only administrators can create new topics</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid">
+                                    {% if current_user.is_admin %}
+                                        <a href="{{ url_for('theory.add_topic') }}" class="btn btn-outline-primary">Add Topic</a>
+                                    {% else %}
+                                        <a href="{{ url_for('theory.index') }}" class="btn btn-outline-primary">View Topics</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tip</h6>
+                            <p class="mb-0">Use the Theory section to document your team's specific strategies and terminology. This is especially valuable for onboarding new players.</p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('theory.index') }}" class="btn btn-primary">Explore Theory Hub</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Session Plans Section -->
+            <section id="sessions" class="how-to-section">
+                <h2 class="section-title">Session Planning</h2>
+                <div class="card feature-card">
+                    <div class="card-header d-flex align-items-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <h5>Create Effective Practice Sessions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Building Your Drill Library</h6>
+                                <p>Create a collection of drills to use in your sessions:</p>
+                                <ol class="mb-3">
+                                    <li>Go to Session Plans > Drill Library</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "Add Basic Drill"</li>
+                                        <li>Define drill parameters:
+                                            <ul>
+                                                <li>Name and description</li>
+                                                <li>Setup instructions</li>
+                                                <li>Skills developed</li>
+                                                <li>Variations</li>
+                                            </ul>
+                                        </li>
+                                        <li>Save to your drill library</li>
+                                    {% else %}
+                                        <li>Browse existing drills</li>
+                                        <li>Note: Only administrators can add new drills</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid">
+                                    <a href="{{ url_for('session.drills') }}" class="btn btn-outline-primary">Drill Library</a>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Creating Session Plans</h6>
+                                <p>Design complete practice sessions:</p>
+                                <ol class="mb-3">
+                                    <li>Go to Session Plans</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Create a new session plan</li>
+                                        <li>Add components:
+                                            <ul>
+                                                <li>Warm-up activities</li>
+                                                <li>Drills from your library</li>
+                                                <li>Scrimmage periods</li>
+                                                <li>Cool-down activities</li>
+                                            </ul>
+                                        </li>
+                                        <li>Set timing for each component</li>
+                                        <li>Save and share with your team</li>
+                                    {% else %}
+                                        <li>View existing session plans</li>
+                                        <li>Note: Only administrators can create new session plans</li>
+                                    {% endif %}
+                                </ol>
+                                
+                                <div class="d-grid">
+                                    <a href="{{ url_for('session.index') }}" class="btn btn-outline-primary">Session Plans</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tip</h6>
+                            <p class="mb-0">Track attendance for each session to identify patterns and ensure players are getting consistent practice time.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Clip Library Section -->
+            <section id="clips" class="how-to-section">
+                <h2 class="section-title">Clip Library</h2>
+                <div class="card feature-card">
+                    <div class="card-header d-flex align-items-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-camera-video"></i>
+                        </div>
+                        <h5>Video Analysis & Highlights</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>The Clip Library helps you organize video footage for analysis, teaching, and review.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Adding Clips</h6>
+                                <ol class="mb-3">
+                                    <li>Navigate to the Clips section</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "Add New Clip"</li>
+                                        <li>Upload video or provide a link (YouTube, Vimeo, etc.)</li>
+                                        <li>Add metadata:
+                                            <ul>
+                                                <li>Title and description</li>
+                                                <li>Related game/point (if applicable)</li>
+                                                <li>Featured players</li>
+                                                <li>Tags for categorization</li>
+                                            </ul>
+                                        </li>
+                                    {% else %}
+                                        <li>Browse existing clips</li>
+                                        <li>Note: Only administrators can add new clips</li>
+                                    {% endif %}
+                                </ol>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Annotating Clips</h6>
+                                <ol class="mb-3">
+                                    <li>Open a clip for viewing</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Use the annotation tools to:
+                                            <ul>
+                                                <li>Add timestamps for key moments</li>
+                                                <li>Draw on the video to highlight movements</li>
+                                                <li>Add text notes to explain concepts</li>
+                                            </ul>
+                                        </li>
+                                        <li>Save annotations for team review</li>
+                                    {% else %}
+                                        <li>View existing annotations added by coaches</li>
+                                        <li>Note: Only administrators can add or edit annotations</li>
+                                    {% endif %}
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tip</h6>
+                            <p class="mb-0">Create collections of clips for specific purposes: teaching a concept, highlighting a player's development, or preparing for an opponent.</p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('clip.index') }}" class="btn btn-primary">Browse Clip Library</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Scouting Section -->
+            <section id="scouting" class="how-to-section">
+                <h2 class="section-title">Scouting Reports</h2>
+                <div class="card feature-card">
+                    <div class="card-header d-flex align-items-center">
+                        <div class="feature-icon">
+                            <i class="bi bi-binoculars"></i>
+                        </div>
+                        <h5>Opponent Analysis & Preparation</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Create detailed scouting reports to prepare your team for upcoming opponents.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Creating Team Reports</h6>
+                                <ol class="mb-3">
+                                    <li>Go to the Scouting section</li>
+                                    {% if current_user.is_admin %}
+                                        <li>Select "New Report"</li>
+                                        <li>Add team information:
+                                            <ul>
+                                                <li>Team name and background</li>
+                                                <li>Offensive and defensive systems</li>
+                                                <li>Key plays and formations</li>
+                                                <li>Team tendencies and patterns</li>
+                                            </ul>
+                                        </li>
+                                        <li>Save and share with your team</li>
+                                    {% else %}
+                                        <li>Browse existing scouting reports</li>
+                                        <li>Note: Only administrators can create new reports</li>
+                                    {% endif %}
+                                </ol>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Player Scouting</h6>
+                                <ol class="mb-3">
+                                    <li>Within a team report, add key players</li>
+                                    {% if current_user.is_admin %}
+                                        <li>For each player, document:
+                                            <ul>
+                                                <li>Position and role</li>
+                                                <li>Throwing preferences</li>
+                                                <li>Cutting patterns</li>
+                                                <li>Defensive style</li>
+                                                <li>Matchup suggestions</li>
+                                            </ul>
+                                        </li>
+                                        <li>Link relevant video clips if available</li>
+                                    {% else %}
+                                        <li>View player information added by coaches</li>
+                                        <li>Note: Only administrators can add or edit player scouting information</li>
+                                    {% endif %}
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Tip</h6>
+                            <p class="mb-0">Focus on actionable intelligence: what specific adjustments should your team make based on this scouting information?</p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('scouting.index') }}" class="btn btn-primary">View Scouting Reports</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Common Workflows Section -->
+            <section id="workflows" class="how-to-section">
+                <h2 class="section-title">Common Workflows</h2>
+                <div class="card feature-card">
+                    <div class="card-body">
+                        <p>Here are some typical workflows that combine multiple features of Ultimate Coach:</p>
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3">Game Day Workflow</h5>
+                            <ol>
+                                {% if current_user.is_admin %}
+                                    <li>Create a new game in the Games section</li>
+                                    <li>Record points as they happen during the game</li>
+                                    <li>Input detailed statistics after each point or post-game</li>
+                                    <li>Review game stats and share insights with the team</li>
+                                    <li>Add notable clips to the Clip Library for further analysis</li>
+                                {% else %}
+                                    <li>View game details in the Games section</li>
+                                    <li>Follow along with points as they're recorded</li>
+                                    <li>Review game stats after they're entered by administrators</li>
+                                    <li>View clips added to the Clip Library by administrators</li>
+                                    <li>Review insights shared by coaches</li>
+                                {% endif %}
+                            </ol>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3">Practice Planning Workflow</h5>
+                            <ol>
+                                <li>Review recent game statistics to identify areas for improvement</li>
+                                {% if current_user.is_admin %}
+                                    <li>Create a session plan focusing on these areas</li>
+                                    <li>Add relevant drills from your drill library</li>
+                                    <li>Include playbook elements to practice</li>
+                                    <li>Track attendance and player progress</li>
+                                {% else %}
+                                    <li>View session plans created by coaches</li>
+                                    <li>Review drills that will be used in practice</li>
+                                    <li>Study playbook elements that will be practiced</li>
+                                    <li>Check your attendance record</li>
+                                {% endif %}
+                            </ol>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3">Tournament Preparation Workflow</h5>
+                            <ol>
+                                {% if current_user.is_admin %}
+                                    <li>Create scouting reports for upcoming opponents</li>
+                                    <li>Review and update your playbook for specific matchups</li>
+                                    <li>Create focused session plans to prepare</li>
+                                    <li>Add tournament schedule to the system</li>
+                                    <li>During the tournament, track games, points, and stats</li>
+                                {% else %}
+                                    <li>Review scouting reports created by coaches</li>
+                                    <li>Study playbook elements relevant to upcoming matchups</li>
+                                    <li>Attend focused practice sessions</li>
+                                    <li>View tournament schedule in the system</li>
+                                    <li>During the tournament, follow game progress and stats</li>
+                                {% endif %}
+                            </ol>
+                        </div>
+                        
+                        <div class="tip-box mt-3">
+                            <h6><i class="bi bi-lightbulb"></i> Final Tip</h6>
+                            <p class="mb-0">Ultimate Coach is designed to be flexible - adapt these workflows to match your team's specific needs and coaching style.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- FAQ Section -->
+            <section class="how-to-section">
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                How do I add players to my team?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                {% if current_user.is_admin %}
+                                    Navigate to the Team section, then select "Add Player" to create a new player profile. Fill in the player's information including name, position, and contact details. Players can later be linked to user accounts if they need system access.
+                                {% else %}
+                                    Only administrators can add players to the team. If you need to be added to the roster, please contact your team administrator.
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                Can players see all the information coaches can see?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                No, player accounts have limited access. They can view their own statistics, team resources (playbook, theory), and session plans, but they cannot add or modify game data, create scouting reports, or access administrative functions.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqThree">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                How detailed should I be when recording game statistics?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                {% if current_user.is_admin %}
+                                    Start with the basics: points played, scores, turnovers, and assists. As you become more comfortable with the system, you can track more detailed stats like throw types, defensive plays, and yardage gained. Consistency is more important than capturing every possible data point.
+                                {% else %}
+                                    Game statistics are recorded by administrators. As a player, you can view these statistics but cannot record them yourself.
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqFour">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                Can I track stats during a live game?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="faqFour" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                {% if current_user.is_admin %}
+                                    Yes, the system is designed to work on mobile devices. You can create a game, add points, and record basic stats in real-time. For more detailed statistical tracking, you might want to have a dedicated stats person or record the full stats after reviewing game footage.
+                                {% else %}
+                                    Only administrators can track stats during games. As a player, you can view the stats after they've been recorded.
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqFive">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                How do I share playbook content with my team?
+                            </button>
+                        </h2>
+                        <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="faqFive" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Players with accounts can access the playbook directly through their login. For players without accounts, coaches can generate shareable links or export plays as PDFs or images to share via other communication channels.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="faqSix">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                                What's the best way to use the Theory section?
+                            </button>
+                        </h2>
+                        <div id="collapseSix" class="accordion-collapse collapse" aria-labelledby="faqSix" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                The Theory section works best as a progressive learning resource. Start with fundamental concepts (throwing mechanics, cutting principles) and build toward more complex team strategies. Link theory topics to relevant drills and playbook items to create a comprehensive learning system for your team.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Getting Help Section -->
+            <section class="how-to-section">
+                <h2 class="section-title">Getting Help</h2>
+                <div class="card feature-card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-question-circle"></i> Need Additional Support?</h5>
+                                <p>If you have questions or need assistance with Ultimate Coach, there are several ways to get help:</p>
+                                <ul>
+                                    <li>Check this guide for step-by-step instructions</li>
+                                    <li>Look for tooltips and help icons throughout the interface</li>
+                                    <li>Contact support via email at support@ultimatecoach.com</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="bi bi-lightbulb"></i> Feature Requests & Feedback</h5>
+                                <p>We're constantly improving Ultimate Coach based on user feedback:</p>
+                                <ul>
+                                    <li>Have a suggestion for a new feature?</li>
+                                    <li>Found something that could work better?</li>
+                                    <li>Want to share how you're using the platform?</li>
+                                </ul>
+                                <p>We'd love to hear from you! Send your thoughts to ultimatecoach00@gmail.com</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Back to Top Button -->
+            <div class="text-center my-5">
+                <a href="#" class="btn btn-primary" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">
+                    <i class="bi bi-arrow-up"></i> Back to Top
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Highlight active section in quick nav
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('.how-to-section');
+            const navLinks = document.querySelectorAll('.quick-nav .btn');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (window.pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('btn-primary');
+                link.classList.add('btn-outline-primary');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.remove('btn-outline-primary');
+                    link.classList.add('btn-primary');
+                }
+            });
+        });
+        
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('.quick-nav .btn').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

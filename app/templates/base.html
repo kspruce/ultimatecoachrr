@@ -12,222 +12,370 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <style>
+    /* ─── Global design tokens (available on every page) ───── */
+    :root {
+      --uc-blue:    #3B82F6;
+      --uc-indigo:  #6366F1;
+      --uc-teal:    #0D9488;
+      --uc-green:   #10B981;
+      --uc-amber:   #F59E0B;
+      --uc-orange:  #F97316;
+      --uc-red:     #EF4444;
+      --uc-purple:  #8B5CF6;
+      --uc-sky:     #0EA5E9;
+      --uc-gray-50: #F9FAFB;
+      --uc-gray-100:#F3F4F6;
+      --uc-gray-200:#E5E7EB;
+      --uc-gray-400:#9CA3AF;
+      --uc-gray-600:#4B5563;
+      --uc-gray-800:#1F2937;
+      --uc-shadow-sm: 0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
+      --uc-shadow-md: 0 4px 14px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04);
+      --uc-radius: 12px;
+    }
+
+    /* ─── Navbar ─────────────────────────────────────────────── */
+    .uc-navbar {
+      background: #0F172A;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      padding: .6rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+    }
+    /* Brand */
+    .uc-brand {
+      display: flex; align-items: center; gap: .55rem;
+      text-decoration: none; flex-shrink: 0;
+    }
+    .uc-brand-disc {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--uc-blue), #1D4ED8);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: .85rem; flex-shrink: 0;
+    }
+    .uc-brand-name {
+      font-weight: 700; font-size: .9rem; color: white;
+      letter-spacing: -.015em; max-width: 160px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* Nav links */
+    .uc-nav-links .nav-link {
+      color: rgba(255,255,255,.65) !important;
+      font-size: .845rem; font-weight: 500;
+      padding: .38rem .7rem !important;
+      border-radius: 8px;
+      transition: color .15s, background .15s;
+      display: flex; align-items: center; gap: .4rem;
+      white-space: nowrap;
+    }
+    .uc-nav-links .nav-link:hover { color: white !important; background: rgba(255,255,255,.09); }
+    .uc-nav-links .nav-item.uc-active > .nav-link {
+      color: white !important; background: rgba(59,130,246,.22);
+    }
+    /* Dropdowns */
+    .uc-nav-links .dropdown-menu {
+      background: #1E293B;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 11px; padding: .45rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+      min-width: 210px;
+    }
+    .uc-nav-links .dropdown-item {
+      color: rgba(255,255,255,.72); border-radius: 7px;
+      padding: .5rem .85rem; font-size: .83rem; font-weight: 500;
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .uc-nav-links .dropdown-item i { width: 16px; text-align: center; opacity: .75; }
+    .uc-nav-links .dropdown-item:hover { background: rgba(255,255,255,.1); color: white; }
+    .uc-nav-links .dropdown-item:hover i { opacity: 1; }
+    .uc-nav-links .dropdown-divider { border-color: rgba(255,255,255,.08); margin: .3rem 0; }
+    .uc-nav-links .dropdown-header {
+      color: rgba(255,255,255,.35); font-size: .66rem;
+      letter-spacing: .09em; text-transform: uppercase; padding: .45rem .85rem .2rem;
+    }
+    /* Team badge (admin active-team pill) */
+    .uc-team-badge {
+      display: inline-flex; align-items: center; gap: .35rem;
+      background: rgba(59,130,246,.18); border: 1px solid rgba(59,130,246,.3);
+      border-radius: 50px; padding: .22rem .7rem;
+      font-size: .76rem; font-weight: 600; color: #93C5FD;
+      white-space: nowrap; text-decoration: none; flex-shrink: 0;
+    }
+    .uc-team-badge:hover { background: rgba(59,130,246,.28); color: #BFDBFE; text-decoration: none; }
+    /* Active team tick in switcher dropdown */
+    .uc-team-tick {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--uc-blue); display: inline-flex;
+      align-items: center; justify-content: center;
+      font-size: .58rem; color: white; margin-left: auto;
+    }
+    /* User pill button */
+    .uc-user-btn {
+      display: flex; align-items: center; gap: .45rem;
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.13);
+      border-radius: 50px; padding: .28rem .65rem .28rem .35rem;
+      color: white; font-size: .83rem; font-weight: 500;
+      text-decoration: none; transition: background .15s; cursor: pointer;
+    }
+    .uc-user-btn:hover { background: rgba(255,255,255,.16); color: white; text-decoration: none; }
+    .uc-user-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--uc-blue), #1D4ED8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; color: white; font-weight: 700; flex-shrink: 0;
+    }
+    /* Mobile toggler */
+    .uc-toggler {
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18);
+      border-radius: 8px; padding: .35rem .55rem; color: white; line-height: 1;
+    }
+    .uc-toggler:focus { box-shadow: none; }
+    /* Right-side wrapper */
+    .uc-nav-right {
+      display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
+    }
+    </style>
+
     {% block styles %}{% endblock %}
 </head>
 
-<body>
+<body style="background:var(--uc-gray-50)">
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-<div class="container">
-<a class="navbar-brand" href="{{ url_for('main.index') }}">
-    {{ current_team.name if current_team else "Ultimate Coach" }}
-</a>
+{# ── Active-section helpers ───────────────────────────────── #}
+{% set ep = request.endpoint or '' %}
+{% set in_club     = ep.startswith('team.') or ep.startswith('game.') or ep.startswith('tournament.') or ep.startswith('calendar.') %}
+{% set in_training = ep.startswith('session.') or ep.startswith('fitness.') %}
+{% set in_strategy = ep.startswith('playbook.') or ep.startswith('scouting.') %}
+{% set in_theory   = ep.startswith('theory.') %}
+{% set in_stats    = ep.startswith('stats_dashboard.') %}
+{% set in_clips    = ep.startswith('clip.') %}
+{# Shortcut for feature settings #}
+{% set ts = current_team.settings if (current_team and current_team.settings) else none %}
 
-<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-    <span class="navbar-toggler-icon"></span>
-</button>
+<nav class="uc-navbar navbar navbar-expand-lg">
+<div class="container d-flex align-items-center gap-2">
 
-<div class="collapse navbar-collapse" id="navbarNav">
+  {# ── Brand ─────────────────────────────────────────────── #}
+  <a class="uc-brand me-1" href="{{ url_for('main.index') }}">
+    <div class="uc-brand-disc"><i class="bi bi-disc-fill"></i></div>
+    <span class="uc-brand-name">{{ current_team.name if current_team else "Ultimate Coach" }}</span>
+  </a>
 
-<ul class="navbar-nav me-auto">
-
-<!-- Home -->
-<li class="nav-item">
-    <a class="nav-link" href="{{ url_for('main.index') }}">
-        <i class="bi bi-house-fill"></i> Home
+  {# ── Mobile: right side (badge + toggler) ──────────────── #}
+  <div class="d-flex align-items-center gap-2 ms-auto d-lg-none">
+    {% if current_user.is_authenticated and current_user.is_admin and current_team %}
+    <a href="#" class="uc-team-badge d-none d-sm-flex" data-bs-toggle="dropdown">
+      <i class="bi bi-shield-check" style="font-size:.7rem"></i>{{ current_team.name }}
     </a>
-</li>
+    {% endif %}
+    <button class="uc-toggler navbar-toggler" type="button"
+            data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
+      <i class="bi bi-list" style="font-size:1.25rem"></i>
+    </button>
+  </div>
 
-<!-- ============================= -->
-<!-- Manage Club (Always Visible) -->
-<!-- ============================= -->
-<li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-        <i class="bi bi-people-fill"></i> Manage Club
-    </a>
-    <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="{{ url_for('team.index') }}">Team Roster</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('game.index') }}">Games</a></li>
-        <li><a class="dropdown-item" href="{{ url_for('tournament.index') }}">Tournaments</a></li>
+  {# ── Collapsible content ───────────────────────────────── #}
+  <div class="collapse navbar-collapse" id="navbarNav">
+
+    {# Main nav items #}
+    <ul class="navbar-nav me-auto uc-nav-links">
+
+      {# Home #}
+      <li class="nav-item {% if ep == 'main.index' %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for('main.index') }}">
+          <i class="bi bi-house-fill"></i> Home
+        </a>
+      </li>
+
+      {# Club #}
+      <li class="nav-item dropdown {% if in_club %}uc-active{% endif %}">
+        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+          <i class="bi bi-people-fill"></i> Club
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{{ url_for('team.index') }}">
+            <i class="bi bi-people"></i> Team Roster</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('game.index') }}">
+            <i class="bi bi-controller"></i> Games</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('tournament.index') }}">
+            <i class="bi bi-trophy"></i> Tournaments</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('calendar.index') }}">
+            <i class="bi bi-calendar3"></i> Calendar</a></li>
+        </ul>
+      </li>
+
+      {# Training #}
+      {% if not ts or ts.sessions_enabled or ts.fitness_enabled %}
+      <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
+        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+          <i class="bi bi-lightning-charge-fill"></i> Training
+        </a>
+        <ul class="dropdown-menu">
+          {% if not ts or ts.sessions_enabled %}
+          <li><a class="dropdown-item" href="{{ url_for('session.index') }}">
+            <i class="bi bi-calendar-check-fill"></i> Session Plans</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('session.drills') }}">
+            <i class="bi bi-clipboard2-check"></i> Drill Library</a></li>
+          {% endif %}
+          {% if not ts or ts.fitness_enabled %}
+          {% if not ts or ts.sessions_enabled %}<li><hr class="dropdown-divider"></li>{% endif %}
+          <li><a class="dropdown-item" href="{{ url_for('fitness.index') }}">
+            <i class="bi bi-heart-pulse"></i> Fitness Dashboard</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('fitness.team_leaderboard') }}">
+            <i class="bi bi-bar-chart-steps"></i> Leaderboards</a></li>
+          {% endif %}
+        </ul>
+      </li>
+      {% endif %}
+
+      {# Strategy #}
+      {% if not ts or ts.playbook_enabled or ts.scouting_enabled %}
+      <li class="nav-item dropdown {% if in_strategy %}uc-active{% endif %}">
+        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+          <i class="bi bi-lightbulb-fill"></i> Strategy
+        </a>
+        <ul class="dropdown-menu">
+          {% if not ts or ts.playbook_enabled %}
+          <li><a class="dropdown-item" href="{{ url_for('playbook.index') }}">
+            <i class="bi bi-book-fill"></i> Playbook</a></li>
+          {% endif %}
+          {% if not ts or ts.scouting_enabled %}
+          <li><a class="dropdown-item" href="{{ url_for('scouting.index') }}">
+            <i class="bi bi-binoculars-fill"></i> Scouting</a></li>
+          {% endif %}
+        </ul>
+      </li>
+      {% endif %}
+
+      {# Theory #}
+      {% if not ts or ts.theory_enabled %}
+      <li class="nav-item {% if in_theory %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for('theory.index') }}">
+          <i class="bi bi-mortarboard-fill"></i> Theory
+        </a>
+      </li>
+      {% endif %}
+
+      {# Stats #}
+      {% if not ts or ts.stats_enabled %}
+      <li class="nav-item dropdown {% if in_stats %}uc-active{% endif %}">
+        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+          <i class="bi bi-graph-up"></i> Stats
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}">
+            <i class="bi bi-speedometer2"></i> Dashboard</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">
+            <i class="bi bi-people"></i> Team Stats</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('game.index') }}">
+            <i class="bi bi-controller"></i> Game Stats</a></li>
+        </ul>
+      </li>
+      {% endif %}
+
+      {# Clips #}
+      {% if not ts or ts.clip_enabled %}
+      <li class="nav-item {% if in_clips %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for('clip.index') }}">
+          <i class="bi bi-camera-video-fill"></i> Clips
+        </a>
+      </li>
+      {% endif %}
+
     </ul>
-</li>
 
-<!-- ============================= -->
-<!-- Training -->
-<!-- ============================= -->
-{% if current_team and current_team.settings and
-   (current_team.settings.sessions_enabled or current_team.settings.fitness_enabled) %}
+    {# ── Right side ──────────────────────────────────────── #}
+    <div class="uc-nav-right">
 
-<li class="nav-item dropdown">
-<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-<i class="bi bi-lightning-charge"></i> Training
-</a>
-<ul class="dropdown-menu">
+      {% if current_user.is_authenticated %}
 
-{% if current_team.settings.sessions_enabled %}
-<li><a class="dropdown-item" href="{{ url_for('session.index') }}">Session Plans</a></li>
-<li><a class="dropdown-item" href="{{ url_for('session.drills') }}">Drill Library</a></li>
-{% endif %}
+      {# Admin: active team badge (desktop) #}
+      {% if current_user.is_admin and current_team %}
+      <a href="{{ url_for('team_organization.index') }}" class="uc-team-badge d-none d-lg-flex">
+        <i class="bi bi-shield-check" style="font-size:.7rem"></i>{{ current_team.name }}
+      </a>
+      {% endif %}
 
-{% if current_team.settings.fitness_enabled %}
-<li><hr class="dropdown-divider"></li>
-<li><a class="dropdown-item" href="{{ url_for('fitness.index') }}">Fitness Dashboard</a></li>
-<li><a class="dropdown-item" href="{{ url_for('fitness.team_leaderboard') }}">Leaderboards</a></li>
-{% endif %}
+      {# User dropdown #}
+      <div class="nav-item dropdown">
+        <a class="uc-user-btn dropdown-toggle" data-bs-toggle="dropdown" role="button">
+          <div class="uc-user-avatar">{{ current_user.username[0].upper() }}</div>
+          <span class="d-none d-md-inline" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ current_user.username }}
+          </span>
+          <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6;margin-left:.1rem"></i>
+        </a>
 
-</ul>
-</li>
+        <ul class="dropdown-menu dropdown-menu-end uc-nav-links" style="min-width:230px">
 
-{% endif %}
+          <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+            <i class="bi bi-person-circle"></i> Profile</a></li>
 
-<!-- ============================= -->
-<!-- Strategy -->
-<!-- ============================= -->
-{% if current_team and current_team.settings and
-   (current_team.settings.playbook_enabled or current_team.settings.scouting_enabled) %}
+          {% if current_user.is_coach %}
+          <li><a class="dropdown-item" href="{{ url_for('team.feature_settings') }}">
+            <i class="bi bi-sliders"></i> Feature Settings</a></li>
+          {% endif %}
 
-<li class="nav-item dropdown">
-<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-<i class="bi bi-lightbulb"></i> Strategy
-</a>
-<ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{{ url_for('main.how_to_use') }}">
+            <i class="bi bi-question-circle"></i> How to Use</a></li>
 
-{% if current_team.settings.playbook_enabled %}
-<li><a class="dropdown-item" href="{{ url_for('playbook.index') }}">Playbook</a></li>
-{% endif %}
+          {% if current_user.is_admin %}
+          <li><hr class="dropdown-divider"></li>
+          <li><span class="dropdown-header">Admin</span></li>
 
-{% if current_team.settings.scouting_enabled %}
-<li><a class="dropdown-item" href="{{ url_for('scouting.index') }}">Scouting</a></li>
-{% endif %}
+          <li><a class="dropdown-item" href="{{ url_for('auth.users') }}">
+            <i class="bi bi-people"></i> User Management</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
+            <i class="bi bi-database"></i> Data Management</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('discord.settings') }}">
+            <i class="bi bi-discord"></i> Discord Settings</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
+            <i class="bi bi-gear-fill"></i> Manage Teams</a></li>
 
-</ul>
-</li>
+          <li><hr class="dropdown-divider"></li>
+          <li><span class="dropdown-header">Switch Team</span></li>
 
-{% endif %}
+          {% for team in available_teams %}
+          <li>
+            <a class="dropdown-item d-flex align-items-center"
+               href="{{ url_for('team_organization.switch', team_id=team.id) }}">
+              <i class="bi bi-people-fill"></i>
+              {{ team.name }}
+              {% if current_team and current_team.id == team.id %}
+              <span class="uc-team-tick ms-auto"><i class="bi bi-check"></i></span>
+              {% endif %}
+            </a>
+          </li>
+          {% endfor %}
+          {% endif %}
 
-<!-- ============================= -->
-<!-- Theory -->
-<!-- ============================= -->
-{% if current_team and current_team.settings and current_team.settings.theory_enabled %}
-<li class="nav-item">
-    <a class="nav-link" href="{{ url_for('theory.index') }}">
-        <i class="bi bi-mortarboard"></i> Theory
-    </a>
-</li>
-{% endif %}
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}" style="color:#F87171">
+            <i class="bi bi-box-arrow-right"></i> Log out</a></li>
 
-<!-- ============================= -->
-<!-- Stats -->
-<!-- ============================= -->
-{% if current_team and current_team.settings and current_team.settings.stats_enabled %}
-<li class="nav-item dropdown">
-<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-<i class="bi bi-graph-up"></i> Stats
-</a>
-<ul class="dropdown-menu">
-<li><a class="dropdown-item" href="{{ url_for('stats_dashboard.index') }}">Dashboard</a></li>
-<li><a class="dropdown-item" href="{{ url_for('stats_dashboard.team_stats') }}">Team Stats</a></li>
-<li><a class="dropdown-item" href="{{ url_for('game.index') }}">Game Stats</a></li>
-</ul>
-</li>
-{% endif %}
+        </ul>
+      </div>
 
-<!-- ============================= -->
-<!-- Clips -->
-<!-- ============================= -->
-{% if current_team and current_team.settings and current_team.settings.clip_enabled %}
-<li class="nav-item">
-<a class="nav-link" href="{{ url_for('clip.index') }}">
-<i class="bi bi-camera-video"></i> Clips
-</a>
-</li>
-{% endif %}
+      {% else %}
+      <a href="{{ url_for('auth.login') }}"
+         class="btn btn-sm d-none d-md-inline-flex"
+         style="color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:.3rem .9rem">
+        Log in
+      </a>
+      <a href="{{ url_for('auth.register') }}"
+         class="btn btn-sm btn-primary"
+         style="border-radius:8px;padding:.3rem .9rem;font-size:.845rem">
+        Register
+      </a>
+      {% endif %}
 
-</ul>
+    </div>{# end uc-nav-right #}
 
-<!-- ============================= -->
-<!-- User Section -->
-<!-- ============================= -->
-{% if current_user.is_authenticated %}
-<ul class="navbar-nav">
+  </div>{# end collapse #}
 
-<li class="nav-item dropdown">
-<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-<i class="bi bi-person-circle"></i> {{ current_user.username }}
-</a>
-
-<ul class="dropdown-menu dropdown-menu-end">
-
-<li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">Profile</a></li>
-
-{% if current_user.is_coach %}
-<li>
-<a class="dropdown-item" href="{{ url_for('team.feature_settings') }}">
-<i class="bi bi-sliders"></i> Team Feature Settings
-</a>
-</li>
-{% endif %}
-
-{% if current_user.is_admin %}
-
-<li><hr class="dropdown-divider"></li>
-<li><h6 class="dropdown-header">Admin</h6></li>
-
-<li>
-<a class="dropdown-item" href="{{ url_for('auth.users') }}">
-<i class="bi bi-people"></i> User Management
-</a>
-</li>
-
-<li>
-<a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
-<i class="fas fa-database me-2"></i> Data Management
-</a>
-</li>
-
-<li>
-<a class="dropdown-item" href="{{ url_for('discord.settings') }}">
-<i class="bi bi-discord"></i> Discord Settings
-</a>
-</li>
-
-<li>
-<a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
-<i class="bi bi-gear-fill me-2"></i> Manage Teams
-</a>
-</li>
-
-<li><hr class="dropdown-divider"></li>
-<li><h6 class="dropdown-header">Team Selection</h6></li>
-
-{% for team in available_teams %}
-
-<li>
-<a class="dropdown-item" href="{{ url_for('team_organization.switch', team_id=team.id) }}">
-{{ team.name }}
-{% if current_team and current_team.id == team.id %}
-<span class="badge bg-primary rounded-pill">✓</span>
-{% endif %}
-</a>
-</li>
-{% endfor %}
-{% endif %}
-
-<li><hr class="dropdown-divider"></li>
-<li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
-
-</ul>
-</li>
-
-</ul>
-{% else %}
-<ul class="navbar-nav">
-<li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Login</a></li>
-<li class="nav-item"><a class="nav-link" href="{{ url_for('auth.register') }}">Register</a></li>
-</ul>
-{% endif %}
-
-</div>
 </div>
 </nav>
 
