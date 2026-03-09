@@ -3,15 +3,26 @@ from flask import session, g
 from flask_login import current_user
 
 def get_current_team_id():
-    """Get the current team ID from session or user"""
+    """Get the current team ID from session or user.
+
+    For any admin (superadmin or team admin), the session selection always
+    takes precedence so that team-switching works correctly.  Falls back to
+    the user's own team_organization_id if no session value is present, and
+    to None if neither is set (edge-case on very first login).
+    """
     if not current_user.is_authenticated:
         return None
-        
-    # Global admin with team selected in session
-    if current_user.is_admin and current_user.team_organization_id is None:
-        return session.get('current_team_id')
-    
-    # Regular user or team-specific admin
+
+    if current_user.is_admin:
+        # Admins can switch between teams – respect the session selection first.
+        session_team_id = session.get('current_team_id')
+        if session_team_id:
+            return session_team_id
+        # Fall back to their own assigned team (if any) so data is never empty
+        # on the very first request before the context processor has set the session.
+        return current_user.team_organization_id
+
+    # Regular players always see their own team only.
     return current_user.team_organization_id
 
 def team_context(f):
