@@ -1,37 +1,89 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .login-wrap { max-width:420px; margin:4rem auto; }
+  .login-card {
+    background:white; border:1px solid var(--uc-gray-200);
+    border-radius:var(--uc-radius); padding:2.25rem 2rem;
+    box-shadow:var(--uc-shadow-md);
+  }
+  .login-logo {
+    width:52px; height:52px; border-radius:13px;
+    background:linear-gradient(135deg,#0F172A,#1D4ED8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; color:white; margin:0 auto 1rem;
+  }
+  .login-input {
+    width:100%; border:1px solid var(--uc-gray-200); border-radius:9px;
+    padding:.65rem .875rem; font-size:.9rem; color:var(--uc-gray-800);
+    outline:none; transition:border-color .15s;
+  }
+  .login-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+  .login-label {
+    font-size:.75rem; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--uc-gray-400); margin-bottom:.35rem;
+  }
+  .login-btn {
+    width:100%; padding:.7rem; border-radius:9px; font-weight:600;
+    font-size:.9rem; background:var(--uc-blue); color:white; border:none;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .login-btn:hover { opacity:.9; }
+</style>
 
-<div class="container py-5" style="max-width:500px;">
+<div class="login-wrap">
+  <div class="login-card">
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+    <div class="login-logo"><i class="bi bi-disc-fill"></i></div>
 
-            <h3 class="mb-4 text-center fw-bold">Ultimate Coach</h3>
-
-            <form method="POST" novalidate>
-                {{ form.hidden_tag() }}
-
-                <div class="mb-3">
-                    {{ form.username.label(class="form-label") }}
-                    {{ form.username(class="form-control") }}
-                </div>
-
-                <div class="mb-3">
-                    {{ form.password.label(class="form-label") }}
-                    {{ form.password(class="form-control") }}
-                </div>
-
-                <div class="form-check mb-3">
-                    {{ form.remember_me(class="form-check-input") }}
-                    {{ form.remember_me.label(class="form-check-label") }}
-                </div>
-
-                {{ form.submit(class="btn btn-dark w-100") }}
-            </form>
-
-        </div>
+    <div class="text-center mb-4">
+      <h2 style="font-weight:700;font-size:1.4rem;color:var(--uc-gray-800);margin-bottom:.2rem">
+        Ultimate Coach
+      </h2>
+      <p style="font-size:.85rem;color:var(--uc-gray-400);margin:0">Sign in to your account</p>
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-3">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <div class="mb-3">
+        <p class="login-label">Username</p>
+        {{ form.username(class="login-input", placeholder="your username") }}
+      </div>
+
+      <div class="mb-3">
+        <p class="login-label">Password</p>
+        {{ form.password(class="login-input", placeholder="••••••••") }}
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <label style="font-size:.83rem;color:var(--uc-gray-600);display:flex;align-items:center;gap:.4rem;cursor:pointer">
+          {{ form.remember_me(class="form-check-input m-0") }}
+          Remember me
+        </label>
+      </div>
+
+      <button type="submit" class="login-btn">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+      </button>
+    </form>
+
+  </div>
+
+  <p style="text-align:center;font-size:.8rem;color:var(--uc-gray-400);margin-top:1.25rem">
+    New team?
+    <a href="{{ url_for('auth.register_team') }}" style="color:var(--uc-blue);font-weight:600">
+      Register your team &rarr;
+    </a>
+  </p>
 </div>
 
 {% endblock %}

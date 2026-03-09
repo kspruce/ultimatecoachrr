@@ -293,14 +293,27 @@
                                         <div class="action-buttons">
                                             {% if current_user.is_admin %}
                                                 <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-edit"></i> Edit
+                                                    <i class="bi bi-pencil"></i> Edit
                                                 </a>
+                                                {% if not player.user_account %}
+                                                <button type="button" class="btn btn-sm btn-outline-success invite-btn"
+                                                        data-player-id="{{ player.id }}"
+                                                        data-player-name="{{ player.name }}"
+                                                        title="Send invite link">
+                                                    <i class="bi bi-link-45deg"></i> Invite
+                                                </button>
+                                                {% else %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle"
+                                                      style="font-size:.72rem;padding:.35em .55em;border-radius:6px">
+                                                    <i class="bi bi-person-check"></i> Has account
+                                                </span>
+                                                {% endif %}
                                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">
-                                                    <i class="fas fa-trash"></i> Delete
+                                                    <i class="bi bi-trash"></i> Delete
                                                 </button>
                                             {% else %}
                                                 <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-sm btn-outline-secondary">
-                                                    <i class="fas fa-eye"></i> View
+                                                    <i class="bi bi-eye"></i> View
                                                 </a>
                                             {% endif %}
                                         </div>
@@ -345,7 +358,29 @@
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="8" class="text-center">No players found.</td>
+                                    <td colspan="8" class="text-center py-5">
+                                      <div style="max-width:340px;margin:0 auto">
+                                        <div style="width:56px;height:56px;border-radius:14px;background:var(--uc-gray-100);
+                                                    display:flex;align-items:center;justify-content:center;
+                                                    font-size:1.5rem;color:var(--uc-gray-400);margin:0 auto 1rem">
+                                          <i class="bi bi-people"></i>
+                                        </div>
+                                        <p style="font-weight:600;color:var(--uc-gray-800);margin-bottom:.3rem">No players yet</p>
+                                        <p style="font-size:.85rem;color:var(--uc-gray-400);margin-bottom:1rem">
+                                          Add players individually or import your whole roster at once from a spreadsheet.
+                                        </p>
+                                        {% if current_user.is_coach %}
+                                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                          <a href="{{ url_for('team.add_player') }}" class="btn btn-primary btn-sm" style="border-radius:8px">
+                                            <i class="bi bi-plus-circle me-1"></i> Add Player
+                                          </a>
+                                          <a href="{{ url_for('team.bulk_import') }}" class="btn btn-outline-primary btn-sm" style="border-radius:8px">
+                                            <i class="bi bi-upload me-1"></i> Bulk Import
+                                          </a>
+                                        </div>
+                                        {% endif %}
+                                      </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -389,5 +424,102 @@
         // Add tooltip functionality if needed
         $('[data-bs-toggle="tooltip"]').tooltip();
     });
+</script>
+
+{# ── Invite link modal ──────────────────────────────────────────────── #}
+<div class="modal fade" id="inviteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.18)">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" style="font-size:1.05rem">
+          <i class="bi bi-link-45deg text-primary me-2"></i>Invite Link
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p style="font-size:.875rem;color:var(--uc-gray-600)" id="inviteModalDesc">
+          Generating invite link for <strong id="invitePlayerName"></strong>…
+        </p>
+        <div id="inviteLinkBox" style="display:none">
+          <div class="input-group">
+            <input type="text" id="inviteLinkInput" class="form-control form-control-sm"
+                   style="font-family:monospace;font-size:.8rem;border-radius:8px 0 0 8px" readonly>
+            <button class="btn btn-outline-secondary btn-sm" id="copyInviteBtn"
+                    style="border-radius:0 8px 8px 0">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          <p style="font-size:.75rem;color:var(--uc-gray-400);margin-top:.5rem;margin-bottom:0">
+            <i class="bi bi-clock me-1"></i>Expires in 7 days · single use only
+          </p>
+        </div>
+        <div id="inviteError" class="alert alert-danger py-2 mt-2" style="display:none;font-size:.85rem"></div>
+        <div id="inviteSpinner" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"
+                style="border-radius:8px">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.invite-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var playerId   = this.dataset.playerId;
+    var playerName = this.dataset.playerName;
+
+    document.getElementById('invitePlayerName').textContent = playerName;
+    document.getElementById('inviteModalDesc').style.display = 'block';
+    document.getElementById('inviteLinkBox').style.display   = 'none';
+    document.getElementById('inviteError').style.display     = 'none';
+    document.getElementById('inviteSpinner').style.display   = 'block';
+
+    var modal = new bootstrap.Modal(document.getElementById('inviteModal'));
+    modal.show();
+
+    fetch('/auth/invite/create/' + playerId, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('inviteSpinner').style.display = 'none';
+      if (data.link) {
+        document.getElementById('inviteModalDesc').textContent =
+          'Share this link with ' + playerName + ':';
+        document.getElementById('inviteLinkInput').value = data.link;
+        document.getElementById('inviteLinkBox').style.display = 'block';
+      } else {
+        document.getElementById('inviteError').textContent = data.error || 'Something went wrong.';
+        document.getElementById('inviteError').style.display = 'block';
+      }
+    })
+    .catch(function() {
+      document.getElementById('inviteSpinner').style.display = 'none';
+      document.getElementById('inviteError').textContent = 'Network error. Please try again.';
+      document.getElementById('inviteError').style.display = 'block';
+    });
+  });
+});
+
+document.getElementById('copyInviteBtn').addEventListener('click', function() {
+  var link = document.getElementById('inviteLinkInput').value;
+  navigator.clipboard.writeText(link).then(function() {
+    var btn = document.getElementById('copyInviteBtn');
+    btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+    btn.classList.replace('btn-outline-secondary','btn-success');
+    setTimeout(function() {
+      btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+      btn.classList.replace('btn-success','btn-outline-secondary');
+    }, 2000);
+  });
+});
 </script>
 {% endblock %}

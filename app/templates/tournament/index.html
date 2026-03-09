@@ -114,7 +114,24 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center">No tournaments found.</td>
+                            <td colspan="7" class="text-center py-5">
+                              <div style="max-width:340px;margin:0 auto">
+                                <div style="width:56px;height:56px;border-radius:14px;background:var(--uc-gray-100);
+                                            display:flex;align-items:center;justify-content:center;
+                                            font-size:1.5rem;color:var(--uc-gray-400);margin:0 auto 1rem">
+                                  <i class="bi bi-calendar-event"></i>
+                                </div>
+                                <p style="font-weight:600;color:var(--uc-gray-800);margin-bottom:.3rem">No tournaments yet</p>
+                                <p style="font-size:.85rem;color:var(--uc-gray-400);margin-bottom:1rem">
+                                  Create your first tournament to group games and track your season record.
+                                </p>
+                                {% if current_user.is_admin %}
+                                <a href="{{ url_for('tournament.add') }}" class="btn btn-primary btn-sm" style="border-radius:8px">
+                                  <i class="bi bi-plus-circle me-1"></i> Add Tournament
+                                </a>
+                                {% endif %}
+                              </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

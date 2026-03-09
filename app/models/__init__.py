@@ -40,6 +40,9 @@ from app.models.team_settings import TeamSettings
 # Gameday Stats
 from app.models.gameday import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
 
+# Invite tokens
+from app.models.invite_token import InviteToken
+
 # Off-Season Training
 from app.models.off_season import (
     TrackWorkoutWeek,
@@ -79,6 +82,8 @@ __all__ = [
     'LineTemplate', 'LineTemplatePlayer', 'GameDayEvent', 'GameDayPlayerStats', 
     # Settings & Export
     'TeamSettings', 'ExportLog',
+    # Invites
+    'InviteToken',
     # Off-Season
     'TrackWorkoutWeek', 'OffSeasonPhase', 'PhaseMetric', 'PhaseSchedule',
     'ScheduleSession', 'WorkoutPlan', 'UserSessionCompletion', 'SMARTGoal',

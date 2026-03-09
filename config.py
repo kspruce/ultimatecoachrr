@@ -25,6 +25,10 @@ class Config:
     
     # Application URL
     BASE_URL = os.environ.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
+
+    # Team self-registration: set TEAM_REGISTRATION_CODE in env to require a
+    # code when new clubs sign up. Leave blank (default) for open registration.
+    TEAM_REGISTRATION_CODE = os.environ.get('TEAM_REGISTRATION_CODE', '')
     
     # S3 Configuration
     AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')

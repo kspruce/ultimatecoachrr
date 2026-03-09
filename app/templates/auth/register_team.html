@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .rt-wrap { max-width:520px; margin:3rem auto; }
+  .rt-card {
+    background:white; border:1px solid var(--uc-gray-200);
+    border-radius:var(--uc-radius); padding:2.25rem 2rem;
+    box-shadow:var(--uc-shadow-md);
+  }
+  .rt-hero {
+    background:linear-gradient(135deg,#0F172A 0%,#1D4ED8 100%);
+    border-radius:14px; padding:1.75rem 1.5rem 1.5rem;
+    color:white; text-align:center; margin-bottom:2rem;
+  }
+  .rt-icon {
+    width:56px; height:56px; border-radius:14px;
+    background:rgba(255,255,255,.15); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.5rem; color:white; margin:0 auto .875rem;
+  }
+  .rt-label {
+    font-size:.75rem; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--uc-gray-400); margin-bottom:.35rem;
+  }
+  .rt-input {
+    width:100%; border:1px solid var(--uc-gray-200); border-radius:9px;
+    padding:.65rem .875rem; font-size:.9rem; color:var(--uc-gray-800);
+    outline:none; transition:border-color .15s;
+  }
+  .rt-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+  .rt-submit {
+    width:100%; padding:.7rem; border-radius:9px; font-weight:600;
+    font-size:.9rem; background:var(--uc-blue); color:white; border:none;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .rt-submit:hover { opacity:.9; }
+  .rt-divider {
+    display:flex; align-items:center; gap:.75rem;
+    margin:1.5rem 0; color:var(--uc-gray-400); font-size:.8rem;
+  }
+  .rt-divider::before, .rt-divider::after {
+    content:''; flex:1; height:1px; background:var(--uc-gray-200);
+  }
+  .rt-step {
+    display:flex; align-items:flex-start; gap:.75rem; margin-bottom:.875rem;
+  }
+  .rt-step-num {
+    width:22px; height:22px; border-radius:50%; background:var(--uc-blue);
+    color:white; font-size:.72rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:.1rem;
+  }
+</style>
+
+<div class="rt-wrap">
+
+  {# Hero #}
+  <div class="rt-hero">
+    <div class="rt-icon"><i class="bi bi-shield-plus"></i></div>
+    <h1 style="font-size:1.6rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.35rem">
+      Register Your Team
+    </h1>
+    <p style="opacity:.75;font-size:.9rem;margin:0">
+      Get your squad on Ultimate Coach in minutes.
+    </p>
+  </div>
+
+  {# Flash messages #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-3" role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="rt-card">
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      {# Section: Team #}
+      <p style="font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+                color:var(--uc-blue);margin-bottom:.875rem">Team Details</p>
+
+      <div class="mb-3">
+        <p class="rt-label">Team Name *</p>
+        <input type="text" name="team_name" class="rt-input"
+               placeholder="e.g. Brighton Biscuits" required>
+      </div>
+
+      <div class="rt-divider">Admin Account</div>
+
+      <div class="mb-3">
+        <p class="rt-label">Your Name *</p>
+        <input type="text" name="admin_name" class="rt-input"
+               placeholder="e.g. Alex Johnson" required>
+      </div>
+
+      <div class="mb-3">
+        <p class="rt-label">Username *</p>
+        <input type="text" name="username" class="rt-input"
+               placeholder="e.g. alexj7" required minlength="3" autocomplete="username">
+        <p style="font-size:.75rem;color:var(--uc-gray-400);margin-top:.3rem;margin-bottom:0">
+          This is what you'll use to log in.
+        </p>
+      </div>
+
+      <div class="mb-3">
+        <p class="rt-label">Password *</p>
+        <input type="password" name="password" class="rt-input"
+               placeholder="At least 6 characters" required minlength="6"
+               autocomplete="new-password">
+      </div>
+
+      <div class="mb-3">
+        <p class="rt-label">Confirm Password *</p>
+        <input type="password" name="confirm_password" class="rt-input"
+               placeholder="Repeat your password" required minlength="6"
+               autocomplete="new-password">
+      </div>
+
+      {% if registration_code_required %}
+      <div class="mb-4">
+        <p class="rt-label">Registration Code *</p>
+        <input type="text" name="registration_code" class="rt-input"
+               placeholder="Enter the code you were given" required>
+        <p style="font-size:.75rem;color:var(--uc-gray-400);margin-top:.3rem;margin-bottom:0">
+          Contact your platform administrator for the registration code.
+        </p>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="rt-submit">
+        <i class="bi bi-rocket-takeoff me-2"></i>Create My Team
+      </button>
+    </form>
+
+    <p style="text-align:center;font-size:.78rem;color:var(--uc-gray-400);margin-top:1.25rem;margin-bottom:0">
+      Already have an account? <a href="{{ url_for('auth.login') }}" style="color:var(--uc-blue)">Log in</a>
+    </p>
+
+  </div>
+
+  {# What happens next #}
+  <div style="margin-top:1.5rem;padding:1.25rem 1.5rem;background:var(--uc-gray-50);
+              border-radius:var(--uc-radius);border:1px solid var(--uc-gray-200)">
+    <p style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+              color:var(--uc-gray-400);margin-bottom:.875rem">What happens next</p>
+    <div class="rt-step">
+      <div class="rt-step-num">1</div>
+      <div style="font-size:.85rem;color:var(--uc-gray-600)">
+        Your team workspace is created and you're logged in as admin.
+      </div>
+    </div>
+    <div class="rt-step">
+      <div class="rt-step-num">2</div>
+      <div style="font-size:.85rem;color:var(--uc-gray-600)">
+        Use <strong>Bulk Import</strong> to add your roster from a spreadsheet in seconds.
+      </div>
+    </div>
+    <div class="rt-step">
+      <div class="rt-step-num">3</div>
+      <div style="font-size:.85rem;color:var(--uc-gray-600)">
+        Send <strong>invite links</strong> so players can create their own accounts — no
+        passwords to share.
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

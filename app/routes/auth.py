@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
@@ -7,8 +7,11 @@ from app import db
 from app.models.user import User
 from app.models.player import Player
 from app.models.team_organization import TeamOrganization
+from app.models.team_settings import TeamSettings
+from app.models.invite_token import InviteToken
 from app.forms.auth import LoginForm, RegistrationForm, UserForm
 from app.utils.permissions import can_manage_team_users
+from app.utils.team_filter import get_current_team_id
 
 # ---------------------------------------
 # Setup
@@ -379,3 +382,185 @@ def link_player():
         return redirect(url_for('auth.profile'))
 
     return render_template('auth/link_player.html', players=available_players)
+
+
+# ─────────────────────────────────────────────────────────────
+# Player Invite Links
+# ─────────────────────────────────────────────────────────────
+
+@bp.route('/invite/create/<int:player_id>', methods=['POST'])
+@login_required
+def create_invite(player_id):
+    """AJAX: create (or refresh) an invite token for a player and return the link."""
+    if not current_user.is_coach:
+        return jsonify({'error': 'Permission denied'}), 403
+
+    team_id = get_current_team_id()
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
+
+    if player.user_account:
+        return jsonify({'error': 'Player already has an account'}), 400
+
+    # Invalidate any existing unused tokens for this player
+    existing = InviteToken.query.filter_by(player_id=player_id, used_at=None).all()
+    for t in existing:
+        db.session.delete(t)
+
+    invite = InviteToken.create(
+        player_id=player.id,
+        team_id=team_id,
+        created_by_id=current_user.id,
+    )
+    db.session.add(invite)
+    db.session.commit()
+
+    link = url_for('auth.accept_invite', token=invite.token, _external=True)
+    return jsonify({'link': link, 'expires_days': 7})
+
+
+@bp.route('/invite/accept/<token>', methods=['GET', 'POST'])
+def accept_invite(token):
+    """Public: player follows invite link and sets up their account."""
+    invite = InviteToken.query.filter_by(token=token).first_or_404()
+
+    if not invite.is_valid:
+        reason = 'already been used' if invite.is_used else 'expired'
+        flash(f'This invite link has {reason}. Ask your coach to send a new one.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    if current_user.is_authenticated:
+        flash('You are already logged in.', 'info')
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm  = request.form.get('confirm_password', '')
+
+        errors = []
+        if not username or len(username) < 3:
+            errors.append('Username must be at least 3 characters.')
+        if User.query.filter_by(username=username).first():
+            errors.append('That username is already taken — please choose another.')
+        if len(password) < 6:
+            errors.append('Password must be at least 6 characters.')
+        if password != confirm:
+            errors.append('Passwords do not match.')
+
+        if errors:
+            for e in errors:
+                flash(e, 'danger')
+            return render_template('auth/accept_invite.html', invite=invite, username=username)
+
+        # Create the user account
+        user = User(
+            username=username,
+            email=invite.player.email if invite.player else None,
+            role='player',
+            is_superadmin=False,
+            team_organization_id=invite.team_organization_id,
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.flush()
+
+        # Link to player profile
+        if invite.player:
+            invite.player.user_id = user.id
+
+        # Mark invite as used
+        from datetime import datetime
+        invite.used_at = datetime.utcnow()
+        invite.used_by_user_id = user.id
+
+        db.session.commit()
+
+        login_user(user)
+        flash(f'Welcome to Ultimate Coach, {username}! Your account is all set.', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template('auth/accept_invite.html', invite=invite, username='')
+
+
+# ─────────────────────────────────────────────────────────────
+# Team Self-Registration
+# ─────────────────────────────────────────────────────────────
+
+@bp.route('/register-team', methods=['GET', 'POST'])
+def register_team():
+    """Public: a new club admin registers their team."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
+    reg_code = current_app.config.get('TEAM_REGISTRATION_CODE', '')
+    requires_code = bool(reg_code)
+
+    if request.method == 'POST':
+        team_name  = request.form.get('team_name', '').strip()
+        username   = request.form.get('username', '').strip()
+        email      = request.form.get('email', '').strip()
+        password   = request.form.get('password', '')
+        confirm    = request.form.get('confirm_password', '')
+        entered_code = request.form.get('access_code', '').strip()
+
+        errors = []
+        if not team_name:
+            errors.append('Team name is required.')
+        if not username or len(username) < 3:
+            errors.append('Username must be at least 3 characters.')
+        if User.query.filter_by(username=username).first():
+            errors.append('That username is already taken.')
+        if TeamOrganization.query.filter(
+            db.func.lower(TeamOrganization.name) == team_name.lower()
+        ).first():
+            errors.append(f'A team called "{team_name}" already exists.')
+        if len(password) < 6:
+            errors.append('Password must be at least 6 characters.')
+        if password != confirm:
+            errors.append('Passwords do not match.')
+        if requires_code and entered_code != reg_code:
+            errors.append('Access code is incorrect.')
+
+        if errors:
+            for e in errors:
+                flash(e, 'danger')
+            return render_template('auth/register_team.html',
+                                   requires_code=requires_code,
+                                   form_data=request.form)
+
+        # Create team
+        slug = team_name.lower().replace(' ', '-')
+        # Ensure unique slug
+        base_slug, counter = slug, 1
+        while TeamOrganization.query.filter_by(slug=slug).first():
+            slug = f'{base_slug}-{counter}'
+            counter += 1
+
+        team = TeamOrganization(name=team_name, slug=slug)
+        db.session.add(team)
+        db.session.flush()
+
+        # Create team settings with all features on
+        settings = TeamSettings(team_organization_id=team.id)
+        db.session.add(settings)
+
+        # Create admin user
+        user = User(
+            username=username,
+            email=email or None,
+            role='admin',
+            is_superadmin=False,
+            team_organization_id=team.id,
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        login_user(user)
+        flash(f'Welcome! Your team "{team_name}" has been created. '
+              'Start by importing your roster below.', 'success')
+        return redirect(url_for('team.bulk_import'))
+
+    return render_template('auth/register_team.html',
+                           requires_code=requires_code,
+                           form_data={})

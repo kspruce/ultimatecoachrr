@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .invite-wrap { max-width:440px; margin:3rem auto; }
+  .invite-card {
+    background:white; border:1px solid var(--uc-gray-200);
+    border-radius:var(--uc-radius); padding:2.25rem 2rem;
+    box-shadow:var(--uc-shadow-md);
+  }
+  .invite-avatar {
+    width:56px; height:56px; border-radius:14px;
+    background:linear-gradient(135deg,var(--uc-blue),#1D4ED8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.5rem; color:white; margin:0 auto 1.25rem;
+  }
+  .invite-label {
+    font-size:.75rem; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--uc-gray-400); margin-bottom:.35rem;
+  }
+  .invite-input {
+    width:100%; border:1px solid var(--uc-gray-200); border-radius:9px;
+    padding:.65rem .875rem; font-size:.9rem; color:var(--uc-gray-800);
+    outline:none; transition:border-color .15s;
+  }
+  .invite-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+  .invite-submit {
+    width:100%; padding:.7rem; border-radius:9px; font-weight:600;
+    font-size:.9rem; background:var(--uc-blue); color:white; border:none;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .invite-submit:hover { opacity:.9; }
+</style>
+
+<div class="invite-wrap">
+  <div class="invite-card">
+
+    <div class="invite-avatar"><i class="bi bi-disc-fill"></i></div>
+
+    <div class="text-center mb-4">
+      <h2 style="font-weight:700;font-size:1.4rem;color:var(--uc-gray-800);margin-bottom:.4rem">
+        You've been invited!
+      </h2>
+      {% if invite.player %}
+      <p style="color:var(--uc-gray-600);font-size:.9rem;margin:0">
+        Set up your account for <strong>{{ invite.player.name }}</strong>
+        on <strong>{{ invite.team.name }}</strong>.
+      </p>
+      {% else %}
+      <p style="color:var(--uc-gray-600);font-size:.9rem;margin:0">
+        Create your account for <strong>{{ invite.team.name }}</strong>.
+      </p>
+      {% endif %}
+    </div>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <p class="invite-label">Username</p>
+        <input type="text" name="username" class="invite-input"
+               value="{{ username }}" placeholder="e.g. alexj7"
+               required minlength="3" autocomplete="username">
+        <p style="font-size:.75rem;color:var(--uc-gray-400);margin-top:.3rem;margin-bottom:0">
+          This is what you'll use to log in.
+        </p>
+      </div>
+
+      <div class="mb-3">
+        <p class="invite-label">Password</p>
+        <input type="password" name="password" class="invite-input"
+               placeholder="At least 6 characters"
+               required minlength="6" autocomplete="new-password">
+      </div>
+
+      <div class="mb-4">
+        <p class="invite-label">Confirm Password</p>
+        <input type="password" name="confirm_password" class="invite-input"
+               placeholder="Repeat your password"
+               required minlength="6" autocomplete="new-password">
+      </div>
+
+      <button type="submit" class="invite-submit">
+        <i class="bi bi-check-circle me-2"></i>Create My Account
+      </button>
+    </form>
+
+    <p style="text-align:center;font-size:.78rem;color:var(--uc-gray-400);margin-top:1.25rem;margin-bottom:0">
+      This invite link expires in 7 days and can only be used once.
+    </p>
+
+  </div>
+</div>
+{% endblock %}
