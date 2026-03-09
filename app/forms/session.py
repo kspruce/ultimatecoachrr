@@ -100,7 +100,7 @@ class SessionComponentForm(FlaskForm):
     submit = SubmitField('Save Component')
 
 class AttendanceForm(FlaskForm):
-    players = SelectMultipleField('Players', coerce=int, validators=[DataRequired()])
+    players = SelectMultipleField('Players', coerce=int, validators=[])
     status = SelectField('Status', choices=[
         ('present', 'Present'),
         ('absent', 'Absent'),

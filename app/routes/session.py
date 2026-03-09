@@ -847,8 +847,11 @@ def rsvps(session_id):
 @login_required
 def attendance_analytics():
     # Get all sessions with dates, ordered by date
+    today = datetime.now().date()
+
     sessions = SessionPlan.query.filter(
         SessionPlan.date != None,
+        SessionPlan.date <= today,
         SessionPlan.team_organization_id == get_current_team_id(),
         SessionPlan.session_type != SessionPlan.SESSION_TYPE_POD
     ).order_by(SessionPlan.date).all()
@@ -888,7 +891,7 @@ def attendance_analytics():
         # Calculate attendance rate
         total_sessions = len([
             s for s in sessions
-            if player.joined_team_date and s.date >= player.joined_team_date
+            if not player.joined_team_date or s.date >= player.joined_team_date
         ])
         attended_sessions = present_count + late_count
         attendance_rate = (attended_sessions / total_sessions * 100) if total_sessions > 0 else 0
