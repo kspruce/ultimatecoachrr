@@ -541,7 +541,7 @@ def register_team():
         db.session.flush()
 
         # Create team settings with all features on
-        settings = TeamSettings(team_organization_id=team.id)
+        settings = TeamSettings(team_id=team.id)
         db.session.add(settings)
 
         # Create admin user
