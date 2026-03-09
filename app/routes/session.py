@@ -892,7 +892,7 @@ def attendance_analytics():
         # Calculate attendance rate
         total_sessions = len([
             s for s in sessions
-            if s.date >= player.created_at
+            if player.joined_team_date and s.date >= player.joined_team_date
         ])
         attended_sessions = present_count + late_count
         attendance_rate = (attended_sessions / total_sessions * 100) if total_sessions > 0 else 0
