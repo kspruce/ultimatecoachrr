@@ -33,6 +33,11 @@
                             {{ team.name }}
                         </option>
                         {% endfor %}
+                        {% if is_superadmin %}
+                        <option value="0" {% if viewing_unassigned %}selected{% endif %}>
+                            — No Team (unassigned) —
+                        </option>
+                        {% endif %}
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -41,6 +46,14 @@
             </form>
         </div>
     </div>
+
+    {% if viewing_unassigned %}
+    <div class="alert alert-info mb-4" style="border-radius:10px">
+        <i class="bi bi-info-circle me-2"></i>
+        Showing users with <strong>no team assigned</strong>. These are typically
+        self-registered admins whose team creation failed, or orphaned accounts.
+    </div>
+    {% endif %}
 
     <!-- Users Table -->
     <div class="card shadow-sm">
@@ -51,6 +64,7 @@
                         <th>Username</th>
                         <th>Email</th>
                         <th>Role</th>
+                        {% if is_superadmin %}<th>Team</th>{% endif %}
                         <th>Linked Player</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -59,18 +73,36 @@
                 {% for user in users %}
                     <tr>
                         <td class="fw-semibold">{{ user.username }}</td>
-                        <td>{{ user.email }}</td>
+                        <td>{{ user.email or '—' }}</td>
 
                         <td>
-                            <span class="badge bg-secondary">
+                            <span class="badge
+                                {% if user.role == 'admin' %}bg-dark
+                                {% elif user.role == 'coach' %}bg-primary
+                                {% elif user.role == 'captain' %}bg-info text-dark
+                                {% else %}bg-secondary{% endif %}">
                                 {{ user.role|capitalize }}
                             </span>
                         </td>
 
+                        {% if is_superadmin %}
+                        <td>
+                            {% if user.team_organization %}
+                                <span class="badge bg-light text-dark border" style="font-size:.75rem">
+                                    {{ user.team_organization.name }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark" style="font-size:.75rem">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>No team
+                                </span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
                         <td>
                             {% if user.player %}
                                 <span class="badge bg-info text-dark">
-                                    {{ user.player.first_name }} {{ user.player.last_name }}
+                                    {{ user.player.name }}
                                 </span>
                             {% else %}
                                 <span class="text-muted">None</span>

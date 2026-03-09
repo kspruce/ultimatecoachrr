@@ -185,29 +185,41 @@ def users():
 
     team_id = _get_managed_team_id()
 
-    if not team_id:
+    # Superadmin can view unassigned users (team_id=0 means "no team")
+    viewing_unassigned = (current_user.is_superadmin and
+                          request.args.get('team_id') == '0')
+
+    if not viewing_unassigned and not team_id:
         flash("Select a team first.", "warning")
         return redirect(url_for("main.index"))
 
-    if not can_manage_team_users(team_id):
+    if not viewing_unassigned and not can_manage_team_users(team_id):
         flash("You do not have permission.", "danger")
         return redirect(url_for("main.index"))
 
-    teams = TeamOrganization.query.order_by(TeamOrganization.name).all() \
-        if current_user.is_superadmin \
-        else [TeamOrganization.query.get(team_id)]
+    if current_user.is_superadmin:
+        teams = TeamOrganization.query.order_by(TeamOrganization.name).all()
+    else:
+        teams = [TeamOrganization.query.get(team_id)]
 
-    users = User.query.filter_by(
-        team_organization_id=team_id
-    ).order_by(User.username).all()
-
-    current_team = TeamOrganization.query.get(team_id)
+    if viewing_unassigned:
+        users = User.query.filter_by(
+            team_organization_id=None
+        ).order_by(User.username).all()
+        current_team = None
+    else:
+        users = User.query.filter_by(
+            team_organization_id=team_id
+        ).order_by(User.username).all()
+        current_team = TeamOrganization.query.get(team_id)
 
     return render_template(
         "auth/users.html",
         users=users,
         teams=teams,
-        current_team=current_team
+        current_team=current_team,
+        viewing_unassigned=viewing_unassigned,
+        is_superadmin=current_user.is_superadmin
     )
 
 
@@ -510,6 +522,8 @@ def register_team():
             errors.append('Username must be at least 3 characters.')
         if User.query.filter_by(username=username).first():
             errors.append('That username is already taken.')
+        if email and User.query.filter_by(email=email).first():
+            errors.append('That email address is already registered.')
         if TeamOrganization.query.filter(
             db.func.lower(TeamOrganization.name) == team_name.lower()
         ).first():
@@ -547,7 +561,7 @@ def register_team():
         # Create admin user
         user = User(
             username=username,
-            email=email or None,
+            email=email if email else None,
             role='admin',
             is_superadmin=False,
             team_organization_id=team.id,
