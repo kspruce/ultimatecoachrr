@@ -95,6 +95,9 @@ class SessionPlan(db.Model):
 
 
 class Attendance(db.Model):
+    __table_args__ = (
+        db.UniqueConstraint('session_id', 'player_id', name='unique_player_session'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session_plan.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)

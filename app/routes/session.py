@@ -778,6 +778,21 @@ def admin_rsvp(session_id):
         team_organization_id=get_current_team_id()
     ).all()
     
+    # Hide players already assigned to another RSVP status
+    current_status = form.status.data
+
+    excluded_players = {
+        r.player_id for r in all_rsvps
+        if r.status != current_status
+    }
+
+    # Filter player choices so they only appear in one status tab
+    form.players.choices = [
+        (pid, label)
+        for pid, label in form.players.choices
+        if pid not in excluded_players
+    ]
+    
     # Group RSVPs by status
     rsvps_by_status = {
         'attending': [],
@@ -838,7 +853,8 @@ def attendance_analytics():
     # Get all sessions with dates, ordered by date
     sessions = SessionPlan.query.filter(
         SessionPlan.date != None,
-        SessionPlan.team_organization_id == get_current_team_id()
+        SessionPlan.team_organization_id == get_current_team_id(),
+        SessionPlan.session_type != SessionPlan.SESSION_TYPE_POD
     ).order_by(SessionPlan.date).all()
     
     # Get all active players
@@ -861,9 +877,10 @@ def attendance_analytics():
     player_stats = []
     for player in players:
         # Get attendance records for this player
-        attendances = Attendance.query.filter_by(
-            player_id=player.id,
-            team_organization_id=get_current_team_id()
+        attendances = Attendance.query.join(SessionPlan).filter(
+            Attendance.player_id == player.id,
+            Attendance.team_organization_id == get_current_team_id(),
+            SessionPlan.session_type != SessionPlan.SESSION_TYPE_POD
         ).all()
         
         # Count attendance by status
@@ -873,7 +890,10 @@ def attendance_analytics():
         excused_count = sum(1 for a in attendances if a.status == 'excused')
         
         # Calculate attendance rate
-        total_sessions = len(sessions)
+        total_sessions = len([
+            s for s in sessions
+            if s.date >= player.created_at
+        ])
         attended_sessions = present_count + late_count
         attendance_rate = (attended_sessions / total_sessions * 100) if total_sessions > 0 else 0
         
@@ -1700,3 +1720,33 @@ def revoke_share_link(session_id):
         'success': True,
         'message': 'Share link has been revoked'
     })
+    
+@bp.route('/<int:session_id>/quick_checkin', methods=['POST'])
+@login_required
+def quick_checkin(session_id):
+
+    data = request.get_json()
+
+    player_id = data.get("player_id")
+    status = data.get("status")
+
+    existing = SessionRSVP.query.filter_by(
+        session_id=session_id,
+        player_id=player_id,
+        team_organization_id=get_current_team_id()
+    ).first()
+
+    if existing:
+        existing.status = status
+    else:
+        rsvp = SessionRSVP(
+            session_id=session_id,
+            player_id=player_id,
+            status=status,
+            team_organization_id=get_current_team_id()
+        )
+        db.session.add(rsvp)
+
+    db.session.commit()
+
+    return {"status": "success"}
