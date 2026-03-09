@@ -1,86 +1,192 @@
 from app import db
 from datetime import datetime
-from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+
 
 class Player(db.Model):
-    __tablename__ = 'player'
+
+    __tablename__ = "player"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # Basic info
     name = db.Column(db.String(100), nullable=False)
-    jersey_number = db.Column(db.String(10))
+
+    jersey_number = db.Column(db.Integer)
+
     position = db.Column(db.String(20))
+
+    gender = db.Column(db.String(20))
+
+    gender_match = db.Column(db.String(20))
+
+
+    # Physical attributes
     height = db.Column(db.String(20))
     weight = db.Column(db.String(20))
-    gender = db.Column(db.String(20))
-    gender_match = db.Column(db.String(20))
+
     birth_date = db.Column(db.Date)
-    team = db.Column(db.String(50))
+
+
+    # Contact
     email = db.Column(db.String(120))
     phone = db.Column(db.String(20))
-    line_preference = db.Column(db.String(20))
+
+
+    # Team status
     active = db.Column(db.Boolean, default=True)
+
+    joined_team_date = db.Column(db.Date)
+
+    left_team_date = db.Column(db.Date)
+
+
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+    # Development tracking
     notes = db.Column(db.Text)
-    points_played = db.Column(db.Integer, default=0)
-    games_played = db.Column(db.Integer, default=0)
+
     short_term_goals = db.Column(db.Text)
     mid_term_goals = db.Column(db.Text)
     long_term_goals = db.Column(db.Text)
+
     skills_to_develop = db.Column(db.Text)
-    coach_feedback = db.Column(db.Text) 
-    # Add team organization relationship
-    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    
+
+    coach_feedback = db.Column(db.Text)
+
+
+    # Stats
+    points_played = db.Column(db.Integer, default=0)
+    games_played = db.Column(db.Integer, default=0)
+
+
+    # Organization relationship
+    team_organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("team_organization.id")
+    )
+
+
+    # User account relationship
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True)
+
+    user_account = db.relationship(
+        "User",
+        back_populates="player_profile",
+        uselist=False
+    )
+
+
     # Relationships
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True)
-    user_account = db.relationship('User', back_populates='player_profile', uselist=False)
-    lineups = db.relationship('LineUp', back_populates='player', lazy='dynamic', cascade='all, delete-orphan')
-    player_events = db.relationship('Event', 
-                                  foreign_keys='Event.player_id',
-                                  back_populates='player',
-                                  lazy='dynamic')
-    receiver_events = db.relationship('Event',
-                                    foreign_keys='Event.receiver_id',
-                                    back_populates='receiver',
-                                    lazy='dynamic')
-    pulls = db.relationship('Pull', back_populates='player', lazy='dynamic', cascade='all, delete-orphan')
-    attendances = db.relationship('Attendance', back_populates='player', lazy='dynamic')
-    session_rsvps = db.relationship('SessionRSVP', back_populates='player', lazy='dynamic')
-    # Add relationship with TournamentRSVP
-    tournament_rsvps = db.relationship('TournamentRSVP', back_populates='player', lazy='dynamic')
-    point_stats = db.relationship('PlayerPointStats', back_populates='player', cascade='all, delete-orphan')
-    throws_made = db.relationship('Throw',
-                                foreign_keys='Throw.thrower_id',
-                                back_populates='thrower',
-                                lazy='dynamic')
-    throws_received = db.relationship('Throw',
-                                    foreign_keys='Throw.receiver_id',
-                                    back_populates='receiver',
-                                    lazy='dynamic')
-    fitness_records = db.relationship('FitnessRecord', back_populates='player', cascade='all, delete-orphan')
-    # Add these relationships
-    gameday_events = db.relationship('GameDayEvent', back_populates='player', lazy='dynamic')
-    gameday_stats = db.relationship('GameDayPlayerStats', back_populates='player', cascade='all, delete-orphan')
+    attendances = db.relationship(
+        "Attendance",
+        back_populates="player",
+        lazy="dynamic"
+    )
+
+    session_rsvps = db.relationship(
+        "SessionRSVP",
+        back_populates="player",
+        lazy="dynamic"
+    )
+
+    tournament_rsvps = db.relationship(
+        "TournamentRSVP",
+        back_populates="player",
+        lazy="dynamic"
+    )
+
+    lineups = db.relationship(
+        "LineUp",
+        back_populates="player",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+
+    point_stats = db.relationship(
+        "PlayerPointStats",
+        back_populates="player",
+        cascade="all, delete-orphan"
+    )
+
+    fitness_records = db.relationship(
+        "FitnessRecord",
+        back_populates="player",
+        cascade="all, delete-orphan"
+    )
+
+    player_events = db.relationship(
+        "Event",
+        foreign_keys="Event.player_id",
+        back_populates="player",
+        lazy="dynamic"
+    )
+
+    receiver_events = db.relationship(
+        "Event",
+        foreign_keys="Event.receiver_id",
+        back_populates="receiver",
+        lazy="dynamic"
+    )
+
+    pulls = db.relationship(
+        "Pull",
+        back_populates="player",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+
+    throws_made = db.relationship(
+        "Throw",
+        foreign_keys="Throw.thrower_id",
+        back_populates="thrower",
+        lazy="dynamic"
+    )
+
+    throws_received = db.relationship(
+        "Throw",
+        foreign_keys="Throw.receiver_id",
+        back_populates="receiver",
+        lazy="dynamic"
+    )
+
+    gameday_events = db.relationship(
+        "GameDayEvent",
+        back_populates="player",
+        lazy="dynamic"
+    )
+
+    gameday_stats = db.relationship(
+        "GameDayPlayerStats",
+        back_populates="player",
+        cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
-        db.Index('idx_player_active', 'active'),
-        db.Index('idx_player_team', 'team'),
+        db.Index("idx_player_active", "active"),
+        db.Index("idx_player_team", "team_organization_id"),
     )
-    
+
+
     def __repr__(self):
-        return f'<Player {self.name}>'
+        return f"<Player {self.name}>"
 
-    @property
-    def receptions(self):
-        return self.receiver_events.filter_by(event_type='catch').all()
-
-    @property
-    def throws(self):
-        return self.player_events.filter_by(event_type='throw').all()
 
     @property
     def age(self):
+
         if self.birth_date:
+
             today = datetime.now().date()
-            return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+
+            return (
+                today.year
+                - self.birth_date.year
+                - ((today.month, today.day) <
+                   (self.birth_date.month, self.birth_date.day))
+            )
+
         return None
