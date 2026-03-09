@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
@@ -229,8 +229,8 @@ def add_user():
     _populate_player_choices(form, team_id)
 
     if request.method == "POST":
-        print("VALID:", form.validate())
-        print("ERRORS:", form.errors)
+        current_app.logger.debug("VALID:", form.validate())
+        current_app.logger.error("ERRORS:", form.errors)
 
     if form.validate_on_submit():
 
@@ -286,8 +286,8 @@ def edit_user(user_id):
         form.player_id.data = user.player.id if user.player else 0
 
     if request.method == "POST":
-        print("VALID:", form.validate())
-        print("ERRORS:", form.errors)
+        current_app.logger.debug("VALID:", form.validate())
+        current_app.logger.error("ERRORS:", form.errors)
 
     if form.validate_on_submit():
 

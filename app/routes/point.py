@@ -10,6 +10,7 @@ from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
 from app.models.tournament_rsvp import TournamentRSVP
 from app.utils.utils import admin_required
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('point', __name__, url_prefix='/points')
 
@@ -17,10 +18,6 @@ bp = Blueprint('point', __name__, url_prefix='/points')
 # ---------------------------------------
 # Helper function to get current team ID
 # ---------------------------------------
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 
 # ---------------------------------------

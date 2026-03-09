@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from sqlalchemy.orm import subqueryload
 from flask_login import login_required, current_user
-from app import db
+from app import db, cache
 from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
@@ -14,18 +14,12 @@ from app.models.clip import Clip
 import json
 import math
 from app.utils.utils import admin_required
-from datetime import datetime, date
-from functools import lru_cache
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
+from app.utils.team_filter import get_current_team_id
 
 
 bp = Blueprint('stats_dashboard', __name__, url_prefix='/stats')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 def is_admin(user):
     """Check if user has admin role"""
@@ -35,35 +29,20 @@ def is_coach(user):
     """Check if user has coach role"""
     return user.role == 'coach' if hasattr(user, 'role') else False
 
-# Cache for team averages that rarely change
-_team_avg_cache = {}
-_team_avg_timestamp = {}
-
-def get_cached_team_averages(games=None, max_age_minutes=15):
-    """Get team averages with caching"""
-    # Create a cache key based on game IDs and team ID
+def get_cached_team_averages(games=None):
+    """Get team averages with Flask-Caching (15-minute TTL)."""
     team_id = get_current_team_id()
-    if games:
-        if isinstance(games, list):
-            cache_key = (team_id, tuple(sorted([g.id for g in games])))
-        else:
-            cache_key = (team_id, (games.id,))
+    game_ids = games_to_tuple(games) if games else None
+    return _cached_team_averages(team_id, game_ids)
+
+@cache.memoize(timeout=900)  # 15 minutes
+def _cached_team_averages(team_id, game_ids_tuple):
+    """Internal cached worker — keyed by team_id + sorted game IDs."""
+    if game_ids_tuple:
+        games = Game.query.filter(Game.id.in_(game_ids_tuple)).all()
     else:
-        cache_key = (team_id, 'all_games')
-    
-    now = datetime.now()
-    if (cache_key in _team_avg_cache and 
-        cache_key in _team_avg_timestamp and
-        now - _team_avg_timestamp[cache_key] < timedelta(minutes=max_age_minutes)):
-        print(f"Using cached team averages for {cache_key}")
-        return _team_avg_cache[cache_key]
-    
-    # Calculate if not in cache or expired
-    print(f"Calculating team averages for {cache_key}")
-    result = calculate_team_averages(games)
-    _team_avg_cache[cache_key] = result
-    _team_avg_timestamp[cache_key] = now
-    return result
+        games = None
+    return calculate_team_averages(games)
 
 def safe_date_format(date_obj, format_str='%Y-%m-%d'):
     """Safely format a date object, handling None values"""
@@ -75,27 +54,25 @@ def safe_date_format(date_obj, format_str='%Y-%m-%d'):
         return "Unknown"
 
 
-# Use LRU cache for player stats that don't change often
-@lru_cache(maxsize=128)
+@cache.memoize(timeout=600)  # 10 minutes
 def get_cached_player_base_stats(player_id, game_ids_tuple=None, team_id=None):
-    """Cached version of player stats"""
+    """Cached version of player base stats (Flask-Caching, 10-minute TTL)."""
     player = Player.query.filter_by(
         id=player_id,
         team_organization_id=team_id
     ).first()
-    
+
     if not player:
         return {}
-        
+
     if game_ids_tuple:
-        games = [Game.query.filter_by(
-            id=gid,
-            team_organization_id=team_id
-        ).first() for gid in game_ids_tuple]
-        games = [g for g in games if g]  # Filter out None values
+        games = Game.query.filter(
+            Game.id.in_(game_ids_tuple),
+            Game.team_organization_id == team_id
+        ).all()
     else:
         games = None
-        
+
     return get_player_base_stats(player, games)
 
 # Helper function to convert games to a tuple of IDs for caching
@@ -108,33 +85,15 @@ def games_to_tuple(games):
     return (games.id,)
 
 def invalidate_stats_cache(player_id=None, game_id=None):
-    """Invalidate stats cache when data changes"""
-    global _team_avg_cache, _team_avg_timestamp
-    
-    # If a specific player's stats changed
+    """Invalidate stats caches when underlying data changes."""
+    cache.delete_memoized(get_cached_player_base_stats)
+    cache.delete_memoized(_cached_team_averages)
     if player_id:
-        # Clear LRU cache for this player
-        get_cached_player_base_stats.cache_clear()
-        
-        # We could be more selective here, but for simplicity, clear all team averages
-        _team_avg_cache = {}
-        _team_avg_timestamp = {}
-        print(f"Cleared cache for player {player_id} and team averages")
-    
-    # If a game's data changed
+        current_app.logger.debug(f"Cleared stats cache for player {player_id}")
     elif game_id:
-        # Clear all caches since game data affects multiple players and team averages
-        get_cached_player_base_stats.cache_clear()
-        _team_avg_cache = {}
-        _team_avg_timestamp = {}
-        print(f"Cleared all stats caches due to game {game_id} update")
-    
-    # If no specific entity changed, clear everything
+        current_app.logger.debug(f"Cleared stats cache due to game {game_id} update")
     else:
-        get_cached_player_base_stats.cache_clear()
-        _team_avg_cache = {}
-        _team_avg_timestamp = {}
-        print("Cleared all stats caches")
+        current_app.logger.debug("Cleared all stats caches")
 
 
 # --- Core Statistical Calculation Functions ---
@@ -448,7 +407,7 @@ def calculate_per(player, games=None, team_avgs=None):
 
 def get_player_base_stats(player, games=None):
     """Get comprehensive player statistics"""
-    print(f"Calculating stats for player {player.id}")
+    current_app.logger.debug(f"Calculating stats for player {player.id}")
     # Start with default values for ALL possible stats
     stats = {
         # Basic stats
@@ -603,15 +562,15 @@ def get_player_base_stats(player, games=None):
             stats['turnovers']
         )
 
-        print(f"Stats retrieved for {player.name}:")
-        print(f"Throws: {stats['throws']}")
-        print(f"Total Distance: {stats['total_throw_distance']:.1f}m")
-        print(f"Avg Distance: {stats['avg_throw_distance']:.1f}m")
-        print(f"Goals: {stats['goals']}")
-        print(f"Assists: {stats['assists']}")
-        print(f"Blocks: {stats['blocks']}")
-        print(f"Turnovers: {stats['turnovers']}")
-        print(f"Plus/Minus: {stats['plus_minus']}")
+        current_app.logger.debug(f"Stats retrieved for {player.name}:")
+        current_app.logger.debug(f"Throws: {stats['throws']}")
+        current_app.logger.debug(f"Total Distance: {stats['total_throw_distance']:.1f}m")
+        current_app.logger.debug(f"Avg Distance: {stats['avg_throw_distance']:.1f}m")
+        current_app.logger.debug(f"Goals: {stats['goals']}")
+        current_app.logger.debug(f"Assists: {stats['assists']}")
+        current_app.logger.debug(f"Blocks: {stats['blocks']}")
+        current_app.logger.debug(f"Turnovers: {stats['turnovers']}")
+        current_app.logger.debug(f"Plus/Minus: {stats['plus_minus']}")
 
         # Calculate O-line and D-line stats
         o_line_points = [p for p in points_played if p.point.our_line_type == 'O-line']
@@ -695,7 +654,7 @@ def get_player_base_stats(player, games=None):
 
 
     except Exception as e:
-        print(f"Error getting stats for {player.name}: {str(e)}")
+        current_app.logger.error(f"Error getting stats for {player.name}: {str(e)}")
         import traceback
         traceback.print_exc()
     
@@ -1104,25 +1063,25 @@ def index():
                 stats = calculate_game_stats(game)
                 team_stats.append({'stats': stats})
             except Exception as e:
-                print(f"Error calculating stats for game {game.id}: {str(e)}")
+                current_app.logger.error(f"Error calculating stats for game {game.id}: {str(e)}")
                 continue
                 
         # Calculate team averages once for all players
-        print("Calculating team averages...")
+        current_app.logger.debug("Calculating team averages...")
         team_avgs = get_cached_team_averages(recent_games)
         
         # Calculate player stats in batch
-        print("Calculating player stats in batch...")
+        current_app.logger.debug("Calculating player stats in batch...")
         player_stats = get_players_base_stats(players, recent_games)
         
         # Calculate PER for each player using the preloaded stats
-        print("Calculating PER for each player...")
+        current_app.logger.debug("Calculating PER for each player...")
         for player_id, stats in player_stats.items():
             if stats['points_played'] > 0:
                 stats['per'] = calculate_per_from_stats(stats, team_avgs)
 
         
-        print(f"Stats calculation took {time.time() - start_time:.2f} seconds")
+        current_app.logger.debug(f"Stats calculation took {time.time() - start_time:.2f} seconds")
         
         # Determine O-line and D-line players based on point participation
         # This part is already optimized by using the preloaded player stats
@@ -1193,7 +1152,7 @@ def index():
         )
 
     except Exception as e:
-        print(f"Error in index route: {str(e)}")
+        current_app.logger.error(f"Error in index route: {str(e)}")
         import traceback
         traceback.print_exc()
         flash(f"An error occurred: {str(e)}", "danger")
@@ -1454,7 +1413,7 @@ def player_stats(player_id):
         if d_line_points_played > 0:
             stats['d_line_conversion_rate'] = (d_line_points_scored / d_line_points_played) * 100
             # Log for debugging
-            print(f"DEBUG: Player {player.name} - D-line points played: {d_line_points_played}, scored: {d_line_points_scored}, rate: {stats['d_line_conversion_rate']}%")
+            current_app.logger.debug(f"DEBUG: Player {player.name} - D-line points played: {d_line_points_played}, scored: {d_line_points_scored}, rate: {stats['d_line_conversion_rate']}%")
         else:
             stats['d_line_conversion_rate'] = 0
         
@@ -1480,13 +1439,13 @@ def player_stats(player_id):
     ).order_by(Tournament.start_date.desc()).all()
 
     # Add this right after calculating d_line_conversion_rate
-    print(f"DEBUG: Player {player.name}")
-    print(f"DEBUG: d_line_points_played = {stats['d_line_points_played']}")
-    print(f"DEBUG: d_line_conversion_rate = {stats['d_line_conversion_rate']}")
+    current_app.logger.debug(f"DEBUG: Player {player.name}")
+    current_app.logger.debug(f"DEBUG: d_line_points_played = {stats['d_line_points_played']}")
+    current_app.logger.debug(f"DEBUG: d_line_conversion_rate = {stats['d_line_conversion_rate']}")
     
     # Also print the point IDs to check if they match what we expect
     point_ids_list = [p_id for p_id in point_ids] if point_ids else []
-    print(f"DEBUG: point_ids = {point_ids_list}")
+    current_app.logger.debug(f"DEBUG: point_ids = {point_ids_list}")
 
     return render_template(
         'stats/player_stats.html',
@@ -1981,7 +1940,7 @@ def calculate_o_d_line_stats(player, games=None):
         )
 
     except Exception as e:
-        print(f"Error calculating O/D line stats for player {player.id}: {str(e)}")
+        current_app.logger.error(f"Error calculating O/D line stats for player {player.id}: {str(e)}")
 
     return stats
 
@@ -2143,7 +2102,7 @@ def calculate_team_summary(games):
                 points = game.points
             summary['total_points'] += len(points)
         except Exception as e:
-            print(f"Error counting points for game {game.id}: {str(e)}")
+            current_app.logger.error(f"Error counting points for game {game.id}: {str(e)}")
 
 
     for game in games:
@@ -2791,7 +2750,7 @@ def calculate_additional_team_metrics(games):
             points = game.points.all() if hasattr(game.points, 'all') else game.points
             total_points += len(points)
         except Exception as e:
-            print(f"Error counting points for game {game.id}: {str(e)}")
+            current_app.logger.error(f"Error counting points for game {game.id}: {str(e)}")
     
     if total_points == 0:
         return {
@@ -2813,7 +2772,7 @@ def calculate_additional_team_metrics(games):
             points = game.points.all() if hasattr(game.points, 'all') else game.points
             point_ids.extend([p.id for p in points])
         except Exception as e:
-            print(f"Error getting points for game {game.id}: {str(e)}")
+            current_app.logger.error(f"Error getting points for game {game.id}: {str(e)}")
     
     # Count all throws
     throws_query = Throw.query.filter_by(team_organization_id=get_current_team_id())
@@ -2876,7 +2835,7 @@ def calculate_additional_team_metrics(games):
             o_points = game.o_line_points.all() if hasattr(game.o_line_points, 'all') else game.o_line_points
             o_points_count += len(o_points)
         except Exception as e:
-            print(f"Error calculating o-line stats for game {game.id}: {str(e)}")
+            current_app.logger.error(f"Error calculating o-line stats for game {game.id}: {str(e)}")
     
     # Calculate throws per point correctly - total throws divided by total points
     throws_per_point = len(throws) / total_points if total_points > 0 else 0
@@ -3176,7 +3135,7 @@ def debug_line_plus_minus(player_id):
 
 def get_players_base_stats(players, games=None):
     """Get stats for multiple players in a single batch of queries"""
-    print(f"Batch loading stats for {len(players)} players")
+    current_app.logger.debug(f"Batch loading stats for {len(players)} players")
     player_ids = [p.id for p in players]
     
     # Determine point IDs if games are specified
@@ -3193,7 +3152,7 @@ def get_players_base_stats(players, games=None):
                         points = g.points
                     point_ids.extend([p.id for p in points])
                 except Exception as e:
-                    print(f"Error getting points for game {g.id}: {str(e)}")
+                    current_app.logger.error(f"Error getting points for game {g.id}: {str(e)}")
         else:
             try:
                 if hasattr(games.points, 'all'):
@@ -3202,7 +3161,7 @@ def get_players_base_stats(players, games=None):
                     points = games.points
                 point_ids = [p.id for p in points]
             except Exception as e:
-                print(f"Error getting points for game: {str(e)}")
+                current_app.logger.error(f"Error getting points for game: {str(e)}")
     
     # 1. Preload all lineups for these players in one query
     lineup_query = LineUp.query.filter(
@@ -3939,7 +3898,7 @@ def get_point_ids_from_games(games):
                 
             point_ids.extend([p.id for p in points])
         except Exception as e:
-            print(f"Error getting points for game {game.id}: {str(e)}")
+            current_app.logger.error(f"Error getting points for game {game.id}: {str(e)}")
             
     return point_ids
 
@@ -4261,10 +4220,10 @@ def debug_radar_stats(player_id):
     player_d_scores = sum(1 for p in player_d_line_points if point_we_scored(p))
     
     # Print debug information to help diagnose the issue
-    print(f"DEBUG: Player {player.name} - D-line points played: {len(player_d_line_points)}")
-    print(f"DEBUG: Player {player.name} - D-line points scored: {player_d_scores}")
+    current_app.logger.debug(f"DEBUG: Player {player.name} - D-line points played: {len(player_d_line_points)}")
+    current_app.logger.debug(f"DEBUG: Player {player.name} - D-line points scored: {player_d_scores}")
     for i, p in enumerate(player_d_line_points):
-        print(f"DEBUG: D-line point {i+1}: Point ID {p.id}, We scored: {point_we_scored(p)}")
+        current_app.logger.debug(f"DEBUG: D-line point {i+1}: Point ID {p.id}, We scored: {point_we_scored(p)}")
     
     debug_info['d_line_conversion'] = {
         'player': {

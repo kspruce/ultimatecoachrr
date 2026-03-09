@@ -4,6 +4,7 @@ Run with: flask populate-tags
 """
 
 from app import db
+from flask import current_app
 from app.models.clip import ClipTag
 from app.models.annotation import AnnotationTag
 
@@ -221,7 +222,7 @@ def populate_clip_tags(team_organization_id=None):
         create_tag_recursive(root_tag_data)
     
     db.session.commit()
-    print(f"Created {len(VIDEO_TAGS_TREE)} root clip tag categories")
+    current_app.logger.debug(f"Created {len(VIDEO_TAGS_TREE)} root clip tag categories")
 
 
 def populate_annotation_tags(team_organization_id=None):
@@ -263,7 +264,7 @@ def populate_annotation_tags(team_organization_id=None):
         create_tag_recursive(root_tag_data)
     
     db.session.commit()
-    print(f"Created {len(ANNOTATION_TAGS_TREE)} root annotation tag categories")
+    current_app.logger.debug(f"Created {len(ANNOTATION_TAGS_TREE)} root annotation tag categories")
 
 
 def register_commands(app):
@@ -272,13 +273,13 @@ def register_commands(app):
     @app.cli.command('populate-tags')
     def populate_tags_command():
         """Populate default clip and annotation tags"""
-        print("Populating clip tags...")
+        current_app.logger.debug("Populating clip tags...")
         populate_clip_tags()
         
-        print("Populating annotation tags...")
+        current_app.logger.debug("Populating annotation tags...")
         populate_annotation_tags()
         
-        print("✓ All default tags created successfully!")
+        current_app.logger.debug("✓ All default tags created successfully!")
     
     @app.cli.command('clear-tags')
     def clear_tags_command():
@@ -287,6 +288,6 @@ def register_commands(app):
             ClipTag.query.delete()
             AnnotationTag.query.delete()
             db.session.commit()
-            print("✓ All tags cleared")
+            current_app.logger.debug("✓ All tags cleared")
         else:
-            print("Cancelled")
+            current_app.logger.debug("Cancelled")

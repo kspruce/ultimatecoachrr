@@ -20,15 +20,11 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
 import markdown
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('off_season', __name__, url_prefix='/off-season')
 
 # Helper function to get current team ID
-def get_current_team_id():
-    """Get the current team ID based on user role."""
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 # Forms
 class PhaseForm(FlaskForm):

@@ -1,17 +1,13 @@
-from flask import Blueprint, jsonify, request, render_template, session
+from flask import Blueprint, jsonify, request, render_template, session, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.models.point import Point
 from app.models.cutting_skill import CuttingSkill
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('cutting_skill', __name__, url_prefix='/cutting-skills')
 
 # Helper function to get current team ID
-def get_current_team_id():
-    """Get the current team ID based on user role."""
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @bp.route('/record/<int:point_id>', methods=['POST'])
 @login_required
@@ -43,7 +39,7 @@ def record_cutting_skill(point_id):
         return jsonify(cutting_skill.to_dict()), 201
     
     except Exception as e:
-        print("Error recording cutting skill:", str(e))
+        current_app.logger.error("Error recording cutting skill:", str(e))
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
 

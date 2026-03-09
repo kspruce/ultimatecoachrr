@@ -7,14 +7,10 @@ from app.models.tournament_rsvp import TournamentRSVP
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
+from app.utils.team_filter import get_current_team_id
 
 calendar_bp = Blueprint('calendar', __name__)
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @calendar_bp.route('/calendar')
 @login_required

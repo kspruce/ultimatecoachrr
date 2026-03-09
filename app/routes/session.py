@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, abort, render_template, redirect, url_for, flash, 
+    Blueprint, abort, render_template, redirect, url_for, flash,
     request, jsonify, current_app, render_template_string, session
 )
 from flask_login import login_required, current_user
@@ -30,11 +30,6 @@ csrf = CSRFProtect()
 
 bp = Blueprint('session', __name__, url_prefix='/sessions')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 # Existing Session Routes
 @bp.route('/')
@@ -1417,19 +1412,19 @@ def verify_file_paths():
     if not os.path.exists(upload_folder):
         try:
             os.makedirs(upload_folder)
-            print(f"Created upload directory: {upload_folder}")
+            current_app.logger.debug(f"Created upload directory: {upload_folder}")
         except Exception as e:
-            print(f"Error creating upload directory: {e}")
+            current_app.logger.error(f"Error creating upload directory: {e}")
             return False
     
     # Check if directory is writable
     if not os.access(upload_folder, os.W_OK):
-        print(f"Upload directory is not writable: {upload_folder}")
+        current_app.logger.debug(f"Upload directory is not writable: {upload_folder}")
         return False
     
     # Check if directory is readable
     if not os.access(upload_folder, os.R_OK):
-        print(f"Upload directory is not readable: {upload_folder}")
+        current_app.logger.debug(f"Upload directory is not readable: {upload_folder}")
         return False
         
     return True
@@ -1604,6 +1599,7 @@ def printable_view(session_id):
 # Add these imports to your existing imports at the top of session.py
 from secrets import token_urlsafe
 from datetime import datetime, timedelta
+from app.utils.team_filter import get_current_team_id
 
 # Add this route to your session.py Blueprint
 

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
+from sqlalchemy.orm import joinedload
 from app import db
 from app.models.game import Game
 from app.models.tournament import Tournament
@@ -13,14 +14,10 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
 from sqlalchemy import and_
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @bp.route('/')
 @login_required
@@ -80,25 +77,25 @@ def detail(game_id):
     
     delete_form = FlaskForm()  # Add CSRF form here too
 
-    # Get players assigned to the game through GamePlayer model
-    game_player_records = GamePlayer.query.filter_by(
-        game_id=game_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    game_players = []
-    
-    if game_player_records:
-        # Get the actual Player objects
-        player_ids = [gp.player_id for gp in game_player_records]
-        game_players = Player.query.filter(
-            Player.id.in_(player_ids),
-            Player.team_organization_id==get_current_team_id()
-        ).all()
-    # If no players are assigned through GamePlayer, fall back to lineup players
-    elif game.points.count() > 0:
-        first_point = game.points.first()
-        game_players = [lineup.player for lineup in first_point.lineups if lineup.player.team_organization_id == get_current_team_id()]
+    # Get players assigned to the game — single JOIN query instead of two round-trips
+    game_players = (
+        Player.query
+        .join(GamePlayer, GamePlayer.player_id == Player.id)
+        .filter(
+            GamePlayer.game_id == game_id,
+            GamePlayer.team_organization_id == get_current_team_id(),
+            Player.team_organization_id == get_current_team_id(),
+        )
+        .all()
+    )
+
+    # Fall back to the first-point lineup if no GamePlayer records exist
+    if not game_players and game.points.count() > 0:
+        first_point = game.points.options(joinedload('lineups').joinedload('player')).first()
+        game_players = [
+            lu.player for lu in first_point.lineups
+            if lu.player and lu.player.team_organization_id == get_current_team_id()
+        ]
 
     return render_template('game/detail.html', 
                          game=game, 

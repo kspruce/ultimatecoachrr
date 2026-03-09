@@ -1,6 +1,6 @@
 # app/routes/playbook.py
 from flask import (
-    Blueprint, render_template, redirect, url_for, flash, 
+    Blueprint, render_template, redirect, url_for, flash,
     request, jsonify, current_app, abort, session
 )
 from flask_login import login_required, current_user
@@ -12,14 +12,10 @@ import os
 import json
 from app.utils.storage import store_file, delete_file, get_file_url
 from app.utils.utils import admin_required
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 # Main Routes
 @bp.route('/')
@@ -219,7 +215,7 @@ def add_formation():
         )
         
         # Debug print
-        print(f"Creating formation with imgur_url: {formation.imgur_url}")
+        current_app.logger.debug(f"Creating formation with imgur_url: {formation.imgur_url}")
         
         db.session.add(formation)
         db.session.commit()
@@ -270,7 +266,7 @@ def edit_formation(formation_id):
         formation.imgur_url = form.imgur_url.data
         
         # Debug print
-        print(f"Saving formation with imgur_url: {formation.imgur_url}")
+        current_app.logger.debug(f"Saving formation with imgur_url: {formation.imgur_url}")
         
         db.session.commit()
         flash(f'Team concept "{formation.name}" has been updated!', 'success')
@@ -369,8 +365,8 @@ def view_formation(formation_id):
     ).all()
     
     # Debug print
-    print(f"Formation ID: {formation.id}, Name: {formation.name}")
-    print(f"Imgur URL: {formation.imgur_url}")
+    current_app.logger.debug(f"Formation ID: {formation.id}, Name: {formation.name}")
+    current_app.logger.debug(f"Imgur URL: {formation.imgur_url}")
     
     return render_template('playbook/view_formation.html', 
                           formation=formation,

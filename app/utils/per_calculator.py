@@ -68,11 +68,11 @@ class PERCalculator:
         # Return cached results if valid
         if not force_recalculate and self._is_cache_valid(cache_key):
             if current_app.debug:
-                print(f"Using cached PER values for key: {cache_key}")
+                current_app.logger.debug(f"Using cached PER values for key: {cache_key}")
             return self._cache[cache_key]
             
         if current_app.debug:
-            print(f"Calculating PER values for key: {cache_key}")
+            current_app.logger.debug(f"Calculating PER values for key: {cache_key}")
             calculation_start = time.time()
         
         # Get all active players
@@ -117,7 +117,7 @@ class PERCalculator:
                 'max_per': max_per,
                 'team_avgs': team_avgs
             }
-            print(f"PER calculation completed in {calculation_time:.3f} seconds for {len(normalized_pers)} players")
+            current_app.logger.debug(f"PER calculation completed in {calculation_time:.3f} seconds for {len(normalized_pers)} players")
         
         return normalized_pers
     
@@ -132,7 +132,7 @@ class PERCalculator:
         self._cache = {}
         self._cache_timestamp = 0
         if current_app.debug:
-            print(f"PER cache cleared. {old_size} entries removed.")
+            current_app.logger.debug(f"PER cache cleared. {old_size} entries removed.")
             self._debug_info['cache_cleared'] = {
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'entries_removed': old_size

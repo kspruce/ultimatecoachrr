@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session, current_app
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from app import db
 from app.models.game import Game
 from app.models.player import Player
@@ -11,11 +12,6 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @bp.route('/game/<int:game_id>')
 @login_required
@@ -30,18 +26,17 @@ def game_dashboard(game_id):
     if not hasattr(game, 'our_team'):
         game.our_team = "Our Team"
     
-    # Get players assigned to this game
-    game_player_entries = GamePlayer.query.filter_by(
-        game_id=game_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-    game_player_ids = [gp.player_id for gp in game_player_entries]
-    
-    # Get player objects
-    all_game_players = Player.query.filter(
-        Player.id.in_(game_player_ids),
-        Player.team_organization_id == get_current_team_id()
-    ).all()
+    # Get players assigned to this game — single JOIN instead of two queries
+    all_game_players = (
+        Player.query
+        .join(GamePlayer, GamePlayer.player_id == Player.id)
+        .filter(
+            GamePlayer.game_id == game_id,
+            GamePlayer.team_organization_id == get_current_team_id(),
+            Player.team_organization_id == get_current_team_id(),
+        )
+        .all()
+    )
     
     # Split players by gender
     mmp_players = [p for p in all_game_players if p.gender == "male"]
@@ -76,14 +71,14 @@ def game_dashboard(game_id):
         team_organization_id=get_current_team_id()
     ).all()
     
-    # Calculate next point number
-    next_point_number = 1
-    last_point = Point.query.filter_by(
+    # Calculate next point number — scalar aggregate avoids loading a full row
+    max_point_number = db.session.query(
+        func.max(Point.point_number)
+    ).filter_by(
         game_id=game_id,
         team_organization_id=get_current_team_id()
-    ).order_by(Point.point_number.desc()).first()
-    if last_point:
-        next_point_number = last_point.point_number + 1
+    ).scalar()
+    next_point_number = (max_point_number or 0) + 1
     
     return render_template('gameday/dashboard.html', 
                           game=game,
@@ -297,7 +292,7 @@ def record_point():
     except Exception as e:
         db.session.rollback()
         import traceback
-        print(traceback.format_exc())  # Print the full traceback for debugging
+        current_app.logger.error(traceback.format_exc())
         return jsonify({
             'success': False,
             'error': str(e)
@@ -509,8 +504,8 @@ def fix_missing_team_ids():
         
     except Exception as e:
         import traceback
-        print("Error in fix_missing_team_ids:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in fix_missing_team_ids:", str(e))
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -697,6 +692,7 @@ def team_stats():
     )
 
 from sqlalchemy import text  # Add this import at the top of your file
+from app.utils.team_filter import get_current_team_id
 
 @bp.route('/admin/reset_all_sequences', methods=['GET'])
 @login_required
@@ -750,6 +746,6 @@ def reset_all_sequences():
     except Exception as e:
         db.session.rollback()
         import traceback
-        print("Error resetting sequences:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error resetting sequences:", str(e))
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500

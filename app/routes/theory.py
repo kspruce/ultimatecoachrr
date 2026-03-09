@@ -9,14 +9,10 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('theory', __name__, url_prefix='/theory')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 # Main Routes
 @bp.route('/')

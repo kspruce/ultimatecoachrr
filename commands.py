@@ -1,4 +1,5 @@
 # app/commands.py
+import os
 import click
 from flask.cli import with_appcontext
 from app import db
@@ -8,28 +9,32 @@ from app.utils.tag_management import register_commands as register_tag_commands
 import json
 
 @click.command('create-admin')
+@click.option('--email', default=lambda: os.environ.get('ADMIN_EMAIL', ''), prompt='Admin email', help='Admin user email address')
+@click.option('--username', default='admin', prompt='Admin username', help='Admin username')
+@click.password_option(help='Admin password')
 @with_appcontext
-def create_admin():
-    """Create an admin user"""
-    # Check if admin already exists
-    admin = User.query.filter_by(email='kspruce98@outlook.com').first()
-    if admin:
-        click.echo('Admin user already exists')
+def create_admin(email, username, password):
+    """Create an admin user (reads ADMIN_EMAIL from env if set)"""
+    if not email:
+        raise click.UsageError('Email is required. Pass --email or set ADMIN_EMAIL env var.')
+
+    existing = User.query.filter_by(email=email).first()
+    if existing:
+        click.echo(f'A user with email {email} already exists.')
         return
 
-    # Create admin user
     admin = User(
-        username='admin',
-        email='kspruce98@outlook.com',
+        username=username,
+        email=email,
         role='admin',
         is_admin=True
     )
-    admin.set_password('Mythago22!')
-    
+    admin.set_password(password)
+
     db.session.add(admin)
     db.session.commit()
-    
-    click.echo('Admin user created successfully')
+
+    click.echo(f'Admin user "{username}" ({email}) created successfully.')
 
 @click.command()
 @click.option('--output-dir', default='data_exports', help='Directory to save exported data')

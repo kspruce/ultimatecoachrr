@@ -21,14 +21,10 @@ from datetime import datetime
 from flask import current_app
 from itsdangerous import URLSafeSerializer, BadSignature
 import time
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 def get_share_serializer():
     """Serializer for generating and verifying share tokens."""

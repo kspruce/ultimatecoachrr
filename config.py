@@ -56,37 +56,27 @@ class Config:
     # Fallback to temporary directory if DATA_EXPORT_DIR is not writable
     TEMP_EXPORT_DIR = os.environ.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
     
-    @staticmethod
-    def init_app(app):
-        # Create upload folders with correct permissions
-        try:
-            os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-            # Create subdirectories
-            for subdir in ['drills', 'playbook', 'theory', 'temp']:
-                os.makedirs(os.path.join(Config.UPLOAD_FOLDER, subdir), exist_ok=True)
-        except Exception as e:
-            print(f"Warning: Could not create upload directories: {e}")
-    
     # Mail settings
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    ADMINS = ['your-email@example.com']
-    
+    ADMINS = [os.environ.get('ADMIN_EMAIL', 'your-email@example.com')]
+
     @staticmethod
     def init_app(app):
-        # Create upload folder if it doesn't exist
-        os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-        
+        # Create upload folder and subdirectories
+        try:
+            os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+            for subdir in ['drills', 'playbook', 'theory', 'temp']:
+                os.makedirs(os.path.join(Config.UPLOAD_FOLDER, subdir), exist_ok=True)
+        except Exception as e:
+            app.logger.warning(f"Could not create upload directories: {e}")
+
         # Validate S3 configuration
         if not all([Config.AWS_ACCESS_KEY, Config.AWS_SECRET_KEY, Config.AWS_BUCKET_NAME]):
             app.logger.warning("S3 configuration incomplete. Some features may not work properly.")
-        
-        # Create necessary subdirectories
-        for subdir in ['drills', 'playbook', 'theory', 'temp']:
-            os.makedirs(os.path.join(Config.UPLOAD_FOLDER, subdir), exist_ok=True)
     
     @staticmethod
     def validate_file_type(filename, allowed_types):

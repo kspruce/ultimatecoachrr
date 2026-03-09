@@ -8,16 +8,12 @@ from app.forms.scouting import ScoutingReportForm, OpponentPlayerForm, ScoutingC
 import re
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.team_filter import get_current_team_id
 
 csrf = CSRFProtect()
 
 bp = Blueprint('scouting', __name__, url_prefix='/scouting')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @bp.route('/')
 @login_required

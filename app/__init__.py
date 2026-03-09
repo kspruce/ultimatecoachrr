@@ -2,6 +2,7 @@ from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_caching import Cache
 from config import Config
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_moment import Moment
@@ -17,6 +18,7 @@ login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
 moment = Moment()
+cache = Cache()
 
 
 def create_app(config_class=Config):
@@ -29,6 +31,7 @@ def create_app(config_class=Config):
     login.init_app(app)
     csrf.init_app(app)
     moment.init_app(app)
+    cache.init_app(app)
 
     # Ensure the SECRET_KEY is set
     if not app.config.get('SECRET_KEY'):

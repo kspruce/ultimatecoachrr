@@ -15,14 +15,10 @@ from app.models.team_organization import TeamOrganization
 from app.models.team_settings import TeamSettings
 from datetime import datetime
 from markupsafe import Markup
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @bp.route('/')
 @login_required

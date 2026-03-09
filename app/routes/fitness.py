@@ -14,15 +14,11 @@ from wtforms.validators import DataRequired, Optional, Length
 import csv
 import io
 import tempfile
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('fitness', __name__, url_prefix='/fitness')
 
 # Helper function to get current team ID
-def get_current_team_id():
-    """Get the current team ID based on user role."""
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 class FitnessRecordForm(FlaskForm):
     metric = SelectField('Metric', coerce=int, validators=[DataRequired()])

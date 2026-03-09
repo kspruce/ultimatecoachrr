@@ -14,14 +14,10 @@ from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from wtforms import SubmitField, HiddenField
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @bp.route('/')
 @login_required
@@ -321,32 +317,17 @@ def rsvps(tournament_id):
         team_organization_id=get_current_team_id()
     ).first_or_404()
     
-    # Get RSVPs grouped by status
-    attending = TournamentRSVP.query.filter_by(
-        tournament_id=tournament_id, 
-        status='attending',
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    maybe = TournamentRSVP.query.filter_by(
-        tournament_id=tournament_id, 
-        status='maybe',
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    not_attending = TournamentRSVP.query.filter_by(
-        tournament_id=tournament_id, 
-        status='not_attending',
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    # Get all active players who haven't RSVP'd
-    rsvp_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
+    # Load all RSVPs in a single query, then group in Python
+    all_rsvps = TournamentRSVP.query.filter_by(
         tournament_id=tournament_id,
         team_organization_id=get_current_team_id()
     ).all()
-    
-    rsvp_player_ids = [id[0] for id in rsvp_player_ids]
+
+    attending     = [r for r in all_rsvps if r.status == 'attending']
+    maybe         = [r for r in all_rsvps if r.status == 'maybe']
+    not_attending = [r for r in all_rsvps if r.status == 'not_attending']
+
+    rsvp_player_ids = [r.player_id for r in all_rsvps]
     
     no_rsvp_players = Player.query.filter(
         Player.active == True,
@@ -466,11 +447,14 @@ def assign_players(tournament_id):
         team_organization_id=get_current_team_id()
     ).order_by(Game.date).all()
     
-    # Get current player assignments for each game
+    # Load all GamePlayer records for this tournament's games in one query
+    game_ids = [g.id for g in games]
+    all_assignments = GamePlayer.query.filter(
+        GamePlayer.game_id.in_(game_ids)
+    ).all() if game_ids else []
     game_players = {}
-    for game in games:
-        player_ids = [gp.player_id for gp in game.assigned_players.all()]
-        game_players[game.id] = player_ids
+    for gp in all_assignments:
+        game_players.setdefault(gp.game_id, []).append(gp.player_id)
     
     # Create form for player assignment
     class AssignmentForm(FlaskForm):

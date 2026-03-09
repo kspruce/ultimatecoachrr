@@ -2,16 +2,12 @@ from flask import Blueprint, render_template, request, jsonify, abort, current_a
 from flask_login import login_required, current_user
 from app import db
 from app.models.drill import Drill, DrillFrame
+from app.utils.team_filter import get_current_team_id
 
 # Create Blueprint
 drill_bp = Blueprint('drills', __name__, url_prefix='/drills')
 
 # Helper function to get current team ID
-def get_current_team_id():
-    """Get the current team ID based on user role."""
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 @drill_bp.route('/editor', methods=['GET'])
 @drill_bp.route('/editor/<int:drill_id>', methods=['GET'])

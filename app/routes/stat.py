@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template, url_for, session
+from flask import Blueprint, jsonify, request, render_template, url_for, session, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.models.point import Point, LineUp
@@ -12,11 +12,6 @@ import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
 
-# Helper function to get current team ID
-def get_current_team_id():
-    if current_user.is_admin:
-        return session.get('current_team_id')
-    return current_user.team_organization_id
 
 def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
     """
@@ -166,7 +161,7 @@ def record_events(point_id):
                         ).first()
                         
                         if regular_throw:
-                            print(f"Removing regular throw {regular_throw.id} that is now a hockey assist")
+                            current_app.logger.debug(f"Removing regular throw {regular_throw.id} that is now a hockey assist")
                             db.session.delete(regular_throw)
 
                         
@@ -271,7 +266,7 @@ def record_events(point_id):
             return jsonify(event.to_dict()), 201
 
         except Exception as e:
-            print("Error recording event:", str(e))
+            current_app.logger.error("Error recording event:", str(e))
             db.session.rollback()
             return jsonify({'error': str(e)}), 400
 
@@ -358,8 +353,8 @@ def undo_event(point_id):
 
     except Exception as e:
         import traceback
-        print("Error in undo_event:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in undo_event:", str(e))
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
@@ -391,8 +386,8 @@ def undo_cutting_skill(point_id):
     
     except Exception as e:
         import traceback
-        print("Error in undo_cutting_skill:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in undo_cutting_skill:", str(e))
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
@@ -472,7 +467,7 @@ def finish_point(point_id):
             ).all()
             
             for duplicate in duplicate_throws:
-                print(f"Removing duplicate throw: {duplicate.id} (regular) in favor of hockey assist: {hockey.id}")
+                current_app.logger.debug(f"Removing duplicate throw: {duplicate.id} (regular) in favor of hockey assist: {hockey.id}")
                 db.session.delete(duplicate)
 
         # Calculate final stats for all players in the point
@@ -510,7 +505,7 @@ def finish_point(point_id):
                     (throw.x_end - throw.x_start) ** 2 +
                     (throw.y_end - throw.y_start) ** 2
                 )
-                print(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
+                current_app.logger.debug(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
 
         db.session.commit()
         
@@ -709,21 +704,21 @@ def recalculate_throw_distances():
 @stat_taker_required
 def available_players(point_id):
     try:
-        print(f"Fetching available players for point {point_id}")
+        current_app.logger.debug(f"Fetching available players for point {point_id}")
         point = Point.query.filter_by(
             id=point_id,
             team_organization_id=get_current_team_id()
         ).first_or_404()
-        print(f"Found point: {point}")
+        current_app.logger.debug(f"Found point: {point}")
         game = Game.query.filter_by(
             id=point.game_id,
             team_organization_id=get_current_team_id()
         ).first_or_404()
-        print(f"Found game: {game}")
+        current_app.logger.debug(f"Found game: {game}")
         
         # Get players already in the point
         current_player_ids = [lineup.player_id for lineup in point.lineups]
-        print(f"Current player IDs in lineup: {current_player_ids}")
+        current_app.logger.debug(f"Current player IDs in lineup: {current_player_ids}")
         
         # Get all active players not in the current lineup
         from app.models.player import Player
@@ -737,7 +732,7 @@ def available_players(point_id):
         # Filter out players already in the lineup
         available_players = [p for p in available_players if p.id not in current_player_ids]
         
-        print(f"Found {len(available_players)} available players")
+        current_app.logger.debug(f"Found {len(available_players)} available players")
         
         result = {
             'available_players': [
@@ -750,12 +745,12 @@ def available_players(point_id):
             ]
         }
 
-        print(f"Returning result: {result}")
+        current_app.logger.debug(f"Returning result: {result}")
         return jsonify(result)
     except Exception as e:
         import traceback
-        print("Error in available_players:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in available_players:", str(e))
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'error': str(e), 'available_players': []}), 500
 
 
@@ -840,8 +835,8 @@ def substitute_player(point_id):
         })
     except Exception as e:
         import traceback
-        print("Error in substitute_player:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in substitute_player:", str(e))
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -894,8 +889,8 @@ def record_cutting_skill(point_id):
         
     except Exception as e:
         import traceback
-        print("Error in record_cutting_skill:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in record_cutting_skill:", str(e))
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -942,8 +937,8 @@ def get_cutting_skills(point_id):
         
     except Exception as e:
         import traceback
-        print("Error in get_cutting_skills:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in get_cutting_skills:", str(e))
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -995,8 +990,8 @@ def get_events(point_id):
         
     except Exception as e:
         import traceback
-        print("Error in get_events:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in get_events:", str(e))
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1061,8 +1056,8 @@ def get_throws(point_id):
         
     except Exception as e:
         import traceback
-        print("Error in get_throws:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in get_throws:", str(e))
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1145,12 +1140,13 @@ def fix_missing_team_ids():
         
     except Exception as e:
         import traceback
-        print("Error in fix_missing_team_ids:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error in fix_missing_team_ids:", str(e))
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 from sqlalchemy import text
+from app.utils.team_filter import get_current_team_id
 
 @bp.route('/admin/reset_all_sequences', methods=['GET'])
 @login_required
@@ -1182,7 +1178,7 @@ def reset_all_sequences():
     except Exception as e:
         db.session.rollback()
         import traceback
-        print("Error resetting sequences:", str(e))
-        print(traceback.format_exc())
+        current_app.logger.error("Error resetting sequences:", str(e))
+        current_app.logger.error(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
