@@ -496,42 +496,38 @@ def attendance(session_id):
     form = AttendanceForm(team_organization_id=get_current_team_id())  # ADD team_organization_id here
     
     if form.validate_on_submit():
-        # Get the selected status
         status = form.status.data
-        
-        # Delete existing attendance records for the selected players
+
+        # First remove ALL attendance records for this session/status
+        Attendance.query.filter_by(
+            session_id=session_id,
+            status=status,
+            team_organization_id=get_current_team_id()
+        ).delete()
+
+        # Then add back only the currently selected players
         for player_id in form.players.data:
-            Attendance.query.filter_by(
-                session_id=session_id, 
-                player_id=player_id,
-                team_organization_id=get_current_team_id()
-            ).delete()
-        
-        # Create new attendance records for the selected players
-        for player_id in form.players.data:
-            # Verify player belongs to current team
             player = Player.query.filter_by(
                 id=player_id,
                 team_organization_id=get_current_team_id()
             ).first()
-            
+
             if player:
-                # Find the highest existing attendance ID and add 1
                 highest_id = db.session.query(db.func.max(Attendance.id)).scalar() or 0
                 next_id = highest_id + 1
-                
+
                 attendance = Attendance(
-                    id=next_id,  # Explicitly set the ID to avoid conflicts
+                    id=next_id,
                     session_id=session_id,
                     player_id=player_id,
                     status=status,
                     notes=form.notes.data,
-                    team_organization_id=get_current_team_id()  # Add team organization ID
+                    team_organization_id=get_current_team_id()
                 )
                 db.session.add(attendance)
-        
+
         db.session.commit()
-        
+
         flash(f'Attendance for {len(form.players.data)} players has been recorded as {status}!', 'success')
         return redirect(url_for('session.attendance', session_id=session_id))
     
