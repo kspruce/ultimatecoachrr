@@ -75,8 +75,9 @@
     .uc-nav-links .nav-item.uc-active > .nav-link {
       color: white !important; background: rgba(59,130,246,.22);
     }
-    /* Dropdowns */
-    .uc-nav-links .dropdown-menu {
+    /* Dropdowns — covers both: menus inside .uc-nav-links AND the user menu which IS .uc-nav-links */
+    .uc-nav-links .dropdown-menu,
+    .dropdown-menu.uc-nav-links {
       background: #1E293B;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 11px; padding: .45rem;

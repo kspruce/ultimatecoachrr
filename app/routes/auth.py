@@ -565,11 +565,11 @@ def register_team():
         # Use provided email, or a unique placeholder until the DB constraint is relaxed
         resolved_email = email if email else f'{username}@no-email.placeholder'
 
-        # Create admin user
+        # Create team coach account (coach role — admin is reserved for site superadmins)
         user = User(
             username=username,
             email=resolved_email,
-            role='admin',
+            role='coach',
             is_superadmin=False,
             team_organization_id=team.id,
         )
