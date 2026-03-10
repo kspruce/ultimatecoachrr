@@ -3,188 +3,103 @@
 {% block styles %}
 {{ super() }}
 <style>
-    /* Hero section with gradient background */
-    .hero-section {
-        background: linear-gradient(135deg, #13547a 0%, #80d0c7 100%);
-        color: white;
-        padding: 3rem 0;
-        border-radius: 8px;
-        margin-bottom: 2rem;
+    /* ─── Playbook-specific styles ──────────────────────────────── */
+    .uc-tab-nav {
+        display: flex; gap: .35rem; border-bottom: 1px solid var(--uc-gray-200);
+        margin-bottom: 1.5rem; padding-bottom: 0;
     }
-    
-    /* Card enhancements */
-    .concept-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        border: none;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    .uc-tab-nav .nav-link {
+        font-size: .875rem; font-weight: 600; color: var(--uc-gray-400);
+        padding: .55rem 1rem; border-radius: 9px 9px 0 0;
+        border: none; background: none;
+        border-bottom: 2px solid transparent; margin-bottom: -1px;
+        transition: color .15s, border-color .15s;
     }
-    
-    .concept-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    .uc-tab-nav .nav-link:hover { color: var(--uc-gray-800); }
+    .uc-tab-nav .nav-link.active {
+        color: var(--uc-blue); border-bottom-color: var(--uc-blue);
     }
-    
-    /* Play cards */
-    .play-card {
-        border-left: 4px solid #007bff;
-        transition: box-shadow 0.2s ease;
+    /* Concept cards hover lift */
+    .concept-card { transition: box-shadow .2s, transform .2s; cursor: pointer; }
+    .concept-card:hover { transform: translateY(-3px); box-shadow: var(--uc-shadow-md) !important; }
+    /* Play accordion rows */
+    .play-row { border: 1px solid var(--uc-gray-200); border-radius: 10px; margin-bottom: .5rem; overflow: hidden; }
+    .play-row .play-row-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: .85rem 1.1rem; background: white; cursor: pointer;
+        gap: .75rem;
     }
-    
-    .play-card:hover {
-        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    .play-row .play-row-header:hover { background: var(--uc-gray-50); }
+    .play-row .play-row-body { padding: 1.1rem; border-top: 1px solid var(--uc-gray-100); background: var(--uc-gray-50); }
+    /* Offense / defense accent */
+    .play-offense { border-left: 3px solid var(--uc-blue); }
+    .play-defense { border-left: 3px solid var(--uc-red); }
+    /* Embed container */
+    .embed-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 10px; background: var(--uc-gray-100); margin-bottom: 1rem; }
+    .embed-container iframe { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border: 0; }
+    .iframe-direct-container { width: 100%; height: 300px; border: 0; border-radius: 10px; }
+    /* Chevron rotation */
+    .rotate-icon { transition: transform .25s; }
+    [aria-expanded="true"] .rotate-icon { transform: rotate(180deg); }
+    /* Stat pill */
+    .uc-stat-pill {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 1.1rem 1.5rem; border-radius: var(--uc-radius);
+        background: white; border: 1px solid var(--uc-gray-200);
+        box-shadow: var(--uc-shadow-sm);
     }
-    
-    .play-card.defense {
-        border-left-color: #dc3545;
-    }
-    
-    /* Fixed embed container */
-    .embed-container {
-        position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
-        height: 0;
-        overflow: hidden;
-        max-width: 100%;
-        background: #f8f9fa;
-        margin-bottom: 1rem;
-    }
-
-    .embed-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100% !important; /* Override inline width */
-        height: 100% !important; /* Override inline height */
-        border: 0;
-    }
-    
-    /* Badge styling */
-    .badge {
-        margin-right: 0.25rem;
-        margin-bottom: 0.25rem;
-    }
-    
-    /* Tab styling */
-    .nav-tabs .nav-link {
-        font-weight: 500;
-        padding: 0.75rem 1.5rem;
-    }
-    
-    .nav-tabs .nav-link.active {
-        border-bottom: 3px solid #007bff;
-    }
-    
-    /* Animation for content */
-    .tab-pane {
-        animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    /* Stats cards */
-    .stats-card {
-        border-radius: 10px;
-        border: none;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-    }
-    
-    .stats-card h3 {
-        font-size: 2rem;
-        font-weight: 600;
-    }
-    
-    /* Play details */
-    .play-details {
-        padding-top: 1rem;
-    }
-    
-    /* Chevron animation */
-    .rotate-icon {
-        transition: transform 0.3s ease;
-    }
-    
-    [aria-expanded="true"] .rotate-icon {
-        transform: rotate(180deg);
-    }
-    
-    /* Direct iframe container */
-    .iframe-direct-container {
-        width: 100%;
-        height: 300px;
-        margin-bottom: 1rem;
-        border: 0;
-    }
-
-    /* Button group styling */
-    .btn-group-vertical .btn {
-        margin-bottom: 0.25rem;
-    }
-    
-    .btn-group-vertical .btn:last-child {
-        margin-bottom: 0;
-    }
+    .uc-stat-pill .stat-num { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+    .uc-stat-pill .stat-lbl { font-size: .75rem; color: var(--uc-gray-400); font-weight: 600; margin-top: .25rem; letter-spacing: .04em; text-transform: uppercase; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Hero Section with Overview -->
-    <div class="row mb-5">
-        <div class="col-12 text-center py-4 hero-section">
-            <h1 class="display-4">Team Playbook</h1>
-            <p class="lead">Our offensive and defensive strategies in one place</p>
-            <div class="mt-3">
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-light mx-2">
-                        <i class="bi bi-plus-lg"></i> Add Play
-                    </a>
-                    <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-light mx-2">
-                        <i class="bi bi-plus-lg"></i> Add Team Concept
-                    </a>
-                {% endif %}
-            </div>
+<div class="container py-4">
+
+    <!-- Page header -->
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>Playbook</h2>
+            <p>Offensive and defensive strategies for your team</p>
+        </div>
+        {% if current_user.is_admin %}
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add Play
+            </a>
+            <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-plus-lg me-1"></i>Add Concept
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Stats row -->
+    <div class="d-flex gap-3 flex-wrap mb-4">
+        <div class="uc-stat-pill">
+            <span class="stat-num" style="color:var(--uc-indigo)">{{ formations|length }}</span>
+            <span class="stat-lbl">Team Concepts</span>
+        </div>
+        <div class="uc-stat-pill">
+            <span class="stat-num" style="color:var(--uc-blue)">{{ offensive_plays|length }}</span>
+            <span class="stat-lbl">Offensive Plays</span>
+        </div>
+        <div class="uc-stat-pill">
+            <span class="stat-num" style="color:var(--uc-red)">{{ defensive_plays|length }}</span>
+            <span class="stat-lbl">Defensive Plays</span>
         </div>
     </div>
-    
-    <!-- Stats Overview -->
-    <div class="row mb-4">
-        <div class="col-md-4 col-6 mb-3">
-            <div class="card text-center h-100 stats-card">
-                <div class="card-body">
-                    <h3 class="text-primary">{{ formations|length }}</h3>
-                    <p class="card-text">Team Concepts</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 col-6 mb-3">
-            <div class="card text-center h-100 stats-card">
-                <div class="card-body">
-                    <h3 class="text-success">{{ offensive_plays|length }}</h3>
-                    <p class="card-text">Offensive Plays</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 col-6 mb-3">
-            <div class="card text-center h-100 stats-card">
-                <div class="card-body">
-                    <h3 class="text-danger">{{ defensive_plays|length }}</h3>
-                    <p class="card-text">Defensive Plays</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Search and Filter -->
-    <div class="row mb-4">
-        <div class="col-md-8 mb-3 mb-md-0">
+
+    <!-- Search & filter -->
+    <div class="row g-2 mb-4">
+        <div class="col-md-8">
             <div class="input-group">
-                <input type="text" class="form-control" id="playSearch" placeholder="Search plays and concepts...">
-                <button class="btn btn-outline-secondary" type="button">
-                    <i class="bi bi-search"></i>
-                </button>
+                <span class="input-group-text" style="border-radius:9px 0 0 9px;border-color:var(--uc-gray-200);background:white">
+                    <i class="bi bi-search" style="color:var(--uc-gray-400)"></i>
+                </span>
+                <input type="text" class="form-control" id="playSearch"
+                       placeholder="Search plays and concepts…"
+                       style="border-left:none;border-radius:0 9px 9px 0">
             </div>
         </div>
         <div class="col-md-4">
@@ -198,329 +113,312 @@
             </select>
         </div>
     </div>
-    
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs mb-4" id="playbookTabs" role="tablist">
+
+    <!-- Tabs -->
+    <ul class="nav uc-tab-nav" id="playbookTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="concepts-tab" data-bs-toggle="tab" data-bs-target="#concepts" type="button" role="tab">Team Concepts</button>
+            <button class="nav-link active" id="concepts-tab"
+                    data-bs-toggle="tab" data-bs-target="#concepts" type="button" role="tab">
+                <i class="bi bi-layers me-1"></i>Team Concepts
+                {% if formations %}<span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ formations|length }}</span>{% endif %}
+            </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="offense-tab" data-bs-toggle="tab" data-bs-target="#offense" type="button" role="tab">Offense</button>
+            <button class="nav-link" id="offense-tab"
+                    data-bs-toggle="tab" data-bs-target="#offense" type="button" role="tab">
+                <i class="bi bi-arrow-up-right-circle me-1"></i>Offense
+                {% if offensive_plays %}<span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ offensive_plays|length }}</span>{% endif %}
+            </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="defense-tab" data-bs-toggle="tab" data-bs-target="#defense" type="button" role="tab">Defense</button>
+            <button class="nav-link" id="defense-tab"
+                    data-bs-toggle="tab" data-bs-target="#defense" type="button" role="tab">
+                <i class="bi bi-shield me-1"></i>Defense
+                {% if defensive_plays %}<span class="badge bg-secondary ms-1" style="font-size:.7rem">{{ defensive_plays|length }}</span>{% endif %}
+            </button>
         </li>
     </ul>
-    
-    <!-- Tab Content -->
+
+    <!-- Tab content -->
     <div class="tab-content" id="playbookTabContent">
-        <!-- Team Concepts Tab -->
-        <div class="tab-pane fade show active" id="concepts" role="tabpanel" aria-labelledby="concepts-tab">
-            <div class="row g-4">
-                {% if formations %}
-                    {% for formation in formations %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 concept-card">
-                            <div class="card-header bg-{{ 'primary' if formation.type == 'offense' else 'danger' }} text-white">
-                                <h5 class="mb-0">{{ formation.name }}</h5>
+
+        <!-- ── Team Concepts ───────────────────────────────── -->
+        <div class="tab-pane fade show active" id="concepts" role="tabpanel">
+            {% if formations %}
+            <div class="row g-3">
+                {% for formation in formations %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 concept-card">
+                        <!-- coloured accent stripe -->
+                        <div style="height:4px;border-radius:var(--uc-radius) var(--uc-radius) 0 0;
+                                    background:{{ 'var(--uc-blue)' if formation.type == 'offense' else 'var(--uc-red)' }}"></div>
+                        <div class="card-body pb-2">
+                            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                <h6 class="fw-700 mb-0" style="font-weight:700;font-size:.95rem">{{ formation.name }}</h6>
+                                <span class="badge {% if formation.type == 'offense' %}bg-primary{% else %}bg-danger{% endif %}"
+                                      style="font-size:.7rem;flex-shrink:0">
+                                    {{ formation.type|title }}
+                                </span>
                             </div>
-                            
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="badge bg-{{ 'primary' if formation.type == 'offense' else 'danger' }}">
-                                        {{ formation.type|title }}
-                                    </span>
-                                    <small class="text-muted">Used in {{ formation.plays|length if formation.plays else 0 }} plays</small>
-                                </div>
-                                <p class="card-text">{{ formation.description|truncate(150) }}</p>
-                                
-                                {% if formation.ultiplay_embed %}
-                                <button class="btn btn-sm btn-outline-secondary mt-2" type="button" 
-                                        data-bs-toggle="collapse" data-bs-target="#conceptVideo{{ formation.id }}">
-                                    <i class="bi bi-play me-1"></i> View Animation
-                                </button>
-                                
-                                <div class="collapse mt-3" id="conceptVideo{{ formation.id }}">
-                                    {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
-                                        {% set embed_url = formation.ultiplay_embed.split('src="')[1].split('"')[0] %}
-                                        <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
-                                    {% else %}
-                                        <div class="embed-container">
-                                            {{ formation.ultiplay_embed|safe }}
-                                        </div>
-                                    {% endif %}
-                                </div>
+                            <p class="text-muted" style="font-size:.825rem;margin-bottom:.5rem">
+                                {{ formation.description|truncate(140) }}
+                            </p>
+                            {% if formation.plays %}
+                            <div style="font-size:.75rem;color:var(--uc-gray-400)">
+                                <i class="bi bi-collection me-1"></i>Used in {{ formation.plays|length }} play{{ 's' if formation.plays|length != 1 }}
+                            </div>
+                            {% endif %}
+                            {% if formation.ultiplay_embed %}
+                            <button class="btn btn-sm btn-outline-secondary mt-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#conceptVideo{{ formation.id }}">
+                                <i class="bi bi-play-circle me-1"></i>View Animation
+                            </button>
+                            <div class="collapse mt-2" id="conceptVideo{{ formation.id }}">
+                                {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
+                                    {% set embed_url = formation.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                                    <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                                {% else %}
+                                    <div class="embed-container">{{ formation.ultiplay_embed|safe }}</div>
                                 {% endif %}
                             </div>
-                            
-                            <div class="card-footer bg-transparent">
-                                <div class="btn-group-vertical w-100">
-                                    <a href="{{ url_for('playbook.view_formation', formation_id=formation.id) }}" 
-                                       class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye me-1"></i> View Details
-                                    </a>
-                                    {% if current_user.is_admin %}
-                                        <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-pencil me-1"></i> Edit
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger"
-                                                data-bs-toggle="modal" data-bs-target="#deleteFormationModal{{ formation.id }}">
-                                            <i class="bi bi-trash me-1"></i> Delete
-                                        </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer" style="background:transparent;border-top:1px solid var(--uc-gray-100);padding:.75rem 1rem">
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('playbook.view_formation', formation_id=formation.id) }}"
+                                   class="btn btn-sm btn-primary" style="flex:1">
+                                    <i class="bi bi-eye me-1"></i>View
+                                </a>
+                                {% if current_user.is_admin %}
+                                <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deleteFormationModal{{ formation.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if current_user.is_admin %}
+                    <div class="modal fade" id="deleteFormationModal{{ formation.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Delete Team Concept</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Delete <strong>{{ formation.name }}</strong>? This cannot be undone.</p>
+                                    {% if formation.plays %}
+                                    <div class="alert alert-warning" style="font-size:.875rem">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        This concept is used in {{ formation.plays|length }} play(s) and will be removed from them.
+                                    </div>
                                     {% endif %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
-                        
-                        {% if current_user.is_admin %}
-                            <!-- Formation Delete Modal -->
-                            <div class="modal fade" id="deleteFormationModal{{ formation.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Delete Team Concept</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to delete the team concept "{{ formation.name }}"?</p>
-                                            {% if formation.plays %}
-                                            <div class="alert alert-warning">
-                                                Warning: This concept is used in {{ formation.plays|length }} play(s).
-                                                Deleting it will remove it from these plays.
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-danger">Delete Concept</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="col-12">
-                        <div class="alert alert-info text-center">
-                            <p>No team concepts added yet.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="uc-empty">
+                    <div class="uc-empty-icon"><i class="bi bi-layers"></i></div>
+                    <h5>No Team Concepts Yet</h5>
+                    <p>Add your first formation or system concept.</p>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Add First Concept
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ── Offensive Plays ─────────────────────────────── -->
+        <div class="tab-pane fade" id="offense" role="tabpanel">
+            {% if offensive_plays %}
+            {% for play in offensive_plays %}
+            <div class="play-row play-offense">
+                <div class="play-row-header" data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}" aria-expanded="false">
+                    <div class="d-flex align-items-center gap-2 flex-wrap" style="flex:1;min-width:0">
+                        <span class="fw-bold" style="font-size:.9rem">{{ play.name }}</span>
+                        {% if play.formation %}
+                        <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem">
+                            {{ play.formation.name }}
+                        </span>
+                        {% endif %}
+                        {% for tag in play.tags %}
+                        <span class="badge bg-secondary" style="font-size:.7rem" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    <i class="bi bi-chevron-down rotate-icon" style="color:var(--uc-gray-400);flex-shrink:0"></i>
+                </div>
+                <div class="collapse" id="playDetails{{ play.id }}">
+                    <div class="play-row-body">
+                        {% if play.ultiplay_embed %}
+                            {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
+                                {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                                <iframe class="iframe-direct-container mb-3" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                            {% else %}
+                                <div class="embed-container">{{ play.ultiplay_embed|safe }}</div>
+                            {% endif %}
+                        {% endif %}
+                        {% if play.description %}
+                        <p style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description }}</p>
+                        {% endif %}
+                        <div class="d-flex gap-2 mt-2">
+                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye me-1"></i>Full Details
+                            </a>
                             {% if current_user.is_admin %}
-                                <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-primary mt-2">
-                                    <i class="bi bi-plus-lg"></i> Add your first team concept
-                                </a>
+                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
                             {% endif %}
                         </div>
                     </div>
+                </div>
+                {% if current_user.is_admin %}
+                <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
+                    <div class="modal-dialog"><div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Delete Play</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">Delete <strong>{{ play.name }}</strong>?</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div></div>
+                </div>
                 {% endif %}
             </div>
+            {% endfor %}
+            {% else %}
+            <div class="card">
+                <div class="uc-empty">
+                    <div class="uc-empty-icon"><i class="bi bi-arrow-up-right-circle"></i></div>
+                    <h5>No Offensive Plays Yet</h5>
+                    <p>Add your team's offensive plays and animations.</p>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Add First Play
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
-        
-        <!-- Offensive Plays Tab -->
-        <div class="tab-pane fade" id="offense" role="tabpanel" aria-labelledby="offense-tab">
-            <div class="play-list">
-                {% if offensive_plays %}
-                    {% for play in offensive_plays %}
-                    <div class="card mb-3 play-card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">{{ play.name }}</h5>
-                            <div>
-                                {% if play.formation %}
-                                <span class="badge bg-light text-dark me-2">{{ play.formation.name }}</span>
-                                {% endif %}
-                                <button class="btn btn-sm btn-outline-secondary" type="button" 
-                                        data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
-                                    <i class="bi bi-chevron-down rotate-icon"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="collapse" id="playDetails{{ play.id }}">
-                            <div class="card-body play-details">
-                                {% if play.ultiplay_embed %}
-                                    {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
-                                        {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
-                                        <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
-                                    {% else %}
-                                        <div class="embed-container">
-                                            {{ play.ultiplay_embed|safe }}
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                                
-                                <h6>Description</h6>
-                                <p>{{ play.description }}</p>
-                                
-                                {% if play.tags %}
-                                <h6>Tags</h6>
-                                <div class="mb-3">
-                                    {% for tag in play.tags %}
-                                    <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                
-                                <div class="d-flex flex-wrap gap-2 mt-3">
-                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye me-1"></i> Full Details
-                                    </a>
-                                    {% if current_user.is_admin %}
-                                        <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-pencil me-1"></i> Edit
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger"
-                                                data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                            <i class="bi bi-trash me-1"></i> Delete
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if current_user.is_admin %}
-                            <!-- Play Delete Modal -->
-                            <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Delete Play</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to delete the play "{{ play.name }}"?</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-danger">Delete Play</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+
+        <!-- ── Defensive Plays ─────────────────────────────── -->
+        <div class="tab-pane fade" id="defense" role="tabpanel">
+            {% if defensive_plays %}
+            {% for play in defensive_plays %}
+            <div class="play-row play-defense">
+                <div class="play-row-header" data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}" aria-expanded="false">
+                    <div class="d-flex align-items-center gap-2 flex-wrap" style="flex:1;min-width:0">
+                        <span class="fw-bold" style="font-size:.9rem">{{ play.name }}</span>
+                        {% if play.formation %}
+                        <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem">
+                            {{ play.formation.name }}
+                        </span>
                         {% endif %}
+                        {% for tag in play.tags %}
+                        <span class="badge bg-secondary" style="font-size:.7rem" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="alert alert-info text-center">
-                        <p>No offensive plays added yet.</p>
-                        {% if current_user.is_admin %}
-                            <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary mt-2">
-                                <i class="bi bi-plus-lg"></i> Add your first offensive play
+                    <i class="bi bi-chevron-down rotate-icon" style="color:var(--uc-gray-400);flex-shrink:0"></i>
+                </div>
+                <div class="collapse" id="playDetails{{ play.id }}">
+                    <div class="play-row-body">
+                        {% if play.ultiplay_embed %}
+                            {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
+                                {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
+                                <iframe class="iframe-direct-container mb-3" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
+                            {% else %}
+                                <div class="embed-container">{{ play.ultiplay_embed|safe }}</div>
+                            {% endif %}
+                        {% endif %}
+                        {% if play.description %}
+                        <p style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description }}</p>
+                        {% endif %}
+                        <div class="d-flex gap-2 mt-2">
+                            <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye me-1"></i>Full Details
                             </a>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <!-- Defensive Plays Tab -->
-        <div class="tab-pane fade" id="defense" role="tabpanel" aria-labelledby="defense-tab">
-            <div class="play-list">
-                {% if defensive_plays %}
-                    {% for play in defensive_plays %}
-                    <div class="card mb-3 play-card defense">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">{{ play.name }}</h5>
-                            <div>
-                                {% if play.formation %}
-                                <span class="badge bg-light text-dark me-2">{{ play.formation.name }}</span>
-                                {% endif %}
-                                <button class="btn btn-sm btn-outline-secondary" type="button" 
-                                        data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
-                                    <i class="bi bi-chevron-down rotate-icon"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="collapse" id="playDetails{{ play.id }}">
-                            <div class="card-body play-details">
-                                {% if play.ultiplay_embed %}
-                                    {% if "ultiplays.com/embed/" in play.ultiplay_embed %}
-                                        {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
-                                        <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
-                                    {% else %}
-                                        <div class="embed-container">
-                                            {{ play.ultiplay_embed|safe }}
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                                
-                                <h6>Description</h6>
-                                <p>{{ play.description }}</p>
-                                
-                                {% if play.tags %}
-                                <h6>Tags</h6>
-                                <div class="mb-3">
-                                    {% for tag in play.tags %}
-                                    <span class="badge bg-secondary me-1" data-tag-id="{{ tag.id }}">{{ tag.name }}</span>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                
-                                <div class="d-flex flex-wrap gap-2 mt-3">
-                                    <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye me-1"></i> Full Details
-                                    </a>
-                                    <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
-                                       class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-pencil me-1"></i> Edit
-                                    </a>
-                                    {% if current_user.is_admin %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger"
-                                                data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                            <i class="bi bi-trash me-1"></i> Delete
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if current_user.is_admin %}
-                            <!-- Play Delete Modal -->
-                            <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Delete Play</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to delete the play "{{ play.name }}"?</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-danger">Delete Play</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="alert alert-info text-center">
-                        <p>No defensive plays added yet.</p>
-                        {% if current_user.is_admin %}
-                            <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary mt-2">
-                                <i class="bi bi-plus-lg"></i> Add your first defensive play
+                            {% if current_user.is_admin %}
+                            <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil me-1"></i>Edit
                             </a>
-                        {% endif %}
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
+                </div>
+                {% if current_user.is_admin %}
+                <div class="modal fade" id="deletePlayModal{{ play.id }}" tabindex="-1">
+                    <div class="modal-dialog"><div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Delete Play</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">Delete <strong>{{ play.name }}</strong>?</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form action="{{ url_for('playbook.delete_play', play_id=play.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div></div>
+                </div>
                 {% endif %}
             </div>
+            {% endfor %}
+            {% else %}
+            <div class="card">
+                <div class="uc-empty">
+                    <div class="uc-empty-icon"><i class="bi bi-shield"></i></div>
+                    <h5>No Defensive Plays Yet</h5>
+                    <p>Add your team's defensive schemes and animations.</p>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Add First Play
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
-    </div>
+
+    </div><!-- /tab-content -->
 </div>
 {% endblock %}
 
@@ -528,97 +426,55 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-    
-    // Fix iframe loading issues
-    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
-        button.addEventListener('click', function() {
-            // Get the target element
-            const targetId = this.getAttribute('data-bs-target');
-            const targetElement = document.querySelector(targetId);
-            
-            // Check if it contains an iframe
-            if (targetElement) {
+    // Fix iframe reload on collapse open
+    document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = document.querySelector(this.getAttribute('data-bs-target'));
+            if (target) {
                 setTimeout(() => {
-                    const iframes = targetElement.querySelectorAll('iframe');
-                    iframes.forEach(iframe => {
-                        // Force iframe reload
-                        const src = iframe.src;
-                        iframe.src = '';
-                        setTimeout(() => {
-                            iframe.src = src;
-                        }, 50);
+                    target.querySelectorAll('iframe').forEach(iframe => {
+                        const src = iframe.src; iframe.src = ''; setTimeout(() => iframe.src = src, 50);
                     });
-                }, 300); // Wait for collapse animation
+                }, 300);
             }
         });
     });
-    
-    // Search functionality
+
+    // Live search
     const searchInput = document.getElementById('playSearch');
     if (searchInput) {
         searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            
-            // Search team concepts
-            const conceptCards = document.querySelectorAll('.concept-card');
-            conceptCards.forEach(card => {
-                const title = card.querySelector('h5').textContent.toLowerCase();
-                const description = card.querySelector('.card-text')?.textContent.toLowerCase() || '';
-                const isMatch = title.includes(searchTerm) || description.includes(searchTerm);
-                card.closest('.col-md-6, .col-lg-4').style.display = isMatch ? '' : 'none';
+            const term = this.value.toLowerCase();
+            document.querySelectorAll('.concept-card').forEach(card => {
+                const match = card.querySelector('h6')?.textContent.toLowerCase().includes(term) ||
+                              card.querySelector('p')?.textContent.toLowerCase().includes(term);
+                card.closest('.col-md-6, .col-lg-4').style.display = match ? '' : 'none';
             });
-            
-            // Search plays
-            const playCards = document.querySelectorAll('.play-card');
-            playCards.forEach(card => {
-                const title = card.querySelector('h5').textContent.toLowerCase();
-                const description = card.querySelector('p')?.textContent.toLowerCase() || '';
-                const tags = Array.from(card.querySelectorAll('.badge'))
-                    .map(badge => badge.textContent.toLowerCase());
-                
-                const isMatch = title.includes(searchTerm) || 
-                               description.includes(searchTerm) ||
-                               tags.some(tag => tag.includes(searchTerm));
-                               
-                card.style.display = isMatch ? '' : 'none';
+            document.querySelectorAll('.play-row').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
             });
         });
     }
-    
-    // Tag filtering
+
+    // Tag filter
     const tagFilter = document.getElementById('tagFilter');
     if (tagFilter) {
         tagFilter.addEventListener('change', function() {
-            const selectedTag = this.value;
-            const playCards = document.querySelectorAll('.play-card');
-            
-            if (!selectedTag) {
-                playCards.forEach(card => card.style.display = '');
-                return;
-            }
-            
-            playCards.forEach(card => {
-                const tags = Array.from(card.querySelectorAll('.badge[data-tag-id]'))
-                    .map(badge => badge.getAttribute('data-tag-id'));
-                card.style.display = tags.includes(selectedTag) ? '' : 'none';
+            const sel = this.value;
+            document.querySelectorAll('.play-row').forEach(row => {
+                if (!sel) { row.style.display = ''; return; }
+                const tags = Array.from(row.querySelectorAll('.badge[data-tag-id]')).map(b => b.getAttribute('data-tag-id'));
+                row.style.display = tags.includes(sel) ? '' : 'none';
             });
         });
     }
-    
-    // Ensure correct tab is shown when navigating directly to a tab
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get('tab');
+
+    // URL tab param
+    const tab = new URLSearchParams(window.location.search).get('tab');
     if (tab) {
-        const tabElement = document.querySelector(`#${tab}-tab`);
-        if (tabElement) {
-            const tabInstance = new bootstrap.Tab(tabElement);
-            tabInstance.show();
-        }
+        const el = document.querySelector(`#${tab}-tab`);
+        if (el) new bootstrap.Tab(el).show();
     }
 });
 </script>

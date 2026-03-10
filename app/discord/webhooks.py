@@ -169,7 +169,7 @@ class DiscordWebhook:
         
         # Add link to view the game
         base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
-        game_url = f"{base_url}/games/{game.id}/detail"
+        game_url = f"{base_url}/games/{game.id}"
         embed["fields"].append({
             "name": "View Game",
             "value": f"[Click here for details]({game_url})",
@@ -417,7 +417,7 @@ class DiscordWebhook:
         
         # Add link to view the tournament
         base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
-        tournament_url = f"{base_url}/tournaments/{tournament.id}/detail"
+        tournament_url = f"{base_url}/tournaments/{tournament.id}"
         embed["fields"].append({
             "name": "View Tournament",
             "value": f"[Click here for details]({tournament_url})",
@@ -540,7 +540,7 @@ class DiscordWebhook:
         
         # Add link to view the clip
         base_url = current_app.config.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
-        clip_url = f"{base_url}/clips/view/{clip.id}"
+        clip_url = f"{base_url}/clips/{clip.id}"
         embed["fields"].append({
             "name": "View Clip",
             "value": f"[Click here to view]({clip_url})",
@@ -605,7 +605,7 @@ class DiscordWebhook:
         if is_topic:
             theory_url = f"{base_url}/theory/topic/{theory_item.id}"
         else:
-            theory_url = f"{base_url}/theory/section/{theory_item.id}"
+            theory_url = f"{base_url}/theory/section/{theory_item.slug}"
         
         embed["fields"].append({
             "name": "Read More",

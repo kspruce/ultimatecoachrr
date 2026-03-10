@@ -65,9 +65,6 @@ class UltimateCoachBot:
         @self.bot.event
         async def on_ready():
             logger.info(f'Bot logged in as {self.bot.user}')
-            # Start background tasks
-            if not self.sync_task or not self.sync_task.is_running():
-                self.sync_calendar.start()
 
         
                 

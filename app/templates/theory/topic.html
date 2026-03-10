@@ -1,181 +1,166 @@
 {# templates/theory/topic.html #}
 {% extends "base.html" %}
+
 {% block styles %}
 {{ super() }}
 <style>
+    /* Rich text content styles */
     .topic-content h2 {
-        color: #2c3e50;
-        border-bottom: 2px solid #eee;
-        padding-bottom: 10px;
-        margin-top: 30px;
-        margin-bottom: 20px;
+        font-size: 1.2rem; font-weight: 700; color: var(--uc-gray-800);
+        border-bottom: 1px solid var(--uc-gray-200);
+        padding-bottom: .5rem; margin-top: 2rem; margin-bottom: 1rem;
     }
-    
     .topic-content h3 {
-        color: #3498db;
-        margin-top: 25px;
+        font-size: 1rem; font-weight: 700; color: var(--uc-blue);
+        margin-top: 1.5rem; margin-bottom: .65rem;
     }
-    
-    .topic-content p {
-        font-size: 1.05rem;
-        line-height: 1.7;
-    }
-    
-    .topic-content ul, .topic-content ol {
-        padding-left: 20px;
-        margin-bottom: 20px;
-    }
-    
-    .topic-content li {
-        margin-bottom: 8px;
-    }
-    
+    .topic-content p { font-size: .925rem; line-height: 1.75; color: var(--uc-gray-800); }
+    .topic-content ul, .topic-content ol { padding-left: 1.25rem; margin-bottom: 1rem; }
+    .topic-content li { margin-bottom: .4rem; font-size: .925rem; line-height: 1.6; }
     .topic-content blockquote {
-        border-left: 4px solid #3498db;
-        padding-left: 15px;
-        color: #555;
-        font-style: italic;
-        margin: 20px 0;
+        border-left: 3px solid var(--uc-blue); padding-left: 1rem;
+        color: var(--uc-gray-600); font-style: italic; margin: 1.25rem 0;
+        background: rgba(59,130,246,.05); border-radius: 0 8px 8px 0; padding: .75rem 1rem;
     }
-    
     .topic-content code {
-        background-color: #f8f9fa;
-        padding: 2px 5px;
-        border-radius: 3px;
+        background: var(--uc-gray-100); padding: .15rem .4rem;
+        border-radius: 5px; font-size: .85em;
     }
-    
-    /* Animation for section transitions */
-    .card {
-        transition: all 0.3s ease;
-    }
-    
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    }
-    
-    /* Make markdown images responsive */
     .topic-content img {
-        max-width: 100%;
-        height: auto;
-        display: block;
-        margin: 1rem auto;
-        border-radius: 5px;
+        max-width: 100%; height: auto; display: block;
+        margin: 1rem auto; border-radius: var(--uc-radius);
+        box-shadow: var(--uc-shadow-md);
     }
-    
-    /* Optional: Add a subtle shadow to images */
-    .topic-content img {
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }    
+    /* Sidebar nav items */
+    .theory-nav-link {
+        display: block; padding: .5rem .85rem;
+        font-size: .85rem; font-weight: 500; text-decoration: none;
+        color: var(--uc-gray-600); border-radius: 8px;
+        transition: background .15s, color .15s;
+    }
+    .theory-nav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
+    .theory-nav-link.active {
+        background: rgba(59,130,246,.1); color: var(--uc-blue); font-weight: 600;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
+<div class="container py-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="font-size:.82rem">
             <li class="breadcrumb-item">
-                <a href="{{ url_for('theory.index') }}">Theory</a>
+                <a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a>
             </li>
             <li class="breadcrumb-item">
-                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}">
+                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" style="color:var(--uc-blue)">
                     {{ topic.section.name }}
                 </a>
             </li>
-            <li class="breadcrumb-item active">{{ topic.name }}</li>
+            <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ topic.name }}</li>
         </ol>
     </nav>
 
-    <div class="row">
-        <!-- Main Content -->
-        <div class="col-md-8">
+    <div class="row g-4">
+
+        <!-- ── Main content ───────────────────────────────── -->
+        <div class="col-lg-8">
+
+            <!-- Hero image -->
+            {% if topic.image_url %}
+            <div class="mb-4">
+                <img src="{{ topic.image_url }}" alt="{{ topic.name }}"
+                     class="img-fluid"
+                     style="width:100%;max-height:320px;object-fit:cover;border-radius:var(--uc-radius);box-shadow:var(--uc-shadow-md)">
+            </div>
+            {% endif %}
+
+            <!-- Topic card -->
             <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h1 class="h2 mb-0">{{ topic.name }}</h1>
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h1 class="h4 mb-0" style="font-weight:700;color:var(--uc-gray-800)">{{ topic.name }}</h1>
                     {% if current_user.is_admin %}
-                    <div class="btn-group">
-                        <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}" 
-                           class="btn btn-outline-primary">
-                            <i class="bi bi-pencil"></i> Edit
-                        </a>
-                    </div>
+                    <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </a>
                     {% endif %}
                 </div>
-                <div class="card-body">
-                    {% if topic.image_url %}
-                    <div class="topic-image mb-4">
-                        <img src="{{ topic.image_url }}" 
-                             class="img-fluid rounded shadow" 
-                             alt="{{ topic.name }}">
-                        <figcaption class="text-center text-muted mt-2">
-                            <small>{{ topic.name }} - Visual Guide</small>
-                        </figcaption>
-                    </div>
-                    {% endif %}
-                    <div class="toc-container mb-4 d-none" id="table-of-contents">
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Table of Contents</h5>
+                <div class="card-body p-4">
+                    <!-- Table of contents (populated by JS if headings present) -->
+                    <div class="d-none mb-4" id="table-of-contents">
+                        <div style="background:var(--uc-gray-50);border:1px solid var(--uc-gray-200);
+                                    border-radius:10px;padding:1rem 1.25rem">
+                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;
+                                        text-transform:uppercase;color:var(--uc-gray-400);margin-bottom:.65rem">
+                                Contents
                             </div>
-                            <div class="card-body p-0">
-                                <ul class="list-group list-group-flush" id="toc-list"></ul>
-                            </div>
+                            <ul id="toc-list" style="list-style:none;padding:0;margin:0"></ul>
                         </div>
                     </div>
 
-                    <div class="topic-content p-2">
-                        <div class="mb-4">
-                            {{ topic.content|markdown|safe }}
-                        </div>
-                        
-                        {% if topic.tags %}
-                        <div class="mt-4 mb-3">
-                            {% for tag in topic.tags %}
-                            <span class="badge bg-secondary me-1">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
+                    <div class="topic-content">
+                        {{ topic.content|markdown|safe }}
                     </div>
+
+                    {% if topic.tags %}
+                    <div class="mt-4 pt-3" style="border-top:1px solid var(--uc-gray-100)">
+                        {% for tag in topic.tags %}
+                        <span class="badge bg-secondary me-1" style="font-size:.75rem">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
+            <!-- Related videos -->
             {% if topic.related_videos %}
-            <!-- Videos Section -->
-            <div class="card mb-4">
+            <div class="card">
                 <div class="card-header">
-                    <h3 class="h4 mb-0">Related Videos</h3>
+                    <h5 class="mb-0"><i class="bi bi-camera-video me-2" style="color:var(--uc-sky)"></i>Related Videos</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     {% for video in topic.related_videos %}
-                    <div class="mb-4">
-                        <div class="ratio ratio-16x9">
-                            <iframe src="{{ video.url|safe }}" 
-                                    allowfullscreen></iframe>
+                    <div class="mb-4{% if not loop.last %} pb-4{% endif %}"
+                         {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
+                        <div class="ratio ratio-16x9" style="border-radius:10px;overflow:hidden">
+                            <iframe src="{{ video.url|safe }}" allowfullscreen></iframe>
                         </div>
-                        <h5 class="mt-2">{{ video.title }}</h5>
+                        <h6 class="mt-2 mb-0" style="font-weight:700">{{ video.title }}</h6>
                         {% if video.description %}
-                        <p class="text-muted">{{ video.description }}</p>
+                        <p class="text-muted mt-1 mb-0" style="font-size:.85rem">{{ video.description }}</p>
                         {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
+
         </div>
 
-        <!-- Sidebar -->
-        <div class="col-md-4">
-            <!-- Section Topics -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="h5 mb-0">In This Section</h4>
-                </div>
+        <!-- ── Sidebar ─────────────────────────────────────── -->
+        <div class="col-lg-4">
+
+            <!-- In this section -->
+            <div class="card mb-3">
                 <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
+                    <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
+                        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                            <a href="{{ url_for('theory.section', slug=topic.section.slug) }}"
+                               class="text-decoration-none" style="color:inherit">
+                                {{ topic.section.name }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="p-2">
                         {% for section_topic in topic.section.topics %}
-                        <a href="{{ url_for('theory.topic', topic_id=section_topic.id) }}" 
-                           class="list-group-item list-group-item-action {% if section_topic.id == topic.id %}active{% endif %}">
+                        <a href="{{ url_for('theory.topic', topic_id=section_topic.id) }}"
+                           class="theory-nav-link {% if section_topic.id == topic.id %}active{% endif %}">
+                            {% if section_topic.id == topic.id %}
+                            <i class="bi bi-chevron-right me-1" style="font-size:.7rem"></i>
+                            {% endif %}
                             {{ section_topic.name }}
                         </a>
                         {% endfor %}
@@ -183,17 +168,20 @@
                 </div>
             </div>
 
+            <!-- Related drills -->
             {% if topic.related_drills %}
-            <!-- Related Drills -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="h5 mb-0">Related Drills</h4>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
+                        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                            <i class="bi bi-list-check me-1" style="color:var(--uc-green)"></i>Related Drills
+                        </div>
+                    </div>
+                    <div class="p-2">
                         {% for drill in topic.related_drills %}
-                        <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}" 
-                           class="list-group-item list-group-item-action">
+                        <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}"
+                           class="theory-nav-link">
+                            <i class="bi bi-arrow-right-short me-1" style="color:var(--uc-gray-400)"></i>
                             {{ drill.title }}
                         </a>
                         {% endfor %}
@@ -201,43 +189,34 @@
                 </div>
             </div>
             {% endif %}
+
         </div>
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Generate table of contents
+    // Auto-generate table of contents
     const content = document.querySelector('.topic-content');
+    if (!content) return;
     const headings = content.querySelectorAll('h2, h3');
-    const tocList = document.getElementById('toc-list');
-    const tocContainer = document.getElementById('table-of-contents');
-    
     if (headings.length > 2) {
-        headings.forEach((heading, index) => {
-            // Add ID to the heading if it doesn't have one
-            if (!heading.id) {
-                heading.id = `section-${index}`;
-            }
-            
-            // Create TOC item
+        const tocList = document.getElementById('toc-list');
+        const tocContainer = document.getElementById('table-of-contents');
+        headings.forEach((h, i) => {
+            if (!h.id) h.id = `section-${i}`;
             const li = document.createElement('li');
-            li.className = 'list-group-item';
-            if (heading.tagName === 'H3') {
-                li.className += ' ps-4';
-            }
-            
+            li.style.cssText = 'margin-bottom:.3rem' + (h.tagName === 'H3' ? ';padding-left:1rem' : '');
             const a = document.createElement('a');
-            a.href = `#${heading.id}`;
-            a.textContent = heading.textContent;
-            a.className = 'text-decoration-none';
-            
+            a.href = `#${h.id}`;
+            a.textContent = h.textContent;
+            a.style.cssText = 'font-size:.82rem;color:var(--uc-blue);text-decoration:none;font-weight:500';
             li.appendChild(a);
             tocList.appendChild(li);
         });
-        
         tocContainer.classList.remove('d-none');
     }
 });

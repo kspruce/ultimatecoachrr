@@ -2,127 +2,145 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('theory.index') }}">Theory</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ section.name }}</li>
-                </ol>
-            </nav>
-            <h1>{{ section.name }}</h1>
+<div class="container py-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="font-size:.82rem">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a>
+            </li>
+            <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ section.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Page header -->
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>{{ section.name }}</h2>
             {% if section.description %}
-            <p class="lead">{{ section.description }}</p>
+            <p>{{ section.description }}</p>
             {% endif %}
         </div>
-        <div class="col-md-4 text-end">
-            {% if current_user.is_admin %}
-            <div class="btn-group">
-                <a href="{{ url_for('theory.edit_section', section_id=section.id) }}" 
-                   class="btn btn-outline-primary">
-                    <i class="bi bi-pencil"></i> Edit Section
-                </a>
-                <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" 
-                   class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Topic
-                </a>
-            </div>
-            {% endif %}
+        {% if current_user.is_admin %}
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('theory.edit_section', section_id=section.id) }}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-pencil me-1"></i>Edit Section
+            </a>
+            <a href="{{ url_for('theory.add_topic', section_id=section.id) }}"
+               class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add Topic
+            </a>
         </div>
+        {% endif %}
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <!-- Topics List -->
+    <div class="row g-4">
+        <!-- Topics grid -->
+        <div class="col-lg-8">
             {% if topics %}
-            <div class="row row-cols-1 row-cols-md-2 g-4">
+            <div class="row g-3">
                 {% for topic in topics %}
-                <div class="col">
-                    <div class="card h-100 shadow-sm">
+                <div class="col-sm-6">
+                    <div class="card h-100" style="transition:box-shadow .2s,transform .2s"
+                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='var(--uc-shadow-md)'"
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
                         {% if topic.image_url %}
-                        <img src="{{ topic.image_url }}" 
-                             class="card-img-top" alt="{{ topic.name }}"
-                             style="height: 160px; object-fit: cover;">
+                        <img src="{{ topic.image_url }}" class="card-img-top"
+                             alt="{{ topic.name }}" style="height:150px;object-fit:cover;border-radius:var(--uc-radius) var(--uc-radius) 0 0">
                         {% else %}
-                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                             style="height: 160px;">
-                            <i class="bi bi-file-text display-4 text-secondary"></i>
+                        <div style="height:120px;background:linear-gradient(135deg,var(--uc-gray-100),var(--uc-gray-50));
+                                    display:flex;align-items:center;justify-content:center;
+                                    border-radius:var(--uc-radius) var(--uc-radius) 0 0">
+                            <i class="bi bi-file-text" style="font-size:2rem;color:var(--uc-gray-200)"></i>
                         </div>
                         {% endif %}
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <a href="{{ url_for('theory.topic', topic_id=topic.id) }}" 
-                                   class="text-decoration-none">
-                                    {{ topic.name }}
-                                </a>
-                            </h5>
+                        <div class="card-body pb-2">
+                            <a href="{{ url_for('theory.topic', topic_id=topic.id) }}"
+                               class="text-decoration-none">
+                                <h6 style="font-weight:700;color:var(--uc-gray-800);margin-bottom:.35rem">{{ topic.name }}</h6>
+                            </a>
                             {% if topic.content %}
-                            <p class="card-text">{{ topic.content|striptags|truncate(100) }}</p>
+                            <p style="font-size:.8rem;color:var(--uc-gray-400);margin:0">
+                                {{ topic.content|striptags|truncate(90) }}
+                            </p>
                             {% endif %}
                         </div>
-                        <div class="card-footer bg-transparent">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    {% if topic.related_videos %}
-                                    <span class="badge bg-info me-1">
-                                        <i class="bi bi-camera-video"></i> {{ topic.related_videos|length }}
-                                    </span>
-                                    {% endif %}
-                                    {% if topic.related_drills %}
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-list-check"></i> {{ topic.related_drills|length }}
-                                    </span>
-                                    {% endif %}
-                                </div>
-                                <a href="{{ url_for('theory.topic', topic_id=topic.id) }}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    Read More
-                                </a>
+                        <div class="card-footer" style="background:transparent;border-top:1px solid var(--uc-gray-100);
+                                                         display:flex;align-items:center;justify-content:space-between;
+                                                         padding:.65rem 1rem">
+                            <div class="d-flex gap-1">
+                                {% if topic.related_videos %}
+                                <span class="badge" style="background:rgba(14,165,233,.15);color:var(--uc-sky);font-size:.7rem">
+                                    <i class="bi bi-camera-video me-1"></i>{{ topic.related_videos|length }}
+                                </span>
+                                {% endif %}
+                                {% if topic.related_drills %}
+                                <span class="badge" style="background:rgba(16,185,129,.12);color:var(--uc-green);font-size:.7rem">
+                                    <i class="bi bi-list-check me-1"></i>{{ topic.related_drills|length }}
+                                </span>
+                                {% endif %}
                             </div>
+                            <a href="{{ url_for('theory.topic', topic_id=topic.id) }}"
+                               class="btn btn-sm btn-outline-primary" style="font-size:.78rem">
+                                Read →
+                            </a>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="alert alert-info">
-                No topics have been added to this section yet.
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('theory.add_topic', section_id=section.id) }}">Add the first topic</a>
-                {% endif %}
+            <div class="card">
+                <div class="uc-empty">
+                    <div class="uc-empty-icon"><i class="bi bi-file-text"></i></div>
+                    <h5>No Topics Yet</h5>
+                    <p>Add the first topic to this section.</p>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Add First Topic
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>
-    
-        <div class="col-md-4">
-            <!-- Related Content Sidebar -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Quick Links</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="nav flex-column">
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
+                        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                            Quick Links
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <a href="{{ url_for('theory.index') }}"
+                           class="d-flex align-items-center gap-2 p-2 text-decoration-none"
+                           style="border-radius:8px;color:var(--uc-gray-600);font-size:.85rem;font-weight:500">
+                            <i class="bi bi-arrow-left" style="color:var(--uc-gray-400)"></i> All Sections
+                        </a>
                         {% if section.related_drills %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#related-drills">
-                                <i class="bi bi-list-check"></i> Related Drills
-                            </a>
-                        </li>
+                        <a href="#related-drills"
+                           class="d-flex align-items-center gap-2 p-2 text-decoration-none"
+                           style="border-radius:8px;color:var(--uc-gray-600);font-size:.85rem;font-weight:500">
+                            <i class="bi bi-list-check" style="color:var(--uc-green)"></i> Related Drills
+                        </a>
                         {% endif %}
                         {% if section.related_videos %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#related-videos">
-                                <i class="bi bi-camera-video"></i> Video Resources
-                            </a>
-                        </li>
+                        <a href="#related-videos"
+                           class="d-flex align-items-center gap-2 p-2 text-decoration-none"
+                           style="border-radius:8px;color:var(--uc-gray-600);font-size:.85rem;font-weight:500">
+                            <i class="bi bi-camera-video" style="color:var(--uc-sky)"></i> Video Resources
+                        </a>
                         {% endif %}
-                    </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
 </div>
 {% endblock %}

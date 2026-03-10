@@ -2,126 +2,109 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1 class="display-4">Ultimate Theory Hub</h1>
-            <p class="lead">Comprehensive guides and resources for ultimate players and coaches.</p>
+<div class="container py-4">
+
+    <!-- Page header -->
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>Theory Hub</h2>
+            <p>Guides and resources to elevate your game</p>
         </div>
-        <div class="col-md-4 text-end">
-            {% if current_user.is_admin %}
-            <div class="btn-group">
-                <a href="{{ url_for('theory.add_section') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Section
-                </a>
-                <a href="{{ url_for('theory.add_topic') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-plus-circle"></i> Add Topic
-                </a>
-            </div>
-            {% endif %}
+        {% if current_user.is_admin %}
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('theory.add_section') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-folder-plus me-1"></i>Add Section
+            </a>
+            <a href="{{ url_for('theory.add_topic') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add Topic
+            </a>
         </div>
+        {% endif %}
     </div>
 
-    <!-- Hero Section -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="card bg-primary text-white">
-                <div class="card-body p-5 text-center">
-                    <h2 class="display-4 mb-3">Master Ultimate Frisbee</h2>
-                    <p class="lead">Comprehensive guides, videos, and techniques to elevate your game</p>
-                    <a href="#sections" class="btn btn-light btn-lg mt-3">Explore Topics</a>
+    <!-- Quick-access cards -->
+    <div class="row g-3 mb-5">
+        {% set quick = [
+            ('defense',         'bi-shield-fill',     'uc-blue',   'Defense',        'Defensive techniques and schemes'),
+            ('throwing',        'bi-disc-fill',       'uc-teal',   'Throwing',       'Throws, releases, and technique'),
+            ('cutting',         'bi-lightning-fill',  'uc-amber',  'Cutting',        'Effective cutting patterns and timing'),
+            ('handler-offense', 'bi-diagram-3-fill',  'uc-purple', 'Handler Offense','Handler movement and decision-making'),
+        ] %}
+        {% for slug, icon, color, label, desc in quick %}
+        <div class="col-sm-6 col-lg-3">
+            <a href="{{ url_for('theory.section', slug=slug) }}"
+               class="card text-decoration-none h-100" style="transition:box-shadow .2s,transform .2s"
+               onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='var(--uc-shadow-md)'"
+               onmouseout="this.style.transform='';this.style.boxShadow=''">
+                <div class="card-body text-center py-4">
+                    <div style="width:52px;height:52px;border-radius:14px;
+                                background:rgba(59,130,246,.1);display:inline-flex;
+                                align-items:center;justify-content:center;
+                                font-size:1.4rem;color:var(--{{ color }});margin-bottom:.875rem">
+                        <i class="bi {{ icon }}"></i>
+                    </div>
+                    <div style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800);margin-bottom:.3rem">{{ label }}</div>
+                    <div style="font-size:.8rem;color:var(--uc-gray-400)">{{ desc }}</div>
                 </div>
-            </div>
+            </a>
         </div>
+        {% endfor %}
     </div>
 
-
-    <!-- Quick Access Cards -->
-    <div class="row mb-5">
-        <div class="col-md-3">
-            <div class="card h-100 border-primary">
-                <div class="card-body text-center">
-                    <i class="bi bi-shield display-4 text-primary"></i>
-                    <h5 class="card-title mt-3">Defense</h5>
-                    <p class="card-text">Master defensive techniques and strategies</p>
-                    <a href="{{ url_for('theory.section', slug='defense') }}" class="btn btn-outline-primary">Learn Defense</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-success">
-                <div class="card-body text-center">
-                    <i class="bi bi-disc display-4 text-success"></i>
-                    <h5 class="card-title mt-3">Throwing</h5>
-                    <p class="card-text">Perfect your throws and techniques</p>
-                    <a href="{{ url_for('theory.section', slug='throwing') }}" class="btn btn-outline-success">Master Throws</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-info">
-                <div class="card-body text-center">
-                    <i class="bi bi-lightning display-4 text-info"></i>
-                    <h5 class="card-title mt-3">Cutting</h5>
-                    <p class="card-text">Learn effective cutting patterns</p>
-                    <a href="{{ url_for('theory.section', slug='cutting') }}" class="btn btn-outline-info">Study Cutting</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-warning">
-                <div class="card-body text-center">
-                    <i class="bi bi-diagram-3 display-4 text-warning"></i>
-                    <h5 class="card-title mt-3">Handler Offense</h5>
-                    <p class="card-text">Develop handler movement skills</p>
-                    <a href="{{ url_for('theory.section', slug='handler-offense') }}" class="btn btn-outline-warning">Handler Skills</a>
-                </div>
-            </div>
-        </div>
+    <!-- All sections -->
+    <div style="font-size:.82rem;color:var(--uc-gray-400);font-weight:700;
+                letter-spacing:.07em;text-transform:uppercase;margin-bottom:1rem" id="sections">
+        All Sections
     </div>
 
-    <!-- All Sections -->
-    <div class="row">
-        <div class="col-12">
-            <h2 class="mb-4">All Theory Sections</h2>
-        </div>
+    {% if sections %}
+    <div class="row g-3">
         {% for section in sections %}
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center bg-gradient">
-                    <h5 class="card-title mb-0">
-                        <a href="{{ url_for('theory.section', slug=section.slug) }}" 
-                           class="text-decoration-none">
-                            <i class="bi bi-book me-2"></i>{{ section.name }}
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body p-0">
+                    <!-- Header -->
+                    <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3"
+                         style="border-bottom:1px solid var(--uc-gray-100)">
+                        <a href="{{ url_for('theory.section', slug=section.slug) }}"
+                           class="text-decoration-none d-flex align-items-center gap-2">
+                            <div style="width:34px;height:34px;border-radius:9px;
+                                        background:rgba(99,102,241,.1);display:flex;
+                                        align-items:center;justify-content:center;
+                                        color:var(--uc-indigo);font-size:.9rem;flex-shrink:0">
+                                <i class="bi bi-book-fill"></i>
+                            </div>
+                            <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">{{ section.name }}</span>
                         </a>
-                    </h5>
-                    {% if section.topics.count() %}
-                    <span class="badge bg-primary">{{ section.topics.count() }} topics</span>
-                    {% endif %}
-                </div>
-                <div class="card-body">
+                        {% if section.topics.count() %}
+                        <span class="badge bg-secondary" style="font-size:.72rem">{{ section.topics.count() }} topic{{ 's' if section.topics.count() != 1 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Description -->
                     {% if section.description %}
-                    <p class="card-text">{{ section.description }}</p>
+                    <p class="px-4 pt-3 mb-0" style="font-size:.85rem;color:var(--uc-gray-600)">{{ section.description }}</p>
                     {% endif %}
-                    
+
+                    <!-- Topic list preview -->
                     {% if section.topics.count() %}
-                    <div class="list-group list-group-flush">
+                    <div class="px-4 py-3">
                         {% for topic in section.topics[:3] %}
-                        <a href="{{ url_for('theory.topic', topic_id=topic.id) }}" 
-                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-file-text text-primary me-2"></i>
+                        <a href="{{ url_for('theory.topic', topic_id=topic.id) }}"
+                           class="d-flex align-items-center justify-content-between py-2 text-decoration-none"
+                           style="border-bottom:1px solid var(--uc-gray-100);{% if loop.last %}border-bottom:none{% endif %}">
+                            <div class="d-flex align-items-center gap-2" style="font-size:.85rem;color:var(--uc-gray-800)">
+                                <i class="bi bi-file-text" style="color:var(--uc-blue);font-size:.8rem"></i>
                                 {{ topic.name }}
                             </div>
-                            <div>
+                            <div class="d-flex gap-1">
                                 {% if topic.related_videos %}
-                                <span class="badge bg-info rounded-pill me-1">
+                                <span class="badge" style="background:rgba(14,165,233,.15);color:var(--uc-sky);font-size:.68rem">
                                     <i class="bi bi-camera-video"></i> {{ topic.related_videos|length }}
                                 </span>
                                 {% endif %}
                                 {% if topic.image_url %}
-                                <span class="badge bg-success rounded-pill">
+                                <span class="badge" style="background:rgba(16,185,129,.12);color:var(--uc-green);font-size:.68rem">
                                     <i class="bi bi-image"></i>
                                 </span>
                                 {% endif %}
@@ -129,27 +112,30 @@
                         </a>
                         {% endfor %}
                         {% if section.topics.count() > 3 %}
-                        <a href="{{ url_for('theory.section', slug=section.slug) }}" 
-                           class="list-group-item list-group-item-action text-center text-primary">
-                            <i class="bi bi-arrow-right-circle"></i> View all {{ section.topics.count() }} topics...
+                        <a href="{{ url_for('theory.section', slug=section.slug) }}"
+                           class="d-block text-center mt-2"
+                           style="font-size:.8rem;color:var(--uc-blue);text-decoration:none;font-weight:600">
+                            <i class="bi bi-arrow-right me-1"></i>View all {{ section.topics.count() }} topics
                         </a>
                         {% endif %}
                     </div>
                     {% else %}
-                    <p class="text-muted">No topics yet.</p>
+                    <div class="px-4 py-3">
+                        <span style="font-size:.85rem;color:var(--uc-gray-400)">No topics yet.</span>
+                    </div>
                     {% endif %}
                 </div>
 
                 {% if current_user.is_admin %}
-                <div class="card-footer">
-                    <div class="btn-group w-100">
-                        <a href="{{ url_for('theory.edit_section', section_id=section.id) }}" 
+                <div class="card-footer" style="background:transparent;border-top:1px solid var(--uc-gray-100);padding:.65rem 1rem">
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('theory.edit_section', section_id=section.id) }}"
                            class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-pencil"></i> Edit
+                            <i class="bi bi-pencil me-1"></i>Edit
                         </a>
-                        <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" 
+                        <a href="{{ url_for('theory.add_topic', section_id=section.id) }}"
                            class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-plus"></i> Add Topic
+                            <i class="bi bi-plus-lg me-1"></i>Add Topic
                         </a>
                     </div>
                 </div>
@@ -158,21 +144,20 @@
         </div>
         {% endfor %}
     </div>
-</div>
+    {% else %}
+    <div class="card">
+        <div class="uc-empty">
+            <div class="uc-empty-icon"><i class="bi bi-mortarboard"></i></div>
+            <h5>No Theory Sections Yet</h5>
+            <p>Create sections and topics to build your team's learning hub.</p>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('theory.add_section') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add First Section
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
-<!-- Add some custom styles -->
-{% block styles %}
-{{ super() }}
-<style>
-    .card {
-        transition: transform 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    .display-4 {
-        font-size: 3rem;
-    }
-</style>
-{% endblock %}
+</div>
 {% endblock %}
