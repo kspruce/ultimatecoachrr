@@ -9,6 +9,8 @@ from sqlalchemy import or_
 
 logger = logging.getLogger(__name__)
 
+bp = Blueprint('team_organization', __name__, url_prefix='/teams')
+
 @bp.route('/')
 @login_required
 def index():
