@@ -13,7 +13,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-body">
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST">
                 {{ form.hidden_tag() }}
 
                 <div class="row g-4">
@@ -51,18 +51,22 @@
                         {% endfor %}
                     </div>
 
-                    <!-- Team Logo -->
+                    <!-- Team Logo URL -->
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Team Logo</label>
+                        {{ form.logo.label(class="form-label fw-semibold") }}
                         {% if team and team.logo %}
                         <div class="mb-2 d-flex align-items-center gap-2">
-                            <img src="{{ url_for('static', filename=team.logo) }}"
-                                 style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--uc-gray-200)">
-                            <small class="text-muted">Current logo — upload a new file to replace</small>
+                            <img src="{{ team.logo }}"
+                                 style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--uc-gray-200)"
+                                 onerror="this.style.display='none'">
+                            <small class="text-muted">Current logo — paste a new URL to replace, or clear to remove</small>
                         </div>
                         {% endif %}
-                        {{ form.logo(class="form-control") }}
-                        <small class="text-muted">PNG, JPG, SVG or WebP. Shown in the navbar.</small>
+                        {{ form.logo(class="form-control", placeholder="https://i.ibb.co/xxx/logo.png") }}
+                        <small class="text-muted">
+                            Paste a direct image URL (e.g. from <a href="https://imgbb.com" target="_blank">imgbb.com</a>).
+                            Shown in the navbar for all team members.
+                        </small>
                         {% for error in form.logo.errors %}
                             <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}

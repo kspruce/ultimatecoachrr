@@ -250,8 +250,10 @@
   {# ── Brand ─────────────────────────────────────────────── #}
   <a class="uc-brand me-1" href="{{ url_for('main.index') }}">
     {% if current_team and current_team.logo %}
-    <img src="{{ url_for('static', filename=current_team.logo) }}"
-         class="uc-brand-logo" alt="{{ current_team.name }}">
+    <img src="{{ current_team.logo }}"
+         class="uc-brand-logo" alt="{{ current_team.name }}"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="uc-brand-disc" style="display:none"><i class="bi bi-disc-fill"></i></div>
     {% else %}
     <div class="uc-brand-disc"><i class="bi bi-disc-fill"></i></div>
     {% endif %}
