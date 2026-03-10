@@ -123,13 +123,21 @@ def settings():
                 # Update Discord webhook settings
                 current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
                 
-                # Reinitialize Discord integration
-                from app.discord.config import init_discord
-                init_discord(current_app)
-                
+                # Update the live webhook object with the new URL.
+                # Do NOT call init_discord() here — it tries to register
+                # teardown_appcontext which Flask forbids after the first request.
+                from app.discord.webhooks import discord_webhook as _wh
+                _wh.webhook_url = current_app.config.get('DISCORD_WEBHOOK_URL', '')
+                if team_id:
+                    new_url = request.form.get('discord_webhook_url', '')
+                    if new_url:
+                        _wh.team_webhook_urls[team_id] = new_url
+                    elif team_id in _wh.team_webhook_urls:
+                        del _wh.team_webhook_urls[team_id]
+
                 flash('Discord settings updated successfully.', 'success')
                 return redirect(url_for('discord.settings'))
-                
+
         except sqlalchemy.exc.ProgrammingError as e:
             # Table doesn't exist yet
             logger.warning(f"TeamSettings table doesn't exist yet: {e}")
@@ -162,13 +170,13 @@ def settings():
                 # Update Discord webhook settings
                 current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
                 
-                # Reinitialize Discord integration
-                from app.discord.config import init_discord
-                init_discord(current_app)
-                
+                # Update the live webhook object with the new URL.
+                from app.discord.webhooks import discord_webhook as _wh
+                _wh.webhook_url = current_app.config.get('DISCORD_WEBHOOK_URL', '')
+
                 flash('Discord settings updated successfully.', 'success')
                 return redirect(url_for('discord.settings'))
-                
+
     except ImportError:
         # TeamSettings model doesn't exist yet, use app config
         logger.warning("TeamSettings model not found, using app config")
@@ -190,10 +198,10 @@ def settings():
             # Update Discord webhook settings
             current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
             
-            # Reinitialize Discord integration
-            from app.discord.config import init_discord
-            init_discord(current_app)
-            
+            # Update the live webhook object with the new URL.
+            from app.discord.webhooks import discord_webhook as _wh
+            _wh.webhook_url = current_app.config.get('DISCORD_WEBHOOK_URL', '')
+
             flash('Discord settings updated successfully.', 'success')
             return redirect(url_for('discord.settings'))
     
