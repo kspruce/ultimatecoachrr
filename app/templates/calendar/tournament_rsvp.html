@@ -89,7 +89,7 @@
             </div>
             <div class="col-md-4 text-md-end">
                 <a href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}" class="btn btn-secondary back-button">
-                    <i class="fas fa-arrow-left"></i> Back to Tournament
+                    <i class="bi bi-arrow-left"></i> Back to Tournament
                 </a>
             </div>
         </div>
@@ -99,19 +99,19 @@
         <div class="col-md-8 offset-md-2">
             <div class="card tournament-details">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Tournament Details</h5>
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Tournament Details</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="detail-item">
-                                <i class="fas fa-calendar-alt"></i>
+                                <i class="bi bi-calendar3"></i>
                                 <span><strong>Dates:</strong> {{ tournament.formatted_date_range }}</span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="detail-item">
-                                <i class="fas fa-map-marker-alt"></i>
+                                <i class="bi bi-geo-alt"></i>
                                 <span><strong>Location:</strong> {{ tournament.location or 'TBD' }}</span>
                             </div>
                         </div>
@@ -119,13 +119,13 @@
                     <div class="row mt-2">
                         <div class="col-md-6">
                             <div class="detail-item">
-                                <i class="fas fa-trophy"></i>
+                                <i class="bi bi-trophy"></i>
                                 <span><strong>Season:</strong> {{ tournament.season or 'N/A' }}</span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="detail-item">
-                                <i class="fas fa-users"></i>
+                                <i class="bi bi-people"></i>
                                 <span><strong>Attending:</strong> {{ tournament.attending_count }} players</span>
                             </div>
                         </div>
@@ -135,15 +135,15 @@
             
             <div class="card rsvp-card mt-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-reply"></i> Your RSVP</h5>
+                    <h5 class="mb-0"><i class="bi bi-reply"></i> Your RSVP</h5>
                 </div>
                 <div class="card-body">
                     {% if existing_rsvp %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
+                        <i class="bi bi-info-circle"></i> You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
                         {% if existing_rsvp.selected_by_admin %}
                         <div class="mt-2">
-                            <span class="badge bg-purple"><i class="fas fa-check-circle"></i> You have been selected by the admin to participate in this tournament.</span>
+                            <span class="badge bg-purple"><i class="bi bi-check-circle"></i> You have been selected by the admin to participate in this tournament.</span>
                         </div>
                         {% endif %}
                     </div>
@@ -164,7 +164,7 @@
                             {{ form.notes.label(class="form-label") }}
                             {{ form.notes(class="form-control", rows=3) }}
                             <div class="form-text">
-                                <i class="fas fa-info-circle"></i> Optional notes about your availability (e.g., can only attend certain days)
+                                <i class="bi bi-info-circle"></i> Optional notes about your availability (e.g., can only attend certain days)
                             </div>
                             {% for error in form.notes.errors %}
                             <div class="text-danger">{{ error }}</div>
@@ -184,6 +184,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -51,7 +51,7 @@
                 <a href="https://www.ultiplays.com/" class="btn btn-success" target="_blank">Ultiplays</a>  
                 {% if current_user.is_admin %}
                     <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add New Drill
+                        <i class="bi bi-plus-lg"></i> Add New Drill
                     </a>
                 {% endif %}
                 <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
@@ -101,7 +101,7 @@
                     </div>
                 {% else %}
                     <div class="drill-placeholder">
-                        <i class="fas fa-video fa-3x text-muted"></i>
+                        <i class="bi bi-camera-video fa-3x text-muted"></i>
                     </div>
                 {% endif %}
                 

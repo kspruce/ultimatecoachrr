@@ -22,7 +22,7 @@
         {% if current_user.is_authenticated and current_user.id == drill.created_by %}
         <div class="drill-actions">
             <a href="{{ url_for('drills.editor', drill_id=drill.id) }}" class="btn btn-primary">
-                <i class="fas fa-edit"></i> Edit Drill
+                <i class="bi bi-pencil"></i> Edit Drill
             </a>
         </div>
         {% endif %}
@@ -37,13 +37,13 @@
     <div class="viewer-controls">
         <div class="playback-controls">
             <button id="prev-frame" class="btn btn-sm btn-secondary">
-                <i class="fas fa-step-backward"></i>
+                <i class="bi bi-skip-backward"></i>
             </button>
             <button id="play-pause" class="btn btn-sm btn-primary">
-                <i class="fas fa-play"></i>
+                <i class="bi bi-play"></i>
             </button>
             <button id="next-frame" class="btn btn-sm btn-secondary">
-                <i class="fas fa-step-forward"></i>
+                <i class="bi bi-skip-forward"></i>
             </button>
         </div>
         

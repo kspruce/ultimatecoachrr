@@ -266,7 +266,7 @@
     <div class="row mb-3">
         <div class="col-12">
             <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Playbook
+                <i class="bi bi-arrow-left"></i> Back to Playbook
             </a>
         </div>
     </div>
@@ -285,11 +285,11 @@
                     {% if current_user.is_admin %}
                         <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
                            class="btn btn-light me-2">
-                            <i class="fas fa-edit"></i> Edit
+                            <i class="bi bi-pencil"></i> Edit
                         </a>
                         <button type="button" class="btn btn-outline-light"
                                 data-bs-toggle="modal" data-bs-target="#deleteConceptModal">
-                            <i class="fas fa-trash"></i> Delete
+                            <i class="bi bi-trash"></i> Delete
                         </button>
                     {% endif %}
                 </div>
@@ -304,7 +304,7 @@
             {% if formation.imgur_url %}
                 <div class="card content-section">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-image me-2"></i> Concept Diagram</h5>
+                        <h5 class="mb-0"><i class="bi bi-image me-2"></i> Concept Diagram</h5>
                     </div>
                     <div class="card-body text-center">
                         <div class="concept-image-container">
@@ -318,7 +318,7 @@
             {% if formation.ultiplay_embed %}
                 <div class="card content-section">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-film me-2"></i> Animation</h5>
+                        <h5 class="mb-0"><i class="bi bi-film me-2"></i> Animation</h5>
                     </div>
                     <div class="card-body">
                         {% if "ultiplays.com/embed/" in formation.ultiplay_embed %}
@@ -336,7 +336,7 @@
             <!-- Description with Markdown -->
             <div class="card description-card content-section">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Description</h5>
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i> Description</h5>
                 </div>
                 <div class="card-body">
                     <div class="markdown-content">
@@ -351,7 +351,7 @@
             <!-- Concept Details Card -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i> Concept Details</h5>
+                    <h5 class="mb-0"><i class="bi bi-clipboard2-check me-2"></i> Concept Details</h5>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
@@ -371,7 +371,7 @@
             {% if formation.plays %}
                 <div class="card related-plays">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-link me-2"></i> Plays Using This Concept</h5>
+                        <h5 class="mb-0"><i class="bi bi-link me-2"></i> Plays Using This Concept</h5>
                     </div>
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush">
@@ -392,18 +392,18 @@
             <!-- Quick Actions -->
             <div class="card mt-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i> Quick Actions</h5>
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge me-2"></i> Quick Actions</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         {% if current_user.is_admin %}
                             <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
                                class="btn btn-outline-primary">
-                                <i class="fas fa-edit me-2"></i> Edit Concept
+                                <i class="bi bi-pencil me-2"></i> Edit Concept
                             </a>
                             <a href="{{ url_for('playbook.add_play') }}" 
                                class="btn btn-outline-success">
-                                <i class="fas fa-plus me-2"></i> Create Play Using This Concept
+                                <i class="bi bi-plus-lg me-2"></i> Create Play Using This Concept
                             </a>
                         {% endif %}
                     </div>
@@ -426,7 +426,7 @@
                     <p>Are you sure you want to delete the team concept "{{ formation.name }}"?</p>
                     {% if formation.plays %}
                     <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <i class="bi bi-exclamation-triangle me-2"></i>
                         Warning: This concept is used in {{ formation.plays|length }} play(s).
                         Deleting it will remove it from these plays.
                     </div>
@@ -437,7 +437,7 @@
                     <form action="{{ url_for('playbook.delete_formation', formation_id=formation.id) }}" method="POST" class="d-inline">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash me-1"></i> Delete Concept
+                            <i class="bi bi-trash me-1"></i> Delete Concept
                         </button>
                     </form>
                 </div>

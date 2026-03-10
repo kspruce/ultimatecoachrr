@@ -1,53 +1,68 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Team Fitness Dashboard</h1>
-            <p class="text-muted">Track, compare, and improve athletic performance metrics</p>
+<div class="container py-4">
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>Fitness Dashboard</h2>
+            <p>Track, compare, and improve athletic performance metrics</p>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="d-flex gap-2">
             {% if current_user.is_admin %}
-                <a href="{{ url_for('fitness.manage_metrics') }}" class="btn btn-primary">
-                    <i class="bi bi-gear"></i> Manage Metrics
+                <a href="{{ url_for('fitness.manage_metrics') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-gear me-1"></i>Manage Metrics
                 </a>
             {% endif %}
-            <a href="{{ url_for('fitness.team_leaderboard') }}" class="btn btn-success">
-                <i class="bi bi-trophy"></i> Leaderboards
+            <a href="{{ url_for('fitness.team_leaderboard') }}" class="btn btn-primary">
+                <i class="bi bi-bar-chart-steps me-1"></i>Leaderboards
             </a>
         </div>
     </div>
 
     <!-- Fitness Categories Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 bg-light">
-                <div class="card-body text-center">
-                    <i class="bi bi-lightning-charge display-4 text-primary"></i>
-                    <h3 class="mt-3">Speed & Agility</h3>
-                    <p>Sprinting, acceleration, and change of direction metrics</p>
-                    <a href="#speed-section" class="btn btn-outline-primary">View Metrics</a>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center py-4">
+                    <div style="width:56px;height:56px;border-radius:16px;
+                                background:rgba(59,130,246,.12);display:inline-flex;
+                                align-items:center;justify-content:center;
+                                font-size:1.5rem;color:var(--uc-blue);margin-bottom:.875rem">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Speed & Agility</h5>
+                    <p class="text-muted" style="font-size:.875rem">Sprinting, acceleration, and change of direction metrics</p>
+                    <a href="#speed-section" class="btn btn-sm btn-outline-primary">View Metrics</a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 bg-light">
-                <div class="card-body text-center">
-                    <i class="bi bi-heart-pulse display-4 text-danger"></i>
-                    <h3 class="mt-3">Endurance</h3>
-                    <p>Stamina, recovery, and conditioning metrics</p>
-                    <a href="#endurance-section" class="btn btn-outline-danger">View Metrics</a>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center py-4">
+                    <div style="width:56px;height:56px;border-radius:16px;
+                                background:rgba(239,68,68,.1);display:inline-flex;
+                                align-items:center;justify-content:center;
+                                font-size:1.5rem;color:var(--uc-red);margin-bottom:.875rem">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Endurance</h5>
+                    <p class="text-muted" style="font-size:.875rem">Stamina, recovery, and conditioning metrics</p>
+                    <a href="#endurance-section" class="btn btn-sm btn-outline-danger">View Metrics</a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 bg-light">
-                <div class="card-body text-center">
-                    <i class="bi bi-arrow-up-circle display-4 text-success"></i>
-                    <h3 class="mt-3">Power & Skills</h3>
-                    <p>Jumping, throwing, and ultimate-specific metrics</p>
-                    <a href="#power-section" class="btn btn-outline-success">View Metrics</a>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center py-4">
+                    <div style="width:56px;height:56px;border-radius:16px;
+                                background:rgba(16,185,129,.1);display:inline-flex;
+                                align-items:center;justify-content:center;
+                                font-size:1.5rem;color:var(--uc-green);margin-bottom:.875rem">
+                        <i class="bi bi-arrow-up-circle-fill"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Power & Skills</h5>
+                    <p class="text-muted" style="font-size:.875rem">Jumping, throwing, and ultimate-specific metrics</p>
+                    <a href="#power-section" class="btn btn-sm btn-outline-success">View Metrics</a>
                 </div>
             </div>
         </div>
@@ -57,8 +72,8 @@
     <div id="speed-section" class="row mb-5">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4><i class="bi bi-lightning-charge"></i> Speed & Agility Metrics</h4>
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge-fill me-2" style="color:var(--uc-blue)"></i>Speed & Agility Metrics</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -103,8 +118,8 @@
     <div id="endurance-section" class="row mb-5">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h4><i class="bi bi-heart-pulse"></i> Endurance Metrics</h4>
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-heart-pulse-fill me-2" style="color:var(--uc-red)"></i>Endurance Metrics</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -149,8 +164,8 @@
     <div id="power-section" class="row mb-5">
         <div class="col-12">
             <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h4><i class="bi bi-arrow-up-circle"></i> Power & Skills Metrics</h4>
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-arrow-up-circle-fill me-2" style="color:var(--uc-green)"></i>Power & Skills Metrics</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -200,26 +215,35 @@
                 </div>
                 <div class="card-body">
                     {% if recent_records %}
-                        <div class="list-group">
+                        <div class="d-flex flex-column gap-2">
                             {% for record in recent_records %}
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">
-                                            <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}">
+                                <div class="d-flex align-items-center gap-3 p-3"
+                                     style="border:1px solid var(--uc-gray-100);border-radius:10px;background:var(--uc-gray-50)">
+                                    <div style="flex:1">
+                                        <div style="font-size:.875rem;font-weight:600">
+                                            <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}"
+                                               style="color:var(--uc-gray-800);text-decoration:none">
                                                 {{ record.player.name }}
                                             </a>
-                                            recorded {{ record.value }} {{ record.metric.unit }} for {{ record.metric.name }}
-                                        </h5>
-                                        <small>{{ record.date_recorded.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            <span style="font-weight:400;color:var(--uc-gray-600)">
+                                                — {{ record.value }} {{ record.metric.unit }} in {{ record.metric.name }}
+                                            </span>
+                                        </div>
+                                        {% if record.notes %}
+                                            <div style="font-size:.78rem;color:var(--uc-gray-400);margin-top:.2rem">{{ record.notes }}</div>
+                                        {% endif %}
                                     </div>
-                                    {% if record.notes %}
-                                        <p class="mb-1">{{ record.notes }}</p>
-                                    {% endif %}
+                                    <small class="text-muted" style="white-space:nowrap;font-size:.78rem">
+                                        {{ record.date_recorded.strftime('%Y-%m-%d') }}
+                                    </small>
                                 </div>
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-muted">No recent fitness activity recorded.</p>
+                        <div class="uc-empty" style="padding:2rem 1rem">
+                            <div class="uc-empty-icon"><i class="bi bi-heart-pulse"></i></div>
+                            <p>No recent fitness activity recorded yet.</p>
+                        </div>
                     {% endif %}
                 </div>
             </div>

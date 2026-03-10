@@ -1,13 +1,18 @@
 # app/forms/team_organization.py
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, TextAreaField, SubmitField, SelectField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms.validators import DataRequired, ValidationError, Optional
 from app.models.team_organization import TeamOrganization
 
 class TeamOrganizationForm(FlaskForm):
     name = StringField('Team Name', validators=[DataRequired()])
     slug = StringField('Slug', validators=[DataRequired()])
     description = TextAreaField('Description')
+    logo = FileField('Team Logo', validators=[
+        Optional(),
+        FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'], 'Images only!')
+    ])
     submit = SubmitField('Save')
     division = SelectField(
         "Division",

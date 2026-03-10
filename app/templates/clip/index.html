@@ -21,11 +21,11 @@
     }
     .tag-category-header {
         font-weight: 600;
-        color: #495057;
+        color: var(--uc-gray-600);
         margin-top: 1rem;
         margin-bottom: 0.5rem;
         padding-bottom: 0.25rem;
-        border-bottom: 2px solid #dee2e6;
+        border-bottom: 2px solid var(--uc-gray-200);
     }
     .tag-stat-item {
         display: flex;
@@ -38,7 +38,7 @@
         transition: background-color 0.2s;
     }
     .tag-stat-item:hover {
-        background-color: #f8f9fa;
+        background-color: var(--uc-gray-50);
     }
     .tag-stat-badge {
         font-size: 0.75rem;
@@ -49,29 +49,29 @@
         align-items: center;
         padding: 0.25rem 0.75rem;
         margin: 0.25rem;
-        background-color: #e3f2fd;
-        border: 1px solid #2196F3;
+        background-color: rgba(59,130,246,.1);
+        border: 1px solid rgba(59,130,246,.35);
         border-radius: 16px;
         font-size: 0.875rem;
     }
     .filter-chip .remove-filter {
         margin-left: 0.5rem;
         cursor: pointer;
-        color: #1976D2;
+        color: var(--uc-blue);
         font-weight: bold;
     }
     .clip-card-featured {
-        border: 2px solid #FFD700;
-        box-shadow: 0 4px 6px rgba(255, 215, 0, 0.3);
+        border: 2px solid var(--uc-amber) !important;
+        box-shadow: 0 4px 6px rgba(245,158,11,.25) !important;
     }
     .featured-badge {
         position: absolute;
         top: 10px;
         right: 10px;
-        background-color: #FFD700;
+        background-color: var(--uc-amber);
         color: #000;
         padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
+        border-radius: 6px;
         font-size: 0.75rem;
         font-weight: bold;
         z-index: 10;
@@ -108,33 +108,31 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>
-                <i class="bi bi-camera-video"></i> Clip Library
+<div class="container-fluid py-4">
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>
+                Clip Library
                 {% if clips|length > 0 %}
-                <span class="badge bg-secondary">{{ clips|length }}</span>
+                <span class="badge bg-secondary ms-1" style="font-size:.75rem;vertical-align:middle">{{ clips|length }}</span>
                 {% endif %}
-            </h1>
+            </h2>
+            <p>Video analysis and highlights</p>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Clip
-                    </a>
-                    <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-primary d-none d-sm-inline-block">
-                        <i class="bi bi-tags"></i> Manage Tags
-                    </a>
-                {% endif %}
-                <!-- Mobile toggle for Advanced Filters -->
-                <button class="btn btn-outline-secondary d-inline d-md-none" 
-                        data-bs-toggle="collapse" data-bs-target="#filterCollapse" 
-                        aria-expanded="false" aria-controls="filterCollapse">
-                    <i class="bi bi-funnel"></i> Filters
-                </button>
-            </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Add Clip
+                </a>
+                <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-secondary d-none d-sm-inline-flex">
+                    <i class="bi bi-tags me-1"></i>Manage Tags
+                </a>
+            {% endif %}
+            <button class="btn btn-outline-secondary d-inline-flex d-md-none"
+                    data-bs-toggle="collapse" data-bs-target="#filterCollapse"
+                    aria-expanded="false" aria-controls="filterCollapse">
+                <i class="bi bi-funnel me-1"></i>Filters
+            </button>
         </div>
     </div>
 

@@ -1,15 +1,34 @@
 # app/routes/team_organization.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, g
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, g, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.models.team_organization import TeamOrganization
 from app.forms.team_organization import TeamOrganizationForm
 import logging
+import os
+import uuid
+from werkzeug.utils import secure_filename
 from sqlalchemy import or_
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('team_organization', __name__, url_prefix='/teams')
+
+LOGO_UPLOAD_FOLDER = os.path.join('uploads', 'team_logos')
+ALLOWED_LOGO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'}
+
+def _save_logo(file_storage):
+    """Save an uploaded logo file and return the relative path for static serving."""
+    if not file_storage or not file_storage.filename:
+        return None
+    ext = file_storage.filename.rsplit('.', 1)[-1].lower()
+    if ext not in ALLOWED_LOGO_EXTENSIONS:
+        return None
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    upload_dir = os.path.join(current_app.static_folder, LOGO_UPLOAD_FOLDER)
+    os.makedirs(upload_dir, exist_ok=True)
+    file_storage.save(os.path.join(upload_dir, filename))
+    return f"{LOGO_UPLOAD_FOLDER}/{filename}"
 
 @bp.route('/')
 @login_required
@@ -30,11 +49,13 @@ def add():
     
     form = TeamOrganizationForm()
     if form.validate_on_submit():
+        logo_path = _save_logo(form.logo.data)
         team = TeamOrganization(
             name=form.name.data,
             slug=form.slug.data,
             description=form.description.data,
-            division=form.division.data
+            division=form.division.data,
+            logo=logo_path
         )
 
         db.session.add(team)
@@ -54,7 +75,22 @@ def edit(team_id):
     team = TeamOrganization.query.get_or_404(team_id)
     form = TeamOrganizationForm(obj=team, team_id=team_id)  # Pass team_id here
     if form.validate_on_submit():
-        form.populate_obj(team)
+        team.name = form.name.data
+        team.slug = form.slug.data
+        team.description = form.description.data
+        team.division = form.division.data
+        # Handle logo upload (only replace if a new file was provided)
+        new_logo = _save_logo(form.logo.data)
+        if new_logo:
+            # Delete old logo file if it exists
+            if team.logo:
+                old_path = os.path.join(current_app.static_folder, team.logo)
+                if os.path.exists(old_path):
+                    try:
+                        os.remove(old_path)
+                    except OSError:
+                        pass
+            team.logo = new_logo
         db.session.commit()
         flash(f'Team {team.name} has been updated!', 'success')
         return redirect(url_for('team_organization.index'))

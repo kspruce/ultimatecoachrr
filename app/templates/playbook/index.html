@@ -139,10 +139,10 @@
             <div class="mt-3">
                 {% if current_user.is_admin %}
                     <a href="{{ url_for('playbook.add_play') }}" class="btn btn-light mx-2">
-                        <i class="fas fa-plus"></i> Add Play
+                        <i class="bi bi-plus-lg"></i> Add Play
                     </a>
                     <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-light mx-2">
-                        <i class="fas fa-plus"></i> Add Team Concept
+                        <i class="bi bi-plus-lg"></i> Add Team Concept
                     </a>
                 {% endif %}
             </div>
@@ -183,7 +183,7 @@
             <div class="input-group">
                 <input type="text" class="form-control" id="playSearch" placeholder="Search plays and concepts...">
                 <button class="btn btn-outline-secondary" type="button">
-                    <i class="fas fa-search"></i>
+                    <i class="bi bi-search"></i>
                 </button>
             </div>
         </div>
@@ -237,7 +237,7 @@
                                 {% if formation.ultiplay_embed %}
                                 <button class="btn btn-sm btn-outline-secondary mt-2" type="button" 
                                         data-bs-toggle="collapse" data-bs-target="#conceptVideo{{ formation.id }}">
-                                    <i class="fas fa-play me-1"></i> View Animation
+                                    <i class="bi bi-play me-1"></i> View Animation
                                 </button>
                                 
                                 <div class="collapse mt-3" id="conceptVideo{{ formation.id }}">
@@ -257,16 +257,16 @@
                                 <div class="btn-group-vertical w-100">
                                     <a href="{{ url_for('playbook.view_formation', formation_id=formation.id) }}" 
                                        class="btn btn-sm btn-primary">
-                                        <i class="fas fa-eye me-1"></i> View Details
+                                        <i class="bi bi-eye me-1"></i> View Details
                                     </a>
                                     {% if current_user.is_admin %}
                                         <a href="{{ url_for('playbook.edit_formation', formation_id=formation.id) }}" 
                                            class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-edit me-1"></i> Edit
+                                            <i class="bi bi-pencil me-1"></i> Edit
                                         </a>
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-bs-toggle="modal" data-bs-target="#deleteFormationModal{{ formation.id }}">
-                                            <i class="fas fa-trash me-1"></i> Delete
+                                            <i class="bi bi-trash me-1"></i> Delete
                                         </button>
                                     {% endif %}
                                 </div>
@@ -310,7 +310,7 @@
                             <p>No team concepts added yet.</p>
                             {% if current_user.is_admin %}
                                 <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-primary mt-2">
-                                    <i class="fas fa-plus"></i> Add your first team concept
+                                    <i class="bi bi-plus-lg"></i> Add your first team concept
                                 </a>
                             {% endif %}
                         </div>
@@ -333,7 +333,7 @@
                                 {% endif %}
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
-                                    <i class="fas fa-chevron-down rotate-icon"></i>
+                                    <i class="bi bi-chevron-down rotate-icon"></i>
                                 </button>
                             </div>
                         </div>
@@ -366,16 +366,16 @@
                                 <div class="d-flex flex-wrap gap-2 mt-3">
                                     <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
                                        class="btn btn-sm btn-primary">
-                                        <i class="fas fa-eye me-1"></i> Full Details
+                                        <i class="bi bi-eye me-1"></i> Full Details
                                     </a>
                                     {% if current_user.is_admin %}
                                         <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
                                            class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-edit me-1"></i> Edit
+                                            <i class="bi bi-pencil me-1"></i> Edit
                                         </a>
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                            <i class="fas fa-trash me-1"></i> Delete
+                                            <i class="bi bi-trash me-1"></i> Delete
                                         </button>
                                     {% endif %}
                                 </div>
@@ -412,7 +412,7 @@
                         <p>No offensive plays added yet.</p>
                         {% if current_user.is_admin %}
                             <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary mt-2">
-                                <i class="fas fa-plus"></i> Add your first offensive play
+                                <i class="bi bi-plus-lg"></i> Add your first offensive play
                             </a>
                         {% endif %}
                     </div>
@@ -434,7 +434,7 @@
                                 {% endif %}
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" data-bs-target="#playDetails{{ play.id }}">
-                                    <i class="fas fa-chevron-down rotate-icon"></i>
+                                    <i class="bi bi-chevron-down rotate-icon"></i>
                                 </button>
                             </div>
                         </div>
@@ -467,16 +467,16 @@
                                 <div class="d-flex flex-wrap gap-2 mt-3">
                                     <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" 
                                        class="btn btn-sm btn-primary">
-                                        <i class="fas fa-eye me-1"></i> Full Details
+                                        <i class="bi bi-eye me-1"></i> Full Details
                                     </a>
                                     <a href="{{ url_for('playbook.edit_play', play_id=play.id) }}" 
                                        class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-edit me-1"></i> Edit
+                                        <i class="bi bi-pencil me-1"></i> Edit
                                     </a>
                                     {% if current_user.is_admin %}
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-bs-toggle="modal" data-bs-target="#deletePlayModal{{ play.id }}">
-                                            <i class="fas fa-trash me-1"></i> Delete
+                                            <i class="bi bi-trash me-1"></i> Delete
                                         </button>
                                     {% endif %}
                                 </div>
@@ -513,7 +513,7 @@
                         <p>No defensive plays added yet.</p>
                         {% if current_user.is_admin %}
                             <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary mt-2">
-                                <i class="fas fa-plus"></i> Add your first defensive play
+                                <i class="bi bi-plus-lg"></i> Add your first defensive play
                             </a>
                         {% endif %}
                     </div>

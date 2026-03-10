@@ -7,7 +7,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-body p-5">
                     <div class="text-center mb-4">
-                        <i class="fas fa-exclamation-triangle text-danger fa-4x mb-3"></i>
+                        <i class="bi bi-exclamation-triangle text-danger fa-4x mb-3"></i>
                         <h2 class="mb-3">Oops! Something went wrong</h2>
                         <div class="alert alert-danger">
                             {{ error_message }}
@@ -21,10 +21,10 @@
                         
                         <div class="d-flex justify-content-center gap-3">
                             <a href="{{ back_url or url_for('admin.index') }}" class="btn btn-primary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
                             </a>
                             <button onclick="window.location.reload()" class="btn btn-outline-secondary">
-                                <i class="fas fa-sync-alt me-2"></i>Try Again
+                                <i class="bi bi-arrow-repeat me-2"></i>Try Again
                             </button>
                         </div>
                     </div>

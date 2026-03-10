@@ -13,7 +13,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-body">
 
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
 
                 <div class="row g-4">
@@ -47,6 +47,23 @@
                             Determines stat tracking behaviour
                         </small>
                         {% for error in form.division.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Team Logo -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Team Logo</label>
+                        {% if team and team.logo %}
+                        <div class="mb-2 d-flex align-items-center gap-2">
+                            <img src="{{ url_for('static', filename=team.logo) }}"
+                                 style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--uc-gray-200)">
+                            <small class="text-muted">Current logo — upload a new file to replace</small>
+                        </div>
+                        {% endif %}
+                        {{ form.logo(class="form-control") }}
+                        <small class="text-muted">PNG, JPG, SVG or WebP. Shown in the navbar.</small>
+                        {% for error in form.logo.errors %}
                             <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}
                     </div>

@@ -168,7 +168,7 @@
             </div>
             <div class="col-md-4 text-md-end">
                 <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary back-button">
-                    <i class="fas fa-arrow-left"></i> Back to Session
+                    <i class="bi bi-arrow-left"></i> Back to Session
                 </a>
             </div>
         </div>
@@ -193,7 +193,7 @@
         <div class="col-md-4">
             <div class="card rsvp-list">
                 <div class="card-header attending-header">
-                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Attending ({{ attending|length }})</h5>
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Attending ({{ attending|length }})</h5>
                 </div>
                 <div class="card-body p-0">
                     {% if attending %}
@@ -226,7 +226,7 @@
                     </div>
                     {% else %}
                     <div class="empty-list">
-                        <i class="fas fa-info-circle"></i> No players have confirmed attendance yet.
+                        <i class="bi bi-info-circle"></i> No players have confirmed attendance yet.
                     </div>
                     {% endif %}
                 </div>
@@ -236,7 +236,7 @@
         <div class="col-md-4">
             <div class="card rsvp-list">
                 <div class="card-header maybe-header">
-                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Maybe ({{ maybe|length }})</h5>
+                    <h5 class="mb-0"><i class="bi bi-question-circle"></i> Maybe ({{ maybe|length }})</h5>
                 </div>
                 <div class="card-body p-0">
                     {% if maybe %}
@@ -269,7 +269,7 @@
                     </div>
                     {% else %}
                     <div class="empty-list">
-                        <i class="fas fa-info-circle"></i> No players have responded with "maybe" yet.
+                        <i class="bi bi-info-circle"></i> No players have responded with "maybe" yet.
                     </div>
                     {% endif %}
                 </div>
@@ -279,7 +279,7 @@
         <div class="col-md-4">
             <div class="card rsvp-list">
                 <div class="card-header not-attending-header">
-                    <h5 class="mb-0"><i class="fas fa-times-circle"></i> Not Attending ({{ not_attending|length }})</h5>
+                    <h5 class="mb-0"><i class="bi bi-x-circle"></i> Not Attending ({{ not_attending|length }})</h5>
                 </div>
                 <div class="card-body p-0">
                     {% if not_attending %}
@@ -312,7 +312,7 @@
                     </div>
                     {% else %}
                     <div class="empty-list">
-                        <i class="fas fa-info-circle"></i> No players have declined yet.
+                        <i class="bi bi-info-circle"></i> No players have declined yet.
                     </div>
                     {% endif %}
                 </div>
@@ -324,6 +324,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

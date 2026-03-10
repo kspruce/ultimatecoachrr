@@ -85,7 +85,7 @@
             </div>
             <div class="col-md-4 text-md-end">
                 <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary back-button">
-                    <i class="fas fa-arrow-left"></i> Back to Session
+                    <i class="bi bi-arrow-left"></i> Back to Session
                 </a>
             </div>
         </div>
@@ -95,25 +95,25 @@
         <div class="col-md-8 offset-md-2">
             <div class="card session-details">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Session Details</h5>
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Session Details</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="detail-item">
-                                <i class="fas fa-calendar-alt"></i>
+                                <i class="bi bi-calendar3"></i>
                                 <span><strong>Date:</strong> {{ session.formatted_date }}</span>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="detail-item">
-                                <i class="fas fa-clock"></i>
+                                <i class="bi bi-clock"></i>
                                 <span><strong>Time:</strong> {{ session.formatted_time }}</span>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="detail-item">
-                                <i class="fas fa-map-marker-alt"></i>
+                                <i class="bi bi-geo-alt"></i>
                                 <span><strong>Location:</strong> {{ session.location or 'TBD' }}</span>
                             </div>
                         </div>
@@ -121,14 +121,14 @@
                     
                     {% if session.focus_area %}
                     <div class="detail-item mt-2">
-                        <i class="fas fa-bullseye"></i>
+                        <i class="bi bi-bullseye"></i>
                         <span><strong>Focus Area:</strong> {{ session.focus_area }}</span>
                     </div>
                     {% endif %}
                     
                     {% if session.notes %}
                     <div class="detail-item mt-2">
-                        <i class="fas fa-sticky-note"></i>
+                        <i class="bi bi-sticky"></i>
                         <span><strong>Notes:</strong> {{ session.notes }}</span>
                     </div>
                     {% endif %}
@@ -137,12 +137,12 @@
             
             <div class="card rsvp-card mt-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-reply"></i> Your RSVP</h5>
+                    <h5 class="mb-0"><i class="bi bi-reply"></i> Your RSVP</h5>
                 </div>
                 <div class="card-body">
                     {% if existing_rsvp %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
+                        <i class="bi bi-info-circle"></i> You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
                     </div>
                     {% endif %}
                     
@@ -161,7 +161,7 @@
                             {{ form.notes.label(class="form-label") }}
                             {{ form.notes(class="form-control", rows=3) }}
                             <div class="form-text">
-                                <i class="fas fa-info-circle"></i> Optional notes about your attendance (e.g., arriving late, leaving early)
+                                <i class="bi bi-info-circle"></i> Optional notes about your attendance (e.g., arriving late, leaving early)
                             </div>
                             {% for error in form.notes.errors %}
                             <div class="text-danger">{{ error }}</div>
@@ -181,6 +181,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 {% endblock %}
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

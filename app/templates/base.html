@@ -138,6 +138,94 @@
     .uc-nav-right {
       display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
     }
+
+    /* ─── Team logo in brand ──────────────────────────────────── */
+    .uc-brand-logo {
+      width: 30px; height: 30px; border-radius: 8px;
+      object-fit: cover; flex-shrink: 0;
+    }
+
+    /* ─── Global page structure ───────────────────────────────── */
+    body { background: var(--uc-gray-50); color: var(--uc-gray-800); }
+
+    /* ─── Page header utility ─────────────────────────────────── */
+    .uc-page-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem; margin-bottom: 1.75rem;
+    }
+    .uc-page-header h1, .uc-page-header h2 {
+      font-weight: 700; letter-spacing: -.025em;
+      font-size: 1.45rem; margin-bottom: .2rem; color: var(--uc-gray-800);
+    }
+    .uc-page-header p { color: var(--uc-gray-400); font-size: .875rem; margin: 0; }
+
+    /* ─── Card auto-styling ───────────────────────────────────── */
+    .card {
+      border: 1px solid var(--uc-gray-200) !important;
+      border-radius: var(--uc-radius) !important;
+      box-shadow: var(--uc-shadow-sm) !important;
+    }
+    .card-header {
+      background: transparent !important;
+      border-bottom: 1px solid var(--uc-gray-200) !important;
+      font-weight: 600; padding: .875rem 1.25rem !important;
+    }
+    .card-header h5, .card-header h6 { margin: 0; font-weight: 600; }
+
+    /* ─── Table auto-styling ──────────────────────────────────── */
+    .table { vertical-align: middle; }
+    .table thead th {
+      font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--uc-gray-400);
+      background: var(--uc-gray-50); border-bottom: 1px solid var(--uc-gray-200);
+      padding: .65rem 1rem;
+    }
+    .table td { padding: .75rem 1rem; border-color: var(--uc-gray-100); }
+    .table-hover tbody tr:hover td { background: rgba(59,130,246,.04); }
+
+    /* ─── Form controls ───────────────────────────────────────── */
+    .form-control, .form-select {
+      border-radius: 9px !important;
+      border: 1px solid var(--uc-gray-200) !important;
+      font-size: .9rem; color: var(--uc-gray-800);
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--uc-blue) !important;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.12) !important;
+    }
+    .form-label { font-weight: 600; font-size: .82rem; color: var(--uc-gray-600); margin-bottom: .35rem; }
+
+    /* ─── Button consistency ──────────────────────────────────── */
+    .btn { border-radius: 9px !important; font-weight: 500; font-size: .875rem; }
+    .btn-primary { background: var(--uc-blue); border-color: var(--uc-blue); }
+    .btn-primary:hover { background: #2563EB; border-color: #2563EB; }
+
+    /* ─── Badge consistency ───────────────────────────────────── */
+    .badge { font-weight: 600; border-radius: 6px; }
+
+    /* ─── Alert styling ───────────────────────────────────────── */
+    .alert { border-radius: var(--uc-radius); border: none; font-size: .875rem; }
+
+    /* ─── Footer ──────────────────────────────────────────────── */
+    .footer {
+      background: transparent !important;
+      border-top: 1px solid var(--uc-gray-200);
+      color: var(--uc-gray-400); font-size: .8rem;
+    }
+
+    /* ─── Empty state helper ──────────────────────────────────── */
+    .uc-empty {
+      text-align: center; padding: 3.5rem 1rem;
+    }
+    .uc-empty-icon {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: var(--uc-gray-100); display: inline-flex;
+      align-items: center; justify-content: center;
+      font-size: 1.75rem; color: var(--uc-gray-400);
+      margin-bottom: 1rem;
+    }
+    .uc-empty h5 { font-weight: 700; color: var(--uc-gray-800); margin-bottom: .4rem; }
+    .uc-empty p { color: var(--uc-gray-400); font-size: .875rem; margin-bottom: 1.25rem; }
     </style>
 
     {% block styles %}{% endblock %}
@@ -161,7 +249,12 @@
 
   {# ── Brand ─────────────────────────────────────────────── #}
   <a class="uc-brand me-1" href="{{ url_for('main.index') }}">
+    {% if current_team and current_team.logo %}
+    <img src="{{ url_for('static', filename=current_team.logo) }}"
+         class="uc-brand-logo" alt="{{ current_team.name }}">
+    {% else %}
     <div class="uc-brand-disc"><i class="bi bi-disc-fill"></i></div>
+    {% endif %}
     <span class="uc-brand-name">{{ current_team.name if current_team else "Ultimate Coach" }}</span>
   </a>
 
