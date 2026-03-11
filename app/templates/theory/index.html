@@ -24,13 +24,14 @@
 
     <!-- Quick-access cards -->
     <div class="row g-3 mb-5">
+        {# slug / icon / CSS-var colour / bg rgba / label / description #}
         {% set quick = [
-            ('defense',         'bi-shield-fill',     'uc-blue',   'Defense',        'Defensive techniques and schemes'),
-            ('throwing',        'bi-disc-fill',       'uc-teal',   'Throwing',       'Throws, releases, and technique'),
-            ('cutting',         'bi-lightning-fill',  'uc-amber',  'Cutting',        'Effective cutting patterns and timing'),
-            ('handler-offense', 'bi-diagram-3-fill',  'uc-purple', 'Handler Offense','Handler movement and decision-making'),
+            ('defense',         'bi-shield-fill',     'uc-blue',   'rgba(59,130,246,.1)',  'Defense',        'Defensive techniques and schemes'),
+            ('throwing',        'bi-disc-fill',       'uc-teal',   'rgba(20,184,166,.1)',  'Throwing',       'Throws, releases, and technique'),
+            ('cutting',         'bi-lightning-fill',  'uc-amber',  'rgba(245,158,11,.1)',  'Cutting',        'Effective cutting patterns and timing'),
+            ('handler-offense', 'bi-diagram-3-fill',  'uc-purple', 'rgba(139,92,246,.1)',  'Handler Offense','Handler movement and decision-making'),
         ] %}
-        {% for slug, icon, color, label, desc in quick %}
+        {% for slug, icon, color, bg, label, desc in quick %}
         <div class="col-sm-6 col-lg-3">
             <a href="{{ url_for('theory.section', slug=slug) }}"
                class="card text-decoration-none h-100" style="transition:box-shadow .2s,transform .2s"
@@ -38,7 +39,7 @@
                onmouseout="this.style.transform='';this.style.boxShadow=''">
                 <div class="card-body text-center py-4">
                     <div style="width:52px;height:52px;border-radius:14px;
-                                background:rgba(59,130,246,.1);display:inline-flex;
+                                background:{{ bg }};display:inline-flex;
                                 align-items:center;justify-content:center;
                                 font-size:1.4rem;color:var(--{{ color }});margin-bottom:.875rem">
                         <i class="bi {{ icon }}"></i>

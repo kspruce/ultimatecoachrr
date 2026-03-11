@@ -1,157 +1,303 @@
 {# templates/theory/topic_form.html #}
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    /* Live markdown preview mirrors topic-content styles */
+    #content-preview h2 {
+        font-size:1.1rem; font-weight:700; color:var(--uc-gray-800);
+        border-bottom:1px solid var(--uc-gray-200); padding-bottom:.4rem;
+        margin-top:1.5rem; margin-bottom:.75rem;
+    }
+    #content-preview h3 {
+        font-size:.95rem; font-weight:700; color:var(--uc-blue);
+        margin-top:1.25rem; margin-bottom:.5rem;
+    }
+    #content-preview p  { font-size:.875rem; line-height:1.7; color:var(--uc-gray-700); }
+    #content-preview ul,
+    #content-preview ol { padding-left:1.2rem; margin-bottom:.75rem; }
+    #content-preview li { font-size:.875rem; margin-bottom:.25rem; }
+    #content-preview blockquote {
+        border-left:3px solid var(--uc-blue); padding:.6rem 1rem;
+        background:rgba(59,130,246,.05); border-radius:0 8px 8px 0;
+        margin:1rem 0; color:var(--uc-gray-600); font-style:italic;
+    }
+    #content-preview code {
+        background:var(--uc-gray-100); padding:.1rem .35rem;
+        border-radius:5px; font-size:.82em;
+    }
+    #content-preview img {
+        max-width:100%; border-radius:var(--uc-radius);
+        box-shadow:var(--uc-shadow-sm); margin:.75rem 0;
+    }
+    /* Editor toolbar */
+    .md-toolbar { display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:.5rem; }
+    .md-toolbar button {
+        background:var(--uc-gray-50); border:1px solid var(--uc-gray-200);
+        border-radius:6px; padding:.25rem .55rem; font-size:.78rem;
+        font-family:monospace; color:var(--uc-gray-700); cursor:pointer;
+        transition:background .12s, border-color .12s;
+    }
+    .md-toolbar button:hover { background:var(--uc-gray-100); border-color:var(--uc-gray-300); }
+    /* Tab switcher */
+    .editor-tabs { display:flex; border-bottom:1px solid var(--uc-gray-200); margin-bottom:0; }
+    .editor-tab {
+        padding:.45rem 1rem; font-size:.82rem; font-weight:600;
+        color:var(--uc-gray-500); cursor:pointer; border-bottom:2px solid transparent;
+        margin-bottom:-1px; transition:color .15s, border-color .15s;
+    }
+    .editor-tab.active { color:var(--uc-blue); border-bottom-color:var(--uc-blue); }
+    /* Sticky sidebar on desktop */
+    @media (min-width:992px) {
+        .form-sidebar { position:sticky; top:1.5rem; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('theory.index') }}">Theory</a>
-                    </li>
-                    <li class="breadcrumb-item active">
-                        {% if topic %}Edit Topic{% else %}New Topic{% endif %}
-                    </li>
-                </ol>
-            </nav>
-            <h1>{{ title }}</h1>
+<div class="container py-4">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb" style="font-size:.82rem">
+            <li class="breadcrumb-item"><a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a></li>
+            {% if topic and topic.section %}
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" style="color:var(--uc-blue)">{{ topic.section.name }}</a>
+            </li>
+            {% endif %}
+            <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">
+                {% if topic %}Edit Topic{% else %}New Topic{% endif %}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page header -->
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>{{ title }}</h2>
+            <p>{% if topic %}Update the details for this topic.{% else %}Add a new topic to the Theory Hub.{% endif %}</p>
         </div>
+        <a href="{{ url_for('theory.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Cancel
+        </a>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        {{ form.hidden_tag() }}
-                        
-                        <!-- Topic Name -->
+    <div class="row g-4">
+
+        <!-- ── Main form ───────────────────────────────── -->
+        <div class="col-lg-8">
+            <form method="POST" id="topic-form">
+                {{ form.hidden_tag() }}
+
+                <!-- Name -->
+                <div class="card mb-3">
+                    <div class="card-body">
                         <div class="mb-3">
-                            {{ form.name.label(class="form-label") }}
+                            {{ form.name.label(class="form-label fw-semibold") }}
                             {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
-                                       placeholder="Enter topic name") }}
+                                        placeholder="e.g., Zone Defence Fundamentals") }}
                             {% for error in form.name.errors %}
                             <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                         </div>
-
-                        <!-- Section Selection -->
-                        <div class="mb-3">
-                            {{ form.section_id.label(class="form-label") }}
+                        <div class="mb-0">
+                            {{ form.section_id.label(class="form-label fw-semibold") }}
                             {{ form.section_id(class="form-select select2-single" + (" is-invalid" if form.section_id.errors else "")) }}
                             {% for error in form.section_id.errors %}
                             <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Image Upload -->
+                <!-- Hero image -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <label class="form-label fw-semibold">Hero Image <span class="text-muted fw-normal">(optional)</span></label>
+
+                        {% if topic and topic.image_url %}
                         <div class="mb-3">
-                            {{ form.image_url.label(class="form-label") }}
-                            {% if topic and topic.image_url %}
-                            <div class="current-image mb-2">
-                                <img src="{{ topic.image_url }}" 
-                                     alt="Current image" 
-                                     class="img-fluid mb-2" 
-                                     style="max-height: 200px;">
-                                <p class="text-muted">Enter a new URL to replace the current image</p>
-                            </div>
-                            {% endif %}
-                            {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else ""), 
-                                             placeholder="https://i.imgur.com/example.jpg") }}
-                            {% for error in form.image_url.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
-                            <small class="form-text text-muted">
-                                Paste the direct link to your Imgur image (should start with https://i.imgur.com/)
-                            </small>
-                            <div id="image-preview" class="mt-2" style="display: none;">
-                                <h6>Preview:</h6>
-                                <img src="" alt="Preview" class="img-fluid" style="max-height: 200px;">
+                            <img src="{{ topic.image_url }}" alt="Current image"
+                                 style="max-height:180px;border-radius:var(--uc-radius);box-shadow:var(--uc-shadow-sm)">
+                            <p class="text-muted mt-1 mb-0" style="font-size:.8rem">Paste a new URL below to replace this image.</p>
+                        </div>
+                        {% endif %}
+
+                        {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else ""),
+                                         id="image_url_input",
+                                         placeholder="https://i.ibb.co/xxxxxxxx/image.jpg") }}
+                        {% for error in form.image_url.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <small class="text-muted">Paste a direct image URL — recommended host: <a href="https://imgbb.com" target="_blank">imgbb.com</a></small>
+
+                        <!-- Live image preview -->
+                        <div id="img-preview-wrap" class="mt-3" style="display:none">
+                            <img id="img-preview" src="" alt="Preview"
+                                 style="max-height:200px;border-radius:var(--uc-radius);box-shadow:var(--uc-shadow-sm)">
+                            <div id="img-error" class="alert alert-warning mt-2 mb-0 py-2" style="display:none;font-size:.85rem">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Could not load image — make sure it's a direct image link (not a page link).
                             </div>
                         </div>
 
-                        <div class="card mt-3">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">How to Use Imgur for Images</h5>
+                        <!-- imgbb guide -->
+                        <div class="mt-3 p-3" style="background:var(--uc-gray-50);border-radius:10px;border:1px solid var(--uc-gray-200)">
+                            <div style="font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--uc-gray-400);margin-bottom:.6rem">
+                                <i class="bi bi-image me-1"></i>How to add an image via imgbb
                             </div>
-                            <div class="card-body">
-                                <ol>
-                                    <li>Go to <a href="https://imgur.com/upload" target="_blank">Imgur.com/upload</a></li>
-                                    <li>Upload your image by dragging and dropping or clicking "Choose Photo/Video"</li>
-                                    <li>Once uploaded, right-click on the image and select "Copy image address"</li>
-                                    <li>Paste the copied URL into the Image URL field above</li>
-                                    <li>The URL should look like: <code>https://i.imgur.com/abcXYZ.jpg</code></li>
-                                </ol>
-                                <div class="alert alert-info">
-                                    <strong>Note:</strong> You don't need an Imgur account to upload images, but creating one allows you to manage your uploads.
+                            <ol style="font-size:.83rem;color:var(--uc-gray-600);padding-left:1.1rem;margin:0">
+                                <li class="mb-1">Go to <a href="https://imgbb.com" target="_blank" style="color:var(--uc-blue)">imgbb.com</a> and upload your image</li>
+                                <li class="mb-1">After uploading, click the image to open it</li>
+                                <li class="mb-1">Under "Direct links", copy the <strong>Direct link</strong> (starts with <code>https://i.ibb.co/</code>)</li>
+                                <li>Paste it in the field above — a preview will appear</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content editor -->
+                <div class="card mb-3">
+                    <div class="card-body pb-0">
+                        <label class="form-label fw-semibold mb-2">Content</label>
+
+                        <!-- Tab switcher -->
+                        <div class="editor-tabs mb-0" id="editor-tabs">
+                            <div class="editor-tab active" data-tab="write" onclick="switchTab('write')">Write</div>
+                            <div class="editor-tab" data-tab="preview" onclick="switchTab('preview')">Preview</div>
+                        </div>
+                    </div>
+
+                    <!-- Write pane -->
+                    <div id="write-pane" class="card-body pt-3">
+                        <!-- Toolbar -->
+                        <div class="md-toolbar">
+                            <button type="button" onclick="insertMd('**','**')" title="Bold"><b>B</b></button>
+                            <button type="button" onclick="insertMd('*','*')" title="Italic"><i>I</i></button>
+                            <button type="button" onclick="insertMd('## ','')" title="Heading">H2</button>
+                            <button type="button" onclick="insertMd('### ','')" title="Subheading">H3</button>
+                            <button type="button" onclick="insertMd('\n- ','')" title="Bullet list">• List</button>
+                            <button type="button" onclick="insertMd('\n> ','')" title="Blockquote">" Quote</button>
+                            <button type="button" onclick="insertMd('`','`')" title="Inline code">` Code</button>
+                            <button type="button" onclick="insertMd('[','](url)')" title="Link">🔗 Link</button>
+                            <button type="button" onclick="insertMd('![alt](',')') " title="Inline image">🖼 Img</button>
+                        </div>
+                        {{ form.content(class="form-control font-monospace" + (" is-invalid" if form.content.errors else ""),
+                                        id="content_textarea",
+                                        rows="16",
+                                        placeholder="Write your topic content here using Markdown…",
+                                        style="font-size:.875rem;resize:vertical") }}
+                        {% for error in form.content.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Preview pane -->
+                    <div id="preview-pane" class="card-body pt-3" style="display:none;min-height:300px">
+                        <div id="content-preview" style="font-size:.9rem"></div>
+                        <div id="preview-empty" class="text-muted" style="font-size:.85rem">Nothing to preview yet — start writing.</div>
+                    </div>
+                </div>
+
+                <!-- Order -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        {{ form.order.label(class="form-label fw-semibold") }}
+                        {{ form.order(class="form-control" + (" is-invalid" if form.order.errors else ""),
+                                      type="number", placeholder="Display order — lower numbers appear first",
+                                      style="max-width:220px") }}
+                        {% for error in form.order.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>
+                        {% if topic %}Save Changes{% else %}Create Topic{% endif %}
+                    </button>
+                    <a href="{{ url_for('theory.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- ── Sidebar ─────────────────────────────────── -->
+        <div class="col-lg-4">
+            <div class="form-sidebar">
+
+                <!-- Markdown reference -->
+                <div class="card mb-3">
+                    <div class="card-body p-0">
+                        <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                                Markdown Reference
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <table style="font-size:.82rem;width:100%;border-collapse:collapse">
+                                {% set ref = [
+                                    ('# Heading 1','Large heading'),
+                                    ('## Heading 2','Section heading'),
+                                    ('**bold**','Bold text'),
+                                    ('*italic*','Italic text'),
+                                    ('- item','Bullet point'),
+                                    ('1. item','Numbered list'),
+                                    ('> text','Blockquote'),
+                                    ('`code`','Inline code'),
+                                    ('[text](url)','Hyperlink'),
+                                    ('![alt](url)','Inline image'),
+                                ] %}
+                                {% for md, desc in ref %}
+                                <tr style="border-bottom:1px solid var(--uc-gray-100)">
+                                    <td class="py-1 pe-3"><code style="font-size:.78rem;background:var(--uc-gray-100);padding:.1rem .3rem;border-radius:4px">{{ md }}</code></td>
+                                    <td class="py-1" style="color:var(--uc-gray-500)">{{ desc }}</td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                                Writing Tips
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            {% set tips = [
+                                ('bi-lightbulb','uc-amber','Keep it focused','One topic per page works best — link to related topics rather than covering everything here.'),
+                                ('bi-diagram-3','uc-blue','Use headings','Break long content into H2/H3 sections — a table of contents is generated automatically.'),
+                                ('bi-image','uc-green','Add images','Diagrams and screenshots help players visualise concepts. Upload to imgbb and paste the Direct link.'),
+                                ('bi-camera-video','uc-sky','Link videos','Add related videos via the Videos section after creating the topic.'),
+                            ] %}
+                            {% for icon, color, heading, body in tips %}
+                            <div class="d-flex gap-3 {% if not loop.last %}mb-3 pb-3{% endif %}" {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
+                                <div style="width:32px;height:32px;flex-shrink:0;border-radius:8px;
+                                            background:rgba(59,130,246,.08);display:flex;
+                                            align-items:center;justify-content:center;
+                                            color:var(--{{ color }});font-size:.85rem">
+                                    <i class="bi {{ icon }}"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size:.82rem;font-weight:700;color:var(--uc-gray-700);margin-bottom:.2rem">{{ heading }}</div>
+                                    <div style="font-size:.78rem;color:var(--uc-gray-400);line-height:1.5">{{ body }}</div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Content -->
-                        <div class="mb-3">
-                            {{ form.content.label(class="form-label") }}
-                            {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""),
-                                          rows="15",
-                                          placeholder="Enter topic content (supports Markdown)") }}
-                            {% for error in form.content.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
                         </div>
-
-                        <!-- Order -->
-                        <div class="mb-3">
-                            {{ form.order.label(class="form-label") }}
-                            {{ form.order(class="form-control" + (" is-invalid" if form.order.errors else ""),
-                                        type="number",
-                                        placeholder="Display order (optional)") }}
-                            {% for error in form.order.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Submit Buttons -->
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary">
-                                {% if topic %}Update Topic{% else %}Create Topic{% endif %}
-                            </button>
-                            <a href="{{ url_for('theory.index') }}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
+
             </div>
         </div>
 
-        <!-- Preview Panel -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Content Preview</h5>
-                </div>
-                <div class="card-body">
-                    <div id="content-preview"></div>
-                </div>
-            </div>
-
-            <!-- Markdown Help -->
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Markdown Guide</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><code># Heading 1</code></li>
-                        <li class="mb-2"><code>## Heading 2</code></li>
-                        <li class="mb-2"><code>**bold text**</code></li>
-                        <li class="mb-2"><code>*italic text*</code></li>
-                        <li class="mb-2"><code>- bullet point</code></li>
-                        <li class="mb-2"><code>[link text](URL)</code></li>
-                        <li class="mb-2"><code>![image alt text](URL)</code></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
@@ -160,66 +306,88 @@
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Select2
-    $('.select2-single').select2({
-        theme: 'bootstrap-5',
-        width: '100%'
-    });
+/* ── Tab switcher ───────────────────────────── */
+function switchTab(tab) {
+    document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    const writePaneEl  = document.getElementById('write-pane');
+    const previewPaneEl = document.getElementById('preview-pane');
+    if (tab === 'preview') {
+        writePaneEl.style.display = 'none';
+        previewPaneEl.style.display = 'block';
+        renderPreview();
+    } else {
+        writePaneEl.style.display = 'block';
+        previewPaneEl.style.display = 'none';
+    }
+}
 
-    // Content preview
-    const contentInput = document.getElementById('content');
-    const previewDiv = document.getElementById('content-preview');
+function renderPreview() {
+    const val = document.getElementById('content_textarea').value.trim();
+    const preview = document.getElementById('content-preview');
+    const empty   = document.getElementById('preview-empty');
+    if (val) {
+        preview.innerHTML = marked.parse(val);
+        preview.style.display = 'block';
+        empty.style.display   = 'none';
+    } else {
+        preview.style.display = 'none';
+        empty.style.display   = 'block';
+    }
+}
+
+/* ── Markdown toolbar helpers ───────────────── */
+function insertMd(before, after) {
+    const ta = document.getElementById('content_textarea');
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const selected = ta.value.substring(start, end);
+    const replacement = before + selected + after;
+    ta.setRangeText(replacement, start, end, 'select');
+    ta.focus();
+    // Move caret sensibly when after is a URL placeholder
+    if (after === '](url)') {
+        ta.setSelectionRange(start + before.length + selected.length + 2,
+                             start + before.length + selected.length + 5);
+    }
+}
+
+/* ── Image URL live preview ─────────────────── */
+(function () {
+    const input   = document.getElementById('image_url_input');
+    const wrap    = document.getElementById('img-preview-wrap');
+    const img     = document.getElementById('img-preview');
+    const errDiv  = document.getElementById('img-error');
 
     function updatePreview() {
-        const content = contentInput.value;
-        previewDiv.innerHTML = marked.parse(content);
-        // Add this line to ensure links open in new tabs
-        previewDiv.querySelectorAll('a').forEach(link => {
-            link.setAttribute('target', '_blank');
-        });
+        const url = input.value.trim();
+        if (!url) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'block';
+        errDiv.style.display = 'none';
+        img.style.display = 'block';
+        img.src = url;
     }
 
-    contentInput.addEventListener('input', updatePreview);
-    updatePreview();
-
-    // Image URL preview
-    const imageUrlInput = document.getElementById('image_url');
-    const previewContainer = document.getElementById('image-preview');
-    const previewImg = previewContainer.querySelector('img');
-    
-    imageUrlInput.addEventListener('input', function() {
-        if (this.value) {
-            // Check if it's likely an Imgur URL
-            if (this.value.includes('imgur.com')) {
-                // Make sure we're using the direct image URL (i.imgur.com)
-                if (!this.value.includes('i.imgur.com')) {
-                    previewContainer.innerHTML = '<div class="alert alert-warning">This appears to be an Imgur page link, not a direct image URL. Right-click on the image and select "Copy image address" to get the direct URL (should start with https://i.imgur.com/)</div>';
-                    previewContainer.style.display = 'block';
-                    return;
-                }
-            }
-            
-            previewImg.src = this.value;
-            previewContainer.style.display = 'block';
-            
-            // Handle image load error
-            previewImg.onerror = function() {
-                previewContainer.innerHTML = '<div class="alert alert-warning">Unable to load image from this URL. Make sure it\'s a direct image link (e.g., https://i.imgur.com/abcXYZ.jpg)</div>';
-            };
-            
-            // Reset error handler when image loads successfully
-            previewImg.onload = function() {
-                if (previewContainer.querySelector('.alert')) {
-                    previewContainer.innerHTML = '<h6>Preview:</h6><img src="' + imageUrlInput.value + '" alt="Preview" class="img-fluid" style="max-height: 200px;">';
-                    previewImg = previewContainer.querySelector('img');
-                }
-            };
-        } else {
-            previewContainer.style.display = 'none';
+    if (input) {
+        input.addEventListener('input', updatePreview);
+        if (img) {
+            img.addEventListener('error', function () {
+                img.style.display = 'none';
+                errDiv.style.display = 'block';
+            });
+            img.addEventListener('load', function () {
+                img.style.display = 'block';
+                errDiv.style.display = 'none';
+            });
         }
-    });
+        // Show preview for existing value on page load
+        if (input.value) updatePreview();
+    }
+})();
+
+/* ── Select2 ────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('.select2-single').select2({ theme: 'bootstrap-5', width: '100%' });
+    }
 });
 </script>
-
 {% endblock %}
