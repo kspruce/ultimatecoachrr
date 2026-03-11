@@ -72,6 +72,7 @@
         border: 2px solid #333;
         margin-bottom: 20px;
         overflow: hidden;
+        isolation: isolate; /* contain child z-indices; prevents bleeding over footer */
     }
     
     .field-container svg {
