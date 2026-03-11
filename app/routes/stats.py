@@ -1368,7 +1368,8 @@ def player_stats(player_id):
         stats['assists_per_point'] = stats['assists'] / stats['points_played']
         stats['throws_per_point'] = stats['throws'] / stats['points_played']
         stats['hucks_per_point'] = stats.get('hucks', 0) / stats['points_played']
-        
+        stats['break_throw_percentage'] = (stats['break_throws'] / stats['throws'] * 100) if stats['throws'] > 0 else 0
+
         # Defensive metrics
         if stats['d_line_points_played'] > 0:
             stats['blocks_per_point'] = stats['blocks'] / stats['d_line_points_played']
@@ -1433,6 +1434,17 @@ def player_stats(player_id):
     # Ensure team_summary has defensive_efficiency for comparison
     if 'defensive_efficiency' not in team_summary:
         team_summary['defensive_efficiency'] = team_summary.get('d_line_conversion_rate', 0)
+
+    # Enrich team_summary with per-point averages needed for radar chart comparison.
+    # calculate_team_summary() only computes win/loss and line conversion rates; the
+    # per-point metrics live in calculate_team_averages().
+    if games:
+        team_avgs = get_cached_team_averages(games)
+        for key in ['completion_rate', 'catch_rate', 'goals_per_point', 'assists_per_point',
+                    'throws_per_point', 'hucks_per_point', 'blocks_per_point',
+                    'turnovers_forced_per_point', 'break_percentage']:
+            if key not in team_summary:
+                team_summary[key] = team_avgs.get(key, 0)
 
     tournaments = Tournament.query.filter_by(
         team_organization_id=get_current_team_id()

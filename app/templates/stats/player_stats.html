@@ -388,15 +388,10 @@
                             </div>
                             <div class="radar-legend mt-2">
                                 <small class="text-muted">
-                                    <strong>Scaling:</strong> 100% represents excellent performance
-                                    <ul class="mb-0 ps-3">
-                                        <li>Completion Rate: 100%</li>
-                                        <li>O-Line Conversion: 80%</li>
-                                        <li>Goals Per Point: 1.0</li>
-                                        <li>Assists Per Point: 1.0</li>
-                                        <li>Throws Per Point: 10.0</li>
-                                        <li>Hucks Per Point: 0.5</li>
-                                    </ul>
+                                    <strong>Elite benchmarks</strong> (outer ring = 100 score):
+                                    Completion Rate ≥95% · O-Line Conversion ≥80% ·
+                                    Goals/Point ≥0.3 · Assists/Point ≥0.3 ·
+                                    Break Throw% ≥25% · Hucks/Point ≥0.2
                                 </small>
                             </div>
                         </div>
@@ -414,14 +409,10 @@
                             </div>
                             <div class="radar-legend mt-2">
                                 <small class="text-muted">
-                                    <strong>Scaling:</strong> 100% represents excellent performance
-                                    <ul class="mb-0 ps-3">
-                                        <li>D-Line Conversion: 50%</li>
-                                        <li>Blocks Per Point: 0.8</li>
-                                        <li>Break Percentage: 40%</li>
-                                        <li>Turnovers Forced/Point: 1.0</li>
-                                        <li>Defensive Efficiency: 80%</li>
-                                    </ul>
+                                    <strong>Elite benchmarks</strong> (outer ring = 100 score):
+                                    D-Line Conversion ≥50% · Blocks/D-Point ≥0.3 ·
+                                    Catch Rate ≥90% · Turnovers Forced/D-Point ≥0.5 ·
+                                    Completion Rate ≥95%
                                 </small>
                             </div>
                         </div>
@@ -1273,32 +1264,36 @@ function initializeRadarCharts() {
     };
 
     // --- Offensive Radar Chart ---
-    const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Throws Per Point', 'Hucks Per Point'];
+    // Axis "excellent" values represent elite-but-achievable benchmarks, not absolute maxima.
+    // Goals/Assists Per Point use 0.3 because scoring/assisting in ~30% of played points
+    // is genuinely elite. Completion Rate uses 95 (not 100) as the elite ceiling.
+    // Break Throw % replaces "Throws Per Point" (volume ≠ quality).
+    const offensiveLabels = ['Completion Rate', 'O-Line Conversion', 'Goals Per Point', 'Assists Per Point', 'Break Throw %', 'Hucks Per Point'];
     const offensiveExcellentValues = {
-        'Completion Rate': 100, 
-        'O-Line Conversion': 80, 
-        'Goals Per Point': 1.0, 
-        'Assists Per Point': 1.0, 
-        'Throws Per Point': 10.0, 
-        'Hucks Per Point': 0.5
+        'Completion Rate': 95,      // 95% completion = elite
+        'O-Line Conversion': 80,    // 80% O-line conversion = very good
+        'Goals Per Point': 0.3,     // 0.3 goals/point played = excellent scorer
+        'Assists Per Point': 0.3,   // 0.3 assists/point played = excellent handler
+        'Break Throw %': 25,        // 25% of throws from the break side = excellent
+        'Hucks Per Point': 0.2      // 0.2 hucks/point = very active huck game
     };
-    
+
     // Get raw values from the template variables
     const playerOffensiveRaw = {
         'Completion Rate': {{ stats.completion_rate|default(0)|round(1) }},
         'O-Line Conversion': {{ stats.o_line_conversion_rate|default(0)|round(1) }},
         'Goals Per Point': {{ stats.goals_per_point|default(0)|round(2) }},
         'Assists Per Point': {{ stats.assists_per_point|default(0)|round(2) }},
-        'Throws Per Point': {{ stats.throws_per_point|default(0)|round(1) }},
+        'Break Throw %': {{ stats.break_throw_percentage|default(0)|round(1) }},
         'Hucks Per Point': {{ stats.hucks_per_point|default(0)|round(2) }}
     };
-    
+
     const teamOffensiveRaw = {
         'Completion Rate': {{ team_summary.completion_rate|default(0)|round(1) }},
         'O-Line Conversion': {{ team_summary.o_line_conversion_rate|default(0)|round(1) }},
         'Goals Per Point': {{ team_summary.goals_per_point|default(0)|round(2) }},
         'Assists Per Point': {{ team_summary.assists_per_point|default(0)|round(2) }},
-        'Throws Per Point': {{ team_summary.throws_per_point|default(0)|round(1) }},
+        'Break Throw %': {{ team_summary.break_percentage|default(0)|round(1) }},
         'Hucks Per Point': {{ team_summary.hucks_per_point|default(0)|round(2) }}
     };
 
@@ -1332,11 +1327,18 @@ function initializeRadarCharts() {
                 legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
+                        title: function(items) {
+                            const axisLabel = items[0].chart.data.labels[items[0].dataIndex];
+                            const excellent = offensiveExcellentValues[axisLabel];
+                            const suffix = ['Completion Rate','O-Line Conversion','Break Throw %'].includes(axisLabel) ? '%' : '';
+                            return `${axisLabel} (elite ≥ ${excellent}${suffix})`;
+                        },
                         label: function(context) {
-                            const label = context.label;
-                            const rawValue = context.dataset.label === 'Player Stats' ? 
-                                playerOffensiveRaw[label] : teamOffensiveRaw[label];
-                            return `${context.dataset.label}: ${rawValue}`;
+                            const axisLabel = context.chart.data.labels[context.dataIndex];
+                            const rawValue = context.dataset.label === 'Player Stats' ?
+                                playerOffensiveRaw[axisLabel] : teamOffensiveRaw[axisLabel];
+                            const suffix = ['Completion Rate','O-Line Conversion','Break Throw %'].includes(axisLabel) ? '%' : '';
+                            return `${context.dataset.label}: ${rawValue}${suffix} (score: ${Math.round(context.raw)}/100)`;
                         }
                     }
                 }
@@ -1344,34 +1346,34 @@ function initializeRadarCharts() {
         }
     });
 
-   // --- Defensive Radar Chart ---
-    const defensiveLabels = ['D-Line Conversion', 'Blocks Per Point', 'Break Percentage', 'Turnovers Forced/Point', 'Defensive Efficiency'];
+    // --- Defensive Radar Chart ---
+    // NOTE: The previous version had 3 of 5 axes all reading from d_line_conversion_rate
+    // (D-Line Conversion, Break Percentage, AND Defensive Efficiency were all identical).
+    // Fixed: Break Percentage → Catch Rate, Defensive Efficiency → Completion Rate.
+    // This gives 5 genuinely distinct defensive dimensions.
+    const defensiveLabels = ['D-Line Conversion', 'Blocks Per Point', 'Catch Rate', 'Turnovers Forced/Point', 'Completion Rate'];
     const defensiveExcellentValues = {
-        'D-Line Conversion': 50,
-        'Blocks Per Point': 0.8,
-        'Break Percentage': 40,
-        'Turnovers Forced/Point': 1.0,
-        'Defensive Efficiency': 80
+        'D-Line Conversion': 50,        // 50% of D-line points scored = very good
+        'Blocks Per Point': 0.3,        // 0.3 blocks per D-line point = excellent (was 0.8, unreachable)
+        'Catch Rate': 90,               // 90% catch rate = elite
+        'Turnovers Forced/Point': 0.5,  // 0.5 forced TOs per D-line point = excellent (was 1.0, unreachable)
+        'Completion Rate': 95           // 95% completion = elite
     };
-
-
 
     const playerDefensiveRaw = {
         'D-Line Conversion': {{ stats.d_line_conversion_rate|default(0)|round(1) }},
         'Blocks Per Point': {{ stats.blocks_per_point|default(0)|round(2) }},
-        // CORRECTED LINE: Use the player's stat, not the team's.
-        'Break Percentage': {{ stats.d_line_conversion_rate|default(0)|round(1) }}, 
+        'Catch Rate': {{ stats.catch_rate|default(0)|round(1) }},
         'Turnovers Forced/Point': {{ stats.turnovers_forced_per_point|default(0)|round(2) }},
-        'Defensive Efficiency': {{ stats.d_line_conversion_rate|default(0)|round(1) }} // This is also correct
+        'Completion Rate': {{ stats.completion_rate|default(0)|round(1) }}
     };
-
 
     const teamDefensiveRaw = {
         'D-Line Conversion': {{ team_summary.d_line_conversion_rate|default(0)|round(1) }},
         'Blocks Per Point': {{ team_summary.blocks_per_point|default(0)|round(2) }},
-        'Break Percentage': {{ team_summary.break_percentage|default(0)|round(1) }},
+        'Catch Rate': {{ team_summary.catch_rate|default(0)|round(1) }},
         'Turnovers Forced/Point': {{ team_summary.turnovers_forced_per_point|default(0)|round(2) }},
-        'Defensive Efficiency': {{ team_summary.defensive_efficiency|default(0)|round(1) }}
+        'Completion Rate': {{ team_summary.completion_rate|default(0)|round(1) }}
     };
 
     // Debug output
@@ -1404,11 +1406,18 @@ function initializeRadarCharts() {
                 legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
+                        title: function(items) {
+                            const axisLabel = items[0].chart.data.labels[items[0].dataIndex];
+                            const excellent = defensiveExcellentValues[axisLabel];
+                            const suffix = ['D-Line Conversion','Catch Rate','Completion Rate'].includes(axisLabel) ? '%' : '';
+                            return `${axisLabel} (elite ≥ ${excellent}${suffix})`;
+                        },
                         label: function(context) {
-                            const label = context.label;
-                            const rawValue = context.dataset.label === 'Player Stats' ? 
-                                playerDefensiveRaw[label] : teamDefensiveRaw[label];
-                            return `${context.dataset.label}: ${rawValue}`;
+                            const axisLabel = context.chart.data.labels[context.dataIndex];
+                            const rawValue = context.dataset.label === 'Player Stats' ?
+                                playerDefensiveRaw[axisLabel] : teamDefensiveRaw[axisLabel];
+                            const suffix = ['D-Line Conversion','Catch Rate','Completion Rate'].includes(axisLabel) ? '%' : '';
+                            return `${context.dataset.label}: ${rawValue}${suffix} (score: ${Math.round(context.raw)}/100)`;
                         }
                     }
                 }
