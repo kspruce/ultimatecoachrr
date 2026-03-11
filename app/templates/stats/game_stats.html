@@ -141,8 +141,20 @@
         max-width: 200px;
         text-align: left;
     }
-    
-    
+
+    /* Mobile: reduce tall fixed-height visualisations */
+    @media (max-width: 576px) {
+        #field-heatmap,
+        .field-container,
+        #player-connections {
+            height: 240px !important;
+        }
+        /* Stat summary cards: larger font is fine, but values can be smaller */
+        .stat-value { font-size: 1.5rem; }
+        /* Compact stat cards on mobile */
+        .stat-card { padding: 10px; }
+    }
+
 </style>
 {% endblock %}
 
@@ -243,60 +255,57 @@
     </div>
     
     <div class="row mb-4">
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Field Heatmap
-                            <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                               title="Heat map showing concentration of throws on the field"></i>
-                        </h5>
-                        <div class="btn-group btn-group-sm mt-2">
-                            <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
-                            <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
-                            <button class="btn btn-outline-primary" data-filter="goals">Goals</button>
-                            <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
-                            <button class="btn btn-outline-primary" data-filter="scored_on">Scored On</button>
-                        </div>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Field Heatmap
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip"
+                           title="Heat map showing concentration of throws on the field"></i>
+                    </h5>
+                    <div class="btn-group btn-group-sm mt-2">
+                        <button class="btn btn-outline-primary active" data-filter="all">All Events</button>
+                        <button class="btn btn-outline-primary" data-filter="throws">Throws</button>
+                        <button class="btn btn-outline-primary" data-filter="goals">Goals</button>
+                        <button class="btn btn-outline-primary" data-filter="turnovers">Turnovers</button>
+                        <button class="btn btn-outline-primary" data-filter="scored_on">Scored On</button>
                     </div>
-                    <div class="card-body">
-                        <div class="field-container" id="field-heatmap">
-                            <div class="endzone endzone-left"></div>
-                            <div class="endzone endzone-right"></div>
-                            {% if not heatmap_data %}
-                            <div class="loading-overlay">
-                                <p>No throw data available</p>
-                            </div>
-                            {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="field-container" id="field-heatmap">
+                        <div class="endzone endzone-left"></div>
+                        <div class="endzone endzone-right"></div>
+                        {% if not heatmap_data %}
+                        <div class="loading-overlay">
+                            <p>No throw data available</p>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Player Connections
-                            <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip" 
-                               title="Network diagram showing throw connections between players"></i>
-                        </h5>
-                        <div class="btn-group btn-group-sm mt-2">
-                            <button class="btn btn-outline-primary active" data-strength="all">All Connections</button>
-                            <button class="btn btn-outline-primary" data-strength="strong">Strong Connections</button>
-                            <button class="btn btn-outline-primary" data-strength="weak">Weak Connections</button>
-                        </div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Player Connections
+                        <i class="bi bi-info-circle ms-2" data-bs-toggle="tooltip"
+                           title="Network diagram showing throw connections between players"></i>
+                    </h5>
+                    <div class="btn-group btn-group-sm mt-2">
+                        <button class="btn btn-outline-primary active" data-strength="all">All Connections</button>
+                        <button class="btn btn-outline-primary" data-strength="strong">Strong Connections</button>
+                        <button class="btn btn-outline-primary" data-strength="weak">Weak Connections</button>
                     </div>
-                    <div class="card-body">
-                        <div class="network-chart" id="player-connections">
-                            {% if not connections %}
-                            <div class="loading-overlay">
-                                <p>No connection data available</p>
-                            </div>
-                            {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="network-chart" id="player-connections">
+                        {% if not connections %}
+                        <div class="loading-overlay">
+                            <p>No connection data available</p>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -306,13 +315,21 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Player Statistics</h5>
-                    {% if is_admin(current_user) or is_coach(current_user) %}
-                    <span class="badge bg-info">Admin/Coach View: Showing all players</span>
-                    {% elif current_user.player %}
-                    <span class="badge bg-info">Showing your stats only</span>
-                    {% endif %}
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="mb-0">Player Statistics</h5>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        {% if is_admin(current_user) or is_coach(current_user) %}
+                        <span class="badge bg-info">Admin/Coach View</span>
+                        {% elif current_user.player %}
+                        <span class="badge bg-info">Your stats</span>
+                        {% endif %}
+                        {% if is_admin(current_user) or is_coach(current_user) %}
+                        <a href="{{ url_for('stats_dashboard.export_game_csv', game_id=game.id) }}"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-download me-1"></i>Export CSV
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -432,41 +449,59 @@ document.addEventListener('DOMContentLoaded', function() {
                             label: 'Our Score',
                             data: ourScores,
                             borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.15)',
                             tension: 0.1,
-                            fill: true
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: pointFlow.map(p =>
+                                p.scored ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)')
                         },
                         {
                             label: 'Their Score',
                             data: theirScores,
                             borderColor: 'rgba(255, 99, 132, 1)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
                             tension: 0.1,
-                            fill: true
+                            fill: false,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
                         }
                     ]
                 },
                 options: {
                     responsive: true,
+                    interaction: { mode: 'index', intersect: false },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Score'
-                            }
+                            title: { display: true, text: 'Score' },
+                            ticks: { stepSize: 1 }
                         },
                         x: {
-                            title: {
-                                display: true,
-                                text: 'Point Number'
-                            }
+                            title: { display: true, text: 'Point' }
                         }
                     },
                     plugins: {
-                        title: {
-                            display: true,
-                            text: 'Score Progression'
+                        title: { display: true, text: 'Score Progression' },
+                        tooltip: {
+                            callbacks: {
+                                title: function(items) {
+                                    const i = items[0].dataIndex;
+                                    const p = pointFlow[i];
+                                    const line = p.start_possession === 'offence' ? 'O-line' : 'D-line';
+                                    const result = p.scored ? '✓ We scored' : '✗ They scored';
+                                    return `Point ${p.point_number} (${line}) — ${result}`;
+                                },
+                                afterTitle: function(items) {
+                                    const p = pointFlow[items[0].dataIndex];
+                                    const t = p.turnovers || 0;
+                                    return t > 0 ? `${t} turnover${t > 1 ? 's' : ''} this point` : 'Clean point';
+                                },
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
                         }
                     }
                 }

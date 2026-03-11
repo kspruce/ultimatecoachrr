@@ -180,6 +180,20 @@
         min-height: 400px;
     }
 
+    /* Performance trend chart */
+    .trend-chart-container {
+        position: relative;
+        height: 280px;
+    }
+    @media (max-width: 576px) {
+        .trend-chart-container { height: 200px; }
+    }
+
+    /* Trend toggle buttons — dim when inactive */
+    .trend-toggle:not(.active) {
+        opacity: 0.45;
+    }
+
 </style>
 {% endblock %}
 
@@ -959,23 +973,29 @@
         <!-- Game History Tab -->
         <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
             <!-- Game History Content -->
-            <!-- Performance Trend Chart (Add this new section) -->
+            <!-- Performance Trend Chart -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <h5 class="mb-0">Performance Trends</h5>
+                            <a href="{{ url_for('stats_dashboard.export_player_history_csv', player_id=player.id) }}"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-download me-1"></i>Export CSV
+                            </a>
                         </div>
                         <div class="card-body">
-                            <div class="chart-container" style="position: relative; height:300px;">
+                            <div class="chart-container trend-chart-container">
                                 <canvas id="performanceTrendChart"></canvas>
                             </div>
-                            <div class="mt-3">
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-primary active" data-metric="per">PER</button>
-                                    <button type="button" class="btn btn-outline-primary" data-metric="plus_minus">Plus/Minus</button>
-                                    <button type="button" class="btn btn-outline-primary" data-metric="completion_rate">Completion Rate</button>
-                                </div>
+                            <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+                                <small class="text-muted me-1">Toggle metrics:</small>
+                                <button type="button" class="btn btn-sm btn-outline-primary trend-toggle active" data-dataset="0">PER</button>
+                                <button type="button" class="btn btn-sm btn-outline-success trend-toggle active" data-dataset="1">+/−</button>
+                                <button type="button" class="btn btn-sm btn-outline-warning trend-toggle active" data-dataset="2">Completion %</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger trend-toggle" data-dataset="3">Goals/Pt</button>
+                                <button type="button" class="btn btn-sm btn-outline-info trend-toggle" data-dataset="4">Assists/Pt</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary trend-toggle" data-dataset="5">Blocks/Pt</button>
                             </div>
                         </div>
                     </div>
@@ -1120,125 +1140,113 @@ function initializeVisualizations() {
 
 // Performance Trend Chart
 function initializePerformanceTrendChart() {
-    const container = document.getElementById('performanceTrendChart').parentElement;
     const ctx = document.getElementById('performanceTrendChart');
     if (!ctx) return;
 
-    // Extract performance data from player_games
+    // Build per-game data from Jinja — sorted oldest → newest for chart readability
     const performanceData = [
-        {% for game_data in player_games %}
+        {% for game_data in player_games|sort(attribute='game.date') %}
         {
-            date: "{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else 'No date' }}",
+            date: "{{ game_data.game.date.strftime('%d %b') if game_data.game.date else '?' }}",
+            fullDate: "{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else '' }}",
             opponent: "{{ game_data.game.opponent }}",
-            per: {{ game_data.stats.per|round(2) }},
-            plus_minus: {{ (game_data.stats.goals + game_data.stats.assists + game_data.stats.blocks - game_data.stats.throwaways)|round(2) }},
+            points_played: {{ game_data.stats.points_played }},
+            per:             {{ game_data.stats.per|default(0)|round(2) }},
+            plus_minus:      {{ (game_data.stats.goals + game_data.stats.assists + game_data.stats.blocks - (game_data.stats.throwaways + game_data.stats.drops))|round(1) }},
             completion_rate: {{ ((game_data.stats.completions / game_data.stats.throws * 100) if game_data.stats.throws > 0 else 0)|round(1) }},
-            points_played: {{ game_data.stats.points_played }}
+            goals_per_point: {{ (game_data.stats.goals / game_data.stats.points_played if game_data.stats.points_played > 0 else 0)|round(3) }},
+            assists_per_point: {{ (game_data.stats.assists / game_data.stats.points_played if game_data.stats.points_played > 0 else 0)|round(3) }},
+            blocks_per_point: {{ (game_data.stats.blocks / game_data.stats.points_played if game_data.stats.points_played > 0 else 0)|round(3) }}
         },
         {% endfor %}
     ];
-    
-    // Check for empty data
+
     if (performanceData.length === 0) {
-        container.innerHTML = '<div class="alert alert-info text-center">No game history available to plot a trend.</div>';
+        ctx.parentElement.innerHTML = '<div class="alert alert-info text-center my-3">No game history available yet.</div>';
         return;
     }
-    
-    // Sort by date
-    performanceData.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    // Create the chart
-    const chart = new Chart(ctx, {
+
+    const labels = performanceData.map(d => `${d.date} vs ${d.opponent}`);
+
+    // Each dataset: { key, label, color } — visibility toggled by buttons
+    const datasetConfig = [
+        { key: 'per',             label: 'PER',             color: '13, 110, 253'   },  // Bootstrap primary blue
+        { key: 'plus_minus',      label: '+/−',             color: '25, 135, 84'    },  // Bootstrap success green
+        { key: 'completion_rate', label: 'Completion %',    color: '255, 193, 7'    },  // Bootstrap warning yellow
+        { key: 'goals_per_point', label: 'Goals/Pt',        color: '220, 53, 69'    },  // Bootstrap danger red
+        { key: 'assists_per_point',label: 'Assists/Pt',     color: '13, 202, 240'   },  // Bootstrap info cyan
+        { key: 'blocks_per_point',label: 'Blocks/Pt',       color: '108, 117, 125'  },  // Bootstrap secondary gray
+    ];
+
+    const datasets = datasetConfig.map((cfg, i) => ({
+        label: cfg.label,
+        data: performanceData.map(d => d[cfg.key]),
+        borderColor: `rgba(${cfg.color}, 1)`,
+        backgroundColor: `rgba(${cfg.color}, 0.08)`,
+        pointBackgroundColor: `rgba(${cfg.color}, 1)`,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: false,
+        tension: 0.25,
+        // Start with PER, +/-, Completion % visible; the rest hidden
+        hidden: i > 2
+    }));
+
+    const trendChart = new Chart(ctx, {
         type: 'line',
-        data: {
-            labels: performanceData.map(d => `${d.date} vs ${d.opponent}`),
-            datasets: [{
-                label: 'PER',
-                data: performanceData.map(d => d.per),
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.1,
-                pointRadius: 4,
-                pointBackgroundColor: '#007bff'
-            }]
-        },
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             scales: {
+                x: {
+                    ticks: { maxRotation: 45, minRotation: 30, font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
                 y: {
                     beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'PER'
-                    }
-                },
-                x: {
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
+                    grid: { color: 'rgba(0,0,0,0.05)' }
                 }
             },
             plugins: {
+                legend: { display: false },  // We use custom toggle buttons
                 tooltip: {
                     callbacks: {
+                        title: function(items) {
+                            const d = performanceData[items[0].dataIndex];
+                            return `${d.fullDate} vs ${d.opponent} (${d.points_played} pts played)`;
+                        },
                         label: function(context) {
-                            const dataPoint = performanceData[context.dataIndex];
-                            const metric = context.dataset.label;
-                            return `${metric}: ${context.raw.toFixed(2)} (${dataPoint.points_played} points played)`;
+                            const v = context.raw;
+                            const label = context.dataset.label;
+                            if (label === 'Completion %') return `${label}: ${v.toFixed(1)}%`;
+                            if (label === 'PER') return `${label}: ${v.toFixed(2)}`;
+                            return `${label}: ${v.toFixed(3)}`;
                         }
                     }
                 }
             }
         }
     });
-    
-    // Add event listeners to metric buttons
-    document.querySelectorAll('[data-metric]').forEach(button => {
-        button.addEventListener('click', function() {
-            // Update active button
-            document.querySelectorAll('[data-metric]').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-            
-            // Get selected metric
-            const metric = this.dataset.metric;
-            
-            // Update chart data and options
-            chart.data.datasets[0].label = metric === 'per' ? 'PER' : 
-                                          metric === 'plus_minus' ? 'Plus/Minus' : 
-                                          'Completion Rate';
-            chart.data.datasets[0].data = performanceData.map(d => d[metric]);
-            
-            // Update y-axis title
-            chart.options.scales.y.title.text = metric === 'per' ? 'PER' : 
-                                              metric === 'plus_minus' ? 'Plus/Minus' : 
-                                              'Completion Rate (%)';
-            
-            // Update colors based on metric
-            if (metric === 'per') {
-                chart.data.datasets[0].borderColor = '#007bff';
-                chart.data.datasets[0].pointBackgroundColor = '#007bff';
-                chart.data.datasets[0].backgroundColor = 'rgba(0, 123, 255, 0.1)';
-            } else if (metric === 'plus_minus') {
-                chart.data.datasets[0].borderColor = '#28a745';
-                chart.data.datasets[0].pointBackgroundColor = '#28a745';
-                chart.data.datasets[0].backgroundColor = 'rgba(40, 167, 69, 0.1)';
-            } else {
-                chart.data.datasets[0].borderColor = '#fd7e14';
-                chart.data.datasets[0].pointBackgroundColor = '#fd7e14';
-                chart.data.datasets[0].backgroundColor = 'rgba(253, 126, 20, 0.1)';
-            }
-            
-            chart.update();
+
+    // Wire toggle buttons to Chart.js dataset visibility
+    document.querySelectorAll('.trend-toggle').forEach(btn => {
+        const idx = parseInt(btn.dataset.dataset, 10);
+        // Sync initial state — datasets 3+ are hidden
+        if (trendChart.getDatasetMeta(idx).hidden === true || datasets[idx].hidden) {
+            btn.classList.remove('active');
+        }
+        btn.addEventListener('click', function() {
+            const meta = trendChart.getDatasetMeta(idx);
+            meta.hidden = !meta.hidden;
+            this.classList.toggle('active', !meta.hidden);
+            trendChart.update();
         });
     });
-    
-    return chart;
+
+    return trendChart;
 }
 
 // Radar chart initialization

@@ -44,9 +44,17 @@
         <div>
             <h2>Team Statistics</h2>
         </div>
-        <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Stats
-        </a>
+        <div class="d-flex gap-2">
+            {% if current_user.is_admin or current_user.is_coach %}
+            <a href="{{ url_for('stats_dashboard.export_team_season_csv') }}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </a>
+            {% endif %}
+            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Stats
+            </a>
+        </div>
     </div>
 
     <div class="row mb-4">
