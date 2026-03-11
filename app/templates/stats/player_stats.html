@@ -23,11 +23,11 @@
     }
 
     .nav-tabs .nav-link {
-        color: #495057;
+        color: var(--uc-gray-600);
     }
     .nav-tabs .nav-link.active {
-        color: #007bff;
-        font-weight: bold;
+        color: var(--uc-blue);
+        font-weight: 700;
     }
     
     #perDisplay {
@@ -50,7 +50,7 @@
         height: 300px;
         width: 100%;
         margin-bottom: 20px;
-        border: 1px solid #eee; /* Add a border to see the container */
+        border: 1px solid var(--uc-gray-100);
     }
     
     .stat-card {
@@ -116,7 +116,7 @@
     
     .cutting-quadrant .attempts {
         font-size: 0.9rem;
-        color: #666;
+        color: var(--uc-gray-400);
     }
     
     .cutting-stat-value {
@@ -126,12 +126,15 @@
     }
     
     .cutting-stat-label {
-        font-size: 0.9rem;
-        color: #666;
+        font-size: 0.82rem;
+        color: var(--uc-gray-400);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .04em;
     }
-    
+
     .cutting-filter-btn.active {
-        background-color: #007bff;
+        background-color: var(--uc-blue);
         color: white;
     }
     
@@ -181,24 +184,21 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container py-4">
     {% if current_user.is_admin or current_user.is_coach or (current_user.player and current_user.player.id == player.id) %}
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ player.name }}</h1>
-            <p class="lead">
-                {% if player.jersey_number %}#{{ player.jersey_number }} | {% endif %}
-                {{ player.position|capitalize if player.position else 'No position' }}
-            </p>
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>{{ player.name }}</h2>
+            <p>{% if player.jersey_number %}#{{ player.jersey_number }} · {% endif %}{{ player.position|capitalize if player.position else 'No position set' }}</p>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
-                <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-secondary">Back to Stats</a>
-                <button id="printReportBtn" class="btn btn-primary">
-                    <i class="bi bi-printer"></i> Print Report
-                </button>
-            </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-outline-secondary">Player Profile</a>
+            <a href="{{ url_for('stats_dashboard.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Stats
+            </a>
+            <button id="printReportBtn" class="btn btn-primary">
+                <i class="bi bi-printer me-1"></i>Print Report
+            </button>
         </div>
     </div>
 

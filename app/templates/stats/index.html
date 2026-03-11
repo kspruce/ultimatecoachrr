@@ -17,16 +17,17 @@
     }
     
     .stat-value {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #2c3e50;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--uc-gray-800);
     }
-    
+
     .stat-label {
-        font-size: 0.9rem;
-        color: #7f8c8d;
+        font-size: 0.82rem;
+        color: var(--uc-gray-400);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: .04em;
+        font-weight: 600;
     }
     
     .trend-indicator {
@@ -34,19 +35,19 @@
         margin-left: 5px;
     }
     
-    .trend-up { color: #2ecc71; }
-    .trend-down { color: #e74c3c; }
+    .trend-up { color: var(--uc-green); }
+    .trend-down { color: var(--uc-red); }
     
     .line-card {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background: linear-gradient(135deg, var(--uc-gray-50) 0%, var(--uc-gray-100) 100%);
     }
     
     .player-card {
         border-left: 4px solid transparent;
     }
     
-    .o-line { border-left-color: #3498db; }
-    .d-line { border-left-color: #e74c3c; }
+    .o-line { border-left-color: var(--uc-blue); }
+    .d-line { border-left-color: var(--uc-red); }
     
     .field-container {
         position: relative;
@@ -96,8 +97,8 @@
     .network-chart {
         height: 400px;
         width: 100%;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
+        background-color: var(--uc-gray-50);
+        border: 1px solid var(--uc-gray-200);
     }
     
     .tooltip-inner {
@@ -127,18 +128,18 @@
     .dataTable th {
         position: sticky;
         top: 0;
-        background-color: #f8f9fa;
+        background-color: var(--uc-gray-50);
         z-index: 10;
-        border-bottom: 2px solid #dee2e6;
+        border-bottom: 2px solid var(--uc-gray-200);
     }
 
     .dataTable td:first-child,
     .dataTable th:first-child {
         position: sticky;
         left: 0;
-        background-color: #f8f9fa;
+        background-color: var(--uc-gray-50);
         z-index: 5;
-        border-right: 2px solid #dee2e6;
+        border-right: 2px solid var(--uc-gray-200);
     }
 
     .dataTable th:first-child {
@@ -147,7 +148,7 @@
 
     /* Highlight rows on hover */
     .dataTable tr:hover {
-        background-color: rgba(0,123,255,0.1) !important;
+        background-color: rgba(59,130,246,.08) !important;
     }
 
     /* Card body for tables */
@@ -163,12 +164,12 @@
 
     /* Make sure the fixed column has proper background on hover */
     .dataTable tr:hover td:first-child {
-        background-color: rgba(0,123,255,0.1) !important;
+        background-color: rgba(59,130,246,.08) !important;
     }
     
     /* Filter buttons styling */
     .stats-filter-btn.active {
-        background-color: #0d6efd;
+        background-color: var(--uc-blue);
         color: white;
     }
     
@@ -178,11 +179,11 @@
     }
     
     .offensive-stat {
-        background-color: rgba(52, 152, 219, 0.1);
+        background-color: rgba(59,130,246,.07);
     }
-    
+
     .defensive-stat {
-        background-color: rgba(231, 76, 60, 0.1);
+        background-color: rgba(239,68,68,.07);
     }
     
     /* Tooltip improvements */
@@ -199,20 +200,20 @@
 
     /* Gender styling for optimal lines */
     .player-card.female {
-        border-left: 4px solid #e83e8c;
+        border-left: 4px solid var(--uc-purple);
     }
-    
+
     .player-card.male {
-        border-left: 4px solid #007bff;
+        border-left: 4px solid var(--uc-blue);
     }
-    
+
     /* Section dividers */
     .gender-divider {
-        background-color: #f8f9fa;
-        font-weight: bold;
+        background-color: var(--uc-gray-50);
+        font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.8rem;
-        color: #6c757d;
+        font-size: 0.75rem;
+        color: var(--uc-gray-400);
     }  
     
     .d3-tooltip {
@@ -231,29 +232,26 @@
   
     /* Enhanced Navigation Styling */
     .stats-nav-container {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        background: white;
+        border-radius: var(--uc-radius);
+        box-shadow: var(--uc-shadow-sm);
         overflow: hidden;
-        transition: all 0.3s ease;
-        border: 1px solid rgba(0,0,0,0.08);
+        border: 1px solid var(--uc-gray-200);
     }
-    
-    .stats-nav-container:hover {
-        box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-    }
-    
+
     .stats-nav-header {
-        padding: 15px 20px;
-        background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
-        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 12px 20px;
+        background: var(--uc-gray-50);
+        border-bottom: 1px solid var(--uc-gray-100);
     }
-    
+
     .stats-nav-header h5 {
         margin: 0;
-        color: #495057;
-        font-weight: 600;
-        font-size: 1.1rem;
+        color: var(--uc-gray-600);
+        font-weight: 700;
+        font-size: .75rem;
+        text-transform: uppercase;
+        letter-spacing: .07em;
     }
     
     .stats-nav-buttons {
@@ -322,18 +320,18 @@
     }
     
     .player-btn {
-        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        background: linear-gradient(135deg, var(--uc-blue), #1D4ED8);
+        box-shadow: 0 4px 8px rgba(59,130,246,.3);
     }
-    
+
     .team-btn {
-        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-        box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+        background: linear-gradient(135deg, var(--uc-green), #059669);
+        box-shadow: 0 4px 8px rgba(16,185,129,.3);
     }
-    
+
     .games-btn {
-        background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-        box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
+        background: linear-gradient(135deg, var(--uc-purple), #7C3AED);
+        box-shadow: 0 4px 8px rgba(139,92,246,.3);
     }
     
     /* Responsive adjustments */
@@ -351,12 +349,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container py-4">
     <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Team Statistics Dashboard</h1>
-            <p class="text-muted">Real-time analytics and performance metrics</p>
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>Statistics Dashboard</h2>
+            <p>Real-time analytics and performance metrics</p>
         </div>
     </div>
     <!-- Navigation Section -->
