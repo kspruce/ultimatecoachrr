@@ -1123,8 +1123,8 @@ def index():
         
         # Generate heatmap and connection data
         # Consider limiting the amount of data processed here
-        heatmap_data = process_heatmap_data(team_name=team_name, limit=1000)  # Limit to 1000 data points
-        connection_data = generate_player_connections(team_name=team_name, min_connections=2)  # Only include connections with at least 2 throws
+        heatmap_data = process_heatmap_data(limit=1000)
+        connection_data = generate_player_connections(min_connections=2)
 
         return render_template(
             'stats/index.html',
