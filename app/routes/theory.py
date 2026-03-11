@@ -31,12 +31,17 @@ def section(slug):
         slug=slug,
         team_organization_id=get_current_team_id()
     ).first_or_404()
-    
+
     topics = section.topics.filter_by(
         team_organization_id=get_current_team_id()
     ).order_by(TheoryTopic.order).all()
-    
-    return render_template('theory/section.html', section=section, topics=topics)
+
+    # All sections (for sidebar navigation)
+    all_sections = TheorySection.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(TheorySection.order).all()
+
+    return render_template('theory/section.html', section=section, topics=topics, all_sections=all_sections)
 
 @bp.route('/topic/<int:topic_id>')
 @login_required
@@ -46,9 +51,22 @@ def topic(topic_id):
             id=topic_id,
             team_organization_id=get_current_team_id()
         ).first_or_404()
-        
-        return render_template('theory/topic.html', 
+
+        # Build ordered topic list for prev/next navigation
+        section_topics = topic.section.topics.filter_by(
+            team_organization_id=get_current_team_id()
+        ).order_by(TheoryTopic.order).all()
+
+        current_idx = next((i for i, t in enumerate(section_topics) if t.id == topic_id), 0)
+        prev_topic = section_topics[current_idx - 1] if current_idx > 0 else None
+        next_topic = section_topics[current_idx + 1] if current_idx < len(section_topics) - 1 else None
+
+        return render_template('theory/topic.html',
                              topic=topic,
+                             section_topics=section_topics,
+                             prev_topic=prev_topic,
+                             next_topic=next_topic,
+                             current_idx=current_idx,
                              title=topic.name)
     except Exception as e:
         current_app.logger.error(f"Error viewing topic {topic_id}: {str(e)}")

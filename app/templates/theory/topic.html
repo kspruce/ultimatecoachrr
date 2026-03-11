@@ -4,192 +4,314 @@
 {% block styles %}
 {{ super() }}
 <style>
-    /* Rich text content styles */
-    .topic-content h2 {
-        font-size: 1.2rem; font-weight: 700; color: var(--uc-gray-800);
-        border-bottom: 1px solid var(--uc-gray-200);
-        padding-bottom: .5rem; margin-top: 2rem; margin-bottom: 1rem;
-    }
-    .topic-content h3 {
-        font-size: 1rem; font-weight: 700; color: var(--uc-blue);
-        margin-top: 1.5rem; margin-bottom: .65rem;
-    }
-    .topic-content p { font-size: .925rem; line-height: 1.75; color: var(--uc-gray-800); }
-    .topic-content ul, .topic-content ol { padding-left: 1.25rem; margin-bottom: 1rem; }
-    .topic-content li { margin-bottom: .4rem; font-size: .925rem; line-height: 1.6; }
-    .topic-content blockquote {
-        border-left: 3px solid var(--uc-blue); padding-left: 1rem;
-        color: var(--uc-gray-600); font-style: italic; margin: 1.25rem 0;
-        background: rgba(59,130,246,.05); border-radius: 0 8px 8px 0; padding: .75rem 1rem;
-    }
-    .topic-content code {
-        background: var(--uc-gray-100); padding: .15rem .4rem;
-        border-radius: 5px; font-size: .85em;
-    }
-    .topic-content img {
-        max-width: 100%; height: auto; display: block;
-        margin: 1rem auto; border-radius: var(--uc-radius);
-        box-shadow: var(--uc-shadow-md);
-    }
-    /* Sidebar nav items */
-    .theory-nav-link {
-        display: block; padding: .5rem .85rem;
-        font-size: .85rem; font-weight: 500; text-decoration: none;
-        color: var(--uc-gray-600); border-radius: 8px;
-        transition: background .15s, color .15s;
-    }
-    .theory-nav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
-    .theory-nav-link.active {
-        background: rgba(59,130,246,.1); color: var(--uc-blue); font-weight: 600;
-    }
+/* ── Reading progress bar (top of page) ──────────────── */
+#reading-progress {
+    position: fixed; top: 0; left: 0; z-index: 9999;
+    height: 3px; width: 0%; background: var(--uc-blue);
+    transition: width .1s linear;
+    box-shadow: 0 0 6px rgba(59,130,246,.4);
+}
+
+/* ── Topic content typography ──────────────────────── */
+.topic-content h2 {
+    font-size: 1.15rem; font-weight: 700; color: var(--uc-gray-800);
+    border-bottom: 1px solid var(--uc-gray-200);
+    padding-bottom: .45rem; margin-top: 2.25rem; margin-bottom: .9rem;
+    scroll-margin-top: 1.5rem;
+}
+.topic-content h3 {
+    font-size: 1rem; font-weight: 700; color: var(--uc-blue);
+    margin-top: 1.75rem; margin-bottom: .6rem;
+    scroll-margin-top: 1.5rem;
+}
+.topic-content p  { font-size: .925rem; line-height: 1.8; color: var(--uc-gray-800); margin-bottom: 1rem; }
+.topic-content ul,
+.topic-content ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+.topic-content li { margin-bottom: .4rem; font-size: .925rem; line-height: 1.65; }
+.topic-content blockquote {
+    border-left: 3px solid var(--uc-blue); padding: .75rem 1.1rem;
+    background: rgba(59,130,246,.04); border-radius: 0 10px 10px 0;
+    margin: 1.25rem 0; color: var(--uc-gray-600); font-style: italic;
+}
+.topic-content code {
+    background: var(--uc-gray-100); padding: .15rem .4rem;
+    border-radius: 5px; font-size: .85em; color: var(--uc-indigo);
+}
+.topic-content pre {
+    background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+    border-radius: var(--uc-radius); padding: 1rem 1.25rem; overflow-x: auto;
+}
+.topic-content pre code { background: none; padding: 0; }
+.topic-content img {
+    max-width: 100%; height: auto; display: block;
+    margin: 1.25rem auto; border-radius: var(--uc-radius);
+    box-shadow: var(--uc-shadow-md);
+}
+.topic-content a { color: var(--uc-blue); }
+.topic-content a:hover { text-decoration: underline; }
+.topic-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .875rem; }
+.topic-content th,
+.topic-content td { padding: .5rem .75rem; border: 1px solid var(--uc-gray-200); }
+.topic-content th { background: var(--uc-gray-50); font-weight: 600; }
+
+/* ── Sidebar ───────────────────────────────────────── */
+@media (min-width: 992px) { .theory-sidebar { position: sticky; top: 1.5rem; } }
+
+/* ── TOC links ─────────────────────────────────────── */
+.toc-link {
+    display: block; padding: .3rem 0; font-size: .8rem; font-weight: 500;
+    color: var(--uc-gray-500); text-decoration: none;
+    border-left: 2px solid transparent; padding-left: .75rem;
+    transition: color .15s, border-color .15s;
+}
+.toc-link:hover { color: var(--uc-blue); }
+.toc-link.active { color: var(--uc-blue); border-left-color: var(--uc-blue); font-weight: 600; }
+.toc-link.h3 { padding-left: 1.5rem; font-size: .78rem; }
+
+/* ── Section nav ────────────────────────────────────── */
+.section-nav-link {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .45rem .75rem; font-size: .82rem; font-weight: 500;
+    color: var(--uc-gray-600); text-decoration: none;
+    border-radius: 8px; transition: background .15s, color .15s;
+}
+.section-nav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
+.section-nav-link.active {
+    background: rgba(59,130,246,.08); color: var(--uc-blue); font-weight: 600;
+}
+.section-nav-num {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .68rem; font-weight: 700; background: var(--uc-gray-100);
+    color: var(--uc-gray-400);
+}
+.section-nav-link.active .section-nav-num {
+    background: var(--uc-blue); color: #fff;
+}
+
+/* ── Prev/Next nav ──────────────────────────────────── */
+.topic-nav-btn {
+    display: flex; align-items: center; gap: .75rem;
+    padding: 1rem 1.25rem; border-radius: var(--uc-radius);
+    border: 1px solid var(--uc-gray-200); text-decoration: none;
+    background: var(--uc-white); transition: border-color .15s, box-shadow .15s, transform .15s;
+    min-width: 0; flex: 1;
+}
+.topic-nav-btn:hover {
+    border-color: var(--uc-blue); box-shadow: var(--uc-shadow-sm);
+    transform: translateY(-1px);
+}
+.topic-nav-btn.next { flex-direction: row-reverse; text-align: right; }
+.topic-nav-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--uc-gray-400); }
+.topic-nav-title { font-size: .875rem; font-weight: 600; color: var(--uc-gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topic-nav-arrow { font-size: 1.1rem; color: var(--uc-gray-300); flex-shrink: 0; }
+.topic-nav-btn:hover .topic-nav-arrow { color: var(--uc-blue); }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Reading progress bar -->
+<div id="reading-progress"></div>
+
 <div class="container py-4">
 
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb" style="font-size:.82rem">
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" style="color:var(--uc-blue)">
-                    {{ topic.section.name }}
-                </a>
-            </li>
-            <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ topic.name }}</li>
-        </ol>
-    </nav>
+    <!-- Breadcrumb + position indicator -->
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:.82rem">
+                <li class="breadcrumb-item"><a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('theory.section', slug=topic.section.slug) }}" style="color:var(--uc-blue)">{{ topic.section.name }}</a></li>
+                <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ topic.name }}</li>
+            </ol>
+        </nav>
+        {% if section_topics %}
+        <span style="font-size:.78rem;color:var(--uc-gray-400);font-weight:600;white-space:nowrap">
+            {{ current_idx + 1 }} of {{ section_topics|length }}
+        </span>
+        {% endif %}
+    </div>
 
     <div class="row g-4">
 
-        <!-- ── Main content ───────────────────────────────── -->
-        <div class="col-lg-8">
+        <!-- ── Main content ─────────────────────────────── -->
+        <div class="col-lg-8" id="article-body">
+
+            <!-- Topic header -->
+            <div class="mb-4">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+                    <h1 style="font-size:1.65rem;font-weight:800;color:var(--uc-gray-900);line-height:1.25;margin:0">{{ topic.name }}</h1>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"
+                       class="btn btn-sm btn-outline-secondary flex-shrink-0">
+                        <i class="bi bi-pencil me-1"></i>Edit
+                    </a>
+                    {% endif %}
+                </div>
+                <!-- Tags -->
+                {% if topic.tags %}
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    {% for tag in topic.tags %}
+                    <span class="badge" style="background:var(--uc-gray-100);color:var(--uc-gray-600);font-size:.72rem;font-weight:600">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
 
             <!-- Hero image -->
             {% if topic.image_url %}
             <div class="mb-4">
                 <img src="{{ topic.image_url }}" alt="{{ topic.name }}"
-                     class="img-fluid"
-                     style="width:100%;max-height:320px;object-fit:cover;border-radius:var(--uc-radius);box-shadow:var(--uc-shadow-md)">
+                     style="width:100%;max-height:340px;object-fit:cover;border-radius:var(--uc-radius);box-shadow:var(--uc-shadow-md)">
             </div>
             {% endif %}
 
-            <!-- Topic card -->
+            <!-- Article content -->
             <div class="card mb-4">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <h1 class="h4 mb-0" style="font-weight:700;color:var(--uc-gray-800)">{{ topic.name }}</h1>
-                    {% if current_user.is_admin %}
-                    <a href="{{ url_for('theory.edit_topic', topic_id=topic.id) }}"
-                       class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-pencil me-1"></i>Edit
-                    </a>
-                    {% endif %}
-                </div>
-                <div class="card-body p-4">
-                    <!-- Table of contents (populated by JS if headings present) -->
-                    <div class="d-none mb-4" id="table-of-contents">
-                        <div style="background:var(--uc-gray-50);border:1px solid var(--uc-gray-200);
-                                    border-radius:10px;padding:1rem 1.25rem">
-                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;
-                                        text-transform:uppercase;color:var(--uc-gray-400);margin-bottom:.65rem">
-                                Contents
-                            </div>
-                            <ul id="toc-list" style="list-style:none;padding:0;margin:0"></ul>
-                        </div>
-                    </div>
-
+                <div class="card-body p-4 p-md-5">
                     <div class="topic-content">
                         {{ topic.content|markdown|safe }}
                     </div>
-
-                    {% if topic.tags %}
-                    <div class="mt-4 pt-3" style="border-top:1px solid var(--uc-gray-100)">
-                        {% for tag in topic.tags %}
-                        <span class="badge bg-secondary me-1" style="font-size:.75rem">{{ tag.name }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
                 </div>
             </div>
 
             <!-- Related videos -->
             {% if topic.related_videos %}
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-camera-video me-2" style="color:var(--uc-sky)"></i>Related Videos</h5>
-                </div>
-                <div class="card-body p-4">
-                    {% for video in topic.related_videos %}
-                    <div class="mb-4{% if not loop.last %} pb-4{% endif %}"
-                         {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
-                        <div class="ratio ratio-16x9" style="border-radius:10px;overflow:hidden">
-                            <iframe src="{{ video.url|safe }}" allowfullscreen></iframe>
-                        </div>
-                        <h6 class="mt-2 mb-0" style="font-weight:700">{{ video.title }}</h6>
-                        {% if video.description %}
-                        <p class="text-muted mt-1 mb-0" style="font-size:.85rem">{{ video.description }}</p>
-                        {% endif %}
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
+                        <h5 class="mb-0" style="font-weight:700;font-size:1rem">
+                            <i class="bi bi-camera-video me-2" style="color:var(--uc-sky)"></i>Related Videos
+                        </h5>
                     </div>
-                    {% endfor %}
+                    <div class="p-4">
+                        {% for video in topic.related_videos %}
+                        <div class="{% if not loop.last %}mb-4 pb-4{% endif %}"
+                             {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
+                            <div class="ratio ratio-16x9" style="border-radius:10px;overflow:hidden;background:var(--uc-gray-900)">
+                                <iframe src="{{ video.url|safe }}" allowfullscreen loading="lazy"></iframe>
+                            </div>
+                            <h6 class="mt-3 mb-0" style="font-weight:700">{{ video.title }}</h6>
+                            {% if video.description %}
+                            <p class="text-muted mt-1 mb-0" style="font-size:.85rem">{{ video.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
+            </div>
+            {% endif %}
+
+            <!-- Prev / Next navigation -->
+            {% if prev_topic or next_topic %}
+            <div class="d-flex gap-3 mt-2">
+                {% if prev_topic %}
+                <a href="{{ url_for('theory.topic', topic_id=prev_topic.id) }}" class="topic-nav-btn">
+                    <i class="bi bi-arrow-left topic-nav-arrow"></i>
+                    <div style="min-width:0">
+                        <div class="topic-nav-label">Previous</div>
+                        <div class="topic-nav-title">{{ prev_topic.name }}</div>
+                    </div>
+                </a>
+                {% else %}
+                <div style="flex:1"></div>
+                {% endif %}
+
+                {% if next_topic %}
+                <a href="{{ url_for('theory.topic', topic_id=next_topic.id) }}" class="topic-nav-btn next">
+                    <i class="bi bi-arrow-right topic-nav-arrow"></i>
+                    <div style="min-width:0">
+                        <div class="topic-nav-label">Next</div>
+                        <div class="topic-nav-title">{{ next_topic.name }}</div>
+                    </div>
+                </a>
+                {% else %}
+                <a href="{{ url_for('theory.section', slug=topic.section.slug) }}" class="topic-nav-btn next">
+                    <i class="bi bi-check-circle topic-nav-arrow" style="color:var(--uc-green)"></i>
+                    <div style="min-width:0">
+                        <div class="topic-nav-label">Section complete</div>
+                        <div class="topic-nav-title">Back to {{ topic.section.name }}</div>
+                    </div>
+                </a>
+                {% endif %}
             </div>
             {% endif %}
 
         </div>
 
-        <!-- ── Sidebar ─────────────────────────────────────── -->
+        <!-- ── Sidebar ───────────────────────────────────── -->
         <div class="col-lg-4">
+            <div class="theory-sidebar">
 
-            <!-- In this section -->
-            <div class="card mb-3">
-                <div class="card-body p-0">
-                    <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
-                        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                            <a href="{{ url_for('theory.section', slug=topic.section.slug) }}"
-                               class="text-decoration-none" style="color:inherit">
+                <!-- Table of contents (populated by JS) -->
+                <div class="card mb-3 d-none" id="toc-card">
+                    <div class="card-body p-0">
+                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                                On this page
+                            </div>
+                        </div>
+                        <div class="px-3 py-2" id="toc-list"></div>
+                    </div>
+                </div>
+
+                <!-- Section progress + topics -->
+                <div class="card mb-3">
+                    <div class="card-body p-0">
+                        <!-- Section header link -->
+                        <a href="{{ url_for('theory.section', slug=topic.section.slug) }}"
+                           class="d-flex align-items-center justify-content-between px-4 pt-3 pb-3 text-decoration-none"
+                           style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--uc-gray-400)">
                                 {{ topic.section.name }}
-                            </a>
-                        </div>
-                    </div>
-                    <div class="p-2">
-                        {% for section_topic in topic.section.topics %}
-                        <a href="{{ url_for('theory.topic', topic_id=section_topic.id) }}"
-                           class="theory-nav-link {% if section_topic.id == topic.id %}active{% endif %}">
-                            {% if section_topic.id == topic.id %}
-                            <i class="bi bi-chevron-right me-1" style="font-size:.7rem"></i>
+                            </div>
+                            {% if section_topics %}
+                            <span style="font-size:.7rem;font-weight:700;color:var(--uc-blue);background:rgba(59,130,246,.08);padding:.15rem .5rem;border-radius:20px">
+                                {{ current_idx + 1 }}/{{ section_topics|length }}
+                            </span>
                             {% endif %}
-                            {{ section_topic.name }}
                         </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Related drills -->
-            {% if topic.related_drills %}
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
-                        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                            <i class="bi bi-list-check me-1" style="color:var(--uc-green)"></i>Related Drills
+                        <!-- Progress bar -->
+                        {% if section_topics|length > 1 %}
+                        <div style="height:3px;background:var(--uc-gray-100)">
+                            <div style="height:100%;background:var(--uc-blue);width:{{ ((current_idx + 1) / section_topics|length * 100)|round|int }}%;transition:width .4s"></div>
+                        </div>
+                        {% endif %}
+                        <!-- Topic list -->
+                        <div class="py-2">
+                            {% for t in section_topics %}
+                            <a href="{{ url_for('theory.topic', topic_id=t.id) }}"
+                               class="section-nav-link {% if t.id == topic.id %}active{% endif %}">
+                                <span class="section-nav-num">{{ loop.index }}</span>
+                                <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.name }}</span>
+                            </a>
+                            {% endfor %}
                         </div>
                     </div>
-                    <div class="p-2">
-                        {% for drill in topic.related_drills %}
-                        <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}"
-                           class="theory-nav-link">
-                            <i class="bi bi-arrow-right-short me-1" style="color:var(--uc-gray-400)"></i>
-                            {{ drill.title }}
-                        </a>
-                        {% endfor %}
+                </div>
+
+                <!-- Related drills -->
+                {% if topic.related_drills %}
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                                <i class="bi bi-list-check me-1" style="color:var(--uc-green)"></i>Related Drills
+                            </div>
+                        </div>
+                        <div class="py-2">
+                            {% for drill in topic.related_drills %}
+                            <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}"
+                               class="section-nav-link">
+                                <i class="bi bi-arrow-right-short" style="color:var(--uc-gray-300);font-size:1rem;flex-shrink:0"></i>
+                                {{ drill.title }}
+                            </a>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
+            </div>
         </div>
     </div>
 </div>
@@ -198,27 +320,50 @@
 {% block scripts %}
 {{ super() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-generate table of contents
-    const content = document.querySelector('.topic-content');
-    if (!content) return;
-    const headings = content.querySelectorAll('h2, h3');
-    if (headings.length > 2) {
-        const tocList = document.getElementById('toc-list');
-        const tocContainer = document.getElementById('table-of-contents');
-        headings.forEach((h, i) => {
-            if (!h.id) h.id = `section-${i}`;
-            const li = document.createElement('li');
-            li.style.cssText = 'margin-bottom:.3rem' + (h.tagName === 'H3' ? ';padding-left:1rem' : '');
-            const a = document.createElement('a');
-            a.href = `#${h.id}`;
-            a.textContent = h.textContent;
-            a.style.cssText = 'font-size:.82rem;color:var(--uc-blue);text-decoration:none;font-weight:500';
-            li.appendChild(a);
-            tocList.appendChild(li);
-        });
-        tocContainer.classList.remove('d-none');
+(function () {
+    /* ── Reading progress bar ─────────────────────── */
+    const bar     = document.getElementById('reading-progress');
+    const article = document.getElementById('article-body');
+    function updateProgress() {
+        if (!article || !bar) return;
+        const rect  = article.getBoundingClientRect();
+        const total = article.offsetHeight - window.innerHeight;
+        const scrolled = Math.max(0, -rect.top);
+        bar.style.width = Math.min(100, total > 0 ? (scrolled / total) * 100 : 100) + '%';
     }
-});
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    /* ── Table of contents ────────────────────────── */
+    const content = document.querySelector('.topic-content');
+    const tocCard = document.getElementById('toc-card');
+    const tocList = document.getElementById('toc-list');
+    if (content && tocCard && tocList) {
+        const headings = Array.from(content.querySelectorAll('h2, h3'));
+        if (headings.length >= 2) {
+            headings.forEach((h, i) => {
+                if (!h.id) h.id = 'h-' + i;
+                const a = document.createElement('a');
+                a.href        = '#' + h.id;
+                a.textContent = h.textContent;
+                a.className   = 'toc-link' + (h.tagName === 'H3' ? ' h3' : '');
+                a.dataset.id  = h.id;
+                tocList.appendChild(a);
+            });
+            tocCard.classList.remove('d-none');
+
+            /* Active TOC link on scroll */
+            const tocLinks = tocList.querySelectorAll('.toc-link');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        tocLinks.forEach(l => l.classList.toggle('active', l.dataset.id === entry.target.id));
+                    }
+                });
+            }, { rootMargin: '0px 0px -60% 0px', threshold: 0 });
+            headings.forEach(h => observer.observe(h));
+        }
+    }
+})();
 </script>
 {% endblock %}

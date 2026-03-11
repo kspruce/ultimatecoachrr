@@ -1,15 +1,62 @@
 {# templates/theory/section.html #}
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    /* Topic row list item */
+    .topic-row {
+        display: flex; align-items: flex-start; gap: 1rem;
+        padding: 1.1rem 1.25rem; text-decoration: none;
+        border-bottom: 1px solid var(--uc-gray-100);
+        transition: background .15s;
+    }
+    .topic-row:last-child { border-bottom: none; }
+    .topic-row:hover { background: var(--uc-gray-50); }
+    .topic-row-num {
+        width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .72rem; font-weight: 800;
+        background: var(--uc-gray-100); color: var(--uc-gray-400);
+        margin-top: .1rem;
+    }
+    .topic-row-thumb {
+        width: 72px; height: 52px; border-radius: 8px; flex-shrink: 0;
+        object-fit: cover; background: var(--uc-gray-100);
+    }
+    .topic-row-thumb-placeholder {
+        width: 72px; height: 52px; border-radius: 8px; flex-shrink: 0;
+        background: var(--uc-gray-100); display: flex;
+        align-items: center; justify-content: center;
+    }
+    .topic-row-title {
+        font-size: .9rem; font-weight: 700; color: var(--uc-gray-800);
+        margin-bottom: .2rem; line-height: 1.35;
+    }
+    .topic-row-excerpt {
+        font-size: .8rem; color: var(--uc-gray-400); line-height: 1.5;
+        display: -webkit-box; -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical; overflow: hidden;
+    }
+    /* Sidebar nav */
+    .snav-link {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .4rem .75rem; font-size: .82rem; font-weight: 500;
+        color: var(--uc-gray-600); text-decoration: none; border-radius: 8px;
+        transition: background .15s, color .15s;
+    }
+    .snav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
+    @media (min-width: 992px) { .section-sidebar { position: sticky; top: 1.5rem; } }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
 
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb" style="font-size:.82rem">
-            <li class="breadcrumb-item">
-                <a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a>
-            </li>
+        <ol class="breadcrumb mb-0" style="font-size:.82rem">
+            <li class="breadcrumb-item"><a href="{{ url_for('theory.index') }}" style="color:var(--uc-blue)">Theory</a></li>
             <li class="breadcrumb-item active" style="color:var(--uc-gray-400)">{{ section.name }}</li>
         </ol>
     </nav>
@@ -18,18 +65,14 @@
     <div class="uc-page-header mb-4">
         <div>
             <h2>{{ section.name }}</h2>
-            {% if section.description %}
-            <p>{{ section.description }}</p>
-            {% endif %}
+            {% if section.description %}<p>{{ section.description }}</p>{% endif %}
         </div>
         {% if current_user.is_admin %}
         <div class="d-flex gap-2">
-            <a href="{{ url_for('theory.edit_section', section_id=section.id) }}"
-               class="btn btn-outline-secondary">
+            <a href="{{ url_for('theory.edit_section', section_id=section.id) }}" class="btn btn-outline-secondary">
                 <i class="bi bi-pencil me-1"></i>Edit Section
             </a>
-            <a href="{{ url_for('theory.add_topic', section_id=section.id) }}"
-               class="btn btn-primary">
+            <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" class="btn btn-primary">
                 <i class="bi bi-plus-lg me-1"></i>Add Topic
             </a>
         </div>
@@ -37,66 +80,74 @@
     </div>
 
     <div class="row g-4">
-        <!-- Topics grid -->
+
+        <!-- ── Topic list ─────────────────────────────── -->
         <div class="col-lg-8">
             {% if topics %}
-            <div class="row g-3">
+
+            <!-- Topic count + meta row -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <span style="font-size:.8rem;color:var(--uc-gray-400);font-weight:600">
+                    {{ topics|length }} topic{{ 's' if topics|length != 1 }}
+                </span>
+                <span style="font-size:.78rem;color:var(--uc-gray-300)">Read in order for best results</span>
+            </div>
+
+            <div class="card p-0" style="overflow:hidden">
                 {% for topic in topics %}
-                <div class="col-sm-6">
-                    <div class="card h-100" style="transition:box-shadow .2s,transform .2s"
-                         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='var(--uc-shadow-md)'"
-                         onmouseout="this.style.transform='';this.style.boxShadow=''">
-                        {% if topic.image_url %}
-                        <img src="{{ topic.image_url }}" class="card-img-top"
-                             alt="{{ topic.name }}" style="height:150px;object-fit:cover;border-radius:var(--uc-radius) var(--uc-radius) 0 0">
-                        {% else %}
-                        <div style="height:120px;background:linear-gradient(135deg,var(--uc-gray-100),var(--uc-gray-50));
-                                    display:flex;align-items:center;justify-content:center;
-                                    border-radius:var(--uc-radius) var(--uc-radius) 0 0">
-                            <i class="bi bi-file-text" style="font-size:2rem;color:var(--uc-gray-200)"></i>
-                        </div>
+                <a href="{{ url_for('theory.topic', topic_id=topic.id) }}" class="topic-row">
+                    <!-- Number badge -->
+                    <span class="topic-row-num">{{ loop.index }}</span>
+
+                    <!-- Thumbnail or placeholder -->
+                    {% if topic.image_url %}
+                    <img src="{{ topic.image_url }}" alt="{{ topic.name }}" class="topic-row-thumb">
+                    {% else %}
+                    <div class="topic-row-thumb-placeholder">
+                        <i class="bi bi-file-text" style="font-size:1.1rem;color:var(--uc-gray-200)"></i>
+                    </div>
+                    {% endif %}
+
+                    <!-- Text content -->
+                    <div style="flex:1;min-width:0">
+                        <div class="topic-row-title">{{ topic.name }}</div>
+                        {% if topic.content %}
+                        <div class="topic-row-excerpt">{{ topic.content|striptags|truncate(120) }}</div>
                         {% endif %}
-                        <div class="card-body pb-2">
-                            <a href="{{ url_for('theory.topic', topic_id=topic.id) }}"
-                               class="text-decoration-none">
-                                <h6 style="font-weight:700;color:var(--uc-gray-800);margin-bottom:.35rem">{{ topic.name }}</h6>
-                            </a>
-                            {% if topic.content %}
-                            <p style="font-size:.8rem;color:var(--uc-gray-400);margin:0">
-                                {{ topic.content|striptags|truncate(90) }}
-                            </p>
+                        <!-- Badges -->
+                        <div class="d-flex gap-1 mt-1">
+                            {% if topic.related_videos %}
+                            <span class="badge" style="background:rgba(14,165,233,.12);color:var(--uc-sky);font-size:.67rem">
+                                <i class="bi bi-camera-video me-1"></i>{{ topic.related_videos|length }} video{{ 's' if topic.related_videos|length != 1 }}
+                            </span>
+                            {% endif %}
+                            {% if topic.related_drills %}
+                            <span class="badge" style="background:rgba(16,185,129,.1);color:var(--uc-green);font-size:.67rem">
+                                <i class="bi bi-list-check me-1"></i>{{ topic.related_drills|length }} drill{{ 's' if topic.related_drills|length != 1 }}
+                            </span>
                             {% endif %}
                         </div>
-                        <div class="card-footer" style="background:transparent;border-top:1px solid var(--uc-gray-100);
-                                                         display:flex;align-items:center;justify-content:space-between;
-                                                         padding:.65rem 1rem">
-                            <div class="d-flex gap-1">
-                                {% if topic.related_videos %}
-                                <span class="badge" style="background:rgba(14,165,233,.15);color:var(--uc-sky);font-size:.7rem">
-                                    <i class="bi bi-camera-video me-1"></i>{{ topic.related_videos|length }}
-                                </span>
-                                {% endif %}
-                                {% if topic.related_drills %}
-                                <span class="badge" style="background:rgba(16,185,129,.12);color:var(--uc-green);font-size:.7rem">
-                                    <i class="bi bi-list-check me-1"></i>{{ topic.related_drills|length }}
-                                </span>
-                                {% endif %}
-                            </div>
-                            <a href="{{ url_for('theory.topic', topic_id=topic.id) }}"
-                               class="btn btn-sm btn-outline-primary" style="font-size:.78rem">
-                                Read →
-                            </a>
-                        </div>
                     </div>
-                </div>
+
+                    <!-- Arrow -->
+                    <i class="bi bi-chevron-right" style="color:var(--uc-gray-200);font-size:.85rem;flex-shrink:0;margin-top:.2rem"></i>
+                </a>
                 {% endfor %}
             </div>
+
+            <!-- Start reading CTA -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('theory.topic', topic_id=topics[0].id) }}" class="btn btn-primary">
+                    <i class="bi bi-book me-2"></i>Start Reading
+                </a>
+            </div>
+
             {% else %}
             <div class="card">
                 <div class="uc-empty">
                     <div class="uc-empty-icon"><i class="bi bi-file-text"></i></div>
                     <h5>No Topics Yet</h5>
-                    <p>Add the first topic to this section.</p>
+                    <p>Add the first topic to this section to get started.</p>
                     {% if current_user.is_admin %}
                     <a href="{{ url_for('theory.add_topic', section_id=section.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i>Add First Topic
@@ -107,37 +158,61 @@
             {% endif %}
         </div>
 
-        <!-- Sidebar -->
+        <!-- ── Sidebar ───────────────────────────────────── -->
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="px-4 pt-4 pb-3" style="border-bottom:1px solid var(--uc-gray-100)">
-                        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
-                            Quick Links
+            <div class="section-sidebar">
+
+                <!-- In this section — quick topic nav -->
+                {% if topics %}
+                <div class="card mb-3">
+                    <div class="card-body p-0">
+                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                                Topics in this section
+                            </div>
+                        </div>
+                        <div class="py-2">
+                            {% for topic in topics %}
+                            <a href="{{ url_for('theory.topic', topic_id=topic.id) }}" class="snav-link">
+                                <span style="width:18px;height:18px;border-radius:50%;background:var(--uc-gray-100);
+                                             display:flex;align-items:center;justify-content:center;
+                                             font-size:.62rem;font-weight:800;color:var(--uc-gray-400);flex-shrink:0">
+                                    {{ loop.index }}
+                                </span>
+                                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ topic.name }}</span>
+                            </a>
+                            {% endfor %}
                         </div>
                     </div>
-                    <div class="p-3">
-                        <a href="{{ url_for('theory.index') }}"
-                           class="d-flex align-items-center gap-2 p-2 text-decoration-none"
-                           style="border-radius:8px;color:var(--uc-gray-600);font-size:.85rem;font-weight:500">
-                            <i class="bi bi-arrow-left" style="color:var(--uc-gray-400)"></i> All Sections
-                        </a>
-                        {% if section.related_drills %}
-                        <a href="#related-drills"
-                           class="d-flex align-items-center gap-2 p-2 text-decoration-none"
-                           style="border-radius:8px;color:var(--uc-gray-600);font-size:.85rem;font-weight:500">
-                            <i class="bi bi-list-check" style="color:var(--uc-green)"></i> Related Drills
-                        </a>
-                        {% endif %}
-                        {% if section.related_videos %}
-                        <a href="#related-videos"
-                           class="d-flex align-items-center gap-2 p-2 text-decoration-none"
-                           style="border-radius:8px;color:var(--uc-gray-600);font-size:.85rem;font-weight:500">
-                            <i class="bi bi-camera-video" style="color:var(--uc-sky)"></i> Video Resources
-                        </a>
-                        {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Other sections -->
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="px-4 pt-3 pb-2" style="border-bottom:1px solid var(--uc-gray-100)">
+                            <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--uc-gray-400)">
+                                Other Sections
+                            </div>
+                        </div>
+                        <div class="py-2">
+                            <a href="{{ url_for('theory.index') }}" class="snav-link">
+                                <i class="bi bi-grid" style="color:var(--uc-gray-300);font-size:.9rem;flex-shrink:0"></i>
+                                <span style="font-weight:600;color:var(--uc-blue)">Theory Hub</span>
+                            </a>
+                            {% for s in all_sections if s.id != section.id %}
+                            <a href="{{ url_for('theory.section', slug=s.slug) }}" class="snav-link">
+                                <i class="bi bi-book" style="color:var(--uc-gray-300);font-size:.9rem;flex-shrink:0"></i>
+                                {{ s.name }}
+                                {% if s.topics.count() %}
+                                <span class="ms-auto" style="font-size:.7rem;color:var(--uc-gray-300);flex-shrink:0">{{ s.topics.count() }}</span>
+                                {% endif %}
+                            </a>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
