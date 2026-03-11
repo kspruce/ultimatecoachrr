@@ -2784,27 +2784,27 @@ def calculate_additional_team_metrics(games):
 
     # Count goals and assists
     goals_query = Event.query.filter_by(
-        event_type=’goal’,
+        event_type='goal',
         team_organization_id=get_current_team_id()
     ).filter(Event.point_id.in_(point_ids))
 
     goals = goals_query.count()
-    assists = sum(1 for t in throws if t.throw_type == ‘assist’)
+    assists = sum(1 for t in throws if t.throw_type == 'assist')
 
     # Count catch/drop events for catch_rate
     catches = Event.query.filter_by(
-        event_type=’catch’,
+        event_type='catch',
         team_organization_id=get_current_team_id()
     ).filter(Event.point_id.in_(point_ids)).count()
 
     drops = Event.query.filter_by(
-        event_type=’drop’,
+        event_type='drop',
         team_organization_id=get_current_team_id()
     ).filter(Event.point_id.in_(point_ids)).count()
 
     # Count blocks
     blocks_query = Event.query.filter_by(
-        event_type=’block’,
+        event_type='block',
         team_organization_id=get_current_team_id()
     )
     blocks_query = blocks_query.filter(Event.point_id.in_(point_ids))
@@ -2812,7 +2812,7 @@ def calculate_additional_team_metrics(games):
 
     # Count turnovers forced
     turnovers_forced_query = Event.query.filter(
-        Event.event_type.in_([‘throwaway’, ‘drop’, ‘stall’]),
+        Event.event_type.in_(['throwaway', 'drop', 'stall']),
         Event.is_offensive == False,
         Event.team_organization_id == get_current_team_id()
     )
@@ -2827,7 +2827,7 @@ def calculate_additional_team_metrics(games):
     d_conversions = 0
 
     for game in games:
-        d_points = game.d_line_points.all() if hasattr(game.d_line_points, ‘all’) else game.d_line_points
+        d_points = game.d_line_points.all() if hasattr(game.d_line_points, 'all') else game.d_line_points
         d_points_count += len(d_points)
         d_conversions += sum(1 for p in d_points if point_we_scored(p))
 
@@ -2841,7 +2841,7 @@ def calculate_additional_team_metrics(games):
     o_points_count = 0
     for game in games:
         try:
-            o_points = game.o_line_points.all() if hasattr(game.o_line_points, ‘all’) else game.o_line_points
+            o_points = game.o_line_points.all() if hasattr(game.o_line_points, 'all') else game.o_line_points
             o_points_count += len(o_points)
         except Exception as e:
             current_app.logger.error(f"Error calculating o-line stats for game {game.id}: {str(e)}")
@@ -2850,17 +2850,17 @@ def calculate_additional_team_metrics(games):
     throws_per_point = len(throws) / total_points if total_points > 0 else 0
 
     result = {
-        ‘completion_rate’: (completions / len(throws)) * 100 if throws else 0,
-        ‘catch_rate’: (catches / (catches + drops)) * 100 if (catches + drops) > 0 else 0,
-        ‘goals_per_point’: goals / total_points,
-        ‘assists_per_point’: assists / total_points,
-        ‘throws_per_point’: throws_per_point,
-        ‘hucks_per_point’: hucks / total_points,
+        'completion_rate': (completions / len(throws)) * 100 if throws else 0,
+        'catch_rate': (catches / (catches + drops)) * 100 if (catches + drops) > 0 else 0,
+        'goals_per_point': goals / total_points,
+        'assists_per_point': assists / total_points,
+        'throws_per_point': throws_per_point,
+        'hucks_per_point': hucks / total_points,
         # blocks_per_point: blocks earned on D-line per D-line point played
-        ‘blocks_per_point’: blocks / d_points_count if d_points_count > 0 else 0,
-        ‘turnovers_forced_per_point’: turnovers_forced / d_points_count if d_points_count > 0 else 0,
-        ‘break_throw_percentage’: break_throw_percentage,
-        ‘break_percentage’: break_percentage,       # D-line conversion rate alias
+        'blocks_per_point': blocks / d_points_count if d_points_count > 0 else 0,
+        'turnovers_forced_per_point': turnovers_forced / d_points_count if d_points_count > 0 else 0,
+        'break_throw_percentage': break_throw_percentage,
+        'break_percentage': break_percentage,       # D-line conversion rate alias
     }
 
     return result
