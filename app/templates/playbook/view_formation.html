@@ -77,19 +77,42 @@
         margin-bottom: 1.5rem;
         border-radius: 8px;
         overflow: hidden;
+        background: var(--uc-gray-50, #f9fafb);
+        text-align: center;
     }
-    
+
     .concept-image {
-        width: 100%;
+        max-width: 100%;
+        width: auto;
         height: auto;
+        max-height: 520px;
+        object-fit: contain;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
+        cursor: zoom-in;
+        display: block;
+        margin: 0 auto;
     }
-    
-    .concept-image:hover {
-        transform: scale(1.02);
+
+    /* Lightbox */
+    #pb-lightbox {
+        display: none; position: fixed; inset: 0; z-index: 10000;
+        background: rgba(0,0,0,.9); align-items: center; justify-content: center;
+        padding: 1.5rem; cursor: zoom-out;
     }
+    #pb-lightbox.open { display: flex; }
+    #pb-lightbox img {
+        max-width: min(100%, 1100px); max-height: 88vh;
+        width: auto; height: auto; object-fit: contain;
+        border-radius: 10px; box-shadow: 0 12px 60px rgba(0,0,0,.6);
+        cursor: default;
+    }
+    #pb-lightbox-close {
+        position: fixed; top: 1rem; right: 1.5rem;
+        color: rgba(255,255,255,.65); font-size: 2rem; cursor: pointer;
+        line-height: 1; font-weight: 300; z-index: 10001;
+    }
+    #pb-lightbox-close:hover { color: #fff; }
     
     /* Video container styling */
     .iframe-direct-container {
@@ -307,9 +330,11 @@
                         <h5 class="mb-0"><i class="bi bi-image me-2"></i> Concept Diagram</h5>
                     </div>
                     <div class="card-body text-center">
-                        <div class="concept-image-container">
+                        <div class="concept-image-container"
+                             onclick="pbLightbox('{{ formation.imgur_url|e }}','{{ formation.name|e }} diagram')">
                             <img src="{{ formation.imgur_url }}" alt="{{ formation.name }} diagram" class="concept-image">
                         </div>
+                        <small class="text-muted"><i class="bi bi-zoom-in me-1"></i>Click to enlarge</small>
                     </div>
                 </div>
             {% endif %}
@@ -457,11 +482,26 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
     
+    // Lightbox
+    function pbLightbox(src, alt) {
+        var lb = document.getElementById('pb-lightbox');
+        lb.querySelector('img').src = src;
+        lb.querySelector('img').alt = alt || '';
+        lb.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function pbCloseLightbox(e) {
+        if (e && e.target.tagName === 'IMG') return;
+        document.getElementById('pb-lightbox').classList.remove('open');
+        document.getElementById('pb-lightbox').querySelector('img').src = '';
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') pbCloseLightbox(); });
+
     // Fix image loading issues
     document.querySelectorAll('.concept-image').forEach(img => {
         img.addEventListener('error', function() {
             this.onerror = null;
-            this.src = '/static/images/placeholder-image.png'; // Replace with your placeholder image path
             this.alt = 'Image not available';
             this.classList.add('img-error');
         });
@@ -478,4 +518,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Playbook lightbox -->
+<div id="pb-lightbox" onclick="pbCloseLightbox(event)">
+    <span id="pb-lightbox-close" onclick="pbCloseLightbox()">&times;</span>
+    <img src="" alt="">
+</div>
 {% endblock %}

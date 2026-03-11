@@ -42,12 +42,66 @@
     border-radius: var(--uc-radius); padding: 1rem 1.25rem; overflow-x: auto;
 }
 .topic-content pre code { background: none; padding: 0; }
+/* Content images — !important overrides any inline width/height attrs from imgbb */
 .topic-content img {
-    max-width: 100%; height: auto; display: block;
-    margin: 1.25rem auto; border-radius: var(--uc-radius);
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: var(--uc-radius);
     box-shadow: var(--uc-shadow-md);
+    cursor: zoom-in;
 }
 .topic-content a { color: var(--uc-blue); }
+
+/* ── Hero image wrapper ───────────────────────── */
+.theory-img-wrap {
+    background: var(--uc-gray-50);
+    border-radius: var(--uc-radius);
+    box-shadow: var(--uc-shadow-md);
+    overflow: hidden;
+    cursor: zoom-in;
+    text-align: center;
+}
+.theory-hero-img {
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    max-height: 500px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+/* ── Lightbox ─────────────────────────────────── */
+#img-lightbox {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,.9); align-items: center; justify-content: center;
+    padding: 1.5rem; cursor: zoom-out;
+}
+#img-lightbox.open { display: flex; }
+#img-lightbox-img {
+    max-width: min(100%, 1100px);
+    max-height: 88vh;
+    width: auto; height: auto;
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 12px 60px rgba(0,0,0,.6);
+    cursor: default;
+}
+#img-lightbox-close {
+    position: fixed; top: 1rem; right: 1.5rem;
+    color: rgba(255,255,255,.65); font-size: 2rem; cursor: pointer;
+    line-height: 1; font-weight: 300; transition: color .15s;
+    z-index: 10001;
+}
+#img-lightbox-close:hover { color: #fff; }
+#img-lightbox-caption {
+    position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.45); font-size: .78rem;
+    max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .topic-content a:hover { text-decoration: underline; }
 .topic-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .875rem; }
 .topic-content th,
@@ -160,8 +214,16 @@
             <!-- Hero image -->
             {% if topic.image_url %}
             <div class="mb-4">
-                <img src="{{ topic.image_url }}" alt="{{ topic.name }}"
-                     style="width:100%;max-height:340px;object-fit:cover;border-radius:var(--uc-radius);box-shadow:var(--uc-shadow-md)">
+                <div class="theory-img-wrap"
+                     onclick="openLightbox('{{ topic.image_url|e }}','{{ topic.name|e }}')">
+                    <img src="{{ topic.image_url }}" alt="{{ topic.name }}"
+                         class="theory-hero-img">
+                </div>
+                <div class="text-center mt-1">
+                    <span style="font-size:.7rem;color:var(--uc-gray-300)">
+                        <i class="bi bi-zoom-in me-1"></i>Click to enlarge
+                    </span>
+                </div>
             </div>
             {% endif %}
 
@@ -315,6 +377,13 @@
         </div>
     </div>
 </div>
+
+<!-- Lightbox overlay -->
+<div id="img-lightbox" onclick="closeLightbox(event)">
+    <span id="img-lightbox-close" onclick="closeLightbox()">&times;</span>
+    <img id="img-lightbox-img" src="" alt="">
+    <div id="img-lightbox-caption"></div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -333,6 +402,27 @@
     }
     window.addEventListener('scroll', updateProgress, { passive: true });
     updateProgress();
+
+    /* ── Lightbox ────────────────────────────────── */
+    function openLightbox(src, alt) {
+        document.getElementById('img-lightbox-img').src = src;
+        document.getElementById('img-lightbox-caption').textContent = alt || '';
+        document.getElementById('img-lightbox').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox(e) {
+        // Clicking the image itself shouldn't close the box
+        if (e && e.target.id === 'img-lightbox-img') return;
+        document.getElementById('img-lightbox').classList.remove('open');
+        document.getElementById('img-lightbox-img').src = '';
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    // Make every image inside the article content clickable
+    document.querySelectorAll('.topic-content img').forEach(img => {
+        img.addEventListener('click', () => openLightbox(img.src, img.alt));
+    });
 
     /* ── Table of contents ────────────────────────── */
     const content = document.querySelector('.topic-content');
