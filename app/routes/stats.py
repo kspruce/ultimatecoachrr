@@ -1000,18 +1000,11 @@ def index():
     }
 
     try:
-        # Get team name from current user's player
-        team_name = None
-        if hasattr(current_user, 'player') and current_user.player:
-            team_name = current_user.player.team
-
-        # Get active players with eager loading
+        # Get active players scoped to the current team organisation
         players_query = Player.query.filter_by(
             active=True,
             team_organization_id=get_current_team_id()
         )
-        if team_name:
-            players_query = players_query.filter_by(team=team_name)
         players = players_query.all()
 
         if not players:
@@ -1599,16 +1592,11 @@ def game_stats(game_id):
     # Sort by points played
     player_stats.sort(key=lambda x: x['stats']['points_played'], reverse=True)
     
-    # Get team name from the first player (assuming all players are on the same team)
-    team_name = None
-    if players:
-        first_player = players[0]
-        team_name = first_player.team
-    
-    # Generate visualization data
+    # Generate visualization data — point_ids already scopes to this game,
+    # so team_name filtering is redundant and Player.team doesn't exist anyway.
     point_ids = [p.id for p in game.points]
-    heatmap_data = process_heatmap_data(team_name=team_name, point_ids=point_ids)
-    connection_data = generate_player_connections(team_name=team_name, min_connections=2, point_ids=point_ids)
+    heatmap_data = process_heatmap_data(point_ids=point_ids)
+    connection_data = generate_player_connections(min_connections=2, point_ids=point_ids)
     
     # Add additional team metrics
     team_stats.update(calculate_additional_team_metrics([game]))
@@ -1939,18 +1927,11 @@ def team_stats():
     for key, value in prev_poss_metrics.items():
         team_summary[f'prev_{key}'] = value
     
-    # Get team name from current user's player
-    team_name = None
-    if hasattr(current_user, 'player') and current_user.player:
-        team_name = current_user.player.team
-    
-    # Calculate player statistics
+    # Calculate player statistics scoped to the current team organisation
     players_query = Player.query.filter_by(
         active=True,
         team_organization_id=get_current_team_id()
     )
-    if team_name:
-        players_query = players_query.filter_by(team=team_name)
     players = players_query.all()
     
     # Get cached team averages
@@ -4032,17 +4013,12 @@ def api_player_connections_sankey(player_id): # <-- Accept player_id here
 @login_required
 def api_connection_data():
     """API endpoint for player connection data"""
-    team_name = None
-    if hasattr(current_user, 'player') and current_user.player:
-        team_name = current_user.player.team
-    
     # Get filter parameters
     opposition_team = request.args.get('opposition_team')
     min_connections = request.args.get('min_connections', 2, type=int)
-    
-    # Only include connections with at least min_connections throws
+
+    # team_organization_id scoping happens inside generate_player_connections via get_current_team_id()
     connection_data = generate_player_connections(
-        team_name=team_name, 
         opposition_team=opposition_team,
         min_connections=min_connections
     )
@@ -4078,23 +4054,15 @@ def api_player_stats():
             team_organization_id=get_current_team_id()
         ).all()
     
-    # Get team name from current user's player
-    team_name = None
-    if hasattr(current_user, 'player') and current_user.player:
-        team_name = current_user.player.team
-    
-    # Get active players
-    players_query = Player.query.filter_by(
+    # Get active players scoped to the current team organisation
+    players = Player.query.filter_by(
         active=True,
         team_organization_id=get_current_team_id()
-    )
-    if team_name:
-        players_query = players_query.filter_by(team=team_name)
-    players = players_query.all()
-    
+    ).all()
+
     # Get cached team averages
     team_avgs = get_cached_team_averages(games)
-    
+
     # Get player stats in batch
     player_stats = get_players_base_stats(players, games)
     

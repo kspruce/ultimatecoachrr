@@ -393,6 +393,67 @@
         </div>
     </div>
     
+    <!-- Recent Games quick-access -->
+    {% if recent_games %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Games</h5>
+                    <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-secondary">All Games</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Opponent</th>
+                                    <th>Result</th>
+                                    <th>Score</th>
+                                    <th>O-Line%</th>
+                                    <th>D-Line%</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in recent_games[:8] %}
+                                {% set gs = team_stats[loop.index0] if loop.index0 < team_stats|length else none %}
+                                <tr>
+                                    <td class="text-muted" style="white-space:nowrap">
+                                        {{ game.date.strftime('%d %b %Y') if game.date else '—' }}
+                                    </td>
+                                    <td>{{ game.opponent }}</td>
+                                    <td>
+                                        {% if game.is_win %}<span class="badge bg-success">W</span>
+                                        {% elif game.is_loss %}<span class="badge bg-danger">L</span>
+                                        {% else %}<span class="badge bg-secondary">—</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="{% if game.is_win %}text-success{% elif game.is_loss %}text-danger{% endif %} fw-semibold">
+                                            {{ game.our_score }}–{{ game.their_score }}
+                                        </span>
+                                    </td>
+                                    <td>{% if gs %}{{ gs.stats.o_line_conversion_rate|round(0)|int }}%{% else %}—{% endif %}</td>
+                                    <td>{% if gs %}{{ gs.stats.d_line_conversion_rate|round(0)|int }}%{% else %}—{% endif %}</td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('stats_dashboard.game_stats', game_id=game.id) }}"
+                                           class="btn btn-outline-primary"
+                                           style="font-size:0.75rem;padding:2px 8px">
+                                            Stats →
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Visualization Sections -->
     <div class="row mb-4">
         <div class="col-md-12">
