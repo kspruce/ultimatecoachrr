@@ -77,6 +77,29 @@
   .uc-feat-desc  { font-size:.79rem; color:var(--uc-gray-400); line-height:1.45; margin:0; }
   .uc-feat-arrow { position:absolute; top:1.25rem; right:1.125rem; color:var(--uc-gray-400); font-size:.8rem; opacity:0; transition:opacity .2s,transform .2s; }
 
+  /* ─── Spotlight cards ──────────────────────────────── */
+  .uc-spotlight {
+    display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1.5rem;
+  }
+  .uc-spot {
+    background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.2);
+    border-radius:10px; padding:.85rem 1rem; text-decoration:none; color:white;
+    transition:background .15s;
+  }
+  .uc-spot:hover { background:rgba(255,255,255,.2); text-decoration:none; color:white; }
+  .uc-spot-kicker {
+    font-size:.67rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+    opacity:.65; display:flex; align-items:center; gap:.35rem; margin-bottom:.4rem;
+  }
+  .uc-spot-title { font-size:.95rem; font-weight:700; line-height:1.3; margin-bottom:.25rem; }
+  .uc-spot-meta  { font-size:.77rem; opacity:.75; display:flex; align-items:center; gap:.3rem; margin-bottom:.15rem; }
+  .uc-spot-empty {
+    background:rgba(255,255,255,.07); border:1px dashed rgba(255,255,255,.2);
+    border-radius:10px; padding:.85rem 1rem; color:rgba(255,255,255,.5);
+    font-size:.82rem; display:flex; align-items:center; gap:.5rem;
+  }
+  @media (max-width:540px) { .uc-spotlight { grid-template-columns:1fr; } }
+
   /* ─── Icon colour helpers ───────────────────────────── */
   .ic-blue   { background:#EFF6FF; color:var(--uc-blue);   }
   .ic-indigo { background:#EEF2FF; color:var(--uc-indigo); }
@@ -182,14 +205,37 @@
       {% else %}Team management, game analysis and coaching — all in one place.{% endif %}
     </p>
 
-    {% if current_user.is_authenticated and current_user.is_admin %}
-    <div class="uc-hero-stats">
-      <span class="uc-stat-pill"><i class="bi bi-people-fill"></i><strong>{{ stats.active_players_count }}</strong><span style="opacity:.8">players</span></span>
-      <span class="uc-stat-pill"><i class="bi bi-controller"></i><strong>{{ stats.games_count }}</strong><span style="opacity:.8">games this season</span></span>
-      <span class="uc-stat-pill"><i class="bi bi-graph-up-arrow"></i><strong>{{ stats.win_rate }}%</strong><span style="opacity:.8">win rate</span></span>
-      {% if stats.next_game_date %}
-      <span class="uc-stat-pill"><i class="bi bi-calendar-event"></i><span style="opacity:.8">Next game:</span><strong>{{ stats.next_game_date }}</strong></span>
+    {% if current_user.is_authenticated %}
+    <div class="uc-spotlight">
+
+      {# ── Next session ── #}
+      {% if next_session %}
+      <a href="{{ url_for('session.detail', session_id=next_session.id) }}" class="uc-spot">
+        <div class="uc-spot-kicker"><i class="bi bi-calendar-check-fill"></i> Next Session</div>
+        <div class="uc-spot-title">{{ next_session.title }}</div>
+        <div class="uc-spot-meta"><i class="bi bi-calendar3"></i> {{ next_session.date.strftime('%a %d %b') }}{% if next_session.formatted_time %} &middot; {{ next_session.formatted_time }}{% endif %}</div>
+        {% if next_session.location %}<div class="uc-spot-meta"><i class="bi bi-geo-alt"></i> {{ next_session.location }}</div>{% endif %}
+        {% if next_session.focus_area %}<div class="uc-spot-meta"><i class="bi bi-bullseye"></i> {{ next_session.focus_area }}</div>{% endif %}
+      </a>
+      {% else %}
+      <div class="uc-spot-empty"><i class="bi bi-calendar-check"></i> No upcoming sessions scheduled</div>
       {% endif %}
+
+      {# ── Next tournament ── #}
+      {% if next_tournament %}
+      <a href="{{ url_for('tournament.detail', tournament_id=next_tournament.id) }}" class="uc-spot">
+        <div class="uc-spot-kicker"><i class="bi bi-trophy-fill"></i> Next Tournament</div>
+        <div class="uc-spot-title">{{ next_tournament.name }}</div>
+        <div class="uc-spot-meta"><i class="bi bi-calendar3"></i>
+          {% if next_tournament.formatted_date_range %}{{ next_tournament.formatted_date_range }}
+          {% else %}{{ next_tournament.start_date.strftime('%a %d %b') }}{% endif %}
+        </div>
+        {% if next_tournament.location %}<div class="uc-spot-meta"><i class="bi bi-geo-alt"></i> {{ next_tournament.location }}</div>{% endif %}
+      </a>
+      {% else %}
+      <div class="uc-spot-empty"><i class="bi bi-trophy"></i> No upcoming tournaments scheduled</div>
+      {% endif %}
+
     </div>
     {% endif %}
   </div>

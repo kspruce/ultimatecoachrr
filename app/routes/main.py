@@ -39,6 +39,8 @@ def index():
     recent_activities = []
     upcoming_events = []
     team_name = None
+    next_session = None
+    next_tournament = None
 
     if current_user.is_authenticated:
         try:
@@ -245,13 +247,13 @@ def index():
                         logger.error(f"Error processing tournament {tournament.id}: {str(e)}")
                 
                 logger.debug(f"Total upcoming events before sorting: {len(upcoming_events)}")
-                
+
                 # Only try to sort if we have events
                 if upcoming_events:
                     # Debug each event's sort_date before sorting
                     for i, event in enumerate(upcoming_events):
                         logger.debug(f"Event {i}: {event['title']} - sort_date: {event['sort_date']} - type: {type(event['sort_date'])}")
-                    
+
                     # Sort upcoming events by the actual date object, not a string
                     try:
                         upcoming_events.sort(key=lambda x: x['sort_date'])
@@ -259,7 +261,7 @@ def index():
                     except Exception as e:
                         logger.error(f"Error sorting events: {str(e)}")
                         # Don't empty the list on error, just leave it unsorted
-                    
+
                     upcoming_events = upcoming_events[:5]
                     logger.debug(f"Final upcoming events count: {len(upcoming_events)}")
                 else:
@@ -271,6 +273,17 @@ def index():
                 if team:
                     team_name = team.name
 
+                # Next session and tournament for homepage spotlight
+                next_session = SessionPlan.query.filter(
+                    SessionPlan.date >= datetime.now().date(),
+                    SessionPlan.team_organization_id == team_id
+                ).order_by(SessionPlan.date.asc(), SessionPlan.start_time.asc()).first()
+
+                next_tournament = Tournament.query.filter(
+                    Tournament.start_date >= datetime.now().date(),
+                    Tournament.team_organization_id == team_id
+                ).order_by(Tournament.start_date.asc()).first()
+
         except Exception as e:
             # Log any errors but don't crash the application
             logger.exception(f"Error generating dashboard data: {str(e)}")
@@ -281,7 +294,9 @@ def index():
                          stats=stats,
                          recent_activities=recent_activities,
                          upcoming_events=upcoming_events,
-                         team_name=team_name)
+                         team_name=team_name,
+                         next_session=next_session,
+                         next_tournament=next_tournament)
 
 
 @bp.route('/about')

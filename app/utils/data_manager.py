@@ -161,12 +161,13 @@ class DataManager:
                 logging.info(f"Exported {len(data)} records from {table_name}")
                 
             except Exception as e:
+                db.session.rollback()
                 logging.error(f"Error exporting {table_name}: {e}")
                 export_summary[table_name] = {
                     'error': str(e),
                     'records_exported': 0
                 }
-        
+
         # Save export summary
         with open(os.path.join(export_path, 'export_summary.json'), 'w') as f:
             json.dump(export_summary, f, indent=2)
@@ -369,11 +370,25 @@ class DataManager:
                             'references': f"{fk.column.table.name}.{fk.column.name}"
                         })
             
+            try:
+                record_count = model.query.count()
+            except Exception as e:
+                db.session.rollback()
+                logging.warning(f"Could not count records for {table_name}: {e}")
+                if "relation" in str(e) and "does not exist" in str(e):
+                    continue
+                record_count = 0
+
             info['models'][table_name] = {
                 'class_name': model.__name__,
                 'columns': columns,
                 'foreign_keys': foreign_keys,
-                'record_count': model.query.count()
+                'record_count': record_count
             }
-        
+
+        # Only include tables in dependency_order that were successfully added to models
+        info['dependency_order'] = [
+            t for t in info['dependency_order'] if t in info['models']
+        ]
+
         return info

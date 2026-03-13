@@ -264,17 +264,18 @@ class EnhancedDataManager:
                         logger.info(f"Exported {len(data)} records from {table_name}")
                         
                     except Exception as e:
+                        db.session.rollback()
                         logger.error(f"Error exporting {table_name}: {e}")
                         export_summary[table_name] = {
                             'status': 'error',
                             'error': str(e)
                         }
-            
+
             # Update and save summary
             export_summary['status'] = 'completed'
             export_summary['completed_timestamp'] = datetime.now().isoformat()
             zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
-        
+
         memory_file.seek(0)
         return memory_file, f"{export_dir_name}.zip"
         
@@ -341,12 +342,13 @@ class EnhancedDataManager:
                         logger.info(f"Exported {len(data)} records from {table_name} to Excel")
                         
                     except Exception as e:
+                        db.session.rollback()
                         logger.error(f"Error exporting {table_name} to Excel: {e}")
                         export_summary[table_name] = {
                             'status': 'error',
                             'error': str(e)
                         }
-            
+
             # Update and save summary
             export_summary['status'] = 'completed'
             export_summary['completed_timestamp'] = datetime.now().isoformat()
@@ -405,6 +407,7 @@ class EnhancedDataManager:
                                     adjusted_width = max_length + 2
                                     worksheet.column_dimensions[column_letter].width = min(adjusted_width, 50)
                             except Exception as e:
+                                db.session.rollback()
                                 logger.error(f"Error adding {table_name} to all-tables Excel: {e}")
                 
                 all_tables_excel.seek(0)
@@ -479,6 +482,7 @@ class EnhancedDataManager:
                         logger.info(f"Exported {len(data)} records from {table_name} to JSON")
                         
                     except Exception as e:
+                        db.session.rollback()
                         logger.error(f"Error exporting {table_name} to JSON: {e}")
                         export_summary[table_name] = {
                             'error': str(e),
@@ -512,6 +516,7 @@ class EnhancedDataManager:
                             
                             all_data[table_name] = data
                         except Exception as e:
+                            db.session.rollback()
                             logger.error(f"Error adding {table_name} to all-tables JSON: {e}")
                 
                 zipf.writestr('all_tables.json', json.dumps(all_data, indent=2))
