@@ -169,6 +169,16 @@
                 {% if component.focus_area %}
                 <p>Focus: {{ component.focus_area }}</p>
                 {% endif %}
+                {% if component.saved_drill %}
+                <p><strong>Drill:</strong> {{ component.saved_drill.title }}
+                    {% if component.saved_drill.setup_instructions %}
+                    <br><em>Setup:</em> {{ component.saved_drill.setup_instructions }}
+                    {% endif %}
+                    {% if component.saved_drill.equipment_needed %}
+                    <br><em>Equipment:</em> {{ component.saved_drill.equipment_needed }}
+                    {% endif %}
+                </p>
+                {% endif %}
                 {% if component.notes %}
                 <p>Notes: {{ component.notes }}</p>
                 {% endif %}

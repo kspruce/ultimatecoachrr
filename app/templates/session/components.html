@@ -9,87 +9,104 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-primary">Add Component</a>
-                <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
+                <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Component
+                </a>
+                <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Session
+                </a>
             </div>
         </div>
     </div>
 
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Session Components</h5>
-                </div>
-                <div class="card-body">
-                    {% if components %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Order</th>
-                                    <th>Title</th>
-                                    <th>Type</th>
-                                    <th>Duration</th>
-                                    <th>Focus Area</th>
-                                    <th>Drill</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for component in components %}
-                                <tr>
-                                    <td>{{ component.order }}</td>
-                                    <td>{{ component.title }}</td>
-                                    <td>{{ component.component_type|replace('_', ' ')|capitalize }}</td>
-                                    <td>{{ component.duration_minutes }} min</td>
-                                    <td>{{ component.focus_area }}</td>
-                                    <td>
-                                        {% if component.drill %}
-                                        <a href="{{ url_for('session.drill_detail', drill_id=component.drill.id) }}">
-                                            {{ component.drill.title }}
-                                        </a>
-                                        {% else %}
-                                        -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="{{ url_for('session.edit_component', component_id=component.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ component.id }}">Delete</button>
-                                        </div>
-                                        
-                                        <!-- Delete Confirmation Modal -->
-                                        <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ component.id }}" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="deleteModalLabel{{ component.id }}">Confirm Delete</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        Are you sure you want to delete the component "{{ component.title }}"?
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <form action="{{ url_for('session.delete_component', component_id=component.id) }}" method="post">
-                                                            <button type="submit" class="btn btn-danger">Delete</button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            {% if components %}
+            {% set total_duration = components | map(attribute='duration_minutes') | select('number') | sum %}
+            <div class="alert alert-light border mb-3 d-flex justify-content-between align-items-center">
+                <span><strong>{{ components|length }}</strong> component{{ 's' if components|length != 1 else '' }}</span>
+                <span><i class="bi bi-clock"></i> Total duration: <strong>{{ total_duration }}</strong> minutes</span>
+            </div>
+
+            {% for component in components %}
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-secondary rounded-pill">{{ component.order }}</span>
+                        <h5 class="mb-0">{{ component.title }}</h5>
+                        <span class="badge bg-{% if component.component_type == 'warmup' %}warning text-dark{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% else %}secondary{% endif %}">
+                            {{ component.component_type|replace('_', ' ')|capitalize }}
+                        </span>
                     </div>
-                    {% else %}
-                    <p class="text-center">No components added yet. <a href="{{ url_for('session.add_component', session_id=session.id) }}">Add a component</a> to build your session plan.</p>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if component.duration_minutes %}
+                        <span class="text-muted"><i class="bi bi-clock"></i> {{ component.duration_minutes }} min</span>
+                        {% endif %}
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('session.edit_component', component_id=component.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ component.id }}" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body py-2">
+                    {% if component.description %}
+                    <div class="markdown-content mb-2">{{ component.description|markdown }}</div>
+                    {% endif %}
+
+                    <div class="d-flex flex-wrap gap-3 text-muted small">
+                        {% if component.focus_area %}
+                        <span><i class="bi bi-bullseye"></i> {{ component.focus_area }}</span>
+                        {% endif %}
+                        {% if component.saved_drill %}
+                        <a href="{{ url_for('session.drill_detail', drill_id=component.saved_drill.id) }}" class="text-decoration-none">
+                            <i class="bi bi-journal-bookmark"></i> Linked drill: {{ component.saved_drill.title }}
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    {% if component.notes %}
+                    <div class="mt-2 small text-muted fst-italic">{{ component.notes }}</div>
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Delete Confirmation Modal -->
+            <div class="modal fade" id="deleteModal{{ component.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ component.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteModalLabel{{ component.id }}">Confirm Delete</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete the component "{{ component.title }}"?
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <form action="{{ url_for('session.delete_component', component_id=component.id) }}" method="post">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-clipboard-plus" style="font-size: 3rem; color: #6c757d;"></i>
+                    <p class="mt-3 mb-2 text-muted">No components added yet.</p>
+                    <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add your first component
+                    </a>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

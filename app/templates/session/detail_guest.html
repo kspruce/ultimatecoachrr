@@ -72,34 +72,40 @@
                 </div>
                 <div class="card-body">
                     {% if components %}
+                    {% set total_duration = components | map(attribute='duration_minutes') | select('number') | sum %}
+                    <div class="mb-3 text-muted small"><i class="bi bi-clock"></i> {{ total_duration }} min total</div>
                     <div class="timeline">
                         {% for component in components %}
                         <div class="timeline-item">
-                            <div class="timeline-badge bg-{% if component.component_type == 'warmup' %}warning{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% else %}info{% endif %}">
-                                <i class="bi bi-{% if component.component_type == 'warmup' %}fire{% elif component.component_type == 'drill' %}diagram-3{% elif component.component_type == 'scrimmage' %}controller{% else %}gear{% endif %}"></i>
+                            <div class="timeline-badge bg-{% if component.component_type == 'warmup' %}warning{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% else %}secondary{% endif %}">
+                                <i class="bi bi-{% if component.component_type == 'warmup' %}fire{% elif component.component_type == 'drill' %}diagram-3{% elif component.component_type == 'scrimmage' %}controller{% elif component.component_type == 'cooldown' %}snow{% elif component.component_type == 'discussion' %}chat-dots{% else %}gear{% endif %}"></i>
                             </div>
                             <div class="timeline-panel card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">{{ component.title }}</h5>
-                                    <span class="badge bg-{% if component.component_type == 'warmup' %}warning{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% else %}info{% endif %}">
-                                        {{ component.component_type|capitalize }}
-                                    </span>
+                                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                    <div>
+                                        <h5 class="mb-0 d-inline">{{ component.title }}</h5>
+                                        <span class="badge bg-{% if component.component_type == 'warmup' %}warning text-dark{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% else %}secondary{% endif %} ms-2">
+                                            {{ component.component_type|replace('_', ' ')|capitalize }}
+                                        </span>
+                                    </div>
+                                    {% if component.duration_minutes %}
+                                    <span class="text-muted small"><i class="bi bi-clock"></i> {{ component.duration_minutes }} min</span>
+                                    {% endif %}
                                 </div>
                                 <div class="card-body">
                                     {% if component.description %}
-                                    <div class="markdown-content">{{ component.description|markdown }}</div>
+                                    <div class="markdown-content mb-2">{{ component.description|markdown }}</div>
                                     {% endif %}
 
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <small class="text-muted">
-                                                <i class="bi bi-clock"></i> {{ component.duration_minutes }} minutes
-                                                {% if component.focus_area %}
-                                                | <i class="bi bi-bullseye"></i> {{ component.focus_area }}
-                                                {% endif %}
-                                            </small>
-                                        </div>
+                                    {% if component.focus_area %}
+                                    <div>
+                                        <small class="text-muted"><i class="bi bi-bullseye"></i> {{ component.focus_area }}</small>
                                     </div>
+                                    {% endif %}
+
+                                    {% if component.notes %}
+                                    <div class="small text-muted fst-italic mt-1">{{ component.notes }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

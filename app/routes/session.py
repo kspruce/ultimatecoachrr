@@ -115,7 +115,7 @@ def add_session():
         db.session.add(session_plan)
         db.session.commit()
         
-        flash(f'Session plan "{session_plan.title}" has been created!', 'success')
+        flash(f'Session plan "{session_plan.title}" has been created! Add components to build out your session.', 'success')
         return redirect(url_for('session.detail', session_id=session_plan.id))
     
     return render_template('session/session_form.html', form=form, title='Add Session Plan')
@@ -329,6 +329,31 @@ def manage_drill(drill_id):
 
 
 
+# Drill data API for component form auto-fill
+@bp.route('/get_drill/<int:drill_id>')
+@login_required
+def get_drill(drill_id):
+    """Return drill data as JSON for component form auto-fill"""
+    drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+
+    return jsonify({
+        'id': drill.id,
+        'title': drill.title,
+        'description': drill.description or '',
+        'setup_instructions': drill.setup_instructions or '',
+        'recommended_duration': drill.recommended_duration,
+        'min_players': drill.min_players,
+        'max_players': drill.max_players,
+        'skill_level': drill.skill_level or '',
+        'focus_area': drill.focus_area or '',
+        'equipment_needed': drill.equipment_needed or '',
+        'ultiplay_embed': drill.ultiplay_embed or ''
+    })
+
+
 # Session Component Routes
 @bp.route('/<int:session_id>/components')
 @login_required
@@ -409,7 +434,11 @@ def add_component(session_id):
         db.session.commit()
         
         flash(f'Component "{component.title}" has been added!', 'success')
-        return redirect(url_for('session.components', session_id=session_id))
+
+        # Check if user wants to add another component
+        if request.form.get('add_another'):
+            return redirect(url_for('session.add_component', session_id=session_id))
+        return redirect(url_for('session.detail', session_id=session_id))
     
     return render_template('session/component_form.html', form=form, session=session_plan, title='Add Session Component')
 
@@ -461,7 +490,7 @@ def edit_component(component_id):
         db.session.commit()
         
         flash(f'Component "{component.title}" has been updated!', 'success')
-        return redirect(url_for('session.components', session_id=component.session_id))
+        return redirect(url_for('session.detail', session_id=component.session_id))
     
     return render_template('session/component_form.html', form=form, component=component, session=session_plan, title='Edit Session Component')
 
@@ -481,7 +510,7 @@ def delete_component(component_id):
     db.session.commit()
     
     flash(f'Component "{title}" has been deleted!', 'success')
-    return redirect(url_for('session.components', session_id=session_id))
+    return redirect(url_for('session.detail', session_id=session_id))
 
 # Attendance Routes
 @bp.route('/<int:session_id>/attendance', methods=['GET', 'POST'])

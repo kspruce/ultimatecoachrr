@@ -8,45 +8,76 @@
             <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ url_for('session.components', session_id=session.id) }}" class="btn btn-secondary">Back to Components</a>
+            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Session
+            </a>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
                 <div class="card-body">
                     <form method="post" novalidate>
                         {{ form.hidden_tag() }}
-                        
+
+                        <!-- Drill Selection -->
                         <div class="mb-3">
-                            {{ form.drill_id.label(class="form-label") }}
+                            {{ form.drill_id.label(class="form-label fw-bold") }}
                             {{ form.drill_id(class="form-select", id="drill-select") }}
-                            <div class="form-text">Select a drill from the library to auto-fill details</div>
+                            <div class="form-text">Selecting a drill will auto-fill the fields below. You can still edit them afterwards.</div>
                             {% for error in form.drill_id.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        
-                        <div class="mb-3">
-                            {{ form.title.label(class="form-label") }}
-                            {{ form.title(class="form-control") }}
-                            {% for error in form.title.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
+
+                        <!-- Drill Preview (hidden by default, shown when drill selected) -->
+                        <div id="drill-preview" class="alert alert-light border mb-3" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong id="preview-title"></strong>
+                                    <div id="preview-description" class="small text-muted mt-1"></div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="apply-drill-btn">
+                                    <i class="bi bi-arrow-down-circle"></i> Apply to form
+                                </button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-3 mt-2 small">
+                                <span id="preview-duration" class="d-none"><i class="bi bi-clock"></i> <span></span></span>
+                                <span id="preview-focus" class="d-none"><i class="bi bi-bullseye"></i> <span></span></span>
+                                <span id="preview-players" class="d-none"><i class="bi bi-people"></i> <span></span></span>
+                                <span id="preview-equipment" class="d-none"><i class="bi bi-bag"></i> <span></span></span>
+                            </div>
                         </div>
-                        
+
+                        <hr class="my-3">
+
+                        <!-- Title & Type Row -->
                         <div class="row mb-3">
+                            <div class="col-md-8">
+                                {{ form.title.label(class="form-label fw-bold") }}
+                                {{ form.title(class="form-control") }}
+                                {% for error in form.title.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
                             <div class="col-md-4">
-                                {{ form.component_type.label(class="form-label") }}
+                                {{ form.component_type.label(class="form-label fw-bold") }}
                                 {{ form.component_type(class="form-select") }}
                                 {% for error in form.component_type.errors %}
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
+                        </div>
+
+                        <!-- Duration & Order Row -->
+                        <div class="row mb-3">
                             <div class="col-md-4">
                                 {{ form.duration_minutes.label(class="form-label") }}
-                                {{ form.duration_minutes(class="form-control") }}
+                                <div class="input-group">
+                                    {{ form.duration_minutes(class="form-control") }}
+                                    <span class="input-group-text">min</span>
+                                </div>
                                 {% for error in form.duration_minutes.errors %}
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
@@ -58,46 +89,95 @@
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
+                            <div class="col-md-4">
+                                {{ form.focus_area.label(class="form-label") }}
+                                {{ form.focus_area(class="form-control") }}
+                                {% for error in form.focus_area.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            {{ form.focus_area.label(class="form-label") }}
-                            {{ form.focus_area(class="form-control") }}
-                            {% for error in form.focus_area.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
+
+                        <!-- Description -->
                         <div class="mb-3">
                             {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control", rows=3) }}
+                            {{ form.description(class="form-control", rows=3, placeholder="Describe what players will do in this component...") }}
                             {% for error in form.description.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        
+
+                        <!-- Notes -->
                         <div class="mb-3">
                             {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows=2) }}
+                            {{ form.notes(class="form-control", rows=2, placeholder="Coach notes, reminders, variations...") }}
                             {% for error in form.notes.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
                         </div>
-                        
+
+                        <!-- Plays -->
                         <div class="form-group mb-3">
                             {{ form.plays.label(class="form-label") }}
                             {{ form.plays(class="form-select", multiple="multiple", size="5") }}
                             <small class="form-text text-muted">
-                                Select plays that will be practiced in this component
+                                Hold Ctrl/Cmd to select multiple plays
                             </small>
                         </div>
-                        
-                        <div class="d-grid gap-2">
+
+                        <!-- Submit buttons -->
+                        <div class="d-flex gap-2">
                             {{ form.submit(class="btn btn-primary") }}
+                            <button type="submit" name="add_another" value="1" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle"></i> Save &amp; Add Another
+                            </button>
+                            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-outline-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
+
+        <!-- Sidebar: Session overview -->
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Session Overview</h6>
+                </div>
+                <div class="card-body small">
+                    <div class="mb-1"><i class="bi bi-calendar-event"></i> {{ session.formatted_date }}</div>
+                    <div class="mb-1"><i class="bi bi-clock"></i> {{ session.formatted_time }}</div>
+                    {% if session.location %}
+                    <div class="mb-1"><i class="bi bi-geo-alt"></i> {{ session.location }}</div>
+                    {% endif %}
+                    {% if session.focus_area %}
+                    <div><i class="bi bi-bullseye"></i> {{ session.focus_area }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% set existing_components = session.components.order_by('order').all() %}
+            {% if existing_components %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Existing Components</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for comp in existing_components %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-2 small
+                        {% if component is defined and comp.id == component.id %} active{% endif %}">
+                        <span>
+                            <span class="badge bg-{% if comp.component_type == 'warmup' %}warning text-dark{% elif comp.component_type == 'drill' %}primary{% elif comp.component_type == 'scrimmage' %}success{% elif comp.component_type == 'cooldown' %}info{% elif comp.component_type == 'discussion' %}dark{% else %}secondary{% endif %} me-1">{{ comp.order }}</span>
+                            {{ comp.title }}
+                        </span>
+                        {% if comp.duration_minutes %}
+                        <span class="text-muted">{{ comp.duration_minutes }}m</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -111,23 +191,99 @@
         const descriptionTextarea = document.getElementById('description');
         const durationInput = document.getElementById('duration_minutes');
         const focusAreaInput = document.getElementById('focus_area');
-        
+        const drillPreview = document.getElementById('drill-preview');
+        const applyDrillBtn = document.getElementById('apply-drill-btn');
+
+        let currentDrillData = null;
+
+        function showDrillPreview(drill) {
+            currentDrillData = drill;
+            document.getElementById('preview-title').textContent = drill.title;
+            document.getElementById('preview-description').textContent = drill.description || '';
+
+            const durationEl = document.getElementById('preview-duration');
+            if (drill.recommended_duration) {
+                durationEl.querySelector('span').textContent = drill.recommended_duration + ' min';
+                durationEl.classList.remove('d-none');
+            } else {
+                durationEl.classList.add('d-none');
+            }
+
+            const focusEl = document.getElementById('preview-focus');
+            if (drill.focus_area) {
+                focusEl.querySelector('span').textContent = drill.focus_area;
+                focusEl.classList.remove('d-none');
+            } else {
+                focusEl.classList.add('d-none');
+            }
+
+            const playersEl = document.getElementById('preview-players');
+            if (drill.min_players || drill.max_players) {
+                let playerText = '';
+                if (drill.min_players && drill.max_players) {
+                    playerText = drill.min_players + '-' + drill.max_players + ' players';
+                } else if (drill.min_players) {
+                    playerText = drill.min_players + '+ players';
+                } else {
+                    playerText = 'Up to ' + drill.max_players + ' players';
+                }
+                playersEl.querySelector('span').textContent = playerText;
+                playersEl.classList.remove('d-none');
+            } else {
+                playersEl.classList.add('d-none');
+            }
+
+            const equipEl = document.getElementById('preview-equipment');
+            if (drill.equipment_needed) {
+                equipEl.querySelector('span').textContent = drill.equipment_needed;
+                equipEl.classList.remove('d-none');
+            } else {
+                equipEl.classList.add('d-none');
+            }
+
+            drillPreview.style.display = 'block';
+        }
+
+        function applyDrillToForm(drill) {
+            if (drill.title) titleInput.value = drill.title;
+            if (drill.description) descriptionTextarea.value = drill.description;
+            if (drill.recommended_duration) durationInput.value = drill.recommended_duration;
+            if (drill.focus_area) focusAreaInput.value = drill.focus_area;
+        }
+
         drillSelect.addEventListener('change', function() {
             const drillId = this.value;
             if (drillId > 0) {
-                // Fetch drill details
                 fetch(`/sessions/get_drill/${drillId}`)
                     .then(response => response.json())
                     .then(drill => {
-                        // Auto-fill form fields
-                        titleInput.value = drill.title;
-                        descriptionTextarea.value = drill.description || '';
-                        durationInput.value = drill.recommended_duration || '';
-                        focusAreaInput.value = drill.focus_area || '';
+                        showDrillPreview(drill);
+                        // Auto-apply on first selection
+                        applyDrillToForm(drill);
                     })
-                    .catch(error => console.error('Error fetching drill details:', error));
+                    .catch(error => {
+                        console.error('Error fetching drill details:', error);
+                        drillPreview.style.display = 'none';
+                    });
+            } else {
+                drillPreview.style.display = 'none';
+                currentDrillData = null;
             }
         });
+
+        applyDrillBtn.addEventListener('click', function() {
+            if (currentDrillData) {
+                applyDrillToForm(currentDrillData);
+            }
+        });
+
+        // If drill is already selected (edit mode), show preview
+        if (drillSelect.value > 0) {
+            fetch(`/sessions/get_drill/${drillSelect.value}`)
+                .then(response => response.json())
+                .then(drill => showDrillPreview(drill))
+                .catch(error => console.error('Error:', error));
+        }
     });
 </script>
 {% endblock %}
