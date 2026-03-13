@@ -187,7 +187,13 @@ class EnhancedDataManager:
                 'foreign_keys': foreign_keys,
                 'record_count': record_count
             }
-        
+
+        # Only include tables in dependency_order that were successfully added to models
+        # (some tables may be skipped if they don't exist in the database yet)
+        model_info['dependency_order'] = [
+            t for t in model_info['dependency_order'] if t in model_info['models']
+        ]
+
         return model_info
 
     
