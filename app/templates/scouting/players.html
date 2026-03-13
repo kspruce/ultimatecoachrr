@@ -1,156 +1,245 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Players - {{ report.team_name }}</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-primary">Add Player</a>
-                <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-secondary">Back to Report</a>
-            </div>
-        </div>
-    </div>
+<style>
+/* ── Player cards ───────────────────────────────────────── */
+.opp-card { background:#fff; border:1px solid var(--uc-gray-200);
+  border-radius:var(--uc-radius); overflow:hidden; transition:box-shadow .15s }
+.opp-card:hover { box-shadow: var(--uc-shadow-md) }
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Opponent Players</h5>
-                </div>
-                <div class="card-body">
-                    {% if players %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Name</th>
-                                    <th>Position</th>
-                                    <th>Height</th>
-                                    <th>Gender</th>
-                                    <th>Throwing</th>
-                                    <th>Cutting</th>
-                                    <th>Defense</th>
-                                    <th>Athletic</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for player in players %}
-                                <tr>
-                                    <td>{{ player.jersey_number }}</td>
-                                    <td>{{ player.name }}</td>
-                                    <td>{{ player.position|capitalize if player.position else '-' }}</td>
-                                    <td>{{ player.height or '-' }}</td>
-                                    <td>{{ player.gender|capitalize if player.gender else '-' }}</td>
-                                    <td>{{ player.throwing_ability or '-' }}/5</td>
-                                    <td>{{ player.cutting_ability or '-' }}/5</td>
-                                    <td>{{ player.defensive_ability or '-' }}/5</td>
-                                    <td>{{ player.athletic_ability or '-' }}/5</td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="{{ url_for('scouting.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">Delete</button>
-                                        </div>
-                                        
-                                        <!-- Delete Confirmation Modal -->
-                                        <div class="modal fade" id="deleteModal{{ player.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ player.id }}" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="deleteModalLabel{{ player.id }}">Confirm Delete</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        Are you sure you want to delete the player "{{ player.name }}"?
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <form action="{{ url_for('scouting.delete_player', player_id=player.id) }}" method="post">
-                                                            <button type="submit" class="btn btn-danger">Delete</button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-center">No players added yet. <a href="{{ url_for('scouting.add_player', report_id=report.id) }}">Add a player</a> to track key opponents.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+.opp-card-header { padding:.9rem 1.1rem .6rem; border-bottom:1px solid var(--uc-gray-100) }
+.opp-jersey { display:inline-block; width:32px; height:32px; border-radius:8px;
+  background:var(--uc-gray-800); color:#fff; font-size:.75rem; font-weight:700;
+  text-align:center; line-height:32px; margin-right:.5rem; flex-shrink:0 }
+.opp-name { font-weight:700; font-size:.95rem; color:var(--uc-gray-800) }
+.opp-meta { font-size:.75rem; color:var(--uc-gray-400); margin-top:.1rem }
+
+/* ── Threat badge ───────────────────────────────────────── */
+.threat-badge { display:inline-block; padding:.18rem .55rem; border-radius:20px;
+  font-size:.68rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase }
+.threat-elite   { background:#fef3c7; color:#92400e; border:1px solid #fde68a }
+.threat-high    { background:#fee2e2; color:#991b1b; border:1px solid #fecaca }
+.threat-medium  { background:#fef9c3; color:#713f12; border:1px solid #fef08a }
+.threat-low     { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0 }
+
+/* ── Skill bars ─────────────────────────────────────────── */
+.skill-row { display:flex; align-items:center; gap:.5rem; margin-bottom:.45rem }
+.skill-label { font-size:.72rem; color:var(--uc-gray-600); width:54px; flex-shrink:0; font-weight:600 }
+.skill-track { flex:1; height:7px; background:var(--uc-gray-100); border-radius:4px; overflow:hidden }
+.skill-fill  { height:100%; border-radius:4px; transition:width .3s }
+.skill-val   { font-size:.72rem; font-weight:700; width:20px; text-align:right; color:var(--uc-gray-600) }
+
+/* ── Position badge ─────────────────────────────────────── */
+.pos-badge { display:inline-block; padding:.15rem .5rem; border-radius:20px;
+  font-size:.68rem; font-weight:600; text-transform:capitalize }
+
+/* ── Sort/filter bar ────────────────────────────────────── */
+.filter-pill { padding:.3rem .75rem; border-radius:20px; font-size:.8rem; font-weight:600;
+  border:1.5px solid var(--uc-gray-200); background:#fff; cursor:pointer; transition:all .15s;
+  text-decoration:none; color:var(--uc-gray-800) }
+.filter-pill.active, .filter-pill:hover { border-color:var(--uc-blue); color:var(--uc-blue);
+  background:rgba(59,130,246,.06) }
+</style>
+
+<div class="container py-4">
+
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>Opponent Players</h2>
+      <p>{{ report.team_name }}{% if report.date %} · {{ report.date.strftime('%d %b %Y') }}{% endif %}</p>
     </div>
-    
-    {% if players %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Player Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="accordion" id="playerAccordion">
-                        {% for player in players %}
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="heading{{ player.id }}">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ player.id }}" aria-expanded="false" aria-controls="collapse{{ player.id }}">
-                                    {% if player.jersey_number %}#{{ player.jersey_number }} {% endif %}
-                                    {{ player.name }} - {{ player.position|capitalize if player.position else 'Unknown Position' }}
-                                </button>
-                            </h2>
-                            <div id="collapse{{ player.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ player.id }}" data-bs-parent="#playerAccordion">
-                                <div class="accordion-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <h6>Basic Information</h6>
-                                            <ul class="list-unstyled">
-                                                <li><strong>Position:</strong> {{ player.position|capitalize if player.position else 'Unknown' }}</li>
-                                                <li><strong>Height:</strong> {{ player.height or 'Unknown' }}</li>
-                                                <li><strong>Gender:</strong> {{ player.gender|capitalize if player.gender else 'Unknown' }}</li>
-                                            </ul>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <h6>Skills Assessment</h6>
-                                            <ul class="list-unstyled">
-                                                <li><strong>Throwing Ability:</strong> {{ player.throwing_ability or 'Not rated' }}/5</li>
-                                                <li><strong>Cutting Ability:</strong> {{ player.cutting_ability or 'Not rated' }}/5</li>
-                                                <li><strong>Defensive Ability:</strong> {{ player.defensive_ability or 'Not rated' }}/5</li>
-                                                <li><strong>Athletic Ability:</strong> {{ player.athletic_ability or 'Not rated' }}/5</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    
-                                    {% if player.preferred_throws %}
-                                    <h6>Preferred Throws</h6>
-                                    <p>{{ player.preferred_throws }}</p>
-                                    {% endif %}
-                                    
-                                    {% if player.notes %}
-                                    <h6>Notes</h6>
-                                    <p>{{ player.notes|nl2br }}</p>
-                                    {% endif %}
-                                    
-                                    <div class="mt-3">
-                                        <a href="{{ url_for('scouting.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">Edit Player</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Add Player
+      </a>
+      <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Report
+      </a>
     </div>
-    {% endif %}
+  </div>
+
+  {% if players %}
+
+  <!-- Filter bar -->
+  <div class="d-flex gap-2 mb-4 flex-wrap" id="filterBar">
+    <a href="#" class="filter-pill active" data-pos="all">All ({{ players|length }})</a>
+    {% set handlers = players|selectattr('position','equalto','handler')|list %}
+    {% set cutters  = players|selectattr('position','equalto','cutter')|list %}
+    {% set hybrids  = players|selectattr('position','equalto','hybrid')|list %}
+    {% if handlers %}<a href="#" class="filter-pill" data-pos="handler">Handlers ({{ handlers|length }})</a>{% endif %}
+    {% if cutters  %}<a href="#" class="filter-pill" data-pos="cutter">Cutters ({{ cutters|length }})</a>{% endif %}
+    {% if hybrids  %}<a href="#" class="filter-pill" data-pos="hybrid">Hybrids ({{ hybrids|length }})</a>{% endif %}
+    <!-- Sort -->
+    <span style="margin-left:auto;font-size:.78rem;color:var(--uc-gray-400);align-self:center">Sort by:</span>
+    <a href="#" class="filter-pill" data-sort="threat">Threat</a>
+    <a href="#" class="filter-pill" data-sort="name">Name</a>
+  </div>
+
+  <!-- Player grid -->
+  <div class="row g-3" id="playerGrid">
+    {% for player in players %}
+    {# Compute threat level #}
+    {% set ratings = [player.throwing_ability, player.cutting_ability, player.defensive_ability, player.athletic_ability]
+                     | select | list %}
+    {% set avg_rating = (ratings|sum / ratings|length) if ratings else 0 %}
+    {% if avg_rating >= 4.5 %}{% set threat = 'elite' %}{% set threat_label = '⚡ Elite' %}
+    {% elif avg_rating >= 3.5 %}{% set threat = 'high' %}{% set threat_label = '🔴 High' %}
+    {% elif avg_rating >= 2.5 %}{% set threat = 'medium' %}{% set threat_label = '🟡 Medium' %}
+    {% else %}{% set threat = 'low' %}{% set threat_label = '🟢 Low' %}{% endif %}
+
+    <div class="col-sm-6 col-xl-4 player-item"
+         data-pos="{{ player.position or 'unknown' }}"
+         data-name="{{ player.name }}"
+         data-threat="{{ avg_rating }}">
+      <div class="opp-card">
+
+        <!-- Header -->
+        <div class="opp-card-header">
+          <div class="d-flex align-items-start justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <div class="opp-jersey">
+                {{ player.jersey_number or '?' }}
+              </div>
+              <div>
+                <div class="opp-name">{{ player.name }}</div>
+                <div class="opp-meta d-flex flex-wrap gap-2 mt-1">
+                  {% if player.position %}
+                  <span class="pos-badge"
+                    style="{% if player.position == 'handler' %}background:rgba(59,130,246,.1);color:var(--uc-blue)
+                           {% elif player.position == 'cutter' %}background:rgba(239,68,68,.1);color:var(--uc-red)
+                           {% else %}background:rgba(16,185,129,.1);color:var(--uc-green){% endif %}">
+                    {{ player.position }}
+                  </span>
+                  {% endif %}
+                  {% if player.height %}<span>{{ player.height }}</span>{% endif %}
+                  {% if player.gender %}<span>{{ player.gender|capitalize }}</span>{% endif %}
+                </div>
+              </div>
+            </div>
+            <span class="threat-badge threat-{{ threat }} flex-shrink-0">{{ threat_label }}</span>
+          </div>
+        </div>
+
+        <!-- Skill bars -->
+        <div class="px-3 pt-2 pb-1">
+          {% set skill_colours = ['#3B82F6','#EF4444','#10B981','#F59E0B'] %}
+          {% for skill_name, skill_val in [
+              ('Throw',   player.throwing_ability),
+              ('Cut',     player.cutting_ability),
+              ('Defend',  player.defensive_ability),
+              ('Athletic',player.athletic_ability)] %}
+          <div class="skill-row">
+            <div class="skill-label">{{ skill_name }}</div>
+            <div class="skill-track">
+              <div class="skill-fill"
+                   style="width:{{ ((skill_val or 0) / 5 * 100)|int }}%;
+                          background:{{ skill_colours[loop.index0] }}"></div>
+            </div>
+            <div class="skill-val">{{ skill_val or '–' }}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if player.preferred_throws %}
+        <div class="px-3 pb-2" style="font-size:.75rem;color:var(--uc-gray-600)">
+          <i class="bi bi-disc me-1"></i><strong>Throws:</strong> {{ player.preferred_throws }}
+        </div>
+        {% endif %}
+
+        {% if player.notes %}
+        <div class="px-3 pb-2">
+          <div style="font-size:.78rem;color:var(--uc-gray-600);background:var(--uc-gray-50);
+                      border-radius:8px;padding:.5rem .65rem;border-left:3px solid var(--uc-amber)">
+            {{ player.notes|truncate(120) }}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="px-3 pb-3 pt-1 d-flex gap-2">
+          <a href="{{ url_for('scouting.edit_player', player_id=player.id) }}"
+             class="btn btn-sm btn-outline-secondary flex-fill">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+          <button type="button" class="btn btn-sm btn-outline-danger"
+                  data-bs-toggle="modal" data-bs-target="#del{{ player.id }}">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Delete modal -->
+      <div class="modal fade" id="del{{ player.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+          <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Delete player?</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="font-size:.875rem">
+              Remove <strong>{{ player.name }}</strong> from this scouting report?
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <form action="{{ url_for('scouting.delete_player', player_id=player.id) }}" method="post">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="uc-empty card py-5">
+    <div class="uc-empty-icon"><i class="bi bi-person-plus"></i></div>
+    <p>No players added yet.</p>
+    <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-primary">
+      Add First Player
+    </a>
+  </div>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const pills    = document.querySelectorAll('#filterBar [data-pos], #filterBar [data-sort]');
+  const items    = Array.from(document.querySelectorAll('.player-item'));
+  let currentPos  = 'all';
+  let currentSort = null;
+
+  function render() {
+    let visible = items.filter(i => currentPos === 'all' || i.dataset.pos === currentPos);
+    if (currentSort === 'threat') {
+      visible.sort((a, b) => parseFloat(b.dataset.threat) - parseFloat(a.dataset.threat));
+    } else if (currentSort === 'name') {
+      visible.sort((a, b) => a.dataset.name.localeCompare(b.dataset.name));
+    }
+    items.forEach(i => i.style.display = 'none');
+    visible.forEach(i => i.style.display = '');
+    // Re-append in sorted order
+    const grid = document.getElementById('playerGrid');
+    visible.forEach(i => grid.appendChild(i));
+  }
+
+  pills.forEach(p => {
+    p.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (this.dataset.pos !== undefined) {
+        document.querySelectorAll('[data-pos]').forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+        currentPos = this.dataset.pos;
+      } else {
+        document.querySelectorAll('[data-sort]').forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+        currentSort = this.dataset.sort;
+      }
+      render();
+    });
+  });
+});
+</script>
 {% endblock %}

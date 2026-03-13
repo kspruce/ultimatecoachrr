@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, session
 from flask_login import login_required, current_user
 from app import db
-from app.models.fitness import FitnessMetric, FitnessRecord
+from app.models.fitness import FitnessMetric, FitnessRecord, TestingPhase
 from app.models.player import Player
 from app.utils.utils import admin_required
 from sqlalchemy import func, and_
@@ -39,6 +39,23 @@ class FitnessGoalForm(FlaskForm):
     target_date = DateField('Target Date', validators=[DataRequired()])
     submit = SubmitField('Set Goal')
 
+class TestingPhaseForm(FlaskForm):
+    name = StringField('Phase Name', validators=[DataRequired(), Length(max=100)])
+    phase_type = SelectField('Phase Type', choices=[
+        ('pre_season',  'Pre-Season'),
+        ('mid_season',  'Mid-Season'),
+        ('post_season', 'Post-Season'),
+        ('custom',      'Custom'),
+    ])
+    description = TextAreaField('Description', validators=[Optional()])
+    start_date = DateField('Start Date', validators=[Optional()])
+    end_date = DateField('End Date', validators=[Optional()])
+    active = BooleanField('Active', default=True)
+    submit = SubmitField('Save Phase')
+
+class ImportForm(FlaskForm):
+    file = FileField('CSV File', validators=[FileRequired(), FileAllowed(['csv'])])
+
 @bp.route('/')
 @login_required
 def index():
@@ -48,55 +65,90 @@ def index():
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
         
-    # Get all active metrics (shared across teams)
+    # Active metrics
     metrics = FitnessMetric.query.filter_by(active=True).all()
-    
-    # Get team averages and record holders for each metric - filtered by team
+
+    # Metric summary (team avg + record holder)
     metric_data = []
     for metric in metrics:
-        # Calculate team average for this specific team
         team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
-            metric_id=metric.id,
-            team_organization_id=team_id
+            metric_id=metric.id, team_organization_id=team_id
         ).scalar()
-        
-        # Get record holder for this specific team
         if metric.higher_is_better:
             record = FitnessRecord.query.filter_by(
-                metric_id=metric.id,
-                team_organization_id=team_id
+                metric_id=metric.id, team_organization_id=team_id
             ).order_by(FitnessRecord.value.desc()).first()
         else:
             record = FitnessRecord.query.filter_by(
-                metric_id=metric.id,
-                team_organization_id=team_id
+                metric_id=metric.id, team_organization_id=team_id
             ).order_by(FitnessRecord.value).first()
-        
-        record_holder_entry = None
-        if record:
-            record_holder_entry = {
-                'player': record.player,
-                'value': record.value,
-                'date': record.date_recorded
-            }
-            
         metric_data.append({
             'metric': metric,
-            'average': team_avg,
-            'record_holder': record_holder_entry
+            'average': round(team_avg, 2) if team_avg else None,
+            'record_holder': {'player': record.player, 'value': record.value} if record else None,
         })
-    
-    # Get recent fitness records - filter by team
+
+    # Active testing phases
+    active_phases = TestingPhase.query.filter_by(
+        team_organization_id=team_id, active=True
+    ).order_by(TestingPhase.created_at.desc()).limit(3).all()
+
+    # Player roster with latest record date + record counts
+    players = Player.query.filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
+    player_data = []
+    for player in players:
+        last_record = FitnessRecord.query.filter_by(
+            player_id=player.id, team_organization_id=team_id
+        ).order_by(FitnessRecord.date_recorded.desc()).first()
+
+        record_count = FitnessRecord.query.filter_by(
+            player_id=player.id, team_organization_id=team_id
+        ).count()
+
+        # Pick 3 spotlight metrics: vertical jump, 40-yard sprint, beep test (fall back to whatever exists)
+        spotlight_metrics = [m for m in metrics if m.name in ('Vertical Jump', '40-Yard Sprint', 'Beep Test/Yo-Yo Test')]
+        if not spotlight_metrics:
+            spotlight_metrics = metrics[:3]
+
+        spots = []
+        for sm in spotlight_metrics[:3]:
+            latest = FitnessRecord.query.filter_by(
+                player_id=player.id, metric_id=sm.id, team_organization_id=team_id
+            ).order_by(FitnessRecord.date_recorded.desc()).limit(2).all()
+            if latest:
+                trend = None
+                if len(latest) == 2:
+                    diff = latest[0].value - latest[1].value
+                    trend = 'up' if diff > 0 else ('down' if diff < 0 else 'flat')
+                    # For lower-is-better, flip the colour logic (handled in template)
+                spots.append({'metric': sm, 'value': latest[0].value, 'trend': trend})
+
+        player_data.append({
+            'player': player,
+            'last_date': last_record.date_recorded if last_record else None,
+            'record_count': record_count,
+            'spots': spots,
+        })
+
+    # Recent activity feed
     recent_records = FitnessRecord.query.join(Player).filter(
         Player.active == True,
         FitnessRecord.team_organization_id == team_id
-    ).order_by(
-        FitnessRecord.date_recorded.desc()
-    ).limit(10).all()
-    
-    return render_template('fitness/index.html', 
-                          metric_data=metric_data,
-                          recent_records=recent_records)
+    ).order_by(FitnessRecord.date_recorded.desc()).limit(12).all()
+
+    total_records = FitnessRecord.query.filter_by(team_organization_id=team_id).count()
+    players_tested = db.session.query(func.count(func.distinct(FitnessRecord.player_id))).filter_by(
+        team_organization_id=team_id
+    ).scalar() or 0
+
+    return render_template('fitness/index.html',
+                           metric_data=metric_data,
+                           active_phases=active_phases,
+                           player_data=player_data,
+                           recent_records=recent_records,
+                           total_records=total_records,
+                           players_tested=players_tested,
+                           total_players=len(players))
 
 @bp.route('/player/<int:player_id>')
 @login_required
@@ -771,43 +823,58 @@ def batch_record():
             .order_by(FitnessRecord.value)\
             .limit(5).all()
     
+    # Available phases for optional linking
+    phases = TestingPhase.query.filter_by(
+        team_organization_id=team_id, active=True
+    ).order_by(TestingPhase.created_at.desc()).all()
+
     if request.method == 'POST':
         try:
             records_added = 0
+
+            # Parse test date (default to today)
+            date_str = request.form.get('test_date', '').strip()
+            try:
+                test_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
+            except ValueError:
+                test_date = datetime.utcnow()
+
+            # Optional phase
+            phase_id = request.form.get('phase_id', type=int) or None
+
             for player in active_players:
                 value_key = f'value_{player.id}'
                 notes_key = f'notes_{player.id}'
-                
                 if value_key in request.form and request.form[value_key].strip():
                     try:
                         value = float(request.form[value_key])
                         notes = request.form.get(notes_key, '')
-                        
                         record = FitnessRecord(
                             player_id=player.id,
                             metric_id=metric_id,
                             value=value,
                             notes=notes,
-                            date_recorded=datetime.utcnow(),
-                            team_organization_id=team_id  # Add team ID
+                            date_recorded=test_date,
+                            testing_phase_id=phase_id,
+                            team_organization_id=team_id,
                         )
                         db.session.add(record)
                         records_added += 1
                     except ValueError:
-                        # Skip invalid values
                         pass
-            
+
             db.session.commit()
-            flash(f'Successfully recorded {records_added} fitness values for {metric.name}.', 'success')
+            flash(f'Recorded {records_added} results for {metric.name}.', 'success')
             return redirect(url_for('fitness.index'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error recording fitness data: {str(e)}', 'danger')
-    
+
     return render_template('fitness/batch_record.html',
-                          metric=metric,
-                          players=active_players,
-                          top_records=top_records)
+                           metric=metric,
+                           players=active_players,
+                           top_records=top_records,
+                           phases=phases)
 
 @bp.route('/api/player/<int:player_id>/metrics/<int:metric_id>/chart-data')
 @login_required
@@ -1271,4 +1338,92 @@ def add_goal(player_id):
 def fitness_model():
     """Information about the fitness model and how metrics are calculated"""
     return render_template('fitness/fitness_model.html')
+
+
+# ─── Testing Phase management ────────────────────────────────────────────────
+
+@bp.route('/phases')
+@login_required
+def phases():
+    """List all testing phases"""
+    team_id = get_current_team_id()
+    all_phases = TestingPhase.query.filter_by(
+        team_organization_id=team_id
+    ).order_by(TestingPhase.created_at.desc()).all()
+
+    # Annotate with record counts
+    phase_data = []
+    for phase in all_phases:
+        count = phase.records.filter_by(team_organization_id=team_id).count()
+        phase_data.append({'phase': phase, 'record_count': count})
+
+    return render_template('fitness/phases.html', phase_data=phase_data)
+
+
+@bp.route('/phases/add', methods=['GET', 'POST'])
+@login_required
+def add_phase():
+    team_id = get_current_team_id()
+    if not (current_user.is_admin or getattr(current_user, 'role', None) == 'coach'):
+        flash('Only coaches and admins can manage testing phases.', 'warning')
+        return redirect(url_for('fitness.phases'))
+
+    form = TestingPhaseForm()
+    if form.validate_on_submit():
+        phase = TestingPhase(
+            name=form.name.data,
+            phase_type=form.phase_type.data,
+            description=form.description.data,
+            start_date=form.start_date.data,
+            end_date=form.end_date.data,
+            active=form.active.data,
+            team_organization_id=team_id,
+        )
+        db.session.add(phase)
+        db.session.commit()
+        flash(f'Testing phase "{phase.name}" created.', 'success')
+        return redirect(url_for('fitness.phases'))
+
+    return render_template('fitness/phase_form.html', form=form, phase=None)
+
+
+@bp.route('/phases/edit/<int:phase_id>', methods=['GET', 'POST'])
+@login_required
+def edit_phase(phase_id):
+    team_id = get_current_team_id()
+    if not (current_user.is_admin or getattr(current_user, 'role', None) == 'coach'):
+        flash('Only coaches and admins can manage testing phases.', 'warning')
+        return redirect(url_for('fitness.phases'))
+
+    phase = TestingPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first_or_404()
+    form = TestingPhaseForm(obj=phase)
+    if form.validate_on_submit():
+        phase.name = form.name.data
+        phase.phase_type = form.phase_type.data
+        phase.description = form.description.data
+        phase.start_date = form.start_date.data
+        phase.end_date = form.end_date.data
+        phase.active = form.active.data
+        db.session.commit()
+        flash('Phase updated.', 'success')
+        return redirect(url_for('fitness.phases'))
+
+    return render_template('fitness/phase_form.html', form=form, phase=phase)
+
+
+@bp.route('/phases/delete/<int:phase_id>', methods=['POST'])
+@login_required
+def delete_phase(phase_id):
+    team_id = get_current_team_id()
+    if not current_user.is_admin:
+        flash('Only admins can delete phases.', 'warning')
+        return redirect(url_for('fitness.phases'))
+
+    phase = TestingPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first_or_404()
+    # Unlink records rather than cascade-delete them
+    FitnessRecord.query.filter_by(testing_phase_id=phase_id).update({'testing_phase_id': None})
+    db.session.delete(phase)
+    db.session.commit()
+    flash('Phase deleted.', 'success')
+    return redirect(url_for('fitness.phases'))
 

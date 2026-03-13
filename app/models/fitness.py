@@ -205,20 +205,57 @@ class FitnessMetric(db.Model):
         return record
 
 
+class TestingPhase(db.Model):
+    """A named testing block, e.g. 'Pre-Season 2025' or 'Mid-Season Check-In'."""
+    __tablename__ = 'testing_phase'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    phase_type = db.Column(db.String(30), default='custom')   # pre_season | mid_season | post_season | custom
+    description = db.Column(db.Text)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+
+    records = db.relationship('FitnessRecord', back_populates='testing_phase', lazy='dynamic')
+
+    PHASE_LABELS = {
+        'pre_season':  ('Pre-Season',  'var(--uc-blue)'),
+        'mid_season':  ('Mid-Season',  'var(--uc-amber)'),
+        'post_season': ('Post-Season', 'var(--uc-green)'),
+        'custom':      ('Custom',      'var(--uc-purple)'),
+    }
+
+    @property
+    def label(self):
+        return self.PHASE_LABELS.get(self.phase_type, ('Custom', 'var(--uc-purple)'))[0]
+
+    @property
+    def colour(self):
+        return self.PHASE_LABELS.get(self.phase_type, ('Custom', 'var(--uc-purple)'))[1]
+
+    def __repr__(self):
+        return f'<TestingPhase {self.name}>'
+
+
 class FitnessRecord(db.Model):
     __tablename__ = 'fitness_record'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metric.id'), nullable=False)
     value = db.Column(db.Float, nullable=False)
     date_recorded = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
-    
+    testing_phase_id = db.Column(db.Integer, db.ForeignKey('testing_phase.id'), nullable=True)
+
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    
-    # Existing relationships
+
+    # Relationships
     player = db.relationship('Player', back_populates='fitness_records')
     metric = db.relationship('FitnessMetric', back_populates='records')
+    testing_phase = db.relationship('TestingPhase', back_populates='records')
 

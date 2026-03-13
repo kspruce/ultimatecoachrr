@@ -1,253 +1,266 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* ── Dashboard stats row ───────────────────────────────── */
+.fit-stat{padding:1rem 1.25rem;background:#fff;border:1px solid var(--uc-gray-200);
+  border-radius:var(--uc-radius);display:flex;align-items:center;gap:.875rem}
+.fit-stat-icon{width:44px;height:44px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.fit-stat-val{font-size:1.45rem;font-weight:700;line-height:1;color:var(--uc-gray-800)}
+.fit-stat-lbl{font-size:.75rem;color:var(--uc-gray-400);margin-top:.1rem;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Phase chips ───────────────────────────────────────── */
+.phase-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .7rem;
+  border-radius:20px;font-size:.78rem;font-weight:600;border:1.5px solid;
+  text-decoration:none;transition:opacity .15s}
+.phase-chip:hover{opacity:.8}
+
+/* ── Player roster grid ────────────────────────────────── */
+.player-fitness-card{background:#fff;border:1px solid var(--uc-gray-200);
+  border-radius:var(--uc-radius);padding:1rem 1.25rem;transition:box-shadow .15s;
+  text-decoration:none;display:block;color:inherit}
+.player-fitness-card:hover{box-shadow:var(--uc-shadow-md);border-color:var(--uc-blue);color:inherit}
+.pfc-name{font-weight:700;font-size:.95rem;color:var(--uc-gray-800)}
+.pfc-meta{font-size:.75rem;color:var(--uc-gray-400);margin:.1rem 0 .75rem}
+.pfc-spots{display:flex;gap:.5rem;flex-wrap:wrap}
+.pfc-spot{flex:1;min-width:72px;background:var(--uc-gray-50);border-radius:8px;
+  padding:.4rem .5rem;text-align:center}
+.pfc-spot-val{font-size:.95rem;font-weight:700;color:var(--uc-gray-800);line-height:1.1}
+.pfc-spot-name{font-size:.68rem;color:var(--uc-gray-400);margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pfc-spot-trend{font-size:.7rem;margin-left:.15rem}
+.trend-good{color:var(--uc-green)}
+.trend-bad{color:var(--uc-red)}
+.pfc-no-data{font-size:.8rem;color:var(--uc-gray-400);text-align:center;padding:.5rem 0}
+
+/* ── Quick action buttons ──────────────────────────────── */
+.qa-btn{display:flex;flex-direction:column;align-items:center;gap:.35rem;
+  padding:.875rem .5rem;border-radius:var(--uc-radius);border:1.5px solid var(--uc-gray-200);
+  background:#fff;font-size:.78rem;font-weight:600;color:var(--uc-gray-800);
+  text-decoration:none;transition:all .15s;text-align:center;flex:1;min-width:80px}
+.qa-btn i{font-size:1.3rem}
+.qa-btn:hover{border-color:var(--uc-blue);color:var(--uc-blue);background:rgba(59,130,246,.04)}
+
+/* ── Activity feed ─────────────────────────────────────── */
+.act-row{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;
+  border-radius:8px;background:var(--uc-gray-50);border:1px solid var(--uc-gray-100)}
+.act-dot{width:8px;height:8px;border-radius:50%;background:var(--uc-blue);flex-shrink:0}
+</style>
+
 <div class="container py-4">
-    <div class="uc-page-header mb-4">
-        <div>
-            <h2>Fitness Dashboard</h2>
-            <p>Track, compare, and improve athletic performance metrics</p>
-        </div>
-        <div class="d-flex gap-2">
-            {% if current_user.is_admin %}
-                <a href="{{ url_for('fitness.manage_metrics') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-gear me-1"></i>Manage Metrics
-                </a>
-            {% endif %}
-            <a href="{{ url_for('fitness.team_leaderboard') }}" class="btn btn-primary">
-                <i class="bi bi-bar-chart-steps me-1"></i>Leaderboards
-            </a>
-        </div>
-    </div>
 
-    <!-- Fitness Categories Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center py-4">
-                    <div style="width:56px;height:56px;border-radius:16px;
-                                background:rgba(59,130,246,.12);display:inline-flex;
-                                align-items:center;justify-content:center;
-                                font-size:1.5rem;color:var(--uc-blue);margin-bottom:.875rem">
-                        <i class="bi bi-lightning-charge-fill"></i>
-                    </div>
-                    <h5 class="fw-bold mb-1">Speed & Agility</h5>
-                    <p class="text-muted" style="font-size:.875rem">Sprinting, acceleration, and change of direction metrics</p>
-                    <a href="#speed-section" class="btn btn-sm btn-outline-primary">View Metrics</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center py-4">
-                    <div style="width:56px;height:56px;border-radius:16px;
-                                background:rgba(239,68,68,.1);display:inline-flex;
-                                align-items:center;justify-content:center;
-                                font-size:1.5rem;color:var(--uc-red);margin-bottom:.875rem">
-                        <i class="bi bi-heart-pulse-fill"></i>
-                    </div>
-                    <h5 class="fw-bold mb-1">Endurance</h5>
-                    <p class="text-muted" style="font-size:.875rem">Stamina, recovery, and conditioning metrics</p>
-                    <a href="#endurance-section" class="btn btn-sm btn-outline-danger">View Metrics</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center py-4">
-                    <div style="width:56px;height:56px;border-radius:16px;
-                                background:rgba(16,185,129,.1);display:inline-flex;
-                                align-items:center;justify-content:center;
-                                font-size:1.5rem;color:var(--uc-green);margin-bottom:.875rem">
-                        <i class="bi bi-arrow-up-circle-fill"></i>
-                    </div>
-                    <h5 class="fw-bold mb-1">Power & Skills</h5>
-                    <p class="text-muted" style="font-size:.875rem">Jumping, throwing, and ultimate-specific metrics</p>
-                    <a href="#power-section" class="btn btn-sm btn-outline-success">View Metrics</a>
-                </div>
-            </div>
-        </div>
+  <!-- Page header -->
+  <div class="uc-page-header mb-4">
+    <div>
+      <h2>Fitness Dashboard</h2>
+      <p>Track, compare, and improve athletic performance</p>
     </div>
-
-    <!-- Speed & Agility Section -->
-    <div id="speed-section" class="row mb-5">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-lightning-charge-fill me-2" style="color:var(--uc-blue)"></i>Speed & Agility Metrics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Metric</th>
-                                    <th>Description</th>
-                                    <th>Team Average</th>
-                                    <th>Record Holder</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for data in metric_data %}
-                                    {% if data.metric.name in ['20-Yard Sprint', '40-Yard Sprint', 'Flying 20', '5-10-5 Shuttle/Pro Agility', 'Change of Direction Speed'] %}
-                                    <tr>
-                                        <td>{{ data.metric.name }} ({{ data.metric.unit }})</td>
-                                        <td>{{ data.metric.description|truncate(100) }}</td>
-                                        <td>{{ data.average if data.average else 'No data' }}</td>
-                                        <td>
-                                            {% if data.record_holder %}
-                                                <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
-                                                    {{ data.record_holder.player.name }}
-                                                </a>
-                                                ({{ data.record_holder.value }} {{ data.metric.unit }})
-                                            {% else %}
-                                                No record yet
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if current_user.is_admin or current_user.role == 'coach' %}
+        <a href="{{ url_for('fitness.phases') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-layers me-1"></i>Testing Phases
+        </a>
+      {% endif %}
+      {% if current_user.is_admin %}
+        <a href="{{ url_for('fitness.manage_metrics') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-gear me-1"></i>Metrics
+        </a>
+      {% endif %}
+      <a href="{{ url_for('fitness.team_leaderboard') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-bar-chart-steps me-1"></i>Leaderboards
+      </a>
     </div>
+  </div>
 
-    <!-- Endurance Section -->
-    <div id="endurance-section" class="row mb-5">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-heart-pulse-fill me-2" style="color:var(--uc-red)"></i>Endurance Metrics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Metric</th>
-                                    <th>Description</th>
-                                    <th>Team Average</th>
-                                    <th>Record Holder</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for data in metric_data %}
-                                    {% if data.metric.name in ['Beep Test/Yo-Yo Test', '1-Mile Run', '300-Yard Shuttle', 'Ultimate-Specific Conditioning Test', 'Recovery Heart Rate'] %}
-                                    <tr>
-                                        <td>{{ data.metric.name }} ({{ data.metric.unit }})</td>
-                                        <td>{{ data.metric.description|truncate(100) }}</td>
-                                        <td>{{ data.average if data.average else 'No data' }}</td>
-                                        <td>
-                                            {% if data.record_holder %}
-                                                <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
-                                                    {{ data.record_holder.player.name }}
-                                                </a>
-                                                ({{ data.record_holder.value }} {{ data.metric.unit }})
-                                            {% else %}
-                                                No record yet
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Stats row -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="fit-stat">
+        <div class="fit-stat-icon" style="background:rgba(59,130,246,.1);color:var(--uc-blue)"><i class="bi bi-clipboard-data-fill"></i></div>
+        <div><div class="fit-stat-val">{{ total_records }}</div><div class="fit-stat-lbl">Total Records</div></div>
+      </div>
     </div>
-
-    <!-- Power & Skills Section -->
-    <div id="power-section" class="row mb-5">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-arrow-up-circle-fill me-2" style="color:var(--uc-green)"></i>Power & Skills Metrics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Metric</th>
-                                    <th>Description</th>
-                                    <th>Team Average</th>
-                                    <th>Record Holder</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for data in metric_data %}
-                                    {% if data.metric.name not in ['20-Yard Sprint', '40-Yard Sprint', 'Flying 20', '5-10-5 Shuttle/Pro Agility', 'Change of Direction Speed', 'Beep Test/Yo-Yo Test', '1-Mile Run', '300-Yard Shuttle', 'Ultimate-Specific Conditioning Test', 'Recovery Heart Rate'] %}
-                                    <tr>
-                                        <td>{{ data.metric.name }} ({{ data.metric.unit }})</td>
-                                        <td>{{ data.metric.description|truncate(100) }}</td>
-                                        <td>{{ data.average if data.average else 'No data' }}</td>
-                                        <td>
-                                            {% if data.record_holder %}
-                                                <a href="{{ url_for('team.player_detail', player_id=data.record_holder.player.id) }}">
-                                                    {{ data.record_holder.player.name }}
-                                                </a>
-                                                ({{ data.record_holder.value }} {{ data.metric.unit }})
-                                            {% else %}
-                                                No record yet
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="col-6 col-md-3">
+      <div class="fit-stat">
+        <div class="fit-stat-icon" style="background:rgba(16,185,129,.1);color:var(--uc-green)"><i class="bi bi-people-fill"></i></div>
+        <div><div class="fit-stat-val">{{ players_tested }}/{{ total_players }}</div><div class="fit-stat-lbl">Players Tested</div></div>
+      </div>
     </div>
+    <div class="col-6 col-md-3">
+      <div class="fit-stat">
+        <div class="fit-stat-icon" style="background:rgba(139,92,246,.1);color:var(--uc-purple)"><i class="bi bi-layers-fill"></i></div>
+        <div><div class="fit-stat-val">{{ active_phases|length }}</div><div class="fit-stat-lbl">Active Phases</div></div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="fit-stat">
+        <div class="fit-stat-icon" style="background:rgba(245,158,11,.1);color:var(--uc-amber)"><i class="bi bi-lightning-charge-fill"></i></div>
+        <div><div class="fit-stat-val">{{ metric_data|length }}</div><div class="fit-stat-lbl">Active Metrics</div></div>
+      </div>
+    </div>
+  </div>
 
-    <!-- Recent Activity -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Recent Fitness Activity</h5>
-                </div>
-                <div class="card-body">
-                    {% if recent_records %}
-                        <div class="d-flex flex-column gap-2">
-                            {% for record in recent_records %}
-                                <div class="d-flex align-items-center gap-3 p-3"
-                                     style="border:1px solid var(--uc-gray-100);border-radius:10px;background:var(--uc-gray-50)">
-                                    <div style="flex:1">
-                                        <div style="font-size:.875rem;font-weight:600">
-                                            <a href="{{ url_for('team.player_detail', player_id=record.player.id) }}"
-                                               style="color:var(--uc-gray-800);text-decoration:none">
-                                                {{ record.player.name }}
-                                            </a>
-                                            <span style="font-weight:400;color:var(--uc-gray-600)">
-                                                — {{ record.value }} {{ record.metric.unit }} in {{ record.metric.name }}
-                                            </span>
-                                        </div>
-                                        {% if record.notes %}
-                                            <div style="font-size:.78rem;color:var(--uc-gray-400);margin-top:.2rem">{{ record.notes }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <small class="text-muted" style="white-space:nowrap;font-size:.78rem">
-                                        {{ record.date_recorded.strftime('%Y-%m-%d') }}
-                                    </small>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="uc-empty" style="padding:2rem 1rem">
-                            <div class="uc-empty-icon"><i class="bi bi-heart-pulse"></i></div>
-                            <p>No recent fitness activity recorded yet.</p>
-                        </div>
+  <!-- Quick actions -->
+  <div class="card mb-4">
+    <div class="card-body py-3">
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('fitness.batch_record') }}" class="qa-btn">
+          <i class="bi bi-pencil-square" style="color:var(--uc-blue)"></i>Batch Record
+        </a>
+        <a href="{{ url_for('fitness.team_leaderboard') }}" class="qa-btn">
+          <i class="bi bi-trophy-fill" style="color:var(--uc-amber)"></i>Leaderboards
+        </a>
+        <a href="{{ url_for('fitness.phases') }}" class="qa-btn">
+          <i class="bi bi-layers-fill" style="color:var(--uc-purple)"></i>Phases
+        </a>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('fitness.manage_metrics') }}" class="qa-btn">
+          <i class="bi bi-gear-fill" style="color:var(--uc-teal)"></i>Manage Metrics
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Active testing phases -->
+  {% if active_phases %}
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-layers me-2" style="color:var(--uc-purple)"></i>Active Testing Phases</h5>
+      <a href="{{ url_for('fitness.phases') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body d-flex flex-wrap gap-2 py-3">
+      {% for phase in active_phases %}
+        <a href="{{ url_for('fitness.phases') }}"
+           class="phase-chip"
+           style="color:{{ phase.colour }};border-color:{{ phase.colour }};background:{{ phase.colour }}18">
+          <i class="bi bi-circle-fill" style="font-size:.45rem"></i>
+          {{ phase.name }}
+          <span style="opacity:.6;font-weight:400">· {{ phase.label }}</span>
+        </a>
+      {% endfor %}
+      {% if current_user.is_admin or current_user.role == 'coach' %}
+        <a href="{{ url_for('fitness.add_phase') }}" class="phase-chip"
+           style="color:var(--uc-gray-400);border-color:var(--uc-gray-200);border-style:dashed">
+          <i class="bi bi-plus-lg"></i> New Phase
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Player roster -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-blue)"></i>Player Fitness Roster</h5>
+      <span class="text-muted" style="font-size:.8rem">{{ player_data|length }} players</span>
+    </div>
+    <div class="card-body">
+      {% if player_data %}
+        <div class="row g-3">
+          {% for pd in player_data %}
+          <div class="col-sm-6 col-lg-4">
+            <a href="{{ url_for('fitness.player_fitness', player_id=pd.player.id) }}" class="player-fitness-card">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="pfc-name">
+                    {% if pd.player.jersey_number %}
+                      <span style="color:var(--uc-gray-400);font-weight:500">#{{ pd.player.jersey_number }}</span>
                     {% endif %}
+                    {{ pd.player.name }}
+                  </div>
+                  <div class="pfc-meta">
+                    {% if pd.last_date %}
+                      Last tested {{ pd.last_date.strftime('%d %b %Y') }}
+                      · {{ pd.record_count }} record{{ 's' if pd.record_count != 1 }}
+                    {% else %}
+                      No data recorded yet
+                    {% endif %}
+                  </div>
                 </div>
-            </div>
+                <i class="bi bi-chevron-right" style="color:var(--uc-gray-400);font-size:.8rem;margin-top:.2rem"></i>
+              </div>
+
+              {% if pd.spots %}
+                <div class="pfc-spots">
+                  {% for spot in pd.spots %}
+                  <div class="pfc-spot">
+                    <div class="pfc-spot-val">
+                      {{ spot.value | round(2) }}
+                      {% if spot.trend %}
+                        {% if spot.metric.higher_is_better %}
+                          {% if spot.trend == 'up' %}<span class="pfc-spot-trend trend-good">▲</span>
+                          {% elif spot.trend == 'down' %}<span class="pfc-spot-trend trend-bad">▼</span>
+                          {% endif %}
+                        {% else %}
+                          {% if spot.trend == 'down' %}<span class="pfc-spot-trend trend-good">▼</span>
+                          {% elif spot.trend == 'up' %}<span class="pfc-spot-trend trend-bad">▲</span>
+                          {% endif %}
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                    <div class="pfc-spot-name" title="{{ spot.metric.name }}">{{ spot.metric.name|truncate(12, True, '') }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="pfc-no-data"><i class="bi bi-dash-circle me-1"></i>No results yet</div>
+              {% endif %}
+            </a>
+          </div>
+          {% endfor %}
         </div>
+      {% else %}
+        <div class="uc-empty py-4">
+          <div class="uc-empty-icon"><i class="bi bi-people"></i></div>
+          <p>No active players found.</p>
+        </div>
+      {% endif %}
     </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-clock-history me-2" style="color:var(--uc-teal)"></i>Recent Activity</h5>
+    </div>
+    <div class="card-body">
+      {% if recent_records %}
+        <div class="d-flex flex-column gap-2">
+          {% for record in recent_records %}
+          <div class="act-row">
+            <div class="act-dot"></div>
+            <div style="flex:1;font-size:.875rem">
+              <a href="{{ url_for('fitness.player_fitness', player_id=record.player.id) }}"
+                 style="font-weight:600;color:var(--uc-gray-800);text-decoration:none">
+                {{ record.player.name }}
+              </a>
+              <span style="color:var(--uc-gray-600)">
+                — <strong>{{ record.value }} {{ record.metric.unit }}</strong> in {{ record.metric.name }}
+              </span>
+              {% if record.testing_phase %}
+                <span class="badge rounded-pill ms-1"
+                      style="font-size:.65rem;background:{{ record.testing_phase.colour }}22;
+                             color:{{ record.testing_phase.colour }};border:1px solid {{ record.testing_phase.colour }}44">
+                  {{ record.testing_phase.name }}
+                </span>
+              {% endif %}
+            </div>
+            <small class="text-muted" style="white-space:nowrap;font-size:.75rem">
+              {{ record.date_recorded.strftime('%d %b') }}
+            </small>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="uc-empty py-3">
+          <div class="uc-empty-icon"><i class="bi bi-heart-pulse"></i></div>
+          <p>No fitness records yet.</p>
+          <a href="{{ url_for('fitness.batch_record') }}" class="btn btn-sm btn-primary">Record First Session</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
 </div>
 {% endblock %}

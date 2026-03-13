@@ -1,266 +1,259 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Batch Record: {{ metric.name }}</h1>
-            <p class="text-muted">
-                Unit: {{ metric.unit }} | 
-                {% if metric.higher_is_better %}
-                    <span class="badge bg-success">Higher is better</span>
-                {% else %}
-                    <span class="badge bg-info">Lower is better</span>
-                {% endif %}
-            </p>
+<style>
+.br-player-row td { vertical-align: middle; padding: .6rem .75rem; }
+.br-player-row:focus-within { background: rgba(59,130,246,.04); }
+.br-prev-badge { font-size:.7rem; color:var(--uc-gray-400); white-space:nowrap }
+.value-input { max-width: 120px; }
+.top-record-bar { display:flex; align-items:center; gap:.5rem; padding:.5rem 0;
+  border-bottom:1px solid var(--uc-gray-100) }
+.top-record-bar:last-child { border-bottom:none }
+.tr-rank { width:22px; height:22px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; font-size:.7rem; font-weight:700; flex-shrink:0 }
+</style>
+
+<div class="container py-4">
+
+  <div class="uc-page-header mb-4">
+    <div>
+      <h2>Batch Record — {{ metric.name }}</h2>
+      <p>{{ metric.description }}</p>
+    </div>
+    <a href="{{ url_for('fitness.batch_record') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Pick Different Metric
+    </a>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main form -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0"><i class="bi bi-people me-1"></i>{{ players|length }} Active Players</h5>
+            {% if metric.higher_is_better %}
+              <span class="badge rounded-pill" style="background:rgba(16,185,129,.12);color:var(--uc-green);font-size:.7rem">
+                <i class="bi bi-arrow-up me-1"></i>Higher is better
+              </span>
+            {% else %}
+              <span class="badge rounded-pill" style="background:rgba(59,130,246,.12);color:var(--uc-blue);font-size:.7rem">
+                <i class="bi bi-arrow-down me-1"></i>Lower is better
+              </span>
+            {% endif %}
+          </div>
+          <span style="font-size:.8rem;color:var(--uc-gray-400)">Unit: <strong>{{ metric.unit }}</strong></span>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('fitness.batch_record') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Choose Different Metric
-            </a>
+
+        <div class="card-body px-0 py-0">
+          <form method="POST" id="batchForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Test session meta -->
+            <div class="px-4 pt-3 pb-3" style="border-bottom:1px solid var(--uc-gray-100);background:var(--uc-gray-50)">
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label class="form-label">Test Date</label>
+                  <input type="date" name="test_date" class="form-control"
+                         value="{{ today.strftime('%Y-%m-%d') if today else '' }}"
+                         id="testDate">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label">Testing Phase <span style="font-weight:400;color:var(--uc-gray-400)">(optional)</span></label>
+                  <select name="phase_id" class="form-select">
+                    <option value="">— None —</option>
+                    {% for phase in phases %}
+                      <option value="{{ phase.id }}">{{ phase.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Players table -->
+            <div class="table-responsive">
+              <table class="table table-hover mb-0" id="playersTable">
+                <thead>
+                  <tr>
+                    <th style="width:35%">Player</th>
+                    <th style="width:20%">Value ({{ metric.unit }})</th>
+                    <th>Notes <span style="font-weight:400;color:var(--uc-gray-400)">(optional)</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for player in players %}
+                  <tr class="br-player-row">
+                    <td>
+                      <div style="font-weight:600;font-size:.9rem">
+                        {% if player.jersey_number %}
+                          <span style="color:var(--uc-gray-400)">#{{ player.jersey_number }}</span>
+                        {% endif %}
+                        {{ player.name }}
+                      </div>
+                    </td>
+                    <td>
+                      <input type="number"
+                             class="form-control value-input"
+                             id="value_{{ player.id }}"
+                             name="value_{{ player.id }}"
+                             step="any"
+                             placeholder="–"
+                             autocomplete="off">
+                    </td>
+                    <td>
+                      <input type="text"
+                             class="form-control"
+                             id="notes_{{ player.id }}"
+                             name="notes_{{ player.id }}"
+                             placeholder="Optional note">
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="px-4 py-3 d-flex justify-content-between align-items-center"
+                 style="border-top:1px solid var(--uc-gray-100)">
+              <div class="d-flex gap-3 align-items-center">
+                <div class="form-check mb-0">
+                  <input class="form-check-input" type="checkbox" id="fillWithPrevious">
+                  <label class="form-check-label" for="fillWithPrevious" style="font-size:.875rem">
+                    Pre-fill previous values
+                  </label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAll">
+                  <i class="bi bi-x-circle me-1"></i>Clear
+                </button>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Save All Records
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
+
+      <!-- Keyboard shortcuts -->
+      <div class="card mt-3">
+        <div class="card-body py-2 px-3">
+          <span style="font-size:.78rem;color:var(--uc-gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.04em">
+            Keyboard shortcuts
+          </span>
+          <span class="ms-3" style="font-size:.8rem;color:var(--uc-gray-600)">
+            <kbd>Enter</kbd> next player &nbsp;
+            <kbd>Shift+Enter</kbd> previous &nbsp;
+            <kbd>Tab</kbd> notes field &nbsp;
+            <kbd>Ctrl+Enter</kbd> save
+          </span>
+        </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5><i class="bi bi-people"></i> Record Data for All Players</h5>
-                    <span class="badge bg-light text-dark">{{ players|length }} Active Players</span>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> <strong>Instructions:</strong> {{ metric.description }}
-                    </div>
-                    
-                    <form method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 30%">Player</th>
-                                        <th style="width: 20%">Value ({{ metric.unit }})</th>
-                                        <th style="width: 50%">Notes (Optional)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for player in players %}
-                                        <tr>
-                                            <td>
-                                                <label for="value_{{ player.id }}" class="form-label">
-                                                    {{ player.name }}
-                                                    {% if player.jersey_number %}
-                                                        <span class="badge bg-secondary">#{{ player.jersey_number }}</span>
-                                                    {% endif %}
-                                                </label>
-                                                <input type="hidden" id="player_id_{{ player.id }}" value="{{ player.id }}">
-                                            </td>
-                                            <td>
-                                                <input type="number" 
-                                                       class="form-control" 
-                                                       id="value_{{ player.id }}" 
-                                                       name="value_{{ player.id }}" 
-                                                       step="any" 
-                                                       placeholder="Value">
-                                            </td>
-                                            <td>
-                                                <input type="text" 
-                                                       class="form-control" 
-                                                       id="notes_{{ player.id }}" 
-                                                       name="notes_{{ player.id }}" 
-                                                       placeholder="Optional notes">
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between mt-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="fillWithPrevious">
-                                <label class="form-check-label" for="fillWithPrevious">
-                                    <i class="bi bi-clock-history"></i> Fill with previous values (where available)
-                                </label>
-                            </div>
-                            
-                            <div>
-                                <button type="reset" class="btn btn-outline-secondary me-2">
-                                    <i class="bi bi-x-circle"></i> Clear All
-                                </button>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-save"></i> Save All Records
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- Sidebar: current records -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-trophy me-2" style="color:var(--uc-amber)"></i>Current Top 5</h5>
         </div>
+        <div class="card-body">
+          {% if top_records %}
+            {% for record in top_records %}
+            <div class="top-record-bar">
+              <div class="tr-rank {% if loop.index == 1 %}bg-warning text-dark{% else %}bg-light text-muted{% endif %}">
+                {{ loop.index }}
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:.875rem">{{ record.player.name }}</div>
+                <div style="font-size:.75rem;color:var(--uc-gray-400)">
+                  {{ record.date_recorded.strftime('%d %b %Y') }}
+                </div>
+              </div>
+              <div style="font-weight:700;font-size:.95rem;color:var(--uc-gray-800)">
+                {{ record.value }} <span style="font-size:.72rem;color:var(--uc-gray-400)">{{ metric.unit }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="uc-empty py-2">
+              <div class="uc-empty-icon" style="font-size:1.8rem"><i class="bi bi-bar-chart"></i></div>
+              <p style="font-size:.85rem">No records yet for this metric.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if phases %}
+      <div class="card mt-3">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-layers me-2" style="color:var(--uc-purple)"></i>Testing Phases</h5>
+        </div>
+        <div class="card-body d-flex flex-column gap-1">
+          {% for phase in phases %}
+          <div style="font-size:.85rem;padding:.35rem .5rem;border-radius:6px;
+                      background:{{ phase.colour }}12;border:1px solid {{ phase.colour }}30">
+            <span style="font-weight:600;color:{{ phase.colour }}">{{ phase.name }}</span>
+            <span style="color:var(--uc-gray-400);font-size:.75rem"> · {{ phase.label }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
-    
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="bi bi-trophy"></i> Current Records</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">Current team records for this metric:</p>
-                    
-                    {% if top_records %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Player</th>
-                                        <th>Value</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for record in top_records %}
-                                        <tr>
-                                            <td>{{ record.player.name }}</td>
-                                            <td>{{ record.value }} {{ metric.unit }}</td>
-                                            <td>{{ record.date_recorded.strftime('%Y-%m-%d') }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p>No records yet for this metric.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5><i class="bi bi-keyboard"></i> Keyboard Shortcuts</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Move to next player</span>
-                            <span class="badge bg-secondary">Enter</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Move to previous player</span>
-                            <span class="badge bg-secondary">Shift + Enter</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Move to notes field</span>
-                            <span class="badge bg-secondary">Tab</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Submit form</span>
-                            <span class="badge bg-secondary">Ctrl + Enter</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle "Fill with previous values" checkbox
-    const fillCheckbox = document.getElementById('fillWithPrevious');
-    if (fillCheckbox) {
-        fillCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                // Make an AJAX call to get previous values
-                fetch('/fitness/api/previous-values/{{ metric.id }}')
-                    .then(response => response.json())
-                    .then(data => {
-                        // For each player with previous data
-                        for (const playerId in data) {
-                            const valueInput = document.getElementById(`value_${playerId}`);
-                            const notesInput = document.getElementById(`notes_${playerId}`);
-                            
-                            if (valueInput && !valueInput.value) {
-                                valueInput.value = data[playerId].value;
-                            }
-                            
-                            if (notesInput && !notesInput.value && data[playerId].notes) {
-                                notesInput.value = data[playerId].notes;
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching previous values:', error);
-                        alert('Failed to load previous values. Please try again.');
-                        this.checked = false;
-                    });
-            }
-        });
-    }
-    
-    // Add validation for numeric inputs
-    const valueInputs = document.querySelectorAll('input[name^="value_"]');
-    valueInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            // Remove any non-numeric characters except decimal point
-            this.value = this.value.replace(/[^0-9.]/g, '');
-            
-            // Ensure only one decimal point
-            const parts = this.value.split('.');
-            if (parts.length > 2) {
-                this.value = parts[0] + '.' + parts.slice(1).join('');
-            }
-        });
-    });
-    
-    // Add keyboard navigation between rows
-    document.querySelectorAll('input[id^="value_"]').forEach(input => {
-        input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                
-                // Find the current player ID
-                const currentPlayerId = this.id.split('_')[1];
-                
-                // Find the next row's value input
-                const currentRow = this.closest('tr');
-                const nextRow = currentRow.nextElementSibling;
-                
-                if (nextRow) {
-                    const nextInput = nextRow.querySelector('input[id^="value_"]');
-                    if (nextInput) nextInput.focus();
-                } else if (e.ctrlKey) {
-                    // Ctrl+Enter submits the form
-                    this.form.submit();
-                }
-            } else if (e.key === 'Enter' && e.shiftKey) {
-                e.preventDefault();
-                
-                // Find the previous row's value input
-                const currentRow = this.closest('tr');
-                const prevRow = currentRow.previousElementSibling;
-                
-                if (prevRow) {
-                    const prevInput = prevRow.querySelector('input[id^="value_"]');
-                    if (prevInput) prevInput.focus();
-                }
-            }
-        });
-    });
-    
-    // Submit form with Ctrl+Enter from anywhere
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            document.querySelector('form').submit();
+document.addEventListener('DOMContentLoaded', function () {
+  // Set today's date default
+  const dateInput = document.getElementById('testDate');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  // Pre-fill previous values
+  document.getElementById('fillWithPrevious').addEventListener('change', function () {
+    if (!this.checked) return;
+    fetch('/fitness/api/previous-values/{{ metric.id }}')
+      .then(r => r.json())
+      .then(data => {
+        for (const pid in data) {
+          const vi = document.getElementById(`value_${pid}`);
+          if (vi && !vi.value) vi.value = data[pid].value;
+          const ni = document.getElementById(`notes_${pid}`);
+          if (ni && !ni.value && data[pid].notes) ni.value = data[pid].notes;
         }
+      })
+      .catch(() => { this.checked = false; });
+  });
+
+  // Clear all
+  document.getElementById('clearAll').addEventListener('click', function () {
+    document.querySelectorAll('input[name^="value_"]').forEach(i => i.value = '');
+    document.querySelectorAll('input[name^="notes_"]').forEach(i => i.value = '');
+    document.getElementById('fillWithPrevious').checked = false;
+  });
+
+  // Keyboard nav
+  const valueInputs = Array.from(document.querySelectorAll('input[id^="value_"]'));
+  valueInputs.forEach((input, idx) => {
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const next = valueInputs[idx + 1];
+        if (next) next.focus(); else this.form.submit();
+      } else if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        if (idx > 0) valueInputs[idx - 1].focus();
+      }
     });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); document.getElementById('batchForm').submit(); }
+  });
 });
 </script>
 {% endblock %}

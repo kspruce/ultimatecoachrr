@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.phase-card{background:#fff;border:1px solid var(--uc-gray-200);border-radius:var(--uc-radius);
+  padding:1.25rem;transition:box-shadow .15s}
+.phase-card:hover{box-shadow:var(--uc-shadow-md)}
+.phase-type-pill{display:inline-block;padding:.2rem .65rem;border-radius:20px;
+  font-size:.72rem;font-weight:600;border:1.5px solid}
+</style>
+
+<div class="container py-4">
+  <div class="uc-page-header mb-4">
+    <div>
+      <h2>Testing Phases</h2>
+      <p>Organise fitness sessions into pre-season, mid-season, or custom testing blocks</p>
+    </div>
+    {% if current_user.is_admin or current_user.role == 'coach' %}
+    <a href="{{ url_for('fitness.add_phase') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>New Phase
+    </a>
+    {% endif %}
+  </div>
+
+  {% if phase_data %}
+    <div class="row g-3">
+      {% for pd in phase_data %}
+      <div class="col-md-6 col-lg-4">
+        <div class="phase-card">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <div style="font-weight:700;font-size:1rem;color:var(--uc-gray-800)">{{ pd.phase.name }}</div>
+              <span class="phase-type-pill mt-1"
+                    style="color:{{ pd.phase.colour }};border-color:{{ pd.phase.colour }};background:{{ pd.phase.colour }}15">
+                {{ pd.phase.label }}
+              </span>
+            </div>
+            {% if pd.phase.active %}
+              <span class="badge rounded-pill bg-success" style="font-size:.68rem">Active</span>
+            {% else %}
+              <span class="badge rounded-pill bg-secondary" style="font-size:.68rem">Inactive</span>
+            {% endif %}
+          </div>
+
+          {% if pd.phase.description %}
+            <p style="font-size:.82rem;color:var(--uc-gray-600);margin:.5rem 0">{{ pd.phase.description }}</p>
+          {% endif %}
+
+          <div class="d-flex gap-3 mt-2 mb-3" style="font-size:.78rem;color:var(--uc-gray-400)">
+            {% if pd.phase.start_date %}
+              <span><i class="bi bi-calendar-event me-1"></i>
+                {{ pd.phase.start_date.strftime('%d %b %Y') }}
+                {% if pd.phase.end_date %} – {{ pd.phase.end_date.strftime('%d %b %Y') }}{% endif %}
+              </span>
+            {% endif %}
+            <span><i class="bi bi-clipboard-data me-1"></i>{{ pd.record_count }} record{{ 's' if pd.record_count != 1 }}</span>
+          </div>
+
+          <div class="d-flex gap-2">
+            <a href="{{ url_for('fitness.batch_record') }}?phase={{ pd.phase.id }}"
+               class="btn btn-sm btn-primary flex-fill">
+              <i class="bi bi-pencil-square me-1"></i>Record
+            </a>
+            {% if current_user.is_admin or current_user.role == 'coach' %}
+            <a href="{{ url_for('fitness.edit_phase', phase_id=pd.phase.id) }}"
+               class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% endif %}
+            {% if current_user.is_admin %}
+            <form action="{{ url_for('fitness.delete_phase', phase_id=pd.phase.id) }}" method="post"
+                  onsubmit="return confirm('Delete phase? Records will be unlinked but not deleted.')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="uc-empty card py-5">
+      <div class="uc-empty-icon"><i class="bi bi-layers"></i></div>
+      <p>No testing phases yet. Create one to start organising your fitness sessions.</p>
+      {% if current_user.is_admin or current_user.role == 'coach' %}
+        <a href="{{ url_for('fitness.add_phase') }}" class="btn btn-primary">Create First Phase</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

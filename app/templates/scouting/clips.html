@@ -1,76 +1,226 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Clips - {{ report.team_name }}</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-primary">Add Clip</a>
-                <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-secondary">Back to Report</a>
-            </div>
-        </div>
-    </div>
+<style>
+.clip-card { background:#fff; border:1px solid var(--uc-gray-200); border-radius:var(--uc-radius);
+  overflow:hidden; transition:box-shadow .15s }
+.clip-card:hover { box-shadow: var(--uc-shadow-md) }
 
-    <div class="row">
-        {% if clips %}
-            {% for clip in clips %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title">{{ clip.title }}</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="embed-responsive embed-responsive-16by9 mb-3">
-                            <iframe class="embed-responsive-item" src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
-                        </div>
-                        
-                        <p><strong>Type:</strong> {{ clip.clip_type|replace('_', ' ')|capitalize if clip.clip_type else 'General' }}</p>
-                        
-                        {% if clip.description %}
-                        <p class="card-text">{{ clip.description|truncate(100) }}</p>
-                        {% endif %}
-                    </div>
-                    <div class="card-footer">
-                        <div class="btn-group w-100">
-                            <a href="{{ url_for('scouting.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">Delete</button>
-                        </div>
-                        
-                        <!-- Delete Confirmation Modal -->
-                        <div class="modal fade" id="deleteModal{{ clip.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ clip.id }}" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">Confirm Delete</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        Are you sure you want to delete the clip "{{ clip.title }}"?
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <form action="{{ url_for('scouting.delete_clip', clip_id=clip.id) }}" method="post">
-                                            <button type="submit" class="btn btn-danger">Delete</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                No clips added yet. <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}">Add a clip</a> to record key plays.
-            </div>
-        </div>
-        {% endif %}
+.clip-thumb { position:relative; aspect-ratio:16/9; background:var(--uc-gray-800);
+  overflow:hidden; cursor:pointer }
+.clip-thumb img { width:100%; height:100%; object-fit:cover; opacity:.85; display:block }
+.clip-play-btn { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.2); opacity:0; transition:opacity .15s }
+.clip-thumb:hover .clip-play-btn { opacity:1 }
+.clip-play-btn i { font-size:2.5rem; color:#fff; filter:drop-shadow(0 2px 8px rgba(0,0,0,.4)) }
+
+.clip-type-tag { display:inline-block; padding:.15rem .55rem; border-radius:20px;
+  font-size:.68rem; font-weight:700; text-transform:capitalize }
+
+.type-offense  { background:rgba(59,130,246,.12); color:var(--uc-blue) }
+.type-defense  { background:rgba(239,68,68,.12);  color:var(--uc-red) }
+.type-set_play { background:rgba(139,92,246,.12); color:var(--uc-purple) }
+.type-pull     { background:rgba(16,185,129,.12); color:var(--uc-green) }
+.type-other    { background:var(--uc-gray-100);   color:var(--uc-gray-600) }
+
+.filter-tab { padding:.35rem .8rem; border-radius:20px; font-size:.8rem; font-weight:600;
+  border:1.5px solid var(--uc-gray-200); background:#fff; cursor:pointer;
+  text-decoration:none; color:var(--uc-gray-800); transition:all .15s; white-space:nowrap }
+.filter-tab.active, .filter-tab:hover { border-color:var(--uc-blue); color:var(--uc-blue);
+  background:rgba(59,130,246,.06) }
+
+/* Video modal */
+.clip-modal-body { padding:0; background:#000 }
+.clip-modal-body iframe { width:100%; aspect-ratio:16/9; display:block; border:none }
+</style>
+
+<div class="container py-4">
+  <div class="uc-page-header mb-4">
+    <div>
+      <h2>Video Clips</h2>
+      <p>{{ report.team_name }}{% if report.date %} · {{ report.date.strftime('%d %b %Y') }}{% endif %}</p>
     </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Add Clip
+      </a>
+      <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Report
+      </a>
+    </div>
+  </div>
+
+  {% if clips %}
+  <!-- Type filter tabs -->
+  <div class="d-flex gap-2 mb-4 flex-wrap" id="clipFilters">
+    <a href="#" class="filter-tab active" data-type="all">
+      All ({{ clips|length }})
+    </a>
+    {% set types = clips | map(attribute='clip_type') | select | unique | list %}
+    {% for t in ['offense','defense','set_play','pull','other'] %}
+      {% set cnt = clips | selectattr('clip_type','equalto', t) | list | length %}
+      {% if cnt > 0 %}
+      <a href="#" class="filter-tab" data-type="{{ t }}">
+        {{ t|replace('_',' ')|capitalize }} ({{ cnt }})
+      </a>
+      {% endif %}
+    {% endfor %}
+    {% set untyped = clips | selectattr('clip_type', 'none') | list | length %}
+    {% if untyped > 0 %}
+    <a href="#" class="filter-tab" data-type="none">Uncategorised ({{ untyped }})</a>
+    {% endif %}
+  </div>
+
+  <div class="row g-3" id="clipsGrid">
+    {% for clip in clips %}
+    {% set vid_id = '' %}
+    {% if clip.youtube_embed_url %}
+      {% set vid_id = clip.youtube_embed_url.split('/embed/')[1].split('?')[0] %}
+    {% endif %}
+    <div class="col-sm-6 col-lg-4 clip-item" data-type="{{ clip.clip_type or 'none' }}">
+      <div class="clip-card">
+
+        <!-- Thumbnail -->
+        <div class="clip-thumb" data-bs-toggle="modal" data-bs-target="#clipModal{{ clip.id }}">
+          {% if vid_id %}
+          <img src="https://img.youtube.com/vi/{{ vid_id }}/mqdefault.jpg"
+               alt="{{ clip.title }}"
+               onerror="this.src='';this.style.display='none'">
+          {% else %}
+          <div style="height:100%;display:flex;align-items:center;justify-content:center">
+            <i class="bi bi-camera-video" style="font-size:2rem;color:var(--uc-gray-400)"></i>
+          </div>
+          {% endif %}
+          <div class="clip-play-btn"><i class="bi bi-play-circle-fill"></i></div>
+          {% if clip.clip_type %}
+          <span style="position:absolute;top:.5rem;left:.5rem" class="clip-type-tag type-{{ clip.clip_type }}">
+            {{ clip.clip_type|replace('_',' ') }}
+          </span>
+          {% endif %}
+          {% if clip.start_time %}
+          <span style="position:absolute;bottom:.5rem;right:.5rem;background:rgba(0,0,0,.65);
+                        color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:4px">
+            ▶ {{ '%d:%02d'|format(clip.start_time // 60, clip.start_time % 60) }}
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="p-3">
+          <div style="font-weight:700;font-size:.9rem;margin-bottom:.25rem">{{ clip.title }}</div>
+          {% if clip.description %}
+          <p style="font-size:.78rem;color:var(--uc-gray-600);margin-bottom:.5rem;
+                    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
+            {{ clip.description }}
+          </p>
+          {% endif %}
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-sm btn-primary flex-fill"
+                    data-bs-toggle="modal" data-bs-target="#clipModal{{ clip.id }}">
+              <i class="bi bi-play-fill me-1"></i>Watch
+            </button>
+            <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}"
+               class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#delClip{{ clip.id }}">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video modal -->
+      <div class="modal fade" id="clipModal{{ clip.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header py-2">
+              <h6 class="modal-title">{{ clip.title }}</h6>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="clip-modal-body">
+              {% if clip.youtube_embed_url %}
+              <iframe src="{{ clip.youtube_embed_url }}&autoplay=0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen></iframe>
+              {% else %}
+              <div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
+                           background:#111;color:var(--uc-gray-400)">
+                Invalid video link
+              </div>
+              {% endif %}
+            </div>
+            {% if clip.description %}
+            <div class="modal-footer justify-content-start py-2">
+              <p style="font-size:.82rem;color:var(--uc-gray-600);margin:0">{{ clip.description }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete modal -->
+      <div class="modal fade" id="delClip{{ clip.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+          <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Delete clip?</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="font-size:.875rem">
+              Remove <strong>{{ clip.title }}</strong> from this report?
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <form action="{{ url_for('scouting.delete_clip', clip_id=clip.id) }}" method="post">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="uc-empty card py-5">
+    <div class="uc-empty-icon"><i class="bi bi-camera-video"></i></div>
+    <p>No clips added yet. Add YouTube clips to review key plays before the game.</p>
+    <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-primary">
+      Add First Clip
+    </a>
+  </div>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const tabs  = document.querySelectorAll('.filter-tab');
+  const items = document.querySelectorAll('.clip-item');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function (e) {
+      e.preventDefault();
+      tabs.forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      const type = this.dataset.type;
+      items.forEach(item => {
+        item.style.display = (type === 'all' || item.dataset.type === type) ? '' : 'none';
+      });
+    });
+  });
+
+  // Pause video when modal is closed
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('hidden.bs.modal', function () {
+      this.querySelectorAll('iframe').forEach(f => {
+        f.src = f.src; // reload to stop playback
+      });
+    });
+  });
+});
+</script>
 {% endblock %}
