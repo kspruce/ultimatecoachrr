@@ -2,39 +2,251 @@
 
 {% block content %}
 <style>
-.clip-card { background:#fff; border:1px solid var(--uc-gray-200); border-radius:var(--uc-radius);
-  overflow:hidden; transition:box-shadow .15s }
-.clip-card:hover { box-shadow: var(--uc-shadow-md) }
+/* ── Toolbar ──────────────────────────────────────────── */
+.clips-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  padding: .875rem 1rem;
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  margin-bottom: 1.5rem;
+}
+.clips-search {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: var(--uc-gray-50);
+  border: 1px solid var(--uc-gray-200);
+  border-radius: 8px;
+  padding: .45rem .75rem;
+}
+.clips-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: .875rem;
+  color: var(--uc-gray-800);
+  width: 100%;
+}
+.clips-search input::placeholder { color: var(--uc-gray-400); }
+.clips-search i { color: var(--uc-gray-400); font-size: .9rem; flex-shrink: 0; }
 
-.clip-thumb { position:relative; aspect-ratio:16/9; background:var(--uc-gray-800);
-  overflow:hidden; cursor:pointer }
-.clip-thumb img { width:100%; height:100%; object-fit:cover; opacity:.85; display:block }
-.clip-play-btn { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.2); opacity:0; transition:opacity .15s }
-.clip-thumb:hover .clip-play-btn { opacity:1 }
-.clip-play-btn i { font-size:2.5rem; color:#fff; filter:drop-shadow(0 2px 8px rgba(0,0,0,.4)) }
+.type-filter {
+  display: flex;
+  gap: .35rem;
+  flex-wrap: wrap;
+}
+.type-btn {
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  font-size: .775rem;
+  font-weight: 600;
+  border: 1px solid var(--uc-gray-200);
+  background: transparent;
+  color: var(--uc-gray-600);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.type-btn:hover { border-color: var(--uc-gray-400); color: var(--uc-gray-800); }
+.type-btn.active {
+  background: var(--uc-gray-800);
+  border-color: var(--uc-gray-800);
+  color: #fff;
+}
+.clips-count {
+  font-size: .78rem;
+  color: var(--uc-gray-400);
+  white-space: nowrap;
+  margin-left: auto;
+}
 
-.clip-type-tag { display:inline-block; padding:.15rem .55rem; border-radius:20px;
-  font-size:.68rem; font-weight:700; text-transform:capitalize }
+/* ── Clip card ────────────────────────────────────────── */
+.clip-card {
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  transition: box-shadow .18s, border-color .18s;
+  cursor: pointer;
+}
+.clip-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,.09);
+  border-color: var(--uc-gray-400);
+}
 
-.type-offense  { background:rgba(59,130,246,.12); color:var(--uc-blue) }
-.type-defense  { background:rgba(239,68,68,.12);  color:var(--uc-red) }
-.type-set_play { background:rgba(139,92,246,.12); color:var(--uc-purple) }
-.type-pull     { background:rgba(16,185,129,.12); color:var(--uc-green) }
-.type-other    { background:var(--uc-gray-100);   color:var(--uc-gray-600) }
+/* Thumbnail */
+.clip-thumb {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #111;
+  overflow: hidden;
+}
+.clip-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .25s, opacity .25s;
+  opacity: .9;
+}
+.clip-card:hover .clip-thumb img {
+  transform: scale(1.03);
+  opacity: 1;
+}
+.clip-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: .5rem .6rem;
+  opacity: 0;
+  transition: opacity .18s;
+}
+.clip-card:hover .clip-overlay { opacity: 1; }
+.play-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .18s;
+}
+.clip-card:hover .play-icon { opacity: 1; }
+.play-icon i {
+  font-size: 2.2rem;
+  color: #fff;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,.5));
+}
 
-.filter-tab { padding:.35rem .8rem; border-radius:20px; font-size:.8rem; font-weight:600;
-  border:1.5px solid var(--uc-gray-200); background:#fff; cursor:pointer;
-  text-decoration:none; color:var(--uc-gray-800); transition:all .15s; white-space:nowrap }
-.filter-tab.active, .filter-tab:hover { border-color:var(--uc-blue); color:var(--uc-blue);
-  background:rgba(59,130,246,.06) }
+/* Type dot on thumbnail */
+.clip-type-dot {
+  position: absolute;
+  top: .55rem;
+  left: .55rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.6);
+}
+.dot-offense  { background: #60a5fa; }
+.dot-defense  { background: #f87171; }
+.dot-set_play { background: #a78bfa; }
+.dot-pull     { background: #34d399; }
+.dot-other    { background: #9ca3af; }
 
-/* Video modal */
-.clip-modal-body { padding:0; background:#000 }
-.clip-modal-body iframe { width:100%; aspect-ratio:16/9; display:block; border:none }
+/* Timestamp chip */
+.clip-ts {
+  font-size: .65rem;
+  color: rgba(255,255,255,.9);
+  background: rgba(0,0,0,.55);
+  padding: .1rem .4rem;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card body */
+.clip-body {
+  padding: .75rem .9rem .65rem;
+}
+.clip-title {
+  font-weight: 700;
+  font-size: .875rem;
+  color: var(--uc-gray-800);
+  margin: 0 0 .2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clip-desc {
+  font-size: .75rem;
+  color: var(--uc-gray-400);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 .55rem;
+}
+.clip-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.clip-type-label {
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--uc-gray-400);
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.clip-actions {
+  display: flex;
+  gap: .3rem;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.clip-card:hover .clip-actions { opacity: 1; }
+.clip-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--uc-gray-200);
+  background: #fff;
+  color: var(--uc-gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .12s;
+  text-decoration: none;
+}
+.clip-action-btn:hover { border-color: var(--uc-gray-400); color: var(--uc-gray-800); }
+.clip-action-btn.del:hover { border-color: var(--uc-red); color: var(--uc-red); background: rgba(239,68,68,.04); }
+
+/* ── No results ───────────────────────────────────────── */
+.no-results {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--uc-gray-400);
+  font-size: .9rem;
+  display: none;
+}
+
+/* ── Video modal ──────────────────────────────────────── */
+.modal-content { border: none; border-radius: 14px; overflow: hidden; }
+.clip-modal-header {
+  background: var(--uc-gray-800);
+  color: #fff;
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.clip-modal-header .btn-close { filter: invert(1); opacity: .7; }
+.clip-modal-video { background: #000; }
+.clip-modal-video iframe { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
+.clip-modal-info {
+  padding: .75rem 1rem;
+  background: var(--uc-gray-50);
+  border-top: 1px solid var(--uc-gray-100);
+}
 </style>
 
 <div class="container py-4">
+
+  <!-- Page header -->
   <div class="uc-page-header mb-4">
     <div>
       <h2>Video Clips</h2>
@@ -51,108 +263,128 @@
   </div>
 
   {% if clips %}
-  <!-- Type filter tabs -->
-  <div class="d-flex gap-2 mb-4 flex-wrap" id="clipFilters">
-    <a href="#" class="filter-tab active" data-type="all">
-      All ({{ clips|length }})
-    </a>
-    {% set types = clips | map(attribute='clip_type') | select | unique | list %}
-    {% for t in ['offense','defense','set_play','pull','other'] %}
-      {% set cnt = clips | selectattr('clip_type','equalto', t) | list | length %}
-      {% if cnt > 0 %}
-      <a href="#" class="filter-tab" data-type="{{ t }}">
-        {{ t|replace('_',' ')|capitalize }} ({{ cnt }})
-      </a>
+
+  <!-- Toolbar: search + type filter -->
+  <div class="clips-toolbar">
+    <div class="clips-search">
+      <i class="bi bi-search"></i>
+      <input type="text" id="clipSearch" placeholder="Search clips…" autocomplete="off">
+    </div>
+
+    <div class="type-filter" id="typeFilter">
+      <button class="type-btn active" data-type="all">All</button>
+      {% for t, label in [('offense','Offense'),('defense','Defense'),('set_play','Set Play'),('pull','Pull'),('other','Other')] %}
+        {% set cnt = clips | selectattr('clip_type','equalto', t) | list | length %}
+        {% if cnt %}
+        <button class="type-btn" data-type="{{ t }}">{{ label }}</button>
+        {% endif %}
+      {% endfor %}
+      {% if clips | selectattr('clip_type', 'none') | list | length %}
+      <button class="type-btn" data-type="none">Untagged</button>
       {% endif %}
-    {% endfor %}
-    {% set untyped = clips | selectattr('clip_type', 'none') | list | length %}
-    {% if untyped > 0 %}
-    <a href="#" class="filter-tab" data-type="none">Uncategorised ({{ untyped }})</a>
-    {% endif %}
+    </div>
+
+    <span class="clips-count" id="clipsCount">{{ clips|length }} clip{{ 's' if clips|length != 1 }}</span>
   </div>
 
+  <!-- Grid -->
   <div class="row g-3" id="clipsGrid">
     {% for clip in clips %}
     {% set vid_id = '' %}
     {% if clip.youtube_embed_url %}
       {% set vid_id = clip.youtube_embed_url.split('/embed/')[1].split('?')[0] %}
     {% endif %}
-    <div class="col-sm-6 col-lg-4 clip-item" data-type="{{ clip.clip_type or 'none' }}">
-      <div class="clip-card">
+    <div class="col-sm-6 col-xl-4 clip-item"
+         data-type="{{ clip.clip_type or 'none' }}"
+         data-title="{{ clip.title|lower }}"
+         data-desc="{{ (clip.description or '')|lower }}">
+
+      <div class="clip-card" data-bs-toggle="modal" data-bs-target="#clipModal{{ clip.id }}">
 
         <!-- Thumbnail -->
-        <div class="clip-thumb" data-bs-toggle="modal" data-bs-target="#clipModal{{ clip.id }}">
+        <div class="clip-thumb">
           {% if vid_id %}
           <img src="https://img.youtube.com/vi/{{ vid_id }}/mqdefault.jpg"
                alt="{{ clip.title }}"
-               onerror="this.src='';this.style.display='none'">
-          {% else %}
-          <div style="height:100%;display:flex;align-items:center;justify-content:center">
-            <i class="bi bi-camera-video" style="font-size:2rem;color:var(--uc-gray-400)"></i>
-          </div>
+               onerror="this.style.display='none'">
           {% endif %}
-          <div class="clip-play-btn"><i class="bi bi-play-circle-fill"></i></div>
+
+          <!-- Type dot -->
           {% if clip.clip_type %}
-          <span style="position:absolute;top:.5rem;left:.5rem" class="clip-type-tag type-{{ clip.clip_type }}">
-            {{ clip.clip_type|replace('_',' ') }}
-          </span>
+          <span class="clip-type-dot dot-{{ clip.clip_type }}"></span>
           {% endif %}
-          {% if clip.start_time %}
-          <span style="position:absolute;bottom:.5rem;right:.5rem;background:rgba(0,0,0,.65);
-                        color:#fff;font-size:.65rem;padding:.1rem .4rem;border-radius:4px">
-            ▶ {{ '%d:%02d'|format(clip.start_time // 60, clip.start_time % 60) }}
-          </span>
-          {% endif %}
+
+          <!-- Hover overlay -->
+          <div class="play-icon"><i class="bi bi-play-circle-fill"></i></div>
+          <div class="clip-overlay">
+            <span></span>
+            {% if clip.start_time %}
+            <span class="clip-ts">{{ '%d:%02d'|format(clip.start_time // 60, clip.start_time % 60) }}</span>
+            {% endif %}
+          </div>
         </div>
 
-        <!-- Info -->
-        <div class="p-3">
-          <div style="font-weight:700;font-size:.9rem;margin-bottom:.25rem">{{ clip.title }}</div>
+        <!-- Card body -->
+        <div class="clip-body">
+          <div class="clip-title">{{ clip.title }}</div>
           {% if clip.description %}
-          <p style="font-size:.78rem;color:var(--uc-gray-600);margin-bottom:.5rem;
-                    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
-            {{ clip.description }}
-          </p>
+          <div class="clip-desc">{{ clip.description }}</div>
           {% endif %}
-          <div class="d-flex gap-2 mt-2">
-            <button type="button" class="btn btn-sm btn-primary flex-fill"
-                    data-bs-toggle="modal" data-bs-target="#clipModal{{ clip.id }}">
-              <i class="bi bi-play-fill me-1"></i>Watch
-            </button>
-            <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}"
-               class="btn btn-sm btn-outline-secondary">
-              <i class="bi bi-pencil"></i>
-            </a>
-            <button type="button" class="btn btn-sm btn-outline-danger"
-                    data-bs-toggle="modal" data-bs-target="#delClip{{ clip.id }}">
-              <i class="bi bi-trash"></i>
-            </button>
+          <div class="clip-meta">
+            <span class="clip-type-label">
+              {% if clip.clip_type %}
+              <span class="clip-type-dot dot-{{ clip.clip_type }}" style="position:static;width:6px;height:6px;border:none"></span>
+              {{ clip.clip_type|replace('_',' ') }}
+              {% else %}
+              <span style="color:var(--uc-gray-300)">untagged</span>
+              {% endif %}
+            </span>
+            <!-- Action buttons — stop propagation so card click doesn't open modal -->
+            <div class="clip-actions" onclick="event.stopPropagation()">
+              <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}"
+                 class="clip-action-btn" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button class="clip-action-btn del"
+                      data-bs-toggle="modal"
+                      data-bs-target="#delClip{{ clip.id }}"
+                      title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Video modal -->
       <div class="modal fade" id="clipModal{{ clip.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
           <div class="modal-content">
-            <div class="modal-header py-2">
-              <h6 class="modal-title">{{ clip.title }}</h6>
+            <div class="clip-modal-header">
+              <div>
+                <div style="font-weight:700;font-size:.95rem">{{ clip.title }}</div>
+                {% if clip.clip_type %}
+                <div style="font-size:.72rem;opacity:.6;text-transform:capitalize;margin-top:.1rem">
+                  {{ clip.clip_type|replace('_',' ') }}
+                </div>
+                {% endif %}
+              </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="clip-modal-body">
+            <div class="clip-modal-video">
               {% if clip.youtube_embed_url %}
               <iframe src="{{ clip.youtube_embed_url }}&autoplay=0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowfullscreen></iframe>
               {% else %}
               <div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
-                           background:#111;color:var(--uc-gray-400)">
-                Invalid video link
+                          background:#111;color:#555;font-size:.875rem">
+                No valid video link
               </div>
               {% endif %}
             </div>
             {% if clip.description %}
-            <div class="modal-footer justify-content-start py-2">
+            <div class="clip-modal-info">
               <p style="font-size:.82rem;color:var(--uc-gray-600);margin:0">{{ clip.description }}</p>
             </div>
             {% endif %}
@@ -162,63 +394,117 @@
 
       <!-- Delete modal -->
       <div class="modal fade" id="delClip{{ clip.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
           <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Delete clip?</h5>
+            <div class="modal-header border-0 pb-0">
+              <h6 class="modal-title">Remove clip?</h6>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" style="font-size:.875rem">
-              Remove <strong>{{ clip.title }}</strong> from this report?
+            <div class="modal-body pt-1" style="font-size:.875rem;color:var(--uc-gray-600)">
+              "<strong>{{ clip.title }}</strong>" will be removed from this report.
             </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
               <form action="{{ url_for('scouting.delete_clip', clip_id=clip.id) }}" method="post">
-                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
               </form>
             </div>
           </div>
         </div>
       </div>
+
     </div>
     {% endfor %}
   </div>
 
-  {% else %}
-  <div class="uc-empty card py-5">
-    <div class="uc-empty-icon"><i class="bi bi-camera-video"></i></div>
-    <p>No clips added yet. Add YouTube clips to review key plays before the game.</p>
-    <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-primary">
-      Add First Clip
-    </a>
+  <!-- No results message -->
+  <div class="no-results" id="noResults">
+    <i class="bi bi-search" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3"></i>
+    No clips match your search.
   </div>
+
+  {% else %}
+
+  <!-- Empty state -->
+  <div class="card">
+    <div class="card-body text-center py-5">
+      <div style="width:56px;height:56px;border-radius:16px;background:var(--uc-gray-100);
+                  display:inline-flex;align-items:center;justify-content:center;
+                  font-size:1.4rem;color:var(--uc-gray-400);margin-bottom:1rem">
+        <i class="bi bi-camera-video"></i>
+      </div>
+      <h5 style="color:var(--uc-gray-800);margin-bottom:.4rem">No clips yet</h5>
+      <p style="color:var(--uc-gray-400);font-size:.875rem;margin-bottom:1.25rem">
+        Add YouTube clips to build a library of key plays for this opponent.
+      </p>
+      <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Add First Clip
+      </a>
+    </div>
+  </div>
+
   {% endif %}
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const tabs  = document.querySelectorAll('.filter-tab');
-  const items = document.querySelectorAll('.clip-item');
+  const items    = Array.from(document.querySelectorAll('.clip-item'));
+  const typeBtns = document.querySelectorAll('.type-btn');
+  const searchEl = document.getElementById('clipSearch');
+  const countEl  = document.getElementById('clipsCount');
+  const noRes    = document.getElementById('noResults');
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', function (e) {
-      e.preventDefault();
-      tabs.forEach(t => t.classList.remove('active'));
+  let activeType = 'all';
+  let searchTerm = '';
+
+  function applyFilters() {
+    let visible = 0;
+    items.forEach(item => {
+      const typeMatch = activeType === 'all' || item.dataset.type === activeType;
+      const searchMatch = !searchTerm ||
+        item.dataset.title.includes(searchTerm) ||
+        item.dataset.desc.includes(searchTerm);
+      const show = typeMatch && searchMatch;
+      item.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    if (countEl) countEl.textContent = visible + ' clip' + (visible !== 1 ? 's' : '');
+    if (noRes)   noRes.style.display  = visible === 0 ? 'block' : 'none';
+  }
+
+  // Type filter
+  typeBtns.forEach(btn => {
+    btn.addEventListener('click', function () {
+      typeBtns.forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-      const type = this.dataset.type;
-      items.forEach(item => {
-        item.style.display = (type === 'all' || item.dataset.type === type) ? '' : 'none';
-      });
+      activeType = this.dataset.type;
+      applyFilters();
     });
   });
 
-  // Pause video when modal is closed
+  // Search
+  if (searchEl) {
+    searchEl.addEventListener('input', function () {
+      searchTerm = this.value.toLowerCase().trim();
+      applyFilters();
+    });
+  }
+
+  // Stop video on modal close
   document.querySelectorAll('.modal').forEach(modal => {
     modal.addEventListener('hidden.bs.modal', function () {
-      this.querySelectorAll('iframe').forEach(f => {
-        f.src = f.src; // reload to stop playback
-      });
+      this.querySelectorAll('iframe').forEach(f => { f.src = f.src; });
+    });
+  });
+
+  // Prevent delete modal from also opening the video modal
+  document.querySelectorAll('[data-bs-target^="#delClip"]').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
     });
   });
 });
