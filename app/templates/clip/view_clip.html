@@ -2,504 +2,647 @@
 
 {% block styles %}
 <style>
-    .annotation-card { border-left: 4px solid #007bff; transition: all 0.3s; }
-    .annotation-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); transform: translateY(-2px); }
-    .annotation-card.key-moment { border-left-color: #ffc107; background-color: #fffbf0; }
-    .timestamp-link { cursor: pointer; color: #007bff; font-weight: bold; }
-    .timestamp-link:hover { text-decoration: underline; }
-    .annotation-tag { font-size: 0.85rem; margin: 2px; }
-    .creator-badge { font-size: 0.75rem; }
-    .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
-    .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-    .annotation-filters { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-    .annotation-stats { font-size: 0.9rem; color: #6c757d; }
-    .category-badge { font-size: 0.8rem; padding: 4px 8px; }
+/* ── Page layout ────────────────────────────────────────── */
+.clip-view-wrap { max-width: 1400px; margin: 0 auto; }
+
+/* ── Video card ─────────────────────────────────────────── */
+.video-card {
+  background: #0f172a;
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  box-shadow: var(--uc-shadow-md);
+  margin-bottom: 1rem;
+}
+.video-ratio {
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+}
+.video-ratio iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+.video-ratio .no-video {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.4); gap: .5rem; font-size: .9rem;
+}
+.video-ratio .no-video i { font-size: 2.5rem; }
+
+/* ── Clip header bar ────────────────────────────────────── */
+.clip-header-bar {
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.clip-main-title {
+  font-size: 1.15rem; font-weight: 800; color: var(--uc-gray-900);
+  margin: 0 0 .35rem;
+}
+.clip-header-meta {
+  display: flex; flex-wrap: wrap; gap: .5rem .9rem;
+  font-size: .78rem; color: var(--uc-gray-500); align-items: center;
+}
+.clip-header-meta i { font-size: .72rem; }
+
+.clip-tag-pill {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .72rem; font-weight: 600;
+  padding: .15rem .5rem; border-radius: 20px;
+  background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+  color: var(--uc-gray-700);
+}
+.clip-tag-pill::before {
+  content:''; width:7px; height:7px; border-radius:50%;
+  background: var(--tag-color, var(--uc-gray-400)); display:inline-block;
+}
+
+.player-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .73rem; font-weight: 600;
+  background: var(--uc-gray-100); color: var(--uc-gray-700);
+  padding: .2rem .6rem; border-radius: 20px;
+}
+
+/* ── Action buttons bar ─────────────────────────────────── */
+.clip-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* ── Add annotation card ────────────────────────────────── */
+.annotation-actions-card {
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  padding: .85rem 1rem;
+  margin-bottom: 1rem;
+}
+.annotation-actions-card h6 {
+  font-size: .78rem; font-weight: 700; color: var(--uc-gray-600);
+  text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: .6rem;
+}
+
+/* ── Sidebar panels ─────────────────────────────────────── */
+.side-panel {
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  margin-bottom: .85rem;
+}
+.side-panel-header {
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--uc-gray-100);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .78rem; font-weight: 700; color: var(--uc-gray-700);
+}
+.side-panel-body {
+  padding: .65rem .9rem;
+  max-height: 340px; overflow-y: auto;
+}
+
+/* ── Annotation cards ───────────────────────────────────── */
+.ann-card {
+  padding: .65rem .75rem;
+  border-radius: 10px;
+  border: 1px solid var(--uc-gray-200);
+  margin-bottom: .55rem;
+  transition: box-shadow .12s;
+  background: #fff;
+}
+.ann-card:hover { box-shadow: var(--uc-shadow-sm); }
+.ann-card.key-moment {
+  border-color: var(--uc-amber);
+  background: rgba(251,191,36,.04);
+}
+
+.ann-timestamp {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .75rem; font-weight: 700; color: var(--uc-blue);
+  cursor: pointer; padding: .12rem .4rem;
+  border-radius: 6px; background: rgba(59,130,246,.08);
+  border: 1px solid rgba(59,130,246,.2);
+  transition: background .12s;
+  text-decoration: none;
+}
+.ann-timestamp:hover { background: rgba(59,130,246,.15); color: var(--uc-blue); }
+
+.ann-title { font-size: .82rem; font-weight: 700; color: var(--uc-gray-800); margin: .3rem 0 .2rem; }
+.ann-notes { font-size: .78rem; color: var(--uc-gray-600); margin-bottom: .35rem; line-height: 1.45; }
+
+.ann-badge {
+  display: inline-block; font-size: .65rem; font-weight: 700;
+  padding: .12rem .45rem; border-radius: 20px;
+  text-transform: capitalize; margin-right: .2rem;
+}
+.ann-meta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: .3rem;
+}
+.ann-creator { font-size: .68rem; color: var(--uc-gray-400); }
+
+/* ── Annotation filter bar ──────────────────────────────── */
+.ann-filter-bar {
+  background: var(--uc-gray-50);
+  border-bottom: 1px solid var(--uc-gray-100);
+  padding: .55rem .9rem;
+}
+.ann-filter-bar .form-select { font-size: .75rem; padding: .2rem .5rem; }
+
+/* ── Segment list ───────────────────────────────────────── */
+.seg-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .45rem .6rem; border-radius: 8px; margin-bottom: .3rem;
+  background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+  font-size: .78rem;
+}
+.seg-item strong { color: var(--uc-gray-800); }
+.seg-time { color: var(--uc-gray-500); font-size: .72rem; }
+
+/* ── Empty annotation state ─────────────────────────────── */
+.ann-empty { text-align: center; padding: 1.5rem; color: var(--uc-gray-400); }
+.ann-empty i { font-size: 2rem; display: block; margin-bottom: .4rem; }
+.ann-empty p { font-size: .8rem; margin: 0; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ clip.title }}</h1>
-            <p class="lead">
-                {% if clip.game %}
-                    <span class="badge bg-secondary">vs {{ clip.game.opponent }}</span>
-                    {% if clip.game.date %}
-                        {{ clip.game.date.strftime('%B %d, %Y') }}
-                    {% endif %}
-                {% endif %}
-                {% if clip.point %}
-                    <span class="badge bg-info">Point {{ clip.point.point_number }}</span>
-                {% endif %}
-            </p>
+<div class="container-fluid py-4">
+<div class="clip-view-wrap">
+
+  <!-- Breadcrumb / back -->
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('clip.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Library
+    </a>
+    {% if clip.game %}
+    <span style="color:var(--uc-gray-400);font-size:.8rem">/</span>
+    <span style="font-size:.8rem;color:var(--uc-gray-600)">vs {{ clip.game.opponent }}{% if clip.game.date %} · {{ clip.game.date.strftime('%d %b %Y') }}{% endif %}</span>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+
+    <!-- ── Left: Video + info ────────────────────────────── -->
+    <div class="col-lg-8">
+
+      <!-- Video -->
+      <div class="video-card">
+        <div class="video-ratio">
+          {% if clip.embed_url %}
+            {% set sep = '&' if '?' in clip.embed_url else '?' %}
+            <iframe id="video-player"
+                    src="{{ clip.embed_url }}{{ sep }}enablejsapi=1"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+          {% else %}
+            <div class="no-video">
+              <i class="bi bi-camera-video-off"></i>
+              <span>Video unavailable — check the link</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Clip info bar -->
+      <div class="clip-header-bar">
+        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+          <div style="flex:1;min-width:0">
+            <h1 class="clip-main-title">{{ clip.title }}</h1>
+            <div class="clip-header-meta">
+              {% if clip.game %}
+              <span><i class="bi bi-calendar3"></i> vs {{ clip.game.opponent }}
+                {% if clip.game.date %}· {{ clip.game.date.strftime('%d %b %Y') }}{% endif %}
+              </span>
+              {% endif %}
+              {% if clip.point %}
+              <span><i class="bi bi-flag"></i> Point {{ clip.point.point_number }}</span>
+              {% endif %}
+              <span><i class="bi bi-eye"></i> {{ clip.view_count or 0 }} views</span>
+              {% if clip.annotation_count %}
+              <span><i class="bi bi-chat-left-text"></i> {{ clip.annotation_count }} annotations</span>
+              {% endif %}
+              {% if clip.key_moments_count > 0 %}
+              <span style="color:var(--uc-amber)">
+                <i class="bi bi-star-fill"></i> {{ clip.key_moments_count }} key moments
+              </span>
+              {% endif %}
+              {% if clip.created_by %}
+              <span><i class="bi bi-person-circle"></i> {{ clip.created_by.username }}</span>
+              {% endif %}
+            </div>
+
             {% if clip.description %}
-            <p>{{ clip.description }}</p>
+            <p style="font-size:.85rem;color:var(--uc-gray-600);margin:.6rem 0 .5rem;line-height:1.5">
+              {{ clip.description }}
+            </p>
             {% endif %}
 
             {% if clip.tag_list %}
-            <div class="mb-3">
-                <strong>Video Type:</strong>
-                {% for tag in clip.tag_list %}
-                <span class="badge" style="background-color: {{ tag.color }};">{{ tag.name }}</span>
-                {% endfor %}
+            <div class="d-flex gap-2 flex-wrap mt-2">
+              {% for tag in clip.tag_list %}
+              <span class="clip-tag-pill" style="--tag-color:{{ tag.color }}" title="{{ tag.category }}">
+                {{ tag.name }}
+              </span>
+              {% endfor %}
             </div>
             {% endif %}
 
             {% if clip.player_list %}
-            <div class="mb-3">
-                <strong>Featured Players:</strong>
-                {% for player in clip.player_list %}
-                <span class="badge bg-secondary">{{ player.name }} #{{ player.jersey_number }}</span>
+            <div class="d-flex gap-2 flex-wrap mt-2">
+              {% for player in clip.player_list %}
+              <span class="player-chip">
+                <i class="bi bi-person"></i> #{{ player.jersey_number }} {{ player.name }}
+              </span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Actions -->
+          <div class="clip-actions flex-shrink-0">
+            {% if current_user.is_admin or current_user.is_coach %}
+            <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}"
+               class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            {% endif %}
+            {% if current_user.is_admin or current_user.is_coach or clip.created_by_id == current_user.id %}
+            <form id="createShareForm" method="post"
+                  action="{{ url_for('clip.create_share_link', clip_id=clip.id) }}" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="expires_days" value="7">
+              <button type="submit" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-share me-1"></i>Share
+              </button>
+            </form>
+            <a href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}"
+               class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-download me-1"></i>Export
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Add annotation + point markers -->
+      {% if current_user.is_authenticated %}
+      <div class="annotation-actions-card">
+        <h6><i class="bi bi-plus-circle me-1"></i>Annotate</h6>
+        <div class="d-flex gap-2 flex-wrap">
+          <a id="btn-add-annotation"
+             data-base-url="{{ url_for('clip.add_annotation', clip_id=clip.id) }}"
+             class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>Add Annotation
+            <span style="font-size:.7rem;opacity:.75;margin-left:.2rem">(at current time)</span>
+          </a>
+          <button id="btn-point-start" class="btn btn-outline-success btn-sm" type="button">
+            <i class="bi bi-flag me-1"></i>Mark Point Start
+          </button>
+          <button id="btn-point-end" class="btn btn-outline-danger btn-sm" type="button">
+            <i class="bi bi-flag-fill me-1"></i>Mark Point End
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- ── Right sidebar ─────────────────────────────────── -->
+    <div class="col-lg-4">
+
+      <!-- Points breakdown -->
+      <div class="side-panel">
+        <div class="side-panel-header">
+          <span><i class="bi bi-flag me-1"></i>Point Segments</span>
+          <button class="btn btn-link btn-sm p-0" id="btn-refresh-segments" type="button"
+                  style="color:var(--uc-gray-500);font-size:.82rem">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+        <div class="side-panel-body" id="segments-container">
+          <div class="ann-empty">
+            <i class="bi bi-flag"></i>
+            <p>No points recorded yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Annotations panel -->
+      <div class="side-panel">
+        <div class="side-panel-header">
+          <span><i class="bi bi-chat-left-text me-1"></i>Annotations
+            <span style="font-weight:500;color:var(--uc-gray-500)">({{ annotations|length }})</span>
+          </span>
+          {% if annotations %}
+          <button class="btn btn-link btn-sm p-0" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#annFilterBar"
+                  style="color:var(--uc-gray-500);font-size:.78rem">
+            <i class="bi bi-funnel me-1"></i>Filter
+          </button>
+          {% endif %}
+        </div>
+
+        <!-- Annotation filter (collapsible) -->
+        {% if annotations %}
+        <div class="collapse ann-filter-bar" id="annFilterBar">
+          <form method="get" action="" class="d-flex gap-2 flex-wrap">
+            <div class="flex-fill" style="min-width:120px">
+              <select name="event_filter" class="form-select form-select-sm">
+                <option value="">All Events</option>
+                <option value="goal">Goals</option>
+                <option value="turnover">Turnovers</option>
+                <option value="block">Blocks</option>
+                <option value="assist">Assists</option>
+              </select>
+            </div>
+            <div class="flex-fill" style="min-width:120px">
+              <select name="creator_filter" class="form-select form-select-sm">
+                <option value="">All Users</option>
+                {% for user in annotation_creators %}
+                <option value="{{ user.id }}">{{ user.username }}</option>
                 {% endfor %}
+              </select>
             </div>
-            {% endif %}
-
-            <div class="annotation-stats mb-3">
-                <i class="bi bi-chat-left-text"></i> {{ clip.annotation_count }} annotations
-                {% if clip.key_moments_count > 0 %}
-                | <i class="bi bi-star-fill text-warning"></i> {{ clip.key_moments_count }} key moments
-                {% endif %}
-                {% if clip.created_by %}
-                | Created by {{ clip.created_by.username }}
-                {% endif %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" name="key_only" id="keyOnly">
+                <label class="form-check-label" for="keyOnly" style="font-size:.72rem;white-space:nowrap">Key only</label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Go</button>
             </div>
+          </form>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                {% if current_user.is_admin or current_user.is_coach %}
-                    <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">
-                        <i class="bi bi-pencil"></i> Edit Clip
-                    </a>
-                {% endif %}
+        {% endif %}
 
-                {# Share link + Markdown export (visible to admin/coach or clip creator) #}
-                {% if current_user.is_admin or current_user.is_coach or clip.created_by_id == current_user.id %}
-                    <form id="createShareForm" method="post" action="{{ url_for('clip.create_share_link', clip_id=clip.id) }}" class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="expires_days" value="7">
-                        <button type="submit" class="btn btn-outline-success">
-                            <i class="bi bi-share"></i> Share
-                        </button>
-                    </form>
-                    <a href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-markdown"></i> Export MD
-                    </a>
-                {% endif %}
-
-                <a href="{{ url_for('clip.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Library
+        <!-- Annotation list -->
+        <div class="side-panel-body" style="max-height:580px">
+          {% if annotations %}
+            {% for annotation in annotations %}
+            <div class="ann-card {% if annotation.is_key_moment %}key-moment{% endif %}">
+              <div class="d-flex align-items-start justify-content-between gap-2">
+                <a class="ann-timestamp" onclick="seekToTime({{ annotation.timestamp }})">
+                  <i class="bi bi-play-fill"></i>{{ annotation.formatted_timestamp }}
                 </a>
-            </div>
-        </div>
-    </div>
+                {% if annotation.is_key_moment %}
+                <span class="ann-badge" style="background:rgba(245,158,11,.15);color:#92400e;border:1px solid rgba(245,158,11,.3)">
+                  <i class="bi bi-star-fill me-1"></i>Key
+                </span>
+                {% endif %}
+              </div>
 
-    <div class="row">
-        <!-- Video Player -->
-        <div class="col-lg-8">
-            <div class="card mb-3">
-                <div class="card-body">
-                    {% if clip.embed_url %}
-                    <div class="video-container">
-                        {# IMPORTANT: add enablejsapi=1 to allow reading current time #}
-                        {% set sep = '&' if '?' in clip.embed_url else '?' %}
-                        <iframe id="video-player"
-                                src="{{ clip.embed_url }}{{ sep }}enablejsapi=1"
-                                frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen></iframe>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-warning">
-                        Video unavailable. Please check the video link.
-                    </div>
-                    {% endif %}
+              {% if annotation.title %}
+              <div class="ann-title">{{ annotation.title }}</div>
+              {% endif %}
+
+              <div class="d-flex flex-wrap gap-1 my-1">
+                {% if annotation.event_type %}
+                <span class="ann-badge"
+                      style="background:rgba(59,130,246,.1);color:var(--uc-blue);border:1px solid rgba(59,130,246,.2)">
+                  {{ annotation.event_type|title }}
+                </span>
+                {% endif %}
+                {% if annotation.our_score is not none and annotation.their_score is not none %}
+                <span class="ann-badge"
+                      style="background:var(--uc-gray-100);color:var(--uc-gray-700);border:1px solid var(--uc-gray-200)">
+                  {{ annotation.our_score }}–{{ annotation.their_score }}
+                </span>
+                {% endif %}
+                {% if annotation.tags %}
+                  {% for tag in annotation.tags %}
+                  <span class="ann-badge" style="background:{{ tag.color }}22;color:{{ tag.color }};border:1px solid {{ tag.color }}44">
+                    {{ tag.name }}
+                  </span>
+                  {% endfor %}
+                {% endif %}
+              </div>
+
+              {% if annotation.offense or annotation.defense %}
+              <div style="font-size:.72rem;color:var(--uc-gray-600);margin:.2rem 0 .3rem">
+                {% if annotation.offense %}<span><strong>O:</strong> {{ annotation.offense|replace('_',' ')|title }}</span>{% endif %}
+                {% if annotation.offense and annotation.defense %} · {% endif %}
+                {% if annotation.defense %}<span><strong>D:</strong> {{ annotation.defense|replace('_',' ')|title }}</span>{% endif %}
+              </div>
+              {% endif %}
+
+              {% if annotation.players %}
+              <div style="font-size:.72rem;color:var(--uc-gray-600);margin-bottom:.25rem">
+                <i class="bi bi-people me-1"></i>
+                {% for player in annotation.players %}
+                <span>#{{ player.jersey_number }} {{ player.name }}{% if not loop.last %}, {% endif %}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              {% if annotation.notes %}
+              <p class="ann-notes">{{ annotation.notes }}</p>
+              {% endif %}
+
+              <div class="ann-meta-row">
+                <span class="ann-creator">
+                  {% if annotation.created_by %}
+                  <i class="bi bi-person-circle me-1"></i>{{ annotation.created_by.username }} ·
+                  {% endif %}
+                  {{ annotation.created_at.strftime('%d %b %Y') }}
+                </span>
+                {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
+                <div class="d-flex gap-1">
+                  <a href="{{ url_for('clip.edit_annotation', annotation_id=annotation.id) }}"
+                     class="btn btn-xs btn-outline-secondary"
+                     style="padding:.15rem .4rem;font-size:.7rem">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <button type="button"
+                          class="btn btn-xs btn-outline-danger"
+                          style="padding:.15rem .4rem;font-size:.7rem"
+                          data-bs-toggle="modal"
+                          data-bs-target="#delAnn{{ annotation.id }}">
+                    <i class="bi bi-trash"></i>
+                  </button>
                 </div>
+                {% endif %}
+              </div>
             </div>
 
-            <!-- Add Annotation + Point Start/End Buttons -->
-            {% if current_user.is_authenticated %}
-            <div class="card mb-4">
-                <div class="card-body d-grid gap-2">
-                    <!-- This button will be intercepted to append ?t=current_time -->
-                    <a id="btn-add-annotation"
-                       data-base-url="{{ url_for('clip.add_annotation', clip_id=clip.id) }}"
-                       class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add New Annotation (use current time)
-                    </a>
-
-                    <div class="d-flex gap-2">
-                        <button id="btn-point-start" class="btn btn-outline-success flex-fill" type="button">
-                            <i class="bi bi-flag"></i> Mark Point Start
-                        </button>
-                        <button id="btn-point-end" class="btn btn-outline-danger flex-fill" type="button">
-                            <i class="bi bi-flag-fill"></i> Mark Point End
-                        </button>
-                    </div>
-                    <small class="text-muted">These will create simple point segments using the current video time.</small>
+            {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
+            <div class="modal fade" id="delAnn{{ annotation.id }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Delete annotation?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body" style="font-size:.875rem">This cannot be undone.</div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ url_for('clip.delete_annotation', annotation_id=annotation.id) }}" method="post" class="d-inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </div>
                 </div>
+              </div>
             </div>
             {% endif %}
+            {% endfor %}
+
+          {% else %}
+          <div class="ann-empty">
+            <i class="bi bi-chat-left-text"></i>
+            <p>No annotations yet.</p>
+            {% if current_user.is_authenticated %}
+            <a id="btn-add-annotation-empty"
+               data-base-url="{{ url_for('clip.add_annotation', clip_id=clip.id) }}"
+               class="btn btn-sm btn-primary mt-2">
+              Add First Annotation
+            </a>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
+      </div>
 
-        <!-- Right sidebar: Annotations and Points breakdown -->
-        <div class="col-lg-4">
-            <!-- Points breakdown -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Points in this clip</h5>
-                    <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-segments" type="button">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
-                </div>
-                <div class="card-body" id="segments-container" style="max-height: 300px; overflow-y: auto;">
-                    <div class="text-muted">No points recorded yet.</div>
-                </div>
-            </div>
-
-            <!-- Existing Annotations Sidebar -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Annotations ({{ annotations|length }})</h5>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#annotationFilters">
-                        <i class="bi bi-funnel"></i> Filter
-                    </button>
-                </div>
-
-                <div class="collapse" id="annotationFilters">
-                    <div class="annotation-filters">
-                        <form method="get" action="">
-                            <div class="mb-2">
-                                <label class="form-label small">Event Type</label>
-                                <select name="event_filter" class="form-select form-select-sm">
-                                    <option value="">All Events</option>
-                                    <option value="goal">Goals</option>
-                                    <option value="turnover">Turnovers</option>
-                                    <option value="block">Blocks</option>
-                                    <option value="assist">Assists</option>
-                                </select>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label small">Creator</label>
-                                <select name="creator_filter" class="form-select form-select-sm">
-                                    <option value="">All Users</option>
-                                    {% for user in annotation_creators %}
-                                    <option value="{{ user.id }}">{{ user.username }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="key_only" id="keyMomentsOnly">
-                                <label class="form-check-label small" for="keyMomentsOnly">
-                                    Key Moments Only
-                                </label>
-                            </div>
-                            <button type="submit" class="btn btn-sm btn-primary w-100">Apply</button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
-                    {% if annotations %}
-                        {% for annotation in annotations %}
-                        <div class="annotation-card card mb-3 {% if annotation.is_key_moment %}key-moment{% endif %}">
-                            <div class="card-body p-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="timestamp-link" onclick="seekToTime({{ annotation.timestamp }})">
-                                        <i class="bi bi-play-circle"></i> {{ annotation.formatted_timestamp }}
-                                    </span>
-                                    {% if annotation.is_key_moment %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-star-fill"></i> Key
-                                    </span>
-                                    {% endif %}
-                                </div>
-                                {% if annotation.title %}
-                                <h6 class="card-title">{{ annotation.title }}</h6>
-                                {% endif %}
-                                <div class="mb-2">
-                                    {% if annotation.event_type %}
-                                    <span class="badge bg-primary">{{ annotation.event_type|title }}</span>
-                                    {% endif %}
-                                    {% if annotation.our_score is not none and annotation.their_score is not none %}
-                                    <span class="badge bg-secondary">{{ annotation.our_score }}-{{ annotation.their_score }}</span>
-                                    {% endif %}
-                                </div>
-                                {% if annotation.offense or annotation.defense %}
-                                <div class="small mb-2">
-                                    {% if annotation.offense %}<div><strong>O:</strong> {{ annotation.offense|replace('_',' ')|title }}</div>{% endif %}
-                                    {% if annotation.defense %}<div><strong>D:</strong> {{ annotation.defense|replace('_',' ')|title }}</div>{% endif %}
-                                </div>
-                                {% endif %}
-                                {% if annotation.tags %}
-                                <div class="mb-2">
-                                    {% for tag in annotation.tags %}
-                                    <span class="badge annotation-tag" style="background-color: {{ tag.color }};">
-                                        {{ tag.name }}
-                                    </span>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                {% if annotation.players %}
-                                <div class="small mb-2">
-                                    <i class="bi bi-people"></i>
-                                    {% for player in annotation.players %}
-                                    <span class="badge bg-light text-dark">#{{ player.jersey_number }} {{ player.name }}</span>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                {% if annotation.notes %}
-                                <p class="card-text small mb-2">{{ annotation.notes }}</p>
-                                {% endif %}
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted creator-badge">
-                                        {% if annotation.created_by %}
-                                        <i class="bi bi-person-circle"></i> {{ annotation.created_by.username }}
-                                        {% endif %}
-                                        | {{ annotation.created_at.strftime('%b %d, %Y') }}
-                                    </small>
-                                    {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('clip.edit_annotation', annotation_id=annotation.id) }}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAnnotationModal{{ annotation.id }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
-                        <div class="modal fade" id="deleteAnnotationModal{{ annotation.id }}" tabindex="-1">
-                            <div class="modal-dialog"><div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Delete Annotation</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">Are you sure you want to delete this annotation?</div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <form action="{{ url_for('clip.delete_annotation', annotation_id=annotation.id) }}" method="post" class="d-inline">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                        <button type="submit" class="btn btn-danger">Delete</button>
-                                    </form>
-                                </div>
-                            </div></div>
-                        </div>
-                        {% endif %}
-                        {% endfor %}
-                    {% else %}
-                    <div class="text-center text-muted py-4">
-                        <i class="bi bi-chat-left-text" style="font-size: 3rem;"></i>
-                        <p class="mt-2">No annotations yet</p>
-                        {% if current_user.is_authenticated %}
-                        <a id="btn-add-annotation-empty"
-                           data-base-url="{{ url_for('clip.add_annotation', clip_id=clip.id) }}"
-                           class="btn btn-sm btn-primary">
-                            Add First Annotation (use current time)
-                        </a>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
     </div>
+  </div>
+
+</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<!-- YouTube Iframe API for getting current time -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    let ytPlayer = null;
+let ytPlayer = null;
 
-    // Init YT player when API is ready
-    function onYouTubeIframeAPIReady() {
-        const iframe = document.getElementById('video-player');
-        if (!iframe || !iframe.src.includes('youtube.com')) return;
+function onYouTubeIframeAPIReady() {
+  const iframe = document.getElementById('video-player');
+  if (!iframe || !iframe.src.includes('youtube.com')) return;
+  ytPlayer = new YT.Player('video-player', { events: {} });
+}
 
-        ytPlayer = new YT.Player('video-player', {
-            events: {}
-        });
+function seekToTime(seconds) {
+  const iframe = document.getElementById('video-player');
+  if (!iframe) return;
+  if (iframe.src.includes('youtube.com')) {
+    if (ytPlayer && ytPlayer.seekTo) {
+      ytPlayer.seekTo(seconds, true);
+      ytPlayer.playVideo && ytPlayer.playVideo();
+      return;
     }
-
-    // Seek helper used by annotation timestamps
-    function seekToTime(seconds) {
-        const iframe = document.getElementById('video-player');
-        const currentSrc = iframe.src;
-        if (currentSrc.includes('youtube.com')) {
-            if (ytPlayer && ytPlayer.seekTo) {
-                ytPlayer.seekTo(seconds, true);
-                ytPlayer.playVideo && ytPlayer.playVideo();
-                return;
-            }
-            // Fallback if API not ready
-            const videoIdMatch = currentSrc.match(/embed\/([^?]+)/);
-            if (videoIdMatch) {
-                const videoId = videoIdMatch[1];
-                const newSrc = `https://www.youtube.com/embed/${videoId}?start=${seconds}&autoplay=1&enablejsapi=1`;
-                iframe.src = newSrc;
-            }
-        }
+    const m = iframe.src.match(/embed\/([^?]+)/);
+    if (m) {
+      iframe.src = `https://www.youtube.com/embed/${m[1]}?start=${seconds}&autoplay=1&enablejsapi=1`;
     }
+  }
+}
 
-    // Get current time in seconds from YT if possible
-    function getCurrentTimeSeconds() {
-        if (ytPlayer && ytPlayer.getCurrentTime) {
-            return Math.floor(ytPlayer.getCurrentTime());
-        }
-        // Fallback prompt if not YouTube or API not ready
-        const manual = prompt('Enter the current video time (in seconds):');
-        if (manual !== null && manual.trim() !== '' && !isNaN(manual)) {
-            return parseInt(manual, 10);
-        }
-        return null;
-    }
+function getCurrentTimeSeconds() {
+  if (ytPlayer && ytPlayer.getCurrentTime) return Math.floor(ytPlayer.getCurrentTime());
+  const manual = prompt('Enter the current video time (seconds):');
+  return (manual !== null && !isNaN(manual) && manual.trim() !== '') ? parseInt(manual, 10) : null;
+}
 
-    // Intercept "Add Annotation" to prefill timestamp via query param ?t=<seconds>
-    function wireAddAnnotationButtons() {
-        ['btn-add-annotation', 'btn-add-annotation-empty'].forEach(id => {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const t = getCurrentTimeSeconds();
-                const base = this.getAttribute('data-base-url');
-                if (t !== null) window.location.href = `${base}?t=${t}`;
-                else window.location.href = base; // fallback
-            });
-        });
-    }
-
-    // --- Point Segments ---
-
-    // Basic DOM rendering for the segments breakdown
-    function renderSegments(list) {
-        const container = document.getElementById('segments-container');
-        if (!list || list.length === 0) {
-            container.innerHTML = '<div class="text-muted">No points recorded yet.</div>';
-            return;
-        }
-        let html = '<ul class="list-group">';
-        list.forEach((s, i) => {
-            const duration = (s.end_time !== null && s.end_time >= s.start_time)
-                ? (s.end_time - s.start_time) : null;
-            html += `
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>Point ${s.point_number}</strong>
-                        <div class="small text-muted">
-                            ${formatTime(s.start_time)} ${s.end_time !== null ? '– ' + formatTime(s.end_time) : '(open)'}
-                            ${duration !== null ? ` | ${duration}s` : ''}
-                        </div>
-                    </div>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-primary" onclick="seekToTime(${s.start_time})">
-                            <i class="bi bi-play"></i> Start
-                        </button>
-                        ${s.end_time !== null ? `<button class="btn btn-outline-primary" onclick="seekToTime(${s.end_time})">End</button>` : ''}
-                        {% if current_user.is_authenticated and (current_user.is_admin or current_user.is_coach) %}
-                        <button class="btn btn-outline-danger" onclick="deleteSegment(${s.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        {% endif %}
-                    </div>
-                </li>`;
-        });
-        html += '</ul>';
-        container.innerHTML = html;
-    }
-
-    function formatTime(sec) {
-        const s = Math.floor(sec % 60);
-        const m = Math.floor((sec / 60) % 60);
-        const h = Math.floor(sec / 3600);
-        const pad = n => String(n).padStart(2, '0');
-        if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
-        return `${m}:${pad(s)}`;
-    }
-
-    async function fetchSegments() {
-        const resp = await fetch(`{{ url_for('clip.get_segments', clip_id=clip.id) }}`);
-        if (!resp.ok) return;
-        const data = await resp.json();
-        renderSegments(data);
-    }
-
-    async function markPoint(action) {
-        const t = getCurrentTimeSeconds();
-        if (t === null) return;
-
-        const resp = await fetch(`{{ url_for('clip.mark_segment', clip_id=clip.id, action='__ACTION__') }}`.replace('__ACTION__', action), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ timestamp: t })
-        });
-        if (resp.ok) {
-            await fetchSegments();
-        } else {
-            const msg = await resp.text();
-            alert('Error: ' + msg);
-        }
-    }
-
-    async function deleteSegment(id) {
-        if (!confirm('Delete this point segment?')) return;
-        const resp = await fetch(`{{ url_for('clip.delete_segment', clip_id=clip.id, segment_id=0) }}`.replace('0', id), {
-            method: 'DELETE',
-            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
-        });
-        if (resp.ok) {
-            await fetchSegments();
-        } else {
-            const msg = await resp.text();
-            alert('Error: ' + msg);
-        }
-    }
-
-    // Intercept the Share form to show the share URL without navigating away
-    document.addEventListener('DOMContentLoaded', function() {
-        wireAddAnnotationButtons();
-
-        const btnStart = document.getElementById('btn-point-start');
-        const btnEnd = document.getElementById('btn-point-end');
-        const btnRefresh = document.getElementById('btn-refresh-segments');
-
-        btnStart && btnStart.addEventListener('click', () => markPoint('start'));
-        btnEnd && btnEnd.addEventListener('click', () => markPoint('end'));
-        btnRefresh && btnRefresh.addEventListener('click', fetchSegments);
-
-        // Load existing segments on page load
-        fetchSegments();
-
-        // Share link creation handler
-        const shareForm = document.getElementById('createShareForm');
-        if (shareForm) {
-            shareForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const form = e.target;
-                const resp = await fetch(form.action, { method: 'POST', body: new FormData(form) });
-                try {
-                    const data = await resp.json();
-                    if (data.url) {
-                        // Copy to clipboard if possible
-                        try { await navigator.clipboard.writeText(data.url); } catch (err) {}
-                        alert('Share link created and copied to clipboard:\n\n' + data.url + '\n\nExpires in ' + data.expires_days + ' day(s).');
-                    } else {
-                        alert('Failed to create share link.');
-                    }
-                } catch {
-                    alert('Failed to create share link.');
-                }
-            });
-        }
+function wireAddAnnotationButtons() {
+  ['btn-add-annotation', 'btn-add-annotation-empty'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const t = getCurrentTimeSeconds();
+      const base = this.getAttribute('data-base-url');
+      window.location.href = t !== null ? `${base}?t=${t}` : base;
     });
+  });
+}
+
+/* ── Point segments ────────────────────────────────────── */
+function formatTime(sec) {
+  const s = Math.floor(sec % 60), m = Math.floor((sec / 60) % 60), h = Math.floor(sec / 3600);
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function renderSegments(list) {
+  const c = document.getElementById('segments-container');
+  if (!list || !list.length) {
+    c.innerHTML = '<div class="ann-empty"><i class="bi bi-flag"></i><p>No points recorded yet.</p></div>';
+    return;
+  }
+  c.innerHTML = list.map(s => {
+    const dur = (s.end_time !== null && s.end_time >= s.start_time) ? (s.end_time - s.start_time) : null;
+    return `<div class="seg-item">
+      <div>
+        <strong>Point ${s.point_number}</strong>
+        <div class="seg-time">
+          ${formatTime(s.start_time)}${s.end_time !== null ? ' – ' + formatTime(s.end_time) : ' (open)'}
+          ${dur !== null ? ' · ' + dur + 's' : ''}
+        </div>
+      </div>
+      <div class="d-flex gap-1">
+        <button class="btn btn-xs btn-outline-primary" style="padding:.15rem .4rem;font-size:.7rem"
+                onclick="seekToTime(${s.start_time})"><i class="bi bi-play"></i></button>
+        ${s.end_time !== null ? `<button class="btn btn-xs btn-outline-secondary" style="padding:.15rem .4rem;font-size:.7rem" onclick="seekToTime(${s.end_time})">End</button>` : ''}
+        {% if current_user.is_authenticated and (current_user.is_admin or current_user.is_coach) %}
+        <button class="btn btn-xs btn-outline-danger" style="padding:.15rem .4rem;font-size:.7rem"
+                onclick="deleteSegment(${s.id})"><i class="bi bi-trash"></i></button>
+        {% endif %}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function fetchSegments() {
+  const r = await fetch(`{{ url_for('clip.get_segments', clip_id=clip.id) }}`);
+  if (r.ok) renderSegments(await r.json());
+}
+
+async function markPoint(action) {
+  const t = getCurrentTimeSeconds();
+  if (t === null) return;
+  const r = await fetch(
+    `{{ url_for('clip.mark_segment', clip_id=clip.id, action='__A__') }}`.replace('__A__', action),
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+      body: JSON.stringify({ timestamp: t }) }
+  );
+  if (r.ok) fetchSegments(); else alert('Error: ' + await r.text());
+}
+
+async function deleteSegment(id) {
+  if (!confirm('Delete this segment?')) return;
+  const r = await fetch(
+    `{{ url_for('clip.delete_segment', clip_id=clip.id, segment_id=0) }}`.replace('0', id),
+    { method: 'DELETE', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } }
+  );
+  if (r.ok) fetchSegments(); else alert('Error: ' + await r.text());
+}
+
+/* ── Init ──────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+  wireAddAnnotationButtons();
+
+  const s = document.getElementById('btn-point-start');
+  const e = document.getElementById('btn-point-end');
+  const r = document.getElementById('btn-refresh-segments');
+  s && s.addEventListener('click', () => markPoint('start'));
+  e && e.addEventListener('click', () => markPoint('end'));
+  r && r.addEventListener('click', fetchSegments);
+
+  fetchSegments();
+
+  // Share link
+  const shareForm = document.getElementById('createShareForm');
+  if (shareForm) {
+    shareForm.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      try {
+        const resp = await fetch(shareForm.action, { method: 'POST', body: new FormData(shareForm) });
+        const data = await resp.json();
+        if (data.url) {
+          try { await navigator.clipboard.writeText(data.url); } catch {}
+          alert('Share link copied to clipboard:\n\n' + data.url + '\n\nExpires in ' + data.expires_days + ' day(s).');
+        } else { alert('Failed to create share link.'); }
+      } catch { alert('Failed to create share link.'); }
+    });
+  }
+});
 </script>
 {% endblock %}

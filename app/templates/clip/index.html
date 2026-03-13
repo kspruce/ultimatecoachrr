@@ -4,505 +4,595 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
-    .tag-badge {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        margin: 0.125rem;
-        border-radius: 0.25rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: white;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .tag-badge:hover {
-        opacity: 0.8;
-        transform: translateY(-1px);
-    }
-    .tag-category-header {
-        font-weight: 600;
-        color: var(--uc-gray-600);
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.25rem;
-        border-bottom: 2px solid var(--uc-gray-200);
-    }
-    .tag-stat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-        margin-bottom: 0.25rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    .tag-stat-item:hover {
-        background-color: var(--uc-gray-50);
-    }
-    .tag-stat-badge {
-        font-size: 0.75rem;
-        padding: 0.125rem 0.375rem;
-    }
-    .filter-chip {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.75rem;
-        margin: 0.25rem;
-        background-color: rgba(59,130,246,.1);
-        border: 1px solid rgba(59,130,246,.35);
-        border-radius: 16px;
-        font-size: 0.875rem;
-    }
-    .filter-chip .remove-filter {
-        margin-left: 0.5rem;
-        cursor: pointer;
-        color: var(--uc-blue);
-        font-weight: bold;
-    }
-    .clip-card-featured {
-        border: 2px solid var(--uc-amber) !important;
-        box-shadow: 0 4px 6px rgba(245,158,11,.25) !important;
-    }
-    .featured-badge {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: var(--uc-amber);
-        color: #000;
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: bold;
-        z-index: 10;
-    }
+/* ── Layout ─────────────────────────────────────────────── */
+.clips-sidebar {
+  position: sticky;
+  top: 1rem;
+}
+@media (max-width: 767px) {
+  .clips-sidebar { position: static; }
+}
 
-    /* Keep sidebar visible while scrolling on desktops/laptops */
-    @media (min-width: 768px) {
-        .filters-sticky {
-            position: sticky;
-            top: 1rem;
-        }
-    }
+/* ── Search bar ─────────────────────────────────────────── */
+.clip-search-wrap {
+  position: relative;
+}
+.clip-search-wrap .bi-search {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--uc-gray-400); pointer-events: none; font-size: .9rem;
+}
+.clip-search-input {
+  padding-left: 2.2rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--uc-gray-200);
+  background: #fff;
+  font-size: .875rem;
+  height: 38px;
+}
+.clip-search-input:focus {
+  border-color: var(--uc-blue);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
 
-    /* Tweak tag browser height on smaller screens */
-    @media (max-width: 576px) {
-        .tag-badge {
-            font-size: 0.8rem;
-        }
-        .tag-stat-badge {
-            font-size: 0.7rem;
-        }
-        .tag-browser-body {
-            max-height: 300px; /* smaller on phones */
-            overflow-y: auto;
-        }
-    }
+/* ── Clip cards ─────────────────────────────────────────── */
+.clip-card {
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  transition: box-shadow .15s, transform .15s;
+  cursor: pointer;
+}
+.clip-card:hover {
+  box-shadow: var(--uc-shadow-md);
+  transform: translateY(-2px);
+}
+.clip-card.featured {
+  border-color: var(--uc-amber);
+  box-shadow: 0 0 0 1px rgba(245,158,11,.3);
+}
 
-    /* Default tag browser height for larger screens */
-    .tag-browser-body {
-        max-height: 500px;
-        overflow-y: auto;
-    }
+/* ── Thumbnail ──────────────────────────────────────────── */
+.clip-thumb {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: var(--uc-gray-800);
+  overflow: hidden;
+}
+.clip-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: opacity .2s;
+}
+.clip-card:hover .clip-thumb img { opacity: .85; }
+
+.clip-play-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+  background: rgba(0,0,0,.35);
+}
+.clip-card:hover .clip-play-overlay { opacity: 1; }
+.clip-play-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(255,255,255,.92);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: var(--uc-gray-800);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.clip-featured-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--uc-amber); color: #000;
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: .18rem .5rem; border-radius: 20px;
+  text-transform: uppercase;
+}
+.clip-views {
+  position: absolute; bottom: 6px; right: 8px;
+  font-size: .68rem; color: rgba(255,255,255,.85);
+  background: rgba(0,0,0,.5); padding: .1rem .45rem;
+  border-radius: 20px; font-weight: 600;
+}
+
+/* ── Thumb fallback (no YouTube URL) ───────────────────── */
+.clip-thumb-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--uc-gray-500); font-size: 2rem;
+}
+
+/* ── Card body ──────────────────────────────────────────── */
+.clip-card-body { padding: .7rem .85rem .75rem; }
+.clip-title {
+  font-weight: 700; font-size: .88rem; color: var(--uc-gray-800);
+  margin-bottom: .25rem; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.clip-meta {
+  font-size: .73rem; color: var(--uc-gray-500);
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  margin-bottom: .4rem;
+}
+.clip-meta i { font-size: .7rem; }
+
+.clip-tags { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .3rem; }
+.clip-tag-dot {
+  display: inline-flex; align-items: center; gap: .28rem;
+  font-size: .68rem; font-weight: 600; color: var(--uc-gray-600);
+  background: var(--uc-gray-50); border: 1px solid var(--uc-gray-200);
+  padding: .12rem .45rem; border-radius: 20px;
+}
+.clip-tag-dot::before {
+  content: ''; display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--tag-color, var(--uc-gray-400));
+}
+
+.clip-card-footer {
+  padding: .5rem .85rem;
+  border-top: 1px solid var(--uc-gray-100);
+  display: flex; gap: .4rem; align-items: center;
+}
+
+/* ── Sidebar sections ───────────────────────────────────── */
+.sidebar-card {
+  background: #fff; border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius); overflow: hidden;
+  margin-bottom: .85rem;
+}
+.sidebar-card-header {
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--uc-gray-100);
+  font-size: .78rem; font-weight: 700; color: var(--uc-gray-700);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-card-body { padding: .6rem .9rem; }
+
+/* ── Tag rows in sidebar ────────────────────────────────── */
+.tag-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .35rem .45rem; border-radius: 8px; cursor: pointer;
+  transition: background .12s; margin-bottom: .15rem;
+}
+.tag-row:hover { background: var(--uc-gray-50); }
+.tag-row .tag-pill {
+  display: inline-flex; align-items: center; gap: .28rem;
+  font-size: .75rem; font-weight: 600; color: var(--uc-gray-700);
+}
+.tag-row .tag-pill::before {
+  content: ''; display: inline-block;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--tag-color, var(--uc-gray-400));
+}
+.tag-count {
+  font-size: .68rem; font-weight: 700; color: var(--uc-gray-500);
+  background: var(--uc-gray-100); padding: .1rem .45rem;
+  border-radius: 20px;
+}
+
+.category-label {
+  font-size: .68rem; font-weight: 700; color: var(--uc-gray-400);
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: .55rem .45rem .2rem;
+}
+
+/* ── Active filter chips ────────────────────────────────── */
+.active-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .73rem; font-weight: 600;
+  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.25);
+  color: var(--uc-blue); padding: .2rem .6rem; border-radius: 20px;
+  margin: .15rem;
+}
+.active-chip button {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--uc-blue); line-height: 1; font-size: .85rem;
+  opacity: .7;
+}
+.active-chip button:hover { opacity: 1; }
+
+/* ── Filter form inside sidebar ─────────────────────────── */
+.sidebar-label { font-size: .73rem; font-weight: 600; color: var(--uc-gray-600); margin-bottom: .3rem; display: block; }
+
+/* ── Sort strip ─────────────────────────────────────────── */
+.sort-strip {
+  display: flex; align-items: center; gap: .5rem;
+  margin-bottom: 1rem; flex-wrap: wrap;
+}
+.sort-btn {
+  padding: .25rem .7rem; border-radius: 20px; font-size: .78rem;
+  font-weight: 600; border: 1.5px solid var(--uc-gray-200);
+  background: #fff; cursor: pointer; text-decoration: none;
+  color: var(--uc-gray-700); transition: all .12s;
+}
+.sort-btn.active, .sort-btn:hover {
+  border-color: var(--uc-blue); color: var(--uc-blue);
+  background: rgba(59,130,246,.06);
+}
+
+/* ── Empty state ────────────────────────────────────────── */
+.clips-empty {
+  text-align: center; padding: 3rem 1rem;
+  color: var(--uc-gray-400);
+}
+.clips-empty i { font-size: 3rem; display: block; margin-bottom: .75rem; }
+.clips-empty p { font-size: .9rem; }
+
+/* ── Result count ───────────────────────────────────────── */
+#clipCount { font-size: .8rem; color: var(--uc-gray-500); font-weight: 600; }
+
+/* ── Tag browser scroll ─────────────────────────────────── */
+.tag-browser-scroll { max-height: 380px; overflow-y: auto; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="uc-page-header mb-4">
-        <div>
-            <h2>
-                Clip Library
-                {% if clips|length > 0 %}
-                <span class="badge bg-secondary ms-1" style="font-size:.75rem;vertical-align:middle">{{ clips|length }}</span>
-                {% endif %}
-            </h2>
-            <p>Video analysis and highlights</p>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            {% if current_user.is_admin %}
-                <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Add Clip
-                </a>
-                <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-secondary d-none d-sm-inline-flex">
-                    <i class="bi bi-tags me-1"></i>Manage Tags
-                </a>
-            {% endif %}
-            <button class="btn btn-outline-secondary d-inline-flex d-md-none"
-                    data-bs-toggle="collapse" data-bs-target="#filterCollapse"
-                    aria-expanded="false" aria-controls="filterCollapse">
-                <i class="bi bi-funnel me-1"></i>Filters
-            </button>
-        </div>
+
+  <div class="uc-page-header mb-4">
+    <div>
+      <h2>Clip Library
+        <span class="badge bg-secondary ms-1" id="clipCount"
+              style="font-size:.7rem;vertical-align:middle">{{ clips|length }}</span>
+      </h2>
+      <p>Video analysis and highlights</p>
     </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Add Clip
+      </a>
+      <a href="{{ url_for('clip.tags') }}" class="btn btn-outline-secondary btn-sm d-none d-sm-inline-flex">
+        <i class="bi bi-tags me-1"></i>Tags
+      </a>
+      {% endif %}
+    </div>
+  </div>
 
-    <div class="row">
-        <!-- Sidebar with tag browser and filters -->
-        <div class="col-md-3">
-            <div class="filters-sticky">
-                <!-- Active Filters Display -->
-                {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id or active_filters.video_source or active_filters.is_featured or active_filters.tag_category %}
-                <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Active Filters</h6>
-                        <a href="{{ url_for('clip.index') }}" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-x-circle"></i> Clear All
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        {% if active_filters.tag_ids %}
-                            {% for tag_id in active_filters.tag_ids %}
-                            <span class="filter-chip">
-                                Tag #{{ tag_id }}
-                                <span class="remove-filter" onclick="removeFilter('tags', {{ tag_id }})">×</span>
-                            </span>
-                            {% endfor %}
-                        {% endif %}
-                        {% if active_filters.tag_category %}
-                            <span class="filter-chip">
-                                {{ active_filters.tag_category }}
-                                <span class="remove-filter" onclick="removeFilter('tag_category', null)">×</span>
-                            </span>
-                        {% endif %}
-                        {% if active_filters.video_source %}
-                            <span class="filter-chip">
-                                {{ active_filters.video_source|title }}
-                                <span class="remove-filter" onclick="removeFilter('video_source', null)">×</span>
-                            </span>
-                        {% endif %}
-                        {% if active_filters.is_featured %}
-                            <span class="filter-chip">
-                                Featured Only
-                                <span class="remove-filter" onclick="removeFilter('is_featured', null)">×</span>
-                            </span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
+  <div class="row g-4">
 
-                <!-- Tag Browser -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-tags-fill"></i> Browse by Tag</h6>
-                    </div>
-                    <div class="card-body tag-browser-body">
-                        {% if tag_stats %}
-                            {% set current_category = namespace(value='') %}
-                            {% for tag_id, tag_name, category, color, clip_count in tag_stats %}
-                                {% if category != current_category.value %}
-                                    {% set current_category.value = category %}
-                                    <div class="tag-category-header">{{ category or 'Uncategorized' }}</div>
-                                {% endif %}
-                                <div class="tag-stat-item" onclick="filterByTag({{ tag_id }})">
-                                    <span>
-                                        <span class="tag-badge" style="background-color: {{ color }};">
-                                            {{ tag_name }}
-                                        </span>
-                                    </span>
-                                    <span class="badge bg-secondary tag-stat-badge">{{ clip_count }}</span>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center">No tags yet</p>
-                        {% endif %}
-                    </div>
-                </div>
+    <!-- ── Sidebar ──────────────────────────────────────── -->
+    <div class="col-md-3 col-xl-2">
+      <div class="clips-sidebar">
 
-                <!-- Advanced Filters (collapsible) -->
-                <div class="card">
-                    <div class="card-header p-0">
-                        <button class="btn btn-link text-decoration-none w-100 d-flex justify-content-between align-items-center px-3 py-2"
-                                type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse"
-                                aria-expanded="true" aria-controls="filterCollapse">
-                            <span class="mb-0"><i class="bi bi-funnel"></i> Advanced Filters</span>
-                            <i id="filterCollapseIcon" class="bi bi-chevron-up"></i>
-                        </button>
-                    </div>
-                    <div id="filterCollapse" class="collapse show">
-                        <div class="card-body">
-                            <form method="get" action="{{ url_for('clip.index') }}" id="filterForm">
-                                <div class="mb-3">
-                                    {{ form.game_id.label(class="form-label small") }}
-                                    {{ form.game_id(class="form-select form-select-sm") }}
-                                </div>
-                                
-                                <div class="mb-3">
-                                    {{ form.tags.label(class="form-label small") }}
-                                    {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
-                                    <div class="form-text">Select multiple tags</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    {{ form.tag_category.label(class="form-label small") }}
-                                    {{ form.tag_category(class="form-select form-select-sm") }}
-                                </div>
-                                
-                                <div class="mb-3">
-                                    {{ form.player_id.label(class="form-label small") }}
-                                    {{ form.player_id(class="form-select form-select-sm") }}
-                                </div>
-
-                                <div class="mb-3">
-                                    {{ form.video_source.label(class="form-label small") }}
-                                    {{ form.video_source(class="form-select form-select-sm") }}
-                                </div>
-
-                                <div class="mb-3">
-                                    {{ form.is_featured.label(class="form-label small") }}
-                                    {{ form.is_featured(class="form-select form-select-sm") }}
-                                </div>
-
-                                <div class="mb-3">
-                                    {{ form.sort_by.label(class="form-label small") }}
-                                    {{ form.sort_by(class="form-select form-select-sm") }}
-                                </div>
-                                
-                                <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary btn-sm">
-                                        <i class="bi bi-search"></i> Apply Filters
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>        
-            </div>
+        <!-- Search (client-side) -->
+        <div class="clip-search-wrap mb-3">
+          <i class="bi bi-search"></i>
+          <input type="text" id="clipSearch" class="form-control clip-search-input"
+                 placeholder="Search clips…" autocomplete="off">
         </div>
 
-        <!-- Main content area with clips -->
-        <div class="col-md-9">
-            {% if clips %}
-                <div class="row">
-                    {% for clip in clips %}
-                    <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card h-100 {% if clip.is_featured %}clip-card-featured{% endif %}">
-                            {% if clip.is_featured %}
-                            <span class="featured-badge">
-                                <i class="bi bi-star-fill"></i> FEATURED
-                            </span>
-                            {% endif %}
-                            
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="card-title mb-0">{{ clip.title }}</h6>
-                                <span class="text-muted small">
-                                    <i class="bi bi-eye"></i> {{ clip.view_count or 0 }}
-                                </span>
-                            </div>
-                            
-                            <div class="card-body">
-                                {% if clip.game %}
-                                <p class="small mb-2">
-                                    <strong><i class="bi bi-controller"></i> Game:</strong> vs {{ clip.game.opponent }}
-                                    {% if clip.game.date %}
-                                        <br><span class="text-muted">{{ clip.game.date.strftime('%Y-%m-%d') }}</span>
-                                    {% endif %}
-                                </p>
-                                {% endif %}
-                                
-                                {% if clip.point %}
-                                <p class="small mb-2">
-                                    <strong><i class="bi bi-flag"></i> Point:</strong> {{ clip.point.point_number }}
-                                </p>
-                                {% endif %}
-                                
-                                {% if clip.description %}
-                                <p class="card-text small">{{ clip.description|truncate(100) }}</p>
-                                {% endif %}
-                                
-                                {% if clip.tag_list %}
-                                <div class="mb-2">
-                                    {% for tag in clip.tag_list %}
-                                    <span class="tag-badge" style="background-color: {{ tag.color }};" 
-                                          title="{{ tag.category }}: {{ tag.description or tag.name }}"
-                                          onclick="filterByTag({{ tag.id }})">
-                                        {{ tag.name }}
-                                    </span>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                
-                                {% if clip.player_list %}
-                                <p class="small mb-2">
-                                    <strong><i class="bi bi-people"></i> Players:</strong> 
-                                    {% for player in clip.player_list[:3] %}
-                                    <span class="badge bg-secondary">{{ player.name }}</span>
-                                    {% endfor %}
-                                    {% if clip.player_list|length > 3 %}
-                                    <span class="badge bg-secondary">+{{ clip.player_list|length - 3 }} more</span>
-                                    {% endif %}
-                                </p>
-                                {% endif %}
+        <!-- Active filters -->
+        {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id
+              or active_filters.video_source or active_filters.is_featured or active_filters.tag_category %}
+        <div class="sidebar-card mb-3">
+          <div class="sidebar-card-header">
+            Active Filters
+            <a href="{{ url_for('clip.index') }}" class="text-muted" style="font-size:.75rem;font-weight:500">
+              Clear all
+            </a>
+          </div>
+          <div class="sidebar-card-body" style="padding-bottom:.5rem">
+            {% if active_filters.tag_ids %}
+              {% for tag_id in active_filters.tag_ids %}
+              <span class="active-chip">Tag #{{ tag_id }}
+                <button onclick="removeFilter('tags', {{ tag_id }})">×</button>
+              </span>
+              {% endfor %}
+            {% endif %}
+            {% if active_filters.tag_category %}
+            <span class="active-chip">{{ active_filters.tag_category }}
+              <button onclick="removeFilter('tag_category', null)">×</button>
+            </span>
+            {% endif %}
+            {% if active_filters.video_source %}
+            <span class="active-chip">{{ active_filters.video_source|title }}
+              <button onclick="removeFilter('video_source', null)">×</button>
+            </span>
+            {% endif %}
+            {% if active_filters.is_featured %}
+            <span class="active-chip">Featured
+              <button onclick="removeFilter('is_featured', null)">×</button>
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
 
-                                <div class="small text-muted mt-2">
-                                    <i class="bi bi-chat-left-text"></i> {{ clip.annotation_count }} annotations
-                                    {% if clip.key_moments_count > 0 %}
-                                    | <i class="bi bi-star-fill text-warning"></i> {{ clip.key_moments_count }} key moments
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="card-footer">
-                                <div class="btn-group w-100">
-                                    <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-play-circle"></i> View
-                                    </a>
-                                    {% if current_user.is_admin %}
-                                        <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}" class="btn btn-sm btn-outline-secondary">
-                                            <i class="bi bi-pencil"></i> Edit
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ clip.id }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    {% endif %}
-                                </div>
-                                
-                                {% if current_user.is_admin %}
-                                    <!-- Delete Confirmation Modal -->
-                                    <div class="modal fade" id="deleteModal{{ clip.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ clip.id }}" aria-hidden="true">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title" id="deleteModalLabel{{ clip.id }}">Confirm Delete</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <p>Are you sure you want to delete the clip "{{ clip.title }}"?</p>
-                                                    {% if clip.annotations|length > 0 %}
-                                                    <div class="alert alert-warning">
-                                                        This clip has {{ clip.annotations|length }} annotations that will also be deleted.
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                    <form action="{{ url_for('clip.delete_clip', clip_id=clip.id) }}" method="post" class="d-inline">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                        <button type="submit" class="btn btn-danger">Delete Clip</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
+        <!-- Tag browser -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">
+            <span><i class="bi bi-tags me-1"></i>Browse Tags</span>
+          </div>
+          <div class="tag-browser-scroll sidebar-card-body" style="padding-top:.4rem;padding-bottom:.5rem">
+            {% if tag_stats %}
+              {% set current_category = namespace(value='') %}
+              {% for tag_id, tag_name, category, color, clip_count in tag_stats %}
+                {% if category != current_category.value %}
+                  {% set current_category.value = category %}
+                  <div class="category-label">{{ category or 'General' }}</div>
+                {% endif %}
+                <div class="tag-row" onclick="filterByTag({{ tag_id }})">
+                  <span class="tag-pill" style="--tag-color:{{ color }}">{{ tag_name }}</span>
+                  <span class="tag-count">{{ clip_count }}</span>
                 </div>
+              {% endfor %}
             {% else %}
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> 
-                    {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id %}
-                        No clips found matching your filters. <a href="{{ url_for('clip.index') }}">Clear filters</a> to see all clips.
-                    {% else %}
-                        No clips found. 
-                        {% if current_user.is_admin %}
-                            <a href="{{ url_for('clip.add_clip') }}">Add a clip</a> to get started.
-                        {% else %}
-                            Contact an administrator to add clips.
-                        {% endif %}
-                    {% endif %}
-                </div>
+              <p class="text-muted text-center" style="font-size:.8rem;padding:.5rem 0">No tags yet</p>
             {% endif %}
+          </div>
         </div>
+
+        <!-- Advanced filters (server-side) -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">
+            <button class="btn btn-link text-decoration-none p-0 w-100 d-flex justify-content-between align-items-center"
+                    style="font-size:.78rem;font-weight:700;color:var(--uc-gray-700)"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#advFilters">
+              <span><i class="bi bi-funnel me-1"></i>Filters</span>
+              <i class="bi bi-chevron-down" id="advIcon"></i>
+            </button>
+          </div>
+          <div id="advFilters" class="collapse {% if active_filters.game_id or active_filters.player_id or active_filters.video_source or active_filters.is_featured or active_filters.tag_ids or active_filters.tag_category %}show{% endif %}">
+            <div class="sidebar-card-body">
+              <form method="get" action="{{ url_for('clip.index') }}" id="filterForm">
+
+                <div class="mb-2">
+                  <label class="sidebar-label">{{ form.game_id.label.text }}</label>
+                  {{ form.game_id(class="form-select form-select-sm") }}
+                </div>
+
+                <div class="mb-2">
+                  <label class="sidebar-label">{{ form.tags.label.text }}</label>
+                  {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
+                </div>
+
+                <div class="mb-2">
+                  <label class="sidebar-label">{{ form.tag_category.label.text }}</label>
+                  {{ form.tag_category(class="form-select form-select-sm") }}
+                </div>
+
+                <div class="mb-2">
+                  <label class="sidebar-label">{{ form.player_id.label.text }}</label>
+                  {{ form.player_id(class="form-select form-select-sm") }}
+                </div>
+
+                <div class="mb-2">
+                  <label class="sidebar-label">{{ form.video_source.label.text }}</label>
+                  {{ form.video_source(class="form-select form-select-sm") }}
+                </div>
+
+                <div class="mb-2">
+                  <label class="sidebar-label">{{ form.is_featured.label.text }}</label>
+                  {{ form.is_featured(class="form-select form-select-sm") }}
+                </div>
+
+                <div class="mb-3">
+                  <label class="sidebar-label">{{ form.sort_by.label.text }}</label>
+                  {{ form.sort_by(class="form-select form-select-sm") }}
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                  <i class="bi bi-search me-1"></i>Apply
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <!-- ── Clip Grid ─────────────────────────────────────── -->
+    <div class="col-md-9 col-xl-10">
+
+      {% if clips %}
+
+      <div class="row g-3" id="clipGrid">
+        {% for clip in clips %}
+        {# Extract YouTube video ID from embed URL #}
+        {% set yt_id = '' %}
+        {% if clip.embed_url and 'youtube.com/embed/' in clip.embed_url %}
+          {% set yt_id = clip.embed_url.split('youtube.com/embed/')[1].split('?')[0] %}
+        {% endif %}
+
+        <div class="col-sm-6 col-lg-4 col-xxl-3 clip-item"
+             data-title="{{ clip.title|lower }}"
+             data-desc="{{ (clip.description or '')|lower }}">
+          <div class="clip-card {% if clip.is_featured %}featured{% endif %}"
+               onclick="window.location='{{ url_for('clip.view_clip', clip_id=clip.id) }}'">
+
+            <!-- Thumbnail -->
+            <div class="clip-thumb">
+              {% if yt_id %}
+              <img src="https://img.youtube.com/vi/{{ yt_id }}/mqdefault.jpg"
+                   alt="{{ clip.title }}" loading="lazy"
+                   onerror="this.parentElement.innerHTML='<div class=\'clip-thumb-fallback\'><i class=\'bi bi-play-circle\'></i></div>'">
+              {% else %}
+              <div class="clip-thumb-fallback"><i class="bi bi-play-circle"></i></div>
+              {% endif %}
+
+              {% if clip.is_featured %}
+              <span class="clip-featured-badge"><i class="bi bi-star-fill me-1"></i>Featured</span>
+              {% endif %}
+
+              <div class="clip-play-overlay">
+                <div class="clip-play-btn"><i class="bi bi-play-fill"></i></div>
+              </div>
+
+              <span class="clip-views"><i class="bi bi-eye me-1"></i>{{ clip.view_count or 0 }}</span>
+            </div>
+
+            <!-- Info -->
+            <div class="clip-card-body">
+              <div class="clip-title" title="{{ clip.title }}">{{ clip.title }}</div>
+              <div class="clip-meta">
+                {% if clip.game %}
+                <span><i class="bi bi-calendar3"></i>
+                  vs {{ clip.game.opponent }}{% if clip.game.date %} · {{ clip.game.date.strftime('%d %b %Y') }}{% endif %}
+                </span>
+                {% endif %}
+                {% if clip.annotation_count %}
+                <span><i class="bi bi-chat-left-text"></i>{{ clip.annotation_count }}</span>
+                {% endif %}
+                {% if clip.key_moments_count > 0 %}
+                <span style="color:var(--uc-amber)"><i class="bi bi-star-fill"></i>{{ clip.key_moments_count }}</span>
+                {% endif %}
+              </div>
+
+              {% if clip.tag_list %}
+              <div class="clip-tags">
+                {% for tag in clip.tag_list[:3] %}
+                <span class="clip-tag-dot" style="--tag-color:{{ tag.color }}">{{ tag.name }}</span>
+                {% endfor %}
+                {% if clip.tag_list|length > 3 %}
+                <span class="clip-tag-dot" style="--tag-color:var(--uc-gray-400)">+{{ clip.tag_list|length - 3 }}</span>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Footer actions -->
+            <div class="clip-card-footer" onclick="event.stopPropagation()">
+              <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}"
+                 class="btn btn-sm btn-primary flex-fill"
+                 style="font-size:.75rem;padding:.3rem .6rem">
+                <i class="bi bi-play-circle me-1"></i>Watch
+              </a>
+              {% if current_user.is_admin %}
+              <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}"
+                 class="btn btn-sm btn-outline-secondary"
+                 style="font-size:.75rem;padding:.3rem .55rem"
+                 title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      style="font-size:.75rem;padding:.3rem .55rem"
+                      data-bs-toggle="modal" data-bs-target="#del{{ clip.id }}"
+                      title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if current_user.is_admin %}
+          <!-- Delete modal -->
+          <div class="modal fade" id="del{{ clip.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-sm">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Delete clip?</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="font-size:.875rem">
+                  Delete <strong>{{ clip.title }}</strong>?
+                  {% if clip.annotations|length > 0 %}
+                  <div class="alert alert-warning mt-2 mb-0 py-2" style="font-size:.8rem">
+                    {{ clip.annotations|length }} annotation(s) will also be removed.
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                  <form action="{{ url_for('clip.delete_clip', clip_id=clip.id) }}" method="post" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- No-search-results message -->
+      <div id="noResults" class="clips-empty d-none">
+        <i class="bi bi-search"></i>
+        <p>No clips match your search.</p>
+      </div>
+
+      {% else %}
+      <div class="clips-empty">
+        <i class="bi bi-camera-video"></i>
+        <p>
+          {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id %}
+            No clips match these filters.
+            <a href="{{ url_for('clip.index') }}">Clear filters</a>
+          {% else %}
+            No clips yet.
+            {% if current_user.is_admin %}
+              <a href="{{ url_for('clip.add_clip') }}">Add the first clip</a>
+            {% endif %}
+          {% endif %}
+        </p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // Initialize Select2 for multi-tag selection
-        initTagsSelect2();
+document.addEventListener('DOMContentLoaded', function () {
 
-        // Collapse state persistence for Advanced Filters
-        const collapseEl = document.getElementById('filterCollapse');
-        const iconEl = document.getElementById('filterCollapseIcon');
+  /* ── Select2 for tag multi-select ──────────────────────── */
+  function initSelect2() {
+    $('#tags-select').select2({ theme: 'bootstrap-5', placeholder: 'Select tags', allowClear: true, width: '100%' });
+  }
+  initSelect2();
 
-        // Respect stored state
-        const key = 'clipFiltersCollapsed';
-        const stored = localStorage.getItem(key);
-        if (stored === 'true') {
-            collapseEl.classList.remove('show');
-        } else {
-            collapseEl.classList.add('show');
-        }
+  const advFilters = document.getElementById('advFilters');
+  const advIcon    = document.getElementById('advIcon');
+  if (advFilters) {
+    advFilters.addEventListener('shown.bs.collapse',  () => { advIcon.className = 'bi bi-chevron-up'; $('#tags-select').select2('destroy'); initSelect2(); });
+    advFilters.addEventListener('hidden.bs.collapse', () => { advIcon.className = 'bi bi-chevron-down'; });
+  }
 
-        // Initialize Bootstrap Collapse without toggling immediately
-        const bsCollapse = new bootstrap.Collapse(collapseEl, { toggle: false });
+  /* ── Client-side search ────────────────────────────────── */
+  const searchInput = document.getElementById('clipSearch');
+  const items       = Array.from(document.querySelectorAll('.clip-item'));
+  const countEl     = document.getElementById('clipCount');
+  const noResults   = document.getElementById('noResults');
 
-        const updateIcon = () => {
-            const isShown = collapseEl.classList.contains('show');
-            iconEl.classList.toggle('bi-chevron-up', isShown);
-            iconEl.classList.toggle('bi-chevron-down', !isShown);
-        };
-        updateIcon();
-
-        collapseEl.addEventListener('shown.bs.collapse', function() {
-            localStorage.setItem(key, 'false');
-            updateIcon();
-            // Re-init Select2 to ensure width is correct after becoming visible
-            reinitTagsSelect2();
-        });
-
-        collapseEl.addEventListener('hidden.bs.collapse', function() {
-            localStorage.setItem(key, 'true');
-            updateIcon();
-        });
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      const q = this.value.trim().toLowerCase();
+      let visible = 0;
+      items.forEach(item => {
+        const match = !q || item.dataset.title.includes(q) || item.dataset.desc.includes(q);
+        item.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      if (countEl) countEl.textContent = visible;
+      if (noResults) noResults.classList.toggle('d-none', visible > 0 || !q);
     });
+  }
 
-    function initTagsSelect2() {
-        $('#tags-select').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Select tags',
-            allowClear: true,
-            width: '100%'
-        });
-    }
+  /* ── Tag filter helpers ────────────────────────────────── */
+  window.filterByTag = function (tagId) {
+    const p = new URLSearchParams(window.location.search);
+    if (!p.getAll('tags').includes(tagId.toString())) p.append('tags', tagId);
+    window.location.href = '{{ url_for("clip.index") }}?' + p.toString();
+  };
 
-    function reinitTagsSelect2() {
-        const $el = $('#tags-select');
-        if ($el.hasClass('select2-hidden-accessible')) {
-            $el.select2('destroy');
-        }
-        initTagsSelect2();
+  window.removeFilter = function (name, val) {
+    const p = new URLSearchParams(window.location.search);
+    if (val !== null) {
+      const vals = p.getAll(name);
+      p.delete(name);
+      vals.forEach(v => { if (v !== val.toString()) p.append(name, v); });
+    } else {
+      p.delete(name);
     }
-
-    function filterByTag(tagId) {
-        // Get current URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // Get existing tag filters
-        const existingTags = urlParams.getAll('tags');
-        
-        // Add new tag if not already present
-        if (!existingTags.includes(tagId.toString())) {
-            urlParams.append('tags', tagId);
-        }
-        
-        // Redirect with new filters
-        window.location.href = '{{ url_for("clip.index") }}?' + urlParams.toString();
-    }
-
-    function removeFilter(filterName, filterValue) {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        if (filterValue !== null) {
-            // Remove specific value from multi-value filter
-            const values = urlParams.getAll(filterName);
-            urlParams.delete(filterName);
-            values.forEach(v => {
-                if (v !== filterValue.toString()) {
-                    urlParams.append(filterName, v);
-                }
-            });
-        } else {
-            // Remove entire filter
-            urlParams.delete(filterName);
-        }
-        
-        window.location.href = '{{ url_for("clip.index") }}?' + urlParams.toString();
-    }
+    window.location.href = '{{ url_for("clip.index") }}?' + p.toString();
+  };
+});
 </script>
 {% endblock %}
