@@ -86,9 +86,15 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         {% if current_user.player %}
-                        <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-success">
-                            <i class="bi bi-check-circle"></i> RSVP for this Session
-                        </a>
+                            {% if user_has_rsvp %}
+                            <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-warning">
+                                <i class="bi bi-pencil-square"></i> Change your RSVP
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-success">
+                                <i class="bi bi-check-circle"></i> RSVP for this Session
+                            </a>
+                            {% endif %}
                         {% endif %}
 						{% if current_user.is_admin %}
 						<a href="{{ url_for('session.admin_rsvp', session_id=session.id) }}" class="btn btn-warning">Manage RSVPs</a>

@@ -86,7 +86,13 @@
                                 <div class="card-footer bg-transparent">
                                     <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
                                     {% if current_user.player %}
-                                    <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-sm btn-outline-success">RSVP</a>
+                                        {% if session.id in user_rsvped_sessions %}
+                                        <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-pencil-square me-1"></i>Change RSVP
+                                        </a>
+                                        {% else %}
+                                        <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-sm btn-outline-success">RSVP</a>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
                             </div>
@@ -114,6 +120,7 @@
                         <table class="table table-striped table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th>#</th>
                                     <th>Date</th>
                                     <th>Title</th>
                                     <th>Type</th>
@@ -128,6 +135,9 @@
                             <tbody>
                                 {% for session in sessions %}
                                 <tr>
+                                    <td>
+                                        <span class="badge bg-secondary" title="{{ session.session_type_display }} #{{ session_type_numbers.get(session.id, '?') }}">#{{ session_type_numbers.get(session.id, '?') }}</span>
+                                    </td>
                                     <td>{{ session.date.strftime('%Y-%m-%d') if session.date else 'No date' }}</td>
                                     <td>
                                         <a href="{{ url_for('session.detail', session_id=session.id) }}">

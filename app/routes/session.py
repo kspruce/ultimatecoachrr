@@ -72,18 +72,41 @@ def index():
     
     # Get sessions and sort by date (newest first)
     sessions = query.order_by(SessionPlan.date.desc()).all()
-    
+
+    # Build per-type sequential numbers (ascending by date, so earliest = #1)
+    # First collect ALL sessions for the team ordered oldest-first to assign numbers
+    all_sessions_ordered = SessionPlan.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SessionPlan.date.asc(), SessionPlan.id.asc()).all()
+    type_counters = {}
+    session_type_numbers = {}
+    for s in all_sessions_ordered:
+        stype = s.session_type or 'invited_training'
+        type_counters[stype] = type_counters.get(stype, 0) + 1
+        session_type_numbers[s.id] = type_counters[stype]
+
     # Get upcoming sessions (future dates)
     upcoming_sessions = SessionPlan.query.filter(
         SessionPlan.date >= datetime.now().date(),
         SessionPlan.team_organization_id == get_current_team_id()
     ).order_by(SessionPlan.date).limit(5).all()
-    
+
+    # Build a set of session IDs that the current user has already RSVPed for
+    user_rsvped_sessions = set()
+    if current_user.is_authenticated and current_user.player:
+        from app.models.session import SessionRSVP
+        existing_rsvps = SessionRSVP.query.filter_by(
+            player_id=current_user.player.id
+        ).all()
+        user_rsvped_sessions = {r.session_id for r in existing_rsvps}
+
     return render_template(
         'session/index.html',
         sessions=sessions,
         upcoming_sessions=upcoming_sessions,
-        form=form
+        form=form,
+        session_type_numbers=session_type_numbers,
+        user_rsvped_sessions=user_rsvped_sessions
     )
 
 @bp.route('/add', methods=['GET', 'POST'])
@@ -1255,12 +1278,21 @@ def detail(session_id):
     for attendance in attendances:
         if attendance.status in attendance_by_status:
             attendance_by_status[attendance.status].append(attendance)
-    
+
+    # Check if the current user has already RSVPed for this session
+    user_has_rsvp = False
+    if current_user.is_authenticated and current_user.player:
+        user_has_rsvp = SessionRSVP.query.filter_by(
+            session_id=session_id,
+            player_id=current_user.player.id
+        ).first() is not None
+
     return render_template(
         'session/detail.html',
         session=session_plan,
         components=components,
-        attendance_by_status=attendance_by_status
+        attendance_by_status=attendance_by_status,
+        user_has_rsvp=user_has_rsvp
     )
 
 @bp.route('/edit/<int:session_id>', methods=['GET', 'POST'])

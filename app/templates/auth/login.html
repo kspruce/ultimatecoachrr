@@ -61,7 +61,16 @@
 
       <div class="mb-3">
         <p class="login-label">Password</p>
-        {{ form.password(class="login-input", placeholder="••••••••") }}
+        <div style="position:relative;">
+          {{ form.password(class="login-input", placeholder="••••••••", id="loginPassword", style="padding-right:2.75rem") }}
+          <button type="button" id="togglePassword"
+                  style="position:absolute;right:.65rem;top:50%;transform:translateY(-50%);
+                         background:none;border:none;padding:0;cursor:pointer;
+                         color:var(--uc-gray-400);font-size:1.05rem;line-height:1;"
+                  aria-label="Show password">
+            <i class="bi bi-eye" id="togglePasswordIcon"></i>
+          </button>
+        </div>
       </div>
 
       <div class="d-flex align-items-center justify-content-between mb-4">
@@ -86,4 +95,22 @@
   </p>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var btn  = document.getElementById('togglePassword');
+  var inp  = document.getElementById('loginPassword');
+  var icon = document.getElementById('togglePasswordIcon');
+  if (btn && inp) {
+    btn.addEventListener('click', function() {
+      var isHidden = inp.type === 'password';
+      inp.type = isHidden ? 'text' : 'password';
+      icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+      btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    });
+  }
+});
+</script>
 {% endblock %}

@@ -331,29 +331,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card mb-3 h-100">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">Coach's Notes & Feedback</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        {% if player.coach_feedback %}
-                                            <div class="feedback-timeline">
-                                                {% for feedback in player.coach_feedback.split('---') if feedback.strip() %}
-                                                    <div class="feedback-item">
-                                                        {{ feedback|nl2br|safe }}
-                                                    </div>
-                                                    {% if not loop.last %}
-                                                        <hr>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        {% else %}
-                                            <p class="text-muted">No coach feedback recorded yet.</p>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -361,7 +338,9 @@
                     <div id="goalsEditSection" style="display: none;">
                         <form id="goalsForm" method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+                            {# Keep coach_feedback in sync so it isn't wiped on goals save #}
+                            <input type="hidden" name="coach_feedback" id="coachFeedbackHidden" value="{{ player.coach_feedback or '' }}">
+
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="mb-3">
@@ -391,13 +370,6 @@
                                         <small class="form-text text-muted">Enter each skill on a new line</small>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="coachFeedback" class="form-label">Coach's Notes & Feedback</label>
-                                        <textarea class="form-control" id="coachFeedback" name="coach_feedback" rows="5">{{ player.coach_feedback or '' }}</textarea>
-                                        <small class="form-text text-muted">Use "---" to separate different feedback entries</small>
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="d-flex justify-content-end mt-3">
@@ -411,6 +383,97 @@
         </div>
     </div>
     {% endif %}
+
+    {# ── Coach Feedback / Notes section ──────────────────────────────────── #}
+    {% if current_user.is_admin or current_user.id == player.user_id or current_user.role == 'coach' %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-square-text-fill text-primary me-2"></i>
+                        Coach's Notes &amp; Feedback
+                        <span class="badge bg-info text-white ms-2" style="font-size:.7rem">Private</span>
+                    </h5>
+                    {% if current_user.is_admin or current_user.role == 'coach' %}
+                    <button class="btn btn-sm btn-outline-primary" id="addFeedbackBtn">
+                        <i class="bi bi-plus-circle me-1"></i>Add Note
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+
+                    {# Add-note form (hidden by default) #}
+                    {% if current_user.is_admin or current_user.role == 'coach' %}
+                    <div id="addFeedbackForm" style="display:none;" class="mb-4">
+                        <form method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}" id="feedbackForm">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            {# Pass goals unchanged #}
+                            <input type="hidden" name="short_term_goals" value="{{ player.short_term_goals or '' }}">
+                            <input type="hidden" name="mid_term_goals" value="{{ player.mid_term_goals or '' }}">
+                            <input type="hidden" name="long_term_goals" value="{{ player.long_term_goals or '' }}">
+                            <input type="hidden" name="skills_to_develop" value="{{ player.skills_to_develop or '' }}">
+                            {# coach_feedback will be built by JS to prepend the new note #}
+                            <input type="hidden" name="coach_feedback" id="combinedFeedback" value="{{ player.coach_feedback or '' }}">
+
+                            <div class="card border-primary mb-2">
+                                <div class="card-body py-3">
+                                    <label class="form-label fw-semibold">New Note</label>
+                                    <textarea class="form-control mb-2" id="newFeedbackText" rows="4"
+                                              placeholder="Write your coaching note here…"></textarea>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button type="button" class="btn btn-sm btn-secondary" id="cancelFeedbackBtn">Cancel</button>
+                                        <button type="submit" class="btn btn-sm btn-primary" id="saveFeedbackBtn">
+                                            <i class="bi bi-save me-1"></i>Save Note
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    {# Display existing entries #}
+                    {% if player.coach_feedback %}
+                        {% set entries = [] %}
+                        {% for entry in player.coach_feedback.split('---') %}
+                            {% if entry.strip() %}
+                                {% if entries.append(entry.strip()) %}{% endif %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if entries %}
+                        <div class="feedback-timeline">
+                            {% for entry in entries %}
+                            <div class="feedback-entry">
+                                {# Try to extract a leading date line e.g. "[16 Mar 2026]" #}
+                                {% if entry.startswith('[') and ']' in entry %}
+                                    {% set bracket_end = entry.index(']') %}
+                                    {% set date_part  = entry[1:bracket_end] %}
+                                    {% set body_part  = entry[bracket_end+1:].strip() %}
+                                    <div class="feedback-entry-meta">
+                                        <i class="bi bi-calendar3 me-1"></i>{{ date_part }}
+                                    </div>
+                                    <div class="feedback-entry-body">{{ body_part|nl2br|safe }}</div>
+                                {% else %}
+                                    <div class="feedback-entry-body">{{ entry|nl2br|safe }}</div>
+                                {% endif %}
+                            </div>
+                            {% if not loop.last %}<hr class="feedback-divider">{% endif %}
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted mb-0">No coaching notes recorded yet.</p>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted mb-0">No coaching notes recorded yet.</p>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -418,22 +481,61 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Goal editing functionality
-    const editGoalsBtn = document.getElementById('editGoalsBtn');
-    const cancelGoalsBtn = document.getElementById('cancelGoalsBtn');
+    const editGoalsBtn    = document.getElementById('editGoalsBtn');
+    const cancelGoalsBtn  = document.getElementById('cancelGoalsBtn');
     const goalsViewSection = document.getElementById('goalsViewSection');
     const goalsEditSection = document.getElementById('goalsEditSection');
-    
+
     if (editGoalsBtn) {
         editGoalsBtn.addEventListener('click', function() {
             goalsViewSection.style.display = 'none';
             goalsEditSection.style.display = 'block';
         });
     }
-    
     if (cancelGoalsBtn) {
         cancelGoalsBtn.addEventListener('click', function() {
             goalsEditSection.style.display = 'none';
             goalsViewSection.style.display = 'block';
+        });
+    }
+
+    // Feedback note functionality
+    const addFeedbackBtn    = document.getElementById('addFeedbackBtn');
+    const cancelFeedbackBtn = document.getElementById('cancelFeedbackBtn');
+    const addFeedbackForm   = document.getElementById('addFeedbackForm');
+    const feedbackForm      = document.getElementById('feedbackForm');
+    const newFeedbackText   = document.getElementById('newFeedbackText');
+    const combinedFeedback  = document.getElementById('combinedFeedback');
+
+    if (addFeedbackBtn) {
+        addFeedbackBtn.addEventListener('click', function() {
+            addFeedbackForm.style.display = 'block';
+            newFeedbackText.focus();
+            addFeedbackBtn.style.display = 'none';
+        });
+    }
+    if (cancelFeedbackBtn) {
+        cancelFeedbackBtn.addEventListener('click', function() {
+            addFeedbackForm.style.display = 'none';
+            newFeedbackText.value = '';
+            if (addFeedbackBtn) addFeedbackBtn.style.display = '';
+        });
+    }
+
+    if (feedbackForm) {
+        feedbackForm.addEventListener('submit', function(e) {
+            const noteText = newFeedbackText ? newFeedbackText.value.trim() : '';
+            if (!noteText) { e.preventDefault(); return; }
+
+            // Build a dated entry and prepend to existing content
+            const now   = new Date();
+            const day   = String(now.getDate()).padStart(2, '0');
+            const months= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const dateStr = day + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+            const newEntry = '[' + dateStr + ']\n' + noteText;
+
+            const existing = (combinedFeedback.value || '').trim();
+            combinedFeedback.value = existing ? newEntry + '\n---\n' + existing : newEntry;
         });
     }
 });
@@ -442,23 +544,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block styles %}
 <style>
-    .feedback-timeline {
-        position: relative;
+    /* ── Feedback timeline ──────────────────────────────── */
+    .feedback-timeline { display: flex; flex-direction: column; gap: .5rem; }
+    .feedback-entry { padding: .75rem 0; }
+    .feedback-entry-meta {
+        font-size: .75rem; font-weight: 700; color: var(--uc-blue);
+        letter-spacing: .04em; margin-bottom: .35rem;
     }
-    
-    .feedback-item {
-        padding: 8px 0;
+    .feedback-entry-body {
+        font-size: .875rem; color: var(--uc-gray-800); line-height: 1.55;
     }
-    
+    .feedback-divider { border-color: var(--uc-gray-100); margin: .25rem 0; }
+
     /* Goal cards equal height */
-    .card.h-100 {
-        height: 100%;
-    }
-    
+    .card.h-100 { height: 100%; }
+
     /* Private badge styling */
-    .badge.bg-info {
-        font-size: 0.7rem;
-        vertical-align: middle;
-    }
+    .badge.bg-info { font-size: 0.7rem; vertical-align: middle; }
 </style>
 {% endblock %}

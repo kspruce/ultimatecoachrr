@@ -34,7 +34,55 @@
       --uc-shadow-sm: 0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
       --uc-shadow-md: 0 4px 14px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04);
       --uc-radius: 12px;
+      /* Light mode page tokens */
+      --uc-page-bg:   #F9FAFB;
+      --uc-page-text: #1F2937;
+      --uc-card-bg:   #FFFFFF;
+      --uc-card-border: #E5E7EB;
     }
+    /* ─── Dark mode tokens ───────────────────────────────────── */
+    [data-theme="dark"] {
+      --uc-gray-50:  #111827;
+      --uc-gray-100: #1F2937;
+      --uc-gray-200: #374151;
+      --uc-gray-400: #9CA3AF;
+      --uc-gray-600: #D1D5DB;
+      --uc-gray-800: #F3F4F6;
+      --uc-page-bg:   #0F172A;
+      --uc-page-text: #F3F4F6;
+      --uc-card-bg:   #1E293B;
+      --uc-card-border: #374151;
+    }
+    [data-theme="dark"] body { background: var(--uc-page-bg) !important; color: var(--uc-page-text); }
+    [data-theme="dark"] .card { background: var(--uc-card-bg) !important; border-color: var(--uc-card-border) !important; color: var(--uc-page-text); }
+    [data-theme="dark"] .card-header { background: rgba(255,255,255,.04) !important; border-color: var(--uc-card-border) !important; color: var(--uc-page-text); }
+    [data-theme="dark"] .table { color: var(--uc-page-text); }
+    [data-theme="dark"] .table thead th { background: #1E293B; color: var(--uc-gray-400); border-color: var(--uc-card-border); }
+    [data-theme="dark"] .table td { border-color: #2D3748; }
+    [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * { background-color: rgba(255,255,255,.03); color: var(--uc-page-text); }
+    [data-theme="dark"] .table-hover tbody tr:hover td { background: rgba(59,130,246,.08); }
+    [data-theme="dark"] .form-control, [data-theme="dark"] .form-select {
+      background: #1E293B !important; border-color: #374151 !important; color: #F3F4F6 !important;
+    }
+    [data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus {
+      border-color: var(--uc-blue) !important; box-shadow: 0 0 0 3px rgba(59,130,246,.2) !important;
+    }
+    [data-theme="dark"] .modal-content { background: #1E293B; color: var(--uc-page-text); border-color: #374151; }
+    [data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { border-color: #374151; }
+    [data-theme="dark"] .list-group-item { background: var(--uc-card-bg); border-color: #374151; color: var(--uc-page-text); }
+    [data-theme="dark"] .badge.bg-light { background: #374151 !important; color: #F3F4F6 !important; }
+    [data-theme="dark"] .text-muted { color: #9CA3AF !important; }
+    [data-theme="dark"] .dropdown-menu { background: #1E293B !important; border-color: #374151 !important; }
+    [data-theme="dark"] .dropdown-item { color: rgba(255,255,255,.8) !important; }
+    [data-theme="dark"] .dropdown-item:hover { background: rgba(255,255,255,.08) !important; color: white !important; }
+    [data-theme="dark"] .alert-info { background: rgba(14,165,233,.15); border-color: rgba(14,165,233,.3); color: #BAE6FD; }
+    [data-theme="dark"] .alert-warning { background: rgba(245,158,11,.15); border-color: rgba(245,158,11,.3); color: #FDE68A; }
+    [data-theme="dark"] .alert-danger { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.3); color: #FECACA; }
+    [data-theme="dark"] .alert-success { background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.3); color: #A7F3D0; }
+    [data-theme="dark"] .footer { background: #0F172A !important; border-color: #1E293B; color: #6B7280; }
+    [data-theme="dark"] .bg-light { background: #1E293B !important; }
+    [data-theme="dark"] .border { border-color: #374151 !important; }
+    [data-theme="dark"] select option { background: #1E293B; }
 
     /* ─── Navbar ─────────────────────────────────────────────── */
     .uc-navbar {
@@ -137,6 +185,39 @@
     /* Right-side wrapper */
     .uc-nav-right {
       display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
+    }
+
+    /* ─── Dark mode toggle button ─────────────────────────────── */
+    .uc-theme-btn {
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.15);
+      border-radius: 8px; padding: .28rem .5rem; color: rgba(255,255,255,.75);
+      cursor: pointer; line-height: 1; font-size: .95rem;
+      transition: background .15s, color .15s;
+    }
+    .uc-theme-btn:hover { background: rgba(255,255,255,.18); color: white; }
+
+    /* ─── Mobile: user dropdown positioned inside viewport ───── */
+    @media (max-width: 991.98px) {
+      /* Inside the collapsed nav, dropdowns open inline (not absolute) */
+      #navbarNav .dropdown-menu {
+        position: static !important;
+        transform: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: rgba(255,255,255,.05) !important;
+        border-radius: 8px !important;
+        margin: .25rem 0 .25rem .75rem !important;
+        padding: .25rem !important;
+      }
+      /* The user pill button dropdown (outside the collapse) stays absolute but clipped to screen */
+      .uc-nav-right .dropdown-menu {
+        position: absolute !important;
+        right: 0 !important;
+        left: auto !important;
+        transform: none !important;
+        max-width: calc(100vw - 1rem) !important;
+        min-width: 210px !important;
+      }
     }
 
     /* ─── Team logo in brand ──────────────────────────────────── */
@@ -389,6 +470,11 @@
     {# ── Right side ──────────────────────────────────────── #}
     <div class="uc-nav-right">
 
+      {# Dark / light mode toggle #}
+      <button class="uc-theme-btn" id="uc-theme-toggle" title="Toggle dark/light mode" aria-label="Toggle colour theme">
+        <i class="bi bi-moon-fill" id="uc-theme-icon"></i>
+      </button>
+
       {% if current_user.is_authenticated %}
 
       {# Admin: active team badge (desktop) #}
@@ -512,6 +598,32 @@
 
 <!-- Your App JS -->
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- Dark / light mode -->
+<script>
+(function() {
+  var saved = localStorage.getItem('uc-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  function updateIcon(theme) {
+    var icon = document.getElementById('uc-theme-icon');
+    if (!icon) return;
+    icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    updateIcon(saved);
+    var btn = document.getElementById('uc-theme-toggle');
+    if (btn) {
+      btn.addEventListener('click', function() {
+        var current = document.documentElement.getAttribute('data-theme') || 'light';
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('uc-theme', next);
+        updateIcon(next);
+      });
+    }
+  });
+})();
+</script>
 
 <!-- Page Specific Scripts -->
 {% block scripts %}{% endblock %}

@@ -90,9 +90,7 @@ def add_player():
                 position=form.position.data,
                 gender=form.gender_match.data,
                 gender_match=form.gender_match.data,
-                team=form.team.data if hasattr(form, 'team') else None,
                 email=form.email.data,
-                line_preference=form.line_preference.data,
                 active=form.active.data,
                 team_organization_id=get_current_team_id()  # Add team organization ID
             )
