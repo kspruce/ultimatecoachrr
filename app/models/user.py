@@ -6,6 +6,7 @@ from datetime import datetime
 
 # Role hierarchy (team-scoped)
 ROLE_ORDER = {
+    "guest": 0,
     "player": 1,
     "stat_taker": 2,
     "captain": 3,
@@ -52,6 +53,11 @@ class User(UserMixin, db.Model):
     @property
     def player(self):
         return self.player_profile
+
+    @property
+    def is_guest(self):
+        """True if this is a read-only guest/demo account."""
+        return self.role == "guest"
 
     @property
     def is_admin(self):

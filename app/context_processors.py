@@ -9,7 +9,7 @@ def team_info_processor():
     from app.models.team_settings import TeamSettings
 
     if not current_user.is_authenticated:
-        return {'current_team': None, 'available_teams': []}
+        return {'current_team': None, 'available_teams': [], 'is_guest': False}
 
     try:
         if current_user.is_superadmin or current_user.role == "admin":
@@ -39,7 +39,8 @@ def team_info_processor():
 
         return {
             'current_team': current_team,
-            'available_teams': available_teams
+            'available_teams': available_teams,
+            'is_guest': current_user.role == 'guest',
         }
 
     except SQLAlchemyError as e:
@@ -50,5 +51,6 @@ def team_info_processor():
 
         return {
             'current_team': None,
-            'available_teams': []
+            'available_teams': [],
+            'is_guest': False,
         }

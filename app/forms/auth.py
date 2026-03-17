@@ -46,6 +46,7 @@ class UserForm(FlaskForm):
     role = SelectField(
         'Role',
         choices=[
+            ('guest', 'Guest (Read-only Demo)'),
             ('player', 'Player'),
             ('stat_taker', 'Stat Taker'),
             ('captain', 'Captain'),

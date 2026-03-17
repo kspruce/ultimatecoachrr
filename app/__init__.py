@@ -217,6 +217,41 @@ def create_app(config_class=Config):
             # Don't crash the app if Discord fails
             pass
 
+    # ── Guest read-only enforcement ───────────────────────────────
+    @app.before_request
+    def block_guest_writes():
+        """
+        Guests (role='guest') may browse the site but cannot mutate any data.
+        Any non-GET request from a guest is blocked here, before it reaches a route.
+        JSON/AJAX callers receive a 403 JSON response; regular form posts get a
+        flash message and a redirect back to where they came from.
+        """
+        from flask_login import current_user
+        from flask import request as req, redirect, url_for, flash, jsonify as _jsonify
+
+        if not current_user.is_authenticated:
+            return None
+        if getattr(current_user, 'role', None) != 'guest':
+            return None
+        if req.method in ('GET', 'HEAD', 'OPTIONS'):
+            return None
+        # Allow the logout POST (CSRF-protected form submit)
+        if req.endpoint in ('auth.logout', 'auth.login'):
+            return None
+
+        # AJAX / JSON callers
+        is_ajax = (
+            req.is_json
+            or req.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            or 'application/json' in req.headers.get('Accept', '')
+        )
+        if is_ajax:
+            return _jsonify({'success': False, 'message': 'Guest accounts are read-only.'}), 403
+
+        # Regular form submissions
+        flash('You are viewing in guest/demo mode — changes cannot be saved.', 'warning')
+        return redirect(req.referrer or url_for('main.index'))
+
     # Register central error handlers last
     from app.error_handlers import register_error_handlers
     register_error_handlers(app)
