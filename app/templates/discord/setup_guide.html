@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 860px;">
+
+    {# ── Header ── #}
+    <div class="d-flex align-items-center gap-3 mb-2">
+        <i class="bi bi-discord text-primary" style="font-size:2.5rem;"></i>
+        <div>
+            <h1 class="mb-0">Discord Setup Guide</h1>
+            <p class="text-muted mb-0">Step-by-step instructions for connecting your team's Discord server.</p>
+        </div>
+    </div>
+    <div class="mb-4">
+        <a href="{{ url_for('discord.settings') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Discord Settings
+        </a>
+    </div>
+
+    {# ── Method chooser ── #}
+    <div class="row g-3 mb-5">
+        <div class="col-md-6">
+            <a href="#webhook-guide" class="text-decoration-none">
+                <div class="card h-100 border-primary shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-lightning-charge-fill text-primary" style="font-size:2rem;"></i>
+                        <h5 class="mt-2 mb-1">Option A — Webhook</h5>
+                        <span class="badge bg-primary mb-2">Recommended · ~2 min</span>
+                        <p class="text-muted small mb-0">
+                            Post notifications to a channel.<br>
+                            No coding. No bot required.
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="#bot-guide" class="text-decoration-none">
+                <div class="card h-100 border-secondary shadow-sm">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-robot text-secondary" style="font-size:2rem;"></i>
+                        <h5 class="mt-2 mb-1">Option B — Bot</h5>
+                        <span class="badge bg-secondary mb-2">Advanced · ~10 min</span>
+                        <p class="text-muted small mb-0">
+                            Two-way commands (e.g. <code>!uc upcoming</code>).<br>
+                            Requires a Discord Developer account.
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════════════════════
+       OPTION A — WEBHOOK
+       ═══════════════════════════════════════════════════════ #}
+    <h2 id="webhook-guide" class="border-bottom pb-2 mb-4">
+        <i class="bi bi-lightning-charge-fill text-primary me-2"></i>
+        Option A — Webhook Setup
+    </h2>
+
+    {# Step 1 #}
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">1</span>
+            <strong>Open the channel you want notifications in</strong>
+        </div>
+        <div class="card-body">
+            <p>In Discord, navigate to the <strong>text channel</strong> where you'd like Ultimate Coach to post updates
+            (e.g. <code>#team-announcements</code> or <code>#schedule</code>).</p>
+            <div class="alert alert-info py-2 mb-0">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>Tip:</strong> Create a dedicated channel like <code>#uc-notifications</code> to keep things tidy.
+            </div>
+        </div>
+    </div>
+
+    {# Step 2 #}
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">2</span>
+            <strong>Open Channel Settings</strong>
+        </div>
+        <div class="card-body">
+            <p>Hover over the channel name in the left sidebar. Click the <strong>gear icon ⚙</strong> that appears
+            to the right of the name to open <em>Edit Channel</em>.</p>
+            <div class="bg-light border rounded p-3 font-monospace small">
+                <div class="text-muted"># team-announcements</div>
+                <div class="ms-3">
+                    <span class="text-primary">📢</span> team-announcements
+                    <span class="text-muted ms-3">&nbsp;&nbsp;⚙ ← click this</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Step 3 #}
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">3</span>
+            <strong>Go to Integrations → Webhooks</strong>
+        </div>
+        <div class="card-body">
+            <p>In the Channel Settings sidebar, click <strong>Integrations</strong>, then click the
+            <strong>Webhooks</strong> button.</p>
+            <div class="bg-light border rounded p-3 small">
+                <div class="fw-semibold mb-1">Channel Settings (left sidebar)</div>
+                <ul class="list-unstyled mb-0 ps-2">
+                    <li class="text-muted">Overview</li>
+                    <li class="text-muted">Permissions</li>
+                    <li class="fw-bold text-primary">→ Integrations</li>
+                    <li class="ps-3 text-muted">Webhooks &nbsp;<span class="badge bg-primary">click</span></li>
+                    <li class="text-muted">Invites</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {# Step 4 #}
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">4</span>
+            <strong>Create a New Webhook</strong>
+        </div>
+        <div class="card-body">
+            <p>Click <strong>New Webhook</strong>. Discord will create a webhook called "Spidey Bot" — rename it to
+            something like <strong>Ultimate Coach</strong>. You can also upload a logo if you like.</p>
+            <div class="alert alert-info py-2 mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                The webhook is already set to post to the channel you were in. You don't need to change the channel.
+            </div>
+        </div>
+    </div>
+
+    {# Step 5 #}
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">5</span>
+            <strong>Copy the Webhook URL and paste it into Settings</strong>
+        </div>
+        <div class="card-body">
+            <p>Click <strong>Copy Webhook URL</strong>. The URL looks like this:</p>
+            <div class="bg-dark text-light rounded p-2 font-monospace small mb-3">
+                https://discord.com/api/webhooks/<span class="text-warning">123456789</span>/<span class="text-info">abcdefghijklmnopqrstuvwxyz</span>
+            </div>
+            <p>Go to <a href="{{ url_for('discord.settings') }}">Discord Settings</a>, paste it into the
+            <strong>Webhook URL</strong> field, enable the toggle, and click <strong>Save Settings</strong>.</p>
+            <div class="alert alert-success py-2 mb-0">
+                <i class="bi bi-check-circle me-1"></i>
+                That's it! Use the <strong>Send test message</strong> button to confirm it's working.
+            </div>
+        </div>
+    </div>
+
+    {# ═══════════════════════════════════════════════════════
+       OPTION B — BOT
+       ═══════════════════════════════════════════════════════ #}
+    <h2 id="bot-guide" class="border-bottom pb-2 mb-4">
+        <i class="bi bi-robot text-secondary me-2"></i>
+        Option B — Discord Bot Setup
+    </h2>
+
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        <strong>Before you start:</strong> You need to be a <strong>server administrator</strong> in Discord and have
+        access to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a>.
+        You must also have a Discord account.
+    </div>
+
+    {# ── PART 1: Create the Application & Bot ── #}
+    <h5 class="text-muted fw-normal mb-3">
+        <span class="badge bg-secondary me-2">Part 1</span>Create the Application &amp; Bot
+    </h5>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-secondary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">1</span>
+            <strong>Open the Discord Developer Portal</strong>
+        </div>
+        <div class="card-body">
+            <p class="mb-2">Go to
+            <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">
+                discord.com/developers/applications
+            </a>
+            and log in with your Discord account.</p>
+            <p class="mb-0">Click <strong>New Application</strong> (top-right). Give it a name — we suggest
+            <strong>Ultimate Coach</strong> — and click <strong>Create</strong>.</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-secondary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">2</span>
+            <strong>Create the Bot user</strong>
+        </div>
+        <div class="card-body">
+            <p>In the left sidebar click <strong>Bot</strong>, then click <strong>Add Bot</strong> → <strong>Yes, do it!</strong></p>
+            <p class="mb-0">You can give your bot a username and an icon here. These are what players will see in Discord.</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-secondary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">3</span>
+            <strong>Enable Privileged Intents</strong>
+        </div>
+        <div class="card-body">
+            <p>Still on the <strong>Bot</strong> page, scroll down to <strong>Privileged Gateway Intents</strong> and enable all three:</p>
+            <ul class="mb-2">
+                <li><strong>Presence Intent</strong></li>
+                <li><strong>Server Members Intent</strong></li>
+                <li><strong>Message Content Intent</strong></li>
+            </ul>
+            <p class="mb-0">Click <strong>Save Changes</strong>.</p>
+            <div class="alert alert-warning py-2 mt-2 mb-0 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                These are required so the bot can read messages and respond to <code>!uc</code> commands.
+            </div>
+        </div>
+    </div>
+
+    {# ── BOT TOKEN ── #}
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white d-flex align-items-center gap-2">
+            <span class="badge bg-light text-danger rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">4</span>
+            <strong>Copy your Bot Token</strong>
+        </div>
+        <div class="card-body">
+            <p>On the <strong>Bot</strong> page, click <strong>Reset Token</strong> → <strong>Yes, do it!</strong>
+            Discord will show your token <strong>once</strong>. Copy it immediately.</p>
+            <div class="bg-dark text-light rounded p-2 font-monospace small mb-3">
+                MTxxxxxxxxxxxxxxxxxxxxxxxx.Gxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            </div>
+            <div class="alert alert-danger py-2 mb-0">
+                <i class="bi bi-shield-exclamation me-1"></i>
+                <strong>Keep this secret.</strong> Treat it like a password. Anyone with this token can control
+                your bot. Never share it in a public Discord message or commit it to a code repository.
+                Paste it into the <strong>Bot Token</strong> field in <a href="{{ url_for('discord.settings') }}">Discord Settings</a>.
+            </div>
+        </div>
+    </div>
+
+    {# ── PART 2: Add Bot to Server ── #}
+    <h5 class="text-muted fw-normal mb-3">
+        <span class="badge bg-secondary me-2">Part 2</span>Add the Bot to Your Server
+    </h5>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-secondary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">5</span>
+            <strong>Generate an invite link</strong>
+        </div>
+        <div class="card-body">
+            <p>In the Developer Portal sidebar, go to <strong>OAuth2 → URL Generator</strong>.</p>
+            <p>Under <strong>Scopes</strong>, tick:</p>
+            <ul class="mb-2">
+                <li><code>bot</code></li>
+                <li><code>applications.commands</code></li>
+            </ul>
+            <p class="mb-0">Under <strong>Bot Permissions</strong>, tick:</p>
+            <ul class="mb-0">
+                <li>Send Messages</li>
+                <li>Embed Links</li>
+                <li>Attach Files</li>
+                <li>Read Message History</li>
+                <li>Add Reactions</li>
+                <li>Manage Events</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-secondary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">6</span>
+            <strong>Invite the bot to your server</strong>
+        </div>
+        <div class="card-body">
+            <p>Scroll to the bottom of the URL Generator — you'll see a <strong>Generated URL</strong>.
+            Copy it, open it in your browser, choose your server from the dropdown, and click <strong>Authorize</strong>.</p>
+            <div class="alert alert-info py-2 mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                You must be a <strong>server administrator</strong> to authorize the bot.
+            </div>
+        </div>
+    </div>
+
+    {# ── PART 3: Find IDs ── #}
+    <h5 class="text-muted fw-normal mb-3">
+        <span class="badge bg-secondary me-2">Part 3</span>Find Your Server &amp; Channel IDs
+    </h5>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-secondary rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">7</span>
+            <strong>Enable Developer Mode in Discord</strong>
+        </div>
+        <div class="card-body">
+            <p class="mb-1">You need Developer Mode on to copy IDs. It only takes a second:</p>
+            <ol class="mb-0">
+                <li>Open <strong>Discord</strong> (desktop or browser).</li>
+                <li>Go to <strong>User Settings</strong> (gear icon bottom-left) → <strong>Advanced</strong>.</li>
+                <li>Toggle <strong>Developer Mode</strong> on.</li>
+            </ol>
+        </div>
+    </div>
+
+    {# Server / Guild ID #}
+    <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning bg-opacity-25 d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">8</span>
+            <strong>Copy the Server (Guild) ID</strong>
+        </div>
+        <div class="card-body">
+            <p>Right-click on your <strong>server icon</strong> in the left panel (the circle with your server's name/logo).</p>
+            <p class="mb-1">A context menu appears — click <strong>Copy Server ID</strong>.</p>
+            <div class="bg-light border rounded p-3 small mb-3">
+                <div class="fw-semibold mb-1">Context menu (right-click server icon):</div>
+                <ul class="list-unstyled mb-0 ps-2">
+                    <li class="text-muted">Mark As Read</li>
+                    <li class="text-muted">Mute Server</li>
+                    <li class="text-muted">…</li>
+                    <li class="fw-bold text-warning">→ Copy Server ID &nbsp;<span class="badge bg-warning text-dark">click</span></li>
+                </ul>
+            </div>
+            <div class="bg-dark text-light rounded p-2 font-monospace small mb-2">
+                1234567890123456789  &nbsp;<span class="text-muted">(example — 18–20 digits)</span>
+            </div>
+            <p class="mb-0">Paste this into the <strong>Server (Guild) ID</strong> field in
+            <a href="{{ url_for('discord.settings') }}">Discord Settings</a>.</p>
+        </div>
+    </div>
+
+    {# Channel IDs #}
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-25 d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark rounded-circle" style="width:28px;height:28px;line-height:28px;font-size:.9rem;">9</span>
+            <strong>Copy Channel IDs (Calendar &amp; Notifications)</strong>
+        </div>
+        <div class="card-body">
+            <p>You need two channel IDs — one for calendar posts and one for general notifications.
+            These can be the same channel if you prefer.</p>
+            <p class="mb-1">For each channel:</p>
+            <ol class="mb-3">
+                <li>Right-click the <strong>channel name</strong> in the sidebar.</li>
+                <li>Click <strong>Copy Channel ID</strong> from the context menu.</li>
+                <li>Paste it into the matching field in <a href="{{ url_for('discord.settings') }}">Discord Settings</a>.</li>
+            </ol>
+            <div class="bg-light border rounded p-3 small mb-3">
+                <div class="fw-semibold mb-1">Context menu (right-click channel name):</div>
+                <ul class="list-unstyled mb-0 ps-2">
+                    <li class="text-muted">Mark As Read</li>
+                    <li class="text-muted">Mute Channel</li>
+                    <li class="text-muted">…</li>
+                    <li class="fw-bold text-warning">→ Copy Channel ID &nbsp;<span class="badge bg-warning text-dark">click</span></li>
+                </ul>
+            </div>
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Setting</th>
+                        <th>Which channel to use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Calendar Channel ID</strong></td>
+                        <td>Channel where upcoming sessions/tournaments will be posted</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Notification Channel ID</strong></td>
+                        <td>Channel for general alerts (new sessions added, clips uploaded, etc.)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ── Bot Commands ── #}
+    <h2 class="border-bottom pb-2 mb-4">
+        <i class="bi bi-terminal me-2"></i>Bot Commands Reference
+    </h2>
+    <p>Once connected, players can type these commands in any channel the bot can read.</p>
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Command</th>
+                    <th>What it does</th>
+                    <th>Who can use it</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>!uc help</code></td>
+                    <td>Shows all available commands</td>
+                    <td>Everyone</td>
+                </tr>
+                <tr>
+                    <td><code>!uc upcoming</code></td>
+                    <td>Lists events in the next 7 days</td>
+                    <td>Everyone</td>
+                </tr>
+                <tr>
+                    <td><code>!uc rsvp session 5 yes</code></td>
+                    <td>RSVP to a session (replace <code>5</code> with the session ID, and <code>yes</code> with <code>no</code> or <code>maybe</code>)</td>
+                    <td>Everyone</td>
+                </tr>
+                <tr>
+                    <td><code>!uc rsvp tournament 3 no</code></td>
+                    <td>RSVP to a tournament</td>
+                    <td>Everyone</td>
+                </tr>
+                <tr>
+                    <td><code>!uc link player@example.com</code></td>
+                    <td>Links your Discord account to your Ultimate Coach account so RSVPs are attributed correctly</td>
+                    <td>Everyone</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    {# ── Troubleshooting ── #}
+    <h2 class="border-bottom pb-2 mb-4">
+        <i class="bi bi-tools me-2"></i>Troubleshooting
+    </h2>
+
+    <div class="accordion mb-5" id="troubleshootingAccordion">
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#ts1" aria-expanded="false">
+                    The test message didn't appear in Discord
+                </button>
+            </h2>
+            <div id="ts1" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                <div class="accordion-body small">
+                    <ol class="mb-0">
+                        <li>Make sure the <strong>Enable Discord notifications</strong> toggle is on and settings are saved.</li>
+                        <li>Double-check you pasted the full webhook URL — it should start with <code>https://discord.com/api/webhooks/</code>.</li>
+                        <li>Confirm the webhook still exists in Discord: Server Settings → Integrations → Webhooks.</li>
+                        <li>Check that the webhook's channel hasn't been deleted or restricted.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#ts2" aria-expanded="false">
+                    The bot doesn't respond to <code>!uc</code> commands
+                </button>
+            </h2>
+            <div id="ts2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                <div class="accordion-body small">
+                    <ol class="mb-0">
+                        <li>Verify the bot was successfully added to your server (it should appear in the member list).</li>
+                        <li>Confirm the <strong>Message Content Intent</strong> is enabled in the Developer Portal → Bot → Privileged Gateway Intents.</li>
+                        <li>Check the bot has <strong>Send Messages</strong> and <strong>Read Message History</strong> permissions in the channel.</li>
+                        <li>Make sure your Bot Token is correct — if in doubt, reset it and paste the new one into Settings.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#ts3" aria-expanded="false">
+                    I can't find "Copy Server ID" or "Copy Channel ID"
+                </button>
+            </h2>
+            <div id="ts3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                <div class="accordion-body small">
+                    <p>These options only appear when <strong>Developer Mode</strong> is on.</p>
+                    <ol class="mb-0">
+                        <li>Go to Discord → User Settings (gear icon) → <strong>Advanced</strong>.</li>
+                        <li>Toggle <strong>Developer Mode</strong> on.</li>
+                        <li>Now right-click the server icon or channel name again.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#ts4" aria-expanded="false">
+                    I accidentally shared my Bot Token — what do I do?
+                </button>
+            </h2>
+            <div id="ts4" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                <div class="accordion-body small">
+                    <p class="mb-1"><strong>Immediately reset the token:</strong></p>
+                    <ol class="mb-0">
+                        <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Developer Portal</a>.</li>
+                        <li>Select your application → <strong>Bot</strong> → <strong>Reset Token</strong>.</li>
+                        <li>Copy the new token and update it in <a href="{{ url_for('discord.settings') }}">Discord Settings</a>.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="text-center mb-4">
+        <a href="{{ url_for('discord.settings') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-arrow-left me-2"></i>Back to Discord Settings
+        </a>
+    </div>
+
+</div>
+{% endblock %}

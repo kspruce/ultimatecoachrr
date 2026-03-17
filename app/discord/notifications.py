@@ -156,9 +156,24 @@ class NotificationService:
                 for game in games:
                     discord_webhook.notify_upcoming_game(game, 0, team_id)
     
+    def _team_setting(self, team_id, field, default=True):
+        """Return a boolean setting from TeamSettings for the given team.
+
+        Falls back to *default* if the record or field is missing.
+        """
+        try:
+            from app.models.team_settings import TeamSettings
+            if team_id:
+                ts = TeamSettings.query.filter_by(team_id=team_id).first()
+                if ts:
+                    return bool(getattr(ts, field, default))
+        except Exception:
+            pass
+        return default
+
     def notify_new_event(self, event_type, event, team_id=None):
         """Send notification for a new event
-        
+
         Parameters:
         -----------
         event_type: str
@@ -169,15 +184,15 @@ class NotificationService:
             The team organization ID
         """
         from app.discord.webhooks import discord_webhook
-        from flask import current_app
-        
-        if not current_app.config.get('DISCORD_NOTIFY_NEW_EVENTS', True):
-            return
-        
+
         # Get team_id from event if not provided
         if team_id is None and hasattr(event, 'team_organization_id'):
             team_id = event.team_organization_id
-        
+
+        # Respect per-team toggle
+        if not self._team_setting(team_id, 'discord_notify_new_events', default=True):
+            return
+
         if event_type == 'session':
             discord_webhook.notify_new_session(event, team_id)
         elif event_type == 'tournament':
@@ -189,7 +204,7 @@ class NotificationService:
     
     def notify_new_database_item(self, item_type, item, team_id=None):
         """Send notification about a new database item
-        
+
         Parameters:
         -----------
         item_type: str
@@ -200,14 +215,14 @@ class NotificationService:
             The team organization ID
         """
         from app.discord.webhooks import discord_webhook
-        from flask import current_app
-        
-        if not current_app.config.get('DISCORD_NOTIFY_NEW_ITEMS', True):
-            return
-        
+
         # Get team_id from item if not provided
         if team_id is None and hasattr(item, 'team_organization_id'):
             team_id = item.team_organization_id
+
+        # Respect per-team toggle
+        if not self._team_setting(team_id, 'discord_notify_new_items', default=True):
+            return
         
         if item_type == 'tournament':
             discord_webhook.notify_new_tournament(item, team_id)

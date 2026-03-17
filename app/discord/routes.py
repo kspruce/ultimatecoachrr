@@ -106,28 +106,11 @@ def settings():
                         team_settings.discord_webhook_url = request.form.get('discord_webhook_url', '')
                         
                         db.session.commit()
-                
-                # Update application config with these settings
-                current_app.config['DISCORD_ENABLED'] = 'discord_enabled' in request.form
-                current_app.config['DISCORD_SYNC_CALENDAR'] = 'discord_sync_calendar' in request.form
-                current_app.config['DISCORD_NOTIFY_NEW_EVENTS'] = 'discord_notify_new_events' in request.form
-                current_app.config['DISCORD_NOTIFY_UPCOMING_EVENTS'] = 'discord_notify_upcoming_events' in request.form
-                current_app.config['DISCORD_NOTIFY_NEW_ITEMS'] = 'discord_notify_new_items' in request.form
-                
-                # Update Discord bot settings
-                current_app.config['DISCORD_BOT_TOKEN'] = request.form.get('discord_bot_token', '')
-                current_app.config['DISCORD_GUILD_ID'] = request.form.get('discord_guild_id', '')
-                current_app.config['DISCORD_CALENDAR_CHANNEL_ID'] = request.form.get('discord_calendar_channel_id', '')
-                current_app.config['DISCORD_NOTIFICATION_CHANNEL_ID'] = request.form.get('discord_notification_channel_id', '')
-                
-                # Update Discord webhook settings
-                current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
-                
-                # Update the live webhook object with the new URL.
-                # Do NOT call init_discord() here — it tries to register
-                # teardown_appcontext which Flask forbids after the first request.
+
+                # Only update the in-memory per-team webhook URL cache —
+                # do NOT write to current_app.config, which is shared across
+                # all teams and would cause cross-team interference.
                 from app.discord.webhooks import discord_webhook as _wh
-                _wh.webhook_url = current_app.config.get('DISCORD_WEBHOOK_URL', '')
                 if team_id:
                     new_url = request.form.get('discord_webhook_url', '')
                     if new_url:
@@ -152,57 +135,18 @@ def settings():
                 logger.error(f"Error creating TeamSettings table: {e}")
                 flash('Error creating team settings table. Please contact an administrator.', 'danger')
             
-            # POST handling for when table doesn't exist
+            # POST handling for when table doesn't exist — settings cannot be
+            # persisted yet, so just inform the user to retry after the table
+            # has been created (the table creation flash above covers this).
             if request.method == 'POST':
-                # Update global settings
-                current_app.config['DISCORD_ENABLED'] = 'discord_enabled' in request.form
-                current_app.config['DISCORD_SYNC_CALENDAR'] = 'discord_sync_calendar' in request.form
-                current_app.config['DISCORD_NOTIFY_NEW_EVENTS'] = 'discord_notify_new_events' in request.form
-                current_app.config['DISCORD_NOTIFY_UPCOMING_EVENTS'] = 'discord_notify_upcoming_events' in request.form
-                current_app.config['DISCORD_NOTIFY_NEW_ITEMS'] = 'discord_notify_new_items' in request.form
-                
-                # Update Discord bot settings
-                current_app.config['DISCORD_BOT_TOKEN'] = request.form.get('discord_bot_token', '')
-                current_app.config['DISCORD_GUILD_ID'] = request.form.get('discord_guild_id', '')
-                current_app.config['DISCORD_CALENDAR_CHANNEL_ID'] = request.form.get('discord_calendar_channel_id', '')
-                current_app.config['DISCORD_NOTIFICATION_CHANNEL_ID'] = request.form.get('discord_notification_channel_id', '')
-                
-                # Update Discord webhook settings
-                current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
-                
-                # Update the live webhook object with the new URL.
-                from app.discord.webhooks import discord_webhook as _wh
-                _wh.webhook_url = current_app.config.get('DISCORD_WEBHOOK_URL', '')
-
-                flash('Discord settings updated successfully.', 'success')
+                flash('Settings table was just created. Please save your settings again.', 'warning')
                 return redirect(url_for('discord.settings'))
 
     except ImportError:
-        # TeamSettings model doesn't exist yet, use app config
-        logger.warning("TeamSettings model not found, using app config")
-        
+        # TeamSettings model not available — cannot persist per-team settings.
+        logger.warning("TeamSettings model not found; Discord settings cannot be saved")
         if request.method == 'POST':
-            # Update global settings
-            current_app.config['DISCORD_ENABLED'] = 'discord_enabled' in request.form
-            current_app.config['DISCORD_SYNC_CALENDAR'] = 'discord_sync_calendar' in request.form
-            current_app.config['DISCORD_NOTIFY_NEW_EVENTS'] = 'discord_notify_new_events' in request.form
-            current_app.config['DISCORD_NOTIFY_UPCOMING_EVENTS'] = 'discord_notify_upcoming_events' in request.form
-            current_app.config['DISCORD_NOTIFY_NEW_ITEMS'] = 'discord_notify_new_items' in request.form
-            
-            # Update Discord bot settings
-            current_app.config['DISCORD_BOT_TOKEN'] = request.form.get('discord_bot_token', '')
-            current_app.config['DISCORD_GUILD_ID'] = request.form.get('discord_guild_id', '')
-            current_app.config['DISCORD_CALENDAR_CHANNEL_ID'] = request.form.get('discord_calendar_channel_id', '')
-            current_app.config['DISCORD_NOTIFICATION_CHANNEL_ID'] = request.form.get('discord_notification_channel_id', '')
-            
-            # Update Discord webhook settings
-            current_app.config['DISCORD_WEBHOOK_URL'] = request.form.get('discord_webhook_url', '')
-            
-            # Update the live webhook object with the new URL.
-            from app.discord.webhooks import discord_webhook as _wh
-            _wh.webhook_url = current_app.config.get('DISCORD_WEBHOOK_URL', '')
-
-            flash('Discord settings updated successfully.', 'success')
+            flash('Discord settings could not be saved: TeamSettings model is unavailable. Contact your administrator.', 'danger')
             return redirect(url_for('discord.settings'))
     
     # Always return a response at the end of the function
@@ -292,6 +236,16 @@ def test_notification():
     except Exception as e:
         logger.error(f"Error sending test notification: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+
+@discord_bp.route('/setup-guide')
+@login_required
+def setup_guide():
+    """Discord setup guide — accessible to all admins and coaches"""
+    if not current_user.is_admin and not current_user.is_coach:
+        flash('You do not have permission to access this page.', 'danger')
+        return redirect(url_for('main.index'))
+    return render_template('discord/setup_guide.html', title='Discord Setup Guide')
 
 
 @discord_bp.route('/sync-calendar', methods=['POST'])
