@@ -364,9 +364,10 @@ def profile():
 @login_required
 def link_player():
 
+    team_id = get_current_team_id()
     available_players = Player.query.filter(
         (Player.user_id == None) | (Player.user_id == current_user.id)
-    ).filter_by(active=True).order_by(Player.name).all()
+    ).filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
 
     if request.method == 'POST':
         player_id = request.form.get('player_id', type=int)
