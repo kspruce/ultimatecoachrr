@@ -83,6 +83,11 @@
     [data-theme="dark"] .bg-light { background: #1E293B !important; }
     [data-theme="dark"] .border { border-color: #374151 !important; }
     [data-theme="dark"] select option { background: #1E293B; }
+    /* ─── Bootstrap utility overrides for dark mode ─────────── */
+    [data-theme="dark"] .text-dark { color: var(--uc-page-text) !important; }
+    [data-theme="dark"] .badge.bg-warning { color: var(--uc-gray-800) !important; }
+    [data-theme="dark"] .card-header.bg-warning { color: var(--uc-gray-800) !important; }
+    [data-theme="dark"] .bg-light.text-dark, [data-theme="dark"] .badge.bg-light { background: #374151 !important; color: #F3F4F6 !important; }
 
     /* ─── Navbar ─────────────────────────────────────────────── */
     .uc-navbar {
@@ -217,6 +222,8 @@
         transform: none !important;
         max-width: calc(100vw - 1rem) !important;
         min-width: 210px !important;
+        max-height: calc(100dvh - 70px) !important;
+        overflow-y: auto !important;
       }
     }
 

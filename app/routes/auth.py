@@ -366,7 +366,7 @@ def link_player():
 
     available_players = Player.query.filter(
         (Player.user_id == None) | (Player.user_id == current_user.id)
-    ).filter_by(active=True).order_by(Player.first_name).all()
+    ).filter_by(active=True).order_by(Player.name).all()
 
     if request.method == 'POST':
         player_id = request.form.get('player_id', type=int)
@@ -390,7 +390,7 @@ def link_player():
 
         db.session.commit()
 
-        flash(f'Linked to player {player.first_name} {player.last_name}.', 'success')
+        flash(f'Linked to player {player.name}.', 'success')
         return redirect(url_for('auth.profile'))
 
     return render_template('auth/link_player.html', players=available_players)

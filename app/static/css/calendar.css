@@ -15,6 +15,13 @@
     gap: 10px;
 }
 
+/* Remove link underline from day numbers and weekday column headers */
+.fc .fc-daygrid-day-number,
+.fc .fc-col-header-cell-cushion {
+    text-decoration: none !important;
+    color: inherit;
+}
+
 .fc .fc-toolbar-title {
     font-size: 1.5rem;
     font-weight: 600;

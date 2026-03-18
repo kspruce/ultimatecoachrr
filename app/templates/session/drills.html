@@ -9,7 +9,7 @@
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 <a href="https://www.ultiplays.com/" class="btn btn-success" target="_blank">Ultiplays</a>
-                {% if current_user.is_admin %}
+                {% if current_user.is_coach %}
                 <a href="{{ url_for('session.add_drill') }}" class="btn btn-primary">Add Basic Drill</a>
                 {% endif %}
                 <a href="{{ url_for('session.index') }}" class="btn btn-secondary">Back to Sessions</a>
@@ -82,19 +82,19 @@
                                             {% if drill.has_visual_diagram %}
                                             <a href="{{ url_for('session.drill_viewer', drill_id=drill.id) }}"
                                                class="btn btn-sm btn-outline-primary">View</a>
-                                            {% if current_user.is_admin %}
+                                            {% if current_user.is_coach %}
                                             <a href="{{ url_for('session.drill_editor', drill_id=drill.id) }}"
                                                class="btn btn-sm btn-outline-success">Edit Diagram</a>
                                             {% endif %}
                                             {% else %}
                                             <a href="{{ url_for('session.drill_detail', drill_id=drill.id) }}"
                                                class="btn btn-sm btn-outline-primary">View</a>
-                                            {% if current_user.is_admin %}
+                                            {% if current_user.is_coach %}
                                             <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}"
                                                class="btn btn-sm btn-outline-secondary">Edit</a>
                                             {% endif %}
                                             {% endif %}
-                                            {% if current_user.is_admin %}
+                                            {% if current_user.is_coach %}
                                             <button type="button" class="btn btn-sm btn-outline-danger"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#deleteModal{{ drill.id }}">Delete</button>
@@ -102,7 +102,7 @@
                                         </div>
 
                                         <!-- Delete Confirmation Modal -->
-                                        {% if current_user.is_admin %}
+                                        {% if current_user.is_coach %}
                                         <div class="modal fade" id="deleteModal{{ drill.id }}" tabindex="-1"
                                              aria-labelledby="deleteModalLabel{{ drill.id }}" aria-hidden="true">
                                             <div class="modal-dialog">
@@ -142,8 +142,11 @@
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-center">No drills found. 
-                        <a href="{{ url_for('session.add_drill') }}">Add a drill</a> to get started.</p>
+                    <p class="text-center">No drills found.
+                        {% if current_user.is_coach %}
+                        <a href="{{ url_for('session.add_drill') }}">Add a drill</a> to get started.
+                        {% endif %}
+                    </p>
                     {% endif %}
                 </div>
             </div>

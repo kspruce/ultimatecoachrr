@@ -366,11 +366,13 @@
                         <p class="text-muted">No fitness goals set yet.</p>
                     {% endif %}
                     
+                    {% if current_user.is_coach or current_user.id == player.user_id %}
                     <div class="text-end mt-3">
-                        <a href="#" class="btn btn-outline-primary">
+                        <a href="{{ url_for('fitness.player_goals', player_id=player.id) }}" class="btn btn-outline-primary">
                             <i class="bi bi-plus-circle"></i> Set New Goal
                         </a>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

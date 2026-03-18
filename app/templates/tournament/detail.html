@@ -22,9 +22,11 @@
             </p>
         </div>
         <div class="col-md-4 text-end">
+            {% if current_user.is_coach %}
             <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-outline-primary me-2">Add Game</a>
             <a href="{{ url_for('game.add_multiple', tournament_id=tournament.id) }}" class="btn btn-primary">Add Multiple Games</a>
             <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-outline-primary ms-2">Edit</a>
+            {% endif %}
         </div>
     </div>
 
@@ -142,9 +144,11 @@
                     </div>
                     {% else %}
                     <p class="text-center">No games recorded for this tournament yet.</p>
+                    {% if current_user.is_coach %}
                     <div class="text-center">
                         <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-primary">Add Game</a>
                     </div>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>

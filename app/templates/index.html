@@ -65,7 +65,7 @@
   /* ─── Feature grid ──────────────────────────────────── */
   .uc-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.875rem; }
   .uc-feat {
-    background:white; border:1px solid var(--uc-gray-200); border-radius:var(--uc-radius);
+    background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
     padding:1.375rem; display:flex; flex-direction:column; gap:.625rem;
     text-decoration:none; color:inherit; position:relative;
     transition:box-shadow .2s,transform .2s,border-color .2s;
@@ -113,7 +113,7 @@
 
   /* ─── Player card ───────────────────────────────────── */
   .uc-player-card {
-    background:white; border:1px solid var(--uc-gray-200); border-radius:var(--uc-radius);
+    background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
     padding:1.375rem 1.5rem; display:flex; gap:1.25rem; align-items:flex-start; margin-bottom:1.75rem;
   }
   .uc-avatar {
@@ -142,7 +142,7 @@
   .uc-event-meta       { font-size:.74rem; color:var(--uc-gray-400); }
 
   /* ─── Activity feed ─────────────────────────────────── */
-  .uc-card { background:white; border:1px solid var(--uc-gray-200); border-radius:var(--uc-radius); box-shadow:var(--uc-shadow-sm); overflow:hidden; }
+  .uc-card { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius); box-shadow:var(--uc-shadow-sm); overflow:hidden; }
   .uc-activity {
     display:flex; align-items:center; gap:.875rem; padding:.75rem 1.375rem;
     border-bottom:1px solid var(--uc-gray-100); text-decoration:none; color:inherit; transition:background .12s;
@@ -160,7 +160,7 @@
   .uc-act-time  { font-size:.75rem;  color:var(--uc-gray-400); }
 
   /* ─── Auth CTA ──────────────────────────────────────── */
-  .uc-auth-cta { background:white; border:1px solid var(--uc-gray-200); border-radius:var(--uc-radius); padding:3.5rem 2rem; text-align:center; margin-top:.5rem; }
+  .uc-auth-cta { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius); padding:3.5rem 2rem; text-align:center; margin-top:.5rem; }
   .uc-auth-cta h2 { font-weight:700; color:var(--uc-gray-800); }
 
   /* ─── Responsive ────────────────────────────────────── */

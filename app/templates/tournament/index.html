@@ -7,7 +7,7 @@
             <h1>Tournaments</h1>
         </div>
         <div class="col-md-4 text-end">
-            {% if current_user.is_admin %}
+            {% if current_user.is_coach %}
                 <a href="{{ url_for('tournament.add') }}" class="btn btn-primary">Add Tournament</a>
             {% endif %}
         </div>
@@ -76,7 +76,7 @@
                             <td>{{ tournament.win_count }}-{{ tournament.loss_count }}</td>
                             <td>
                                 <div class="btn-group">
-                                    {% if current_user.is_admin %}
+                                    {% if current_user.is_coach %}
                                         <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tournament.id }}">Delete</button>
                                         <!-- Delete Confirmation Modal -->
@@ -125,7 +125,7 @@
                                 <p style="font-size:.85rem;color:var(--uc-gray-400);margin-bottom:1rem">
                                   Create your first tournament to group games and track your season record.
                                 </p>
-                                {% if current_user.is_admin %}
+                                {% if current_user.is_coach %}
                                 <a href="{{ url_for('tournament.add') }}" class="btn btn-primary btn-sm" style="border-radius:8px">
                                   <i class="bi bi-plus-circle me-1"></i> Add Tournament
                                 </a>

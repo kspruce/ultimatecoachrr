@@ -3,7 +3,7 @@
 {% block content %}
 <style>
 /* ── Player cards ───────────────────────────────────────── */
-.opp-card { background:#fff; border:1px solid var(--uc-gray-200);
+.opp-card { background:var(--uc-card-bg); border:1px solid var(--uc-card-border);
   border-radius:var(--uc-radius); overflow:hidden; transition:box-shadow .15s }
 .opp-card:hover { box-shadow: var(--uc-shadow-md) }
 
@@ -35,7 +35,7 @@
 
 /* ── Sort/filter bar ────────────────────────────────────── */
 .filter-pill { padding:.3rem .75rem; border-radius:20px; font-size:.8rem; font-weight:600;
-  border:1.5px solid var(--uc-gray-200); background:#fff; cursor:pointer; transition:all .15s;
+  border:1.5px solid var(--uc-card-border); background:var(--uc-card-bg); cursor:pointer; transition:all .15s;
   text-decoration:none; color:var(--uc-gray-800) }
 .filter-pill.active, .filter-pill:hover { border-color:var(--uc-blue); color:var(--uc-blue);
   background:rgba(59,130,246,.06) }

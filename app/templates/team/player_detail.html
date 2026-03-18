@@ -120,6 +120,7 @@
                 </div>
             </div>
             
+            {% if current_user.is_coach or current_user.id == player.user_id %}
             <div class="card mb-4">
                 <div class="card-header">
                     <h5>Fitness Tracking</h5>
@@ -137,13 +138,13 @@
                                 <p class="text-muted">No fitness data recorded yet.</p>
                             </div>
                         {% endif %}
-                        
+
                         <div class="col-12 text-center">
                             <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-outline-primary">
                                 View Fitness Profile
                             </a>
-                            
-                            {% if current_user.is_admin or current_user.id == player.user_id or current_user.role == 'coach' %}
+
+                            {% if current_user.is_coach %}
                             <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-outline-success ms-2">
                                 Record New Fitness Data
                             </a>
@@ -152,6 +153,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             
             <div class="row">
                 <div class="col-md-6">
