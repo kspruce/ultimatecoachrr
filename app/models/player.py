@@ -165,6 +165,13 @@ class Player(db.Model):
         cascade="all, delete-orphan"
     )
 
+    feedback_entries = db.relationship(
+        "PlayerFeedback",
+        back_populates="player",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         db.Index("idx_player_active", "active"),
         db.Index("idx_player_team", "team_organization_id"),

@@ -168,6 +168,10 @@ def create_app(config_class=Config):
     from app.routes.off_season import bp as off_season_bp
     app.register_blueprint(off_season_bp)
 
+    # Coach feedback blueprint
+    from app.routes.feedback import bp as feedback_bp
+    app.register_blueprint(feedback_bp)
+
     # Import the models package so ALL models are registered.
     # This ensures all models are loaded into SQLAlchemy's metadata
     from app import models as app_models  # noqa: F401

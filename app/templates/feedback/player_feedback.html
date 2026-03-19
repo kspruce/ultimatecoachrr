@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Coach Feedback — {{ player.name }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+/* ── Feedback view ───────────────────────────────────────── */
+.fb-entry {
+    border-left: 3px solid var(--uc-blue);
+    padding: 0.65rem 1rem;
+    margin-bottom: 0.5rem;
+    background: var(--uc-card-bg);
+    border-radius: 0 8px 8px 0;
+    box-shadow: var(--uc-shadow-sm);
+    transition: border-color 0.15s;
+}
+
+.fb-entry:hover { border-left-color: var(--uc-indigo); }
+
+.fb-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.fb-date {
+    font-size: 0.78rem;
+    color: var(--uc-gray-400);
+    font-weight: 600;
+}
+
+.fb-session-link {
+    font-size: 0.78rem;
+    color: var(--uc-blue);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.fb-session-link:hover { text-decoration: underline; }
+
+.fb-coach {
+    font-size: 0.78rem;
+    color: var(--uc-gray-400);
+}
+
+.fb-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.18rem 0.55rem;
+    border-radius: 99px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.fb-content {
+    font-size: 0.92rem;
+    color: var(--uc-gray-800);
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.delete-form button {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.55rem;
+}
+
+/* Tag colour map */
+.tag-ingame     { background: #fef3c7; color: #92400e; }
+.tag-drill      { background: #dbeafe; color: #1e40af; }
+.tag-debrief    { background: #d1fae5; color: #065f46; }
+.tag-tournament { background: #ede9fe; color: #5b21b6; }
+.tag-general    { background: #f3f4f6; color: #374151; }
+
+/* Section header per session group */
+.session-group-header {
+    background: var(--uc-gray-100);
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--uc-gray-600);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Page header -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">
+                <i class="bi bi-chat-square-text-fill text-primary me-2"></i>
+                Coach Feedback
+            </h2>
+            <p class="text-muted mb-0">
+                {{ player.name }}
+                {% if player.jersey_number %}
+                  <span class="badge bg-secondary ms-1">#{{ player.jersey_number }}</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <a href="{{ url_for('team.player_detail', player_id=player.id) }}"
+               class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Player Profile
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary row -->
+    <div class="row g-2 mb-4">
+        <div class="col-6 col-sm-3">
+            <div class="card text-center py-2 shadow-sm">
+                <div class="h4 mb-0">{{ entries|length }}</div>
+                <div class="text-muted small">Total Notes</div>
+            </div>
+        </div>
+        {% set tag_counts = {} %}
+        {% for e in entries %}
+            {% if e.context_tag in tag_counts %}
+                {# Jinja can't mutate dicts inline, handled below #}
+            {% endif %}
+        {% endfor %}
+        {% for tag in ['In-game', 'Drill', 'Debrief', 'Tournament', 'General'] %}
+        {% set count = entries | selectattr('context_tag', 'equalto', tag) | list | length %}
+        {% if count > 0 %}
+        <div class="col-6 col-sm-3">
+            <div class="card text-center py-2 shadow-sm">
+                <div class="h4 mb-0">{{ count }}</div>
+                <div class="text-muted small">{{ tag }}</div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Group entries by session, then no-session -->
+    {% if entries %}
+
+        {# Collect unique session objects (preserving order) #}
+        {% set seen_sessions = [] %}
+        {% for e in entries %}
+            {% if e.session and e.session.id not in seen_sessions %}
+                {% if seen_sessions.append(e.session.id) %}{% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {# --- Per-session groups --- #}
+        {% for session_id in seen_sessions %}
+            {% set session_entries = entries | selectattr('session_id', 'equalto', session_id) | list %}
+            {% set sess = session_entries[0].session %}
+            <div class="session-group-header">
+                <i class="bi bi-calendar-event me-1"></i>
+                <a href="{{ url_for('session.detail', session_id=sess.id) }}"
+                   class="text-reset text-decoration-none fw-bold">
+                    {{ sess.title }}
+                </a>
+                {% if sess.date %}
+                  <span class="fw-normal text-muted ms-1">— {{ sess.date.strftime('%-d %b %Y') }}</span>
+                {% endif %}
+                <span class="badge bg-secondary ms-2 fw-normal">{{ session_entries|length }} note{{ 's' if session_entries|length != 1 }}</span>
+            </div>
+
+            {% for entry in session_entries %}
+            <div class="fb-entry mb-3">
+                <div class="fb-meta">
+                    <span class="fb-date">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ entry.created_at.strftime('%-d %b %Y, %H:%M') }}
+                    </span>
+                    <span class="fb-tag tag-{{ entry.context_tag|lower|replace('-','') }}">
+                        {{ entry.context_tag }}
+                    </span>
+                    <span class="fb-coach">
+                        <i class="bi bi-person me-1"></i>{{ entry.coach.username }}
+                    </span>
+                </div>
+                <div class="fb-content">{{ entry.content }}</div>
+                <div class="mt-2 text-end">
+                    <form method="POST"
+                          action="{{ url_for('feedback.delete_feedback', feedback_id=entry.id) }}"
+                          class="delete-form d-inline"
+                          onsubmit="return confirm('Delete this note?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# --- Notes not linked to any session --- #}
+        {% set no_session_entries = entries | selectattr('session_id', 'none') | list %}
+        {% if no_session_entries %}
+        <div class="session-group-header">
+            <i class="bi bi-journal me-1"></i> General / No session
+            <span class="badge bg-secondary ms-2 fw-normal">{{ no_session_entries|length }} note{{ 's' if no_session_entries|length != 1 }}</span>
+        </div>
+
+        {% for entry in no_session_entries %}
+        <div class="fb-entry mb-3">
+            <div class="fb-meta">
+                <span class="fb-date">
+                    <i class="bi bi-clock me-1"></i>
+                    {{ entry.created_at.strftime('%-d %b %Y, %H:%M') }}
+                </span>
+                <span class="fb-tag tag-{{ entry.context_tag|lower|replace('-','') }}">
+                    {{ entry.context_tag }}
+                </span>
+                <span class="fb-coach">
+                    <i class="bi bi-person me-1"></i>{{ entry.coach.username }}
+                </span>
+            </div>
+            <div class="fb-content">{{ entry.content }}</div>
+            <div class="mt-2 text-end">
+                <form method="POST"
+                      action="{{ url_for('feedback.delete_feedback', feedback_id=entry.id) }}"
+                      class="delete-form d-inline"
+                      onsubmit="return confirm('Delete this note?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-journal-x" style="font-size:2.5rem"></i>
+        <p class="mt-2">No coaching notes recorded for {{ player.name }} yet.</p>
+        <a href="{{ url_for('session.index') }}" class="btn btn-outline-primary btn-sm mt-1">
+            Go to Sessions
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Feedback — {{ session.title }}{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+/* ── Quick-capture layout ─────────────────────────────── */
+body { background: var(--uc-page-bg); }
+
+.qf-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--uc-card-bg);
+    border-bottom: 1px solid var(--uc-card-border);
+    padding: 0.75rem 1rem;
+}
+
+.qf-header h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--uc-gray-800);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qf-header .sub {
+    font-size: 0.75rem;
+    color: var(--uc-gray-400);
+    margin: 0;
+}
+
+/* ── Player list ─────────────────────────────────────── */
+.player-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.player-item {
+    border-bottom: 1px solid var(--uc-card-border);
+    transition: background 0.1s;
+}
+
+/* The tappable header row */
+.player-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: rgba(59,130,246,.12);
+    min-height: 60px; /* large tap target */
+    gap: 0.5rem;
+}
+
+.player-trigger:active {
+    background: var(--uc-gray-100);
+}
+
+.player-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--uc-gray-800);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Note count badge */
+.note-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--uc-blue);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 99px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.note-badge.hidden { display: none; }
+
+/* Chevron indicator */
+.player-chevron {
+    color: var(--uc-gray-400);
+    font-size: 1rem;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.player-item.open .player-chevron {
+    transform: rotate(90deg);
+}
+
+/* Inline form panel */
+.player-form-panel {
+    display: none;
+    padding: 0 1rem 1rem 1rem;
+    background: var(--uc-gray-50);
+}
+
+.player-item.open .player-form-panel {
+    display: block;
+}
+
+/* Context tag pills */
+.tag-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.65rem;
+}
+
+.tag-pill {
+    border: 1.5px solid var(--uc-card-border);
+    border-radius: 99px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--uc-gray-600);
+    background: var(--uc-card-bg);
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tag-pill.active {
+    background: var(--uc-blue);
+    border-color: var(--uc-blue);
+    color: #fff;
+}
+
+/* Textarea */
+.qf-textarea {
+    width: 100%;
+    border: 1.5px solid var(--uc-card-border);
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem;
+    resize: vertical;
+    min-height: 80px;
+    background: var(--uc-card-bg);
+    color: var(--uc-gray-800);
+    margin-bottom: 0.65rem;
+    transition: border-color 0.15s;
+}
+
+.qf-textarea:focus {
+    outline: none;
+    border-color: var(--uc-blue);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+/* Save button */
+.save-btn {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: none;
+    background: var(--uc-blue);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 48px; /* accessible tap target */
+}
+
+.save-btn:active { background: #2563eb; }
+.save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Save feedback inline */
+.save-status {
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    min-height: 1.2em;
+}
+
+.save-status.success { color: var(--uc-green); }
+.save-status.error   { color: var(--uc-red); }
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--uc-gray-400);
+}
+
+.empty-state i { font-size: 2.5rem; }
+
+/* Responsive: on wider screens give a max-width so it doesn't stretch awkwardly */
+@media (min-width: 640px) {
+    .qf-header,
+    .player-list { max-width: 640px; margin-left: auto; margin-right: auto; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Sticky header -->
+<div class="qf-header d-flex align-items-center gap-3">
+    <a href="{{ url_for('session.detail', session_id=session.id) }}"
+       class="btn btn-sm btn-outline-secondary flex-shrink-0" aria-label="Back">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <div class="overflow-hidden">
+        <h1>Quick Feedback</h1>
+        <p class="sub">{{ session.title }}{% if session.date %} · {{ session.date.strftime('%-d %b %Y') }}{% endif %}</p>
+    </div>
+</div>
+
+<ul class="player-list" id="playerList">
+{% if players %}
+  {% for player in players %}
+  <li class="player-item" id="item-{{ player.id }}">
+
+    <!-- Tappable row -->
+    <div class="player-trigger" onclick="togglePlayer({{ player.id }})" role="button"
+         aria-expanded="false" aria-controls="panel-{{ player.id }}">
+      <span class="player-name">{{ player.name }}</span>
+
+      {% set count = feedback_counts.get(player.id, 0) %}
+      <span class="note-badge{% if count == 0 %} hidden{% endif %}" id="badge-{{ player.id }}">
+        <i class="bi bi-pencil-fill" style="font-size:.65rem"></i>
+        <span id="badge-count-{{ player.id }}">{{ count }}</span>
+      </span>
+
+      <i class="bi bi-chevron-right player-chevron" id="chev-{{ player.id }}"></i>
+    </div>
+
+    <!-- Inline form panel -->
+    <div class="player-form-panel" id="panel-{{ player.id }}">
+
+      <!-- Context tag pills -->
+      <div class="tag-pills" id="tags-{{ player.id }}">
+        {% for tag in context_tags %}
+        <button type="button"
+                class="tag-pill{% if loop.first %} active{% endif %}"
+                onclick="selectTag({{ player.id }}, this, '{{ tag }}')"
+                data-tag="{{ tag }}">
+          {{ tag }}
+        </button>
+        {% endfor %}
+      </div>
+
+      <!-- Note textarea -->
+      <textarea class="qf-textarea"
+                id="note-{{ player.id }}"
+                placeholder="Type your observation…"
+                rows="3"
+                autofocus></textarea>
+
+      <!-- Save button -->
+      <button type="button"
+              class="save-btn"
+              id="save-{{ player.id }}"
+              onclick="saveNote({{ player.id }})">
+        <i class="bi bi-save2 me-1"></i> Save Note
+      </button>
+
+      <div class="save-status" id="status-{{ player.id }}"></div>
+    </div>
+
+  </li>
+  {% endfor %}
+{% else %}
+  <li>
+    <div class="empty-state">
+      <i class="bi bi-people"></i>
+      <p class="mt-2">No players with RSVPs or attendance records for this session yet.</p>
+      <a href="{{ url_for('session.attendance', session_id=session.id) }}"
+         class="btn btn-sm btn-outline-primary mt-1">Record Attendance</a>
+    </div>
+  </li>
+{% endif %}
+</ul>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+    'use strict';
+
+    const SESSION_ID = {{ session.id }};
+    const SAVE_URL = "{{ url_for('feedback.save_feedback', session_id=session.id) }}";
+    const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Track which tag is selected per player
+    const selectedTags = {};
+
+    // ── Toggle expand / collapse ─────────────────────────────────────────
+    window.togglePlayer = function (playerId) {
+        const item = document.getElementById('item-' + playerId);
+        const panel = document.getElementById('panel-' + playerId);
+        const trigger = item.querySelector('.player-trigger');
+        const isOpen = item.classList.contains('open');
+
+        // Close all others first for focus management
+        document.querySelectorAll('.player-item.open').forEach(function (el) {
+            if (el !== item) {
+                el.classList.remove('open');
+                el.querySelector('.player-trigger').setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        if (isOpen) {
+            item.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+        } else {
+            item.classList.add('open');
+            trigger.setAttribute('aria-expanded', 'true');
+            // Auto-focus textarea for fastest typing
+            setTimeout(function () {
+                const ta = document.getElementById('note-' + playerId);
+                if (ta) ta.focus();
+            }, 50);
+        }
+    };
+
+    // ── Tag pill selection ───────────────────────────────────────────────
+    window.selectTag = function (playerId, el, tag) {
+        selectedTags[playerId] = tag;
+        const container = document.getElementById('tags-' + playerId);
+        container.querySelectorAll('.tag-pill').forEach(function (btn) {
+            btn.classList.toggle('active', btn === el);
+        });
+    };
+
+    // ── Save a note via AJAX ─────────────────────────────────────────────
+    window.saveNote = function (playerId) {
+        const textarea = document.getElementById('note-' + playerId);
+        const saveBtn  = document.getElementById('save-' + playerId);
+        const status   = document.getElementById('status-' + playerId);
+        const content  = (textarea.value || '').trim();
+
+        if (!content) {
+            showStatus(status, 'Please write a note first.', 'error');
+            textarea.focus();
+            return;
+        }
+
+        const tag = selectedTags[playerId] || '{{ context_tags[0] }}';
+
+        // Disable button while saving
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Saving…';
+        status.textContent = '';
+        status.className = 'save-status';
+
+        fetch(SAVE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            body: JSON.stringify({
+                player_id: playerId,
+                content: content,
+                context_tag: tag,
+            }),
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.success) {
+                // Clear textarea
+                textarea.value = '';
+
+                // Update badge
+                updateBadge(playerId, data.note_count);
+
+                showStatus(status, '✓ Note saved', 'success');
+
+                // Auto-collapse after a short delay so coach sees confirmation
+                setTimeout(function () {
+                    const item = document.getElementById('item-' + playerId);
+                    if (item) {
+                        item.classList.remove('open');
+                        item.querySelector('.player-trigger').setAttribute('aria-expanded', 'false');
+                        status.textContent = '';
+                    }
+                }, 900);
+            } else {
+                showStatus(status, data.message || 'Could not save note.', 'error');
+            }
+        })
+        .catch(function (err) {
+            console.error(err);
+            showStatus(status, 'Network error — please try again.', 'error');
+        })
+        .finally(function () {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="bi bi-save2 me-1"></i> Save Note';
+        });
+    };
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    function updateBadge(playerId, count) {
+        const badge      = document.getElementById('badge-' + playerId);
+        const badgeCount = document.getElementById('badge-count-' + playerId);
+        if (!badge || !badgeCount) return;
+        badgeCount.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+    }
+
+    function showStatus(el, msg, type) {
+        el.textContent = msg;
+        el.className = 'save-status ' + type;
+    }
+
+    // ── Allow Cmd/Ctrl+Enter to save ─────────────────────────────────────
+    document.addEventListener('keydown', function (e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            const openItem = document.querySelector('.player-item.open');
+            if (!openItem) return;
+            const pid = openItem.id.replace('item-', '');
+            saveNote(parseInt(pid, 10));
+        }
+    });
+}());
+</script>
+{% endblock %}
