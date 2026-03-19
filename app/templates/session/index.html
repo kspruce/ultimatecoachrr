@@ -83,7 +83,7 @@
                                         <strong>Focus:</strong> {{ session.focus_area }}
                                     </p>
                                 </div>
-                                <div class="card-footer bg-transparent">
+                                <div class="card-footer bg-transparent d-flex flex-wrap gap-1">
                                     <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
                                     {% if current_user.player %}
                                         {% if session.id in user_rsvped_sessions %}
@@ -93,6 +93,13 @@
                                         {% else %}
                                         <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-sm btn-outline-success">RSVP</a>
                                         {% endif %}
+                                    {% endif %}
+                                    {% if current_user.is_coach %}
+                                    <a href="{{ url_for('feedback.quick_capture', session_id=session.id) }}"
+                                       class="btn btn-sm btn-warning ms-auto"
+                                       title="Quick Feedback">
+                                        <i class="bi bi-chat-square-text"></i> Feedback
+                                    </a>
                                     {% endif %}
                                 </div>
                             </div>
@@ -160,10 +167,17 @@
                                     <td>
                                         <div class="btn-group">
                                             <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            {% if current_user.is_coach %}
+                                                <a href="{{ url_for('feedback.quick_capture', session_id=session.id) }}"
+                                                   class="btn btn-sm btn-warning"
+                                                   title="Quick Feedback">
+                                                    <i class="bi bi-chat-square-text"></i>
+                                                </a>
+                                            {% endif %}
                                             {% if current_user.is_admin %}
                                                 <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                        data-bs-toggle="modal" 
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        data-bs-toggle="modal"
                                                         data-bs-target="#deleteModal{{ session.id }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>

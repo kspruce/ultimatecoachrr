@@ -12,6 +12,8 @@
         <div class="col-md-4 text-end d-flex flex-wrap gap-2 justify-content-end align-items-start">
             {% if current_user.is_admin %}
                 <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-primary">Edit Player</a>
+            {% endif %}
+            {% if current_user.is_coach %}
                 <a href="{{ url_for('feedback.player_feedback', player_id=player.id) }}"
                    class="btn btn-outline-info">
                     <i class="bi bi-chat-square-text me-1"></i>View Feedback

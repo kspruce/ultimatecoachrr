@@ -4,6 +4,7 @@ from flask import (
     flash, request, jsonify
 )
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from app import db
 from app.models.session import SessionPlan, Attendance, SessionRSVP
 from app.models.player import Player
@@ -12,10 +13,57 @@ from app.models.feedback import PlayerFeedback
 bp = Blueprint('feedback', __name__)
 
 
-def _require_admin():
-    """Abort with 403 if the current user is not an admin."""
-    if not current_user.is_admin:
+def _require_coach():
+    """Abort with 403 unless the current user is a coach or admin."""
+    if not current_user.is_coach:
         abort(403)
+
+
+# ── Feedback Hub ─────────────────────────────────────────────────────────────
+
+@bp.route('/feedback/')
+@login_required
+def hub():
+    _require_coach()
+
+    # Recent sessions — most recent first, up to 8
+    recent_sessions = (
+        SessionPlan.query
+        .order_by(SessionPlan.date.desc().nullslast(), SessionPlan.created_at.desc())
+        .limit(8)
+        .all()
+    )
+
+    # All active players ordered by name
+    players = (
+        Player.query
+        .filter_by(active=True)
+        .order_by(Player.name)
+        .all()
+    )
+
+    # Aggregate feedback counts per player (all time)
+    player_counts: dict[int, int] = dict(
+        db.session.query(PlayerFeedback.player_id, func.count(PlayerFeedback.id))
+        .group_by(PlayerFeedback.player_id)
+        .all()
+    )
+
+    # Per-session note counts (so we can show "X notes" on each session card)
+    session_counts: dict[int, int] = dict(
+        db.session.query(PlayerFeedback.session_id, func.count(PlayerFeedback.id))
+        .filter(PlayerFeedback.session_id.isnot(None))
+        .group_by(PlayerFeedback.session_id)
+        .all()
+    )
+
+    return render_template(
+        'feedback/hub.html',
+        recent_sessions=recent_sessions,
+        players=players,
+        player_counts=player_counts,
+        session_counts=session_counts,
+    )
 
 
 # ── Quick-capture page ───────────────────────────────────────────────────────
@@ -23,7 +71,7 @@ def _require_admin():
 @bp.route('/sessions/<int:session_id>/feedback/quick')
 @login_required
 def quick_capture(session_id):
-    _require_admin()
+    _require_coach()
 
     session_obj = SessionPlan.query.get_or_404(session_id)
 
@@ -67,7 +115,7 @@ def quick_capture(session_id):
 @bp.route('/sessions/<int:session_id>/feedback/save', methods=['POST'])
 @login_required
 def save_feedback(session_id):
-    if not current_user.is_admin:
+    if not current_user.is_coach:
         return jsonify({'success': False, 'message': 'Forbidden'}), 403
 
     # Verify session exists
@@ -116,7 +164,7 @@ def save_feedback(session_id):
 @bp.route('/players/<int:player_id>/feedback')
 @login_required
 def player_feedback(player_id):
-    _require_admin()
+    _require_coach()
 
     player = Player.query.get_or_404(player_id)
 
@@ -139,7 +187,7 @@ def player_feedback(player_id):
 @bp.route('/feedback/<int:feedback_id>/delete', methods=['POST'])
 @login_required
 def delete_feedback(feedback_id):
-    _require_admin()
+    _require_coach()
 
     fb = PlayerFeedback.query.get_or_404(feedback_id)
     player_id = fb.player_id

@@ -112,6 +112,8 @@
                         <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-outline-dark">
                             <i class="bi bi-plus-circle"></i> Add Component
                         </a>
+                        {% endif %}
+                        {% if current_user.is_coach %}
                         <a href="{{ url_for('feedback.quick_capture', session_id=session.id) }}" class="btn btn-warning">
                             <i class="bi bi-chat-square-text"></i> Quick Feedback
                         </a>

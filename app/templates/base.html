@@ -396,6 +396,7 @@
 
       {# Training #}
       {% if not ts or ts.sessions_enabled or ts.fitness_enabled %}
+      {% set in_training = in_training or request.endpoint.startswith('feedback.') %}
       <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-lightning-charge-fill"></i> Training
@@ -407,8 +408,13 @@
           <li><a class="dropdown-item" href="{{ url_for('session.drills') }}">
             <i class="bi bi-clipboard2-check"></i> Drill Library</a></li>
           {% endif %}
+          {% if current_user.is_authenticated and current_user.is_coach %}
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('feedback.hub') }}">
+            <i class="bi bi-chat-square-text-fill"></i> Player Feedback</a></li>
+          {% endif %}
           {% if not ts or ts.fitness_enabled %}
-          {% if not ts or ts.sessions_enabled %}<li><hr class="dropdown-divider"></li>{% endif %}
+          <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="{{ url_for('fitness.index') }}">
             <i class="bi bi-heart-pulse"></i> Fitness Dashboard</a></li>
           <li><a class="dropdown-item" href="{{ url_for('fitness.team_leaderboard') }}">

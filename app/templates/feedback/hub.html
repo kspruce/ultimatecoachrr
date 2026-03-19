@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Player Feedback{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+/* ── Hub layout ──────────────────────────────────────────── */
+.hub-section-title {
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--uc-gray-400);
+    margin-bottom: .75rem;
+}
+
+/* Session rows */
+.session-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem .25rem;
+    border-bottom: 1px solid var(--uc-card-border);
+    text-decoration: none;
+    color: inherit;
+}
+.session-row:last-child { border-bottom: none; }
+
+.session-row-info { flex: 1; min-width: 0; }
+
+.session-row-title {
+    font-weight: 600;
+    font-size: .92rem;
+    color: var(--uc-gray-800);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.session-row-meta {
+    font-size: .75rem;
+    color: var(--uc-gray-400);
+    margin-top: .1rem;
+}
+
+.session-note-badge {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--uc-blue);
+    background: rgba(59,130,246,.1);
+    border-radius: 99px;
+    padding: .15rem .5rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.session-note-badge.empty {
+    color: var(--uc-gray-400);
+    background: var(--uc-gray-100);
+}
+
+.btn-capture {
+    font-size: .78rem;
+    font-weight: 700;
+    padding: .35rem .75rem;
+    border-radius: 8px;
+    border: none;
+    background: #f59e0b;
+    color: #fff;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    transition: background .15s;
+}
+.btn-capture:hover { background: #d97706; color: #fff; text-decoration: none; }
+
+/* Player table */
+.player-fb-row td { vertical-align: middle; }
+
+.player-note-count {
+    font-weight: 700;
+    color: var(--uc-blue);
+}
+.player-note-count.zero { color: var(--uc-gray-400); font-weight: 400; }
+
+/* Empty state */
+.hub-empty {
+    color: var(--uc-gray-400);
+    font-size: .875rem;
+    padding: 1.5rem 0;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- Page header -->
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2><i class="bi bi-chat-square-text-fill text-primary me-2"></i>Player Feedback</h2>
+            <p class="text-muted mb-0">Capture notes during sessions · review a player's history</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ── LEFT: Quick Capture into a session ──────────────────── -->
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Quick Capture</span>
+                    <a href="{{ url_for('session.index') }}" class="btn btn-sm btn-outline-secondary">All Sessions</a>
+                </div>
+                <div class="card-body p-3">
+                    <p class="hub-section-title">Recent &amp; upcoming sessions</p>
+
+                    {% if recent_sessions %}
+                    <div>
+                    {% for sess in recent_sessions %}
+                    {% set note_count = session_counts.get(sess.id, 0) %}
+                    <div class="session-row">
+                        <div class="session-row-info">
+                            <div class="session-row-title">{{ sess.title }}</div>
+                            <div class="session-row-meta">
+                                {% if sess.date %}{{ sess.date.strftime('%-d %b %Y') }}{% else %}No date{% endif %}
+                                {% if sess.location %} · {{ sess.location }}{% endif %}
+                            </div>
+                        </div>
+                        <span class="session-note-badge{% if note_count == 0 %} empty{% endif %}">
+                            {% if note_count > 0 %}
+                                <i class="bi bi-pencil-fill" style="font-size:.6rem"></i> {{ note_count }}
+                            {% else %}
+                                0 notes
+                            {% endif %}
+                        </span>
+                        <a href="{{ url_for('feedback.quick_capture', session_id=sess.id) }}"
+                           class="btn-capture">
+                            <i class="bi bi-chat-square-text"></i> Capture
+                        </a>
+                    </div>
+                    {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="hub-empty">
+                        <i class="bi bi-calendar-x d-block mb-1" style="font-size:1.5rem"></i>
+                        No sessions found.
+                        <a href="{{ url_for('session.add_session') }}">Create one</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Browse player notes ─────────────────────────── -->
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span><i class="bi bi-people-fill text-primary me-2"></i>Player Notes</span>
+                    <span class="text-muted small">{{ players|length }} players</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if players %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Player</th>
+                                    <th class="text-center">Notes</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for player in players %}
+                            {% set count = player_counts.get(player.id, 0) %}
+                            <tr class="player-fb-row">
+                                <td>
+                                    <a href="{{ url_for('team.player_detail', player_id=player.id) }}"
+                                       class="fw-semibold text-decoration-none text-reset">
+                                        {{ player.name }}
+                                    </a>
+                                    {% if player.jersey_number %}
+                                    <span class="badge bg-secondary ms-1" style="font-size:.65rem">#{{ player.jersey_number }}</span>
+                                    {% endif %}
+                                    {% if player.position %}
+                                    <span class="text-muted small ms-1">{{ player.position }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="player-note-count{% if count == 0 %} zero{% endif %}">
+                                        {{ count }}
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a href="{{ url_for('feedback.player_feedback', player_id=player.id) }}"
+                                       class="btn btn-sm {% if count > 0 %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}">
+                                        <i class="bi bi-chat-square-text me-1"></i>
+                                        {% if count > 0 %}View Notes{% else %}No Notes{% endif %}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="hub-empty">
+                        <i class="bi bi-people d-block mb-1" style="font-size:1.5rem"></i>
+                        No active players found.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
