@@ -9,6 +9,7 @@ from app import db
 from app.models.session import SessionPlan, Attendance, SessionRSVP
 from app.models.player import Player
 from app.models.feedback import PlayerFeedback
+from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('feedback', __name__)
 
@@ -26,18 +27,21 @@ def _require_coach():
 def hub():
     _require_coach()
 
-    # Recent sessions — most recent first, up to 8
+    team_id = get_current_team_id()
+
+    # Recent sessions for this team — most recent first, up to 8
     recent_sessions = (
         SessionPlan.query
+        .filter_by(team_organization_id=team_id)
         .order_by(SessionPlan.date.desc().nullslast(), SessionPlan.created_at.desc())
         .limit(8)
         .all()
     )
 
-    # All active players ordered by name
+    # Active players for this team ordered by name
     players = (
         Player.query
-        .filter_by(active=True)
+        .filter_by(active=True, team_organization_id=team_id)
         .order_by(Player.name)
         .all()
     )
@@ -86,10 +90,15 @@ def quick_capture(session_id):
     }
     all_player_ids = attended_ids | rsvp_yes_ids
 
+    team_id = get_current_team_id()
+
     if all_player_ids:
         players = (
             Player.query
-            .filter(Player.id.in_(all_player_ids))
+            .filter(
+                Player.id.in_(all_player_ids),
+                Player.team_organization_id == team_id
+            )
             .order_by(Player.name)
             .all()
         )
