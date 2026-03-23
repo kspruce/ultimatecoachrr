@@ -541,14 +541,31 @@ def finish_point(point_id):
                 current_app.logger.debug(f"Calculated missing distance for throw {throw.id}: {throw.distance:.2f}m")
 
         db.session.commit()
-        
+
+        # Find the next unfinished point for this game (auto-advance support)
+        next_point = (
+            Point.query
+            .filter(
+                Point.game_id == game.id,
+                Point.team_organization_id == get_current_team_id(),
+                Point.point_number > point.point_number,
+                Point.point_outcome.is_(None)
+            )
+            .order_by(Point.point_number.asc())
+            .first()
+        )
+        next_point_url = (
+            url_for('stat.record_events', point_id=next_point.id) if next_point else None
+        )
+
         # Return both redirect and redirect_url for compatibility
         return jsonify({
-            'message': f'Point finished. Outcome: {point.point_outcome}', 
+            'message': f'Point finished. Outcome: {point.point_outcome}',
             'redirect': url_for('point.game_points', game_id=game.id),
             'redirect_url': url_for('point.game_points', game_id=game.id),
-            'game_id': game.id,  # Include game_id explicitly
-            'point_outcome': point.point_outcome  # Include the determined outcome
+            'game_id': game.id,
+            'point_outcome': point.point_outcome,
+            'next_point_url': next_point_url,   # Auto-advance to next unfinished point
         }), 200
 
     except Exception as e:

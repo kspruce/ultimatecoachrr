@@ -457,6 +457,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/offline_queue.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Helper function to safely get player name from DOM
@@ -558,6 +559,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the possession indicator
     updatePossessionIndicator();
 
+    /**
+     * Apply possession-change rules for a given action and update the UI.
+     * Extracted into a shared function so both the online and offline paths
+     * can call it identically.
+     *
+     * Rules (smarter detection):
+     *   defense  + [block | forced_turnover | unforced_turnover]  → offense
+     *   offense  + [throwaway | drop | stall]                     → defense
+     *   callahan = defensive interception for goal → offense (point ends)
+     *   scored_on = opponent scored on us → no possession flip (point ends)
+     */
+    function handlePossessionChange(action) {
+        const defensiveToOffensiveEvents = ['block', 'forced_turnover', 'unforced_turnover', 'callahan'];
+        const offensiveToDefensiveEvents = ['throwaway', 'drop', 'stall'];
+
+        const previousState = gameState.is_offensive;
+
+        if (!gameState.is_offensive && defensiveToOffensiveEvents.includes(action)) {
+            gameState.is_offensive = true;
+        } else if (gameState.is_offensive && offensiveToDefensiveEvents.includes(action)) {
+            gameState.is_offensive = false;
+        } else if (action === 'turnover' || action === 'goal') {
+            // Legacy event names
+            gameState.is_offensive = !gameState.is_offensive;
+        }
+
+        if (previousState !== gameState.is_offensive) {
+            console.log('Possession changed to', gameState.is_offensive ? 'offense' : 'defense', 'after', action);
+            updatePossessionIndicator();
+        }
+    }
+
     // Track which mode we're in (events or cutting skills)
     let currentMode = 'events';
 
@@ -622,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('finish-point').addEventListener('click', function() {
         // Show loading indicator
         showLoading('Finishing point and saving data...');
-        
+
         fetch(`/stats/finish_point/{{ point.id }}`, {
             method: 'POST',
             headers: {
@@ -640,17 +673,17 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             console.log('Point finished successfully:', data);
-            
-            // Check if we have a redirect URL
-            if (data.redirect_url) {
+
+            // Auto-advance to the next unfinished point if the server provided one
+            if (data.next_point_url) {
+                window.location.href = data.next_point_url;
+            } else if (data.redirect_url) {
                 window.location.href = data.redirect_url;
             } else if (data.redirect) {
                 window.location.href = data.redirect;
             } else if (data.game_id) {
-                // Use game_id if available
                 window.location.href = `/points/game/${data.game_id}`;
             } else {
-                // Fallback to the game points page using the point's game_id
                 window.location.href = `/points/game/{{ point.game_id }}`;
             }
         })
@@ -765,9 +798,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show loading indicator
         showLoading(`Recording ${action}...`);
-    
-        // Send the event data to the server - CORRECT URL
-        fetch(`/stats/record/{{ point.id }}`, {
+
+        // Use OfflineQueue.fetch so events are buffered if connectivity is lost
+        OfflineQueue.fetch(`/stats/record/{{ point.id }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -775,19 +808,31 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify(eventData)
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.error || `Server returned ${response.status}`);
-                });
-            }
-            return response.json();
-        })
         .then(data => {
+            // null means queued offline — add a local placeholder marker so the UI stays responsive
+            if (data === null) {
+                const localEvent = {
+                    id: 'queued_' + Date.now(),
+                    event_type: action,
+                    player_id: selectedPlayer,
+                    player_name: getPlayerNameFromDOM(selectedPlayer),
+                    field_position_x: selectedPosition.x,
+                    field_position_y: selectedPosition.y,
+                    is_offensive: gameState.is_offensive
+                };
+                addEventMarker(localEvent);
+                updateEventsState(localEvent);
+                updateEventsTable();
+                undoButton.style.display = 'block';
+                // Still update possession indicator for a smooth experience
+                handlePossessionChange(action);
+                return;
+            }
+
             console.log('Event recorded successfully:', data);
             console.log('Current possession before processing:', gameState.is_offensive ? 'offense' : 'defense');
             console.log('Action type:', action);
-            
+
             // Add event marker to the field
             if (data) {
                 // Use data directly if it's the event, or data.event if that exists
@@ -808,43 +853,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show the undo button
                 undoButton.style.display = 'block';
                 
-                // Update game state based on the event
-                const defensiveToOffensiveEvents = ["block", "forced_turnover", "unforced_turnover"];
-                const offensiveToDefensiveEvents = ["throwaway", "drop"];
-                
-                console.log('Defensive events that change possession:', defensiveToOffensiveEvents);
-                console.log('Is this a defensive event that should change possession?', 
-                           !gameState.is_offensive && defensiveToOffensiveEvents.includes(action));
-                
-                // Store the previous state for logging
-                const previousState = gameState.is_offensive;
-                
-                // Defensive events that should change to offense
-                if (!gameState.is_offensive && defensiveToOffensiveEvents.includes(action)) {
-                    console.log(`Switching possession: ${action} detected while on defense`);
-                    gameState.is_offensive = true;
-                } 
-                // Offensive events that should change to defense
-                else if (gameState.is_offensive && offensiveToDefensiveEvents.includes(action)) {
-                    console.log(`Switching possession: ${action} detected while on offense`);
-                    gameState.is_offensive = false;
-                }
-                // Legacy support for "turnover" and "goal" events
-                else if (action === "turnover" || action === "goal") {
-                    console.log(`Switching possession: Legacy ${action} event`);
-                    gameState.is_offensive = !gameState.is_offensive;
-                }
-                
-                // If possession changed, update the UI and log it
-                if (previousState !== gameState.is_offensive) {
-                    console.log("Possession changed from", previousState ? "offense" : "defense", 
-                                "to", gameState.is_offensive ? "offense" : "defense", 
-                                "after", action);
-                    updatePossessionIndicator();
-                    logGameState();
-                } else {
-                    console.log("No possession change after", action);
-                }
+                // Update possession state and indicator
+                handlePossessionChange(action);
                 // Add notification for goal/scored_on events
                 if (action === 'goal' || action === 'callahan') {
                     // Show a notification that we scored
@@ -1354,17 +1364,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (undoType && undoId) {
-                // Show confirmation dialog
-                if (!confirm(`Are you sure you want to undo the last action: ${undoDescription}?`)) {
-                    return; // User canceled
-                }
-                
+                // Instant undo — no blocking confirm dialog.
                 // Show loading indicator
                 showLoading(`Undoing last ${undoType}...`);
                 
                 // CORRECT URL for undo operations
-                const endpoint = undoType === 'event' ? 
-                    `/stats/undo_event/{{ point.id }}` : 
+                const endpoint = undoType === 'event' ?
+                    `/stats/undo_event/{{ point.id }}` :
                     `/stats/undo_cutting_skill/{{ point.id }}`;
                 
                 fetch(endpoint, {
@@ -1402,10 +1408,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(data => {
                     console.log('Undo successful:', data);
-                    
+
+                    // Show brief toast (replaces the old blocking confirm dialog)
+                    const undoToast = document.createElement('div');
+                    undoToast.className = 'position-fixed bottom-0 start-50 translate-middle-x p-3';
+                    undoToast.style.zIndex = '1080';
+                    undoToast.innerHTML = `
+                      <div class="toast show bg-warning text-dark shadow" role="alert">
+                        <div class="toast-body py-2 px-3">
+                          <i class="bi bi-arrow-counterclockwise me-1"></i>
+                          Undone: <strong>${undoDescription}</strong>
+                        </div>
+                      </div>`;
+                    document.body.appendChild(undoToast);
+                    setTimeout(() => undoToast.remove(), 3000);
+
                     // Remove the marker from the field
-                    const selector = undoType === 'event' ? 
-                        `.event-marker[data-event-id="${undoId}"]` : 
+                    const selector = undoType === 'event' ?
+                        `.event-marker[data-event-id="${undoId}"]` :
                         `.cutting-marker[data-cutting-skill-id="${undoId}"]`;
                     
                     const marker = document.querySelector(selector);
@@ -1418,36 +1438,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         gameState.events.pop();
                         updateEventsTable();
                         
-                        // Check if we need to update possession based on the event type
-                        const defensiveToOffensiveEvents = ["block", "forced_turnover", "unforced_turnover"];
-                        const offensiveToDefensiveEvents = ["throwaway", "drop"];
-                        
+                        // Reverse the possession change that was caused by this event.
+                        // handlePossessionChange applies the forward rule, so calling it
+                        // again on the same event effectively toggles back.
                         console.log("Undoing event:", lastEvent);
-                        
-                        // Store the previous state for logging
-                        const previousState = gameState.is_offensive;
-                        
-                        // If it was a defensive event that changed to offense, change back to defense
-                        if (defensiveToOffensiveEvents.includes(lastEvent.event_type)) {
-                            gameState.is_offensive = false;
-                        } 
-                        // If it was an offensive event that changed to defense, change back to offense
-                        else if (offensiveToDefensiveEvents.includes(lastEvent.event_type)) {
-                            gameState.is_offensive = true;
-                        }
-                        // Legacy support for turnover and goal events
-                        else if (lastEvent.event_type === "turnover" || lastEvent.event_type === "goal") {
-                            gameState.is_offensive = !gameState.is_offensive;
-                        }
-                        
-                        // If possession changed, update the UI and log it
-                        if (previousState !== gameState.is_offensive) {
-                            console.log("Possession changed from", previousState ? "offense" : "defense", 
-                                      "to", gameState.is_offensive ? "offense" : "defense", 
-                                      "after undoing", lastEvent.event_type);
-                            updatePossessionIndicator();
-                            logGameState();
-                        }
+                        handlePossessionChange(lastEvent.event_type);
                     } else {
                         gameState.cuttingSkills.pop();
                         updateCuttingSkillsTable();

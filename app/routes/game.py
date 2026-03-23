@@ -13,6 +13,7 @@ from app.models.event import Event, Pull
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
+from app.models.tournament_rsvp import TournamentRSVP
 from sqlalchemy import and_
 from app.utils.team_filter import get_current_team_id
 
@@ -129,7 +130,40 @@ def add():
         
         db.session.add(game)
         db.session.flush()
-        
+
+        # ── Auto-assign players to the new game ───────────────────────────
+        # Priority: players attending the linked tournament → full active roster
+        team_id = get_current_team_id()
+        auto_player_ids = []
+
+        if game.tournament_id:
+            # Players who RSVP'd as attending (or were admin-selected) for this tournament
+            attending_rsvps = TournamentRSVP.query.filter(
+                TournamentRSVP.tournament_id == game.tournament_id,
+                TournamentRSVP.team_organization_id == team_id,
+                TournamentRSVP.status == 'attending'
+            ).all()
+            auto_player_ids = [r.player_id for r in attending_rsvps]
+
+        if not auto_player_ids:
+            # No tournament attendance data — fall back to the full active roster
+            auto_player_ids = [
+                p.id for p in Player.query.filter_by(
+                    active=True,
+                    team_organization_id=team_id
+                ).all()
+            ]
+
+        for player_id in auto_player_ids:
+            next_gp_id = (db.session.query(db.func.max(GamePlayer.id)).scalar() or 0) + 1
+            db.session.add(GamePlayer(
+                id=next_gp_id,
+                game_id=game.id,
+                player_id=player_id,
+                team_organization_id=team_id
+            ))
+        # ─────────────────────────────────────────────────────────────────
+
         if form.players_present.data:
             point = Point.query.filter_by(game_id=game.id).first()
             if not point:

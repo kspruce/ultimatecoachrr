@@ -102,8 +102,15 @@
       <!-- Line Selection Card -->
       <div class="card mb-3" id="line-selection">
         <div class="card-header bg-primary text-white">
-          <h5>Line Selection</h5>
-          <div class="d-flex justify-content-between">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Line Selection</h5>
+            {% if next_point_number > 1 %}
+            <button class="btn btn-sm btn-warning" id="undo-last-point" title="Undo the last completed point">
+              <i class="bi bi-arrow-counterclockwise"></i> Undo Last Point
+            </button>
+            {% endif %}
+          </div>
+          <div class="d-flex justify-content-between mt-1">
             <span>Point #<span id="next-point-number">{{ next_point_number }}</span></span>
             <input type="hidden" id="game-id" value="{{ game.id }}">
             <input type="hidden" id="next-point-number-input" value="{{ next_point_number }}">
@@ -455,6 +462,7 @@
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', filename='js/offline_queue.js') }}"></script>
 <script>
   // Unregister any old service workers that might be cached in the browser
   if ('serviceWorker' in navigator) {
@@ -472,6 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedPlayers = [];
   let pointEvents = [];
   let lastThrower = null;
+  let discHolder = null;  // player_id of the player currently holding the disc
 
   // Make player cards clickable
   document.querySelectorAll('.player-card').forEach(card => {
@@ -541,6 +550,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  /**
+   * When a player button is tapped, enforce the disc-holder lock:
+   * - If the selected player IS holding the disc → only Throwaway is enabled.
+   * - Everyone else → normal possession-based buttons.
+   */
+  function applyDiscHolderLock(selectedPlayerId) {
+    if (discHolder && String(selectedPlayerId) === String(discHolder)) {
+      // Disc holder can ONLY throwaway
+      document.getElementById('offense-events').style.display = 'grid';
+      document.getElementById('defense-events').style.display = 'none';
+      document.querySelectorAll('.event-btn').forEach(btn => {
+        const isThrowaway = btn.dataset.event === 'throwaway';
+        btn.disabled     = !isThrowaway;
+        btn.style.opacity = isThrowaway ? '' : '0.35';
+      });
+    } else {
+      // Re-enable all buttons, then show correct possession panel
+      document.querySelectorAll('.event-btn').forEach(btn => {
+        btn.disabled      = false;
+        btn.style.opacity = '';
+      });
+      updateEventButtons();
+    }
+  }
+
   function addEventToLog(event) {
     const logContainer = document.getElementById('event-log');
     const eventElement = document.createElement('div');
@@ -581,22 +615,34 @@ document.addEventListener('DOMContentLoaded', function() {
       outcome: outcome
     };
     
-    fetch('/gameday/api/record-point', {
+    // Use OfflineQueue.fetch so the point is saved even if connectivity is lost
+    const fetchOpts = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
       },
       body: JSON.stringify(pointData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            // If response is not ok, read it as text to avoid JSON parse error on HTML error pages
-            return response.text().then(text => { throw new Error(text) });
-        }
-        return response.json();
-    })
+    };
+    OfflineQueue.fetch('/gameday/api/record-point', fetchOpts)
     .then(data => {
+      // OfflineQueue.fetch returns null when the request is queued offline
+      if (data === null) {
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed top-0 end-0 p-3';
+        toast.style.zIndex = '1070';
+        toast.innerHTML = `
+          <div class="toast show bg-warning text-dark" role="alert">
+            <div class="toast-body fw-semibold">
+              <i class="bi bi-wifi-off me-1"></i>
+              Offline — point queued, will sync when reconnected.
+            </div>
+          </div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+        location.reload();
+        return;
+      }
       if (data.success) {
         const toast = document.createElement('div');
         toast.className = 'position-fixed top-0 end-0 p-3';
@@ -788,12 +834,12 @@ document.addEventListener('DOMContentLoaded', function() {
       button.textContent = `#${player.jersey} ${player.name}`;
       button.dataset.playerId = player.id;
       button.addEventListener('click', function() {
-        // Remove active class from all buttons
+        // Remove active class from all buttons, then highlight this one
         document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
-        // Add active class to this button
         this.classList.add('active');
-        // Store the selected player ID in a data attribute on the container
         eventPlayerButtons.dataset.selectedPlayerId = this.dataset.playerId;
+        // Enforce disc-holder lock (may disable buttons for the disc carrier)
+        applyDiscHolderLock(this.dataset.playerId);
       });
       eventPlayerButtons.appendChild(button);
     });
@@ -822,6 +868,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('event-log').innerHTML = '';
     pointEvents = [];
     lastThrower = null;
+    discHolder  = null;
   });
 
   // Event buttons
@@ -861,19 +908,24 @@ document.addEventListener('DOMContentLoaded', function() {
         updateEventButtons();
       }
       
-      if (eventType === 'catch') {
-        lastThrower = { 
-          id: playerId, 
-          name: player ? `#${player.jersey} ${player.name}` : 'Unknown' 
+      if (eventType === 'catch' || eventType === 'pickup') {
+        // This player now holds the disc
+        discHolder = playerId;
+        lastThrower = {
+          id: playerId,
+          name: player ? `#${player.jersey} ${player.name}` : 'Unknown'
         };
+      } else if (['throwaway', 'stall', 'drop', 'block', 'score', 'callahan'].includes(eventType)) {
+        // Disc is no longer with this player (turnover, score, or end of possession)
+        discHolder = null;
       }
-      
+
       pointEvents.push(event);
       addEventToLog(event);
-      
-      // Clear player selection
-      document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
-      document.getElementById('event-player-buttons').dataset.selectedPlayerId = '';
+
+      // Keep the same player selected (last-used player stays highlighted)
+      // but update event buttons to reflect new disc state
+      applyDiscHolderLock(playerId);
     });
   });
 
@@ -924,6 +976,55 @@ document.addEventListener('DOMContentLoaded', function() {
     alert('Substitution logged. Please manually update player selections if needed for the rest of the point.');
     bootstrap.Modal.getInstance(document.getElementById('substitutionModal')).hide();
   });
+
+  // Undo last point (only rendered if next_point_number > 1)
+  const undoBtn = document.getElementById('undo-last-point');
+  if (undoBtn) {
+    undoBtn.addEventListener('click', function() {
+      const gameId = document.getElementById('game-id').value;
+      const btn    = this;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Undoing…';
+
+      fetch(`/gameday/api/undo-last-point/${gameId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          // Show brief confirmation toast
+          const toast = document.createElement('div');
+          toast.className = 'position-fixed top-0 end-0 p-3';
+          toast.style.zIndex = '1070';
+          toast.innerHTML = `
+            <div class="toast show bg-warning text-dark" role="alert">
+              <div class="toast-body fw-semibold">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                Last point undone — Score: ${data.our_score}–${data.their_score}
+              </div>
+            </div>`;
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3000);
+          // Reload to get fresh state from server
+          location.reload();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Undo Last Point';
+          alert('Could not undo: ' + data.error);
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Undo Last Point';
+        console.error('Undo error:', err);
+        alert('A network error occurred. Please try again.');
+      });
+    });
+  }
 
   // End point buttons
   document.getElementById('we-scored').addEventListener('click', () => endPoint('scored'));

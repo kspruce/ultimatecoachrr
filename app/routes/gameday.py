@@ -44,18 +44,28 @@ def game_dashboard(game_id):
     if not hasattr(game, 'our_team'):
         game.our_team = "Our Team"
     
-    # Get players assigned to this game — single JOIN instead of two queries
+    team_id = get_current_team_id()
+
+    # Get players assigned to this game via GamePlayer records
     all_game_players = (
         Player.query
         .join(GamePlayer, GamePlayer.player_id == Player.id)
         .filter(
             GamePlayer.game_id == game_id,
-            GamePlayer.team_organization_id == get_current_team_id(),
-            Player.team_organization_id == get_current_team_id(),
+            GamePlayer.team_organization_id == team_id,
+            Player.team_organization_id == team_id,
         )
         .all()
     )
-    
+
+    # Fallback: if no GamePlayer records exist (e.g. game created before auto-assign),
+    # show the full active roster so stat-takers are never left with an empty list.
+    if not all_game_players:
+        all_game_players = Player.query.filter_by(
+            active=True,
+            team_organization_id=team_id
+        ).order_by(Player.jersey_number).all()
+
     # Split players by gender
     mmp_players = [p for p in all_game_players if p.gender == "male"]
     fmp_players = [p for p in all_game_players if p.gender == "female"]
@@ -63,12 +73,12 @@ def game_dashboard(game_id):
     # Get player stats for this game
     player_stats = GameDayPlayerStats.query.filter_by(
         game_id=game_id,
-        team_organization_id=get_current_team_id()
+        team_organization_id=team_id
     ).all()
-    
+
     # Create a dictionary for quick lookup
     stats_dict = {stat.player_id: stat for stat in player_stats}
-    
+
     # Add stats to player objects
     for player in mmp_players + fmp_players:
         if player.id in stats_dict:
@@ -83,18 +93,18 @@ def game_dashboard(game_id):
                 'turns': 0,
                 'plus_minus': 0
             }
-    
+
     # Get saved line templates
     line_templates = LineTemplate.query.filter_by(
-        team_organization_id=get_current_team_id()
+        team_organization_id=team_id
     ).all()
-    
+
     # Calculate next point number — scalar aggregate avoids loading a full row
     max_point_number = db.session.query(
         func.max(Point.point_number)
     ).filter_by(
         game_id=game_id,
-        team_organization_id=get_current_team_id()
+        team_organization_id=team_id
     ).scalar()
     next_point_number = (max_point_number or 0) + 1
     
@@ -317,6 +327,103 @@ def record_point():
             'error': str(e)
         })
 
+
+
+@bp.route('/api/undo-last-point/<int:game_id>', methods=['POST'])
+@login_required
+@stat_taker_required
+def undo_last_point(game_id):
+    """Delete the last recorded point for a game and revert all associated stats and scores."""
+    try:
+        team_id = get_current_team_id()
+        game = Game.query.filter_by(
+            id=game_id, team_organization_id=team_id
+        ).first_or_404()
+
+        # Find the last point for this game
+        last_point = (
+            Point.query
+            .filter_by(game_id=game_id, team_organization_id=team_id)
+            .order_by(Point.point_number.desc())
+            .first()
+        )
+        if not last_point:
+            return jsonify({'success': False, 'error': 'No points to undo'})
+
+        # Snapshot what we need before deletion
+        point_outcome   = last_point.point_outcome
+        point_number    = last_point.point_number
+        line_type       = last_point.our_line_type
+
+        # Gather events and player IDs while the relationships still exist
+        events  = list(last_point.gameday_events)
+        lineups = list(last_point.lineups)
+        player_ids = [lu.player_id for lu in lineups]
+
+        # ── Reverse player stats ──────────────────────────────────────────
+        for player_id in player_ids:
+            stat = GameDayPlayerStats.query.filter_by(
+                player_id=player_id,
+                game_id=game_id,
+                team_organization_id=team_id
+            ).first()
+            if not stat:
+                continue
+
+            stat.points_played = max(0, (stat.points_played or 0) - 1)
+            if line_type == 'O-line':
+                stat.o_points = max(0, (stat.o_points or 0) - 1)
+            else:
+                stat.d_points = max(0, (stat.d_points or 0) - 1)
+
+            for ev in events:
+                if ev.player_id != player_id:
+                    continue
+                t = ev.event_type
+                if t == 'score':
+                    stat.goals      = max(0, (stat.goals or 0) - 1)
+                    stat.plus_minus = (stat.plus_minus or 0) - 1
+                elif t == 'assist':
+                    stat.assists    = max(0, (stat.assists or 0) - 1)
+                    stat.plus_minus = (stat.plus_minus or 0) - 1
+                elif t == 'block':
+                    stat.blocks     = max(0, (stat.blocks or 0) - 1)
+                    stat.plus_minus = (stat.plus_minus or 0) - 1
+                elif t == 'callahan':
+                    stat.goals      = max(0, (stat.goals or 0) - 1)
+                    stat.blocks     = max(0, (stat.blocks or 0) - 1)
+                    stat.callahans  = max(0, (stat.callahans or 0) - 1)
+                    stat.plus_minus = (stat.plus_minus or 0) - 2
+                elif t in ('throwaway', 'drop', 'stall'):
+                    stat.turns      = max(0, (stat.turns or 0) - 1)
+                    stat.plus_minus = (stat.plus_minus or 0) + 1  # un-penalise
+                elif t == 'pull':
+                    stat.pulls = max(0, (stat.pulls or 0) - 1)
+                    if ev.event_result == 'out':
+                        stat.pulls_ob = max(0, (stat.pulls_ob or 0) - 1)
+
+        # ── Revert game score ─────────────────────────────────────────────
+        if point_outcome == 'scored':
+            game.our_score   = max(0, (game.our_score or 0) - 1)
+        elif point_outcome == 'conceded':
+            game.their_score = max(0, (game.their_score or 0) - 1)
+
+        # ── Delete point (cascades to GameDayEvents + LineUps) ────────────
+        db.session.delete(last_point)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'our_score':        game.our_score,
+            'their_score':      game.their_score,
+            'next_point_number': point_number,   # the deleted point number is now free
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @bp.route('/api/line-template/save', methods=['POST'])
