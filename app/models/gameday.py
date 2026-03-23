@@ -31,6 +31,7 @@ class GameDayEvent(db.Model):
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)  # Nullable for possession changes
     event_type = db.Column(db.String(20), nullable=False)  # catch, drop, score, throwaway, stall, block, pickup, callahan, assist, pull
     event_result = db.Column(db.String(20), nullable=True)  # For pulls: in/out
+    hang_time = db.Column(db.Float, nullable=True)  # Pull hang time in seconds
     sequence = db.Column(db.Integer, nullable=False)  # Order of events within a point
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
@@ -55,6 +56,7 @@ class GameDayPlayerStats(db.Model):
     turns = db.Column(db.Integer, default=0)  # Combined throwaways, drops, stalls
     pulls = db.Column(db.Integer, default=0)
     pulls_ob = db.Column(db.Integer, default=0)
+    total_hang_time = db.Column(db.Float, default=0.0)  # Total pull hang time in seconds
     callahans = db.Column(db.Integer, default=0)
     plus_minus = db.Column(db.Integer, default=0)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))

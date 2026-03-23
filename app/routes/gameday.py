@@ -210,6 +210,7 @@ def record_point():
                 player_id=player_id,
                 event_type=event['type'],
                 event_result=event.get('result'),
+                hang_time=event.get('hang_time'),  # pull hang time in seconds
                 sequence=sequence,
                 team_organization_id=team_id  # Add team ID
             )
@@ -259,6 +260,7 @@ def record_point():
                     callahans=0,
                     pulls=0,
                     pulls_ob=0,
+                    total_hang_time=0.0,
                     team_organization_id=team_id  # Add team ID
                 )
                 db.session.add(player_stat)
@@ -275,6 +277,7 @@ def record_point():
             if player_stat.callahans is None: player_stat.callahans = 0
             if player_stat.pulls is None: player_stat.pulls = 0
             if player_stat.pulls_ob is None: player_stat.pulls_ob = 0
+            if player_stat.total_hang_time is None: player_stat.total_hang_time = 0.0
             
             # Update points played
             player_stat.points_played += 1
@@ -308,6 +311,8 @@ def record_point():
                         player_stat.pulls += 1
                         if event.get('result') == 'out':
                             player_stat.pulls_ob += 1
+                        if event.get('hang_time') is not None:
+                            player_stat.total_hang_time = (player_stat.total_hang_time or 0.0) + event['hang_time']
         
         db.session.commit()
         
@@ -401,6 +406,8 @@ def undo_last_point(game_id):
                     stat.pulls = max(0, (stat.pulls or 0) - 1)
                     if ev.event_result == 'out':
                         stat.pulls_ob = max(0, (stat.pulls_ob or 0) - 1)
+                    if ev.hang_time is not None:
+                        stat.total_hang_time = max(0.0, (stat.total_hang_time or 0.0) - ev.hang_time)
 
         # ── Revert game score ─────────────────────────────────────────────
         if point_outcome == 'scored':
@@ -672,7 +679,16 @@ def game_stats(game_id):
         team_organization_id=team_id
     ).order_by(Point.point_number).all()
     
+    # Attach per-player avg hang time
+    for stat in player_stats:
+        if stat.pulls and stat.pulls > 0 and stat.total_hang_time:
+            stat.avg_hang_time = round(stat.total_hang_time / stat.pulls, 1)
+        else:
+            stat.avg_hang_time = None
+
     # Calculate team totals
+    total_pulls = sum(stat.pulls or 0 for stat in player_stats)
+    total_hang = sum(stat.total_hang_time or 0.0 for stat in player_stats)
     team_totals = {
         'goals': sum(stat.goals for stat in player_stats),
         'assists': sum(stat.assists for stat in player_stats),
@@ -680,8 +696,9 @@ def game_stats(game_id):
         'turns': sum(stat.turns for stat in player_stats),
         'plus_minus': sum(stat.plus_minus for stat in player_stats),
         'callahans': sum(stat.callahans for stat in player_stats),
-        'pulls': sum(stat.pulls for stat in player_stats),
-        'pulls_ob': sum(stat.pulls_ob for stat in player_stats),
+        'pulls': total_pulls,
+        'pulls_ob': sum(stat.pulls_ob or 0 for stat in player_stats),
+        'avg_hang_time': round(total_hang / total_pulls, 1) if total_pulls > 0 else None,
     }
     
     # Calculate efficiency metrics

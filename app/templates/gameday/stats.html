@@ -89,7 +89,13 @@
                 </tr>
                 <tr>
                   <th>Pulls:</th>
-                  <td>{{ team_totals.pulls }} ({{ team_totals.pulls_ob }} OB)</td>
+                  <td>
+                    {{ team_totals.pulls }}
+                    ({{ team_totals.pulls - team_totals.pulls_ob }} IB / {{ team_totals.pulls_ob }} OB)
+                    {% if team_totals.avg_hang_time is not none %}
+                      — avg {{ team_totals.avg_hang_time }}s hang
+                    {% endif %}
+                  </td>
                 </tr>
                 <tr>
                   <th>Completion Rate:</th>
@@ -130,6 +136,8 @@
                   <th data-sort="number">Assists</th>
                   <th data-sort="number">Blocks</th>
                   <th data-sort="number">Turns</th>
+                  <th data-sort="number">Pulls</th>
+                  <th data-sort="number">Avg Hang</th>
                   <th data-sort="number">+/-</th>
                 </tr>
               </thead>
@@ -145,6 +153,17 @@
                   <td>{{ stat.assists }}</td>
                   <td>{{ stat.blocks }}</td>
                   <td>{{ stat.turns }}</td>
+                  <td>
+                    {% if stat.pulls %}
+                      {{ stat.pulls }}
+                      <small class="text-muted">({{ stat.pulls - (stat.pulls_ob or 0) }}IB/{{ stat.pulls_ob or 0 }}OB)</small>
+                    {% else %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if stat.avg_hang_time is not none %}
+                      {{ stat.avg_hang_time }}s
+                    {% else %}—{% endif %}
+                  </td>
                   <td class="{{ 'text-success' if stat.plus_minus > 0 else 'text-danger' if stat.plus_minus < 0 else '' }}">
                     {{ stat.plus_minus }}
                   </td>

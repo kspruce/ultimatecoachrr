@@ -243,14 +243,22 @@
           <!-- Pull Section (Only for D-Line) -->
           <div id="pull-section" class="mb-3" style="display: none;">
             <h6>Pull</h6>
-            <div class="d-flex">
-              <select class="form-select me-2" id="puller">
+            <!-- Step 1: select puller + launch -->
+            <div class="mb-2 d-flex align-items-center gap-2 flex-wrap">
+              <select class="form-select" id="puller" style="max-width: 230px;">
                 <option value="">Select Puller</option>
                 <!-- Options will be populated with selected players -->
               </select>
+              <button class="btn btn-secondary" id="pull-launch">
+                <i class="bi bi-send"></i> Pull!
+              </button>
+            </div>
+            <!-- Step 2: live hang-time + IB / OB (shown after Pull! is tapped) -->
+            <div id="pull-timer-section" style="display: none;" class="d-flex align-items-center gap-3">
+              <div class="fs-3 fw-bold text-primary font-monospace" id="pull-timer-display">0.0s</div>
               <div class="btn-group" role="group">
-                <button class="btn btn-outline-success" id="pull-in">In</button>
-                <button class="btn btn-outline-danger" id="pull-out">Out</button>
+                <button class="btn btn-outline-success fw-bold" id="pull-ib">IB</button>
+                <button class="btn btn-outline-danger fw-bold" id="pull-ob">OB</button>
               </div>
             </div>
           </div>
@@ -480,7 +488,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedPlayers = [];
   let pointEvents = [];
   let lastThrower = null;
-  let discHolder = null;  // player_id of the player currently holding the disc
+  let discHolder = null;       // player_id of the player currently holding the disc
+  let pullStartTime = null;    // Date.now() when Pull! was tapped
+  let pullTimerInterval = null; // setInterval handle for hang-time display
 
   // Make player cards clickable
   document.querySelectorAll('.player-card').forEach(card => {
@@ -591,7 +601,12 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'pickup': eventText = `${event.player_name} picked up the disc`; eventElement.className += ' text-primary'; break;
       case 'callahan': eventText = `${event.player_name} scored a Callahan!`; eventElement.className += ' text-success fw-bold'; break;
       case 'assist': eventText = `${event.player_name} threw an assist`; eventElement.className += ' text-success'; break;
-      case 'pull': eventText = `${event.player_name} pulled (${event.result})`; eventElement.className += ' text-secondary'; break;
+      case 'pull': {
+        const hangStr = event.hang_time != null ? ` — ${event.hang_time.toFixed(1)}s` : '';
+        eventText = `${event.player_name} pulled (${event.result}${hangStr})`;
+        eventElement.className += ' text-secondary';
+        break;
+      }
       case 'possession_change': eventText = event.description; eventElement.className += ' text-info fst-italic'; break;
       case 'timeout': eventText = `Timeout called (${event.timeout_type})`; if (event.notes) eventText += `: ${event.notes}`; eventElement.className += ' text-warning'; break;
       case 'substitution': eventText = `Sub: ${event.player_out_name} → ${event.player_in_name}`; eventElement.className += ' text-info'; break;
@@ -869,6 +884,13 @@ document.addEventListener('DOMContentLoaded', function() {
     pointEvents = [];
     lastThrower = null;
     discHolder  = null;
+    // Reset pull stopwatch state
+    clearInterval(pullTimerInterval);
+    pullTimerInterval = null;
+    pullStartTime = null;
+    document.getElementById('pull-timer-section').style.display = 'none';
+    document.getElementById('pull-launch').disabled = false;
+    document.getElementById('pull-timer-display').textContent = '0.0s';
   });
 
   // Event buttons
@@ -1030,16 +1052,49 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('we-scored').addEventListener('click', () => endPoint('scored'));
   document.getElementById('they-scored').addEventListener('click', () => endPoint('conceded'));
 
-  // Pull buttons
-  document.querySelectorAll('#pull-in, #pull-out').forEach(button => {
+  // Pull section — stopwatch flow
+  document.getElementById('pull-launch').addEventListener('click', function() {
+    const pullerId = document.getElementById('puller').value;
+    if (!pullerId) { alert('Please select a puller first'); return; }
+    // Start stopwatch
+    pullStartTime = Date.now();
+    document.getElementById('pull-timer-display').textContent = '0.0s';
+    document.getElementById('pull-timer-section').style.display = 'flex';
+    this.disabled = true;
+    clearInterval(pullTimerInterval);
+    pullTimerInterval = setInterval(() => {
+      const elapsed = (Date.now() - pullStartTime) / 1000;
+      document.getElementById('pull-timer-display').textContent = elapsed.toFixed(1) + 's';
+    }, 100);
+  });
+
+  document.querySelectorAll('#pull-ib, #pull-ob').forEach(button => {
     button.addEventListener('click', function() {
+      // Stop timer
+      clearInterval(pullTimerInterval);
+      pullTimerInterval = null;
+      const hangTime = pullStartTime !== null ? (Date.now() - pullStartTime) / 1000 : null;
+      pullStartTime = null;
+
       const pullerId = document.getElementById('puller').value;
-      if (!pullerId) { alert('Please select a puller'); return; }
       const puller = selectedPlayers.find(p => p.id === pullerId);
-      const event = { type: 'pull', result: this.id === 'pull-in' ? 'in' : 'out', player_id: pullerId, player_name: puller ? `#${puller.jersey} ${puller.name}` : 'Unknown', timestamp: new Date().toISOString() };
+      const result = this.id === 'pull-ib' ? 'in' : 'out';
+      const event = {
+        type: 'pull',
+        result: result,
+        hang_time: hangTime,
+        player_id: pullerId,
+        player_name: puller ? `#${puller.jersey} ${puller.name}` : 'Unknown',
+        timestamp: new Date().toISOString()
+      };
       pointEvents.push(event);
       addEventToLog(event);
+
+      // Hide pull section and reset for next use
       document.getElementById('pull-section').style.display = 'none';
+      document.getElementById('pull-timer-section').style.display = 'none';
+      document.getElementById('pull-launch').disabled = false;
+      document.getElementById('pull-timer-display').textContent = '0.0s';
     });
   });
 
