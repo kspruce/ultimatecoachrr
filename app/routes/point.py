@@ -385,13 +385,6 @@ def add_point(game_id):
         point.our_score_before = current_our_score
         point.their_score_before = current_their_score
 
-        # Use current game score as source of truth
-        current_our_score = game.our_score or 0
-        current_their_score = game.their_score or 0
-
-        point.our_score_before = current_our_score
-        point.their_score_before = current_their_score
-
         if form.point_outcome.data == 'scored':
             point.our_score_after = current_our_score + 1
             point.their_score_after = current_their_score

@@ -29,8 +29,10 @@ def coach_required(f):
 def stat_taker_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Admins, coaches, captains, and stat_takers all have access.
+        # Players and guests do not.
         if not current_user.is_stat_taker:
-            flash('You need stat taker privileges to access this page.', 'danger')
+            flash('You need at least stat taker privileges to access this page.', 'danger')
             return redirect(url_for('main.index'))
         return f(*args, **kwargs)
     return decorated_function

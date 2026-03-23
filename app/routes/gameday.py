@@ -176,11 +176,12 @@ def record_point():
         # Process events
         sequence = 0
         for event in events:
-            sequence += 1
-            
-            # Skip possession changes and point outcomes
+            # Skip possession changes and point outcomes before incrementing
+            # sequence, so stored events always have contiguous numbering
             if event['type'] in ['possession_change', 'point_outcome']:
                 continue
+
+            sequence += 1
                 
             # Verify player belongs to current team if player_id is provided
             player_id = event.get('player_id')
@@ -204,15 +205,15 @@ def record_point():
             )
             db.session.add(gameday_event)
         
-        # Update game score
+        # Update game score — guard against NULL values in legacy records
+        game.our_score = game.our_score or 0
+        game.their_score = game.their_score or 0
         if outcome == 'scored':
             game.our_score += 1
-            point.our_score_after = game.our_score
-            point.their_score_after = game.their_score
         else:
             game.their_score += 1
-            point.our_score_after = game.our_score
-            point.their_score_after = game.their_score
+        point.our_score_after = game.our_score
+        point.their_score_after = game.their_score
         
         # Update player stats
         for player_id in players:

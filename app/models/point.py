@@ -37,6 +37,8 @@ class Point(db.Model):
         db.Index('idx_point_game', 'game_id'),
         db.Index('idx_point_line_type', 'our_line_type'),
         db.Index('idx_point_outcome', 'point_outcome'),
+        db.UniqueConstraint('game_id', 'point_number', 'team_organization_id',
+                            name='uq_game_point_number_team'),
     )
 
     def __repr__(self):

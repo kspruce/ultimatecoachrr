@@ -71,6 +71,12 @@ class User(UserMixin, db.Model):
     def is_coach(self):
         return self.role == "coach" or self.is_admin
 
+    @property
+    def is_stat_taker(self):
+        """True for stat_taker, captain, coach, and admin — anyone at or
+        above the stat_taker level in the role hierarchy."""
+        return self.role_level() >= ROLE_ORDER["stat_taker"]
+
     # Convenience helpers (do NOT reintroduce an is_admin property)
     def role_level(self) -> int:
         return ROLE_ORDER.get(self.role or "player", 1)

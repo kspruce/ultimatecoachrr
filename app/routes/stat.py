@@ -96,11 +96,16 @@ def record_events(point_id):
                     Event.team_organization_id == get_current_team_id()
                 ).order_by(Event.id.desc()).limit(2).all()
 
-                if previous_events:
+                # Only promote events that are valid precursors to a goal
+                # (catch or pickup). Blocks, drops, throwaways etc. should
+                # never be silently retyped as assists.
+                ASSISTABLE = ('catch', 'pickup')
+
+                if previous_events and previous_events[0].event_type in ASSISTABLE:
                     # Mark first previous event as assist
                     assist_event = previous_events[0]
                     assist_event.event_type = 'assist'
-                    
+
                     # Create throw for the assist
                     assist_throw = Throw(
                         point_id=point_id,
@@ -115,17 +120,18 @@ def record_events(point_id):
                         throw_type='assist',
                         is_completion=True,
                         break_throw=is_break_throw(
-                            assist_event.field_position_x, 
+                            assist_event.field_position_x,
                             assist_event.field_position_y,
                             event.field_position_x,
                             event.field_position_y
                         ),
-                        team_organization_id=get_current_team_id()  # Add team ID
+                        team_organization_id=get_current_team_id()
                     )
                     db.session.add(assist_throw)
 
-                    # If there's a second previous event, mark it as hockey assist
-                    if len(previous_events) >= 2:
+                    # If there's a second previous event of a valid type,
+                    # mark it as hockey assist
+                    if len(previous_events) >= 2 and previous_events[1].event_type in ASSISTABLE:
                         hockey_assist_event = previous_events[1]
                         hockey_assist_event.event_type = 'hockey_assist'
                         
@@ -196,8 +202,8 @@ def record_events(point_id):
                     point_id=point_id,
                     thrower_id=event.player_id,
                     receiver_id=None,
-                    throwing_event_id=previous_event.id,
-                    receiving_event_id=event.id,
+                    throwing_event_id=event.id,       # the throwaway IS the throw
+                    receiving_event_id=None,           # no receiver on a throwaway
                     x_start=previous_event.field_position_x,
                     y_start=previous_event.field_position_y,
                     x_end=event.field_position_x,
@@ -210,7 +216,7 @@ def record_events(point_id):
                         event.field_position_x,
                         event.field_position_y
                     ),
-                    team_organization_id=get_current_team_id()  # Add team ID
+                    team_organization_id=get_current_team_id()
                 )
                 db.session.add(throwaway)
 
@@ -249,13 +255,21 @@ def record_events(point_id):
                 elif event.event_type == 'scored_on':
                     stats.d_line_plus_minus -= 1
 
-            # Update point status for point-ending events
+            # Update point status for point-ending events and keep the
+            # game-level score in sync so the scoreboard stays correct
+            # even when the point outcome is determined via event recording.
             if event.event_type in ['goal', 'callahan']:
                 point.point_outcome = 'scored'
                 point.our_score_after = point.our_score_before + 1
+                point.their_score_after = point.their_score_before
+                point.game.our_score = point.our_score_after
+                point.game.their_score = point.their_score_after
             elif event.event_type == 'scored_on':
                 point.point_outcome = 'conceded'
                 point.their_score_after = point.their_score_before + 1
+                point.our_score_after = point.our_score_before
+                point.game.our_score = point.our_score_after
+                point.game.their_score = point.their_score_after
 
             # Calculate distances for throws
             for throw in db.session.new:
@@ -266,7 +280,7 @@ def record_events(point_id):
             return jsonify(event.to_dict()), 201
 
         except Exception as e:
-            current_app.logger.error("Error recording event:", str(e))
+            current_app.logger.error("Error recording event: %s", str(e))
             db.session.rollback()
             return jsonify({'error': str(e)}), 400
 
@@ -289,9 +303,26 @@ def undo_event(point_id):
         ).order_by(Event.id.desc()).first()
 
         if last_event:
+            # If undoing a goal, restore the two events before it that were
+            # silently retyped to 'assist' / 'hockey_assist' when the goal
+            # was recorded — put them back to 'catch' so their stats remain
+            # correct and a re-recorded goal will promote them cleanly.
+            if last_event.event_type == 'goal':
+                prior_events = Event.query.filter(
+                    Event.point_id == point_id,
+                    Event.id < last_event.id,
+                    Event.team_organization_id == get_current_team_id()
+                ).order_by(Event.id.desc()).limit(2).all()
+
+                if prior_events:
+                    if prior_events[0].event_type == 'assist':
+                        prior_events[0].event_type = 'catch'
+                    if len(prior_events) >= 2 and prior_events[1].event_type == 'hockey_assist':
+                        prior_events[1].event_type = 'catch'
+
             # First, delete any throws associated with this event
             from app.models.throws import Throw
-            
+
             # Delete throws where this event is the receiving event
             throws_received = Throw.query.filter_by(
                 receiving_event_id=last_event.id,
@@ -299,7 +330,7 @@ def undo_event(point_id):
             ).all()
             for throw in throws_received:
                 db.session.delete(throw)
-                
+
             # Delete throws where this event is the throwing event
             throws_thrown = Throw.query.filter_by(
                 throwing_event_id=last_event.id,
@@ -307,17 +338,19 @@ def undo_event(point_id):
             ).all()
             for throw in throws_thrown:
                 db.session.delete(throw)
-            
+
             # Now delete the event itself
             db.session.delete(last_event)
 
-            # Update point if necessary
+            # Update point outcome and keep game score in sync
             if last_event.event_type == 'goal':
-                point.point_outcome = None  # Reset outcome
+                point.point_outcome = None
                 point.our_score_after = point.our_score_before
+                point.game.our_score = point.our_score_before
             elif last_event.event_type == 'scored_on':
                 point.point_outcome = None
                 point.their_score_after = point.their_score_before
+                point.game.their_score = point.their_score_before
             
             # Don't try to update point.is_offensive as it doesn't exist
             # The client-side code will handle possession state
@@ -353,7 +386,7 @@ def undo_event(point_id):
 
     except Exception as e:
         import traceback
-        current_app.logger.error("Error in undo_event:", str(e))
+        current_app.logger.error("Error in undo_event: %s", str(e))
         current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
