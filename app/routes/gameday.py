@@ -13,6 +13,24 @@ from app.utils.utils import admin_required, coach_required, stat_taker_required
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 
 
+@bp.route('/')
+@login_required
+@stat_taker_required
+def index():
+    """Stat-recording hub: pick a game, then choose Game Day or Positional Analysis mode."""
+    from app.utils.team_filter import get_current_team_id
+    from sqlalchemy import desc
+    from datetime import date
+    games = (
+        Game.query
+        .filter_by(team_organization_id=get_current_team_id())
+        .order_by(desc(Game.date), desc(Game.id))
+        .limit(30)
+        .all()
+    )
+    return render_template('gameday/index.html', games=games, today=date.today())
+
+
 @bp.route('/game/<int:game_id>')
 @login_required
 @stat_taker_required

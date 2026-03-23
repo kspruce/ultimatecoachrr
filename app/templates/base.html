@@ -332,6 +332,7 @@
 {% set in_theory   = ep.startswith('theory.') %}
 {% set in_stats    = ep.startswith('stats_dashboard.') %}
 {% set in_clips    = ep.startswith('clip.') %}
+{% set in_record   = ep.startswith('gameday.') or ep == 'point.game_points' %}
 {# Shortcut for feature settings #}
 {% set ts = current_team.settings if (current_team and current_team.settings) else none %}
 
@@ -376,6 +377,15 @@
           <i class="bi bi-house-fill"></i> Home
         </a>
       </li>
+
+      {# Record Stats #}
+      {% if current_user.is_authenticated %}
+      <li class="nav-item {% if in_record %}uc-active{% endif %}">
+        <a class="nav-link" href="{{ url_for('gameday.index') }}">
+          <i class="bi bi-lightning-charge-fill"></i> Record
+        </a>
+      </li>
+      {% endif %}
 
       {# Club #}
       <li class="nav-item dropdown {% if in_club %}uc-active{% endif %}">

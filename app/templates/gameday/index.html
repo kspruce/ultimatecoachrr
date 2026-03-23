@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+.record-mode-card {
+  border: 2px solid var(--uc-card-border);
+  border-radius: var(--uc-radius);
+  background: var(--uc-card-bg);
+  transition: border-color .15s, box-shadow .15s;
+}
+.record-mode-card:hover {
+  border-color: var(--uc-blue);
+  box-shadow: var(--uc-shadow-md);
+}
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-radius: 50px;
+  padding: .22rem .65rem;
+}
+.mode-pill.gameday  { background: rgba(16,185,129,.12); color: #059669; }
+.mode-pill.analysis { background: rgba(99,102,241,.12);  color: #4F46E5; }
+[data-theme="dark"] .mode-pill.gameday  { background: rgba(16,185,129,.2); color: #34D399; }
+[data-theme="dark"] .mode-pill.analysis { background: rgba(99,102,241,.2); color: #A5B4FC; }
+
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .9rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--uc-card-border);
+  background: var(--uc-card-bg);
+  margin-bottom: .6rem;
+  transition: border-color .15s, box-shadow .15s;
+}
+.game-row:hover {
+  border-color: rgba(59,130,246,.35);
+  box-shadow: var(--uc-shadow-sm);
+}
+.game-score {
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--uc-page-text);
+}
+.game-meta {
+  font-size: .78rem;
+  color: var(--uc-gray-400);
+  margin-top: .1rem;
+}
+.game-actions {
+  margin-left: auto;
+  display: flex;
+  gap: .5rem;
+  flex-shrink: 0;
+}
+.btn-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: .38rem .8rem;
+  border: 1.5px solid;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.btn-mode.gameday {
+  border-color: #10B981;
+  color: #059669;
+  background: rgba(16,185,129,.08);
+}
+.btn-mode.gameday:hover {
+  background: #10B981;
+  color: white;
+}
+.btn-mode.analysis {
+  border-color: #6366F1;
+  color: #4F46E5;
+  background: rgba(99,102,241,.08);
+}
+.btn-mode.analysis:hover {
+  background: #6366F1;
+  color: white;
+}
+[data-theme="dark"] .btn-mode.gameday  { color: #34D399; border-color: #34D399; background: rgba(52,211,153,.08); }
+[data-theme="dark"] .btn-mode.gameday:hover  { background: #10B981; color: white; }
+[data-theme="dark"] .btn-mode.analysis { color: #A5B4FC; border-color: #818CF8; background: rgba(165,180,252,.08); }
+[data-theme="dark"] .btn-mode.analysis:hover { background: #6366F1; color: white; }
+
+.section-label {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--uc-gray-400);
+  margin: 1.5rem 0 .6rem;
+}
+.result-bar {
+  width: 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 36px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Page header ───────────────────────────────────────────── #}
+<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+  <div>
+    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.25rem">Record Stats</h1>
+    <p style="color:var(--uc-gray-400);margin:0;font-size:.9rem">
+      Select a game, then choose how you want to record.
+    </p>
+  </div>
+  <a href="{{ url_for('game.add') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2">
+    <i class="bi bi-plus-lg"></i> New Game
+  </a>
+</div>
+
+{# ── Mode explanation cards ─────────────────────────────────── #}
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="record-mode-card p-3 h-100">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,.12);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:#10B981;flex-shrink:0">
+          <i class="bi bi-lightning-charge-fill"></i>
+        </div>
+        <span class="mode-pill gameday"><i class="bi bi-controller"></i> Game Day Mode</span>
+      </div>
+      <p style="font-size:.83rem;color:var(--uc-gray-400);margin:0">
+        Fast, tap-to-record for live sideline use. Capture lines, scores, goals, assists and blocks point-by-point in real time.
+      </p>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="record-mode-card p-3 h-100">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:#6366F1;flex-shrink:0">
+          <i class="bi bi-camera-video-fill"></i>
+        </div>
+        <span class="mode-pill analysis"><i class="bi bi-map"></i> Positional Analysis</span>
+      </div>
+      <p style="font-size:.83rem;color:var(--uc-gray-400);margin:0">
+        Detailed event-by-event entry from footage. Record field positions, throw types, hockey assists and granular movement data.
+      </p>
+    </div>
+  </div>
+</div>
+
+{# ── Game list ─────────────────────────────────────────────── #}
+{% if games %}
+
+<p class="section-label"><i class="bi bi-clock-history me-1"></i>Recent Games</p>
+
+{% for game in games %}
+<div class="game-row">
+
+  {# Win / loss / neutral bar #}
+  {% if game.our_score is not none and game.their_score is not none %}
+    {% if game.our_score > game.their_score %}
+      <div class="result-bar" style="background:#10B981" title="Win"></div>
+    {% elif game.our_score < game.their_score %}
+      <div class="result-bar" style="background:#EF4444" title="Loss"></div>
+    {% else %}
+      <div class="result-bar" style="background:#9CA3AF" title="Draw"></div>
+    {% endif %}
+  {% else %}
+    <div class="result-bar" style="background:#E5E7EB"></div>
+  {% endif %}
+
+  {# Game details #}
+  <div style="min-width:0;flex:1">
+    <div class="game-score">
+      vs {{ game.opponent }}
+      {% if game.our_score is not none and game.their_score is not none %}
+      <span style="font-weight:500;color:var(--uc-gray-400);font-size:.82rem">
+        &nbsp;{{ game.our_score }}–{{ game.their_score }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="game-meta">
+      {% if game.date %}
+        <i class="bi bi-calendar2 me-1"></i>{{ game.date.strftime('%d %b %Y') }}
+      {% endif %}
+      {% if game.tournament %}
+        <span class="ms-2"><i class="bi bi-trophy me-1"></i>{{ game.tournament.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Mode buttons #}
+  <div class="game-actions">
+    <a href="{{ url_for('gameday.game_dashboard', game_id=game.id) }}"
+       class="btn-mode gameday"
+       title="Game Day Mode — live sideline stat entry">
+      <i class="bi bi-lightning-charge-fill"></i>
+      <span class="d-none d-sm-inline">Game Day</span>
+    </a>
+    <a href="{{ url_for('point.game_points', game_id=game.id) }}"
+       class="btn-mode analysis"
+       title="Positional Analysis — detailed entry from footage">
+      <i class="bi bi-camera-video-fill"></i>
+      <span class="d-none d-sm-inline">Analysis</span>
+    </a>
+  </div>
+
+</div>
+{% endfor %}
+
+{% else %}
+<div class="uc-empty">
+  <div class="uc-empty-icon"><i class="bi bi-controller"></i></div>
+  <h5>No games yet</h5>
+  <p>Create your first game to start recording stats.</p>
+  <a href="{{ url_for('game.add') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Add Game
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
