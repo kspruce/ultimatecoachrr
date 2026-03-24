@@ -10,6 +10,7 @@ from app.forms.game import GameForm, GameFilterForm
 from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Event, Pull
+from app.models.gameday import GameDayPlayerStats
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
@@ -91,18 +92,48 @@ def detail(game_id):
     )
 
     # Fall back to the first-point lineup if no GamePlayer records exist
+    # Fix: use class-bound attributes for joinedload (SQLAlchemy 2.x requires this)
     if not game_players and game.points.count() > 0:
-        first_point = game.points.options(joinedload('lineups').joinedload('player')).first()
-        game_players = [
-            lu.player for lu in first_point.lineups
-            if lu.player and lu.player.team_organization_id == get_current_team_id()
-        ]
+        first_point = game.points.options(
+            joinedload(Point.lineups).joinedload(LineUp.player)
+        ).first()
+        if first_point:
+            game_players = [
+                lu.player for lu in first_point.lineups
+                if lu.player and lu.player.team_organization_id == get_current_team_id()
+            ]
 
-    return render_template('game/detail.html', 
-                         game=game, 
-                         all_players=all_players, 
+    team_id = get_current_team_id()
+
+    # ── Gameday stats fallback ────────────────────────────────────────────
+    # Check if positional analysis events exist for this game
+    has_positional_stats = db.session.query(Event.id)\
+        .join(Point, Event.point_id == Point.id)\
+        .filter(Point.game_id == game_id)\
+        .limit(1).scalar() is not None
+
+    # Always fetch gameday stats — shown as fallback when no positional data
+    gameday_stats_raw = GameDayPlayerStats.query.filter_by(
+        game_id=game_id,
+        team_organization_id=team_id
+    ).all()
+
+    # Attach player details and sort by plus_minus descending
+    for stat in gameday_stats_raw:
+        stat.player_details = db.session.get(Player, stat.player_id)
+    gameday_stats = sorted(
+        [s for s in gameday_stats_raw if s.player_details],
+        key=lambda s: (s.plus_minus or 0),
+        reverse=True
+    )
+
+    return render_template('game/detail.html',
+                         game=game,
+                         all_players=all_players,
                          game_players=game_players,
-                         delete_form=delete_form)
+                         delete_form=delete_form,
+                         gameday_stats=gameday_stats,
+                         has_positional_stats=has_positional_stats)
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
