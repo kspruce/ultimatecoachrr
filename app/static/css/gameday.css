@@ -145,6 +145,11 @@
 }
 
 /* ─── Gameday card headers ──────────────────────────────── */
+/*
+ * Use CSS variable tokens rather than the inverted --uc-gray-800 trick.
+ * --uc-gray-50  light mode: #F9FAFB  dark mode: #111827  (slightly off the card bg)
+ * --uc-page-text is always readable on top of --uc-gray-50 in both modes.
+ */
 .gd-header {
   padding: 13px 16px;
   border-bottom: 1px solid var(--uc-card-border);
@@ -152,15 +157,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--uc-gray-800);
-  color: #fff;
+  background: var(--uc-gray-50);
+  color: var(--uc-page-text);
 }
 
-[data-theme="dark"] .gd-header {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--uc-page-text);
-  border-bottom-color: var(--uc-card-border);
-}
+/* No dark-mode override needed — the variables handle it automatically. */
 
 .gd-header-title {
   font-size: 0.95rem;
@@ -171,21 +172,16 @@
   gap: 8px;
 }
 
-/* Score badge inside header */
+/* Score badge inside header — uses page-text tinted background */
 .gd-score-badge {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: var(--uc-card-border);
+  color: var(--uc-page-text);
   padding: 3px 12px;
   border-radius: 20px;
   font-weight: 700;
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-}
-
-[data-theme="dark"] .gd-score-badge {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--uc-gray-200);
 }
 
 /* ─── Pull section ──────────────────────────────────────── */
