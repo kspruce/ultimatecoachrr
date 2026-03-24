@@ -656,29 +656,34 @@ def handle_error(e):
 def game_stats(game_id):
     # Get current team ID
     team_id = get_current_team_id()
-    
+
     # Get the game
     game = Game.query.filter_by(
         id=game_id,
         team_organization_id=team_id
     ).first_or_404()
-    
+
+    # Attach team name for display (Game model has no our_team attribute)
+    from app.models.team_organization import TeamOrganization
+    team_org = db.session.get(TeamOrganization, team_id)
+    game.our_team = team_org.name if team_org else "Our Team"
+
     # Get all player stats for this game
     player_stats = GameDayPlayerStats.query.filter_by(
         game_id=game_id,
         team_organization_id=team_id
     ).all()
-    
+
     # Get player details for each stat
     for stat in player_stats:
-        stat.player_details = Player.query.get(stat.player_id)
-    
+        stat.player_details = db.session.get(Player, stat.player_id)
+
     # Get points for this game
     points = Point.query.filter_by(
         game_id=game_id,
         team_organization_id=team_id
     ).order_by(Point.point_number).all()
-    
+
     # Attach per-player avg hang time
     for stat in player_stats:
         if stat.pulls and stat.pulls > 0 and stat.total_hang_time:
@@ -700,22 +705,74 @@ def game_stats(game_id):
         'pulls_ob': sum(stat.pulls_ob or 0 for stat in player_stats),
         'avg_hang_time': round(total_hang / total_pulls, 1) if total_pulls > 0 else None,
     }
-    
+
     # Calculate efficiency metrics
     if team_totals['goals'] > 0:
         team_totals['completion_rate'] = round(
-            (team_totals['goals'] + team_totals['assists']) / 
+            (team_totals['goals'] + team_totals['assists']) /
             (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) * 100, 1
         ) if (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) > 0 else 0
     else:
         team_totals['completion_rate'] = 0
-    
+
+    # ── Tournament stats (points played + +/- across all games in the tournament) ──
+    tournament_stats = None
+    if game.tournament_id:
+        # Get all game IDs in this tournament for the current team
+        tournament_game_ids = [
+            g.id for g in Game.query.filter_by(
+                tournament_id=game.tournament_id,
+                team_organization_id=team_id
+            ).all()
+        ]
+
+        # Aggregate GameDayPlayerStats across all tournament games
+        all_t_stats = GameDayPlayerStats.query.filter(
+            GameDayPlayerStats.game_id.in_(tournament_game_ids),
+            GameDayPlayerStats.team_organization_id == team_id
+        ).all()
+
+        # Sum by player
+        t_by_player = {}
+        for s in all_t_stats:
+            pid = s.player_id
+            if pid not in t_by_player:
+                t_by_player[pid] = {
+                    'player_id': pid,
+                    'games_played': 0,
+                    'points_played': 0,
+                    'plus_minus': 0,
+                }
+            t_by_player[pid]['games_played'] += 1
+            t_by_player[pid]['points_played'] += s.points_played or 0
+            t_by_player[pid]['plus_minus']    += s.plus_minus    or 0
+
+        # Attach player details; use same player_details objects as game stats for linking
+        player_lookup = {s.player_details.id: s.player_details
+                         for s in player_stats if s.player_details}
+
+        tournament_rows = []
+        for pid, agg in t_by_player.items():
+            player_obj = player_lookup.get(pid) or db.session.get(Player, pid)
+            if player_obj and player_obj.team_organization_id == team_id:
+                agg['player_details'] = player_obj
+                tournament_rows.append(agg)
+
+        # Sort: most points played first, then by +/- descending
+        tournament_rows.sort(key=lambda r: (-r['points_played'], -r['plus_minus']))
+        tournament_stats = {
+            'rows': tournament_rows,
+            'tournament': game.tournament,
+            'game_count': len(tournament_game_ids),
+        }
+
     return render_template(
         'gameday/stats.html',
         game=game,
         player_stats=player_stats,
         team_totals=team_totals,
-        points=points
+        points=points,
+        tournament_stats=tournament_stats,
     )
 
 @bp.route('/team-stats')

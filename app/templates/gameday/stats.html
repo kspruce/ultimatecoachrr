@@ -199,6 +199,61 @@
     </div>
   </div>
 
+  <!-- Tournament Stats (only shown when game belongs to a tournament) -->
+  {% if tournament_stats %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header gd-header">
+          <h5 class="gd-header-title">
+            <i class="bi bi-trophy" style="opacity:0.7;"></i>
+            {{ tournament_stats.tournament.name }} — Player Totals
+          </h5>
+          <span class="badge rounded-pill" style="background:rgba(255,255,255,0.18); font-size:0.72rem; font-weight:600;">
+            {{ tournament_stats.game_count }} game{{ 's' if tournament_stats.game_count != 1 else '' }}
+          </span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover sortable mb-0" id="tournament-stats-table">
+              <thead>
+                <tr>
+                  <th data-sort="number">#</th>
+                  <th data-sort="string">Player</th>
+                  <th data-sort="number" title="Games played in this tournament">GP</th>
+                  <th data-sort="number" title="Total points played across tournament">Pts</th>
+                  <th data-sort="number" title="Plus/Minus across tournament">+/-</th>
+                  <th data-sort="number" title="Points played in this game">This game</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in tournament_stats.rows %}
+                {% if row.points_played > 0 %}
+                <tr>
+                  <td>{{ row.player_details.jersey_number }}</td>
+                  <td>{{ row.player_details.name }}</td>
+                  <td>{{ row.games_played }}</td>
+                  <td><strong>{{ row.points_played }}</strong></td>
+                  <td class="{{ 'text-success' if row.plus_minus > 0 else 'text-danger' if row.plus_minus < 0 else '' }}">
+                    <strong>{{ '+' if row.plus_minus > 0 else '' }}{{ row.plus_minus }}</strong>
+                  </td>
+                  {# Find this player's stat in the current game for comparison #}
+                  {% set this_game_stat = player_stats | selectattr('player_id', 'equalto', row.player_id) | first %}
+                  <td class="text-muted">
+                    {% if this_game_stat %}{{ this_game_stat.points_played }}{% else %}—{% endif %}
+                  </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Points Summary -->
   <div class="row">
     <div class="col-12">
@@ -245,10 +300,10 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     // Make tables sortable
-    const table = document.getElementById('player-stats-table');
-    if (table) {
-      makeTableSortable(table);
-    }
+    ['player-stats-table', 'tournament-stats-table'].forEach(id => {
+      const t = document.getElementById(id);
+      if (t) makeTableSortable(t);
+    });
   });
 
   function makeTableSortable(table) {
