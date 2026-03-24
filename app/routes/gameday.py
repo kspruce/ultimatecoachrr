@@ -775,6 +775,102 @@ def game_stats(game_id):
         tournament_stats=tournament_stats,
     )
 
+@bp.route('/tournament/<int:tournament_id>/stats')
+@login_required
+@stat_taker_required
+def tournament_stats(tournament_id):
+    """Aggregate Game Day stats across all games in a tournament for the current team."""
+    from app.models.tournament import Tournament
+    team_id = get_current_team_id()
+
+    tournament = Tournament.query.filter_by(
+        id=tournament_id,
+        team_organization_id=team_id
+    ).first_or_404()
+
+    # Games in this tournament for this team
+    games = (
+        Game.query
+        .filter_by(tournament_id=tournament_id, team_organization_id=team_id)
+        .order_by(Game.date.asc())
+        .all()
+    )
+    game_ids = [g.id for g in games]
+
+    # All GameDayPlayerStats rows for these games
+    all_stats = GameDayPlayerStats.query.filter(
+        GameDayPlayerStats.game_id.in_(game_ids),
+        GameDayPlayerStats.team_organization_id == team_id
+    ).all() if game_ids else []
+
+    # Aggregate by player
+    agg = {}
+    for stat in all_stats:
+        pid = stat.player_id
+        if pid not in agg:
+            agg[pid] = {
+                'player_id': pid,
+                'games_played': 0,
+                'points_played': 0,
+                'o_points': 0,
+                'd_points': 0,
+                'goals': 0,
+                'assists': 0,
+                'blocks': 0,
+                'turns': 0,
+                'plus_minus': 0,
+                'callahans': 0,
+                'pulls': 0,
+                'pulls_ob': 0,
+            }
+        a = agg[pid]
+        a['games_played'] += 1
+        a['points_played'] += stat.points_played or 0
+        a['o_points'] += stat.o_points or 0
+        a['d_points'] += stat.d_points or 0
+        a['goals'] += stat.goals or 0
+        a['assists'] += stat.assists or 0
+        a['blocks'] += stat.blocks or 0
+        a['turns'] += stat.turns or 0
+        a['plus_minus'] += stat.plus_minus or 0
+        a['callahans'] += stat.callahans or 0
+        a['pulls'] += stat.pulls or 0
+        a['pulls_ob'] += stat.pulls_ob or 0
+
+    # Attach player details
+    player_rows = []
+    for pid, row in agg.items():
+        player = db.session.get(Player, pid)
+        if player and player.team_organization_id == team_id:
+            row['player_details'] = player
+            player_rows.append(row)
+
+    player_rows.sort(key=lambda r: (-r['points_played'], -r['plus_minus']))
+
+    # Team totals
+    totals = {
+        'games': len(games),
+        'wins': sum(1 for g in games if g.our_score > g.their_score),
+        'losses': sum(1 for g in games if g.our_score < g.their_score),
+        'points_for': sum(g.our_score for g in games),
+        'points_against': sum(g.their_score for g in games),
+        'goals': sum(r['goals'] for r in player_rows),
+        'assists': sum(r['assists'] for r in player_rows),
+        'blocks': sum(r['blocks'] for r in player_rows),
+        'turns': sum(r['turns'] for r in player_rows),
+    }
+    denom = totals['goals'] + totals['assists'] + totals['turns']
+    totals['completion_rate'] = round((totals['goals'] + totals['assists']) / denom * 100, 1) if denom else 0
+
+    return render_template(
+        'gameday/tournament_stats.html',
+        tournament=tournament,
+        games=games,
+        player_rows=player_rows,
+        totals=totals,
+    )
+
+
 @bp.route('/team-stats')
 @login_required
 @stat_taker_required

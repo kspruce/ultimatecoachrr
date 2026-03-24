@@ -24,7 +24,7 @@ bp = Blueprint('game', __name__, url_prefix='/games')
 @bp.route('/')
 @login_required
 def index():
-    form = GameFilterForm()
+    form = GameFilterForm(team_id=get_current_team_id())
     delete_form = FlaskForm()  # Add this for CSRF protection
     
     # Get filter parameters
@@ -138,7 +138,7 @@ def detail(game_id):
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add():
-    form = GameForm()
+    form = GameForm(team_id=get_current_team_id())
     
     if form.validate_on_submit():
         # Find the highest existing game ID and add 1
@@ -251,8 +251,8 @@ def edit(game_id):
         team_organization_id=get_current_team_id()
     ).first_or_404()
     
-    form = GameForm(obj=game)
-    
+    form = GameForm(obj=game, team_id=get_current_team_id())
+
     if form.validate_on_submit():
         game.opponent = form.opponent.data
         game.our_score = form.our_score.data

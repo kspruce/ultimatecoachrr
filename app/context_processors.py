@@ -9,7 +9,7 @@ def team_info_processor():
     from app.models.team_settings import TeamSettings
 
     if not current_user.is_authenticated:
-        return {'current_team': None, 'available_teams': [], 'is_guest': False}
+        return {'current_team': None, 'available_teams': [], 'is_guest': False, 'nav_gameday_tournaments': []}
 
     try:
         if current_user.is_superadmin or current_user.role == "admin":
@@ -37,10 +37,26 @@ def team_info_processor():
                 db.session.add(settings)
                 db.session.commit()
 
+        # Tournaments for the current team — used in nav "Game Day" links
+        nav_gameday_tournaments = []
+        if current_team:
+            try:
+                from app.models.tournament import Tournament
+                nav_gameday_tournaments = (
+                    Tournament.query
+                    .filter_by(team_organization_id=current_team.id)
+                    .order_by(Tournament.start_date.desc())
+                    .limit(8)
+                    .all()
+                )
+            except Exception:
+                pass
+
         return {
             'current_team': current_team,
             'available_teams': available_teams,
             'is_guest': current_user.role == 'guest',
+            'nav_gameday_tournaments': nav_gameday_tournaments,
         }
 
     except SQLAlchemyError as e:
@@ -53,4 +69,5 @@ def team_info_processor():
             'current_team': None,
             'available_teams': [],
             'is_guest': False,
+            'nav_gameday_tournaments': [],
         }

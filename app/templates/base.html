@@ -330,7 +330,7 @@
 {% set in_training = ep.startswith('session.') or ep.startswith('fitness.') %}
 {% set in_strategy = ep.startswith('playbook.') or ep.startswith('scouting.') %}
 {% set in_theory   = ep.startswith('theory.') %}
-{% set in_stats    = ep.startswith('stats_dashboard.') %}
+{% set in_stats    = ep.startswith('stats_dashboard.') or ep in ('gameday.team_stats', 'gameday.game_stats', 'gameday.tournament_stats') %}
 {% set in_clips    = ep.startswith('clip.') %}
 {% set in_record   = ep.startswith('gameday.') or ep == 'point.game_points' %}
 {# Shortcut for feature settings #}
@@ -475,6 +475,19 @@
             <i class="bi bi-people"></i> Team Stats</a></li>
           <li><a class="dropdown-item" href="{{ url_for('game.index') }}">
             <i class="bi bi-controller"></i> Game Stats</a></li>
+          {# Game Day Stats — team summary + per-tournament shortcuts #}
+          {% if nav_gameday_tournaments is defined %}
+          <li><hr class="dropdown-divider"></li>
+          <li><h6 class="dropdown-header" style="font-size:0.7rem;letter-spacing:.06em;text-transform:uppercase;opacity:.6;">
+            <i class="bi bi-lightning-charge-fill" style="color:#20c997;"></i> Game Day
+          </h6></li>
+          <li><a class="dropdown-item" href="{{ url_for('gameday.team_stats') }}">
+            <i class="bi bi-bar-chart-line"></i> Season Summary</a></li>
+          {% for t in nav_gameday_tournaments %}
+          <li><a class="dropdown-item ps-4" href="{{ url_for('gameday.tournament_stats', tournament_id=t.id) }}" style="font-size:0.88rem;">
+            <i class="bi bi-trophy" style="opacity:.6;"></i> {{ t.name }}</a></li>
+          {% endfor %}
+          {% endif %}
         </ul>
       </li>
       {% endif %}

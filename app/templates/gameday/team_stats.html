@@ -4,67 +4,63 @@
 
 {% block styles %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
 <style>
   .sortable th {
     cursor: pointer;
     position: relative;
     padding-right: 20px;
+    user-select: none;
   }
-  
   .sortable th::after {
     content: "↕";
     position: absolute;
     right: 8px;
-    color: #999;
+    opacity: 0.4;
   }
-  
-  .sortable th.asc::after {
-    content: "↑";
-    color: var(--uc-page-text);
-  }
-  
-  .sortable th.desc::after {
-    content: "↓";
-    color: var(--uc-page-text);
-  }
-  
+  .sortable th.asc::after  { content: "↑"; opacity: 1; color: var(--uc-blue); }
+  .sortable th.desc::after { content: "↓"; opacity: 1; color: var(--uc-blue); }
+
+  .gd-header h5 { margin: 0; font-size: 0.95rem; font-weight: 600; }
+
   .stat-card {
     text-align: center;
-    padding: 15px;
-    border-radius: 5px;
-    margin-bottom: 15px;
-    background-color: var(--uc-card-bg);
+    padding: 1rem 0.75rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    background: var(--uc-card-bg);
+    border: 1px solid var(--uc-card-border);
   }
-  
   .stat-card .stat-value {
-    font-size: 2rem;
-    font-weight: bold;
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
-  
   .stat-card .stat-label {
-    font-size: 0.9rem;
-    color: #6c757d;
+    font-size: 0.72rem;
+    opacity: 0.55;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-top: 0.2rem;
   }
-  
-  .nav-tabs .nav-link.active {
-    font-weight: bold;
-  }
+  .nav-tabs .nav-link { color: var(--uc-page-text); }
+  .nav-tabs .nav-link.active { font-weight: 600; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="row mb-3">
-    <div class="col-12">
-      <h2>{{ team.name }} - Season Stats Summary</h2>
-      <div class="d-flex justify-content-between align-items-center">
-        <p class="text-muted">Stats from all recorded games</p>
-        <div>
-          <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
-          </a>
-        </div>
-      </div>
+<div class="container-fluid px-2 px-sm-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between py-3 mb-3 border-bottom gap-2"
+       style="border-color: var(--uc-card-border) !important;">
+    <div>
+      <div class="fw-bold" style="font-size:1.05rem;">{{ team.name }}</div>
+      <div class="text-muted" style="font-size:0.82rem;">Season Stats — all recorded games</div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Dashboard
+      </a>
     </div>
   </div>
 
@@ -119,7 +115,7 @@
     <!-- Player Stats Tab -->
     <div class="tab-pane fade show active" id="player-stats" role="tabpanel">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header gd-header">
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Player Stats (All Games)</h5>
             <div class="btn-group">
@@ -190,7 +186,7 @@
       <div class="row">
         <div class="col-md-6">
           <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header gd-header">
               <h5>Team Totals</h5>
             </div>
             <div class="card-body">
@@ -227,7 +223,7 @@
         </div>
         <div class="col-md-6">
           <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header gd-header">
               <h5>Team Performance</h5>
             </div>
             <div class="card-body">
@@ -268,7 +264,7 @@
       <div class="row">
         <div class="col-12">
           <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header gd-header">
               <h5>Efficiency Metrics</h5>
             </div>
             <div class="card-body">
@@ -301,7 +297,7 @@
     <!-- Games List Tab -->
     <div class="tab-pane fade" id="games-list" role="tabpanel">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header gd-header">
           <h5>Games</h5>
         </div>
         <div class="card-body">
@@ -384,51 +380,30 @@
   function makeTableSortable(table) {
     const headers = table.querySelectorAll('th');
     const tableBody = table.querySelector('tbody');
-    const rows = tableBody.querySelectorAll('tr');
 
-    // Add click event to each header
     headers.forEach(header => {
       header.addEventListener('click', () => {
         const sortType = header.getAttribute('data-sort') || 'string';
         const columnIndex = Array.from(header.parentNode.children).indexOf(header);
-        
-        // Remove sort classes from all headers
-        headers.forEach(h => {
-          h.classList.remove('asc', 'desc');
-        });
-        
-        // Determine sort direction
+
+        // Determine direction BEFORE removing classes
         const isAscending = !header.classList.contains('asc');
+        headers.forEach(h => h.classList.remove('asc', 'desc'));
         header.classList.add(isAscending ? 'asc' : 'desc');
-        
-        // Sort the rows
-        const sortedRows = Array.from(rows);
-        sortedRows.sort((rowA, rowB) => {
+
+        // Query rows fresh each time (avoids stale NodeList bug)
+        const currentRows = Array.from(tableBody.querySelectorAll('tr'));
+        currentRows.sort((rowA, rowB) => {
           const cellA = rowA.querySelectorAll('td')[columnIndex].textContent.trim();
           const cellB = rowB.querySelectorAll('td')[columnIndex].textContent.trim();
-          
           if (sortType === 'number') {
-            // Extract numeric value, handling special cases like jersey numbers that might have letters
             const numA = parseFloat(cellA.replace(/[^\d.-]/g, '')) || 0;
             const numB = parseFloat(cellB.replace(/[^\d.-]/g, '')) || 0;
             return isAscending ? numA - numB : numB - numA;
-          } else {
-            // String comparison
-            return isAscending ? 
-              cellA.localeCompare(cellB) : 
-              cellB.localeCompare(cellA);
           }
+          return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
         });
-        
-        // Remove existing rows
-        rows.forEach(row => {
-          tableBody.removeChild(row);
-        });
-        
-        // Add sorted rows
-        sortedRows.forEach(row => {
-          tableBody.appendChild(row);
-        });
+        currentRows.forEach(row => tableBody.appendChild(row));
       });
     });
   }

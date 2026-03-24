@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tournament.name }} — Game Day Stats{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
+<style>
+  .sortable th {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px;
+    user-select: none;
+  }
+  .sortable th::after {
+    content: "↕";
+    position: absolute;
+    right: 8px;
+    opacity: 0.4;
+  }
+  .sortable th.asc::after  { content: "↑"; opacity: 1; color: var(--uc-blue); }
+  .sortable th.desc::after { content: "↓"; opacity: 1; color: var(--uc-blue); }
+
+  .gd-header h5 { margin: 0; font-size: 0.95rem; font-weight: 600; }
+
+  .tourn-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .tourn-stat-tile {
+    background: var(--uc-card-bg);
+    border: 1px solid var(--uc-card-border);
+    border-radius: 10px;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+  }
+  .tourn-stat-tile .tile-val {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .tourn-stat-tile .tile-lbl {
+    font-size: 0.72rem;
+    opacity: 0.55;
+    margin-top: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .tile-win  { color: var(--uc-green, #22c55e); }
+  .tile-loss { color: var(--uc-red,   #ef4444); }
+
+  .game-row-link:hover { text-decoration: none; background: var(--uc-row-hover, rgba(0,0,0,.04)); }
+  [data-theme="dark"] .game-row-link:hover { background: rgba(255,255,255,.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-sm-3">
+
+  {# ── Page header ─────────────────────────────────────────────────── #}
+  <div class="d-flex flex-wrap align-items-start justify-content-between py-3 mb-3 border-bottom gap-2"
+       style="border-color: var(--uc-card-border) !important;">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <i class="bi bi-trophy" style="color:#f59e0b; font-size:1.1rem;"></i>
+        <span class="fw-bold" style="font-size:1.05rem;">{{ tournament.name }}</span>
+      </div>
+      {% if tournament.start_date %}
+      <div class="text-muted" style="font-size:0.8rem;">
+        {{ tournament.start_date.strftime('%d %b %Y') }}
+        {% if tournament.end_date and tournament.end_date != tournament.start_date %}
+          – {{ tournament.end_date.strftime('%d %b %Y') }}
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('gameday.team_stats') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-bar-chart-line"></i> Season Summary
+      </a>
+      <a href="{{ url_for('game.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Games
+      </a>
+    </div>
+  </div>
+
+  {# ── Summary tiles ──────────────────────────────────────────────── #}
+  <div class="tourn-summary-grid mb-4">
+    <div class="tourn-stat-tile">
+      <div class="tile-val">{{ totals.games }}</div>
+      <div class="tile-lbl">Games</div>
+    </div>
+    <div class="tourn-stat-tile">
+      <div class="tile-val tile-win">{{ totals.wins }}</div>
+      <div class="tile-lbl">Wins</div>
+    </div>
+    <div class="tourn-stat-tile">
+      <div class="tile-val tile-loss">{{ totals.losses }}</div>
+      <div class="tile-lbl">Losses</div>
+    </div>
+    <div class="tourn-stat-tile">
+      <div class="tile-val">{{ totals.points_for }}–{{ totals.points_against }}</div>
+      <div class="tile-lbl">Points F–A</div>
+    </div>
+    <div class="tourn-stat-tile">
+      <div class="tile-val">{{ totals.completion_rate }}%</div>
+      <div class="tile-lbl">Completion</div>
+    </div>
+    <div class="tourn-stat-tile">
+      <div class="tile-val">{{ totals.blocks }}</div>
+      <div class="tile-lbl">Blocks</div>
+    </div>
+  </div>
+
+  {# ── Player Stats ────────────────────────────────────────────────── #}
+  <div class="card mb-4">
+    <div class="card-header gd-header">
+      <h5><i class="bi bi-people" style="opacity:.7;"></i> Player Totals</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if player_rows %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover sortable mb-0" id="tourn-player-table">
+          <thead>
+            <tr>
+              <th data-sort="number">#</th>
+              <th data-sort="string">Player</th>
+              <th data-sort="number" title="Games played">GP</th>
+              <th data-sort="number" title="Total points played">Pts</th>
+              <th data-sort="number" title="O-line points">O</th>
+              <th data-sort="number" title="D-line points">D</th>
+              <th data-sort="number">Goals</th>
+              <th data-sort="number">Assists</th>
+              <th data-sort="number">Blocks</th>
+              <th data-sort="number">Turns</th>
+              <th data-sort="number">+/-</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in player_rows %}
+            <tr>
+              <td>{{ row.player_details.jersey_number }}</td>
+              <td>{{ row.player_details.name }}</td>
+              <td>{{ row.games_played }}</td>
+              <td><strong>{{ row.points_played }}</strong></td>
+              <td class="text-muted">{{ row.o_points }}</td>
+              <td class="text-muted">{{ row.d_points }}</td>
+              <td>{{ row.goals }}</td>
+              <td>{{ row.assists }}</td>
+              <td>{{ row.blocks }}</td>
+              <td>{{ row.turns }}</td>
+              <td class="fw-semibold {{ 'text-success' if row.plus_minus > 0 else 'text-danger' if row.plus_minus < 0 else '' }}">
+                {{ '+' if row.plus_minus > 0 else '' }}{{ row.plus_minus }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-center text-muted">
+        <i class="bi bi-lightning-charge" style="font-size:2rem; opacity:.3;"></i>
+        <p class="mt-2 mb-0">No Game Day stats recorded for this tournament yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Games in tournament ─────────────────────────────────────────── #}
+  <div class="card mb-4">
+    <div class="card-header gd-header">
+      <h5><i class="bi bi-controller" style="opacity:.7;"></i> Games</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if games %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Opponent</th>
+              <th>Score</th>
+              <th>Result</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for game in games %}
+            <tr>
+              <td class="text-muted" style="font-size:.85rem; white-space:nowrap;">
+                {% if game.date %}{{ game.date.strftime('%d %b') }}{% endif %}
+              </td>
+              <td class="fw-medium">{{ game.opponent }}</td>
+              <td class="fw-bold">{{ game.our_score }}–{{ game.their_score }}</td>
+              <td>
+                {% if game.our_score > game.their_score %}
+                  <span class="badge rounded-pill text-bg-success">W</span>
+                {% elif game.our_score < game.their_score %}
+                  <span class="badge rounded-pill text-bg-danger">L</span>
+                {% else %}
+                  <span class="badge rounded-pill text-bg-secondary">D</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a href="{{ url_for('gameday.game_stats', game_id=game.id) }}"
+                   class="btn btn-sm btn-outline-secondary py-0">
+                  Stats <i class="bi bi-arrow-right"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0 text-muted">No games recorded for this tournament.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const t = document.getElementById('tourn-player-table');
+    if (t) makeTableSortable(t);
+  });
+
+  function makeTableSortable(table) {
+    const headers = table.querySelectorAll('th');
+    const tableBody = table.querySelector('tbody');
+    headers.forEach(header => {
+      header.addEventListener('click', () => {
+        const sortType = header.getAttribute('data-sort') || 'string';
+        const colIdx = Array.from(header.parentNode.children).indexOf(header);
+        const isAscending = !header.classList.contains('asc');
+        headers.forEach(h => h.classList.remove('asc', 'desc'));
+        header.classList.add(isAscending ? 'asc' : 'desc');
+        const rows = Array.from(tableBody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+          const ca = a.querySelectorAll('td')[colIdx].textContent.trim();
+          const cb = b.querySelectorAll('td')[colIdx].textContent.trim();
+          if (sortType === 'number') {
+            const na = parseFloat(ca.replace(/[^\d.-]/g, '')) || 0;
+            const nb = parseFloat(cb.replace(/[^\d.-]/g, '')) || 0;
+            return isAscending ? na - nb : nb - na;
+          }
+          return isAscending ? ca.localeCompare(cb) : cb.localeCompare(ca);
+        });
+        rows.forEach(r => tableBody.appendChild(r));
+      });
+    });
+  }
+</script>
+{% endblock %}
