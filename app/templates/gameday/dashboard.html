@@ -5,162 +5,128 @@
 {% block styles %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
-<style>
-  /* Inline styles for immediate effect */
-  .player-card {
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    margin-bottom: 4px;
-    transition: background-color 0.2s;
-  }
-  
-  .player-card:hover {
-    background-color: var(--uc-gray-100);
-  }
-  
-  .player-card.selected {
-    background-color: #e3f2fd;
-    border: 1px solid #90caf9;
-  }
-  
-  .player-card .form-check-input {
-    position: absolute;
-    opacity: 0;
-  }
-  
-  .player-card .form-check-label {
-    display: block;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  
-  .player-button-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  
-  .player-button {
-    padding: 8px;
-    text-align: center;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    background-color: #f8f9fa;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  
-  .player-button:hover {
-    background-color: #e9ecef;
-  }
-  
-  .player-button.active {
-    background-color: #007bff;
-    color: white;
-    border-color: #0069d9;
-  }
-  
-  .event-buttons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  
-  .event-btn {
-    padding: 10px 5px;
-  }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="row mb-3">
-    <div class="col-12">
-      <h2>Game Day: {{ game.our_team }} vs {{ game.opponent }}</h2>
-      <div class="d-flex justify-content-between align-items-center">
-        <h3>Score: <span id="our-score">{{ game.our_score }}</span> - <span id="their-score">{{ game.their_score }}</span></h3>
-        <div>
-         <!-- In the top navigation area of dashboard.html -->
-        <div>
-          <a href="{{ url_for('gameday.game_stats', game_id=game.id) }}" class="btn btn-info me-2">
-            <i class="bi bi-bar-chart-fill"></i> View Stats
-          </a>
-          <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Game
-          </a>
-        </div>
+<div class="container-fluid px-2 px-sm-3">
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between py-3 mb-2 border-bottom" style="border-color: var(--uc-card-border) !important;">
+    <div>
+      <div class="fw-bold" style="font-size: 1rem;">{{ game.our_team }} <span class="text-muted fw-normal">vs</span> {{ game.opponent }}</div>
+      <div class="text-muted" style="font-size: 0.8rem;">Game Day · Point #<span id="next-point-number-display">{{ next_point_number }}</span></div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="fw-black text-center" style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; min-width: 80px;">
+        <span id="our-score">{{ game.our_score }}</span><span class="text-muted" style="font-weight: 400; font-size: 1rem;">–</span><span id="their-score">{{ game.their_score }}</span>
+      </div>
+      <div class="d-flex flex-column gap-1">
+        <a href="{{ url_for('gameday.game_stats', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-bar-chart-fill"></i><span class="d-none d-sm-inline ms-1">Stats</span>
+        </a>
+        <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline ms-1">Back</span>
+        </a>
       </div>
     </div>
   </div>
 
-  <div class="row">
+  <div class="row g-3">
     <div class="col-lg-8">
       <!-- Line Selection Card -->
       <div class="card mb-3" id="line-selection">
-        <div class="card-header bg-primary text-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Line Selection</h5>
-            {% if next_point_number > 1 %}
-            <button class="btn btn-sm btn-warning" id="undo-last-point" title="Undo the last completed point">
-              <i class="bi bi-arrow-counterclockwise"></i> Undo Last Point
-            </button>
-            {% endif %}
-          </div>
-          <div class="d-flex justify-content-between mt-1">
-            <span>Point #<span id="next-point-number">{{ next_point_number }}</span></span>
-            <input type="hidden" id="game-id" value="{{ game.id }}">
-            <input type="hidden" id="next-point-number-input" value="{{ next_point_number }}">
-          </div>
+        <div class="gd-header">
+          <h5 class="gd-header-title">
+            <i class="bi bi-people-fill" style="opacity:0.7;"></i>
+            Line Setup
+            <span class="badge rounded-pill" style="background:rgba(255,255,255,0.18); font-size:0.72rem; font-weight:600;">Point #<span id="next-point-number">{{ next_point_number }}</span></span>
+          </h5>
+          {% if next_point_number > 1 %}
+          <button class="btn btn-sm" style="background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.2);" id="undo-last-point" title="Undo the last completed point">
+            <i class="bi bi-arrow-counterclockwise"></i> Undo
+          </button>
+          {% endif %}
         </div>
+        <input type="hidden" id="game-id" value="{{ game.id }}">
+        <input type="hidden" id="next-point-number-input" value="{{ next_point_number }}">
         
-        <div class="card-body">
+        <div class="card-body pt-3">
           <!-- Line Type Selection -->
+          <span class="section-label">Line Type</span>
           <div class="btn-group w-100 mb-3" role="group">
             <input type="radio" class="btn-check" name="line_type" id="o-line" value="O-line" checked>
-            <label class="btn btn-outline-success" for="o-line">O-Line</label>
-            
+            <label class="btn btn-outline-secondary" for="o-line"><i class="bi bi-arrow-up-circle me-1"></i>O-Line</label>
+
             <input type="radio" class="btn-check" name="line_type" id="d-line" value="D-line">
-            <label class="btn btn-outline-danger" for="d-line">D-Line</label>
+            <label class="btn btn-outline-secondary" for="d-line"><i class="bi bi-shield me-1"></i>D-Line</label>
           </div>
-          
-          <!-- Gender Ratio Selection -->
-          <!-- Gender Ratio Selection -->
-          <div class="btn-group w-100 mb-3" role="group">
+
+          <!-- Gender Format -->
+          <span class="section-label">Gender Format</span>
+
+          <!-- Team format tabs: Mixed / Single -->
+          <div class="btn-group w-100 mb-2" role="group" id="team-format-group">
+            <input type="radio" class="btn-check" name="team_format" id="format-mixed" value="mixed">
+            <label class="btn btn-outline-secondary btn-sm" for="format-mixed">⚡ Mixed (ABBA)</label>
+
+            <input type="radio" class="btn-check" name="team_format" id="format-mmp" value="mmp">
+            <label class="btn btn-outline-secondary btn-sm" for="format-mmp">Single MMP</label>
+
+            <input type="radio" class="btn-check" name="team_format" id="format-fmp" value="fmp">
+            <label class="btn btn-outline-secondary btn-sm" for="format-fmp">Single FMP</label>
+          </div>
+
+          <!-- Mixed: ABBA preference + indicator -->
+          <div id="abba-section" style="display:none;" class="mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="text-muted" style="font-size:0.8rem; white-space:nowrap;">Base ratio:</span>
+              <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="abba_pref" id="abba-pref-4-3" value="4-3" checked>
+                <label class="btn btn-outline-secondary btn-sm" for="abba-pref-4-3">4M‑3F</label>
+                <input type="radio" class="btn-check" name="abba_pref" id="abba-pref-3-4" value="3-4">
+                <label class="btn btn-outline-secondary btn-sm" for="abba-pref-3-4">3M‑4F</label>
+              </div>
+            </div>
+            <!-- ABBA sequence dots -->
+            <div class="abba-card" id="abba-indicator-container">
+              <span class="abba-label">ABBA sequence</span>
+              <div class="abba-sequence" id="abba-indicator">
+                <!-- Populated by JS -->
+              </div>
+              <div class="mt-2" style="font-size:0.78rem; color: var(--uc-gray-400);">
+                Next point: <strong id="abba-next-label" style="color: var(--uc-blue);">—</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden gender_ratio radios – controlled by ABBA or format selection -->
+          <!-- These are kept for backward compatibility with existing JS logic -->
+          <div id="gender-ratio-radios" style="display:none;">
             <input type="radio" class="btn-check" name="gender_ratio" id="ratio-4-3" value="4-3" checked>
-            <label class="btn btn-outline-primary" for="ratio-4-3">4 MMP - 3 FMP</label>
-          
             <input type="radio" class="btn-check" name="gender_ratio" id="ratio-3-4" value="3-4">
-            <label class="btn btn-outline-primary" for="ratio-3-4">3 MMP - 4 FMP</label>
-          
             <input type="radio" class="btn-check" name="gender_ratio" id="ratio-7-0" value="7-0">
-            <label class="btn btn-outline-primary" for="ratio-7-0">Single Gender (MMP)</label>
-            
             <input type="radio" class="btn-check" name="gender_ratio" id="ratio-0-7" value="0-7">
-            <label class="btn btn-outline-primary" for="ratio-0-7">Single Gender (FMP)</label>
           </div>
 
           
           <!-- Line Templates -->
-          <div class="d-flex mb-3">
-            <select class="form-select me-2" id="line-template">
-              <option value="">Load Saved Line</option>
+          <span class="section-label">Saved Lines</span>
+          <div class="d-flex mb-3 gap-2">
+            <select class="form-select form-select-sm" id="line-template">
+              <option value="">Load saved line…</option>
               {% for template in line_templates %}
               <option value="{{ template.id }}">{{ template.name }}</option>
               {% endfor %}
             </select>
-            <button class="btn btn-outline-secondary" id="save-line-btn" data-bs-toggle="modal" data-bs-target="#saveLineModal">Save Current</button>
+            <button class="btn btn-sm btn-outline-secondary flex-shrink-0" id="save-line-btn" data-bs-toggle="modal" data-bs-target="#saveLineModal">Save</button>
           </div>
-          
+
           <!-- Power Line Button -->
-          <button class="btn btn-warning w-100 mb-3" id="power-line">
+          <button class="btn w-100 mb-3" id="power-line">
             <i class="bi bi-lightning-charge-fill"></i> Power Line
           </button>
-          
+
           <!-- Player Selection Tabs -->
+          <span class="section-label">Select Players</span>
           <ul class="nav nav-tabs" id="playerTabs" role="tablist">
             <li class="nav-item" role="presentation">
               <button class="nav-link active" id="mmp-tab" data-bs-toggle="tab" data-bs-target="#mmp-players" type="button">
@@ -230,42 +196,43 @@
       
       <!-- Point Tracking Card -->
       <div class="card mb-3" id="point-tracking" style="display: none;">
-        <div class="card-header bg-primary text-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5>Point #<span id="current-point-number">{{ next_point_number }}</span> - <span id="current-line-type">O-Line</span></h5>
-            <div>
-              <span class="badge bg-light text-dark">Score: <span id="current-score">{{ game.our_score }}-{{ game.their_score }}</span></span>
-            </div>
-          </div>
+        <div class="gd-header">
+          <h5 class="gd-header-title">
+            <i class="bi bi-record-circle" style="opacity:0.7;"></i>
+            Point #<span id="current-point-number">{{ next_point_number }}</span>
+            <span class="badge rounded-pill" style="background:rgba(255,255,255,0.18); font-weight:600; font-size:0.7rem;" id="current-line-type-badge">O-Line</span>
+            <span id="current-line-type" style="display:none;">O-Line</span>
+          </h5>
+          <span class="gd-score-badge"><span id="current-score">{{ game.our_score }}-{{ game.their_score }}</span></span>
         </div>
-        
-        <div class="card-body">
+
+        <div class="card-body pt-3">
           <!-- Pull Section (Only for D-Line) -->
-          <div id="pull-section" class="mb-3" style="display: none;">
-            <h6>Pull</h6>
+          <div id="pull-section" class="pull-section-card" style="display: none;">
+            <h6><i class="bi bi-send-fill"></i> Pull</h6>
             <!-- Step 1: select puller + launch -->
-            <div class="mb-2 d-flex align-items-center gap-2 flex-wrap">
-              <select class="form-select" id="puller" style="max-width: 230px;">
-                <option value="">Select Puller</option>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+              <select class="form-select form-select-sm" id="puller" style="max-width: 210px;">
+                <option value="">Select Puller…</option>
                 <!-- Options will be populated with selected players -->
               </select>
-              <button class="btn btn-secondary" id="pull-launch">
-                <i class="bi bi-send"></i> Pull!
+              <button class="btn btn-sm" style="background: var(--uc-teal); color:#fff; border:none; font-weight:600;" id="pull-launch">
+                <i class="bi bi-send"></i> Launch!
               </button>
             </div>
-            <!-- Step 2: live hang-time + IB / OB (shown after Pull! is tapped) -->
-            <div id="pull-timer-section" style="display: none;" class="d-flex align-items-center gap-3">
-              <div class="fs-3 fw-bold text-primary font-monospace" id="pull-timer-display">0.0s</div>
+            <!-- Step 2: live hang-time + IB / OB -->
+            <div id="pull-timer-section" style="display: none;" class="d-flex align-items-center gap-3 mt-2">
+              <div id="pull-timer-display">0.0s</div>
               <div class="btn-group" role="group">
-                <button class="btn btn-outline-success fw-bold" id="pull-ib">IB</button>
-                <button class="btn btn-outline-danger fw-bold" id="pull-ob">OB</button>
+                <button class="btn btn-success fw-bold px-4" id="pull-ib">IB ✓</button>
+                <button class="btn btn-danger fw-bold px-4" id="pull-ob">OB ✗</button>
               </div>
             </div>
           </div>
           
           <!-- Current Players -->
           <div class="mb-3">
-            <h6>Players on Line</h6>
+            <span class="section-label">On Field</span>
             <div class="player-chips" id="active-players">
               <!-- Will be populated with selected players -->
             </div>
@@ -273,53 +240,54 @@
           
           <!-- Event Recording -->
           <div class="mb-3">
-            <h6>Select Player for Event</h6>
+            <span class="section-label">Tap Player</span>
             <div id="event-player-buttons" class="player-button-grid">
               <!-- Will be populated with selected players -->
             </div>
-            
+
             <!-- Offensive Events -->
+            <span class="section-label" id="events-label">Offense Events</span>
             <div id="offense-events" class="event-buttons">
-              <button class="btn btn-outline-primary event-btn" data-event="catch">Catch</button>
-              <button class="btn btn-outline-primary event-btn" data-event="drop">Drop</button>
-              <button class="btn btn-outline-success event-btn" data-event="score">Score</button>
+              <button class="btn btn-outline-secondary event-btn" data-event="catch"><i class="bi bi-hand-index-thumb me-1"></i>Catch</button>
+              <button class="btn btn-outline-secondary event-btn" data-event="drop"><i class="bi bi-exclamation-triangle me-1"></i>Drop</button>
+              <button class="btn btn-success event-btn" data-event="score"><i class="bi bi-trophy me-1"></i>Score!</button>
               <button class="btn btn-outline-danger event-btn" data-event="throwaway">Throwaway</button>
               <button class="btn btn-outline-danger event-btn" data-event="stall">Stall</button>
             </div>
-            
+
             <!-- Defensive Events -->
             <div id="defense-events" class="event-buttons" style="display: none;">
-              <button class="btn btn-outline-success event-btn" data-event="block">Block</button>
-              <button class="btn btn-outline-primary event-btn" data-event="pickup">Pickup</button>
-              <button class="btn btn-outline-success event-btn" data-event="callahan">Callahan</button>
+              <button class="btn btn-success event-btn" data-event="block"><i class="bi bi-shield-check me-1"></i>Block!</button>
+              <button class="btn btn-outline-secondary event-btn" data-event="pickup">Pickup</button>
+              <button class="btn btn-warning event-btn" data-event="callahan"><i class="bi bi-star me-1"></i>Callahan!</button>
             </div>
           </div>
-          
+
           <!-- Game Management -->
-          <div class="d-flex mb-3">
-            <button class="btn btn-warning me-2" id="call-timeout">
-              <i class="bi bi-clock"></i> Timeout
+          <div class="d-flex mb-3 gap-2">
+            <button class="btn btn-sm btn-outline-secondary flex-fill" id="call-timeout">
+              <i class="bi bi-clock"></i><span class="ms-1 d-none d-sm-inline">Timeout</span>
             </button>
-            <button class="btn btn-info me-2" id="substitution" data-bs-toggle="modal" data-bs-target="#substitutionModal">
-              <i class="bi bi-people"></i> Substitution
+            <button class="btn btn-sm btn-outline-secondary flex-fill" id="substitution" data-bs-toggle="modal" data-bs-target="#substitutionModal">
+              <i class="bi bi-people"></i><span class="ms-1 d-none d-sm-inline">Sub</span>
             </button>
-            <button class="btn btn-secondary" id="toggle-possession">
-              <i class="bi bi-arrow-repeat"></i> Switch O/D
+            <button class="btn btn-sm btn-outline-secondary flex-fill" id="toggle-possession">
+              <i class="bi bi-arrow-repeat"></i><span class="ms-1 d-none d-sm-inline">Switch O/D</span>
             </button>
           </div>
-          
+
           <!-- Event Log -->
           <div class="mb-3">
-            <h6>Event Log</h6>
+            <span class="section-label">Event Log</span>
             <div class="event-log" id="event-log">
               <!-- Events will be logged here -->
             </div>
           </div>
-          
+
           <!-- End Point -->
           <div class="btn-group w-100">
-            <button class="btn btn-success" id="we-scored">We Scored</button>
-            <button class="btn btn-danger" id="they-scored">They Scored</button>
+            <button class="btn btn-success" id="we-scored"><i class="bi bi-check-circle me-1"></i>We Scored</button>
+            <button class="btn btn-danger" id="they-scored"><i class="bi bi-x-circle me-1"></i>They Scored</button>
           </div>
         </div>
       </div>
@@ -328,24 +296,24 @@
     <div class="col-lg-4">
       <!-- Game Summary Card -->
       <div class="card">
-        <div class="card-header bg-dark text-white">
-          <h5>Game Summary</h5>
+        <div class="gd-header">
+          <h5 class="gd-header-title"><i class="bi bi-table" style="opacity:0.7;"></i> Live Stats</h5>
         </div>
-        
-        <div class="card-body">
+
+        <div class="card-body p-0">
           <!-- Player Stats Table -->
           <div class="table-responsive">
-            <table class="table table-sm table-hover">
+            <table class="table table-sm table-hover mb-0" id="game-summary-table">
               <thead>
                 <tr>
                   <th>#</th>
                   <th>Player</th>
-                  <th>Points</th>
-                  <th>G</th>
-                  <th>A</th>
-                  <th>D</th>
-                  <th>T</th>
-                  <th>+/-</th>
+                  <th title="Points Played">Pts</th>
+                  <th title="Goals">G</th>
+                  <th title="Assists">A</th>
+                  <th title="Blocks">D</th>
+                  <th title="Turnovers">T</th>
+                  <th title="Plus/Minus">±</th>
                 </tr>
               </thead>
               <tbody>
@@ -551,12 +519,15 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateEventButtons() {
+    const lbl = document.getElementById('events-label');
     if (currentPossession === 'offense') {
-      document.getElementById('offense-events').style.display = 'grid'; 
+      document.getElementById('offense-events').style.display = 'grid';
       document.getElementById('defense-events').style.display = 'none';
+      if (lbl) lbl.textContent = 'Offense Events';
     } else {
       document.getElementById('offense-events').style.display = 'none';
-      document.getElementById('defense-events').style.display = 'grid'; 
+      document.getElementById('defense-events').style.display = 'grid';
+      if (lbl) lbl.textContent = 'Defense Events';
     }
   }
 
@@ -1100,6 +1071,136 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initial setup
   updatePlayerCounts();
+
+  // ── Sync the point-tracking header line-type badge ──────────────────
+  document.querySelectorAll('input[name="line_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const badge = document.getElementById('current-line-type-badge');
+      if (badge) badge.textContent = this.value;
+    });
+  });
+
+  // ── ABBA Gender Ratio Logic ──────────────────────────────────────────
+  // ABBA sequence: A, B, B, A  (positions 0,3 = A; positions 1,2 = B)
+  const ABBA_SEQ = [0, 1, 1, 0];
+
+  function abbaRatioForPoint(pointNum, baseRatio) {
+    const parts = baseRatio.split('-').map(Number);
+    const inverse = `${parts[1]}-${parts[0]}`;
+    const pos = (pointNum - 1) % 4;
+    return ABBA_SEQ[pos] === 0 ? baseRatio : inverse;
+  }
+
+  function ratioLabel(r) {
+    const [m, f] = r.split('-');
+    return `${m}M·${f}F`;
+  }
+
+  function renderAbbaIndicator(pointNum, baseRatio) {
+    const el = document.getElementById('abba-indicator');
+    const nextLabel = document.getElementById('abba-next-label');
+    if (!el) return;
+
+    const html = [];
+    for (let i = 0; i < 7; i++) {
+      const pn = pointNum + i;
+      const ratio = abbaRatioForPoint(pn, baseRatio);
+      const pos = (pn - 1) % 4;
+      const cls = ABBA_SEQ[pos] === 0 ? 'ratio-a' : 'ratio-b';
+      const isCurrent = i === 0;
+      html.push(
+        `<div class="abba-dot ${cls} ${isCurrent ? 'current' : 'future'}" title="Pt ${pn}">`
+        + `<span>${ratioLabel(ratio)}</span>`
+        + `</div>`
+      );
+      if ((pn) % 4 === 0 && i < 6) {
+        html.push(`<div style="width:1px; height:28px; background: var(--uc-card-border); margin: 0 2px;"></div>`);
+      }
+    }
+    el.innerHTML = html.join('');
+    if (nextLabel) nextLabel.textContent = ratioLabel(abbaRatioForPoint(pointNum, baseRatio));
+
+    // Auto-select the ratio radio
+    const suggested = abbaRatioForPoint(pointNum, baseRatio);
+    const radio = document.querySelector(`input[name="gender_ratio"][value="${suggested}"]`);
+    if (radio) {
+      radio.checked = true;
+      radio.dispatchEvent(new Event('change'));
+    }
+    // Update MMP/FMP required counts
+    const [mmp, fmp] = suggested.split('-').map(Number);
+    document.getElementById('mmp-required').textContent = mmp;
+    document.getElementById('fmp-required').textContent = fmp;
+    updatePlayerCounts();
+  }
+
+  const nextPtNum = parseInt(document.getElementById('next-point-number-input').value) || 1;
+
+  // Restore saved format preference
+  const savedFormat = localStorage.getItem('uc_team_format') || 'mixed';
+  const savedPref   = localStorage.getItem('uc_abba_pref')   || '4-3';
+
+  function applyFormat(fmt) {
+    const abbaSection = document.getElementById('abba-section');
+    const mmpTab = document.getElementById('mmp-tab');
+    const fmpTab = document.getElementById('fmp-tab');
+
+    if (fmt === 'mixed') {
+      abbaSection.style.display = '';
+      // Ensure both gender tabs visible
+      if (mmpTab) mmpTab.style.display = '';
+      if (fmpTab) fmpTab.style.display = '';
+      // Set single-gender radios off, apply ABBA
+      const pref = document.querySelector('input[name="abba_pref"]:checked')?.value || savedPref;
+      renderAbbaIndicator(nextPtNum, pref);
+    } else if (fmt === 'mmp') {
+      abbaSection.style.display = 'none';
+      const r = document.querySelector('input[name="gender_ratio"][value="7-0"]');
+      if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
+      document.getElementById('mmp-required').textContent = 7;
+      document.getElementById('fmp-required').textContent = 0;
+      if (mmpTab) mmpTab.style.display = '';
+      if (fmpTab) fmpTab.style.display = 'none';
+      updatePlayerCounts();
+    } else if (fmt === 'fmp') {
+      abbaSection.style.display = 'none';
+      const r = document.querySelector('input[name="gender_ratio"][value="0-7"]');
+      if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
+      document.getElementById('mmp-required').textContent = 0;
+      document.getElementById('fmp-required').textContent = 7;
+      if (mmpTab) mmpTab.style.display = 'none';
+      if (fmpTab) fmpTab.style.display = '';
+      updatePlayerCounts();
+    }
+  }
+
+  // Set initial format radio
+  const fmtRadio = document.querySelector(`input[name="team_format"][value="${savedFormat}"]`);
+  if (fmtRadio) fmtRadio.checked = true;
+
+  // Set initial pref radio
+  const prefRadio = document.querySelector(`input[name="abba_pref"][value="${savedPref}"]`);
+  if (prefRadio) prefRadio.checked = true;
+
+  // Format change listener
+  document.querySelectorAll('input[name="team_format"]').forEach(r => {
+    r.addEventListener('change', function() {
+      localStorage.setItem('uc_team_format', this.value);
+      applyFormat(this.value);
+    });
+  });
+
+  // ABBA pref change listener
+  document.querySelectorAll('input[name="abba_pref"]').forEach(r => {
+    r.addEventListener('change', function() {
+      localStorage.setItem('uc_abba_pref', this.value);
+      const fmt = document.querySelector('input[name="team_format"]:checked')?.value;
+      if (fmt === 'mixed') renderAbbaIndicator(nextPtNum, this.value);
+    });
+  });
+
+  // Apply on load
+  applyFormat(savedFormat);
 });
 </script>
 {% endblock %}

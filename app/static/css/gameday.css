@@ -1,179 +1,439 @@
-/* Game Day Specific Styles */
+/* ── Gameday Styles – sleek, mobile-first, theme-aware ── */
 
-/* Player selection grid */
+/* ─── Player selection grid ─────────────────────────────── */
 .player-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
   max-height: 300px;
   overflow-y: auto;
 }
 
+/* Player cards — theme-aware backgrounds */
 .player-card {
-  padding: 8px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  background-color: #f8f9fa;
+  padding: 10px;
+  border: 1px solid var(--uc-card-border);
+  border-radius: 8px;
+  background-color: var(--uc-card-bg);
+  color: var(--uc-page-text);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .player-card:hover {
-  background-color: #e9ecef;
+  background-color: var(--uc-gray-100);
+  border-color: var(--uc-blue);
 }
 
-.player-card input:checked + label {
-  font-weight: bold;
+.player-card.selected {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: var(--uc-blue);
 }
 
-/* Event buttons */
+.player-card .form-check-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-card .form-check-label {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--uc-page-text);
+  cursor: pointer;
+}
+
+/* ─── Player buttons (for event selection) ─────────────── */
+.player-button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.player-button {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid var(--uc-card-border);
+  border-radius: 8px;
+  background-color: var(--uc-card-bg);
+  color: var(--uc-page-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.875rem;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.player-button:hover {
+  background-color: var(--uc-gray-100);
+  border-color: var(--uc-blue);
+  color: var(--uc-blue);
+}
+
+.player-button.active {
+  background-color: var(--uc-blue);
+  color: #fff;
+  border-color: var(--uc-blue);
+  font-weight: 600;
+}
+
+/* ─── Event buttons ─────────────────────────────────────── */
 .event-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .event-btn {
-  padding: 10px;
+  padding: 12px 8px;
   font-weight: 500;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+  min-height: 50px;
 }
 
-/* Player chips */
+/* ─── Player chips (on-field badge strip) ───────────────── */
 .player-chips {
   display: flex;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
 .player-chip {
-  font-size: 0.9rem;
-  padding: 6px 12px;
-  margin-right: 8px;
-  margin-bottom: 8px;
+  font-size: 0.85rem;
+  padding: 5px 11px;
   border-radius: 20px;
 }
 
-/* Event log */
+/* ─── Event log ─────────────────────────────────────────── */
 .event-log {
   height: 200px;
   overflow-y: auto;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 8px;
-  background-color: #f8f9fa;
-  margin-bottom: 16px;
+  border: 1px solid var(--uc-card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background-color: var(--uc-gray-50);
+  margin-bottom: 14px;
+}
+
+[data-theme="dark"] .event-log {
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .event-item {
-  padding: 4px 0;
-  border-bottom: 1px solid #eee;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--uc-card-border);
+  font-size: 0.875rem;
+  color: var(--uc-page-text);
+  line-height: 1.35;
 }
 
 .event-item:last-child {
   border-bottom: none;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .player-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-  
-  .event-buttons {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  }
+/* ─── Gameday card headers ──────────────────────────────── */
+.gd-header {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--uc-card-border);
+  border-radius: calc(var(--uc-radius) - 1px) calc(var(--uc-radius) - 1px) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--uc-gray-800);
+  color: #fff;
 }
 
-/* Power line button */
+[data-theme="dark"] .gd-header {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--uc-page-text);
+  border-bottom-color: var(--uc-card-border);
+}
+
+.gd-header-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Score badge inside header */
+.gd-score-badge {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="dark"] .gd-score-badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--uc-gray-200);
+}
+
+/* ─── Pull section ──────────────────────────────────────── */
+.pull-section-card {
+  background: rgba(13, 148, 136, 0.07);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+[data-theme="dark"] .pull-section-card {
+  background: rgba(13, 148, 136, 0.1);
+  border-color: rgba(13, 148, 136, 0.3);
+}
+
+.pull-section-card h6 {
+  color: var(--uc-teal);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Pull timer display */
+#pull-timer-display {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--uc-teal);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── ABBA indicator ────────────────────────────────────── */
+.abba-card {
+  background: rgba(59, 130, 246, 0.06);
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+[data-theme="dark"] .abba-card {
+  background: rgba(59, 130, 246, 0.09);
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+.abba-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--uc-blue);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.abba-sequence {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.abba-dot {
+  width: 42px;
+  height: 38px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.abba-dot.ratio-a {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--uc-blue);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.abba-dot.ratio-b {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--uc-purple);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.abba-dot.current {
+  transform: scale(1.15);
+  border-width: 2px;
+  font-size: 0.72rem;
+}
+
+.abba-dot.current.ratio-a {
+  border-color: var(--uc-blue);
+  background: rgba(59, 130, 246, 0.25);
+}
+
+.abba-dot.current.ratio-b {
+  border-color: var(--uc-purple);
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.abba-dot.future {
+  opacity: 0.5;
+}
+
+/* ─── Power line button ─────────────────────────────────── */
 #power-line {
-  background-color: #ffc107;
-  border-color: #ffc107;
-  font-weight: bold;
-  transition: all 0.3s;
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  border: none;
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.28);
 }
 
 #power-line:hover {
-  background-color: #e0a800;
-  border-color: #e0a800;
-  transform: scale(1.02);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.38);
 }
 
-/* Tab styling */
-.nav-tabs .nav-link {
-  font-weight: 500;
-}
-
-/* Line status alert */
+/* ─── Line status ────────────────────────────────────────── */
 #line-status {
   font-weight: 500;
   text-align: center;
+  border-radius: 8px;
+  font-size: 0.9rem;
 }
 
-/* Start point button */
+/* ─── Start point button ─────────────────────────────────── */
 #start-point {
-  font-size: 1.2rem;
-  padding: 12px;
+  font-size: 1.05rem;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-/* End point buttons */
+/* ─── End point buttons ──────────────────────────────────── */
 #we-scored, #they-scored {
-  font-weight: bold;
-  padding: 12px;
+  font-weight: 700;
+  padding: 14px;
+  font-size: 1rem;
+  border-radius: 8px;
 }
 
-/* Mobile-specific styles */
-@media (max-width: 576px) {
-  /* Make buttons larger and easier to tap */
-  .event-btn {
-    padding: 15px 10px;
-    font-size: 1.1rem;
+/* ─── Tab styling ────────────────────────────────────────── */
+.nav-tabs .nav-link {
+  font-weight: 500;
+  border-radius: 8px 8px 0 0;
+  font-size: 0.875rem;
+}
+
+/* ─── Game summary sidebar ───────────────────────────────── */
+#game-summary-table th {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--uc-gray-400);
+  font-weight: 600;
+}
+
+/* ─── Section divider label ──────────────────────────────── */
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--uc-gray-400);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .player-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
-  
-  /* Adjust grid layouts */
+
+  .event-buttons {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .event-btn {
+    padding: 14px 8px;
+    font-size: 0.95rem;
+    min-height: 54px;
+  }
+
   .event-buttons {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
-  
-  /* Make player selection more compact */
+
   .player-card {
+    padding: 12px 10px;
+  }
+
+  .player-button {
     padding: 12px 8px;
+    min-height: 52px;
   }
-  
-  /* Ensure modals are usable */
+
+  .player-button-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .modal-dialog {
-    margin: 10px;
-    max-width: calc(100% - 20px);
+    margin: 8px;
+    max-width: calc(100% - 16px);
   }
-  
-  /* Make the event log taller on mobile */
+
   .event-log {
-    height: 250px;
+    height: 240px;
   }
-  
-  /* Make tabs more tappable */
+
   .nav-tabs .nav-link {
-    padding: 10px 15px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
   }
-  
-  /* Ensure player chips are readable */
+
   .player-chip {
-    font-size: 1rem;
-    padding: 8px 12px;
-    margin-right: 6px;
-    margin-bottom: 6px;
+    font-size: 0.9rem;
+    padding: 6px 12px;
   }
-  
-  /* Make the score more prominent */
+
   #current-score {
     font-size: 1.2rem;
     font-weight: bold;
   }
-  
-  /* Ensure end point buttons are very tappable */
+
   #we-scored, #they-scored {
-    padding: 15px;
-    font-size: 1.2rem;
+    padding: 16px;
+    font-size: 1.05rem;
+  }
+
+  .abba-dot {
+    width: 38px;
+    height: 34px;
   }
 }

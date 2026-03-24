@@ -4,51 +4,73 @@
 
 {% block styles %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gameday.css') }}">
 <style>
   .sortable th {
     cursor: pointer;
     position: relative;
     padding-right: 20px;
+    user-select: none;
   }
-  
+
   .sortable th::after {
     content: "↕";
     position: absolute;
     right: 8px;
-    color: #999;
+    opacity: 0.4;
   }
-  
+
   .sortable th.asc::after {
     content: "↑";
-    color: var(--uc-page-text);
+    opacity: 1;
+    color: var(--uc-blue);
   }
-  
+
   .sortable th.desc::after {
     content: "↓";
-    color: var(--uc-page-text);
+    opacity: 1;
+    color: var(--uc-blue);
+  }
+
+  /* Fix white-on-white for table-success/danger rows in dark mode */
+  [data-theme="dark"] .table-success > td {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+    color: var(--uc-page-text) !important;
+  }
+  [data-theme="dark"] .table-danger > td {
+    background-color: rgba(239, 68, 68, 0.12) !important;
+    color: var(--uc-page-text) !important;
+  }
+
+  .gd-header h5 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="row mb-3">
-    <div class="col-12">
-      <h2>Game Stats: {{ game.our_team }} vs {{ game.opponent }}</h2>
-      <div class="d-flex justify-content-between align-items-center">
-        <h3>Final Score: {{ game.our_score }} - {{ game.their_score }}</h3>
-        <div>
-          <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Game
-          </a>
-          <a href="{{ url_for('gameday.team_stats') }}" class="btn btn-info">
-            <i class="bi bi-bar-chart-line"></i> Team Stats Summary
-          </a>
-          <a href="{{ url_for('gameday.game_dashboard', game_id=game.id) }}" class="btn btn-primary">
-            <i class="bi bi-controller"></i> Game Day Dashboard
-          </a>
-        </div>
+<div class="container-fluid px-2 px-sm-3">
+  <!-- Page header -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between py-3 mb-3 border-bottom gap-2" style="border-color: var(--uc-card-border) !important;">
+    <div>
+      <div class="fw-bold" style="font-size: 1rem;">{{ game.our_team }} <span class="text-muted fw-normal">vs</span> {{ game.opponent }}</div>
+      <div class="mt-1">
+        <span class="fw-black" style="font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em;">{{ game.our_score }}<span class="text-muted" style="font-weight: 400; font-size: 1.1rem;">–</span>{{ game.their_score }}</span>
+        <span class="text-muted ms-2" style="font-size: 0.8rem;">Final Score</span>
       </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('gameday.game_dashboard', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-controller"></i> Dashboard
+      </a>
+      <a href="{{ url_for('gameday.team_stats') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-bar-chart-line"></i> Team Stats
+      </a>
+      <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
     </div>
   </div>
 
@@ -56,7 +78,7 @@
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header gd-header">
           <h5>Team Summary</h5>
         </div>
         <div class="card-body">
@@ -119,7 +141,7 @@
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header gd-header">
           <h5>Player Stats</h5>
         </div>
         <div class="card-body">
@@ -181,7 +203,7 @@
   <div class="row">
     <div class="col-12">
       <div class="card">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header gd-header">
           <h5>Points Summary</h5>
         </div>
         <div class="card-body">
@@ -232,51 +254,37 @@
   function makeTableSortable(table) {
     const headers = table.querySelectorAll('th');
     const tableBody = table.querySelector('tbody');
-    const rows = tableBody.querySelectorAll('tr');
 
-    // Add click event to each header
     headers.forEach(header => {
       header.addEventListener('click', () => {
         const sortType = header.getAttribute('data-sort') || 'string';
         const columnIndex = Array.from(header.parentNode.children).indexOf(header);
-        
-        // Remove sort classes from all headers
-        headers.forEach(h => {
-          h.classList.remove('asc', 'desc');
-        });
-        
-        // Determine sort direction
+
+        // Determine direction BEFORE removing classes (bug fix: was always ascending before)
         const isAscending = !header.classList.contains('asc');
+
+        // Remove sort classes from all headers, then apply to clicked one
+        headers.forEach(h => h.classList.remove('asc', 'desc'));
         header.classList.add(isAscending ? 'asc' : 'desc');
-        
-        // Sort the rows
-        const sortedRows = Array.from(rows);
-        sortedRows.sort((rowA, rowB) => {
+
+        // Query rows FRESH each time (not from a stale captured NodeList)
+        const currentRows = Array.from(tableBody.querySelectorAll('tr'));
+
+        currentRows.sort((rowA, rowB) => {
           const cellA = rowA.querySelectorAll('td')[columnIndex].textContent.trim();
           const cellB = rowB.querySelectorAll('td')[columnIndex].textContent.trim();
-          
+
           if (sortType === 'number') {
-            // Extract numeric value, handling special cases like jersey numbers that might have letters
             const numA = parseFloat(cellA.replace(/[^\d.-]/g, '')) || 0;
             const numB = parseFloat(cellB.replace(/[^\d.-]/g, '')) || 0;
             return isAscending ? numA - numB : numB - numA;
           } else {
-            // String comparison
-            return isAscending ? 
-              cellA.localeCompare(cellB) : 
-              cellB.localeCompare(cellA);
+            return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
           }
         });
-        
-        // Remove existing rows
-        rows.forEach(row => {
-          tableBody.removeChild(row);
-        });
-        
-        // Add sorted rows
-        sortedRows.forEach(row => {
-          tableBody.appendChild(row);
-        });
+
+        // Re-append rows in sorted order (moves DOM nodes, no remove needed)
+        currentRows.forEach(row => tableBody.appendChild(row));
       });
     });
   }
