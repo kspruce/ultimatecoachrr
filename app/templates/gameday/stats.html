@@ -158,6 +158,8 @@
                   <th data-sort="number">Assists</th>
                   <th data-sort="number">Blocks</th>
                   <th data-sort="number">Turns</th>
+                  <th data-sort="number">Throws</th>
+                  <th data-sort="number">Comp%</th>
                   <th data-sort="number">Pulls</th>
                   <th data-sort="number">Avg Hang</th>
                   <th data-sort="number">+/-</th>
@@ -175,6 +177,12 @@
                   <td>{{ stat.assists }}</td>
                   <td>{{ stat.blocks }}</td>
                   <td>{{ stat.turns }}</td>
+                  <td>{{ stat.throws }}</td>
+                  <td>
+                    {% if stat.completion_rate is not none %}
+                      {{ stat.completion_rate }}%
+                    {% else %}—{% endif %}
+                  </td>
                   <td>
                     {% if stat.pulls %}
                       {{ stat.pulls }}

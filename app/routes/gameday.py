@@ -691,6 +691,40 @@ def game_stats(game_id):
         else:
             stat.avg_hang_time = None
 
+    # Compute throws (catches + pickups) and throwaways from raw events
+    from app.models.gameday import GameDayEvent
+    from sqlalchemy import func as sa_func
+    point_ids = [p.id for p in points]
+
+    if point_ids:
+        throw_rows = db.session.query(
+            GameDayEvent.player_id,
+            sa_func.count(GameDayEvent.id)
+        ).filter(
+            GameDayEvent.point_id.in_(point_ids),
+            GameDayEvent.event_type.in_(['catch', 'pickup'])
+        ).group_by(GameDayEvent.player_id).all()
+
+        throwaway_rows = db.session.query(
+            GameDayEvent.player_id,
+            sa_func.count(GameDayEvent.id)
+        ).filter(
+            GameDayEvent.point_id.in_(point_ids),
+            GameDayEvent.event_type == 'throwaway'
+        ).group_by(GameDayEvent.player_id).all()
+    else:
+        throw_rows = []
+        throwaway_rows = []
+
+    throws_by_player = {pid: cnt for pid, cnt in throw_rows}
+    throwaways_by_player = {pid: cnt for pid, cnt in throwaway_rows}
+
+    for stat in player_stats:
+        t  = throws_by_player.get(stat.player_id, 0)
+        ta = throwaways_by_player.get(stat.player_id, 0)
+        stat.throws = t
+        stat.completion_rate = round(t / (t + ta) * 100, 1) if (t + ta) > 0 else None
+
     # Calculate team totals
     total_pulls = sum(stat.pulls or 0 for stat in player_stats)
     total_hang = sum(stat.total_hang_time or 0.0 for stat in player_stats)
