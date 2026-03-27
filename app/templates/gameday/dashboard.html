@@ -440,6 +440,11 @@
 {{ super() }}
 <script src="{{ url_for('static', filename='js/offline_queue.js') }}"></script>
 <script>
+  // Tell OfflineQueue where to fetch a fresh CSRF token before replaying
+  // requests that were queued while offline.  Must be called before any queued
+  // requests are replayed (i.e. before DOMContentLoaded fires replay).
+  OfflineQueue.setCsrfRefreshUrl('{{ url_for("gameday.get_csrf_token") }}');
+
   // Unregister any old service workers that might be cached in the browser
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(function(registrations) {
@@ -626,7 +631,44 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
-        location.reload();
+
+        // ── Local UI update (no page reload — would fail without connection) ──
+        // Update score display immediately so the user sees the right score.
+        if (outcome === 'scored') {
+          const el = document.getElementById('our-score');
+          if (el) el.textContent = parseInt(el.textContent || '0') + 1;
+        } else {
+          const el = document.getElementById('their-score');
+          if (el) el.textContent = parseInt(el.textContent || '0') + 1;
+        }
+
+        // Increment the point number counters so the next point gets the right number.
+        const ptNumDisplay = document.getElementById('next-point-number-display');
+        const ptNumBadge   = document.getElementById('next-point-number');
+        const ptNumInput   = document.getElementById('next-point-number-input');
+        const newPtNum = parseInt((ptNumInput && ptNumInput.value) || '1') + 1;
+        if (ptNumDisplay) ptNumDisplay.textContent = newPtNum;
+        if (ptNumBadge)   ptNumBadge.textContent   = newPtNum;
+        if (ptNumInput)   ptNumInput.value          = String(newPtNum);
+
+        // Reset internal state.
+        selectedPlayers = [];
+        pointEvents     = [];
+        lastThrower     = null;
+        discHolder      = null;
+        clearInterval(pullTimerInterval);
+        pullTimerInterval = null;
+        pullStartTime     = null;
+
+        // Reset player selection UI.
+        document.querySelectorAll('.player-checkbox:checked').forEach(cb => { cb.checked = false; });
+        document.querySelectorAll('.player-card').forEach(card => card.classList.remove('selected'));
+        updatePlayerCounts();
+
+        // Clear the event log and flip back to the line-selection card.
+        document.getElementById('event-log').innerHTML = '';
+        document.getElementById('point-tracking').style.display = 'none';
+        document.getElementById('line-selection').style.display  = 'block';
         return;
       }
       if (data.success) {

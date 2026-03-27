@@ -140,7 +140,30 @@ def record_point():
             id=game_id,
             team_organization_id=team_id
         ).first_or_404()
-        
+
+        # ── Idempotency check ────────────────────────────────────────────────
+        # Offline replay may re-submit a point that was already recorded (e.g.
+        # if the server processed the request but the response was lost).  Guard
+        # against duplicate points by checking the unique (game, number, team)
+        # combination before inserting anything.
+        existing_point = Point.query.filter_by(
+            game_id=game_id,
+            point_number=point_number,
+            team_organization_id=team_id
+        ).first()
+        if existing_point:
+            current_app.logger.info(
+                f'[record_point] Duplicate point detected (game={game_id}, '
+                f'number={point_number}) — returning existing data.'
+            )
+            return jsonify({
+                'success': True,
+                'our_score': game.our_score,
+                'their_score': game.their_score,
+                'next_point_number': existing_point.point_number + 1,
+                'duplicate': True,
+            })
+
         # Create new point
         point = Point(
             game_id=game_id,
@@ -1023,6 +1046,19 @@ def team_stats():
 
 from sqlalchemy import text  # Add this import at the top of your file
 from app.utils.team_filter import get_current_team_id
+
+
+@bp.route('/api/csrf-token', methods=['GET'])
+@login_required
+def get_csrf_token():
+    """Return a fresh CSRF token so the offline queue can replay stale requests.
+
+    This endpoint is intentionally a GET so flask-wtf does not require a token
+    to call it.  It is still protected by @login_required, so unauthenticated
+    callers receive a 401/redirect rather than a token.
+    """
+    from flask_wtf.csrf import generate_csrf
+    return jsonify({'csrf_token': generate_csrf()})
 
 @bp.route('/admin/reset_all_sequences', methods=['GET'])
 @login_required

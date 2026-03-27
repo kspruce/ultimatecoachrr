@@ -13,14 +13,23 @@
  *     .then(data => { ... })        // called immediately if online, or when replayed
  *     .catch(err => { ... })        // only called if the server returns an error
  *
+ * Configuration (optional, call before any queued fetches):
+ *
+ *   OfflineQueue.setCsrfRefreshUrl('/gameday/api/csrf-token');
+ *
+ * When configured, the queue will fetch a fresh CSRF token from that URL before
+ * replaying queued requests, and will retry once with the refreshed token if the
+ * server returns a 400/403.  This prevents silent data loss when the CSRF token
+ * has rotated between the time a request was queued and the time it is replayed.
+ *
  * A small connectivity indicator badge is injected into the DOM automatically.
  * When offline, requests are stored in localStorage and replayed in order once
  * connectivity is restored.
  *
  * Limitations
  * -----------
- * • Replay is fire-and-forget — if the replayed request fails, it is dropped
- *   (with a console warning).  This keeps the queue from growing unboundedly.
+ * • Replay is fire-and-forget — if the replayed request fails permanently
+ *   (after a CSRF retry) it is dropped with a console warning.
  * • localStorage keys are per-origin, so queues are isolated between tabs but
  *   shared within the same origin.  A lock (via a simple flag) prevents two
  *   tabs from replaying simultaneously.
@@ -32,6 +41,9 @@
   // ── Constants ────────────────────────────────────────────────────────────
   const QUEUE_KEY   = 'uc_offline_queue';   // localStorage key
   const REPLAY_FLAG = 'uc_queue_replaying'; // localStorage lock flag
+
+  // ── Config ───────────────────────────────────────────────────────────────
+  let csrfRefreshUrl = null;  // Set via OfflineQueue.setCsrfRefreshUrl()
 
   // ── Connectivity indicator ───────────────────────────────────────────────
   let indicator = null;
@@ -64,6 +76,7 @@
     indicator.textContent = `Offline — ${queuedCount} event${queuedCount !== 1 ? 's' : ''} queued`;
     indicator.style.background = '#EF4444';
     indicator.style.display = 'block';
+    indicator.style.opacity = '1';
   }
 
   function showSyncing() {
@@ -71,6 +84,7 @@
     indicator.textContent = 'Back online — syncing…';
     indicator.style.background = '#F59E0B';
     indicator.style.display = 'block';
+    indicator.style.opacity = '1';
   }
 
   function hideIndicator() {
@@ -101,6 +115,38 @@
     showOffline(q.length);
   }
 
+  // ── CSRF token refresh ────────────────────────────────────────────────────
+  /**
+   * Fetch a fresh CSRF token from the server.
+   * Returns the token string, or null if unavailable/not configured.
+   */
+  async function refreshCsrfToken() {
+    if (!csrfRefreshUrl) return null;
+    try {
+      const resp = await fetch(csrfRefreshUrl, { credentials: 'same-origin' });
+      if (resp.ok) {
+        const data = await resp.json();
+        // Also update the meta tag on the page so inline JS picks it up
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && data.csrf_token) meta.setAttribute('content', data.csrf_token);
+        return data.csrf_token || null;
+      }
+    } catch (e) {
+      console.warn('[OfflineQueue] Could not refresh CSRF token:', e);
+    }
+    return null;
+  }
+
+  /**
+   * Inject a fresh CSRF token into a request options object (mutates in place).
+   */
+  function applyCsrfToken(options, token) {
+    if (!token || !options) return;
+    if (options.headers && 'X-CSRFToken' in options.headers) {
+      options.headers['X-CSRFToken'] = token;
+    }
+  }
+
   // ── Replay ────────────────────────────────────────────────────────────────
   async function replayQueue() {
     // Simple tab-level lock to avoid double-replay
@@ -111,19 +157,48 @@
     localStorage.setItem(REPLAY_FLAG, '1');
     showSyncing();
 
+    // Pre-fetch a fresh CSRF token so every replayed request uses it
+    const freshToken = await refreshCsrfToken();
+
     const remaining = [];
     for (const item of q) {
+      // Apply the fresh token before every attempt
+      if (freshToken) applyCsrfToken(item.options, freshToken);
+
+      let succeeded = false;
       try {
         const resp = await fetch(item.url, item.options);
-        if (!resp.ok) {
-          console.warn('[OfflineQueue] Replay request failed (', resp.status, '), dropping:', item.url);
-        } else {
+
+        if (resp.ok) {
           console.log('[OfflineQueue] Replayed:', item.url);
+          succeeded = true;
+        } else if ((resp.status === 400 || resp.status === 403) && csrfRefreshUrl) {
+          // CSRF failure — fetch another token and retry once
+          console.warn('[OfflineQueue] CSRF error (' + resp.status + ') on replay, retrying with fresh token:', item.url);
+          const retryToken = await refreshCsrfToken();
+          if (retryToken) applyCsrfToken(item.options, retryToken);
+          try {
+            const retryResp = await fetch(item.url, item.options);
+            if (retryResp.ok) {
+              console.log('[OfflineQueue] Replayed (after CSRF refresh):', item.url);
+              succeeded = true;
+            } else {
+              console.warn('[OfflineQueue] Replay failed after CSRF refresh (' + retryResp.status + '), dropping:', item.url);
+              succeeded = true; // treat as dropped so we don't loop forever
+            }
+          } catch (retryErr) {
+            // Still offline on retry — keep in queue
+            remaining.push(item);
+            continue;
+          }
+        } else {
+          console.warn('[OfflineQueue] Replay request failed (' + resp.status + '), dropping:', item.url);
+          succeeded = true; // permanent failure — drop to avoid infinite loop
         }
-        // On success or permanent failure, do NOT re-queue the item.
       } catch (e) {
-        // Still offline — keep the item for next attempt
+        // Network error — still offline, keep the item for next attempt
         remaining.push(item);
+        continue;
       }
     }
 
@@ -182,6 +257,13 @@
     }
   }
 
-  global.OfflineQueue = { fetch: queuedFetch, replayQueue };
+  global.OfflineQueue = {
+    fetch: queuedFetch,
+    replayQueue,
+    /** Configure a URL that returns { csrf_token: "..." } — called before every replay batch. */
+    setCsrfRefreshUrl: (url) => { csrfRefreshUrl = url; },
+    /** Return the number of items currently waiting in the offline queue. */
+    getQueuedCount: () => loadQueue().length,
+  };
 
 }(window));
