@@ -763,14 +763,10 @@ def game_stats(game_id):
         'avg_hang_time': round(total_hang / total_pulls, 1) if total_pulls > 0 else None,
     }
 
-    # Calculate efficiency metrics
-    if team_totals['goals'] > 0:
-        team_totals['completion_rate'] = round(
-            (team_totals['goals'] + team_totals['assists']) /
-            (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) * 100, 1
-        ) if (team_totals['goals'] + team_totals['assists'] + team_totals['turns']) > 0 else 0
-    else:
-        team_totals['completion_rate'] = 0
+    # Team completion rate = average of individual player completion rates
+    # (only players who have at least one recorded throw are included)
+    player_rates = [stat.completion_rate for stat in player_stats if stat.completion_rate is not None]
+    team_totals['completion_rate'] = round(sum(player_rates) / len(player_rates), 1) if player_rates else 0
 
     # ── Tournament stats (points played + +/- across all games in the tournament) ──
     tournament_stats = None
