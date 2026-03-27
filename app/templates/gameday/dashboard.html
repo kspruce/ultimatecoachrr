@@ -956,17 +956,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const playerOutId = document.getElementById('player-out').value;
     const playerInId = document.getElementById('player-in').value;
     if (!playerOutId || !playerInId) { alert('Please select both players'); return; }
-    
+
     const playerOut = selectedPlayers.find(p => p.id === playerOutId);
     const playerInOption = document.getElementById('player-in').selectedOptions[0];
+    if (!playerOut) { alert('Player out not found in current lineup'); return; }
     if (playerOut.gender !== playerInOption.dataset.gender) { alert('Substitution must maintain gender balance'); return; }
 
-    // Update UI and state
-    // ... (This part is complex, for simplicity we will just log it and the user can re-select if needed)
+    // Parse player-in details from the option text (format: "#jersey name")
+    const playerInText = playerInOption.textContent.trim();
+    const jerseyMatch = playerInText.match(/^#(\S+)\s+(.+)$/);
+    const playerIn = {
+      id: playerInId,
+      gender: playerInOption.dataset.gender,
+      jersey: jerseyMatch ? jerseyMatch[1] : '',
+      name: jerseyMatch ? jerseyMatch[2] : playerInText
+    };
+
+    // Log the substitution event
     const event = { type: 'substitution', player_out_id: playerOutId, player_in_id: playerInId, timestamp: new Date().toISOString() };
     pointEvents.push(event);
     addEventToLog({ type: 'substitution', player_out_name: playerOut.name, player_in_name: playerInOption.textContent });
-    alert('Substitution logged. Please manually update player selections if needed for the rest of the point.');
+
+    // Update selectedPlayers: swap player out for player in
+    const outIndex = selectedPlayers.findIndex(p => p.id === playerOutId);
+    if (outIndex !== -1) {
+      selectedPlayers.splice(outIndex, 1, playerIn);
+    }
+
+    // Update active player chips to reflect the new lineup
+    document.getElementById('active-players').innerHTML = selectedPlayers.map(p =>
+      `<span class="badge bg-primary me-1 mb-1 player-chip" data-player-id="${p.id}">#${p.jersey} ${p.name}</span>`
+    ).join('');
+
+    // Rebuild event player buttons so events are attributed to the correct players
+    const eventPlayerButtons = document.getElementById('event-player-buttons');
+    const currentActiveId = eventPlayerButtons.dataset.selectedPlayerId;
+    eventPlayerButtons.innerHTML = '';
+    selectedPlayers.forEach(player => {
+      const button = document.createElement('div');
+      button.className = 'player-button' + (player.id === currentActiveId ? ' active' : '');
+      button.textContent = `#${player.jersey} ${player.name}`;
+      button.dataset.playerId = player.id;
+      button.addEventListener('click', function() {
+        document.querySelectorAll('.player-button').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        eventPlayerButtons.dataset.selectedPlayerId = this.dataset.playerId;
+        applyDiscHolderLock(this.dataset.playerId);
+      });
+      eventPlayerButtons.appendChild(button);
+    });
+    // If the subbed-out player was the active selection, clear it
+    if (currentActiveId === playerOutId) {
+      eventPlayerButtons.dataset.selectedPlayerId = '';
+    }
+
     bootstrap.Modal.getInstance(document.getElementById('substitutionModal')).hide();
   });
 
