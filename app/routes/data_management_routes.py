@@ -610,6 +610,39 @@ def data_management():
 
 
 
+@bp.route('/fix-sequences', methods=['POST'])
+@login_required
+@admin_required
+def fix_sequences():
+    """Reset all PostgreSQL sequences to fix duplicate key (UniqueViolation) errors."""
+    try:
+        from app import db
+        results = get_manager().reset_sequences()
+        db.session.commit()
+
+        success = {t: v for t, v in results.items()
+                   if not str(v).startswith('Error') and not str(v).startswith('Skipped')}
+        errors = {t: v for t, v in results.items() if str(v).startswith('Error')}
+        skipped = {t: v for t, v in results.items() if str(v).startswith('Skipped')}
+
+        return jsonify({
+            'success': True,
+            'message': f'Sequences reset for {len(success)} table(s). '
+                       f'{len(errors)} error(s), {len(skipped)} skipped.',
+            'results': {t: str(v) for t, v in results.items()},
+            'counts': {
+                'reset': len(success),
+                'errors': len(errors),
+                'skipped': len(skipped),
+            }
+        })
+    except Exception as e:
+        logger.error(f'[Fix Sequences] Error: {e}', exc_info=True)
+        from app import db
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @bp.route('/export-data', methods=['POST'])
 @login_required
 @admin_required

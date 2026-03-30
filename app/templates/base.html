@@ -216,14 +216,18 @@
       }
       /* The user pill button dropdown (outside the collapse) stays absolute but clipped to screen */
       .uc-nav-right .dropdown-menu {
-        position: absolute !important;
-        right: 0 !important;
+        position: fixed !important;
+        top: 60px !important;
+        right: .5rem !important;
         left: auto !important;
         transform: none !important;
         max-width: calc(100vw - 1rem) !important;
         min-width: 210px !important;
         max-height: calc(100dvh - 70px) !important;
-        overflow-y: auto !important;
+        overflow-y: scroll !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain !important;
+        z-index: 1050 !important;
       }
     }
 

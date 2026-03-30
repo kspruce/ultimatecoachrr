@@ -357,6 +357,32 @@ def record_point():
 
 
 
+@bp.route('/api/game/<int:game_id>/halftime', methods=['POST'])
+@login_required
+@stat_taker_required
+def record_halftime(game_id):
+    """Record the halftime score for a game."""
+    try:
+        team_id = get_current_team_id()
+        game = Game.query.filter_by(
+            id=game_id, team_organization_id=team_id
+        ).first_or_404()
+
+        game.halftime_our_score = game.our_score
+        game.halftime_their_score = game.their_score
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'halftime_our_score': game.halftime_our_score,
+            'halftime_their_score': game.halftime_their_score,
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'[record_halftime] {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)})
+
+
 @bp.route('/api/undo-last-point/<int:game_id>', methods=['POST'])
 @login_required
 @stat_taker_required
