@@ -17,14 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    # Add hang_time to game_day_event (nullable float, seconds in air)
-    op.add_column('game_day_event',
-        sa.Column('hang_time', sa.Float(), nullable=True)
-    )
-    # Add total_hang_time to game_day_player_stats (cumulative hang time per player per game)
-    op.add_column('game_day_player_stats',
-        sa.Column('total_hang_time', sa.Float(), nullable=True, server_default='0.0')
-    )
+    # Use raw SQL with IF NOT EXISTS so the migration is safe to run even if
+    # the columns were added directly to the database outside of Alembic.
+    op.execute("ALTER TABLE game_day_event ADD COLUMN IF NOT EXISTS hang_time FLOAT")
+    op.execute("ALTER TABLE game_day_player_stats ADD COLUMN IF NOT EXISTS total_hang_time FLOAT DEFAULT 0.0")
 
 
 def downgrade():
