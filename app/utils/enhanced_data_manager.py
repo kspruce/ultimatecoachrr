@@ -1033,41 +1033,56 @@ class EnhancedDataManager:
         
         # Get all models from the registry
         for table_name, model in self.models.items():
+            # Wrap each table in a savepoint so a failure here doesn't abort
+            # the surrounding transaction and break all subsequent tables.
+            try:
+                savepoint = db.session.begin_nested()
+            except Exception as e:
+                results[table_name] = f"Error (savepoint): {str(e)}"
+                continue
+
             try:
                 # Find primary key column(s) that are auto-incrementing
                 pk_columns = []
                 for column in model.__table__.columns:
                     if column.primary_key and column.autoincrement:
                         pk_columns.append(column.name)
-                
+
                 if not pk_columns:
+                    savepoint.commit()
                     results[table_name] = "Skipped (no auto-increment PK)"
                     continue
-                
+
                 # For simplicity, use the first auto-incrementing PK column
                 pk_column = pk_columns[0]
-                
+
+                # Quote table and column names to handle PostgreSQL reserved words
+                # (e.g. "user" is a reserved keyword in PostgreSQL)
+                quoted_table = f'"{table_name}"'
+                quoted_pk = f'"{pk_column}"'
+
                 # Get the max ID value
-                max_id_query = text(f"SELECT COALESCE(MAX({pk_column}), 0) FROM {table_name}")
+                max_id_query = text(f"SELECT COALESCE(MAX({quoted_pk}), 0) FROM {quoted_table}")
                 max_id = db.session.execute(max_id_query).scalar() or 0
                 next_id = max_id + 1
-                
+
                 # Different SQL for different database types
                 if dialect == 'postgresql':
                     # PostgreSQL sequence naming convention
                     seq_name = f"{table_name}_{pk_column}_seq"
-                    
+
                     # Check if the sequence exists
                     seq_exists_query = text(
                         "SELECT EXISTS(SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = :seq_name)"
                     )
                     seq_exists = db.session.execute(seq_exists_query, {"seq_name": seq_name}).scalar()
-                    
+
                     if seq_exists:
                         # Set the sequence to max_id + 1
                         db.session.execute(
                             text(f"SELECT setval('{seq_name}', {next_id}, false)")
                         )
+                        savepoint.commit()
                         results[table_name] = f"Reset to {next_id}"
                     else:
                         # Try alternative sequence naming conventions
@@ -1076,26 +1091,28 @@ class EnhancedDataManager:
                             "SELECT EXISTS(SELECT 1 FROM pg_sequences WHERE schemaname = 'public' AND sequencename = :seq_name)"
                         )
                         seq_exists = db.session.execute(seq_exists_query, {"seq_name": alt_seq_name}).scalar()
-                        
+
                         if seq_exists:
                             db.session.execute(
                                 text(f"SELECT setval('{alt_seq_name}', {next_id}, false)")
                             )
+                            savepoint.commit()
                             results[table_name] = f"Reset to {next_id} (using {alt_seq_name})"
                         else:
+                            savepoint.commit()
                             results[table_name] = "Skipped (sequence not found)"
-                    
+
                 elif dialect == 'sqlite':
                     # For SQLite, we need to update the sqlite_sequence table
                     # First check if the table exists in sqlite_sequence
                     check_query = text("SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_sequence'")
                     has_seq_table = db.session.execute(check_query).scalar() is not None
-                    
+
                     if has_seq_table:
                         # Check if our table is in sqlite_sequence
                         check_table_query = text("SELECT name FROM sqlite_sequence WHERE name = :table_name")
                         table_in_seq = db.session.execute(check_table_query, {"table_name": table_name}).scalar() is not None
-                        
+
                         if table_in_seq:
                             # Update existing entry
                             db.session.execute(
@@ -1108,24 +1125,29 @@ class EnhancedDataManager:
                                 text("INSERT INTO sqlite_sequence (name, seq) VALUES (:table_name, :next_id)"),
                                 {"table_name": table_name, "next_id": max_id}
                             )
-                        
+
+                        savepoint.commit()
                         results[table_name] = f"Reset to {next_id}"
                     else:
+                        savepoint.commit()
                         results[table_name] = "Skipped (sqlite_sequence table not found)"
-                    
+
                 elif dialect == 'mysql':
                     # For MySQL/MariaDB
                     db.session.execute(
-                        text(f"ALTER TABLE {table_name} AUTO_INCREMENT = {next_id}")
+                        text(f"ALTER TABLE {quoted_table} AUTO_INCREMENT = {next_id}")
                     )
+                    savepoint.commit()
                     results[table_name] = f"Reset to {next_id}"
-                    
+
                 else:
+                    savepoint.commit()
                     results[table_name] = f"Unsupported dialect: {dialect}"
-                    
+
             except Exception as e:
+                savepoint.rollback()
                 results[table_name] = f"Error: {str(e)}"
-        
+
         # Commit the changes
         db.session.commit()
         return results
