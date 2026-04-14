@@ -87,6 +87,24 @@
   padding: .18rem .5rem; border-radius: 20px;
   text-transform: uppercase;
 }
+.clip-hidden-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(217,119,6,.9); color: #fff;
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: .18rem .5rem; border-radius: 20px;
+  text-transform: uppercase;
+}
+.clip-share-badge {
+  position: absolute; top: 34px; right: 8px;
+  background: rgba(22,163,74,.9); color: #fff;
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: .18rem .5rem; border-radius: 20px;
+  text-transform: uppercase;
+}
+.clip-card.is-hidden {
+  opacity: .65;
+  border-style: dashed;
+}
 .clip-views {
   position: absolute; bottom: 6px; right: 8px;
   font-size: .68rem; color: rgba(255,255,255,.85);
@@ -399,7 +417,7 @@
         <div class="col-sm-6 col-lg-4 col-xxl-3 clip-item"
              data-title="{{ clip.title|lower }}"
              data-desc="{{ (clip.description or '')|lower }}">
-          <div class="clip-card {% if clip.is_featured %}featured{% endif %}"
+          <div class="clip-card {% if clip.is_featured %}featured{% endif %} {% if clip.is_hidden %}is-hidden{% endif %}"
                onclick="window.location='{{ url_for('clip.view_clip', clip_id=clip.id) }}'">
 
             <!-- Thumbnail -->
@@ -414,6 +432,15 @@
 
               {% if clip.is_featured %}
               <span class="clip-featured-badge"><i class="bi bi-star-fill me-1"></i>Featured</span>
+              {% endif %}
+              {# Admin-only overlay badges #}
+              {% if current_user.is_admin %}
+                {% if clip.is_hidden %}
+                <span class="clip-hidden-badge"><i class="bi bi-eye-slash-fill me-1"></i>Hidden</span>
+                {% endif %}
+                {% if clip.is_flagged_for_sharing %}
+                <span class="clip-share-badge"><i class="bi bi-flag-fill me-1"></i>Share</span>
+                {% endif %}
               {% endif %}
 
               <div class="clip-play-overlay">

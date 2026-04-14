@@ -102,6 +102,10 @@ def index():
                  .group_by(Clip.id)
                  .order_by(func.count(ClipAnnotation.id).desc()))
 
+    # Non-admins and non-coaches never see hidden clips
+    if not (current_user.is_admin or current_user.is_coach):
+        query = query.filter(Clip.is_hidden == False)
+
     # Get clips
     clips = query.all()
 
@@ -235,6 +239,10 @@ def view_clip(clip_id):
     team_id = get_current_team_id()
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
     
+    # Block non-admin/coach users from viewing hidden clips
+    if clip.is_hidden and not (current_user.is_admin or current_user.is_coach):
+        abort(404)
+
     # Increment view count
     clip.view_count = (clip.view_count or 0) + 1
     db.session.commit()
@@ -383,9 +391,11 @@ def delete_segment(clip_id, segment_id):
 @bp.route('/<int:clip_id>/segments/<string:action>', methods=['POST'])
 @login_required
 def mark_segment(clip_id, action):
+    if not (current_user.is_admin or current_user.is_coach):
+        abort(403)
     clip = _get_clip_or_404(clip_id)
     team_id = get_current_team_id()
-    
+
     data = request.get_json(silent=True) or {}
     timestamp = data.get('timestamp', None)
     if timestamp is None:
@@ -429,7 +439,9 @@ def mark_segment(clip_id, action):
         return ('Invalid action', 400)
 
 def _get_clip_or_404(clip_id):
-    clip = Clip.query.get_or_404(clip_id)
+    """Return clip only if it belongs to the current user's team."""
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
     return clip
 
 # ============================================================================
@@ -494,11 +506,16 @@ def add_annotation(clip_id):
 @login_required
 def edit_annotation(annotation_id):
     """Edit an existing annotation"""
-    annotation = ClipAnnotation.query.get_or_404(annotation_id)
     team_id = get_current_team_id()
-    
+    # Verify the annotation belongs to a clip owned by this team
+    annotation = (ClipAnnotation.query
+                  .join(Clip, Clip.id == ClipAnnotation.clip_id)
+                  .filter(ClipAnnotation.id == annotation_id,
+                          Clip.team_organization_id == team_id)
+                  .first_or_404())
+
     # Check permissions
-    if not (current_user.id == annotation.user_id or 
+    if not (current_user.id == annotation.user_id or
             current_user.is_admin or current_user.is_coach):
         flash('You do not have permission to edit this annotation.', 'danger')
         return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
@@ -552,10 +569,16 @@ def edit_annotation(annotation_id):
 @login_required
 def delete_annotation(annotation_id):
     """Delete an annotation"""
-    annotation = ClipAnnotation.query.get_or_404(annotation_id)
-    
+    team_id = get_current_team_id()
+    # Verify the annotation belongs to a clip owned by this team
+    annotation = (ClipAnnotation.query
+                  .join(Clip, Clip.id == ClipAnnotation.clip_id)
+                  .filter(ClipAnnotation.id == annotation_id,
+                          Clip.team_organization_id == team_id)
+                  .first_or_404())
+
     # Check permissions
-    if not (current_user.id == annotation.user_id or 
+    if not (current_user.id == annotation.user_id or
             current_user.is_admin or current_user.is_coach):
         flash('You do not have permission to delete this annotation.', 'danger')
         return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
@@ -566,6 +589,38 @@ def delete_annotation(annotation_id):
     
     flash('Annotation deleted successfully!', 'success')
     return redirect(url_for('clip.view_clip', clip_id=clip_id))
+
+# ============================================================================
+# ADMIN CLIP MODERATION ROUTES
+# ============================================================================
+
+@bp.route('/<int:clip_id>/toggle_hidden', methods=['POST'])
+@login_required
+@admin_required
+def toggle_hidden(clip_id):
+    """Admin: toggle visibility of a clip from players."""
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    clip.is_hidden = not clip.is_hidden
+    db.session.commit()
+    state = 'hidden' if clip.is_hidden else 'visible'
+    flash(f'Clip "{clip.title}" is now {state}.', 'info')
+    return redirect(url_for('clip.view_clip', clip_id=clip_id))
+
+
+@bp.route('/<int:clip_id>/toggle_share_flag', methods=['POST'])
+@login_required
+@admin_required
+def toggle_share_flag(clip_id):
+    """Admin: flag/unflag a clip as ready to share externally."""
+    team_id = get_current_team_id()
+    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    clip.is_flagged_for_sharing = not clip.is_flagged_for_sharing
+    db.session.commit()
+    state = 'flagged for sharing' if clip.is_flagged_for_sharing else 'unflagged'
+    flash(f'Clip "{clip.title}" has been {state}.', 'info')
+    return redirect(url_for('clip.view_clip', clip_id=clip_id))
+
 
 # ============================================================================
 # TAG MANAGEMENT ROUTES

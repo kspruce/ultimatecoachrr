@@ -35,6 +35,8 @@ class Clip(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     is_featured = db.Column(db.Boolean, default=False)  # Highlight important clips
     view_count = db.Column(db.Integer, default=0)
+    is_hidden = db.Column(db.Boolean, default=False)          # Admin can hide a clip from players
+    is_flagged_for_sharing = db.Column(db.Boolean, default=False)  # Admin marks clip ready to share
     
     # Relationships
     game = db.relationship('Game', back_populates='clips')
