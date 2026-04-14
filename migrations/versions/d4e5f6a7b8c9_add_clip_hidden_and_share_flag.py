@@ -1,7 +1,7 @@
 """Add is_hidden and is_flagged_for_sharing to clip
 
-Revision ID: a1b2c3d4e5f6
-Revises: f1a2b3c4d5e6
+Revision ID: d4e5f6a7b8c9
+Revises: b2c3d4e5f6a7
 Create Date: 2026-04-14 12:00:00.000000
 
 """
@@ -10,15 +10,13 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a1b2c3d4e5f6'
-down_revision = 'f1a2b3c4d5e6'
+revision = 'd4e5f6a7b8c9'
+down_revision = 'b2c3d4e5f6a7'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    # Wrap each in try/except so the migration is safe to re-run on SQLite
-    # (which lacks IF NOT EXISTS for ALTER TABLE ADD COLUMN).
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     existing_cols = [c['name'] for c in inspector.get_columns('clip')]
