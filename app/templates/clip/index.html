@@ -105,6 +105,23 @@
   opacity: .65;
   border-style: dashed;
 }
+
+/* ── Group dividers (admin sort view) ───────────────────── */
+.clip-group-divider {
+  width: 100%;
+  display: flex; align-items: center; gap: .6rem;
+  margin: .25rem 0 .25rem;
+  font-size: .73rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--uc-gray-500);
+}
+.clip-group-divider:not(:first-child) { margin-top: 1.1rem; }
+.clip-group-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--uc-gray-200);
+}
+.clip-group-divider.group-flagged { color: #16a34a; }
+.clip-group-divider.group-flagged::after { background: rgba(22,163,74,.25); }
+.clip-group-divider.group-hidden  { color: #d97706; }
+.clip-group-divider.group-hidden::after  { background: rgba(217,119,6,.25); }
 .clip-views {
   position: absolute; bottom: 6px; right: 8px;
   font-size: .68rem; color: rgba(255,255,255,.85);
@@ -407,7 +424,33 @@
       {% if clips %}
 
       <div class="row g-3" id="clipGrid">
+        {% if current_user.is_admin %}{% set ns = namespace(last_grp=-1) %}{% endif %}
         {% for clip in clips %}
+        {# ── Admin section dividers ───────────────────────── #}
+        {% if current_user.is_admin %}
+          {% if clip.is_flagged_for_sharing %}{% set grp = 0 %}
+          {% elif clip.is_hidden %}{% set grp = 2 %}
+          {% else %}{% set grp = 1 %}{% endif %}
+          {% if grp != ns.last_grp %}
+            {% set ns.last_grp = grp %}
+            <div class="col-12">
+              {% if grp == 0 %}
+              <div class="clip-group-divider group-flagged">
+                <i class="bi bi-flag-fill"></i> Flagged for sharing
+              </div>
+              {% elif grp == 1 %}
+              <div class="clip-group-divider">
+                <i class="bi bi-collection-play"></i> All clips
+              </div>
+              {% else %}
+              <div class="clip-group-divider group-hidden">
+                <i class="bi bi-eye-slash-fill"></i> Hidden from players
+              </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endif %}
+
         {# Extract YouTube video ID from embed URL #}
         {% set yt_id = '' %}
         {% if clip.embed_url and 'youtube.com/embed/' in clip.embed_url %}

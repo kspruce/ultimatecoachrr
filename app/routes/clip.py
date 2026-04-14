@@ -86,21 +86,33 @@ def index():
     if is_featured == '1':
         query = query.filter(Clip.is_featured == True)
 
-    # Apply sorting
+    # Priority key: flagged for sharing floats to top (0), hidden sinks to bottom (2), rest in middle (1).
+    # This is always applied as the primary sort so admins get a clear grouped view.
+    from sqlalchemy import case as sa_case
+    priority_key = sa_case(
+        (Clip.is_flagged_for_sharing == True, 0),
+        (Clip.is_hidden == True, 2),
+        else_=1
+    )
+
+    # Apply sorting — priority key always leads, user-chosen sort is the tiebreaker
     if sort_by == 'created_desc':
-        query = query.order_by(Clip.created_at.desc())
+        query = query.order_by(priority_key, Clip.created_at.desc())
     elif sort_by == 'created_asc':
-        query = query.order_by(Clip.created_at.asc())
+        query = query.order_by(priority_key, Clip.created_at.asc())
     elif sort_by == 'title_asc':
-        query = query.order_by(Clip.title.asc())
+        query = query.order_by(priority_key, Clip.title.asc())
     elif sort_by == 'views_desc':
-        query = query.order_by(Clip.view_count.desc())
+        query = query.order_by(priority_key, Clip.view_count.desc())
     elif sort_by == 'annotations_desc':
-        # Sort by annotation count
+        # Sort by annotation count, still respecting priority grouping
         query = (query
                  .outerjoin(ClipAnnotation)
                  .group_by(Clip.id)
-                 .order_by(func.count(ClipAnnotation.id).desc()))
+                 .order_by(priority_key, func.count(ClipAnnotation.id).desc()))
+    else:
+        # Fallback default
+        query = query.order_by(priority_key, Clip.created_at.desc())
 
     # Non-admins and non-coaches never see hidden clips
     if not (current_user.is_admin or current_user.is_coach):
