@@ -290,11 +290,16 @@ def view_clip(clip_id):
     annotation_creators = db.session.query(User).join(
         ClipAnnotation, User.id == ClipAnnotation.user_id
     ).filter(ClipAnnotation.clip_id == clip_id).distinct().all()
-    
-    return render_template('clip/view_clip.html', 
-                         clip=clip, 
+
+    # Annotation form (rendered inline in the offcanvas on this page)
+    from app.forms.annotation import AnnotationForm
+    ann_form = AnnotationForm()
+
+    return render_template('clip/view_clip.html',
+                         clip=clip,
                          annotations=annotations,
-                         annotation_creators=annotation_creators)
+                         annotation_creators=annotation_creators,
+                         ann_form=ann_form)
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
@@ -508,7 +513,11 @@ def add_annotation(clip_id):
         
         db.session.add(annotation)
         db.session.commit()
-        
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            from flask import jsonify
+            return jsonify({'success': True})
+
         flash('Annotation added successfully!', 'success')
         return redirect(url_for('clip.view_clip', clip_id=clip_id))
     

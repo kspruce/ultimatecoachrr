@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block styles %}
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <style>
 /* ── Page layout ────────────────────────────────────────── */
 .clip-view-wrap { max-width: 1400px; margin: 0 auto; }
@@ -174,12 +175,196 @@
 .ann-empty { text-align: center; padding: 1.5rem; color: var(--uc-gray-400); }
 .ann-empty i { font-size: 2rem; display: block; margin-bottom: .4rem; }
 .ann-empty p { font-size: .8rem; margin: 0; }
+
+/* ── Annotation notes HTML rendering ───────────────────── */
+.ann-notes p { margin: 0 0 .25rem; }
+.ann-notes p:last-child { margin-bottom: 0; }
+.ann-notes ul, .ann-notes ol { margin: .2rem 0 .2rem 1.2rem; padding: 0; font-size: .78rem; }
+.ann-notes strong { font-weight: 700; }
+.ann-notes em { font-style: italic; }
+
+/* ── Annotation offcanvas ───────────────────────────────── */
+#annotationOffcanvas { width: min(520px, 100vw); }
+.ann-offcanvas-video {
+  background: #0f172a;
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+}
+.ann-offcanvas-video iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+.ann-offcanvas-body { padding: 1rem; overflow-y: auto; }
+
+/* ── mm:ss timestamp input ──────────────────────────────── */
+.ts-group { display: flex; align-items: center; gap: .4rem; }
+.ts-group input[type=number] {
+  width: 64px; text-align: center; font-weight: 700;
+  -moz-appearance: textfield;
+}
+.ts-group input[type=number]::-webkit-inner-spin-button,
+.ts-group input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ts-colon { font-size: 1.15rem; font-weight: 700; color: var(--uc-gray-600); }
+
+/* ── Quill overrides ────────────────────────────────────── */
+.ql-container { font-size: .85rem; border-radius: 0 0 6px 6px !important; }
+.ql-toolbar { border-radius: 6px 6px 0 0 !important; background: var(--uc-gray-50); }
+.ql-editor { min-height: 100px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
 <div class="clip-view-wrap">
+
+<!-- ── Add Annotation offcanvas ──────────────────────────── -->
+{% if current_user.is_authenticated %}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="annotationOffcanvas" aria-labelledby="annotationOffcanvasLabel">
+  <div class="offcanvas-header border-bottom" style="padding:.75rem 1rem">
+    <h6 class="offcanvas-title mb-0" id="annotationOffcanvasLabel" style="font-weight:700">
+      <i class="bi bi-plus-circle me-1"></i>Add Annotation
+    </h6>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+
+  <!-- Video at the top of the panel -->
+  {% if clip.embed_url %}
+  <div class="ann-offcanvas-video" id="offcanvas-video-wrap">
+    <iframe id="offcanvas-video-player" src="" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+  </div>
+  {% endif %}
+
+  <div class="ann-offcanvas-body">
+    <form id="annotation-offcanvas-form" method="post"
+          action="{{ url_for('clip.add_annotation', clip_id=clip.id) }}" novalidate>
+      {{ ann_form.hidden_tag() }}
+
+      <!-- Timestamp (mm:ss) -->
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">Timestamp</label>
+        <div class="ts-group">
+          <input type="number" id="ann-min" min="0" class="form-control form-control-sm" placeholder="0">
+          <span class="ts-colon">:</span>
+          <input type="number" id="ann-sec" min="0" max="59" class="form-control form-control-sm" placeholder="00">
+          <span style="font-size:.75rem;color:var(--uc-gray-500)">min&thinsp;:&thinsp;sec</span>
+        </div>
+        <input type="hidden" name="timestamp" id="ann-timestamp-hidden" value="0">
+      </div>
+
+      <!-- Title -->
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">
+          Title <span style="font-weight:400;color:var(--uc-gray-400)">(optional)</span>
+        </label>
+        <input type="text" name="title" class="form-control form-control-sm" placeholder="Brief label for this moment">
+      </div>
+
+      <!-- Notes with Quill rich text -->
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">Notes</label>
+        <div id="quill-ann-editor"></div>
+        <textarea name="notes" id="ann-notes-hidden" style="display:none"></textarea>
+      </div>
+
+      <!-- Event type -->
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">Event Type</label>
+        <select name="event_type" class="form-select form-select-sm">
+          {% for value, label in ann_form.event_type.choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Score -->
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label" style="font-size:.8rem;font-weight:700">Our Score</label>
+          <input type="number" name="our_score" min="0" class="form-control form-control-sm">
+        </div>
+        <div class="col-6">
+          <label class="form-label" style="font-size:.8rem;font-weight:700">Their Score</label>
+          <input type="number" name="their_score" min="0" class="form-control form-control-sm">
+        </div>
+      </div>
+
+      <!-- Offense / Defense -->
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label" style="font-size:.8rem;font-weight:700">Offense</label>
+          <select name="offense" class="form-select form-select-sm">
+            {% for value, label in ann_form.offense.choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-6">
+          <label class="form-label" style="font-size:.8rem;font-weight:700">Defense</label>
+          <select name="defense" class="form-select form-select-sm">
+            {% for value, label in ann_form.defense.choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      {% if ann_form.tags.choices %}
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">Tags</label>
+        <select name="tags" class="form-select form-select-sm" multiple size="4">
+          {% for value, label in ann_form.tags.choices %}
+          <option value="{{ value }}"{% if value == -1 %} disabled style="color:var(--uc-gray-400);font-size:.7rem"{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-text" style="font-size:.72rem">Hold Ctrl / Cmd to select multiple</div>
+      </div>
+      {% endif %}
+
+      <!-- Players -->
+      {% if ann_form.players.choices %}
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">Players Involved</label>
+        <select name="players" class="form-select form-select-sm" multiple size="4">
+          {% for value, label in ann_form.players.choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text" style="font-size:.72rem">Hold Ctrl / Cmd to select multiple</div>
+      </div>
+      {% endif %}
+
+      <!-- Key moment + Visibility -->
+      <div class="row g-2 mb-3 align-items-center">
+        <div class="col-6 d-flex align-items-center" style="padding-top:1.6rem">
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" name="is_key_moment" id="ann-key-moment" value="y">
+            <label class="form-check-label" for="ann-key-moment" style="font-size:.82rem">
+              <i class="bi bi-star-fill me-1" style="color:var(--uc-amber)"></i>Key Moment
+            </label>
+          </div>
+        </div>
+        <div class="col-6">
+          <label class="form-label" style="font-size:.8rem;font-weight:700">Visibility</label>
+          <select name="visibility" class="form-select form-select-sm">
+            {% for value, label in ann_form.visibility.choices %}
+            <option value="{{ value }}"{% if value == 'team' %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div id="ann-form-error" class="alert alert-danger py-2 mb-2" style="display:none;font-size:.82rem"></div>
+      <button type="submit" class="btn btn-primary w-100" id="ann-submit-btn">
+        <i class="bi bi-check-circle me-1"></i>Save Annotation
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
 
   <!-- Breadcrumb / back -->
   <div class="d-flex align-items-center gap-2 mb-3">
@@ -347,12 +532,11 @@
       <div class="annotation-actions-card">
         <h6><i class="bi bi-plus-circle me-1"></i>Annotate</h6>
         <div class="d-flex gap-2 flex-wrap">
-          <a id="btn-add-annotation"
-             data-base-url="{{ url_for('clip.add_annotation', clip_id=clip.id) }}"
-             class="btn btn-primary btn-sm">
+          <button id="btn-add-annotation" type="button" class="btn btn-primary btn-sm"
+                  data-bs-toggle="offcanvas" data-bs-target="#annotationOffcanvas">
             <i class="bi bi-plus-circle me-1"></i>Add Annotation
             <span style="font-size:.7rem;opacity:.75;margin-left:.2rem">(at current time)</span>
-          </a>
+          </button>
           <button id="btn-point-start" class="btn btn-outline-success btn-sm" type="button">
             <i class="bi bi-flag me-1"></i>Mark Point Start
           </button>
@@ -501,7 +685,7 @@
               {% endif %}
 
               {% if annotation.notes %}
-              <p class="ann-notes">{{ annotation.notes }}</p>
+              <div class="ann-notes">{{ annotation.notes | safe }}</div>
               {% endif %}
 
               <div class="ann-meta-row">
@@ -557,11 +741,11 @@
             <i class="bi bi-chat-left-text"></i>
             <p>No annotations yet.</p>
             {% if current_user.is_authenticated %}
-            <a id="btn-add-annotation-empty"
-               data-base-url="{{ url_for('clip.add_annotation', clip_id=clip.id) }}"
-               class="btn btn-sm btn-primary mt-2">
+            <button id="btn-add-annotation-empty" type="button"
+                    class="btn btn-sm btn-primary mt-2"
+                    data-bs-toggle="offcanvas" data-bs-target="#annotationOffcanvas">
               Add First Annotation
-            </a>
+            </button>
             {% endif %}
           </div>
           {% endif %}
@@ -600,8 +784,11 @@
 
 {% block scripts %}
 <script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
+/* ── YouTube player ─────────────────────────────────────── */
 let ytPlayer = null;
+const CLIP_EMBED_URL = {{ clip.embed_url | tojson }};
 
 function onYouTubeIframeAPIReady() {
   const iframe = document.getElementById('video-player');
@@ -609,16 +796,19 @@ function onYouTubeIframeAPIReady() {
   ytPlayer = new YT.Player('video-player', { events: {} });
 }
 
+function getCurrentTimeSeconds() {
+  if (ytPlayer && ytPlayer.getCurrentTime) return Math.floor(ytPlayer.getCurrentTime());
+  return 0;
+}
+
 function seekToTime(seconds) {
   const iframe = document.getElementById('video-player');
   if (!iframe) return;
 
-  // Scroll the video into view if it's not currently visible
   const rect = iframe.getBoundingClientRect();
   const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
   if (!isVisible) {
-    const videoCard = iframe.closest('.video-card') || iframe;
-    videoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    (iframe.closest('.video-card') || iframe).scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   if (iframe.src.includes('youtube.com')) {
@@ -628,32 +818,116 @@ function seekToTime(seconds) {
       return;
     }
     const m = iframe.src.match(/embed\/([^?]+)/);
-    if (m) {
-      iframe.src = `https://www.youtube.com/embed/${m[1]}?start=${seconds}&autoplay=1&enablejsapi=1`;
-    }
+    if (m) iframe.src = `https://www.youtube.com/embed/${m[1]}?start=${seconds}&autoplay=1&enablejsapi=1`;
   }
 }
 
-function getCurrentTimeSeconds() {
-  if (ytPlayer && ytPlayer.getCurrentTime) return Math.floor(ytPlayer.getCurrentTime());
-  const manual = prompt('Enter the current video time (seconds):');
-  return (manual !== null && !isNaN(manual) && manual.trim() !== '') ? parseInt(manual, 10) : null;
+/* ── mm:ss ↔ seconds helpers ───────────────────────────── */
+function secondsToMmSs(total) {
+  return { m: Math.floor(total / 60), s: total % 60 };
+}
+function mmSsToSeconds(m, s) {
+  return (parseInt(m) || 0) * 60 + (parseInt(s) || 0);
 }
 
-function wireAddAnnotationButtons() {
-  ['btn-add-annotation', 'btn-add-annotation-empty'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      const t = getCurrentTimeSeconds();
-      const base = this.getAttribute('data-base-url');
-      window.location.href = t !== null ? `${base}?t=${t}` : base;
+/* ── Annotation offcanvas ───────────────────────────────── */
+let quillEditor = null;
+
+function initOffcanvas() {
+  // Initialise Quill once
+  if (!quillEditor) {
+    quillEditor = new Quill('#quill-ann-editor', {
+      theme: 'snow',
+      placeholder: 'Write your notes here…',
+      modules: {
+        toolbar: [
+          ['bold', 'italic', 'underline'],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['clean']
+        ]
+      }
     });
+  }
+
+  // Stamp current playback time into the mm:ss fields
+  const t = getCurrentTimeSeconds();
+  const { m, s } = secondsToMmSs(t);
+  document.getElementById('ann-min').value = m;
+  document.getElementById('ann-sec').value = String(s).padStart(2, '0');
+  document.getElementById('ann-timestamp-hidden').value = t;
+
+  // Load offcanvas video at the right timestamp
+  const videoIframe = document.getElementById('offcanvas-video-player');
+  if (videoIframe && CLIP_EMBED_URL) {
+    const sep = CLIP_EMBED_URL.includes('?') ? '&' : '?';
+    videoIframe.src = `${CLIP_EMBED_URL}${sep}start=${t}`;
+  }
+
+  // Clear any previous error
+  const errBox = document.getElementById('ann-form-error');
+  if (errBox) errBox.style.display = 'none';
+}
+
+// Wire the offcanvas "show" event to stamp the current time
+const offcanvasEl = document.getElementById('annotationOffcanvas');
+if (offcanvasEl) {
+  offcanvasEl.addEventListener('show.bs.offcanvas', initOffcanvas);
+
+  // Stop the offcanvas video when panel is closed
+  offcanvasEl.addEventListener('hide.bs.offcanvas', () => {
+    const videoIframe = document.getElementById('offcanvas-video-player');
+    if (videoIframe) videoIframe.src = '';
   });
 }
 
-/* ── Point segments ────────────────────────────────────── */
+// Sync mm:ss inputs → hidden seconds field
+['ann-min', 'ann-sec'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    const m = document.getElementById('ann-min').value;
+    const s = document.getElementById('ann-sec').value;
+    document.getElementById('ann-timestamp-hidden').value = mmSsToSeconds(m, s);
+  });
+});
+
+// AJAX form submit
+document.getElementById('annotation-offcanvas-form')?.addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  // Sync Quill HTML → hidden textarea
+  if (quillEditor) {
+    document.getElementById('ann-notes-hidden').value = quillEditor.root.innerHTML;
+  }
+
+  const btn = document.getElementById('ann-submit-btn');
+  const errBox = document.getElementById('ann-form-error');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+  errBox.style.display = 'none';
+
+  try {
+    const resp = await fetch(this.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: new FormData(this)
+    });
+    const data = await resp.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      errBox.textContent = 'Please check the form and try again.';
+      errBox.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Save Annotation';
+    }
+  } catch {
+    errBox.textContent = 'An error occurred. Please try again.';
+    errBox.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Save Annotation';
+  }
+});
+
+/* ── Point segments ─────────────────────────────────────── */
 function formatTime(sec) {
   const s = Math.floor(sec % 60), m = Math.floor((sec / 60) % 60), h = Math.floor(sec / 3600);
   const pad = n => String(n).padStart(2, '0');
@@ -696,7 +970,6 @@ async function fetchSegments() {
 
 async function markPoint(action) {
   const t = getCurrentTimeSeconds();
-  if (t === null) return;
   const r = await fetch(
     `{{ url_for('clip.mark_segment', clip_id=clip.id, action='__A__') }}`.replace('__A__', action),
     { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
@@ -714,10 +987,8 @@ async function deleteSegment(id) {
   if (r.ok) fetchSegments(); else alert('Error: ' + await r.text());
 }
 
-/* ── Init ──────────────────────────────────────────────── */
+/* ── Init ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
-  wireAddAnnotationButtons();
-
   const s = document.getElementById('btn-point-start');
   const e = document.getElementById('btn-point-end');
   const r = document.getElementById('btn-refresh-segments');
