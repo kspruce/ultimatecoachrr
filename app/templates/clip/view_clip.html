@@ -5,6 +5,19 @@
 /* ── Page layout ────────────────────────────────────────── */
 .clip-view-wrap { max-width: 1400px; margin: 0 auto; }
 
+/* ── Sticky sidebar ─────────────────────────────────────── */
+@media (min-width: 992px) {
+  .clip-sidebar-sticky {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    /* hide scrollbar visually but keep it functional */
+    scrollbar-width: thin;
+    scrollbar-color: var(--uc-gray-300) transparent;
+  }
+}
+
 /* ── Video card ─────────────────────────────────────────── */
 .video-card {
   background: #0f172a;
@@ -354,6 +367,7 @@
 
     <!-- ── Right sidebar ─────────────────────────────────── -->
     <div class="col-lg-4">
+    <div class="clip-sidebar-sticky">
 
       <!-- Points breakdown -->
       <div class="side-panel">
@@ -546,7 +560,8 @@
         </div>
       </div>
 
-    </div>
+    </div>{# /clip-sidebar-sticky #}
+    </div>{# /col-lg-4 #}
   </div>
 
 </div>
@@ -567,6 +582,15 @@ function onYouTubeIframeAPIReady() {
 function seekToTime(seconds) {
   const iframe = document.getElementById('video-player');
   if (!iframe) return;
+
+  // Scroll the video into view if it's not currently visible
+  const rect = iframe.getBoundingClientRect();
+  const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+  if (!isVisible) {
+    const videoCard = iframe.closest('.video-card') || iframe;
+    videoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   if (iframe.src.includes('youtube.com')) {
     if (ytPlayer && ytPlayer.seekTo) {
       ytPlayer.seekTo(seconds, true);
