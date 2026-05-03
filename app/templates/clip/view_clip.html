@@ -369,72 +369,80 @@
     <div class="col-lg-4">
     <div class="clip-sidebar-sticky">
 
-      <!-- Points breakdown -->
+      <!-- Combined tabbed panel -->
       <div class="side-panel">
-        <div class="side-panel-header">
-          <span><i class="bi bi-flag me-1"></i>Point Segments</span>
-          <button class="btn btn-link btn-sm p-0" id="btn-refresh-segments" type="button"
-                  style="color:var(--uc-gray-500);font-size:.82rem">
-            <i class="bi bi-arrow-clockwise"></i>
-          </button>
-        </div>
-        <div class="side-panel-body" id="segments-container">
-          <div class="ann-empty">
-            <i class="bi bi-flag"></i>
-            <p>No points recorded yet.</p>
-          </div>
-        </div>
-      </div>
 
-      <!-- Annotations panel -->
-      <div class="side-panel">
-        <div class="side-panel-header">
-          <span><i class="bi bi-chat-left-text me-1"></i>Annotations
-            <span style="font-weight:500;color:var(--uc-gray-500)">({{ annotations|length }})</span>
-          </span>
-          {% if annotations %}
-          <button class="btn btn-link btn-sm p-0" type="button"
-                  data-bs-toggle="collapse" data-bs-target="#annFilterBar"
-                  style="color:var(--uc-gray-500);font-size:.78rem">
-            <i class="bi bi-funnel me-1"></i>Filter
-          </button>
-          {% endif %}
+        <!-- Tab nav -->
+        <div class="side-panel-header p-0" style="border-bottom:0">
+          <ul class="nav nav-tabs w-100" id="sidebarTabs" role="tablist"
+              style="border-bottom: 1px solid var(--uc-gray-100); padding: 0 .5rem; margin: 0;">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-annotations-btn"
+                      data-bs-toggle="tab" data-bs-target="#tab-annotations"
+                      type="button" role="tab"
+                      style="font-size:.78rem;font-weight:700;padding:.55rem .75rem">
+                <i class="bi bi-chat-left-text me-1"></i>Annotations
+                <span style="font-weight:500;color:var(--uc-gray-500)">({{ annotations|length }})</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-segments-btn"
+                      data-bs-toggle="tab" data-bs-target="#tab-segments"
+                      type="button" role="tab"
+                      style="font-size:.78rem;font-weight:700;padding:.55rem .75rem">
+                <i class="bi bi-flag me-1"></i>Points
+              </button>
+            </li>
+          </ul>
         </div>
 
-        <!-- Annotation filter (collapsible) -->
-        {% if annotations %}
-        <div class="collapse ann-filter-bar" id="annFilterBar">
-          <form method="get" action="" class="d-flex gap-2 flex-wrap">
-            <div class="flex-fill" style="min-width:120px">
-              <select name="event_filter" class="form-select form-select-sm">
-                <option value="">All Events</option>
-                <option value="goal">Goals</option>
-                <option value="turnover">Turnovers</option>
-                <option value="block">Blocks</option>
-                <option value="assist">Assists</option>
-              </select>
-            </div>
-            <div class="flex-fill" style="min-width:120px">
-              <select name="creator_filter" class="form-select form-select-sm">
-                <option value="">All Users</option>
-                {% for user in annotation_creators %}
-                <option value="{{ user.id }}">{{ user.username }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <div class="form-check mb-0">
-                <input class="form-check-input" type="checkbox" name="key_only" id="keyOnly">
-                <label class="form-check-label" for="keyOnly" style="font-size:.72rem;white-space:nowrap">Key only</label>
-              </div>
-              <button type="submit" class="btn btn-primary btn-sm">Go</button>
-            </div>
-          </form>
-        </div>
-        {% endif %}
+        <div class="tab-content">
 
-        <!-- Annotation list -->
-        <div class="side-panel-body" style="max-height:580px">
+          <!-- ── Annotations tab ──────────────────────────── -->
+          <div class="tab-pane fade show active" id="tab-annotations" role="tabpanel">
+
+            <!-- Filter bar (collapsible) -->
+            {% if annotations %}
+            <div class="ann-filter-bar d-flex align-items-center justify-content-end"
+                 style="border-bottom: 1px solid var(--uc-gray-100)">
+              <button class="btn btn-link btn-sm p-0" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#annFilterBar"
+                      style="color:var(--uc-gray-500);font-size:.78rem">
+                <i class="bi bi-funnel me-1"></i>Filter
+              </button>
+            </div>
+            <div class="collapse ann-filter-bar" id="annFilterBar">
+              <form method="get" action="" class="d-flex gap-2 flex-wrap">
+                <div class="flex-fill" style="min-width:120px">
+                  <select name="event_filter" class="form-select form-select-sm">
+                    <option value="">All Events</option>
+                    <option value="goal">Goals</option>
+                    <option value="turnover">Turnovers</option>
+                    <option value="block">Blocks</option>
+                    <option value="assist">Assists</option>
+                  </select>
+                </div>
+                <div class="flex-fill" style="min-width:120px">
+                  <select name="creator_filter" class="form-select form-select-sm">
+                    <option value="">All Users</option>
+                    {% for user in annotation_creators %}
+                    <option value="{{ user.id }}">{{ user.username }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" name="key_only" id="keyOnly">
+                    <label class="form-check-label" for="keyOnly" style="font-size:.72rem;white-space:nowrap">Key only</label>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm">Go</button>
+                </div>
+              </form>
+            </div>
+            {% endif %}
+
+            <!-- Annotation list -->
+            <div class="side-panel-body" style="max-height:580px">
           {% if annotations %}
             {% for annotation in annotations %}
             <div class="ann-card {% if annotation.is_key_moment %}key-moment{% endif %}">
@@ -557,8 +565,30 @@
             {% endif %}
           </div>
           {% endif %}
-        </div>
-      </div>
+          </div>{# /annotation side-panel-body #}
+          </div>{# /tab-pane annotations #}
+
+          <!-- ── Point segments tab ───────────────────────── -->
+          <div class="tab-pane fade" id="tab-segments" role="tabpanel">
+            <div class="side-panel-header" style="border-top: 1px solid var(--uc-gray-100)">
+              <span style="font-size:.78rem;font-weight:700;color:var(--uc-gray-700)">
+                <i class="bi bi-flag me-1"></i>Point Segments
+              </span>
+              <button class="btn btn-link btn-sm p-0" id="btn-refresh-segments" type="button"
+                      style="color:var(--uc-gray-500);font-size:.82rem">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+            <div class="side-panel-body" id="segments-container">
+              <div class="ann-empty">
+                <i class="bi bi-flag"></i>
+                <p>No points recorded yet.</p>
+              </div>
+            </div>
+          </div>{# /tab-pane segments #}
+
+        </div>{# /tab-content #}
+      </div>{# /side-panel #}
 
     </div>{# /clip-sidebar-sticky #}
     </div>{# /col-lg-4 #}
