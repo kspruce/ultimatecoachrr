@@ -1,6 +1,8 @@
 /* Main styles for Ultimate Coach app */
 body {
     padding-bottom: 60px; /* For footer */
+    background-color: var(--uc-page-bg);
+    color: var(--uc-page-text);
 }
 
 .footer {
@@ -9,7 +11,10 @@ body {
     width: 100%;
     height: 60px;
     line-height: 60px;
-    background-color: #f5f5f5;
+    background-color: var(--uc-page-bg);
+    border-top: 1px solid var(--uc-card-border);
+    color: var(--uc-gray-500);
+    transition: background-color .2s, border-color .2s;
 }
 
 /* Field visualization styles */
@@ -17,7 +22,7 @@ body {
     width: 100%;
     max-width: 800px;
     margin: 0 auto;
-    border: 2px solid #333;
+    border: 2px solid var(--uc-gray-700);
     position: relative;
 }
 

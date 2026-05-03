@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- ⚡ Set theme BEFORE any CSS loads — prevents flash of wrong theme -->
+    <script>(function(){var t=localStorage.getItem('uc-theme')||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.colorScheme=t==='dark'?'dark':'light';})()</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if title %}{{ title }} - {% endif %}Ultimate Coach</title>
@@ -25,33 +27,46 @@
       --uc-red:     #EF4444;
       --uc-purple:  #8B5CF6;
       --uc-sky:     #0EA5E9;
-      --uc-gray-50: #F9FAFB;
-      --uc-gray-100:#F3F4F6;
-      --uc-gray-200:#E5E7EB;
-      --uc-gray-400:#9CA3AF;
-      --uc-gray-600:#4B5563;
-      --uc-gray-800:#1F2937;
+      /* Full grey scale — all steps defined so templates never get silent fallbacks */
+      --uc-gray-50:  #F9FAFB;
+      --uc-gray-100: #F3F4F6;
+      --uc-gray-200: #E5E7EB;
+      --uc-gray-300: #D1D5DB;
+      --uc-gray-400: #9CA3AF;
+      --uc-gray-500: #6B7280;
+      --uc-gray-600: #4B5563;
+      --uc-gray-700: #374151;
+      --uc-gray-800: #1F2937;
+      --uc-gray-900: #111827;
       --uc-shadow-sm: 0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
       --uc-shadow-md: 0 4px 14px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04);
       --uc-radius: 12px;
       /* Light mode page tokens */
-      --uc-page-bg:   #F9FAFB;
-      --uc-page-text: #1F2937;
-      --uc-card-bg:   #FFFFFF;
+      --uc-page-bg:     #F9FAFB;
+      --uc-page-text:   #1F2937;
+      --uc-card-bg:     #FFFFFF;
       --uc-card-border: #E5E7EB;
+      --uc-input-bg:    #FFFFFF;
     }
     /* ─── Dark mode tokens ───────────────────────────────────── */
     [data-theme="dark"] {
+      /* Remap grey scale so var(--uc-gray-X) always reads as the right
+         perceptual weight for the current theme */
       --uc-gray-50:  #111827;
       --uc-gray-100: #1F2937;
       --uc-gray-200: #374151;
+      --uc-gray-300: #4B5563;
       --uc-gray-400: #9CA3AF;
+      --uc-gray-500: #9CA3AF;
       --uc-gray-600: #D1D5DB;
+      --uc-gray-700: #E5E7EB;
       --uc-gray-800: #F3F4F6;
-      --uc-page-bg:   #0F172A;
-      --uc-page-text: #F3F4F6;
-      --uc-card-bg:   #1E293B;
+      --uc-gray-900: #F9FAFB;
+      --uc-page-bg:     #0F172A;
+      --uc-page-text:   #F3F4F6;
+      --uc-card-bg:     #1E293B;
       --uc-card-border: #374151;
+      --uc-input-bg:    #1E293B;
     }
     [data-theme="dark"] body { background: var(--uc-page-bg) !important; color: var(--uc-page-text); }
     [data-theme="dark"] .card { background: var(--uc-card-bg) !important; border-color: var(--uc-card-border) !important; color: var(--uc-page-text); }
@@ -88,6 +103,72 @@
     [data-theme="dark"] .badge.bg-warning { color: var(--uc-gray-800) !important; }
     [data-theme="dark"] .card-header.bg-warning { color: var(--uc-gray-800) !important; }
     [data-theme="dark"] .bg-light.text-dark, [data-theme="dark"] .badge.bg-light { background: #374151 !important; color: #F3F4F6 !important; }
+    /* ─── Common component overrides (covers inline styles in page templates) ── */
+    /* Any element whose class suggests it's a white panel/card */
+    [data-theme="dark"] .side-panel,
+    [data-theme="dark"] .clip-header-bar,
+    [data-theme="dark"] .annotation-actions-card,
+    [data-theme="dark"] .ann-card,
+    [data-theme="dark"] .ann-form-card,
+    [data-theme="dark"] .ann-meta-card,
+    [data-theme="dark"] .ann-offcanvas-body,
+    [data-theme="dark"] .offcanvas,
+    [data-theme="dark"] .offcanvas-header {
+      background: var(--uc-card-bg) !important;
+      border-color: var(--uc-card-border) !important;
+      color: var(--uc-page-text);
+    }
+    /* Annotation timestamp badge stays blue in both modes */
+    [data-theme="dark"] .ann-timestamp { color: var(--uc-blue); }
+    /* Sidebar sticky scroll area */
+    [data-theme="dark"] .side-panel-header {
+      background: var(--uc-card-bg);
+      border-color: var(--uc-card-border) !important;
+      color: var(--uc-gray-700);
+    }
+    [data-theme="dark"] .side-panel-body { background: var(--uc-card-bg); }
+    /* Segment items */
+    [data-theme="dark"] .seg-item {
+      background: var(--uc-gray-100) !important;
+      border-color: var(--uc-card-border) !important;
+      color: var(--uc-page-text);
+    }
+    /* Filter bar */
+    [data-theme="dark"] .ann-filter-bar { background: var(--uc-gray-100); border-color: var(--uc-card-border) !important; }
+    /* Nav tabs inside panels */
+    [data-theme="dark"] .nav-tabs { border-color: var(--uc-card-border); }
+    [data-theme="dark"] .nav-tabs .nav-link { color: var(--uc-gray-600); }
+    [data-theme="dark"] .nav-tabs .nav-link.active {
+      background: var(--uc-card-bg) !important;
+      border-color: var(--uc-card-border) var(--uc-card-border) var(--uc-card-bg) !important;
+      color: var(--uc-page-text) !important;
+    }
+    /* Key-moment annotation card */
+    [data-theme="dark"] .ann-card.key-moment {
+      border-color: var(--uc-amber) !important;
+      background: rgba(251,191,36,.06) !important;
+    }
+    /* Footer (overrides main.css hardcoded #f5f5f5 with higher specificity) */
+    [data-theme="dark"] body > footer,
+    [data-theme="dark"] .footer { background: #0F172A !important; color: #6B7280 !important; border-color: #1E293B !important; }
+    /* Quill editor */
+    [data-theme="dark"] .ql-toolbar { background: var(--uc-gray-100) !important; border-color: var(--uc-card-border) !important; }
+    [data-theme="dark"] .ql-container { border-color: var(--uc-card-border) !important; background: var(--uc-input-bg) !important; }
+    [data-theme="dark"] .ql-editor { color: var(--uc-page-text) !important; }
+    [data-theme="dark"] .ql-toolbar .ql-stroke { stroke: var(--uc-gray-600) !important; }
+    [data-theme="dark"] .ql-toolbar .ql-fill { fill: var(--uc-gray-600) !important; }
+    [data-theme="dark"] .ql-toolbar button:hover .ql-stroke,
+    [data-theme="dark"] .ql-toolbar button.ql-active .ql-stroke { stroke: var(--uc-blue) !important; }
+    /* Select2 */
+    [data-theme="dark"] .select2-container--bootstrap-5 .select2-selection {
+      background: var(--uc-input-bg) !important; border-color: var(--uc-card-border) !important; color: var(--uc-page-text) !important;
+    }
+    [data-theme="dark"] .select2-dropdown { background: var(--uc-card-bg) !important; border-color: var(--uc-card-border) !important; }
+    [data-theme="dark"] .select2-results__option { color: var(--uc-page-text) !important; }
+    [data-theme="dark"] .select2-results__option--highlighted { background: rgba(59,130,246,.2) !important; }
+    /* color-scheme for native browser UI elements (scrollbars, inputs, etc.) */
+    [data-theme="dark"] { color-scheme: dark; }
+    [data-theme="light"] { color-scheme: light; }
 
     /* ─── Navbar ─────────────────────────────────────────────── */
     .uc-navbar {
@@ -650,24 +731,23 @@
 <!-- Your App JS -->
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
-<!-- Dark / light mode -->
+<!-- Dark / light mode toggle handler (theme is already applied in <head>) -->
 <script>
 (function() {
-  var saved = localStorage.getItem('uc-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
   function updateIcon(theme) {
     var icon = document.getElementById('uc-theme-icon');
     if (!icon) return;
     icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
   }
   document.addEventListener('DOMContentLoaded', function() {
-    updateIcon(saved);
+    var current = document.documentElement.getAttribute('data-theme') || 'light';
+    updateIcon(current);
     var btn = document.getElementById('uc-theme-toggle');
     if (btn) {
       btn.addEventListener('click', function() {
-        var current = document.documentElement.getAttribute('data-theme') || 'light';
-        var next = current === 'dark' ? 'light' : 'dark';
+        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
+        document.documentElement.style.colorScheme = next === 'dark' ? 'dark' : 'light';
         localStorage.setItem('uc-theme', next);
         updateIcon(next);
       });

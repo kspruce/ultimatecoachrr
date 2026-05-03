@@ -380,10 +380,10 @@
   <div class="row g-3">
 
     <!-- ── Left: Video + info ────────────────────────────── -->
-    <div class="col-lg-8">
+    <div class="col-lg-8 d-flex flex-column">
 
-      <!-- Video -->
-      <div class="video-card">
+      <!-- Video — 3rd on mobile, 1st on desktop -->
+      <div class="video-card order-3 order-lg-1">
         <div class="video-ratio">
           {% if clip.embed_url %}
             {% set sep = '&' if '?' in clip.embed_url else '?' %}
@@ -401,8 +401,8 @@
         </div>
       </div>
 
-      <!-- Clip info bar -->
-      <div class="clip-header-bar">
+      <!-- Clip info bar — 1st on mobile, 2nd on desktop -->
+      <div class="clip-header-bar order-1 order-lg-2">
         <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
           <div style="flex:1;min-width:0">
             <h1 class="clip-main-title">{{ clip.title }}</h1>
@@ -527,9 +527,9 @@
         </div>
       </div>
 
-      <!-- Add annotation + point markers -->
+      <!-- Add annotation + point markers — 2nd on mobile, 3rd on desktop -->
       {% if current_user.is_authenticated %}
-      <div class="annotation-actions-card">
+      <div class="annotation-actions-card order-2 order-lg-3">
         <h6><i class="bi bi-plus-circle me-1"></i>Annotate</h6>
         <div class="d-flex gap-2 flex-wrap">
           <button id="btn-add-annotation" type="button" class="btn btn-primary btn-sm"

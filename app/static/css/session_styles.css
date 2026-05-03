@@ -13,7 +13,7 @@
 
 .card-header {
     background-color: rgba(0, 0, 0, 0.03);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-bottom: 1px solid var(--uc-card-border);
 }
 
 /* Session type badges */
@@ -45,7 +45,7 @@
     bottom: 0;
     left: 20px;
     width: 4px;
-    background: #e9ecef;
+    background: var(--uc-gray-200);
 }
 
 .timeline-item {
@@ -200,3 +200,22 @@
 .btn-action i {
     font-size: 0.875rem;
 }
+
+/* ─── Dark mode overrides ────────────────────────────────── */
+[data-theme="dark"] .card {
+    background: var(--uc-card-bg);
+    border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .card-header {
+    background-color: rgba(255,255,255,.04) !important;
+    border-color: var(--uc-card-border) !important;
+}
+[data-theme="dark"] .session-card .card-footer {
+    border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .timeline:before {
+    background: var(--uc-gray-200);
+}
+[data-theme="dark"] .border-invited_training  { border-left-color: var(--uc-blue); }
+[data-theme="dark"] .border-open_training     { border-left-color: var(--uc-green); }
+[data-theme="dark"] .border-pod_training      { border-left-color: var(--uc-sky); }
