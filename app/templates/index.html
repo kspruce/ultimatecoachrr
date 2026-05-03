@@ -2,28 +2,8 @@
 
 {% block styles %}
 <style>
-  /* ─── Design tokens ─────────────────────────────────── */
-  :root {
-    --uc-blue:    #3B82F6;
-    --uc-indigo:  #6366F1;
-    --uc-teal:    #0D9488;
-    --uc-green:   #10B981;
-    --uc-amber:   #F59E0B;
-    --uc-orange:  #F97316;
-    --uc-red:     #EF4444;
-    --uc-purple:  #8B5CF6;
-    --uc-sky:     #0EA5E9;
-    --uc-gray-50: #F9FAFB;
-    --uc-gray-100:#F3F4F6;
-    --uc-gray-200:#E5E7EB;
-    --uc-gray-400:#9CA3AF;
-    --uc-gray-600:#4B5563;
-    --uc-gray-800:#1F2937;
-    --uc-shadow-sm: 0 1px 3px rgba(0,0,0,0.07),0 1px 2px rgba(0,0,0,0.04);
-    --uc-shadow-md: 0 4px 14px rgba(0,0,0,0.08),0 2px 6px rgba(0,0,0,0.04);
-    --uc-radius: 12px;
-  }
-  body { background: var(--uc-gray-50); }
+  /* NOTE: design tokens are defined in base.html — do NOT redeclare :root here
+     as it would override the dark-mode variable remapping in [data-theme="dark"]. */
 
   /* ─── Hero ──────────────────────────────────────────── */
   .uc-hero {
@@ -172,6 +152,18 @@
     .uc-upcoming { min-width:0; max-width:100%; border-left:none; padding-left:0; border-top:1px solid var(--uc-gray-200); padding-top:1rem; }
   }
   @media (max-width:380px) { .uc-feature-grid { grid-template-columns:1fr; } }
+
+  /* ─── Dark mode overrides ───────────────────────────── */
+  /* Icon colour helpers — swap pastel light bg for a dark tinted equivalent */
+  [data-theme="dark"] .ic-blue   { background:rgba(59,130,246,.15);  color:var(--uc-blue);   }
+  [data-theme="dark"] .ic-indigo { background:rgba(99,102,241,.15);  color:var(--uc-indigo); }
+  [data-theme="dark"] .ic-teal   { background:rgba(13,148,136,.15);  color:var(--uc-teal);   }
+  [data-theme="dark"] .ic-green  { background:rgba(16,185,129,.15);  color:var(--uc-green);  }
+  [data-theme="dark"] .ic-amber  { background:rgba(245,158,11,.15);  color:var(--uc-amber);  }
+  [data-theme="dark"] .ic-orange { background:rgba(249,115,22,.15);  color:var(--uc-orange); }
+  [data-theme="dark"] .ic-red    { background:rgba(239,68,68,.15);   color:var(--uc-red);    }
+  [data-theme="dark"] .ic-purple { background:rgba(139,92,246,.15);  color:var(--uc-purple); }
+  [data-theme="dark"] .ic-sky    { background:rgba(14,165,233,.15);  color:var(--uc-sky);    }
 </style>
 {% endblock %}
 

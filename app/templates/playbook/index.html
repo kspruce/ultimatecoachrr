@@ -50,6 +50,27 @@
     }
     .uc-stat-pill .stat-num { font-size: 1.75rem; font-weight: 800; line-height: 1; }
     .uc-stat-pill .stat-lbl { font-size: .75rem; color: var(--uc-gray-400); font-weight: 600; margin-top: .25rem; letter-spacing: .04em; text-transform: uppercase; }
+
+    /* ─── Dark mode overrides ────────────────────────────────── */
+    [data-theme="dark"] .play-row-header {
+        background: var(--uc-card-bg) !important;
+        color: var(--uc-page-text);
+    }
+    [data-theme="dark"] .play-row-header:hover {
+        background: var(--uc-gray-100) !important;
+    }
+    [data-theme="dark"] .play-row-body {
+        background: var(--uc-gray-100) !important;
+        border-top-color: var(--uc-card-border);
+    }
+    [data-theme="dark"] .play-row {
+        border-color: var(--uc-card-border);
+    }
+    [data-theme="dark"] .uc-stat-pill {
+        background: var(--uc-card-bg);
+        border-color: var(--uc-card-border);
+        color: var(--uc-page-text);
+    }
 </style>
 {% endblock %}
 

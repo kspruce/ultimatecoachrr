@@ -258,6 +258,45 @@
 
 /* ── Tag browser scroll ─────────────────────────────────── */
 .tag-browser-scroll { max-height: 380px; overflow-y: auto; }
+
+/* ── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] .clip-search-input {
+  background: var(--uc-input-bg);
+  border-color: var(--uc-card-border);
+  color: var(--uc-page-text);
+}
+[data-theme="dark"] .clip-card {
+  background: var(--uc-card-bg);
+}
+[data-theme="dark"] .clip-card-footer {
+  border-top-color: var(--uc-card-border);
+}
+[data-theme="dark"] .sidebar-card {
+  background: var(--uc-card-bg);
+  border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .sidebar-card-header {
+  border-bottom-color: var(--uc-card-border);
+  color: var(--uc-page-text);
+}
+[data-theme="dark"] .sort-btn {
+  background: var(--uc-card-bg);
+  border-color: var(--uc-card-border);
+  color: var(--uc-gray-600);
+}
+[data-theme="dark"] .sort-btn.active,
+[data-theme="dark"] .sort-btn:hover {
+  border-color: var(--uc-blue);
+  color: var(--uc-blue);
+  background: rgba(59,130,246,.12);
+}
+[data-theme="dark"] .tag-row:hover { background: var(--uc-gray-100); }
+[data-theme="dark"] .tag-row .tag-pill { color: var(--uc-gray-600); }
+/* Group divider labels — dark green/amber are near-invisible on dark bg */
+[data-theme="dark"] .clip-group-divider.group-flagged { color: #34d399; }
+[data-theme="dark"] .clip-group-divider.group-flagged::after { background: rgba(52,211,153,.25); }
+[data-theme="dark"] .clip-group-divider.group-hidden { color: #fcd34d; }
+[data-theme="dark"] .clip-group-divider.group-hidden::after { background: rgba(252,211,77,.2); }
 </style>
 {% endblock %}
 

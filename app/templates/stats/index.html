@@ -340,12 +340,42 @@
         .stats-nav-buttons {
             flex-direction: column;
         }
-        
+
         .stats-nav-btn {
             width: 100%;
         }
     }
-    
+
+    /* ─── Dark mode overrides ────────────────────────────────── */
+    [data-theme="dark"] .stats-nav-container {
+        background: var(--uc-card-bg);
+        border-color: var(--uc-card-border);
+    }
+    [data-theme="dark"] .stats-nav-header {
+        background: var(--uc-gray-100);
+        border-bottom-color: var(--uc-card-border);
+    }
+    /* White loading overlay → dark equivalent */
+    [data-theme="dark"] .loading-overlay {
+        background: rgba(15, 23, 42, 0.82);
+    }
+    /* Sticky table header/first-column cells use var(--uc-gray-50) which is
+       a light colour; override with the card background in dark mode */
+    [data-theme="dark"] .dataTable th,
+    [data-theme="dark"] .dataTable td:first-child,
+    [data-theme="dark"] .dataTable th:first-child {
+        background-color: var(--uc-card-bg) !important;
+        color: var(--uc-page-text);
+        border-color: var(--uc-card-border);
+    }
+    [data-theme="dark"] .line-card {
+        background: linear-gradient(135deg, var(--uc-gray-100) 0%, var(--uc-gray-200) 100%);
+    }
+    [data-theme="dark"] .network-chart {
+        background-color: var(--uc-gray-100);
+        border-color: var(--uc-card-border);
+    }
+
 </style>
 {% endblock %}
 

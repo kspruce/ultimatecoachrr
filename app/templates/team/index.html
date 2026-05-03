@@ -145,6 +145,44 @@
         top: 50%;
         transform: translateY(-50%);
     }
+
+    /* ─── Dark mode overrides ────────────────────────────────── */
+    [data-theme="dark"] #playerTable thead th {
+        background-color: var(--uc-gray-100);
+        border-bottom-color: var(--uc-card-border);
+        color: var(--uc-page-text);
+    }
+    /* player-name is near-black #212529 — invisible on dark backgrounds */
+    [data-theme="dark"] .player-name {
+        color: var(--uc-page-text);
+    }
+    [data-theme="dark"] .player-name:hover {
+        color: var(--uc-blue);
+    }
+    [data-theme="dark"] .jersey-number {
+        background-color: var(--uc-gray-500);
+        color: #fff;
+    }
+    [data-theme="dark"] .dataTables_filter input {
+        background: var(--uc-input-bg);
+        border-color: var(--uc-card-border);
+        color: var(--uc-page-text);
+    }
+    /* DataTables itself renders a white wrapper — override it */
+    [data-theme="dark"] .dataTables_wrapper .dataTables_length,
+    [data-theme="dark"] .dataTables_wrapper .dataTables_filter,
+    [data-theme="dark"] .dataTables_wrapper .dataTables_info,
+    [data-theme="dark"] .dataTables_wrapper .dataTables_paginate {
+        color: var(--uc-gray-600);
+    }
+    [data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button {
+        color: var(--uc-gray-600) !important;
+    }
+    [data-theme="dark"] .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: var(--uc-blue) !important;
+        border-color: var(--uc-blue) !important;
+        color: #fff !important;
+    }
 </style>
 {% endblock %}
 
