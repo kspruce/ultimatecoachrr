@@ -714,26 +714,6 @@
               </div>
             </div>
 
-            {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
-            <div class="modal fade" id="delAnn{{ annotation.id }}" tabindex="-1" aria-hidden="true">
-              <div class="modal-dialog modal-sm">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">Delete annotation?</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body" style="font-size:.875rem">This cannot be undone.</div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <form action="{{ url_for('clip.delete_annotation', annotation_id=annotation.id) }}" method="post" class="d-inline">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% endif %}
             {% endfor %}
 
           {% else %}
@@ -780,6 +760,34 @@
 
 </div>
 </div>
+
+{# ── Delete-annotation modals — rendered at body level so they are      #}
+{# outside any overflow:auto container (fixes backdrop stacking context) #}
+{% if annotations %}
+  {% for annotation in annotations %}
+    {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
+    <div class="modal fade" id="delAnn{{ annotation.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" style="font-size:1rem">Delete annotation?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" style="font-size:.875rem">This cannot be undone.</div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <form action="{{ url_for('clip.delete_annotation', annotation_id=annotation.id) }}" method="post" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
