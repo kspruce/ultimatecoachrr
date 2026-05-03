@@ -86,10 +86,10 @@
 
   {# ── Credential warning ─────────────────────────────────── #}
   {% if create_accounts and results | selectattr('credentials') | list %}
-  <div style="background:#FFFBEB;border:1px solid #F59E0B;border-radius:var(--uc-radius);
+  <div class="uc-alert-amber" style="border-radius:var(--uc-radius);
               padding:1rem 1.375rem;margin-bottom:1.25rem;display:flex;gap:.75rem;align-items:flex-start">
-    <i class="bi bi-exclamation-triangle-fill" style="color:#D97706;margin-top:.15rem;flex-shrink:0"></i>
-    <div style="font-size:.845rem;color:#92400E">
+    <i class="bi bi-exclamation-triangle-fill uc-alert-amber-icon" style="margin-top:.15rem;flex-shrink:0"></i>
+    <div class="uc-alert-amber-text" style="font-size:.845rem">
       <strong>Save these credentials now.</strong> Temporary passwords are shown once only — they
       cannot be retrieved later. Share them with players and ask them to change their password on first login.
     </div>

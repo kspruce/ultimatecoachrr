@@ -170,6 +170,42 @@
     [data-theme="dark"] { color-scheme: dark; }
     [data-theme="light"] { color-scheme: light; }
 
+    /* ─── Amber alert box (e.g. viewer banner, bulk-import warning) ── */
+    .uc-alert-amber {
+      background: rgba(245,158,11,.12);
+      border: 1px solid rgba(245,158,11,.35);
+      color: #92400e;
+    }
+    .uc-alert-amber-icon { color: #d97706; }
+    .uc-alert-amber-text { color: #92400e; }
+    [data-theme="dark"] .uc-alert-amber {
+      background: rgba(245,158,11,.18) !important;
+      border-color: rgba(245,158,11,.4) !important;
+      color: #fde68a !important;
+    }
+    [data-theme="dark"] .uc-alert-amber-icon { color: #fbbf24 !important; }
+    [data-theme="dark"] .uc-alert-amber-text { color: #fde68a !important; }
+
+    /* ─── Clip status text labels ───────────────────────────── */
+    .uc-status-amber { color: #d97706; }
+    .uc-status-green { color: #16a34a; }
+    [data-theme="dark"] .uc-status-amber { color: #fcd34d !important; }
+    [data-theme="dark"] .uc-status-green { color: #34d399 !important; }
+
+    /* ─── Key-moment annotation badge ───────────────────────── */
+    .ann-badge-key {
+      background: rgba(245,158,11,.15);
+      color: #92400e;
+      border: 1px solid rgba(245,158,11,.3);
+    }
+    [data-theme="dark"] .ann-badge-key {
+      background: rgba(245,158,11,.18) !important;
+      color: #fde68a !important;
+      border-color: rgba(245,158,11,.4) !important;
+    }
+    /* General ann-badge amber text override (catches any inline-styled ones) */
+    [data-theme="dark"] .ann-badge { color: #fde68a !important; }
+
     /* ─── Navbar ─────────────────────────────────────────────── */
     .uc-navbar {
       background: #0F172A;
@@ -701,8 +737,8 @@
 {% endwith %}
 
 {% if is_guest %}
-<div class="alert d-flex align-items-center gap-2 mb-3"
-     style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:10px;color:#92400e">
+<div class="alert uc-alert-amber d-flex align-items-center gap-2 mb-3"
+     style="border-radius:10px">
   <i class="bi bi-eye-fill" style="font-size:1rem;flex-shrink:0"></i>
   <span>
     <strong>Guest / Demo Mode</strong> — You are viewing a read-only demonstration account.

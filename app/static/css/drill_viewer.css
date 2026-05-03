@@ -76,3 +76,25 @@
     border-radius: 4px;
     border: 1px solid #ddd;
 }
+
+/* ─── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] .drill-header {
+    background-color: var(--uc-gray-100);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .drill-meta {
+    color: var(--uc-gray-400);
+}
+[data-theme="dark"] .canvas-container {
+    background-color: var(--uc-gray-100);
+    border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .viewer-controls {
+    background-color: var(--uc-gray-100);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] #speed-control {
+    background-color: var(--uc-input-bg);
+    border-color: var(--uc-card-border);
+    color: var(--uc-page-text);
+}

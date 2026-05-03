@@ -215,6 +215,47 @@
     border-color: #1e7e34;
 }
 
+/* ─── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] .calendar-container {
+    background-color: var(--uc-card-bg);
+}
+[data-theme="dark"] .calendar-legend {
+    background-color: var(--uc-gray-100);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .event-modal .event-details p i {
+    color: var(--uc-gray-400);
+}
+[data-theme="dark"] .event-modal .event-notes {
+    background-color: var(--uc-gray-100);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .event-modal .modal-header {
+    border-bottom-color: var(--uc-blue);
+}
+[data-theme="dark"] .event-modal.tournament-event .modal-header {
+    border-bottom-color: var(--uc-green);
+}
+[data-theme="dark"] .admin-section {
+    border-top-color: var(--uc-card-border);
+}
+/* FullCalendar internal surfaces */
+[data-theme="dark"] .fc-theme-standard .fc-scrollgrid,
+[data-theme="dark"] .fc-theme-standard td,
+[data-theme="dark"] .fc-theme-standard th {
+    border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .fc .fc-col-header-cell {
+    background: var(--uc-gray-100);
+}
+[data-theme="dark"] .fc .fc-daygrid-day.fc-day-today {
+    background: rgba(59, 130, 246, 0.08);
+}
+[data-theme="dark"] .fc-theme-standard .fc-list-day-cushion,
+[data-theme="dark"] .fc .fc-list-event:hover td {
+    background: var(--uc-gray-100);
+}
+
 /* Responsive adjustments for small screens */
 @media (max-width: 767px) {
     .fc .fc-view-harness {

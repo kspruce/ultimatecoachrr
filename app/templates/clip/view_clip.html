@@ -430,12 +430,12 @@
               {# Admin-only status indicators #}
               {% if current_user.is_admin %}
                 {% if clip.is_hidden %}
-                <span style="color:#d97706;font-weight:700">
+                <span class="uc-status-amber fw-bold">
                   <i class="bi bi-eye-slash-fill"></i> Hidden from players
                 </span>
                 {% endif %}
                 {% if clip.is_flagged_for_sharing %}
-                <span style="color:#16a34a;font-weight:700">
+                <span class="uc-status-green fw-bold">
                   <i class="bi bi-flag-fill"></i> Flagged for sharing
                 </span>
                 {% endif %}
@@ -635,7 +635,7 @@
                   <i class="bi bi-play-fill"></i>{{ annotation.formatted_timestamp }}
                 </a>
                 {% if annotation.is_key_moment %}
-                <span class="ann-badge" style="background:rgba(245,158,11,.15);color:#92400e;border:1px solid rgba(245,158,11,.3)">
+                <span class="ann-badge ann-badge-key">
                   <i class="bi bi-star-fill me-1"></i>Key
                 </span>
                 {% endif %}

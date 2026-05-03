@@ -237,3 +237,56 @@
     overflow: auto;
     height: calc(100vh - 200px);
 }
+
+/* ─── Dark mode overrides ─────────────────────────────────── */
+[data-theme="dark"] .editor-header {
+    background-color: var(--uc-gray-100);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .toolbar {
+    background-color: var(--uc-gray-100);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .tool-btn {
+    background-color: var(--uc-card-bg);
+    border-color: var(--uc-card-border);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .tool-btn:hover {
+    background-color: var(--uc-gray-200);
+}
+[data-theme="dark"] .canvas-container {
+    background-color: var(--uc-gray-100);
+    border-color: var(--uc-card-border);
+}
+[data-theme="dark"] .timeline {
+    background-color: var(--uc-gray-100);
+}
+[data-theme="dark"] .frame-item {
+    background-color: var(--uc-card-bg);
+    border-color: var(--uc-card-border);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .frame-item.active {
+    border-color: var(--uc-blue);
+}
+[data-theme="dark"] .frame-thumbnail {
+    background-color: var(--uc-gray-200);
+}
+[data-theme="dark"] .frame-delete {
+    background-color: rgba(30, 41, 59, 0.85);
+    color: var(--uc-page-text);
+}
+[data-theme="dark"] .tool-label {
+    color: var(--uc-gray-400);
+}
+[data-theme="dark"] .preview-circle.disc {
+    background: var(--uc-gray-200);
+    border-color: var(--uc-gray-500);
+}
+[data-theme="dark"] #drill-title,
+[data-theme="dark"] #drill-description {
+    background-color: var(--uc-input-bg);
+    border-color: var(--uc-card-border);
+    color: var(--uc-page-text);
+}
