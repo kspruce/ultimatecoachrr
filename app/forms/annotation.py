@@ -3,12 +3,14 @@ from wtforms import StringField, IntegerField, TextAreaField, SelectField, Selec
 from wtforms.validators import DataRequired, Optional, NumberRange
 from app.models.annotation import AnnotationTag
 from app.models.player import Player
+from flask_login import current_user
+from flask import session
 
 
 class AnnotationForm(FlaskForm):
     """Form for creating and editing clip annotations"""
     title = StringField('Title', validators=[Optional()])
-    timestamp = IntegerField('Timestamp (seconds)', validators=[DataRequired(), NumberRange(min=0)])
+    timestamp = IntegerField('Timestamp', validators=[DataRequired(), NumberRange(min=0)])
     event_type = SelectField('Event Type', 
         choices=[
             ('', 'Select Event Type'),
@@ -57,7 +59,7 @@ class AnnotationForm(FlaskForm):
         validators=[Optional()]
     )
     
-    notes = TextAreaField('Notes', validators=[Optional()])
+    notes = TextAreaField('Notes', validators=[Optional()])  # stores HTML from Quill editor
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     players = SelectMultipleField('Players Involved', coerce=int, validators=[Optional()])
     is_key_moment = BooleanField('Mark as Key Moment')
@@ -74,33 +76,53 @@ class AnnotationForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(AnnotationForm, self).__init__(*args, **kwargs)
-        # Populate annotation tag choices (hierarchical structure)
-        self.tags.choices = self._get_hierarchical_tag_choices()
-        # Populate player choices
-        self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
-                               for p in Player.query.filter_by(active=True).order_by(Player.name).all()]
-    
-    def _get_hierarchical_tag_choices(self):
-        """Build hierarchical tag choices for display"""
+
+        # Resolve the current team — same pattern used by ClipForm
+        if current_user.is_authenticated:
+            team_id = (session.get('current_team_id')
+                       if current_user.is_admin
+                       else current_user.team_organization_id)
+        else:
+            team_id = None
+
+        # Tags — filtered to this team
+        self.tags.choices = self._get_hierarchical_tag_choices(team_id)
+
+        # Players — filtered to this team's active roster
+        if team_id:
+            self.players.choices = [
+                (p.id, f"{p.name} (#{p.jersey_number})")
+                for p in Player.query.filter_by(
+                    team_organization_id=team_id,
+                    active=True
+                ).order_by(Player.name).all()
+            ]
+        else:
+            self.players.choices = []
+
+    def _get_hierarchical_tag_choices(self, team_id=None):
+        """Build hierarchical tag choices, scoped to the given team."""
         choices = []
-        # Get root tags (no parent)
-        root_tags = AnnotationTag.query.filter_by(parent_tag_id=None, is_active=True).order_by(AnnotationTag.category, AnnotationTag.name).all()
-        
+        query = AnnotationTag.query.filter_by(parent_tag_id=None, is_active=True)
+        if team_id:
+            query = query.filter_by(team_organization_id=team_id)
+        root_tags = query.order_by(AnnotationTag.category, AnnotationTag.name).all()
+
         for root in root_tags:
-            # Add root tag
             choices.append((root.id, root.name))
-            # Add children with indentation
-            self._add_child_tags(root, choices, level=1)
-        
+            self._add_child_tags(root, choices, level=1, team_id=team_id)
+
         return choices
-    
-    def _add_child_tags(self, parent, choices, level):
-        """Recursively add child tags with indentation"""
-        children = parent.children.filter_by(is_active=True).order_by(AnnotationTag.name).all()
-        for child in children:
+
+    def _add_child_tags(self, parent, choices, level, team_id=None):
+        """Recursively add child tags with indentation."""
+        child_query = parent.children.filter_by(is_active=True)
+        if team_id:
+            child_query = child_query.filter_by(team_organization_id=team_id)
+        for child in child_query.order_by(AnnotationTag.name).all():
             indent = "  " * level
             choices.append((child.id, f"{indent}↳ {child.name}"))
-            self._add_child_tags(child, choices, level + 1)
+            self._add_child_tags(child, choices, level + 1, team_id=team_id)
 
 
 class QuickAnnotationForm(FlaskForm):

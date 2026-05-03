@@ -1,219 +1,342 @@
 {% extends "base.html" %}
 
 {% block styles %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
 <style>
-    .form-help {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
+/* ── Layout ────────────────────────────────────────��────── */
+.ann-page-wrap { max-width: 1100px; margin: 0 auto; }
+
+/* ── Video panel ────────────────────────────────────────── */
+.ann-video-panel {
+  background: #0f172a;
+  border-radius: var(--uc-radius);
+  overflow: hidden;
+  box-shadow: var(--uc-shadow-md);
+}
+.ann-video-ratio {
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+}
+.ann-video-ratio iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* ── Form card ──────────────────────────────────────────── */
+.ann-form-card {
+  background: #fff;
+  border: 1px solid var(--uc-gray-200);
+  border-radius: var(--uc-radius);
+  padding: 1.5rem;
+}
+
+/* ── mm:ss timestamp ────────────────────────────────────── */
+.ts-group { display: flex; align-items: center; gap: .4rem; }
+.ts-group input[type=number] {
+  width: 64px; text-align: center; font-weight: 700;
+  -moz-appearance: textfield;
+}
+.ts-group input[type=number]::-webkit-inner-spin-button,
+.ts-group input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+.ts-colon { font-size: 1.1rem; font-weight: 700; color: var(--uc-gray-600); }
+
+/* ── Quill overrides ────────────────────────────────────── */
+.ql-container { font-size: .9rem; border-radius: 0 0 6px 6px !important; }
+.ql-toolbar { border-radius: 6px 6px 0 0 !important; background: var(--uc-gray-50); }
+.ql-editor { min-height: 120px; }
+
+/* ── Section label ──────────────────────────────────────── */
+.field-label {
+  font-size: .8rem; font-weight: 700; color: var(--uc-gray-700);
+  margin-bottom: .35rem; display: block;
+}
+.field-optional { font-weight: 400; color: var(--uc-gray-400); }
+
+/* ── Sticky video on desktop ────────────────────────────── */
+@media (min-width: 992px) {
+  .ann-video-sticky { position: sticky; top: 1rem; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Add Annotation</h1>
-            {% if clip %}
-                <p class="text-muted mb-0">
-                    Clip: <strong>{{ clip.title }}</strong>
-                    {% if clip.game %}
-                        | vs {{ clip.game.opponent }}{% if clip.game.date %} ({{ clip.game.date.strftime('%Y-%m-%d') }}){% endif %}
-                    {% endif %}
-                    {% if clip.point %}
-                        | Point {{ clip.point.point_number }}
-                    {% endif %}
-                </p>
-            {% endif %}
+<div class="container-fluid py-4">
+<div class="ann-page-wrap">
+
+  <!-- Breadcrumb -->
+  <div class="d-flex align-items-center gap-2 mb-3">
+    {% if clip %}
+    <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Back to Clip
+    </a>
+    <span style="color:var(--uc-gray-400);font-size:.8rem">/</span>
+    <span style="font-size:.8rem;color:var(--uc-gray-600)">
+      <strong>{{ clip.title }}</strong>
+      {% if clip.game %} · vs {{ clip.game.opponent }}{% if clip.game.date %} ({{ clip.game.date.strftime('%d %b %Y') }}){% endif %}{% endif %}
+    </span>
+    {% else %}
+    <a href="{{ url_for('clip.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Library
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+
+    <!-- ── Left: Video (sticky on desktop) ─────────��─────── -->
+    {% if clip and clip.embed_url %}
+    <div class="col-lg-5">
+      <div class="ann-video-sticky">
+        <div class="ann-video-panel">
+          <div class="ann-video-ratio">
+            <iframe id="video-player"
+                    src="{{ clip.embed_url }}{% if form.timestamp.data %}{% set sep = '&' if '?' in clip.embed_url else '?' %}{{ sep }}start={{ form.timestamp.data }}{% endif %}&enablejsapi=1"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+          </div>
         </div>
-        <div class="col-md-4 text-end">
-            {% if clip %}
-            <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-secondary">Back to Clip</a>
-            {% else %}
-            <a href="{{ url_for('clip.index') }}" class="btn btn-secondary">Back to Library</a>
-            {% endif %}
-        </div>
+        <p class="text-muted mt-2 mb-0" style="font-size:.75rem">
+          <i class="bi bi-info-circle me-1"></i>
+          Video loaded at the selected timestamp. Adjust mm:ss on the right to jump to a different moment.
+        </p>
+      </div>
     </div>
+    {% endif %}
 
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {{ form.hidden_tag() }}
+    <!-- ── Right: Form ───────────────────────────────────── -->
+    <div class="{% if clip and clip.embed_url %}col-lg-7{% else %}col-lg-8 offset-lg-2{% endif %}">
+      <div class="ann-form-card">
+        <h5 style="font-weight:800;margin-bottom:1.25rem">
+          <i class="bi bi-plus-circle me-1" style="color:var(--uc-blue)"></i>Add Annotation
+        </h5>
 
-                        <!-- Title (optional) -->
-                        <div class="mb-3">
-                            {{ form.title.label(class="form-label") }}
-                            {{ form.title(class="form-control") }}
-                            {% for error in form.title.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+        <form method="post" id="ann-standalone-form" novalidate>
+          {{ form.hidden_tag() }}
 
-                        <!-- Timestamp -->
-                        <div class="mb-3">
-                            {{ form.timestamp.label(class="form-label") }}
-                            <div class="input-group">
-                                {{ form.timestamp(class="form-control", id="timestamp-seconds") }}
-                                <button class="btn btn-outline-secondary" type="button" id="btn-copy-current">Use Current Time</button>
-                            </div>
-                            <div class="form-text form-help">Time in seconds where this annotation occurs</div>
-                            {% for error in form.timestamp.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Event type -->
-                        <div class="mb-3">
-                            {{ form.event_type.label(class="form-label") }}
-                            {{ form.event_type(class="form-select") }}
-                            {% for error in form.event_type.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Score -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                {{ form.our_score.label(class="form-label") }}
-                                {{ form.our_score(class="form-control") }}
-                                {% for error in form.our_score.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.their_score.label(class="form-label") }}
-                                {{ form.their_score(class="form-control") }}
-                                {% for error in form.their_score.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Tactics -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                {{ form.offense.label(class="form-label") }}
-                                {{ form.offense(class="form-select") }}
-                                {% for error in form.offense.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.defense.label(class="form-label") }}
-                                {{ form.defense(class="form-select") }}
-                                {% for error in form.defense.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="mb-3">
-                            {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows=3) }}
-                            {% for error in form.notes.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Tags -->
-                        <div class="mb-3">
-                            {{ form.tags.label(class="form-label") }}
-                            {{ form.tags(class="form-select", id="tags-select", multiple="multiple") }}
-                            <div class="form-text form-help">Select tags to categorize this annotation</div>
-                            {% for error in form.tags.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Players -->
-                        <div class="mb-3">
-                            {{ form.players.label(class="form-label") }}
-                            {{ form.players(class="form-select", id="players-select", multiple="multiple") }}
-                            <div class="form-text form-help">Select players involved in this moment</div>
-                            {% for error in form.players.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Key moment + Visibility -->
-                        <div class="row mb-3">
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="form-check">
-                                    {{ form.is_key_moment(class="form-check-input", id="is-key") }}
-                                    <label class="form-check-label" for="is-key">
-                                        {{ form.is_key_moment.label.text }}
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.visibility.label(class="form-label") }}
-                                {{ form.visibility(class="form-select") }}
-                                {% for error in form.visibility.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
+          <!-- ── Timestamp (mm:ss) ─────────────────────── -->
+          <div class="mb-3">
+            <label class="field-label">Timestamp</label>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <div class="ts-group">
+                <input type="number" id="ann-min" min="0" class="form-control form-control-sm" placeholder="0" aria-label="Minutes">
+                <span class="ts-colon">:</span>
+                <input type="number" id="ann-sec" min="0" max="59" class="form-control form-control-sm" placeholder="00" aria-label="Seconds">
+                <span style="font-size:.75rem;color:var(--uc-gray-500)">min&thinsp;:&thinsp;sec</span>
+              </div>
+              <button type="button" id="btn-use-current" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-stopwatch me-1"></i>Use Current Video Time
+              </button>
             </div>
-
-            {% if clip and clip.embed_url %}
-            <div class="card mt-3">
-                <div class="card-header">
-                    Reference Video
-                </div>
-                <div class="card-body">
-                    <div class="ratio ratio-16x9">
-                        <iframe id="video-player"
-                                src="{{ clip.embed_url }}"
-                                frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen></iframe>
-                    </div>
-                </div>
+            <!-- Hidden seconds field submitted to server -->
+            {{ form.timestamp(id="ann-timestamp-hidden", style="display:none") }}
+            {% if form.timestamp.errors %}
+            <div class="text-danger mt-1" style="font-size:.8rem">
+              {% for e in form.timestamp.errors %}{{ e }}{% endfor %}
             </div>
             {% endif %}
-        </div>
+          </div>
+
+          <!-- ── Title ─────────────────────────────────── -->
+          <div class="mb-3">
+            <label class="field-label">
+              Title <span class="field-optional">(optional)</span>
+            </label>
+            {{ form.title(class="form-control form-control-sm" + (" is-invalid" if form.title.errors else ""),
+                          placeholder="Brief label for this moment") }}
+            {% for e in form.title.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- ── Notes (Quill) ─────────────────────────── -->
+          <div class="mb-3">
+            <label class="field-label">Notes <span class="field-optional">(optional)</span></label>
+            <div id="quill-ann-editor"></div>
+            {{ form.notes(id="ann-notes-hidden", style="display:none") }}
+            {% if form.notes.errors %}
+            <div class="text-danger mt-1" style="font-size:.8rem">
+              {% for e in form.notes.errors %}{{ e }}{% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- ── Event type ────────────────────────────── -->
+          <div class="mb-3">
+            <label class="field-label">Event Type</label>
+            {{ form.event_type(class="form-select form-select-sm" + (" is-invalid" if form.event_type.errors else "")) }}
+            {% for e in form.event_type.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- ── Score ─────────────────────────────────── -->
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="field-label">Our Score</label>
+              {{ form.our_score(class="form-control form-control-sm" + (" is-invalid" if form.our_score.errors else ""),
+                                placeholder="—") }}
+              {% for e in form.our_score.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-6">
+              <label class="field-label">Their Score</label>
+              {{ form.their_score(class="form-control form-control-sm" + (" is-invalid" if form.their_score.errors else ""),
+                                  placeholder="—") }}
+              {% for e in form.their_score.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <!-- ── Offense / Defense ─────────────────────── -->
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="field-label">Offense</label>
+              {{ form.offense(class="form-select form-select-sm") }}
+            </div>
+            <div class="col-6">
+              <label class="field-label">Defense</label>
+              {{ form.defense(class="form-select form-select-sm") }}
+            </div>
+          </div>
+
+          <!-- ── Tags ──────────────────────────────────── -->
+          {% if form.tags.choices %}
+          <div class="mb-3">
+            <label class="field-label">Tags <span class="field-optional">(optional)</span></label>
+            {{ form.tags(class="form-select form-select-sm", multiple=True, size=4,
+                         id="tags-select") }}
+            <div class="form-text" style="font-size:.72rem">Hold Ctrl / Cmd to select multiple</div>
+          </div>
+          {% endif %}
+
+          <!-- ── Players ──���────────────────────────────── -->
+          {% if form.players.choices %}
+          <div class="mb-3">
+            <label class="field-label">Players Involved <span class="field-optional">(optional)</span></label>
+            {{ form.players(class="form-select form-select-sm", multiple=True, size=4,
+                            id="players-select") }}
+            <div class="form-text" style="font-size:.72rem">Hold Ctrl / Cmd to select multiple</div>
+          </div>
+          {% endif %}
+
+          <!-- ── Key moment + Visibility ────────────��──── -->
+          <div class="row g-2 mb-4 align-items-center">
+            <div class="col-6 d-flex align-items-center" style="padding-top:1.5rem">
+              <div class="form-check mb-0">
+                {{ form.is_key_moment(class="form-check-input", id="is-key") }}
+                <label class="form-check-label" for="is-key" style="font-size:.85rem">
+                  <i class="bi bi-star-fill me-1" style="color:var(--uc-amber)"></i>Key Moment
+                </label>
+              </div>
+            </div>
+            <div class="col-6">
+              <label class="field-label">Visibility</label>
+              {{ form.visibility(class="form-select form-select-sm") }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            {{ form.submit(class="btn btn-primary", id="ann-submit-btn") }}
+            {% if clip %}
+            <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}" class="btn btn-outline-secondary">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
     </div>
+
+  </div>
+</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
-    // Initialize Select2 for tags and players
-    $(document).ready(function() {
-        $('#tags-select').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Select tags',
-            allowClear: true
-        });
-        $('#players-select').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Select players',
-            allowClear: true
-        });
-    });
+/* ── YouTube API ────────────────────────────────────────── */
+let ytPlayer = null;
 
-    // Optional: grab current playback time from the iframe (YouTube)
-    // Note: Full-featured getCurrentTime requires YouTube Iframe API.
-    // This button simply helps when you manually pause and know the time.
-    document.getElementById('btn-copy-current')?.addEventListener('click', function() {
-        // If you’re not using the YouTube Iframe API, you could rely on a manual approach:
-        // Prompt user to enter visible/current seconds, then fill the field.
-        const seconds = prompt('Enter the current video time (in seconds):');
-        if (seconds !== null && seconds.trim() !== '' && !isNaN(seconds)) {
-            document.getElementById('timestamp-seconds').value = parseInt(seconds, 10);
-        }
-    });
+function onYouTubeIframeAPIReady() {
+  const iframe = document.getElementById('video-player');
+  if (!iframe || !iframe.src.includes('youtube.com')) return;
+  ytPlayer = new YT.Player('video-player', { events: {} });
+}
+
+/* ── mm:ss helpers ──────────────────────────────────────── */
+function secondsToMmSs(total) {
+  return { m: Math.floor(total / 60), s: total % 60 };
+}
+function mmSsToSeconds(m, s) {
+  return (parseInt(m) || 0) * 60 + (parseInt(s) || 0);
+}
+
+function syncTimestamp() {
+  const m = document.getElementById('ann-min').value;
+  const s = document.getElementById('ann-sec').value;
+  const total = mmSsToSeconds(m, s);
+  document.getElementById('ann-timestamp-hidden').value = total;
+
+  // Update the video iframe src to jump to the new position
+  const iframe = document.getElementById('video-player');
+  if (iframe && iframe.src.includes('youtube.com')) {
+    if (ytPlayer && ytPlayer.seekTo) {
+      ytPlayer.seekTo(total, true);
+    } else {
+      const match = iframe.src.match(/embed\/([^?]+)/);
+      if (match) iframe.src = `https://www.youtube.com/embed/${match[1]}?start=${total}&enablejsapi=1`;
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  /* ── Pre-fill mm:ss from the hidden seconds field ─────── */
+  const hiddenTs = document.getElementById('ann-timestamp-hidden');
+  if (hiddenTs && hiddenTs.value) {
+    const { m, s } = secondsToMmSs(parseInt(hiddenTs.value) || 0);
+    document.getElementById('ann-min').value = m;
+    document.getElementById('ann-sec').value = String(s).padStart(2, '0');
+  }
+
+  ['ann-min', 'ann-sec'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', syncTimestamp);
+    document.getElementById(id)?.addEventListener('input', syncTimestamp);
+  });
+
+  /* ── "Use Current Video Time" button ─────────────────── */
+  document.getElementById('btn-use-current')?.addEventListener('click', function () {
+    let t = 0;
+    if (ytPlayer && ytPlayer.getCurrentTime) {
+      t = Math.floor(ytPlayer.getCurrentTime());
+    }
+    const { m, s } = secondsToMmSs(t);
+    document.getElementById('ann-min').value = m;
+    document.getElementById('ann-sec').value = String(s).padStart(2, '0');
+    document.getElementById('ann-timestamp-hidden').value = t;
+  });
+
+  /* ── Quill ───────────────────────────────────────────── */
+  const quill = new Quill('#quill-ann-editor', {
+    theme: 'snow',
+    placeholder: 'Write your notes here…',
+    modules: {
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['clean']
+      ]
+    }
+  });
+
+  // Pre-populate Quill if editing (notes field already has content)
+  const notesHidden = document.getElementById('ann-notes-hidden');
+  if (notesHidden && notesHidden.value.trim()) {
+    quill.root.innerHTML = notesHidden.value;
+  }
+
+  /* ── Sync Quill → hidden textarea before submit ──────── */
+  document.getElementById('ann-standalone-form')?.addEventListener('submit', function () {
+    notesHidden.value = quill.root.innerHTML;
+  });
+
+});
 </script>
 {% endblock %}
