@@ -85,6 +85,21 @@ class AnnotationForm(FlaskForm):
         else:
             team_id = None
 
+        # Visibility choices — coaches/admins get all options; players only get team/private
+        is_coach_or_admin = (current_user.is_authenticated and
+                             (current_user.is_admin or getattr(current_user, 'is_coach', False)))
+        if is_coach_or_admin:
+            self.visibility.choices = [
+                ('team', 'Team (All Members)'),
+                ('coaches', 'Coaches Only — hidden from players'),
+                ('private', 'Private (Only Me)'),
+            ]
+        else:
+            self.visibility.choices = [
+                ('team', 'Team (All Members)'),
+                ('private', 'Private (Only Me)'),
+            ]
+
         # Tags — filtered to this team
         self.tags.choices = self._get_hierarchical_tag_choices(team_id)
 

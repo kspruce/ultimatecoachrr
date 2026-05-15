@@ -171,6 +171,21 @@
 .seg-item strong { color: var(--uc-gray-800); }
 .seg-time { color: var(--uc-gray-500); font-size: .72rem; }
 
+/* ── Visibility badges ──────────────────────────────────── */
+.ann-private-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .63rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: .1rem .4rem; border-radius: 20px;
+}
+.ann-private-badge.coaches {
+  background: rgba(124,58,237,.1); color: #7c3aed;
+  border: 1px solid rgba(124,58,237,.25);
+}
+.ann-private-badge.private {
+  background: rgba(15,23,42,.07); color: var(--uc-gray-600);
+  border: 1px solid var(--uc-gray-300);
+}
+
 /* ── Empty annotation state ─────────────────────────────── */
 .ann-empty { text-align: center; padding: 1.5rem; color: var(--uc-gray-400); }
 .ann-empty i { font-size: 2rem; display: block; margin-bottom: .4rem; }
@@ -336,24 +351,27 @@
       </div>
       {% endif %}
 
-      <!-- Key moment + Visibility -->
-      <div class="row g-2 mb-3 align-items-center">
-        <div class="col-6 d-flex align-items-center" style="padding-top:1.6rem">
-          <div class="form-check mb-0">
-            <input class="form-check-input" type="checkbox" name="is_key_moment" id="ann-key-moment" value="y">
-            <label class="form-check-label" for="ann-key-moment" style="font-size:.82rem">
-              <i class="bi bi-star-fill me-1" style="color:var(--uc-amber)"></i>Key Moment
-            </label>
-          </div>
+      <!-- Key moment -->
+      <div class="mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="is_key_moment" id="ann-key-moment" value="y">
+          <label class="form-check-label" for="ann-key-moment" style="font-size:.82rem">
+            <i class="bi bi-star-fill me-1" style="color:var(--uc-amber)"></i>Key Moment
+          </label>
         </div>
-        <div class="col-6">
-          <label class="form-label" style="font-size:.8rem;font-weight:700">Visibility</label>
-          <select name="visibility" class="form-select form-select-sm">
-            {% for value, label in ann_form.visibility.choices %}
-            <option value="{{ value }}"{% if value == 'team' %} selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
+      </div>
+
+      <!-- Visibility -->
+      <div class="mb-3">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">
+          <i class="bi bi-eye me-1"></i>Visibility
+        </label>
+        <select name="visibility" id="ann-visibility" class="form-select form-select-sm">
+          {% for value, label in ann_form.visibility.choices %}
+          <option value="{{ value }}"{% if value == 'team' %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div id="ann-visibility-hint" class="form-text" style="font-size:.72rem;margin-top:.3rem"></div>
       </div>
 
       <!-- Submit -->
@@ -634,11 +652,22 @@
                 <a class="ann-timestamp" onclick="seekToTime({{ annotation.timestamp }})">
                   <i class="bi bi-play-fill"></i>{{ annotation.formatted_timestamp }}
                 </a>
-                {% if annotation.is_key_moment %}
-                <span class="ann-badge ann-badge-key">
-                  <i class="bi bi-star-fill me-1"></i>Key
-                </span>
-                {% endif %}
+                <div class="d-flex align-items-center gap-1">
+                  {% if annotation.visibility == 'coaches' %}
+                  <span class="ann-private-badge coaches" title="Only coaches can see this">
+                    <i class="bi bi-lock-fill"></i>Coaches only
+                  </span>
+                  {% elif annotation.visibility == 'private' %}
+                  <span class="ann-private-badge private" title="Only you can see this">
+                    <i class="bi bi-lock-fill"></i>Private
+                  </span>
+                  {% endif %}
+                  {% if annotation.is_key_moment %}
+                  <span class="ann-badge ann-badge-key">
+                    <i class="bi bi-star-fill me-1"></i>Key
+                  </span>
+                  {% endif %}
+                </div>
               </div>
 
               {% if annotation.title %}
@@ -871,6 +900,9 @@ function initOffcanvas() {
     videoIframe.src = `${CLIP_EMBED_URL}${sep}start=${t}`;
   }
 
+  // Update visibility hint
+  updateVisibilityHint();
+
   // Clear any previous error
   const errBox = document.getElementById('ann-form-error');
   if (errBox) errBox.style.display = 'none';
@@ -887,6 +919,22 @@ if (offcanvasEl) {
     if (videoIframe) videoIframe.src = '';
   });
 }
+
+// Visibility hint
+const visibilityHints = {
+  'team':    'Visible to all team members.',
+  'coaches': '🔒 Only coaches and admins will see this — hidden from players.',
+  'private': '🔒 Only you will see this annotation.'
+};
+function updateVisibilityHint() {
+  const sel = document.getElementById('ann-visibility');
+  const hint = document.getElementById('ann-visibility-hint');
+  if (sel && hint) {
+    hint.textContent = visibilityHints[sel.value] || '';
+    hint.style.color = (sel.value === 'team') ? 'var(--uc-gray-500)' : '#7c3aed';
+  }
+}
+document.getElementById('ann-visibility')?.addEventListener('change', updateVisibilityHint);
 
 // Sync mm:ss inputs → hidden seconds field
 ['ann-min', 'ann-sec'].forEach(id => {

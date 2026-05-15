@@ -216,8 +216,8 @@
           </div>
           {% endif %}
 
-          <!-- ── Key moment + Visibility ────────────��──── -->
-          <div class="row g-2 mb-4 align-items-center">
+          <!-- ── Key moment + Visibility ────────────────── -->
+          <div class="row g-2 mb-4 align-items-start">
             <div class="col-6 d-flex align-items-center" style="padding-top:1.5rem">
               <div class="form-check mb-0">
                 {{ form.is_key_moment(class="form-check-input", id="is-key") }}
@@ -227,8 +227,9 @@
               </div>
             </div>
             <div class="col-6">
-              <label class="field-label">Visibility</label>
-              {{ form.visibility(class="form-select form-select-sm") }}
+              <label class="field-label"><i class="bi bi-eye me-1"></i>Visibility</label>
+              {{ form.visibility(class="form-select form-select-sm", id="visibility-select") }}
+              <div id="visibility-hint" class="form-text mt-1" style="font-size:.72rem"></div>
             </div>
           </div>
 
@@ -286,7 +287,24 @@ function syncTimestamp() {
   }
 }
 
+/* ── Visibility hint ─────────────────────────────────────── */
+const visHints = {
+  'team':    'Visible to all team members.',
+  'coaches': '🔒 Only coaches and admins will see this — hidden from players.',
+  'private': '🔒 Only you will see this annotation.'
+};
+function updateVisHint() {
+  const sel = document.getElementById('visibility-select');
+  const hint = document.getElementById('visibility-hint');
+  if (sel && hint) {
+    hint.textContent = visHints[sel.value] || '';
+    hint.style.color = (sel.value === 'team') ? 'var(--uc-gray-500)' : '#7c3aed';
+  }
+}
+document.getElementById('visibility-select')?.addEventListener('change', updateVisHint);
+
 document.addEventListener('DOMContentLoaded', function () {
+  updateVisHint();
 
   /* ── Pre-fill mm:ss from the hidden seconds field ─────── */
   const hiddenTs = document.getElementById('ann-timestamp-hidden');

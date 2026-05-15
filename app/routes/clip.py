@@ -479,6 +479,12 @@ def add_annotation(clip_id):
         form.timestamp.data = t
     
     if form.validate_on_submit():
+        # Clamp visibility: only coaches/admins may set 'coaches'
+        requested_visibility = form.visibility.data
+        is_coach_or_admin = current_user.is_admin or getattr(current_user, 'is_coach', False)
+        if requested_visibility == 'coaches' and not is_coach_or_admin:
+            requested_visibility = 'team'
+
         annotation = ClipAnnotation(
             clip_id=clip_id,
             user_id=current_user.id,
@@ -491,7 +497,7 @@ def add_annotation(clip_id):
             defense=form.defense.data,
             notes=form.notes.data,
             is_key_moment=form.is_key_moment.data,
-            visibility=form.visibility.data,
+            visibility=requested_visibility,
             team_organization_id=team_id
         )
         
@@ -549,6 +555,12 @@ def edit_annotation(annotation_id):
         form.players.data = [player.id for player in annotation.players]
     
     if form.validate_on_submit():
+        # Clamp visibility: only coaches/admins may set 'coaches'
+        requested_visibility = form.visibility.data
+        is_coach_or_admin = current_user.is_admin or getattr(current_user, 'is_coach', False)
+        if requested_visibility == 'coaches' and not is_coach_or_admin:
+            requested_visibility = 'team'
+
         annotation.timestamp = form.timestamp.data
         annotation.title = form.title.data
         annotation.event_type = form.event_type.data
@@ -558,7 +570,7 @@ def edit_annotation(annotation_id):
         annotation.defense = form.defense.data
         annotation.notes = form.notes.data
         annotation.is_key_moment = form.is_key_moment.data
-        annotation.visibility = form.visibility.data
+        annotation.visibility = requested_visibility
         
         # Update tags
         if form.tags.data:
@@ -1103,9 +1115,18 @@ def api_get_annotations(clip_id):
     """API endpoint to get all annotations for a clip (JSON)"""
     team_id = get_current_team_id()
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
-    
-    annotations = ClipAnnotation.query.filter_by(clip_id=clip_id).all()
-    
+
+    # Respect visibility: non-coaches only see 'team' annotations and their own
+    ann_query = ClipAnnotation.query.filter_by(clip_id=clip_id)
+    if not (current_user.is_admin or getattr(current_user, 'is_coach', False)):
+        ann_query = ann_query.filter(
+            or_(
+                ClipAnnotation.visibility == 'team',
+                ClipAnnotation.user_id == current_user.id
+            )
+        )
+    annotations = ann_query.all()
+
     return jsonify([{
         'id': a.id,
         'timestamp': a.timestamp,
@@ -1175,15 +1196,9 @@ def shared_clip_view(token):
     # Enforce team scoping
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
 
-    # Which annotations to show:
-    # If you have a 'public' visibility option, uncomment to show only public:
-    # annotations = (ClipAnnotation.query
-    #                .filter_by(clip_id=clip.id, visibility='public')
-    #                .order_by(ClipAnnotation.timestamp).all())
-
-    # Otherwise, show all annotations for now (read-only). You can refine later.
+    # Shared views only expose 'team' annotations — never coaches-only or private
     annotations = (ClipAnnotation.query
-                   .filter_by(clip_id=clip.id)
+                   .filter_by(clip_id=clip.id, visibility='team')
                    .order_by(ClipAnnotation.timestamp).all())
 
     # Build an embed URL for YouTube/Veo if possible
@@ -1221,9 +1236,16 @@ def export_annotations_markdown(clip_id):
     team_id = get_current_team_id()
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
 
-    annotations = (ClipAnnotation.query
-                   .filter_by(clip_id=clip.id)
-                   .order_by(ClipAnnotation.timestamp).all())
+    # Respect visibility on markdown export too
+    md_query = ClipAnnotation.query.filter_by(clip_id=clip.id)
+    if not (current_user.is_admin or getattr(current_user, 'is_coach', False)):
+        md_query = md_query.filter(
+            or_(
+                ClipAnnotation.visibility == 'team',
+                ClipAnnotation.user_id == current_user.id
+            )
+        )
+    annotations = md_query.order_by(ClipAnnotation.timestamp).all()
 
     lines = []
     lines.append(f"# {clip.title}")
@@ -1277,9 +1299,18 @@ def export_annotations_csv(clip_id):
     
     # Filter clip by team
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
-    
-    annotations = ClipAnnotation.query.filter_by(clip_id=clip.id).order_by(ClipAnnotation.timestamp).all()
-    
+
+    # Respect visibility on export too
+    csv_query = ClipAnnotation.query.filter_by(clip_id=clip.id)
+    if not (current_user.is_admin or getattr(current_user, 'is_coach', False)):
+        csv_query = csv_query.filter(
+            or_(
+                ClipAnnotation.visibility == 'team',
+                ClipAnnotation.user_id == current_user.id
+            )
+        )
+    annotations = csv_query.order_by(ClipAnnotation.timestamp).all()
+
     # Create a file-like buffer
     buffer = io.StringIO()
     writer = csv.writer(buffer)
