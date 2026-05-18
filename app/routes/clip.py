@@ -298,7 +298,7 @@ def view_clip(clip_id):
 
     # Team users list — used in the offcanvas "specific player" selector
     team_users = (User.query
-                  .filter_by(team_organization_id=team_id, is_active=True)
+                  .filter_by(team_organization_id=team_id)
                   .order_by(User.username)
                   .all())
 

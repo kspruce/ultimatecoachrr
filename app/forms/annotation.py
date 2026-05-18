@@ -103,15 +103,16 @@ class AnnotationForm(FlaskForm):
                 ('private', 'Private (Only Me)'),
             ]
 
-        # Target user choices — all active team members (for 'specific' visibility)
+        # Target user choices — all team members (for 'specific' visibility)
         if team_id:
             team_users = (User.query
-                          .filter_by(team_organization_id=team_id, is_active=True)
+                          .filter_by(team_organization_id=team_id)
                           .order_by(User.username)
                           .all())
             self.target_user_id.choices = (
                 [(0, '— Select a player —')] +
-                [(u.id, u.username) for u in team_users if u.id != (current_user.id if current_user.is_authenticated else -1)]
+                [(u.id, u.username) for u in team_users
+                 if u.id != (current_user.id if current_user.is_authenticated else -1)]
             )
         else:
             self.target_user_id.choices = [(0, '— Select a player —')]
