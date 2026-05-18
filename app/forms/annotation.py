@@ -5,7 +5,6 @@ from app.models.annotation import AnnotationTag
 from app.models.player import Player
 from flask_login import current_user
 from flask import session
-from app.models.user import User
 
 
 class AnnotationForm(FlaskForm):
@@ -73,7 +72,8 @@ class AnnotationForm(FlaskForm):
         default='team',
         validators=[DataRequired()]
     )
-    target_user_id = SelectField('Visible to Player', coerce=int, validators=[Optional()])
+    # target_user_id is NOT a WTForms field — it is read directly from request.form
+    # in the route to avoid SelectField choices-validation issues with the offcanvas AJAX form.
     submit = SubmitField('Save Annotation')
 
     def __init__(self, *args, **kwargs):
@@ -102,20 +102,6 @@ class AnnotationForm(FlaskForm):
                 ('team', 'Team (All Members)'),
                 ('private', 'Private (Only Me)'),
             ]
-
-        # Target user choices — all team members (for 'specific' visibility)
-        if team_id:
-            team_users = (User.query
-                          .filter_by(team_organization_id=team_id)
-                          .order_by(User.username)
-                          .all())
-            self.target_user_id.choices = (
-                [(0, '— Select a player —')] +
-                [(u.id, u.username) for u in team_users
-                 if u.id != (current_user.id if current_user.is_authenticated else -1)]
-            )
-        else:
-            self.target_user_id.choices = [(0, '— Select a player —')]
 
         # Tags — filtered to this team
         self.tags.choices = self._get_hierarchical_tag_choices(team_id)

@@ -274,7 +274,17 @@
             <label class="field-label">
               <i class="bi bi-person-lock me-1"></i>Visible to
             </label>
-            {{ form.target_user_id(class="form-select form-select-sm", id="target-user-select") }}
+            <select name="target_user_id" id="target-user-select" class="form-select form-select-sm">
+              <option value="0">— Select a player —</option>
+              {% for u in team_users %}
+              {% if u.id != current_user.id %}
+              <option value="{{ u.id }}"
+                      {% if annotation.target_user_id == u.id %}selected{% endif %}>
+                {{ u.username }}
+              </option>
+              {% endif %}
+              {% endfor %}
+            </select>
             <div class="form-text" style="font-size:.72rem">
               Only this player (and coaches) will see the annotation.
             </div>

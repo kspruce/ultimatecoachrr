@@ -493,12 +493,11 @@ def add_annotation(clip_id):
         if requested_visibility in ('coaches', 'specific') and not is_coach_or_admin:
             requested_visibility = 'team'
 
-        # Resolve target_user_id — only meaningful for 'specific' visibility
+        # Resolve target_user_id — read directly from request.form (not WTForms)
         target_user_id = None
         if requested_visibility == 'specific':
-            raw_target = form.target_user_id.data
+            raw_target = request.form.get('target_user_id', 0, type=int)
             if raw_target and raw_target > 0:
-                from app.models.user import User
                 target_u = User.query.filter_by(id=raw_target, team_organization_id=team_id).first()
                 target_user_id = target_u.id if target_u else None
             if not target_user_id:
@@ -548,7 +547,8 @@ def add_annotation(clip_id):
         flash('Annotation added successfully!', 'success')
         return redirect(url_for('clip.view_clip', clip_id=clip_id))
     
-    return render_template('clip/add_annotation.html', form=form, clip=clip)
+    team_users = User.query.filter_by(team_organization_id=team_id).order_by(User.username).all()
+    return render_template('clip/add_annotation.html', form=form, clip=clip, team_users=team_users)
 
 @bp.route('/annotation/<int:annotation_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -574,8 +574,6 @@ def edit_annotation(annotation_id):
         # Pre-populate form
         form.tags.data = [tag.id for tag in annotation.tags]
         form.players.data = [player.id for player in annotation.players]
-        if annotation.target_user_id:
-            form.target_user_id.data = annotation.target_user_id
     
     if form.validate_on_submit():
         # Clamp visibility: only coaches/admins may set 'coaches' or 'specific'
@@ -584,12 +582,11 @@ def edit_annotation(annotation_id):
         if requested_visibility in ('coaches', 'specific') and not is_coach_or_admin:
             requested_visibility = 'team'
 
-        # Resolve target_user_id for 'specific' visibility
+        # Resolve target_user_id — read directly from request.form (not WTForms)
         target_user_id = annotation.target_user_id  # preserve existing by default
         if requested_visibility == 'specific':
-            raw_target = form.target_user_id.data
+            raw_target = request.form.get('target_user_id', 0, type=int)
             if raw_target and raw_target > 0:
-                from app.models.user import User
                 target_u = User.query.filter_by(id=raw_target, team_organization_id=team_id).first()
                 target_user_id = target_u.id if target_u else None
             if not target_user_id:
@@ -633,7 +630,8 @@ def edit_annotation(annotation_id):
         flash('Annotation updated successfully!', 'success')
         return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
     
-    return render_template('clip/edit_annotation.html', form=form, annotation=annotation)
+    team_users = User.query.filter_by(team_organization_id=team_id).order_by(User.username).all()
+    return render_template('clip/edit_annotation.html', form=form, annotation=annotation, team_users=team_users)
 
 @bp.route('/annotation/<int:annotation_id>/delete', methods=['POST'])
 @login_required
