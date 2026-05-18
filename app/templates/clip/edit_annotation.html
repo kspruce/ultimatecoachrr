@@ -267,6 +267,20 @@
             </div>
           </div>
 
+          <!-- Target player (coaches/admins only, shown when visibility = 'specific') -->
+          {% if current_user.is_admin or current_user.is_coach %}
+          <div id="target-user-wrap" class="mb-4"
+               style="display:{% if annotation.visibility == 'specific' %}block{% else %}none{% endif %}">
+            <label class="field-label">
+              <i class="bi bi-person-lock me-1"></i>Visible to
+            </label>
+            {{ form.target_user_id(class="form-select form-select-sm", id="target-user-select") }}
+            <div class="form-text" style="font-size:.72rem">
+              Only this player (and coaches) will see the annotation.
+            </div>
+          </div>
+          {% endif %}
+
           <div class="d-flex gap-2">
             {{ form.submit(class="btn btn-primary") }}
             <a href="{{ url_for('clip.view_clip', clip_id=annotation.clip_id) }}"
@@ -320,18 +334,28 @@ function syncTimestamp() {
   }
 }
 
-/* ── Visibility hint ─────────────────────────────────────── */
+/* ── Visibility hint + target player show/hide ───────────── */
 const visHints = {
-  'team':    'Visible to all team members.',
-  'coaches': '🔒 Only coaches and admins will see this — hidden from players.',
-  'private': '🔒 Only you will see this annotation.'
+  'team':     'Visible to all team members.',
+  'coaches':  '🔒 Only coaches and admins will see this — hidden from players.',
+  'specific': '🔒 Only the selected player (and coaches) will see this.',
+  'private':  '🔒 Only you will see this annotation.'
 };
 function updateVisHint() {
-  const sel = document.getElementById('visibility-select');
+  const sel  = document.getElementById('visibility-select');
   const hint = document.getElementById('visibility-hint');
-  if (sel && hint) {
+  const wrap = document.getElementById('target-user-wrap');
+  if (!sel) return;
+  if (hint) {
     hint.textContent = visHints[sel.value] || '';
     hint.style.color = (sel.value === 'team') ? 'var(--uc-gray-500)' : '#7c3aed';
+  }
+  if (wrap) {
+    wrap.style.display = (sel.value === 'specific') ? '' : 'none';
+    if (sel.value !== 'specific') {
+      const ts = document.getElementById('target-user-select');
+      if (ts) ts.value = '0';
+    }
   }
 }
 document.getElementById('visibility-select')?.addEventListener('change', updateVisHint);

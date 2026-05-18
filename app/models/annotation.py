@@ -55,19 +55,21 @@ class ClipAnnotation(db.Model):
     offense = db.Column(db.String(20))
     defense = db.Column(db.String(20))
     notes = db.Column(db.Text)
-    
-    # New fields for enhanced functionality
+
+    # Enhanced functionality fields
     title = db.Column(db.String(200))  # Brief title for the annotation
     is_key_moment = db.Column(db.Boolean, default=False)  # Flag important moments
-    visibility = db.Column(db.String(20), default='team')  # 'team', 'coaches', 'private'
-    
+    visibility = db.Column(db.String(20), default='team')  # 'team', 'coaches', 'specific', 'private'
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # For 'specific' visibility
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
-    
+
     # Relationships
     clip = db.relationship('Clip', back_populates='annotations')
     created_by = db.relationship('User', backref='annotations_created', foreign_keys=[user_id])
+    targeted_user = db.relationship('User', backref='targeted_annotations', foreign_keys=[target_user_id])
     tags = db.relationship('AnnotationTag', 
                           secondary=annotation_tag_relation,
                           backref=db.backref('annotations', lazy='dynamic'))

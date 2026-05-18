@@ -267,7 +267,8 @@ def view_clip(clip_id):
         query = query.filter(
             or_(
                 ClipAnnotation.visibility == 'team',
-                ClipAnnotation.user_id == current_user.id
+                ClipAnnotation.user_id == current_user.id,
+                (ClipAnnotation.visibility == 'specific') & (ClipAnnotation.target_user_id == current_user.id)
             )
         )
     
@@ -295,11 +296,18 @@ def view_clip(clip_id):
     from app.forms.annotation import AnnotationForm
     ann_form = AnnotationForm()
 
+    # Team users list — used in the offcanvas "specific player" selector
+    team_users = (User.query
+                  .filter_by(team_organization_id=team_id, is_active=True)
+                  .order_by(User.username)
+                  .all())
+
     return render_template('clip/view_clip.html',
                          clip=clip,
                          annotations=annotations,
                          annotation_creators=annotation_creators,
-                         ann_form=ann_form)
+                         ann_form=ann_form,
+                         team_users=team_users)
 
 @bp.route('/edit/<int:clip_id>', methods=['GET', 'POST'])
 @login_required
@@ -479,11 +487,23 @@ def add_annotation(clip_id):
         form.timestamp.data = t
     
     if form.validate_on_submit():
-        # Clamp visibility: only coaches/admins may set 'coaches'
+        # Clamp visibility: only coaches/admins may set 'coaches' or 'specific'
         requested_visibility = form.visibility.data
         is_coach_or_admin = current_user.is_admin or getattr(current_user, 'is_coach', False)
-        if requested_visibility == 'coaches' and not is_coach_or_admin:
+        if requested_visibility in ('coaches', 'specific') and not is_coach_or_admin:
             requested_visibility = 'team'
+
+        # Resolve target_user_id — only meaningful for 'specific' visibility
+        target_user_id = None
+        if requested_visibility == 'specific':
+            raw_target = form.target_user_id.data
+            if raw_target and raw_target > 0:
+                from app.models.user import User
+                target_u = User.query.filter_by(id=raw_target, team_organization_id=team_id).first()
+                target_user_id = target_u.id if target_u else None
+            if not target_user_id:
+                # Fallback: treat as coaches-only if no valid target selected
+                requested_visibility = 'coaches'
 
         annotation = ClipAnnotation(
             clip_id=clip_id,
@@ -498,6 +518,7 @@ def add_annotation(clip_id):
             notes=form.notes.data,
             is_key_moment=form.is_key_moment.data,
             visibility=requested_visibility,
+            target_user_id=target_user_id,
             team_organization_id=team_id
         )
         
@@ -553,14 +574,30 @@ def edit_annotation(annotation_id):
         # Pre-populate form
         form.tags.data = [tag.id for tag in annotation.tags]
         form.players.data = [player.id for player in annotation.players]
+        if annotation.target_user_id:
+            form.target_user_id.data = annotation.target_user_id
     
     if form.validate_on_submit():
-        # Clamp visibility: only coaches/admins may set 'coaches'
+        # Clamp visibility: only coaches/admins may set 'coaches' or 'specific'
         requested_visibility = form.visibility.data
         is_coach_or_admin = current_user.is_admin or getattr(current_user, 'is_coach', False)
-        if requested_visibility == 'coaches' and not is_coach_or_admin:
+        if requested_visibility in ('coaches', 'specific') and not is_coach_or_admin:
             requested_visibility = 'team'
 
+        # Resolve target_user_id for 'specific' visibility
+        target_user_id = annotation.target_user_id  # preserve existing by default
+        if requested_visibility == 'specific':
+            raw_target = form.target_user_id.data
+            if raw_target and raw_target > 0:
+                from app.models.user import User
+                target_u = User.query.filter_by(id=raw_target, team_organization_id=team_id).first()
+                target_user_id = target_u.id if target_u else None
+            if not target_user_id:
+                requested_visibility = 'coaches'
+        else:
+            target_user_id = None  # clear when switching away from 'specific'
+
+        annotation.target_user_id = target_user_id
         annotation.timestamp = form.timestamp.data
         annotation.title = form.title.data
         annotation.event_type = form.event_type.data
@@ -1116,13 +1153,14 @@ def api_get_annotations(clip_id):
     team_id = get_current_team_id()
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
 
-    # Respect visibility: non-coaches only see 'team' annotations and their own
+    # Respect visibility: non-coaches only see 'team' annotations, their own, and ones targeted at them
     ann_query = ClipAnnotation.query.filter_by(clip_id=clip_id)
     if not (current_user.is_admin or getattr(current_user, 'is_coach', False)):
         ann_query = ann_query.filter(
             or_(
                 ClipAnnotation.visibility == 'team',
-                ClipAnnotation.user_id == current_user.id
+                ClipAnnotation.user_id == current_user.id,
+                (ClipAnnotation.visibility == 'specific') & (ClipAnnotation.target_user_id == current_user.id)
             )
         )
     annotations = ann_query.all()
@@ -1242,7 +1280,8 @@ def export_annotations_markdown(clip_id):
         md_query = md_query.filter(
             or_(
                 ClipAnnotation.visibility == 'team',
-                ClipAnnotation.user_id == current_user.id
+                ClipAnnotation.user_id == current_user.id,
+                (ClipAnnotation.visibility == 'specific') & (ClipAnnotation.target_user_id == current_user.id)
             )
         )
     annotations = md_query.order_by(ClipAnnotation.timestamp).all()
@@ -1306,7 +1345,8 @@ def export_annotations_csv(clip_id):
         csv_query = csv_query.filter(
             or_(
                 ClipAnnotation.visibility == 'team',
-                ClipAnnotation.user_id == current_user.id
+                ClipAnnotation.user_id == current_user.id,
+                (ClipAnnotation.visibility == 'specific') & (ClipAnnotation.target_user_id == current_user.id)
             )
         )
     annotations = csv_query.order_by(ClipAnnotation.timestamp).all()

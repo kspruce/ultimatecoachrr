@@ -181,6 +181,10 @@
   background: rgba(124,58,237,.1); color: #7c3aed;
   border: 1px solid rgba(124,58,237,.25);
 }
+.ann-private-badge.specific {
+  background: rgba(16,185,129,.1); color: #059669;
+  border: 1px solid rgba(16,185,129,.3);
+}
 .ann-private-badge.private {
   background: rgba(15,23,42,.07); color: var(--uc-gray-600);
   border: 1px solid var(--uc-gray-300);
@@ -373,6 +377,26 @@
         </select>
         <div id="ann-visibility-hint" class="form-text" style="font-size:.72rem;margin-top:.3rem"></div>
       </div>
+
+      <!-- Target player (shown only when visibility = 'specific') -->
+      {% if current_user.is_admin or current_user.is_coach %}
+      <div id="ann-target-user-wrap" class="mb-3" style="display:none">
+        <label class="form-label" style="font-size:.8rem;font-weight:700">
+          <i class="bi bi-person-lock me-1"></i>Visible to
+        </label>
+        <select name="target_user_id" id="ann-target-user" class="form-select form-select-sm">
+          <option value="0">— Select a player —</option>
+          {% for u in team_users %}
+          {% if u.id != current_user.id %}
+          <option value="{{ u.id }}">{{ u.username }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+        <div class="form-text" style="font-size:.72rem">
+          This note will be visible only to the selected player and coaches.
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Submit -->
       <div id="ann-form-error" class="alert alert-danger py-2 mb-2" style="display:none;font-size:.82rem"></div>
@@ -657,6 +681,10 @@
                   <span class="ann-private-badge coaches" title="Only coaches can see this">
                     <i class="bi bi-lock-fill"></i>Coaches only
                   </span>
+                  {% elif annotation.visibility == 'specific' and annotation.targeted_user %}
+                  <span class="ann-private-badge specific" title="Only visible to {{ annotation.targeted_user.username }}">
+                    <i class="bi bi-person-lock"></i>{{ annotation.targeted_user.username }} only
+                  </span>
                   {% elif annotation.visibility == 'private' %}
                   <span class="ann-private-badge private" title="Only you can see this">
                     <i class="bi bi-lock-fill"></i>Private
@@ -920,18 +948,29 @@ if (offcanvasEl) {
   });
 }
 
-// Visibility hint
+// Visibility hint + target player show/hide
 const visibilityHints = {
-  'team':    'Visible to all team members.',
-  'coaches': '🔒 Only coaches and admins will see this — hidden from players.',
-  'private': '🔒 Only you will see this annotation.'
+  'team':     'Visible to all team members.',
+  'coaches':  '🔒 Only coaches and admins will see this — hidden from players.',
+  'specific': '🔒 Only the selected player (and coaches) will see this.',
+  'private':  '🔒 Only you will see this annotation.'
 };
 function updateVisibilityHint() {
-  const sel = document.getElementById('ann-visibility');
+  const sel  = document.getElementById('ann-visibility');
   const hint = document.getElementById('ann-visibility-hint');
-  if (sel && hint) {
+  const wrap = document.getElementById('ann-target-user-wrap');
+  if (!sel) return;
+  if (hint) {
     hint.textContent = visibilityHints[sel.value] || '';
     hint.style.color = (sel.value === 'team') ? 'var(--uc-gray-500)' : '#7c3aed';
+  }
+  if (wrap) {
+    wrap.style.display = (sel.value === 'specific') ? '' : 'none';
+    // Reset target select when hidden so it doesn't accidentally submit a stale value
+    if (sel.value !== 'specific') {
+      const targetSel = document.getElementById('ann-target-user');
+      if (targetSel) targetSel.value = '0';
+    }
   }
 }
 document.getElementById('ann-visibility')?.addEventListener('change', updateVisibilityHint);

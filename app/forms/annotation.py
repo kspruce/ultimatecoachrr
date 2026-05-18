@@ -5,6 +5,7 @@ from app.models.annotation import AnnotationTag
 from app.models.player import Player
 from flask_login import current_user
 from flask import session
+from app.models.user import User
 
 
 class AnnotationForm(FlaskForm):
@@ -72,6 +73,7 @@ class AnnotationForm(FlaskForm):
         default='team',
         validators=[DataRequired()]
     )
+    target_user_id = SelectField('Visible to Player', coerce=int, validators=[Optional()])
     submit = SubmitField('Save Annotation')
 
     def __init__(self, *args, **kwargs):
@@ -92,6 +94,7 @@ class AnnotationForm(FlaskForm):
             self.visibility.choices = [
                 ('team', 'Team (All Members)'),
                 ('coaches', 'Coaches Only — hidden from players'),
+                ('specific', 'Specific Player — visible only to them'),
                 ('private', 'Private (Only Me)'),
             ]
         else:
@@ -99,6 +102,19 @@ class AnnotationForm(FlaskForm):
                 ('team', 'Team (All Members)'),
                 ('private', 'Private (Only Me)'),
             ]
+
+        # Target user choices — all active team members (for 'specific' visibility)
+        if team_id:
+            team_users = (User.query
+                          .filter_by(team_organization_id=team_id, is_active=True)
+                          .order_by(User.username)
+                          .all())
+            self.target_user_id.choices = (
+                [(0, '— Select a player —')] +
+                [(u.id, u.username) for u in team_users if u.id != (current_user.id if current_user.is_authenticated else -1)]
+            )
+        else:
+            self.target_user_id.choices = [(0, '— Select a player —')]
 
         # Tags — filtered to this team
         self.tags.choices = self._get_hierarchical_tag_choices(team_id)
