@@ -175,17 +175,45 @@ def make_shell_context():
         'ExportLog': ExportLog
     }
 
+def ensure_admin_exists():
+    """Create admin user on first boot if one doesn't exist."""
+    with app.app_context():
+        try:
+            from app.models.user import User
+            existing = User.query.filter_by(email='kspruce98@outlook.com').first()
+            if existing:
+                logger.info("Admin user already exists, skipping creation.")
+                return
+            admin = User(
+                username='admin',
+                email='kspruce98@outlook.com',
+                role='admin',
+                is_admin_flag=True,
+                is_superadmin=True
+            )
+            admin.set_password('Mythago22!')
+            db.session.add(admin)
+            db.session.commit()
+            logger.info("Admin user created successfully.")
+        except Exception as e:
+            logger.error(f"Error ensuring admin exists: {str(e)}")
+            db.session.rollback()
+
+
 def create_app_instance():
     """Function to create app instance with error handling"""
     try:
         # Ensure upload directories exist
         ensure_upload_directories()
-        
+
         # Verify S3 configuration if enabled
         if app.config.get('AWS_ACCESS_KEY'):
             if not check_aws_credentials():
                 logger.warning("AWS credentials verification failed")
-        
+
+        # Create admin user if not present
+        ensure_admin_exists()
+
         return app
     except Exception as e:
         logger.error(f"Error creating app: {str(e)}")
