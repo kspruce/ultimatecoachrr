@@ -795,20 +795,20 @@ class EnhancedDataManager:
                     
                     # Import records
                     imported_count = 0
+                    skipped_count = 0
                     errors = []
-                    
+
                     for record_data in data:
                         try:
-                            # Create new instance
+                            # Use a savepoint per record so a duplicate key on one
+                            # record doesn't roll back the entire session.
+                            sp = db.session.begin_nested()
+
                             record = model()
-                            
-                            # Set attributes
+
                             for key, value in record_data.items():
-                                # Skip if the attribute doesn't exist on the model
                                 if not hasattr(record, key):
                                     continue
-                                
-                                # Handle ISO format datetime strings
                                 if isinstance(value, str) and 'T' in value:
                                     try:
                                         if value.endswith('Z'):
@@ -817,24 +817,27 @@ class EnhancedDataManager:
                                             value = datetime.fromisoformat(value)
                                     except ValueError:
                                         pass
-                                
                                 setattr(record, key, value)
-                            
+
                             db.session.add(record)
+                            db.session.flush()   # test constraints inside savepoint
+                            sp.commit()
                             imported_count += 1
-                            
+
                         except Exception as e:
+                            sp.rollback()        # only this record is rolled back
+                            skipped_count += 1
                             errors.append(str(e))
-                            db.session.rollback()
-                    
-                    # Commit all records
+
+                    # Commit all successfully imported records for this table
                     db.session.commit()
                     
                     # Update summary
                     import_summary['results'][table_name] = {
                         'status': 'completed' if not errors else 'partial',
                         'records_imported': imported_count,
-                        'errors': errors
+                        'records_skipped': skipped_count,
+                        'errors': errors[:10]  # cap error list to avoid huge responses
                     }
                     
                     logger.info(f"Imported {imported_count} records to {table_name}")
