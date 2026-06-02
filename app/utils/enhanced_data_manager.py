@@ -489,6 +489,25 @@ class EnhancedDataManager:
                             'file': f"{table_name}.json"
                         }
             
+            # Export association tables (db.Table objects like clip_tag_relation,
+            # clip_player) that are not represented as SQLAlchemy model classes.
+            model_table_names = set(self.models.keys())
+            for table_name, table in db.metadata.tables.items():
+                if table_name in model_table_names:
+                    continue  # already exported above
+                try:
+                    rows = db.session.execute(table.select()).fetchall()
+                    data = [dict(row._mapping) for row in rows]
+                    zipf.writestr(f"assoc_{table_name}.json", json.dumps(data, indent=2, default=str))
+                    export_summary[f'assoc_{table_name}'] = {
+                        'records_exported': len(data),
+                        'file': f"assoc_{table_name}.json"
+                    }
+                    logger.info(f"Exported {len(data)} rows from association table {table_name}")
+                except Exception as e:
+                    db.session.rollback()
+                    logger.error(f"Error exporting association table {table_name}: {e}")
+
             # Save summary in the same format as server export
             zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
             
@@ -817,9 +836,24 @@ class EnhancedDataManager:
                                             value = datetime.fromisoformat(value)
                                     except ValueError:
                                         pass
+                                elif isinstance(value, str) and value:
+                                    # Handle db.Time columns stored as "HH:MM:SS" strings
+                                    col = model.__table__.columns.get(key)
+                                    if col is not None and getattr(col.type, '__visit_name__', '') == 'time':
+                                        from datetime import time as time_type
+                                        try:
+                                            parts = value.split(':')
+                                            h, m = int(parts[0]), int(parts[1])
+                                            s = int(float(parts[2])) if len(parts) > 2 else 0
+                                            value = time_type(h, m, s)
+                                        except (ValueError, IndexError):
+                                            pass
                                 setattr(record, key, value)
 
-                            db.session.add(record)
+                            # Use merge instead of add so existing rows (e.g. seed
+                            # data created during db_reset) are updated rather than
+                            # causing a duplicate-key error.
+                            db.session.merge(record)
                             db.session.flush()   # test constraints inside savepoint
                             sp.commit()
                             imported_count += 1
@@ -850,10 +884,53 @@ class EnhancedDataManager:
                         'error': str(e)
                     }
         
+        # Import association tables (db.Table objects not represented as models,
+        # e.g. clip_tag_relation, clip_player).  These are saved with an "assoc_" prefix.
+        for filename in sorted(os.listdir(import_dir)):
+            if not (filename.startswith('assoc_') and filename.endswith('.json')):
+                continue
+            table_name = filename[6:-5]  # strip 'assoc_' prefix and '.json' suffix
+            if table_name not in db.metadata.tables:
+                logger.warning(f"Skipping association table {table_name}: not in metadata")
+                continue
+            table = db.metadata.tables[table_name]
+            try:
+                with open(os.path.join(import_dir, filename), 'r') as f:
+                    assoc_data = json.load(f)
+                if not assoc_data:
+                    import_summary['results'][f'assoc_{table_name}'] = {'status': 'skipped', 'reason': 'No data'}
+                    continue
+                imported_count = 0
+                skipped_count = 0
+                errors = []
+                for row in assoc_data:
+                    try:
+                        sp = db.session.begin_nested()
+                        db.session.execute(table.insert().values(**row))
+                        db.session.flush()
+                        sp.commit()
+                        imported_count += 1
+                    except Exception as e:
+                        sp.rollback()
+                        skipped_count += 1
+                        errors.append(str(e))
+                db.session.commit()
+                import_summary['results'][f'assoc_{table_name}'] = {
+                    'status': 'completed' if not errors else 'partial',
+                    'records_imported': imported_count,
+                    'records_skipped': skipped_count,
+                    'errors': errors[:10]
+                }
+                logger.info(f"Imported {imported_count} rows into association table {table_name}")
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error importing association table {table_name}: {e}")
+                import_summary['results'][f'assoc_{table_name}'] = {'status': 'error', 'error': str(e)}
+
         # Update summary
         import_summary['status'] = 'completed'
         import_summary['completed_timestamp'] = datetime.now().isoformat()
-        
+
         logger.info(f"Import completed with status: {import_summary['status']}")
         return import_summary
 
