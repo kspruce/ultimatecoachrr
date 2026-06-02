@@ -175,6 +175,34 @@ def make_shell_context():
         'ExportLog': ExportLog
     }
 
+def initialize_database():
+    """
+    Handle database setup for both fresh and existing databases.
+    - Fresh DB: use db.create_all() to build all tables, then stamp Alembic head
+    - Existing DB: run flask db upgrade normally
+    """
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect as sa_inspect
+            inspector = sa_inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+
+            if not existing_tables:
+                logger.info("Fresh database detected — running db.create_all()")
+                db.create_all()
+                from flask_migrate import stamp
+                stamp()
+                logger.info("Database initialised and stamped at migration head")
+            else:
+                logger.info("Existing database detected — running migrations")
+                from flask_migrate import upgrade
+                upgrade()
+                logger.info("Database migrations complete")
+        except Exception as e:
+            logger.error(f"Database initialisation error: {str(e)}")
+            raise
+
+
 def ensure_admin_exists():
     """Create admin user on first boot if one doesn't exist."""
     with app.app_context():
@@ -205,6 +233,9 @@ def create_app_instance():
     try:
         # Ensure upload directories exist
         ensure_upload_directories()
+
+        # Initialise database (create tables or run migrations)
+        initialize_database()
 
         # Verify S3 configuration if enabled
         if app.config.get('AWS_ACCESS_KEY'):
