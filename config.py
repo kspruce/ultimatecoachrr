@@ -55,7 +55,7 @@ class Config:
     # Temporary upload folder for processing
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or '/tmp/uploads'
     # Directory for data exports (can be overridden by environment variable)
-    DATA_EXPORT_DIR = os.environ.get('DATA_EXPORT_DIR', '/app/data_exports')
+    DATA_EXPORT_DIR = os.environ.get('DATA_EXPORT_DIR', '/tmp/data_exports')
     
     # Fallback to temporary directory if DATA_EXPORT_DIR is not writable
     TEMP_EXPORT_DIR = os.environ.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
