@@ -203,6 +203,54 @@ def initialize_database():
             raise
 
 
+def import_users_from_json():
+    """
+    If user_import.json exists in the app root, import any missing users from it.
+    Skips users whose email or username already exists. Runs once on startup.
+    """
+    import json as _json
+    json_path = os.path.join(os.path.dirname(__file__), 'user_import.json')
+    if not os.path.exists(json_path):
+        return
+
+    with app.app_context():
+        try:
+            from app.models.user import User
+            with open(json_path, 'r') as f:
+                users_data = _json.load(f)
+
+            imported = 0
+            skipped = 0
+            for u in users_data:
+                email = u.get('email')
+                username = u.get('username')
+                if not email or not username:
+                    continue
+                exists = User.query.filter(
+                    (User.email == email) | (User.username == username)
+                ).first()
+                if exists:
+                    skipped += 1
+                    continue
+                new_user = User(
+                    username=username,
+                    email=email,
+                    password_hash=u.get('password_hash'),
+                    role=u.get('role', 'player'),
+                    is_superadmin=u.get('is_superadmin', False),
+                    team_organization_id=u.get('team_organization_id'),
+                )
+                new_user.is_admin_flag = u.get('is_admin', False)
+                db.session.add(new_user)
+                imported += 1
+
+            db.session.commit()
+            logger.info(f"User import complete: {imported} imported, {skipped} skipped.")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"User import failed: {str(e)}")
+
+
 def ensure_admin_exists():
     """Create admin user on first boot if one doesn't exist."""
     with app.app_context():
@@ -241,6 +289,9 @@ def create_app_instance():
         if app.config.get('AWS_ACCESS_KEY'):
             if not check_aws_credentials():
                 logger.warning("AWS credentials verification failed")
+
+        # Import users from user_import.json if present
+        import_users_from_json()
 
         # Create admin user if not present
         ensure_admin_exists()
