@@ -244,8 +244,8 @@ def add_user():
     _populate_player_choices(form, team_id)
 
     if request.method == "POST":
-        current_app.logger.debug("VALID:", form.validate())
-        current_app.logger.error("ERRORS:", form.errors)
+        current_app.logger.debug("VALID: %s", form.validate())
+        current_app.logger.error("ERRORS: %s", form.errors)
 
     if form.validate_on_submit():
 
@@ -301,8 +301,8 @@ def edit_user(user_id):
         form.player_id.data = user.player.id if user.player else 0
 
     if request.method == "POST":
-        current_app.logger.debug("VALID:", form.validate())
-        current_app.logger.error("ERRORS:", form.errors)
+        current_app.logger.debug("VALID: %s", form.validate())
+        current_app.logger.error("ERRORS: %s", form.errors)
 
     if form.validate_on_submit():
 
