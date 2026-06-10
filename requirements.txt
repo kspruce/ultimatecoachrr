@@ -18,7 +18,7 @@ Flask-Migrate==4.0.5
 Flask-Moment==1.0.5
 Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.1
-greenlet==3.0.3
+greenlet==3.1.1
 gunicorn==23.0.0
 idna==3.10
 importlib_metadata==7.0.1
