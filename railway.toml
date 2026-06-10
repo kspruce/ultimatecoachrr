@@ -1,5 +1,7 @@
 [build]
 builder = "NIXPACKS"
+# Install headless Chromium (+ system deps) for playbook PDF export
+buildCommand = "playwright install --with-deps chromium"
 
 [deploy]
 startCommand = "gunicorn run:application"

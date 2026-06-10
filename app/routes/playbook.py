@@ -17,6 +17,45 @@ from app.utils.team_filter import get_current_team_id
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
 
+@bp.route('/export.pdf')
+@login_required
+def export_pdf():
+    """Export the whole playbook (concepts + plays) as a PDF."""
+    from io import BytesIO
+    from datetime import datetime
+    from flask import send_file
+    from app.models.team_organization import TeamOrganization
+    from app.utils.playbook_export import generate_playbook_pdf
+
+    team_id = get_current_team_id()
+    team = TeamOrganization.query.get(team_id) if team_id else None
+    team_name = team.name if team else 'Team'
+
+    formations = Formation.query.filter_by(team_organization_id=team_id) \
+        .order_by(Formation.name).all()
+    offensive_plays = Play.query.filter_by(type='offense', team_organization_id=team_id) \
+        .order_by(Play.name).all()
+    defensive_plays = Play.query.filter_by(type='defense', team_organization_id=team_id) \
+        .order_by(Play.name).all()
+
+    try:
+        pdf_bytes = generate_playbook_pdf(
+            formations, offensive_plays, defensive_plays, team_name
+        )
+    except ImportError:
+        current_app.logger.error('Playbook export: playwright is not installed')
+        flash('PDF export is not available: Playwright is not installed on the server.', 'danger')
+        return redirect(url_for('playbook.index'))
+    except Exception as e:
+        current_app.logger.error(f'Playbook export failed: {e}')
+        flash('PDF export failed. Please try again or check the server logs.', 'danger')
+        return redirect(url_for('playbook.index'))
+
+    filename = f"{team_name.replace(' ', '_').lower()}_playbook_{datetime.now():%Y-%m-%d}.pdf"
+    return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
+                     as_attachment=True, download_name=filename)
+
+
 # Main Routes
 @bp.route('/')
 @login_required

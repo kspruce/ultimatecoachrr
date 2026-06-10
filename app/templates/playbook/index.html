@@ -83,16 +83,19 @@
             <h2>Playbook</h2>
             <p>Offensive and defensive strategies for your team</p>
         </div>
-        {% if current_user.is_admin %}
         <div class="d-flex gap-2">
+            {% if current_user.is_admin %}
             <a href="{{ url_for('playbook.add_play') }}" class="btn btn-primary">
                 <i class="bi bi-plus-lg me-1"></i>Add Play
             </a>
             <a href="{{ url_for('playbook.add_formation') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-plus-lg me-1"></i>Add Concept
             </a>
+            {% endif %}
+            <a href="{{ url_for('playbook.export_pdf') }}" class="btn btn-outline-secondary" id="exportPdfBtn">
+                <i class="bi bi-file-earmark-pdf me-1" id="exportPdfIcon"></i><span id="exportPdfLabel">Export PDF</span>
+            </a>
         </div>
-        {% endif %}
     </div>
 
     <!-- Stats row -->
@@ -488,6 +491,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tags = Array.from(row.querySelectorAll('.badge[data-tag-id]')).map(b => b.getAttribute('data-tag-id'));
                 row.style.display = tags.includes(sel) ? '' : 'none';
             });
+        });
+    }
+
+    // Export PDF with loading state (first export can take a while
+    // while play snapshots are captured; later exports use the cache)
+    const exportBtn = document.getElementById('exportPdfBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            const icon = document.getElementById('exportPdfIcon');
+            const label = document.getElementById('exportPdfLabel');
+            icon.className = 'spinner-border spinner-border-sm me-1';
+            label.textContent = 'Generating…';
+            exportBtn.classList.add('disabled');
+            // Browser download doesn't fire an event we can hook into,
+            // so reset the button after a generous delay.
+            setTimeout(() => {
+                icon.className = 'bi bi-file-earmark-pdf me-1';
+                label.textContent = 'Export PDF';
+                exportBtn.classList.remove('disabled');
+            }, 8000);
         });
     }
 

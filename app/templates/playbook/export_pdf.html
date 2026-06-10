@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+        color: #1f2937; font-size: 11pt; line-height: 1.45;
+    }
+    .page-break { page-break-after: always; }
+
+    /* Cover */
+    .cover { text-align: center; padding-top: 220px; }
+    .cover h1 { font-size: 30pt; letter-spacing: .5px; }
+    .cover .sub { color: #6b7280; font-size: 13pt; margin-top: 8px; }
+    .cover .meta { color: #9ca3af; font-size: 10pt; margin-top: 60px; }
+
+    /* Section divider */
+    .section-divider { padding-top: 280px; text-align: center; }
+    .section-divider h2 { font-size: 22pt; color: #111827; }
+    .section-divider .count { color: #6b7280; margin-top: 6px; }
+    .accent { width: 70px; height: 4px; margin: 14px auto 0; border-radius: 2px; }
+    .accent.offense { background: #2563eb; }
+    .accent.defense { background: #dc2626; }
+
+    /* Item page */
+    .item { page-break-before: always; }
+    .item-header { display: flex; justify-content: space-between; align-items: baseline;
+                   border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; }
+    .item-header h3 { font-size: 16pt; }
+    .badge { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+             padding: 3px 9px; border-radius: 10px; color: white; }
+    .badge.offense { background: #2563eb; }
+    .badge.defense { background: #dc2626; }
+    .tags { color: #6b7280; font-size: 9pt; margin-bottom: 10px; }
+    .diagram { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0 4px; }
+    .anim-link { font-size: 8.5pt; color: #2563eb; margin-bottom: 12px; word-break: break-all; }
+    .block { margin-top: 12px; }
+    .block h4 { font-size: 10pt; text-transform: uppercase; letter-spacing: .05em;
+                color: #6b7280; margin-bottom: 4px; }
+    .block p { white-space: pre-wrap; }
+    table.assignments { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 10pt; }
+    table.assignments th, table.assignments td { border: 1px solid #e5e7eb; padding: 5px 8px;
+                                                 text-align: left; vertical-align: top; }
+    table.assignments th { background: #f3f4f6; font-size: 9pt; text-transform: uppercase;
+                           letter-spacing: .04em; color: #6b7280; }
+    .no-diagram { color: #9ca3af; font-style: italic; font-size: 9.5pt; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+    <!-- Cover -->
+    <div class="cover page-break">
+        <h1>{{ team_name }}</h1>
+        <div class="sub">Team Playbook</div>
+        <div class="meta">Generated {{ generated }}</div>
+    </div>
+
+    {% for section_name, items in sections %}
+        {% if items %}
+        <div class="section-divider">
+            <h2>{{ section_name }}</h2>
+            <div class="count">{{ items|length }} {{ 'item' if items|length == 1 else 'items' }}</div>
+            <div class="accent {{ 'offense' if 'Offensive' in section_name else 'defense' }}"></div>
+        </div>
+
+        {% for item in items %}
+        {% set obj = item.obj %}
+        <div class="item">
+            <div class="item-header">
+                <h3>{{ obj.name }}</h3>
+                <span class="badge {{ 'offense' if obj.type == 'offense' else 'defense' }}">
+                    {{ obj.type or 'play' }}
+                </span>
+            </div>
+
+            {% if obj.tags is defined and obj.tags %}
+            <div class="tags">Tags: {{ obj.tags|map(attribute='name')|join(', ') }}</div>
+            {% endif %}
+
+            {% if obj.formation is defined and obj.formation %}
+            <div class="tags">Concept: {{ obj.formation.name }}</div>
+            {% endif %}
+
+            {% if item.image %}
+                <img class="diagram" src="{{ item.image }}">
+            {% elif item.imgur_url %}
+                <img class="diagram" src="{{ item.imgur_url }}">
+            {% else %}
+                <div class="no-diagram">No diagram available</div>
+            {% endif %}
+
+            {% if item.animation_url %}
+            <div class="anim-link">Animation: {{ item.animation_url }}</div>
+            {% endif %}
+
+            {% if obj.description %}
+            <div class="block">
+                <h4>Description</h4>
+                <p>{{ obj.description }}</p>
+            </div>
+            {% endif %}
+
+            {% if obj.notes is defined and obj.notes %}
+            <div class="block">
+                <h4>Notes</h4>
+                <p>{{ obj.notes }}</p>
+            </div>
+            {% endif %}
+
+            {% if obj.assignments is defined and obj.assignments %}
+            <div class="block">
+                <h4>Position Assignments</h4>
+                <table class="assignments">
+                    <tr><th style="width:28%">Position</th><th>Instructions</th></tr>
+                    {% for a in obj.assignments %}
+                    <tr>
+                        <td>{{ a.position.name if a.position else '—' }}</td>
+                        <td>{{ a.instructions }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+    {% endfor %}
+
+</body>
+</html>
