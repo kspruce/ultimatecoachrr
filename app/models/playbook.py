@@ -36,6 +36,7 @@ class Play(db.Model):
     notes = db.Column(db.Text)
     ultiplay_embed = db.Column(db.Text)
     image_url = db.Column(db.String(255))  # static diagram (e.g. ImgBB link) shown online + used in PDF export
+    sort_order = db.Column(db.Integer)  # manual ordering in playbook + PDF (lower = first)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

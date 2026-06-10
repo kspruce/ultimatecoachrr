@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .pos-pill {
+        display: inline-block; padding: .45rem 1rem; border-radius: 20px;
+        border: 1px solid var(--uc-gray-200); background: var(--uc-card-bg, white);
+        color: var(--uc-gray-600); font-size: .875rem; font-weight: 600;
+        text-decoration: none; transition: all .15s;
+    }
+    .pos-pill:hover { border-color: var(--uc-blue); color: var(--uc-blue); }
+    .pos-pill.active { background: var(--uc-blue); border-color: var(--uc-blue); color: white; }
+    .assignment-card { border-left: 3px solid var(--uc-gray-200); }
+    .assignment-card.offense { border-left-color: var(--uc-blue); }
+    .assignment-card.defense { border-left-color: var(--uc-red); }
+    .markdown-content p { margin-bottom: .4rem; }
+    .markdown-content ul, .markdown-content ol { margin: .2rem 0 .6rem 1.1rem; }
+    .markdown-content code { background: var(--uc-gray-100); padding: .1rem .3rem; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="uc-page-header mb-4">
+        <div>
+            <h2>Playbook by Position</h2>
+            <p>Pick a position to see its instructions across every play</p>
+        </div>
+        <a href="{{ url_for('playbook.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Playbook
+        </a>
+    </div>
+
+    {% if positions %}
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        {% for pos in positions %}
+        <a href="{{ url_for('playbook.position_view', position_id=pos.id) }}"
+           class="pos-pill {{ 'active' if selected and selected.id == pos.id }}">
+            {{ pos.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No positions defined yet. Positions are created when managing play assignments.
+    </div>
+    {% endif %}
+
+    {% if selected %}
+        {% if assignments %}
+        <div class="row g-3">
+            {% for a in assignments %}
+            <div class="col-12">
+                <div class="card assignment-card {{ a.play.type }}">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="mb-0" style="font-weight:700">
+                                <a href="{{ url_for('playbook.view_play', play_id=a.play_id) }}"
+                                   style="text-decoration:none;color:inherit">
+                                    {{ a.play.name }}
+                                </a>
+                            </h6>
+                            <span class="badge {{ 'bg-primary' if a.play.type == 'offense' else 'bg-danger' }}"
+                                  style="font-size:.7rem">{{ a.play.type|title }}</span>
+                        </div>
+                        <div class="markdown-content" style="font-size:.9rem;color:var(--uc-gray-600)">
+                            {{ a.instructions|markdown }}
+                        </div>
+                        <a href="{{ url_for('playbook.view_play', play_id=a.play_id) }}"
+                           class="btn btn-sm btn-outline-secondary mt-2">
+                            <i class="bi bi-eye me-1"></i>View play
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-secondary">
+            No play instructions for <strong>{{ selected.name }}</strong> yet.
+            Add them from each play's "Manage Assignments" page.
+        </div>
+        {% endif %}
+    {% elif positions %}
+    <p class="text-muted">Select a position above to get started.</p>
+    {% endif %}
+
+</div>
+{% endblock %}

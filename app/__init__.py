@@ -45,12 +45,17 @@ def create_app(config_class=Config):
             inspector = sa_inspect(db.engine)
             if inspector.has_table('play'):
                 play_cols = [c['name'] for c in inspector.get_columns('play')]
-                if 'image_url' not in play_cols:
-                    with db.engine.begin() as conn:
-                        conn.execute(sa_text('ALTER TABLE play ADD COLUMN image_url VARCHAR(255)'))
-                    app.logger.info('Auto-migration: added play.image_url column')
+                wanted = {
+                    'image_url': 'VARCHAR(255)',
+                    'sort_order': 'INTEGER',
+                }
+                for col, ddl in wanted.items():
+                    if col not in play_cols:
+                        with db.engine.begin() as conn:
+                            conn.execute(sa_text(f'ALTER TABLE play ADD COLUMN {col} {ddl}'))
+                        app.logger.info(f'Auto-migration: added play.{col} column')
         except Exception as e:
-            app.logger.warning(f'Auto-migration check failed (play.image_url): {e}')
+            app.logger.warning(f'Auto-migration check failed (play columns): {e}')
 
     # Configure S3: warn if not configured, expose s3_bucket_url in templates
     with app.app_context():

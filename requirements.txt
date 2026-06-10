@@ -48,3 +48,5 @@ Werkzeug==3.0.2
 WTForms==3.2.1
 zipp==3.17.0
 playwright==1.49.1
+qrcode>=7.4
+pypdf>=3.17

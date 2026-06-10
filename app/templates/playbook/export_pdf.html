@@ -4,22 +4,31 @@
 <meta charset="utf-8">
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-        font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
-        color: #1f2937; font-size: 11pt; line-height: 1.45;
-    }
-    .page-break { page-break-after: always; }
+    body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; color: #1f2937;
+           font-size: 11pt; line-height: 1.45; }
+
+    .pgmark { font-size: 1px; color: #ffffff; }
 
     /* Cover */
-    .cover { text-align: center; padding-top: 220px; }
+    .cover { text-align: center; padding-top: 220px; page-break-after: always; }
     .cover h1 { font-size: 30pt; letter-spacing: .5px; }
     .cover .sub { color: #6b7280; font-size: 13pt; margin-top: 8px; }
     .cover .meta { color: #9ca3af; font-size: 10pt; margin-top: 60px; }
 
+    /* Table of contents */
+    .toc { page-break-after: always; padding-top: 30px; }
+    .toc h2 { font-size: 18pt; margin-bottom: 18px; }
+    .toc-row { display: flex; align-items: baseline; font-size: 10.5pt; margin-bottom: 4px; }
+    .toc-row.lvl0 { font-weight: 700; font-size: 12pt; margin-top: 14px; }
+    .toc-row.lvl1 { padding-left: 16px; }
+    .toc-row.lvl2 { padding-left: 34px; color: #4b5563; font-size: 10pt; }
+    .toc-row .dots { flex: 1; border-bottom: 1px dotted #d1d5db; margin: 0 6px; }
+    .toc-row .pg { color: #6b7280; }
+    .toc-concept { font-weight: 600; }
+
     /* Section divider */
-    .section-divider { padding-top: 280px; text-align: center; }
+    .section-divider { padding-top: 280px; text-align: center; page-break-before: always; }
     .section-divider h2 { font-size: 22pt; color: #111827; }
-    .section-divider .count { color: #6b7280; margin-top: 6px; }
     .accent { width: 70px; height: 4px; margin: 14px auto 0; border-radius: 2px; }
     .accent.offense { background: #2563eb; }
     .accent.defense { background: #dc2626; }
@@ -27,103 +36,155 @@
     /* Item page */
     .item { page-break-before: always; }
     .item-header { display: flex; justify-content: space-between; align-items: baseline;
-                   border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; }
+                   border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 10px; }
     .item-header h3 { font-size: 16pt; }
+    .crumb { color: #6b7280; font-size: 9pt; margin-bottom: 8px; }
     .badge { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
              padding: 3px 9px; border-radius: 10px; color: white; }
     .badge.offense { background: #2563eb; }
     .badge.defense { background: #dc2626; }
-    .tags { color: #6b7280; font-size: 9pt; margin-bottom: 10px; }
-    .diagram { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; margin: 8px 0 4px; }
-    .anim-link { font-size: 8.5pt; color: #2563eb; margin-bottom: 12px; word-break: break-all; }
-    .block { margin-top: 12px; }
+    .badge.concept { background: #4f46e5; }
+    .tags { color: #6b7280; font-size: 9pt; margin-bottom: 8px; }
+    .diagram { max-width: 100%; max-height: 380px; border: 1px solid #e5e7eb;
+               border-radius: 8px; margin: 8px 0 4px; display: block; }
+    .no-diagram { color: #9ca3af; font-style: italic; font-size: 9.5pt; margin: 8px 0; }
+
+    .anim-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+    .anim-row img { width: 58px; height: 58px; }
+    .anim-row .lbl { font-size: 8.5pt; color: #6b7280; }
+    .anim-row .url { font-size: 8.5pt; color: #2563eb; word-break: break-all; }
+
+    .block { margin-top: 10px; }
     .block h4 { font-size: 10pt; text-transform: uppercase; letter-spacing: .05em;
                 color: #6b7280; margin-bottom: 4px; }
-    .block p { white-space: pre-wrap; }
+
+    /* Rendered markdown */
+    .md p { margin-bottom: 6px; }
+    .md ul, .md ol { margin: 4px 0 8px 20px; }
+    .md li { margin-bottom: 2px; }
+    .md h1, .md h2, .md h3, .md h4 { margin: 10px 0 4px; color: #111827; }
+    .md h1 { font-size: 13pt; } .md h2 { font-size: 12pt; } .md h3 { font-size: 11pt; }
+    .md blockquote { border-left: 3px solid #d1d5db; padding-left: 10px; color: #4b5563;
+                     margin: 6px 0; }
+    .md code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 9.5pt; }
+    .md pre { background: #f3f4f6; padding: 8px; border-radius: 6px; margin: 6px 0;
+              white-space: pre-wrap; }
+    .md table { border-collapse: collapse; margin: 6px 0; }
+    .md table th, .md table td { border: 1px solid #e5e7eb; padding: 4px 8px; font-size: 10pt; }
+    .md img { max-width: 100%; }
+
     table.assignments { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 10pt; }
     table.assignments th, table.assignments td { border: 1px solid #e5e7eb; padding: 5px 8px;
                                                  text-align: left; vertical-align: top; }
     table.assignments th { background: #f3f4f6; font-size: 9pt; text-transform: uppercase;
                            letter-spacing: .04em; color: #6b7280; }
-    .no-diagram { color: #9ca3af; font-style: italic; font-size: 9.5pt; margin: 8px 0; }
 </style>
 </head>
 <body>
 
     <!-- Cover -->
-    <div class="cover page-break">
+    <div class="cover">
         <h1>{{ team_name }}</h1>
-        <div class="sub">Team Playbook</div>
+        <div class="sub">
+            Team Playbook{% if type_filter %} — {{ type_filter|title }}{% endif %}
+        </div>
         <div class="meta">Generated {{ generated }}</div>
     </div>
 
-    {% for section_name, items in sections %}
-        {% if items %}
-        <div class="section-divider">
-            <h2>{{ section_name }}</h2>
-            <div class="count">{{ items|length }} {{ 'item' if items|length == 1 else 'items' }}</div>
-            <div class="accent {{ 'offense' if 'Offensive' in section_name else 'defense' }}"></div>
-        </div>
-
-        {% for item in items %}
-        {% set obj = item.obj %}
-        <div class="item">
-            <div class="item-header">
-                <h3>{{ obj.name }}</h3>
-                <span class="badge {{ 'offense' if obj.type == 'offense' else 'defense' }}">
-                    {{ obj.type or 'play' }}
-                </span>
-            </div>
-
-            {% if obj.tags is defined and obj.tags %}
-            <div class="tags">Tags: {{ obj.tags|map(attribute='name')|join(', ') }}</div>
-            {% endif %}
-
-            {% if obj.formation is defined and obj.formation %}
-            <div class="tags">Concept: {{ obj.formation.name }}</div>
-            {% endif %}
-
-            {% if item.image %}
-                <img class="diagram" src="{{ item.image }}">
-            {% else %}
-                <div class="no-diagram">No diagram available</div>
-            {% endif %}
-
-            {% if item.animation_url %}
-            <div class="anim-link">Animation: {{ item.animation_url }}</div>
-            {% endif %}
-
-            {% if obj.description %}
-            <div class="block">
-                <h4>Description</h4>
-                <p>{{ obj.description }}</p>
-            </div>
-            {% endif %}
-
-            {% if obj.notes is defined and obj.notes %}
-            <div class="block">
-                <h4>Notes</h4>
-                <p>{{ obj.notes }}</p>
-            </div>
-            {% endif %}
-
-            {% if obj.assignments is defined and obj.assignments %}
-            <div class="block">
-                <h4>Position Assignments</h4>
-                <table class="assignments">
-                    <tr><th style="width:28%">Position</th><th>Instructions</th></tr>
-                    {% for a in obj.assignments %}
-                    <tr>
-                        <td>{{ a.position.name if a.position else '—' }}</td>
-                        <td>{{ a.instructions }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            </div>
-            {% endif %}
+    <!-- Table of contents -->
+    {% if toc %}
+    <div class="toc">
+        <h2>Contents</h2>
+        {% for e in toc %}
+        <div class="toc-row lvl{{ e.level }}">
+            <span class="{{ 'toc-concept' if e.is_concept }}">{{ e.label }}</span>
+            <span class="dots"></span>
+            <span class="pg">{{ e.page if e.page else '' }}</span>
         </div>
         {% endfor %}
+    </div>
+    {% endif %}
+
+    {% macro item_page(item, section_name, parent=None) %}
+    <div class="item">
+        <span class="pgmark">[[itm:{{ item.key }}]]</span>
+        <div class="item-header">
+            <h3>{{ item.obj.name }}</h3>
+            <span class="badge {{ 'concept' if item.kind == 'concept' else ('offense' if item.obj.type == 'offense' else 'defense') }}">
+                {{ 'Concept' if item.kind == 'concept' else (item.obj.type or 'play') }}
+            </span>
+        </div>
+
+        {% if parent %}
+        <div class="crumb">{{ section_name }} &rsaquo; {{ parent.obj.name }}</div>
+        {% else %}
+        <div class="crumb">{{ section_name }}</div>
         {% endif %}
+
+        {% if item.obj.tags is defined and item.obj.tags %}
+        <div class="tags">Tags: {{ item.obj.tags|map(attribute='name')|join(', ') }}</div>
+        {% endif %}
+
+        {% if item.image %}
+            <img class="diagram" src="{{ item.image }}">
+        {% else %}
+            <div class="no-diagram">No diagram available</div>
+        {% endif %}
+
+        {% if item.animation_url %}
+        <div class="anim-row">
+            {% if item.qr %}<img src="{{ item.qr }}">{% endif %}
+            <div>
+                <div class="lbl">Scan for the animated version</div>
+                <div class="url">{{ item.animation_url }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if item.obj.description %}
+        <div class="block">
+            <h4>Description</h4>
+            <div class="md">{{ item.obj.description|markdown }}</div>
+        </div>
+        {% endif %}
+
+        {% if item.obj.notes is defined and item.obj.notes %}
+        <div class="block">
+            <h4>Notes</h4>
+            <div class="md">{{ item.obj.notes|markdown }}</div>
+        </div>
+        {% endif %}
+
+        {% if item.obj.assignments is defined and item.obj.assignments %}
+        <div class="block">
+            <h4>Position Assignments</h4>
+            <table class="assignments">
+                <tr><th style="width:24%">Position</th><th>Instructions</th></tr>
+                {% for a in item.obj.assignments %}
+                <tr>
+                    <td>{{ a.position.name if a.position else '—' }}</td>
+                    <td><div class="md">{{ a.instructions|markdown }}</div></td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    {% endmacro %}
+
+    {% for section_name, items in sections %}
+    <div class="section-divider">
+        <span class="pgmark">[[itm:section-{{ section_name|lower }}]]</span>
+        <h2>{{ section_name }}</h2>
+        <div class="accent {{ section_name|lower }}"></div>
+    </div>
+
+    {% for item in items %}
+        {{ item_page(item, section_name) }}
+        {% for child in item.plays %}
+            {{ item_page(child, section_name, parent=item) }}
+        {% endfor %}
+    {% endfor %}
     {% endfor %}
 
 </body>

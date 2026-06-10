@@ -1,13 +1,14 @@
 from flask_wtf import FlaskForm
 from wtforms import (
-    StringField, 
-    SelectField, 
-    TextAreaField, 
-    FileField, 
+    StringField,
+    SelectField,
+    TextAreaField,
+    FileField,
     SelectMultipleField,
-    SubmitField
+    SubmitField,
+    IntegerField
 )
-from wtforms.validators import DataRequired, Optional, Length, URL
+from wtforms.validators import DataRequired, Optional, Length, URL, NumberRange
 from flask_wtf.file import FileAllowed
 from app.models.playbook import Formation, PlayTag
 
@@ -23,6 +24,8 @@ class PlayForm(FlaskForm):
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])
     image_url = StringField('Diagram Image Link (ImgBB)', validators=[Optional(), URL()])
+    sort_order = IntegerField('Sort Order', validators=[Optional(), NumberRange(min=0)],
+                              description='Lower numbers appear first in the playbook and PDF')
     submit = SubmitField('Save Play')
 
     def __init__(self, *args, **kwargs):

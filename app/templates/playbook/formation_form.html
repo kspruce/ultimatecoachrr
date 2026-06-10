@@ -2,7 +2,9 @@
 
 {% block styles %}
 {{ super() }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.css">
 <style>
+    .EasyMDEContainer .CodeMirror { min-height: 140px; }
     /* Ultiplay embed preview */
     .embed-preview {
         position:relative; padding-bottom:56.25%; height:0; overflow:hidden;
@@ -74,6 +76,7 @@
                         {% for error in form.description.errors %}
                         <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
+                        <small class="text-muted">Markdown supported — shown in the playbook and the PDF export</small>
                     </div>
                 </div>
 
@@ -197,7 +200,20 @@
 
 {% block scripts %}
 {{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.EasyMDE) {
+        const el = document.getElementById('description');
+        if (el) new EasyMDE({
+            element: el, spellChecker: false, status: false, forceSync: true,
+            minHeight: '120px',
+            toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list',
+                      'ordered-list', 'quote', '|', 'preview', 'guide']
+        });
+    }
+});
+
 function previewEmbed(embedCode) {
     const content     = document.getElementById('embed-preview-content');
     const placeholder = document.getElementById('embed-placeholder');

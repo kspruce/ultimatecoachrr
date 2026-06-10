@@ -17,31 +17,191 @@ from app.utils.team_filter import get_current_team_id
 bp = Blueprint('playbook', __name__, url_prefix='/playbook')
 
 
+def _play_order():
+    """Manual sort order first (lower = first), then name."""
+    return (db.func.coalesce(Play.sort_order, 999999), Play.name)
+
+
+# ── Background export jobs (progress reporting) ──────────────────
+# In-memory job store. Fine for a single gunicorn worker; jobs are
+# pruned after 30 minutes.
+import threading as _threading
+import time as _time
+import uuid as _uuid
+
+_export_jobs = {}
+_export_jobs_lock = _threading.Lock()
+
+
+def _prune_export_jobs():
+    cutoff = _time.time() - 1800
+    with _export_jobs_lock:
+        for jid in [j for j, v in _export_jobs.items() if v['ts'] < cutoff]:
+            _export_jobs.pop(jid, None)
+
+
+def _export_filters():
+    type_filter = request.args.get('type')
+    if type_filter not in ('offense', 'defense'):
+        type_filter = None
+    tag_id = request.args.get('tag', type=int)
+    return type_filter, tag_id
+
+
+def _export_filename(team_name, type_filter):
+    from datetime import datetime
+    suffix = f'_{type_filter}' if type_filter else ''
+    return (f"{team_name.replace(' ', '_').lower()}_playbook{suffix}"
+            f"_{datetime.now():%Y-%m-%d}.pdf")
+
+
+def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id):
+    from app.utils.playbook_export import (
+        generate_playbook_pdf, cache_key, store_cached_pdf
+    )
+    with app.app_context():
+        job = _export_jobs.get(job_id)
+        if job is None:
+            return
+        try:
+            formations = Formation.query.filter_by(team_organization_id=team_id) \
+                .order_by(Formation.name).all()
+            plays = Play.query.filter_by(team_organization_id=team_id) \
+                .order_by(*_play_order()).all()
+
+            def progress(pct, label):
+                j = _export_jobs.get(job_id)
+                if j is not None:
+                    j['pct'] = pct
+                    j['label'] = label
+
+            pdf_bytes = generate_playbook_pdf(
+                formations, plays, team_name,
+                type_filter=type_filter, tag_id=tag_id, progress=progress)
+
+            key = cache_key(team_id, formations, plays, type_filter, tag_id)
+            store_cached_pdf(team_id, key, pdf_bytes)
+
+            job.update(state='ready', pct=100, label='Ready',
+                       pdf=pdf_bytes,
+                       filename=_export_filename(team_name, type_filter))
+        except ImportError:
+            current_app.logger.error('Playbook export: playwright is not installed')
+            job.update(state='error',
+                       label='PDF export is not available on this server (Playwright missing).')
+        except Exception as e:
+            current_app.logger.error(f'Playbook export failed: {e}')
+            job.update(state='error', label='Export failed — check the server logs.')
+
+
+@bp.route('/export/start')
+@login_required
+def export_start():
+    """Kick off a background export; returns a job id to poll."""
+    from app.models.team_organization import TeamOrganization
+    from app.utils.playbook_export import cache_key, cached_pdf
+
+    _prune_export_jobs()
+
+    team_id = get_current_team_id()
+    team = TeamOrganization.query.get(team_id) if team_id else None
+    team_name = team.name if team else 'Team'
+    type_filter, tag_id = _export_filters()
+
+    job_id = _uuid.uuid4().hex
+    job = {'ts': _time.time(), 'team_id': team_id, 'user_id': current_user.id,
+           'state': 'running', 'pct': 2, 'label': 'Starting…',
+           'pdf': None, 'filename': None}
+    with _export_jobs_lock:
+        _export_jobs[job_id] = job
+
+    # Cache fast-path: nothing changed since the last export
+    formations = Formation.query.filter_by(team_organization_id=team_id) \
+        .order_by(Formation.name).all()
+    plays = Play.query.filter_by(team_organization_id=team_id) \
+        .order_by(*_play_order()).all()
+    cached = cached_pdf(team_id, cache_key(team_id, formations, plays, type_filter, tag_id))
+    if cached:
+        job.update(state='ready', pct=100, label='Ready', pdf=cached,
+                   filename=_export_filename(team_name, type_filter))
+        return jsonify({'job_id': job_id, 'state': 'ready'})
+
+    app = current_app._get_current_object()
+    _threading.Thread(
+        target=_run_export_job,
+        args=(app, job_id, team_id, team_name, type_filter, tag_id),
+        daemon=True
+    ).start()
+    return jsonify({'job_id': job_id, 'state': 'running'})
+
+
+@bp.route('/export/status/<job_id>')
+@login_required
+def export_status(job_id):
+    job = _export_jobs.get(job_id)
+    if job is None or job['team_id'] != get_current_team_id():
+        return jsonify({'state': 'unknown'}), 404
+    payload = {'state': job['state'], 'pct': job['pct'], 'label': job['label']}
+    if job['state'] == 'ready':
+        payload['download_url'] = url_for('playbook.export_download', job_id=job_id)
+    return jsonify(payload)
+
+
+@bp.route('/export/download/<job_id>')
+@login_required
+def export_download(job_id):
+    from io import BytesIO
+    from flask import send_file
+    job = _export_jobs.get(job_id)
+    if (job is None or job['state'] != 'ready'
+            or job['team_id'] != get_current_team_id()):
+        abort(404)
+    return send_file(BytesIO(job['pdf']), mimetype='application/pdf',
+                     as_attachment=True, download_name=job['filename'])
+
+
 @bp.route('/export.pdf')
 @login_required
 def export_pdf():
-    """Export the whole playbook (concepts + plays) as a PDF."""
+    """Export the playbook as a PDF. Optional filters: ?type=offense|defense, ?tag=<id>."""
     from io import BytesIO
     from datetime import datetime
     from flask import send_file
     from app.models.team_organization import TeamOrganization
-    from app.utils.playbook_export import generate_playbook_pdf
+    from app.utils.playbook_export import (
+        generate_playbook_pdf, cache_key, cached_pdf, store_cached_pdf
+    )
 
     team_id = get_current_team_id()
     team = TeamOrganization.query.get(team_id) if team_id else None
     team_name = team.name if team else 'Team'
 
+    type_filter = request.args.get('type')
+    if type_filter not in ('offense', 'defense'):
+        type_filter = None
+    tag_id = request.args.get('tag', type=int)
+
     formations = Formation.query.filter_by(team_organization_id=team_id) \
         .order_by(Formation.name).all()
-    offensive_plays = Play.query.filter_by(type='offense', team_organization_id=team_id) \
-        .order_by(Play.name).all()
-    defensive_plays = Play.query.filter_by(type='defense', team_organization_id=team_id) \
-        .order_by(Play.name).all()
+    plays = Play.query.filter_by(team_organization_id=team_id) \
+        .order_by(*_play_order()).all()
+
+    def respond(pdf_bytes):
+        suffix = f'_{type_filter}' if type_filter else ''
+        filename = (f"{team_name.replace(' ', '_').lower()}_playbook{suffix}"
+                    f"_{datetime.now():%Y-%m-%d}.pdf")
+        return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
+                         as_attachment=True, download_name=filename)
+
+    # Serve from cache when nothing has changed
+    key = cache_key(team_id, formations, plays, type_filter, tag_id)
+    cached = cached_pdf(team_id, key)
+    if cached:
+        return respond(cached)
 
     try:
-        pdf_bytes = generate_playbook_pdf(
-            formations, offensive_plays, defensive_plays, team_name
-        )
+        pdf_bytes = generate_playbook_pdf(formations, plays, team_name,
+                                          type_filter=type_filter, tag_id=tag_id)
     except ImportError:
         current_app.logger.error('Playbook export: playwright is not installed')
         flash('PDF export is not available: Playwright is not installed on the server.', 'danger')
@@ -51,9 +211,32 @@ def export_pdf():
         flash('PDF export failed. Please try again or check the server logs.', 'danger')
         return redirect(url_for('playbook.index'))
 
-    filename = f"{team_name.replace(' ', '_').lower()}_playbook_{datetime.now():%Y-%m-%d}.pdf"
-    return send_file(BytesIO(pdf_bytes), mimetype='application/pdf',
-                     as_attachment=True, download_name=filename)
+    store_cached_pdf(team_id, key, pdf_bytes)
+    return respond(pdf_bytes)
+
+
+@bp.route('/positions')
+@bp.route('/positions/<int:position_id>')
+@login_required
+def position_view(position_id=None):
+    """Per-position view: pick a position, see its instructions across all plays."""
+    team_id = get_current_team_id()
+    positions = PlayerPosition.query.filter_by(team_organization_id=team_id) \
+        .order_by(PlayerPosition.name).all()
+
+    selected = None
+    assignments = []
+    if position_id:
+        selected = PlayerPosition.query.filter_by(
+            id=position_id, team_organization_id=team_id).first_or_404()
+        assignments = PlayAssignment.query.filter_by(
+            position_id=selected.id, team_organization_id=team_id
+        ).join(Play, PlayAssignment.play_id == Play.id) \
+         .order_by(Play.type, *_play_order()).all()
+
+    return render_template('playbook/position_view.html',
+                           positions=positions, selected=selected,
+                           assignments=assignments)
 
 
 # Main Routes
@@ -64,21 +247,26 @@ def index():
     offensive_plays = Play.query.filter_by(
         type='offense',
         team_organization_id=get_current_team_id()
-    ).all()
+    ).order_by(*_play_order()).all()
 
     defensive_plays = Play.query.filter_by(
         type='defense',
         team_organization_id=get_current_team_id()
-    ).all()
+    ).order_by(*_play_order()).all()
 
     formations = Formation.query.filter_by(
         team_organization_id=get_current_team_id()
-    ).all()
+    ).order_by(Formation.name).all()
+
+    all_tags = PlayTag.query.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(PlayTag.name).all()
 
     return render_template('playbook/index.html',
                          offensive_plays=offensive_plays,
                          defensive_plays=defensive_plays,
-                         formations=formations)
+                         formations=formations,
+                         all_tags=all_tags)
 
 # Play Routes
 @bp.route('/plays/add', methods=['GET', 'POST'])
@@ -116,6 +304,7 @@ def add_play():
             notes=form.notes.data,
             ultiplay_embed=form.ultiplay_embed.data,
             image_url=form.image_url.data,
+            sort_order=form.sort_order.data,
             created_by=current_user.id,
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
@@ -191,6 +380,7 @@ def edit_play(play_id):
         play.notes = form.notes.data
         play.ultiplay_embed = form.ultiplay_embed.data
         play.image_url = form.image_url.data
+        play.sort_order = form.sort_order.data
 
         if form.formation_id.data and form.formation_id.data > 0:
             # Verify formation belongs to current team

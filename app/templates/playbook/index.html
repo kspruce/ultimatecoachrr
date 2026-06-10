@@ -38,6 +38,12 @@
     .embed-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 10px; background: var(--uc-gray-100); margin-bottom: 1rem; }
     .embed-container iframe { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border: 0; }
     .iframe-direct-container { width: 100%; height: 300px; border: 0; border-radius: 10px; }
+    /* Rendered markdown in play rows */
+    .markdown-content p { margin-bottom: .4rem; }
+    .markdown-content ul, .markdown-content ol { margin: .2rem 0 .6rem 1.1rem; }
+    .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-size: 1rem; margin: .5rem 0 .25rem; }
+    .markdown-content code { background: var(--uc-gray-100); padding: .1rem .3rem; border-radius: 3px; }
+    .markdown-content img { max-width: 100%; }
     /* Chevron rotation */
     .rotate-icon { transition: transform .25s; }
     [aria-expanded="true"] .rotate-icon { transform: rotate(180deg); }
@@ -92,9 +98,41 @@
                 <i class="bi bi-plus-lg me-1"></i>Add Concept
             </a>
             {% endif %}
-            <a href="{{ url_for('playbook.export_pdf') }}" class="btn btn-outline-secondary" id="exportPdfBtn">
-                <i class="bi bi-file-earmark-pdf me-1" id="exportPdfIcon"></i><span id="exportPdfLabel">Export PDF</span>
+            <a href="{{ url_for('playbook.position_view') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-person-badge me-1"></i>By Position
             </a>
+            <div class="btn-group">
+                <a href="{{ url_for('playbook.export_pdf') }}" class="btn btn-outline-secondary export-pdf-btn"
+                   id="exportPdfBtn" data-type="">
+                    <i class="bi bi-file-earmark-pdf me-1" id="exportPdfIcon"></i><span id="exportPdfLabel">Export PDF</span>
+                </a>
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Export options</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item export-pdf-btn" data-type="" href="{{ url_for('playbook.export_pdf') }}">Full playbook</a></li>
+                    <li><a class="dropdown-item export-pdf-btn" data-type="offense" href="{{ url_for('playbook.export_pdf', type='offense') }}">Offense only</a></li>
+                    <li><a class="dropdown-item export-pdf-btn" data-type="defense" href="{{ url_for('playbook.export_pdf', type='defense') }}">Defense only</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export progress -->
+    <div id="exportProgress" class="card mb-4" style="display:none">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.85rem">
+                <span id="exportProgressLabel" style="color:var(--uc-gray-600)">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Starting export…
+                </span>
+                <span id="exportProgressPct" style="color:var(--uc-gray-400);font-weight:600">0%</span>
+            </div>
+            <div class="progress" style="height:8px">
+                <div id="exportProgressBar"
+                     class="progress-bar progress-bar-striped progress-bar-animated"
+                     role="progressbar" style="width:0%"></div>
+            </div>
         </div>
     </div>
 
@@ -308,7 +346,12 @@
                              class="img-fluid rounded mb-3" style="max-height:320px">
                         {% endif %}
                         {% if play.description %}
-                        <p style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description }}</p>
+                        <div class="markdown-content" style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description|markdown }}</div>
+                        {% endif %}
+                        {% if play.updated_at %}
+                        <div style="font-size:.75rem;color:var(--uc-gray-400)">
+                            <i class="bi bi-clock-history me-1"></i>Updated {{ play.updated_at.strftime('%d %b %Y') }}
+                        </div>
                         {% endif %}
                         <div class="d-flex gap-2 mt-2">
                             <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-primary">
@@ -396,7 +439,12 @@
                              class="img-fluid rounded mb-3" style="max-height:320px">
                         {% endif %}
                         {% if play.description %}
-                        <p style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description }}</p>
+                        <div class="markdown-content" style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description|markdown }}</div>
+                        {% endif %}
+                        {% if play.updated_at %}
+                        <div style="font-size:.75rem;color:var(--uc-gray-400)">
+                            <i class="bi bi-clock-history me-1"></i>Updated {{ play.updated_at.strftime('%d %b %Y') }}
+                        </div>
                         {% endif %}
                         <div class="d-flex gap-2 mt-2">
                             <a href="{{ url_for('playbook.view_play', play_id=play.id) }}" class="btn btn-sm btn-primary">
@@ -502,24 +550,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Export PDF with loading state
-    const exportBtn = document.getElementById('exportPdfBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', function() {
-            const icon = document.getElementById('exportPdfIcon');
-            const label = document.getElementById('exportPdfLabel');
-            icon.className = 'spinner-border spinner-border-sm me-1';
-            label.textContent = 'Generating…';
-            exportBtn.classList.add('disabled');
-            // Browser download doesn't fire an event we can hook into,
-            // so reset the button after a generous delay.
-            setTimeout(() => {
-                icon.className = 'bi bi-file-earmark-pdf me-1';
-                label.textContent = 'Export PDF';
-                exportBtn.classList.remove('disabled');
-            }, 8000);
-        });
+    // Export PDF with live progress bar
+    const progressCard = document.getElementById('exportProgress');
+    const progressBar = document.getElementById('exportProgressBar');
+    const progressLabel = document.getElementById('exportProgressLabel');
+    const progressPct = document.getElementById('exportProgressPct');
+    let exportPolling = null;
+
+    function setProgress(pct, label, error) {
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        progressLabel.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i>' + label;
+        progressBar.classList.toggle('bg-danger', !!error);
+        progressBar.classList.toggle('bg-success', pct >= 100 && !error);
     }
+
+    function finishExport(delayMs) {
+        clearInterval(exportPolling);
+        exportPolling = null;
+        document.querySelectorAll('.export-pdf-btn').forEach(b => b.classList.remove('disabled'));
+        setTimeout(() => { progressCard.style.display = 'none'; }, delayMs);
+    }
+
+    function startExport(type) {
+        if (exportPolling) return; // one at a time
+        document.querySelectorAll('.export-pdf-btn').forEach(b => b.classList.add('disabled'));
+        progressCard.style.display = '';
+        setProgress(2, 'Starting export…');
+
+        const startUrl = "{{ url_for('playbook.export_start') }}" + (type ? '?type=' + type : '');
+        fetch(startUrl)
+            .then(r => r.json())
+            .then(({ job_id }) => {
+                const statusUrl = "{{ url_for('playbook.export_status', job_id='JOB') }}".replace('JOB', job_id);
+                exportPolling = setInterval(() => {
+                    fetch(statusUrl)
+                        .then(r => r.json())
+                        .then(s => {
+                            if (s.state === 'ready') {
+                                setProgress(100, 'Done — downloading…');
+                                window.location = s.download_url;
+                                finishExport(2500);
+                            } else if (s.state === 'error' || s.state === 'unknown') {
+                                setProgress(100, s.label || 'Export failed', true);
+                                finishExport(6000);
+                            } else {
+                                setProgress(s.pct || 5, s.label || 'Working…');
+                            }
+                        })
+                        .catch(() => { setProgress(100, 'Connection lost', true); finishExport(6000); });
+                }, 700);
+            })
+            .catch(() => { setProgress(100, 'Could not start export', true); finishExport(6000); });
+    }
+
+    document.querySelectorAll('.export-pdf-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            startExport(this.dataset.type || '');
+        });
+    });
 
     // URL tab param
     const tab = new URLSearchParams(window.location.search).get('tab');

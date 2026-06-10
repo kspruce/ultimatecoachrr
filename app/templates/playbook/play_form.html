@@ -2,7 +2,9 @@
 
 {% block styles %}
 {{ super() }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.css">
 <style>
+    .EasyMDEContainer .CodeMirror { min-height: 140px; }
     .embed-preview {
         position: relative;
         padding-bottom: 56.25%; /* 16:9 aspect ratio */
@@ -90,12 +92,21 @@
                         <div class="form-group mb-3">
                             {{ form.description.label(class="form-label") }}
                             {{ form.description(class="form-control", rows="4") }}
+                            <small class="form-text text-muted">Markdown supported — shown in the playbook and the PDF export</small>
                         </div>
 
                         <!-- Notes -->
                         <div class="form-group mb-3">
                             {{ form.notes.label(class="form-label") }}
                             {{ form.notes(class="form-control", rows="3") }}
+                            <small class="form-text text-muted">Markdown supported</small>
+                        </div>
+
+                        <!-- Sort order -->
+                        <div class="form-group mb-3" style="max-width:220px">
+                            {{ form.sort_order.label(class="form-label") }}
+                            {{ form.sort_order(class="form-control", placeholder="e.g. 10") }}
+                            <small class="form-text text-muted">Lower numbers appear first; leave blank for alphabetical</small>
                         </div>
 
                         <!-- Ultiplay Embed -->
@@ -214,7 +225,22 @@
 
 {% block scripts %}
 {{ super() }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/easymde/2.18.0/easymde.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.EasyMDE) {
+        ['description', 'notes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) new EasyMDE({
+                element: el, spellChecker: false, status: false, forceSync: true,
+                minHeight: '120px',
+                toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list',
+                          'ordered-list', 'quote', '|', 'preview', 'guide']
+            });
+        });
+    }
+});
+
 function previewImage(url) {
     const img = document.getElementById('image-url-preview');
     url = (url || '').trim();

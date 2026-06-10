@@ -23,6 +23,21 @@
     .badge {
         margin-right: 0.25rem;
     }
+
+    /* Rendered markdown */
+    .markdown-content p { margin-bottom: .5rem; }
+    .markdown-content ul, .markdown-content ol { margin: .25rem 0 .75rem 1.25rem; }
+    .markdown-content h1 { font-size: 1.25rem; margin: .75rem 0 .35rem; }
+    .markdown-content h2 { font-size: 1.15rem; margin: .75rem 0 .35rem; }
+    .markdown-content h3 { font-size: 1.05rem; margin: .6rem 0 .3rem; }
+    .markdown-content blockquote { border-left: 3px solid var(--uc-gray-200, #dee2e6);
+        padding-left: .75rem; color: var(--uc-gray-600, #6c757d); margin: .5rem 0; }
+    .markdown-content code { background: var(--uc-gray-100, #f8f9fa);
+        padding: .1rem .3rem; border-radius: 3px; }
+    .markdown-content table { border-collapse: collapse; margin: .5rem 0; }
+    .markdown-content table th, .markdown-content table td {
+        border: 1px solid var(--uc-gray-200, #dee2e6); padding: .25rem .5rem; }
+    .markdown-content img { max-width: 100%; }
 </style>
 {% endblock %}
 
@@ -99,7 +114,7 @@
                 </div>
                 <div class="card-body">
                     {% if play.description %}
-                    {{ play.description|nl2br|safe }}
+                    <div class="markdown-content">{{ play.description|markdown }}</div>
                     {% else %}
                     <p class="text-muted">No description provided.</p>
                     {% endif %}
@@ -126,7 +141,7 @@
                                 </h2>
                                 <div id="collapse{{ assignment.id }}" class="accordion-collapse collapse" data-bs-parent="#assignmentsAccordion">
                                     <div class="accordion-body">
-                                        {{ assignment.instructions|nl2br }}
+                                        <div class="markdown-content">{{ assignment.instructions|markdown }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -186,12 +201,18 @@
                 </div>
                 <div class="card-body">
                     {% if play.notes %}
-                    {{ play.notes|nl2br|safe }}
+                    <div class="markdown-content">{{ play.notes|markdown }}</div>
                     {% else %}
                     <p class="text-muted">No coaching notes provided.</p>
                     {% endif %}
                 </div>
             </div>
+
+            {% if play.updated_at %}
+            <p class="text-muted" style="font-size:.8rem">
+                <i class="bi bi-clock-history me-1"></i>Last updated {{ play.updated_at.strftime('%d %b %Y') }}
+            </p>
+            {% endif %}
         </div>
 
         <!-- Sidebar -->
