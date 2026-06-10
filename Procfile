@@ -1,1 +1,1 @@
-web: flask db upgrade && gunicorn run:app --timeout 300
+web: flask db upgrade && python add_play_image_url.py && gunicorn run:app --timeout 300

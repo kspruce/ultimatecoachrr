@@ -85,8 +85,6 @@
 
             {% if item.image %}
                 <img class="diagram" src="{{ item.image }}">
-            {% elif item.imgur_url %}
-                <img class="diagram" src="{{ item.imgur_url }}">
             {% else %}
                 <div class="no-diagram">No diagram available</div>
             {% endif %}

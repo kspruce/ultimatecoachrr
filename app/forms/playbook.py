@@ -22,6 +22,7 @@ class PlayForm(FlaskForm):
     notes = TextAreaField('Notes', validators=[Optional()])
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     ultiplay_embed = TextAreaField('Ultiplay Embed Code', validators=[Optional()])
+    image_url = StringField('Diagram Image Link (ImgBB)', validators=[Optional(), URL()])
     submit = SubmitField('Save Play')
 
     def __init__(self, *args, **kwargs):

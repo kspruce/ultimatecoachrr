@@ -79,6 +79,19 @@
             </div>
             {% endif %}
 
+            <!-- Diagram Section -->
+            {% if play.image_url %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Play Diagram</h5>
+                </div>
+                <div class="card-body text-center">
+                    <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
+                         class="img-fluid rounded" style="max-height:500px">
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Description Section -->
             <div class="card mb-4">
                 <div class="card-header">

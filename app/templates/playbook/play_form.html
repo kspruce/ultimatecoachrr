@@ -134,6 +134,27 @@
                             </div>
                         </div>
 
+                        <!-- Diagram Image -->
+                        <div class="form-group mb-4">
+                            {{ form.image_url.label(class="form-label") }}
+                            {{ form.image_url(class="form-control",
+                                placeholder="https://i.ibb.co/xxxxxxxx/play-diagram.png",
+                                oninput="previewImage(this.value)") }}
+                            <small class="form-text text-muted">
+                                Static diagram of the play. Upload your image to
+                                <a href="https://imgbb.com" target="_blank">imgbb.com</a> and paste the
+                                <strong>direct link</strong> (ends in .png/.jpg). Used in the online
+                                playbook and the PDF export.
+                            </small>
+                            <div class="mt-2">
+                                <img id="image-url-preview"
+                                     src="{{ play.image_url if play and play.image_url else '' }}"
+                                     alt="Diagram preview"
+                                     class="img-fluid rounded border"
+                                     style="max-height:260px;{{ '' if play and play.image_url else 'display:none;' }}">
+                            </div>
+                        </div>
+
                         <!-- Tags -->
                         <div class="form-group mb-3">
                             {{ form.tags.label(class="form-label") }}
@@ -194,6 +215,18 @@
 {% block scripts %}
 {{ super() }}
 <script>
+function previewImage(url) {
+    const img = document.getElementById('image-url-preview');
+    url = (url || '').trim();
+    if (url && /^https?:\/\//.test(url)) {
+        img.src = url;
+        img.style.display = '';
+        img.onerror = () => { img.style.display = 'none'; };
+    } else {
+        img.style.display = 'none';
+    }
+}
+
 function previewEmbed(embedCode) {
     const previewContainer = document.getElementById('embed-preview-content');
     

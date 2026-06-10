@@ -4,6 +4,6 @@ builder = "NIXPACKS"
 buildCommand = "playwright install --with-deps chromium"
 
 [deploy]
-startCommand = "gunicorn run:application"
+startCommand = "python add_play_image_url.py && gunicorn run:application --timeout 300"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

@@ -185,7 +185,7 @@
                                 </span>
                             </div>
                             <p class="text-muted" style="font-size:.825rem;margin-bottom:.5rem">
-                                {{ formation.description|truncate(140) }}
+                                {{ (formation.description or '')|truncate(140) }}
                             </p>
                             {% if formation.plays %}
                             <div style="font-size:.75rem;color:var(--uc-gray-400)">
@@ -303,6 +303,10 @@
                                 <div class="embed-container">{{ play.ultiplay_embed|safe }}</div>
                             {% endif %}
                         {% endif %}
+                        {% if play.image_url %}
+                        <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
+                             class="img-fluid rounded mb-3" style="max-height:320px">
+                        {% endif %}
                         {% if play.description %}
                         <p style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description }}</p>
                         {% endif %}
@@ -386,6 +390,10 @@
                             {% else %}
                                 <div class="embed-container">{{ play.ultiplay_embed|safe }}</div>
                             {% endif %}
+                        {% endif %}
+                        {% if play.image_url %}
+                        <img src="{{ play.image_url }}" alt="{{ play.name }} diagram"
+                             class="img-fluid rounded mb-3" style="max-height:320px">
                         {% endif %}
                         {% if play.description %}
                         <p style="font-size:.875rem;color:var(--uc-gray-600)">{{ play.description }}</p>
@@ -494,8 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Export PDF with loading state (first export can take a while
-    // while play snapshots are captured; later exports use the cache)
+    // Export PDF with loading state
     const exportBtn = document.getElementById('exportPdfBtn');
     if (exportBtn) {
         exportBtn.addEventListener('click', function() {

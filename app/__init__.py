@@ -37,6 +37,21 @@ def create_app(config_class=Config):
     if not app.config.get('SECRET_KEY'):
         app.config['SECRET_KEY'] = os.urandom(24)
 
+    # Lightweight auto-migration: ensure newer columns exist
+    # (covers local runs that bypass the deploy-time migration scripts)
+    with app.app_context():
+        try:
+            from sqlalchemy import inspect as sa_inspect, text as sa_text
+            inspector = sa_inspect(db.engine)
+            if inspector.has_table('play'):
+                play_cols = [c['name'] for c in inspector.get_columns('play')]
+                if 'image_url' not in play_cols:
+                    with db.engine.begin() as conn:
+                        conn.execute(sa_text('ALTER TABLE play ADD COLUMN image_url VARCHAR(255)'))
+                    app.logger.info('Auto-migration: added play.image_url column')
+        except Exception as e:
+            app.logger.warning(f'Auto-migration check failed (play.image_url): {e}')
+
     # Configure S3: warn if not configured, expose s3_bucket_url in templates
     with app.app_context():
         from app.utils.s3_utils import check_s3_configuration

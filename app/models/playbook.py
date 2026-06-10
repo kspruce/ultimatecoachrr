@@ -35,6 +35,7 @@ class Play(db.Model):
     formation_id = db.Column(db.Integer, db.ForeignKey('formation.id'))
     notes = db.Column(db.Text)
     ultiplay_embed = db.Column(db.Text)
+    image_url = db.Column(db.String(255))  # static diagram (e.g. ImgBB link) shown online + used in PDF export
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
