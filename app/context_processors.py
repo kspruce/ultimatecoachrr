@@ -8,7 +8,9 @@ def team_info_processor():
     from app.models.team_organization import TeamOrganization
     from app.models.team_settings import TeamSettings
 
-    if not current_user.is_authenticated:
+    # current_user is None when rendering outside a request (e.g. background
+    # jobs like the playbook PDF export) — treat it like an anonymous user.
+    if not current_user or not current_user.is_authenticated:
         return {'current_team': None, 'available_teams': [], 'is_guest': False, 'nav_gameday_tournaments': []}
 
     try:

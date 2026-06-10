@@ -59,7 +59,9 @@ def _run_export_job(app, job_id, team_id, team_name, type_filter, tag_id):
     from app.utils.playbook_export import (
         generate_playbook_pdf, cache_key, store_cached_pdf
     )
-    with app.app_context():
+    # test_request_context: templates render in background threads with an
+    # anonymous user instead of crashing in context processors.
+    with app.test_request_context():
         job = _export_jobs.get(job_id)
         if job is None:
             return
