@@ -106,7 +106,10 @@ def create_app(config_class=Config):
                 'markdown.extensions.fenced_code',
                 'markdown.extensions.tables',
                 'markdown.extensions.nl2br',
-                'markdown.extensions.sane_lists'
+                'markdown.extensions.sane_lists',
+                # attr_list: control image size etc. in markdown, e.g.
+                # ![diagram](https://...png){: width="300" }
+                'markdown.extensions.attr_list'
             ]
         )
         return Markup(md_html)
