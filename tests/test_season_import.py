@@ -175,7 +175,7 @@ def test_diagram_routes_and_guest_page(app, team, season):
 def test_logged_in_pages_show_season_fields(app, team, season):
     from app.models.user import User
     import_season(season, IMAGES, team.id)
-    user = User(username='coach', role='coach', team_organization_id=team.id)
+    user = User(username='coach', role='admin', is_admin_flag=True, team_organization_id=team.id)
     user.set_password('x')
     db.session.add(user)
     db.session.commit()

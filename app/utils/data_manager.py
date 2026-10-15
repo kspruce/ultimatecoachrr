@@ -3,7 +3,7 @@ import json
 import importlib
 import inspect
 import logging
-from datetime import datetime
+from datetime import datetime, date, time
 from typing import Dict, List, Any, Set
 from sqlalchemy import inspect as sqlalchemy_inspect
 from sqlalchemy.orm import class_mapper
@@ -188,7 +188,7 @@ class DataManager:
             for column in mapper.columns:
                 value = getattr(record, column.name)
                 # Convert datetime objects to ISO format strings
-                if isinstance(value, datetime):
+                if isinstance(value, (date, time)):  # datetime is a date too
                     value = value.isoformat()
                 record_dict[column.name] = value
             

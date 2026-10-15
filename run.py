@@ -85,71 +85,6 @@ def ensure_upload_directories():
         logger.error(f"Error creating upload directories: {str(e)}")
         return False
 
-@app.route('/debug-info')
-def debug_info():
-    """Endpoint for debugging deployment issues"""
-    try:
-        # Check upload directory permissions
-        upload_folder = app.config['UPLOAD_FOLDER']
-        can_write = os.access(upload_folder, os.W_OK)
-        
-        # Check S3 configuration
-        s3_configured = check_aws_credentials()
-        
-        # Get directory sizes
-        def get_dir_size(path):
-            try:
-                total = 0
-                for dirpath, dirnames, filenames in os.walk(path):
-                    for f in filenames:
-                        fp = os.path.join(dirpath, f)
-                        total += os.path.getsize(fp)
-                return total / (1024 * 1024)  # Convert to MB
-            except Exception:
-                return 0
-        
-        return {
-            # System information
-            'port': os.environ.get('PORT'),
-            'database_url': app.config.get('SQLALCHEMY_DATABASE_URI', 'not set').replace('://:@', '://****:****@'),
-            'environment': os.environ.get('FLASK_ENV', 'not set'),
-            'debug': os.environ.get('FLASK_DEBUG', 'not set'),
-            'python_path': sys.executable,
-            'working_directory': os.getcwd(),
-            
-            # Storage information
-            'upload_folder': upload_folder,
-            'upload_folder_exists': os.path.exists(upload_folder),
-            'upload_folder_writable': can_write,
-            'upload_folder_size_mb': get_dir_size(upload_folder) if os.path.exists(upload_folder) else 0,
-            
-            # S3 configuration
-            's3_configured': s3_configured,
-            's3_bucket': app.config.get('AWS_BUCKET_NAME', 'not set'),
-            's3_region': app.config.get('AWS_REGION', 'not set'),
-            
-            # Application configuration
-            'max_file_size_mb': app.config.get('MAX_CONTENT_LENGTH', 0) / (1024 * 1024),
-            'allowed_extensions': app.config.get('ALLOWED_EXTENSIONS', {}),
-            
-            # Directory structure
-            'upload_subdirs': [
-                {
-                    'name': d,
-                    'exists': os.path.exists(os.path.join(upload_folder, d)),
-                    'writable': os.access(os.path.join(upload_folder, d), os.W_OK) if os.path.exists(os.path.join(upload_folder, d)) else False
-                }
-                for d in ['drills', 'playbook', 'theory', 'temp']
-            ],
-            
-            # Logging information
-            'log_directory': log_dir,
-            'log_directory_writable': os.access(log_dir, os.W_OK) if os.path.exists(log_dir) else False
-        }
-    except Exception as e:
-        logger.error(f"Error in debug-info: {str(e)}")
-        return {'error': str(e)}
-
 @app.shell_context_processor
 def make_shell_context():
     """Make common objects available in Flask shell"""
@@ -252,22 +187,27 @@ def import_users_from_json():
 
 
 def ensure_admin_exists():
-    """Create admin user on first boot if one doesn't exist."""
+    """Create an admin user on first boot if ADMIN_EMAIL and ADMIN_PASSWORD
+    are set in the environment and no user with that email exists yet."""
+    email = os.environ.get('ADMIN_EMAIL')
+    password = os.environ.get('ADMIN_PASSWORD')
+    if not email or not password:
+        return
     with app.app_context():
         try:
             from app.models.user import User
-            existing = User.query.filter_by(email='kspruce98@outlook.com').first()
+            existing = User.query.filter_by(email=email).first()
             if existing:
                 logger.info("Admin user already exists, skipping creation.")
                 return
             admin = User(
                 username='admin',
-                email='kspruce98@outlook.com',
+                email=email,
                 role='admin',
                 is_admin_flag=True,
                 is_superadmin=True
             )
-            admin.set_password('Mythago22!')
+            admin.set_password(password)
             db.session.add(admin)
             db.session.commit()
             logger.info("Admin user created successfully.")

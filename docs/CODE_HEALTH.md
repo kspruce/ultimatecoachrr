@@ -16,22 +16,33 @@ rewrite.
 
 1. **Admin password in the code.** `run.py` `ensure_admin_exists()` creates
    the admin account with a hard-coded email and password, and it's in git
-   history. Change that password now, and make the function read it from an
+   history. **Change that password now**, and make the function read it from an
    environment variable (or delete it now that the admin exists).
+   *Done:* `run.py` now only creates an admin if `ADMIN_EMAIL` and
+   `ADMIN_PASSWORD` are set. `bootstrap_admin.py`, `create_admin.py` and
+   `init_db.py` (also hard-coded) were deleted; use `flask create-admin`.
+   `db_manager.py reset` now generates random passwords and prints them.
+   The old passwords are still in git history, so change any account that
+   used one.
 2. **`.env` is committed** even though `.gitignore` lists it (it was added
    before the ignore rule). I didn't open it. If it holds real keys, rotate
-   them, then `git rm --cached .env` and commit.
+   them, then `git rm --cached .env` and commit. **Not changed:**
+   `config.py` loads this file at startup, so the live site may be reading
+   settings from it. Copy anything it needs into Railway's Variables first.
 3. **`/debug-info` is public** (no login) and is meant to hide the database
    password with `.replace('://:@', ...)`, which never matches, so the full
    `DATABASE_URL` including the password would be returned. It only doesn't
    leak today because the response crashes first (`ALLOWED_EXTENSIONS` is a
-   set and can't be turned into JSON). Delete the route.
+   set and can't be turned into JSON). *Done: route deleted.*
 4. **Third-party script** `sites.super.myninja.ai/...daytona-script.js` is in
    29 templates. In most it sits outside a `{% block %}` and probably never
-   renders, but it shouldn't be there; delete those lines.
+   renders, but it shouldn't be there; delete those lines. *Done: removed
+   from all 29. It did load on the off-season pages.*
 5. **`SECRET_KEY` falls back to `'dev-secret-key-change-in-production'`.**
    Check that Railway has `SECRET_KEY` set; otherwise anyone can forge
-   login cookies.
+   login cookies. *Done: the fallback is gone; if `SECRET_KEY` is unset the
+   app uses a random key and logs an error (everyone is logged out and clip
+   share links stop working on each restart, so set it).*
 
 ## Data safety
 
@@ -44,7 +55,9 @@ rewrite.
    `player`, `scouting_report`, `off_season_phases`, `testing_phase`,
    `smart_goals`, `user_session_completions`. **Don't rely on those backups**
    until this is fixed (it's a small fix: also convert `date` and `time` with
-   `.isoformat()`).
+   `.isoformat()`). *Done: dates and times are exported, and dates are
+   parsed back on import; covered by `tests/test_data_backup.py`. Take a
+   fresh backup, since older ZIPs are missing those tables.*
 7. **IDs are assigned as `max(id) + 1` in 29 places** to work around Postgres
    sequences being out of step after the data move. Two people saving at the
    same moment get the same id and one save fails. Reset the sequences once
@@ -60,14 +73,15 @@ rewrite.
 
 9. **Admin menu crashes when Discord is off.** `base.html` links to
    `discord.settings`, a route that only exists when `DISCORD_ENABLED=true`.
+   *Done: the link only shows when the route exists.*
 10. `routes/session.py` `rsvp()` uses `AdminSessionRSVPForm`, which isn't
-    imported, so that branch raises `NameError`.
+    imported, so that branch raises `NameError`. *Done.*
 11. Session PDF export (`/sessions/<id>/export_pdf`) can't work: neither
     `pdfkit` nor `weasyprint` is installed, and its fallback uses variables
     that are never set. It isn't linked anywhere; the printable page is the
     working route.
 12. `/sessions/debug/files` reads `SavedDrill.diagram_url`, which doesn't
-    exist, so it always errors. Delete it.
+    exist, so it always errors. Delete it. *Done.*
 13. The drill library search form (`q`, `skill_level`, `focus_area`) is
     ignored by the `drills()` route.
 14. The session list's focus-area dropdown lists every team's focus areas.

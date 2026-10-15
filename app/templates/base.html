@@ -672,8 +672,10 @@
             <i class="bi bi-people"></i> User Management</a></li>
           <li><a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
             <i class="bi bi-database"></i> Data Management</a></li>
+          {% if has_endpoint('discord.settings') %}
           <li><a class="dropdown-item" href="{{ url_for('discord.settings') }}">
             <i class="bi bi-discord"></i> Discord Settings</a></li>
+          {% endif %}
           <li><a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
             <i class="bi bi-gear-fill"></i> Manage Teams</a></li>
 

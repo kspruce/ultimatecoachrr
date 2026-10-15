@@ -19,12 +19,19 @@ import sys
 from sqlalchemy import text, inspect
 import os
 import argparse
+import secrets
 
 # Disable Discord integration by setting environment variable
 os.environ['DISCORD_ENABLED'] = 'False'
 
 # Create app with Discord disabled
 app = create_app()
+
+def new_password(username):
+    """Random password for a seeded account, printed once so it can be shared."""
+    password = secrets.token_urlsafe(12)
+    print_status(f"Password for {username}: {password}")
+    return password
 
 def print_status(message):
     """Helper function to print status messages"""
@@ -63,7 +70,7 @@ def reset_database():
                 role='admin',
                 team_organization_id=default_team.id  # Assign to default team
             )
-            admin.set_password('password')
+            admin.set_password(new_password(admin.username))
             db.session.add(admin)
             
             # Create bonus user
@@ -73,7 +80,7 @@ def reset_database():
                 role='player',
                 team_organization_id=default_team.id  # Assign to default team
             )
-            bonus.set_password('bonusboys')
+            bonus.set_password(new_password(bonus.username))
             db.session.add(bonus)
             
             # Create captain users with coach role
@@ -83,7 +90,7 @@ def reset_database():
                 role='coach',
                 team_organization_id=default_team.id  # Assign to default team
             )
-            etaylor.set_password('Taylor35')
+            etaylor.set_password(new_password(etaylor.username))
             db.session.add(etaylor)
             
             cspearing = User(
@@ -92,7 +99,7 @@ def reset_database():
                 role='coach',
                 team_organization_id=default_team.id  # Assign to default team
             )
-            cspearing.set_password('Spearing1')
+            cspearing.set_password(new_password(cspearing.username))
             db.session.add(cspearing)
             
             bleung = User(
@@ -101,7 +108,7 @@ def reset_database():
                 role='coach',
                 team_organization_id=default_team.id  # Assign to default team
             )
-            bleung.set_password('Leung18')
+            bleung.set_password(new_password(bleung.username))
             db.session.add(bleung)
             
             # Create a stat taker user
@@ -111,7 +118,7 @@ def reset_database():
                 role='stat_taker',
                 team_organization_id=default_team.id  # Assign to default team
             )
-            stat_taker.set_password('stats123')
+            stat_taker.set_password(new_password(stat_taker.username))
             db.session.add(stat_taker)
             
             db.session.commit()
@@ -193,7 +200,7 @@ def add_stat_taker_role():
                 print_status("No stat_taker users found, creating one...")
                 # Create a stat taker user
                 stat_taker = User(username='stats', email='stats@example.com', role='stat_taker')
-                stat_taker.set_password('stats123')
+                stat_taker.set_password(new_password(stat_taker.username))
                 db.session.add(stat_taker)
                 db.session.commit()
                 print_status("Created stat_taker user")

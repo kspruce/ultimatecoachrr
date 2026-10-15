@@ -22,7 +22,8 @@ from app.utils.storage import store_file
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
-    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm
+    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm,
+    AdminSessionRSVPForm
 )
 from secrets import token_urlsafe
 from datetime import datetime, timedelta
@@ -1559,64 +1560,6 @@ def internal_error(error):
         'message': 'Internal server error'
     }), 500
 
-
-def verify_file_paths():
-    """Utility function to verify file paths and permissions"""
-    upload_folder = current_app.config['UPLOAD_FOLDER']
-    
-    # Check if directory exists
-    if not os.path.exists(upload_folder):
-        try:
-            os.makedirs(upload_folder)
-            current_app.logger.debug(f"Created upload directory: {upload_folder}")
-        except Exception as e:
-            current_app.logger.error(f"Error creating upload directory: {e}")
-            return False
-    
-    # Check if directory is writable
-    if not os.access(upload_folder, os.W_OK):
-        current_app.logger.debug(f"Upload directory is not writable: {upload_folder}")
-        return False
-    
-    # Check if directory is readable
-    if not os.access(upload_folder, os.R_OK):
-        current_app.logger.debug(f"Upload directory is not readable: {upload_folder}")
-        return False
-        
-    return True
-
-# Add this to your route to debug file paths
-@bp.route('/debug/files')
-@login_required
-def debug_files():
-    """Debug endpoint to check file paths and permissions"""
-    upload_folder = current_app.config['UPLOAD_FOLDER']
-    static_folder = current_app.static_folder
-    
-    # Get all drills with diagrams
-    drills_with_diagrams = SavedDrill.query.filter(
-        SavedDrill.diagram_url.isnot(None),
-        SavedDrill.team_organization_id == get_current_team_id()
-    ).all()
-    
-    debug_info = {
-        'upload_folder': upload_folder,
-        'upload_folder_exists': os.path.exists(upload_folder),
-        'upload_folder_writable': os.access(upload_folder, os.W_OK),
-        'static_folder': static_folder,
-        'static_folder_exists': os.path.exists(static_folder),
-        'drills_with_diagrams': [
-            {
-                'id': drill.id,
-                'title': drill.title,
-                'diagram_url': drill.diagram_url,
-                'file_exists': os.path.exists(os.path.join(upload_folder, drill.diagram_url)) if drill.diagram_url else False
-            }
-            for drill in drills_with_diagrams
-        ]
-    }
-    
-    return jsonify(debug_info)
 
 @bp.before_request
 def before_request():
