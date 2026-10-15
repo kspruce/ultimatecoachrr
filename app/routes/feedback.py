@@ -6,7 +6,7 @@ from flask import (
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from app import db
-from app.models.session import SessionPlan, Attendance, SessionRSVP
+from app.models.session import SessionPlan
 from app.models.player import Player
 from app.models.feedback import PlayerFeedback
 from app.utils.team_filter import get_current_team_id, team_row_or_404

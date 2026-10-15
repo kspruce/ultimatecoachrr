@@ -6,7 +6,6 @@ from app.models import (
     PlayerPointStats, ExportLog
 )
 import os
-import sys
 import logging
 from logging.handlers import RotatingFileHandler
 import boto3

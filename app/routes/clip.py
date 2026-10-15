@@ -1,4 +1,4 @@
-from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from app import db
@@ -1313,7 +1313,7 @@ def export_annotations_markdown(clip_id):
         if tags_str: meta_bits.append(f"Tags: {tags_str}")
         if players_str: meta_bits.append(f"Players: {players_str}")
         meta_bits.append(f"By: {creator}")
-        lines.append(f"  - " + " | ".join(meta_bits))
+        lines.append("  - " + " | ".join(meta_bits))
         if notes:
             # indent notes as a block
             for line in notes.splitlines():

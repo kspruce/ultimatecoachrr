@@ -1,6 +1,6 @@
 # app/routes/tournament.py
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text, and_
@@ -12,8 +12,8 @@ from app.models.game_player import GamePlayer
 from app.models.player import Player
 from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
-from app.utils.utils import admin_required, coach_required, stat_taker_required
-from wtforms import SubmitField, HiddenField
+from app.utils.utils import coach_required
+from wtforms import SubmitField
 from app.utils.team_filter import get_current_team_id, team_row_or_404
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')

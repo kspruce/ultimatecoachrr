@@ -1,7 +1,6 @@
 from app import db
 from datetime import datetime
-from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Integer, ForeignKey
 
 class LineTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)

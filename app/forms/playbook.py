@@ -3,13 +3,11 @@ from wtforms import (
     StringField,
     SelectField,
     TextAreaField,
-    FileField,
     SelectMultipleField,
     SubmitField,
     IntegerField
 )
 from wtforms.validators import DataRequired, Optional, Length, URL, NumberRange
-from flask_wtf.file import FileAllowed
 from app.models.playbook import Formation, PlayTag
 
 class PlayForm(FlaskForm):

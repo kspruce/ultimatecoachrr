@@ -5,7 +5,6 @@ from app.models.annotation import AnnotationTag
 from app.models.player import Player
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
-from flask import session
 
 
 class AnnotationForm(FlaskForm):

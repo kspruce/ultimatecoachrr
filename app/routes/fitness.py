@@ -53,9 +53,6 @@ class TestingPhaseForm(FlaskForm):
     active = BooleanField('Active', default=True)
     submit = SubmitField('Save Phase')
 
-class ImportForm(FlaskForm):
-    file = FileField('CSV File', validators=[FileRequired(), FileAllowed(['csv'])])
-
 @bp.route('/')
 @login_required
 def index():

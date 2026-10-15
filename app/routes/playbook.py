@@ -1,16 +1,12 @@
 # app/routes/playbook.py
 from flask import (
     Blueprint, render_template, redirect, url_for, flash,
-    request, jsonify, current_app, abort, session
+    request, jsonify, current_app, abort
 )
 from flask_login import login_required, current_user
 from app import db
 from app.models.playbook import Play, Formation, PlayTag, PlayAssignment, PlayerPosition
 from app.forms.playbook import PlayForm, FormationForm, PositionAssignmentForm
-from werkzeug.utils import secure_filename
-import os
-import json
-from app.utils.storage import store_file, delete_file, get_file_url
 from app.utils.utils import admin_required
 from app.utils.team_filter import get_current_team_id
 

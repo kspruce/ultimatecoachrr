@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
@@ -9,16 +9,13 @@ from app.forms.team import PlayerForm, PlayerFilterForm
 from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
-from app.utils.utils import admin_required, coach_required, stat_taker_required
-from app.models.session import SessionPlan
+from app.utils.utils import coach_required
 from app.models.team_organization import TeamOrganization
 from app.models.team_settings import TeamSettings
 from datetime import datetime
-from markupsafe import Markup
 from app.utils.team_filter import get_current_team_id
 import re
 import random
-import string
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 

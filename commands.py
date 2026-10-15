@@ -48,7 +48,7 @@ def export_data(output_dir, timestamp):
     
     try:
         export_path = manager.export_all_data(timestamp=timestamp)
-        click.echo(f"✅ Data export completed successfully!")
+        click.echo("✅ Data export completed successfully!")
         click.echo(f"📁 Export location: {export_path}")
         
         # Show summary

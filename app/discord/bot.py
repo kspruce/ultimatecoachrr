@@ -1,8 +1,5 @@
-import os
 import discord
 from discord.ext import commands, tasks
-import datetime
-from flask import current_app
 import asyncio
 import logging
 
@@ -120,7 +117,7 @@ class UltimateCoachBot:
                         # Send a DM to the user if their account isn't linked
                         try:
                             await user.send("Your Discord account is not linked to an Ultimate Coach account. "
-                                           f"Please use `!uc link your@email.com` to link your account.")
+                                           "Please use `!uc link your@email.com` to link your account.")
                         except:
                             # If DM fails, just continue
                             pass
@@ -401,7 +398,7 @@ class UltimateCoachBot:
         async def upcoming_events(ctx):
             """Show upcoming events"""
             with self.app.app_context():
-                from app.models.session import SessionPlan, SessionRSVP
+                from app.models.session import SessionPlan
                 from app.models.tournament import Tournament
                 from app.models.game import Game
                 from datetime import datetime, timedelta
@@ -603,7 +600,6 @@ class UltimateCoachBot:
                 from app.models.session import SessionPlan, SessionRSVP
                 from app.models.tournament import Tournament
                 from app.models.tournament_rsvp import TournamentRSVP
-                from flask_login import current_user
                 from app import db
                 
                 # Find the Discord user's linked account

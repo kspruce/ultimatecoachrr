@@ -1,5 +1,5 @@
-from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
-from flask_login import login_required, current_user
+from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask_login import login_required
 from app import db
 from app.models.scouting import ScoutingReport, OpponentPlayer, ScoutingClip
 from app.models.tournament import Tournament
@@ -7,7 +7,7 @@ from app.models.game import Game
 from app.forms.scouting import ScoutingReportForm, OpponentPlayerForm, ScoutingClipForm, ScoutingFilterForm
 import re
 from flask_wtf.csrf import CSRFProtect
-from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.utils import coach_required
 from app.utils.team_filter import get_current_team_id
 
 csrf = CSRFProtect()

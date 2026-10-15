@@ -6,7 +6,7 @@ from app.models.player import Player
 from app.models.game import Game
 from app.models.session import SessionPlan
 from app.models.tournament import Tournament
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import request, flash, jsonify
 from app.utils.data_manager import DataManager
 import os
@@ -19,7 +19,6 @@ from werkzeug.utils import secure_filename
 import logging
 import math
 from sqlalchemy import inspect as sqlalchemy_inspect
-import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 

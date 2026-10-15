@@ -1,7 +1,7 @@
 # app/forms/team_organization.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SubmitField, SelectField, URLField
-from wtforms.validators import DataRequired, ValidationError, Optional, URL
+from wtforms import StringField, TextAreaField, SubmitField, SelectField
+from wtforms.validators import DataRequired, ValidationError, Optional
 from app.models.team_organization import TeamOrganization
 
 class TeamOrganizationForm(FlaskForm):

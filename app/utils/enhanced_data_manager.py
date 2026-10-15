@@ -21,11 +21,8 @@ from datetime import datetime, date, time
 from sqlalchemy import inspect
 import importlib
 import pkgutil
-from flask import send_file
 import io
-import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from werkzeug.utils import secure_filename
 import math
 
 # Configure logging
@@ -61,11 +58,7 @@ class EnhancedDataManager:
         # First, try to import all model modules to ensure they're registered
         try:
             # Explicitly import common models to ensure they're loaded
-            from app.models import User, Player, Tournament, Game, Point, LineUp
-            from app.models import Event, Pull, Clip, ClipTag, ClipAnnotation
-            from app.models import SessionPlan, SessionComponent, SavedDrill, Attendance
-            from app.models import FitnessMetric, FitnessRecord
-            from app.models import LineTemplate, LineTemplatePlayer, GameDayEvent, GameDayPlayerStats
+            pass
         except Exception as e:
             logger.warning(f"Error pre-loading common models: {e}")
         
@@ -1112,7 +1105,7 @@ class EnhancedDataManager:
         Reset all database sequences to max(id) + 1 for each table.
         Works with PostgreSQL, SQLite, and MySQL databases.
         """
-        from sqlalchemy import text, inspect, MetaData
+        from sqlalchemy import text
         
         results = {}
         inspector = inspect(db.engine)

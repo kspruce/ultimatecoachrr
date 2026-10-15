@@ -1,7 +1,6 @@
 # app/models/theory.py
 from app import db
 from datetime import datetime
-from flask_login import current_user
 from slugify import slugify
 from sqlalchemy import event  # Add this import at the top
 

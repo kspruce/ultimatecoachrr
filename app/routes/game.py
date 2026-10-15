@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask_login import login_required
 from flask_wtf import FlaskForm
 from sqlalchemy import text
 from sqlalchemy.orm import joinedload
@@ -11,11 +11,10 @@ from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Event, Pull
 from app.models.gameday import GameDayPlayerStats
-from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.utils import coach_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
 from app.models.tournament_rsvp import TournamentRSVP
-from sqlalchemy import and_
 from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('game', __name__, url_prefix='/games')

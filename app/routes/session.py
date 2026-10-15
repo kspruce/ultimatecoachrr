@@ -5,8 +5,8 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from app import db
-from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance, SessionRSVP
-from app.models.drill import DrillDiagram
+from app.models.session import SessionPlan, SessionComponent, Attendance, SessionRSVP
+from app.models.drill import SavedDrill, DrillDiagram
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
@@ -20,7 +20,6 @@ from app.forms.session import (
     AdminSessionRSVPForm
 )
 from secrets import token_urlsafe
-from datetime import datetime, timedelta
 
 csrf = CSRFProtect()
 
@@ -1659,8 +1658,6 @@ def printable_view(session_id):
 
         
 # Add these imports to your existing imports at the top of session.py
-from secrets import token_urlsafe
-from datetime import datetime, timedelta
 from app.utils.team_filter import get_current_team_id
 
 # Add this route to your session.py Blueprint

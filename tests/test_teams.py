@@ -128,3 +128,53 @@ def test_fitness_metric_edit_is_limited_to_its_team(app, two_teams):
     assert other.get(f"/fitness/metrics/edit/{two_teams['metric']}").status_code == 404
     herd = client_for(app, two_teams['herd_admin'])
     assert herd.get(f"/fitness/metrics/edit/{two_teams['metric']}").status_code == 200
+
+
+def test_deleting_a_team_removes_its_data_and_nothing_else(app):
+    """Run on Postgres too (TEST_DATABASE_URL): SQLite doesn't enforce FKs."""
+    import json
+    import os
+    from sqlalchemy import func, select
+    from app.models.team_organization import TeamOrganization
+    from app.utils.season_import import import_season
+
+    keep = stats_data.build_team('Thundering Herd', 'herd')
+    keep_admin = stats_data.build_admin(keep, 'kit')
+    stats_data.record_season(app, keep, keep_admin, stats_data.build_players(keep),
+                             games_per_tournament=1, points_per_game=3)
+    gone = stats_data.build_team('Herd 2028', 'herd-2028')
+    gone_admin = stats_data.build_admin(gone, 'other', superadmin=False)
+    gone_players = stats_data.build_players(gone)
+    stats_data.record_season(app, gone, gone_admin, gone_players, seed=3,
+                             games_per_tournament=1, points_per_game=3)
+    fixtures = os.path.join(os.path.dirname(__file__), 'fixtures')
+    with open(os.path.join(fixtures, 'sample_season.json')) as f:
+        season = json.load(f)
+    for team in (keep, gone):
+        import_season(season, os.path.join(fixtures, 'season_images'), team.id)
+    db.session.add(PlayerFeedback(player_id=gone_players[0].id, coach_id=gone_admin.id,
+                                  content='x', context_tag='General'))
+    db.session.commit()
+    keep_id, gone_id = keep.id, gone.id
+
+    def counts(team_id):
+        out = {}
+        for table in db.metadata.sorted_tables:
+            if 'team_organization_id' in table.c:
+                n = db.session.execute(select(func.count()).select_from(table)
+                                       .where(table.c.team_organization_id == team_id)).scalar()
+                if n:
+                    out[table.name] = n
+        return out
+
+    before_keep = counts(keep_id)
+    assert counts(gone_id)
+
+    c = stats_data.Client(app, keep_admin.id, keep_id)
+    r = c.post(f'/teams/delete/{gone_id}', data={'confirm_name': 'Herd 2028'})
+    assert r.status_code == 302
+    db.session.expire_all()
+    assert db.session.get(TeamOrganization, gone_id) is None
+    assert counts(gone_id) == {}
+    assert counts(keep_id) == before_keep
+    assert PlayerFeedback.query.count() == 0

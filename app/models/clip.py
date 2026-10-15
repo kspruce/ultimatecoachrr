@@ -1,7 +1,6 @@
 from app import db
 from datetime import datetime
-from sqlalchemy import Column, Integer, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Integer, ForeignKey
 
 # Association table for clip tags (video-level)
 clip_tag_relation = db.Table('clip_tag_relation',
