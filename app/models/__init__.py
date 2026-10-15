@@ -6,7 +6,7 @@ from app.models.user import User
 from app.models.player import Player
 
 # Drill and Session models
-from app.models.drill import SavedDrill, Drill, DrillFrame
+from app.models.drill import SavedDrill, Drill, DrillFrame, DrillDiagram
 from app.models.session import (
     SessionPlan,
     SessionComponent,
@@ -63,7 +63,7 @@ __all__ = [
     # Core
     'TeamOrganization', 'User', 'Player',
     # Drills & Sessions
-    'SavedDrill', 'Drill', 'DrillFrame', 'SessionPlan', 'SessionComponent', 
+    'SavedDrill', 'Drill', 'DrillFrame', 'DrillDiagram', 'SessionPlan', 'SessionComponent', 
     'Attendance', 'SessionRSVP',
     # Playbook
     'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment',

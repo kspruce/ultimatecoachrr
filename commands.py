@@ -135,9 +135,38 @@ def show_models():
                 click.echo(f"       • {fk['column']} → {fk['references']}")
 
 # Register commands with Flask CLI
+@click.command('import-season')
+@click.argument('season_file', type=click.Path(exists=True, dir_okay=False))
+@click.option('--images-dir', type=click.Path(exists=True, file_okay=False),
+              help='Folder the diagram "file"/"svg" paths are relative to')
+@click.option('--team-org', 'team_org_id', type=int, required=True,
+              help='TeamOrganization id to import into')
+@click.option('--dry-run', is_flag=True, help='Validate and report, but write nothing')
+@with_appcontext
+def import_season_command(season_file, images_dir, team_org_id, dry_run):
+    """Import a season of session plans and drills (herd-session-v1 JSON)."""
+    from app.utils.season_import import import_season, load_season_file, SeasonImportError
+
+    try:
+        data = load_season_file(season_file)
+    except json.JSONDecodeError as e:
+        raise click.ClickException(f'{season_file} is not valid JSON: {e}')
+
+    try:
+        summary = import_season(data, images_dir, team_org_id, dry_run=dry_run)
+    except SeasonImportError as e:
+        click.echo(f'Import failed, nothing was written ({len(e.errors)} problems):', err=True)
+        for error in e.errors:
+            click.echo(f'  - {error}', err=True)
+        raise SystemExit(1)
+
+    click.echo(summary.report())
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
     app.cli.add_command(export_data)
+    app.cli.add_command(import_season_command)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
     register_tag_commands(app)

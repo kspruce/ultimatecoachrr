@@ -35,6 +35,8 @@ def create_app(config_class=Config):
 
     # Ensure the SECRET_KEY is set
     if not app.config.get('SECRET_KEY'):
+        app.logger.error('SECRET_KEY is not set: using a random key, so logins and '
+                         'shared clip links stop working on every restart. Set SECRET_KEY.')
         app.config['SECRET_KEY'] = os.urandom(24)
 
     # Lightweight auto-migration: ensure newer columns exist
@@ -74,6 +76,9 @@ def create_app(config_class=Config):
     # Configure static file serving
     app.static_folder = 'static'
     app.static_url_path = '/static'
+
+    # Lets templates link to optional blueprints (e.g. Discord) only when registered
+    app.jinja_env.globals['has_endpoint'] = lambda endpoint: endpoint in app.view_functions
 
     # Register custom CLI commands
     from commands import register_commands

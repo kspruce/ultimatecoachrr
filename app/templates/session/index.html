@@ -44,6 +44,26 @@
                             {{ form.session_type(class="form-select") }}
                         </div>
                         
+                        {% if form.season.choices|length > 1 %}
+                        <!-- Season Plan Filters -->
+                        <div class="col-md-3">
+                            {{ form.season.label(class="form-label") }}
+                            {{ form.season(class="form-select") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.phase.label(class="form-label") }}
+                            {{ form.phase(class="form-select") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.block.label(class="form-label") }}
+                            {{ form.block(class="form-select") }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.squad.label(class="form-label") }}
+                            {{ form.squad(class="form-select") }}
+                        </div>
+                        {% endif %}
+
                         <!-- Filter Button -->
                         <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100">
@@ -145,13 +165,18 @@
                                     <td>
                                         <span class="badge bg-secondary" title="{{ session.session_type_display }} #{{ session_type_numbers.get(session.id, '?') }}">#{{ session_type_numbers.get(session.id, '?') }}</span>
                                     </td>
-                                    <td>{{ session.date.strftime('%Y-%m-%d') if session.date else 'No date' }}</td>
+                                    <td>{% if session.date %}{{ session.date.strftime('%Y-%m-%d') }}{% elif session.week_commencing %}<span class="text-muted">w/c {{ session.week_commencing.strftime('%Y-%m-%d') }}</span>{% else %}No date{% endif %}</td>
                                     <td>
                                         <a href="{{ url_for('session.detail', session_id=session.id) }}">
                                             {{ session.title }}
                                         </a>
                                         {% if session.is_recurring %}
                                         <span class="badge bg-info">{{ session.recurrence_pattern }}</span>
+                                        {% endif %}
+                                        {% if session.season %}
+                                        <div class="small text-muted">
+                                            {{ session.season }}{% if session.week_number %} · Week {{ session.week_number }}{% endif %}{% if session.squad %} · <span class="badge bg-light text-dark">{{ session.squad }}</span>{% endif %}
+                                        </div>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -254,4 +279,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

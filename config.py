@@ -5,7 +5,9 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    # No built-in fallback: a key that's in the source code lets anyone forge
+    # login cookies. create_app() uses a random key (and logs an error) if unset.
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # Database configuration
     def get_database_url():

@@ -17,7 +17,7 @@ import zipfile
 import tempfile
 import pandas as pd
 import logging
-from datetime import datetime
+from datetime import datetime, date, time
 from sqlalchemy import inspect
 import importlib
 import pkgutil
@@ -240,7 +240,7 @@ class EnhancedDataManager:
                             for column in model.__table__.columns:
                                 value = getattr(record, column.name)
                                 # Handle datetime objects
-                                if isinstance(value, datetime):
+                                if isinstance(value, (date, time)):  # datetime is a date too
                                     value = value.isoformat()
                                 record_dict[column.name] = value
                             data.append(record_dict)
@@ -322,7 +322,7 @@ class EnhancedDataManager:
                             for column in model.__table__.columns:
                                 value = getattr(record, column.name)
                                 # Handle datetime objects
-                                if isinstance(value, datetime):
+                                if isinstance(value, (date, time)):  # datetime is a date too
                                     value = value.isoformat()
                                 record_dict[column.name] = value
                             data.append(record_dict)
@@ -372,7 +372,7 @@ class EnhancedDataManager:
                                     for column in model.__table__.columns:
                                         value = getattr(record, column.name)
                                         # Handle datetime objects
-                                        if isinstance(value, datetime):
+                                        if isinstance(value, (date, time)):  # datetime is a date too
                                             value = value.isoformat()
                                         record_dict[column.name] = value
                                     data.append(record_dict)
@@ -465,7 +465,7 @@ class EnhancedDataManager:
                             for column in model.__table__.columns:
                                 value = getattr(record, column.name)
                                 # Handle datetime objects
-                                if isinstance(value, datetime):
+                                if isinstance(value, (date, time)):  # datetime is a date too
                                     value = value.isoformat()
                                 record_dict[column.name] = value
                             data.append(record_dict)
@@ -528,7 +528,7 @@ class EnhancedDataManager:
                                 for column in model.__table__.columns:
                                     value = getattr(record, column.name)
                                     # Handle datetime objects
-                                    if isinstance(value, datetime):
+                                    if isinstance(value, (date, time)):  # datetime is a date too
                                         value = value.isoformat()
                                     record_dict[column.name] = value
                                 data.append(record_dict)
@@ -837,9 +837,16 @@ class EnhancedDataManager:
                                     except ValueError:
                                         pass
                                 elif isinstance(value, str) and value:
-                                    # Handle db.Time columns stored as "HH:MM:SS" strings
+                                    # Handle db.Date columns stored as "YYYY-MM-DD" strings
+                                    # and db.Time columns stored as "HH:MM:SS" strings
                                     col = model.__table__.columns.get(key)
-                                    if col is not None and getattr(col.type, '__visit_name__', '') == 'time':
+                                    col_type = getattr(col.type, '__visit_name__', '') if col is not None else ''
+                                    if col_type == 'date':
+                                        try:
+                                            value = date.fromisoformat(value)
+                                        except ValueError:
+                                            pass
+                                    elif col_type == 'time':
                                         from datetime import time as time_type
                                         try:
                                             parts = value.split(':')
@@ -954,7 +961,7 @@ class EnhancedDataManager:
                 for column in model.__table__.columns:
                     value = getattr(record, column.name)
                     # Handle datetime objects
-                    if isinstance(value, datetime):
+                    if isinstance(value, (date, time)):  # datetime is a date too
                         value = value.isoformat()
                     record_dict[column.name] = value
                 data.append(record_dict)
@@ -984,7 +991,7 @@ class EnhancedDataManager:
                                 for column in model.__table__.columns:
                                     value = getattr(record, column.name)
                                     # Handle datetime objects
-                                    if isinstance(value, datetime):
+                                    if isinstance(value, (date, time)):  # datetime is a date too
                                         value = value.isoformat()
                                     record_dict[column.name] = value
                                 data.append(record_dict)

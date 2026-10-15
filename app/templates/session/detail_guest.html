@@ -51,6 +51,8 @@
                 </div>
             </div>
 
+            {% include 'session/partials/_season_plan_card.html' %}
+
             <!-- Notes -->
             {% if session.notes %}
             <div class="card shadow-sm mb-4">
@@ -77,14 +79,14 @@
                     <div class="timeline">
                         {% for component in components %}
                         <div class="timeline-item">
-                            <div class="timeline-badge bg-{% if component.component_type == 'warmup' %}warning{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% else %}secondary{% endif %}">
-                                <i class="bi bi-{% if component.component_type == 'warmup' %}fire{% elif component.component_type == 'drill' %}diagram-3{% elif component.component_type == 'scrimmage' %}controller{% elif component.component_type == 'cooldown' %}snow{% elif component.component_type == 'discussion' %}chat-dots{% else %}gear{% endif %}"></i>
+                            <div class="timeline-badge bg-{% if component.component_type == 'warmup' %}warning{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% elif component.component_type == 'water' %}info{% else %}secondary{% endif %}">
+                                <i class="bi bi-{% if component.component_type == 'warmup' %}fire{% elif component.component_type == 'drill' %}diagram-3{% elif component.component_type == 'scrimmage' %}controller{% elif component.component_type == 'cooldown' %}snow{% elif component.component_type == 'discussion' %}chat-dots{% elif component.component_type == 'water' %}droplet{% else %}gear{% endif %}"></i>
                             </div>
                             <div class="timeline-panel card">
                                 <div class="card-header d-flex justify-content-between align-items-center py-2">
                                     <div>
                                         <h5 class="mb-0 d-inline">{{ component.title }}</h5>
-                                        <span class="badge bg-{% if component.component_type == 'warmup' %}warning text-dark{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% else %}secondary{% endif %} ms-2">
+                                        <span class="badge bg-{% if component.component_type == 'warmup' %}warning text-dark{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% elif component.component_type == 'water' %}info{% else %}secondary{% endif %} ms-2">
                                             {{ component.component_type|replace('_', ' ')|capitalize }}
                                         </span>
                                     </div>
@@ -96,6 +98,8 @@
                                     {% if component.description %}
                                     <div class="markdown-content mb-2">{{ component.description|markdown }}</div>
                                     {% endif %}
+
+                                    {% include 'session/partials/_component_extras.html' %}
 
                                     {% if component.focus_area %}
                                     <div>
@@ -171,6 +175,13 @@
     .timeline-panel {
         position: relative;
         margin-left: 60px;
+    }
+
+    /* Drill diagram thumbnail on a component */
+    .drill-thumb img {
+        max-width: 240px;
+        max-height: 180px !important;
+        margin: 4px 0;
     }
     
     /* Card styling */

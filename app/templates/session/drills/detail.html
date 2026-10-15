@@ -6,7 +6,9 @@
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>{{ drill.title }}</h1>
+            <h1>{{ drill.title }}
+                {% if drill.is_standard_card %}<span class="badge bg-warning text-dark fs-6 align-middle">{{ drill.card_code or 'Standard card' }}</span>{% endif %}
+            </h1>
             {% if session_id %}
                 <p>
                     Part of Session: <a href="{{ url_for('session.detail', session_id=session_id) }}">
@@ -40,13 +42,48 @@
             </div>
             {% endif %}
 
+            {% if drill.diagrams %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Diagrams</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for diagram in drill.diagrams %}
+                        <div class="col-md-6">
+                            <figure class="mb-0">
+                                {% if diagram.step_label %}<div class="fw-bold mb-1">{{ diagram.step_label }}</div>{% endif %}
+                                <a href="{{ diagram.image_url }}" target="_blank">
+                                    <img src="{{ diagram.image_url }}" class="img-fluid rounded border" alt="{{ diagram.caption or drill.title }}" loading="lazy">
+                                </a>
+                                <figcaption class="small text-muted mt-1">
+                                    {{ diagram.caption }}
+                                    {% if diagram.source %}<span class="d-block">Source: {{ diagram.source }}</span>{% endif %}
+                                    {% if diagram.svg_url %}<a href="{{ diagram.svg_url }}" target="_blank">SVG</a>{% endif %}
+                                </figcaption>
+                            </figure>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card mb-4">
                 <div class="card-header">
                     <h4>Drill Details</h4>
                 </div>
                 <div class="card-body">
                     {% if drill.description %}
+                        {% if drill.is_standard_card %}
+                        <div class="markdown-content mb-3">{{ drill.description|markdown }}</div>
+                        {% else %}
                         <p><strong>Description:</strong> {{ drill.description }}</p>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if drill.source %}
+                        <p><strong>Source:</strong> {{ drill.source }}</p>
                     {% endif %}
 
                     {% if drill.setup_instructions %}

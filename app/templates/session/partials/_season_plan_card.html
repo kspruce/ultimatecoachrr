@@ -1,0 +1,89 @@
+{# Season plan details for a SessionPlan (Bootstrap card, used by detail and guest pages). #}
+{% if session.season or session.aim or session.learning_points or session.key_terms or session.run_by or session.kit %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Season Plan</h5>
+    </div>
+    <div class="card-body">
+        <ul class="list-group list-group-flush mb-3">
+            {% if session.season %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar3"></i> Season</span>
+                <span class="badge bg-light text-dark">{{ session.season }}</span>
+            </li>
+            {% endif %}
+            {% if session.phase_name or session.phase_number %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-flag"></i> Phase</span>
+                <span class="badge bg-light text-dark text-wrap text-end">{{ session.phase_name or ('Phase ' ~ session.phase_number) }}</span>
+            </li>
+            {% endif %}
+            {% if session.block %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bricks"></i> Block</span>
+                <span class="badge bg-light text-dark text-wrap text-end">{{ session.block }}</span>
+            </li>
+            {% endif %}
+            {% if session.week_number or session.week_commencing %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-week"></i> Week</span>
+                <span class="badge bg-light text-dark">
+                    {% if session.week_number %}Week {{ session.week_number }}{% endif %}
+                    {% if session.week_commencing %} · w/c {{ session.week_commencing.strftime('%Y-%m-%d') }}{% endif %}
+                </span>
+            </li>
+            {% endif %}
+            {% if session.squad %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people"></i> Squad</span>
+                <span class="badge bg-light text-dark">{{ session.squad }}</span>
+            </li>
+            {% endif %}
+            {% if session.run_by %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person-badge"></i> Run by</span>
+                <span class="badge bg-light text-dark text-wrap text-end">{{ session.run_by }}</span>
+            </li>
+            {% endif %}
+            {% if session.kit %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bag"></i> Kit</span>
+                <span class="badge bg-light text-dark text-wrap text-end">{{ session.kit }}</span>
+            </li>
+            {% endif %}
+        </ul>
+
+        {% if session.aim %}
+        <h6>Aim</h6>
+        <div class="markdown-content mb-3">{{ session.aim|markdown }}</div>
+        {% endif %}
+
+        {% if session.learning_points %}
+        <h6>Learning Points</h6>
+        <ol class="mb-3">
+            {% for point in session.learning_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ol>
+        {% endif %}
+
+        {% if session.key_terms %}
+        <h6>Key Terms</h6>
+        <table class="table table-sm small mb-0">
+            <tbody>
+                {% for term, meaning in session.key_terms %}
+                <tr>
+                    <th scope="row">{{ term }}</th>
+                    <td>{{ meaning }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if session.sources %}
+        <div class="small text-muted mt-3"><i class="bi bi-book"></i> {{ session.sources }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

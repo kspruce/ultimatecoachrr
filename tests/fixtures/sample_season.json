@@ -1,0 +1,105 @@
+{
+  "schema": "herd-session-v1",
+  "season": "2027/28",
+  "drills": [
+    {
+      "external_id": "flik-sideline-wrinkle",
+      "title": "Sideline wrinkle",
+      "description": "Handler trapped on the sideline uses the up-line reset.",
+      "setup_instructions": "Two lines on the sideline, one marker, one reset.",
+      "source": "Flik",
+      "focus_area": "Resets",
+      "equipment_needed": "discs, cones",
+      "recommended_duration": 15,
+      "diagrams": [
+        {"file": "panels/flik-sideline-wrinkle-1.png", "svg": "panels/flik-sideline-wrinkle-1.svg",
+         "step_label": "1 Set-up", "caption": "Sideline wrinkle", "source": "Flik"},
+        {"file": "panels/flik-sideline-wrinkle-2.png", "svg": null,
+         "step_label": "2 Reset", "caption": "Reset cuts up the line", "source": "Flik"}
+      ]
+    },
+    {
+      "external_id": "dk-three-person-break-force",
+      "title": "Three-person break force",
+      "description": "Thrower, marker and receiver; marker forces, thrower breaks.",
+      "setup_instructions": "Groups of three, 10m apart.",
+      "source": "Herd",
+      "focus_area": "Throwing",
+      "equipment_needed": "discs",
+      "diagrams": [
+        {"file": "panels/dk-three-person-break-force-1.png",
+         "step_label": "1", "caption": "Break the mark", "source": "Herd diagram"}
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "external_id": "card-a",
+      "card_code": "Card A",
+      "title": "Herd warm-up and 4v3 mini",
+      "summary": "The standard 30-minute warm-up every session starts with.",
+      "sections": [
+        {"heading": "Pulse raiser (10 min)", "lines": ["Jog and skips", "Dynamic stretches"]},
+        {"heading": "4v3 mini (20 min)", "lines": ["Small pitch", "Offence works the reset"]}
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "external_id": "w02-split-2s",
+      "week": 2,
+      "week_commencing": "2027-10-11",
+      "phase_number": 1,
+      "phase": "Phase 1: Foundations",
+      "block": "Block A: throwing, catching, resets",
+      "squad": "2s",
+      "title": "Getting off the sideline",
+      "length_minutes": 180,
+      "run_by": "2s captains",
+      "kit": "discs, cones, bibs",
+      "aim": "Handlers get the disc off the sideline without panicking.",
+      "points": ["Reset early", "Pivot to open space", "Cut up the line"],
+      "words": [["Sideline trap", "Mark forcing the thrower along the sideline"],
+                ["Reset", "Short pass back to a handler to restart the stall"]],
+      "activities": [
+        {"time": "0:00", "mins": 30, "name": "Warm-up", "type": "warmup",
+         "drill_id": "card-a", "how": "Card A as normal.", "coach": "Check everyone is moving."},
+        {"time": "0:30", "mins": 20, "name": "Three-person break force", "type": "drill",
+         "drill_id": "dk-three-person-break-force", "how": "Swap marker every 5 throws.",
+         "coach": "Step out low and wide."},
+        {"time": "0:50", "mins": 5, "name": "Water", "type": "water", "how": null, "coach": null},
+        {"time": "0:55", "mins": 25, "name": "Sideline wrinkle", "type": "drill",
+         "drill_id": "flik-sideline-wrinkle", "how": "Run each side for 10 minutes.",
+         "coach": "Reset cutter goes on stall 4."}
+      ],
+      "notes": ["Bring spare discs", "Pitch 3 if pitch 2 is waterlogged"],
+      "sources": "Flik sideline series"
+    },
+    {
+      "external_id": "w02-joint",
+      "week": 2,
+      "week_commencing": "2027-10-11",
+      "phase_number": 1,
+      "phase": "Phase 1: Foundations",
+      "block": "Block A: throwing, catching, resets",
+      "squad": "joint",
+      "title": "Joint session: resets under pressure",
+      "date": "2027-10-16",
+      "start_time": "10:00",
+      "length_minutes": 120,
+      "location": "Regent's Park",
+      "run_by": "Head coach",
+      "aim": "Bring both squads' reset work together.",
+      "points": ["Talk early", "Space the reset", "Be patient"],
+      "words": [],
+      "activities": [
+        {"mins": 30, "name": "Warm-up", "type": "warmup", "drill_id": "card-a",
+         "how": "Card A.", "coach": "Pairs across squads."},
+        {"mins": 60, "name": "Scrimmage", "type": "scrimmage",
+         "how": "Stall 7, resets only after 5.", "coach": "Call the reset early."},
+        {"mins": 10, "name": "Debrief", "type": "discussion", "how": "One thing each.", "coach": null}
+      ],
+      "notes": "Mixed lines throughout."
+    }
+  ]
+}
