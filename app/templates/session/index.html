@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'session/partials/_badges.html' import session_type_colour, component_colour, component_icon %}
 
 {% block content %}
 <div class="container">
@@ -88,9 +89,9 @@
                     <div class="row">
                         {% for session in upcoming_sessions %}
                         <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card h-100 border-{% if session.session_type == 'invited_training' %}primary{% elif session.session_type == 'open_training' %}success{% else %}info{% endif %}">
+                            <div class="card h-100 border-{{ session_type_colour(session.session_type) }}">
                                 <div class="card-header">
-                                    <span class="badge bg-{% if session.session_type == 'invited_training' %}primary{% elif session.session_type == 'open_training' %}success{% else %}info{% endif %} float-end">
+                                    <span class="badge bg-{{ session_type_colour(session.session_type) }} float-end">
                                         {{ session.session_type_display }}
                                     </span>
                                     <h5 class="card-title mb-0">{{ session.title }}</h5>
@@ -180,7 +181,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge bg-{% if session.session_type == 'invited_training' %}primary{% elif session.session_type == 'open_training' %}success{% else %}info{% endif %}">
+                                        <span class="badge bg-{{ session_type_colour(session.session_type) }}">
                                             {{ session.session_type_display }}
                                         </span>
                                     </td>

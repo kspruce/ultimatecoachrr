@@ -1,0 +1,13 @@
+{# Shared badge colours and icons for session types and component types. #}
+{%- macro session_type_colour(session_type) -%}
+{{ {'invited_training': 'primary', 'open_training': 'success'}.get(session_type, 'info') }}
+{%- endmacro %}
+{%- macro component_colour(component_type, dark_text=False) -%}
+{%- set colour = {'warmup': 'warning', 'drill': 'primary', 'scrimmage': 'success', 'cooldown': 'info',
+                  'discussion': 'dark', 'water': 'info'}.get(component_type, 'secondary') -%}
+{{ colour }}{% if dark_text and colour == 'warning' %} text-dark{% endif %}
+{%- endmacro %}
+{%- macro component_icon(component_type) -%}
+{{ {'warmup': 'fire', 'drill': 'diagram-3', 'scrimmage': 'controller', 'cooldown': 'snow',
+    'discussion': 'chat-dots', 'water': 'droplet'}.get(component_type, 'gear') }}
+{%- endmacro %}
