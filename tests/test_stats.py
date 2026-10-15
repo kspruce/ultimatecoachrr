@@ -159,3 +159,15 @@ def test_no_two_stats_routes_share_a_url(app):
             key = (rule.rule, method)
             assert key not in seen, f'{rule.rule} {method}: {seen.get(key)} and {rule.endpoint}'
             seen[key] = rule.endpoint
+
+
+def test_undoing_a_goal_reopens_the_point(app, season):
+    from app.models.point import Point
+    client = season['client']
+    point = Point.query.filter_by(point_outcome='scored').order_by(Point.id.desc()).first()
+    point_id = point.id
+    # The last recorded point ended with a goal or scored_on; undo its last event.
+    r = client.post(f'/stats/undo_event/{point_id}')
+    assert r.status_code == 200, r.get_data(as_text=True)
+    db.session.expire_all()
+    assert db.session.get(Point, point_id).point_outcome is None

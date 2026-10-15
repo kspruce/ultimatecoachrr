@@ -8,7 +8,7 @@ def register_error_handlers(app):
     def handle_db_error(error):
         db.session.rollback()
         app.logger.error(f"Database error: {str(error)}", exc_info=True)
-        return render_template('error.html', error="A database error occurred. Please try again later."), 500
+        return render_template('error.html', error_message="A database error occurred. Please try again later."), 500
     
     @app.before_request
     def before_request():

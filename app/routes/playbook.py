@@ -294,12 +294,8 @@ def add_play():
     ).order_by(PlayTag.name).all()]
 
     if form.validate_on_submit():
-        # Find the highest existing play ID and add 1
-        highest_id = db.session.query(db.func.max(Play.id)).scalar() or 0
-        next_id = highest_id + 1
 
         play = Play(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
@@ -412,12 +408,8 @@ def edit_play(play_id):
 def add_formation():
     form = FormationForm()
     if form.validate_on_submit():
-        # Find the highest existing formation ID and add 1
-        highest_id = db.session.query(db.func.max(Formation.id)).scalar() or 0
-        next_id = highest_id + 1
 
         formation = Formation(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             type=form.type.data,
             description=form.description.data,
@@ -446,7 +438,7 @@ def not_found_error(error):
             'success': False,
             'message': 'Resource not found'
         }), 404
-    return render_template('404.html'), 404
+    return render_template('error.html', error_message='Page not found.'), 404
 
 @bp.errorhandler(500)
 def internal_error(error):
@@ -456,7 +448,7 @@ def internal_error(error):
             'success': False,
             'message': 'Internal server error'
         }), 500
-    return render_template('500.html'), 500
+    return render_template('error.html', error_message='Something went wrong. Please try again.'), 500
 
 @bp.route('/formations/edit/<int:formation_id>', methods=['GET', 'POST'])
 @login_required
@@ -613,12 +605,8 @@ def manage_assignments(play_id):
             existing.instructions = form.instructions.data
             flash('Position assignment updated', 'success')
         else:
-            # Find the highest existing assignment ID and add 1
-            highest_id = db.session.query(db.func.max(PlayAssignment.id)).scalar() or 0
-            next_id = highest_id + 1
 
             assignment = PlayAssignment(
-                id=next_id,  # Explicitly set the ID
                 play_id=play.id,
                 position_id=form.position_id.data,
                 instructions=form.instructions.data,

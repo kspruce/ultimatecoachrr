@@ -20,7 +20,6 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 
 from flask import current_app
-from sqlalchemy import func
 
 from app import db
 from app.models.drill import SavedDrill, DrillDiagram
@@ -69,22 +68,6 @@ class ImportSummary:
             out.append(f"{kind}: {c['created']} created, {c['updated']} updated, "
                        f"{c['unchanged']} unchanged")
         return '\n'.join(out)
-
-
-class _IdAllocator:
-    """The app assigns ids as max(id)+1 (see add_session/add_drill in
-    routes/session.py) because the Postgres sequences are not trusted after
-    the data move. Do the same here, handing out ids without flushing."""
-
-    def __init__(self):
-        self._next = {}
-
-    def __call__(self, model):
-        if model not in self._next:
-            self._next[model] = (db.session.query(func.max(model.id)).scalar() or 0) + 1
-        value = self._next[model]
-        self._next[model] += 1
-        return value
 
 
 # --------------------------------------------------------------------------
@@ -399,7 +382,7 @@ def _diagram_url(endpoint, diagram, digest, ext):
                                     'filename': f'{digest[:16]}.{ext}'})
 
 
-def _sync_diagrams(drill, wanted, team_org_id, next_id):
+def _sync_diagrams(drill, wanted, team_org_id):
     def key(order, image_hash, svg_hash, caption, step_label, source):
         return (order, image_hash, svg_hash, caption, step_label, source)
 
@@ -414,7 +397,6 @@ def _sync_diagrams(drill, wanted, team_org_id, next_id):
         drill.diagrams.remove(old)  # delete-orphan cascade removes the row
     for w in wanted:
         diagram = DrillDiagram(
-            id=next_id(DrillDiagram),
             order=w['order'],
             caption=w['caption'],
             step_label=w['step_label'],
@@ -426,13 +408,15 @@ def _sync_diagrams(drill, wanted, team_org_id, next_id):
             svg_hash=w['svg_hash'],
             team_organization_id=team_org_id,
         )
-        ext = w['image_mime'].split('/')[1].replace('jpeg', 'jpg')
-        diagram.image_url = _diagram_url('session.drill_diagram_image', diagram,
-                                         w['image_hash'], ext)
-        if w['svg_text']:
-            diagram.svg_url = _diagram_url('session.drill_diagram_svg', diagram,
-                                           w['svg_hash'], 'svg')
         drill.diagrams.append(diagram)
+    db.session.flush()  # assigns the ids the image URLs contain
+    for diagram in drill.diagrams:
+        ext = diagram.image_mime.split('/')[1].replace('jpeg', 'jpg')
+        diagram.image_url = _diagram_url('session.drill_diagram_image', diagram,
+                                         diagram.image_hash, ext)
+        if diagram.svg_data:
+            diagram.svg_url = _diagram_url('session.drill_diagram_svg', diagram,
+                                           diagram.svg_hash, 'svg')
     return True
 
 
@@ -441,7 +425,7 @@ def _component_key(c):
             c.component_type, c.focus_area, c.notes, c.drill_id)
 
 
-def _sync_components(plan, wanted, drill_ids, team_org_id, next_id):
+def _sync_components(plan, wanted, drill_ids, team_org_id):
     target = [(w['order'], w['title'], w['description'], w['coach_cue'], w['duration_minutes'],
                w['component_type'], w['focus_area'], w['notes'],
                drill_ids.get(w['drill_external_id']))
@@ -463,7 +447,6 @@ def _sync_components(plan, wanted, drill_ids, team_org_id, next_id):
 
     for w in wanted:
         db.session.add(SessionComponent(
-            id=next_id(SessionComponent),
             session_id=plan.id,
             drill_id=drill_ids.get(w['drill_external_id']),
             title=w['title'],
@@ -488,7 +471,6 @@ def import_season(data, images_dir, team_org_id, dry_run=False):
 
     drills, sessions = _prepare(data, images_dir, team_org_id)
     summary = ImportSummary(dry_run=dry_run)
-    next_id = _IdAllocator()
 
     try:
         drill_ids = {}
@@ -498,7 +480,7 @@ def import_season(data, images_dir, team_org_id, dry_run=False):
                                                external_id=values['external_id']).first()
             kind = 'card' if values['is_standard_card'] else 'drill'
             if drill is None:
-                drill = SavedDrill(id=next_id(SavedDrill), team_organization_id=team_org_id,
+                drill = SavedDrill(team_organization_id=team_org_id,
                                    is_public=False)
                 _apply(drill, values)
                 db.session.add(drill)
@@ -509,7 +491,7 @@ def import_season(data, images_dir, team_org_id, dry_run=False):
             drill_ids[values['external_id']] = drill.id
 
             had_diagrams = bool(drill.diagrams)
-            if _sync_diagrams(drill, item['diagrams'], team_org_id, next_id):
+            if _sync_diagrams(drill, item['diagrams'], team_org_id):
                 summary.record('diagrams', 'updated' if had_diagrams else 'created',
                                f"{values['external_id']} ({len(item['diagrams'])})")
             elif item['diagrams']:
@@ -529,7 +511,7 @@ def import_season(data, images_dir, team_org_id, dry_run=False):
             plan = SessionPlan.query.filter_by(team_organization_id=team_org_id,
                                                external_id=values['external_id']).first()
             if plan is None:
-                plan = SessionPlan(id=next_id(SessionPlan), team_organization_id=team_org_id)
+                plan = SessionPlan(team_organization_id=team_org_id)
                 _apply(plan, values)
                 db.session.add(plan)
                 db.session.flush()
@@ -537,7 +519,7 @@ def import_season(data, images_dir, team_org_id, dry_run=False):
             else:
                 status = 'updated' if _apply(plan, values) else 'unchanged'
 
-            if _sync_components(plan, item['components'], drill_ids, team_org_id, next_id):
+            if _sync_components(plan, item['components'], drill_ids, team_org_id):
                 summary.record('components', 'updated' if status != 'created' else 'created',
                                f"{values['external_id']} ({len(item['components'])})")
             else:

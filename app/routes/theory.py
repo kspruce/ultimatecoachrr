@@ -1,14 +1,10 @@
 # app/routes/theory.py
-from flask import current_app, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import current_app, Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
-from app.forms.theory import TheorySectionForm, TheoryTopicForm, TheoryVideoForm
-from app.utils.utils import save_uploaded_file
-import os
-from werkzeug.utils import secure_filename
-from datetime import datetime
-from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.models.theory import TheorySection, TheoryTopic
+from app.forms.theory import TheorySectionForm, TheoryTopicForm
+from app.utils.utils import coach_required
 from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('theory', __name__, url_prefix='/theory')
@@ -80,12 +76,8 @@ def topic(topic_id):
 def add_section():
     form = TheorySectionForm()
     if form.validate_on_submit():
-        # Find the highest existing section ID and add 1
-        highest_id = db.session.query(db.func.max(TheorySection.id)).scalar() or 0
-        next_id = highest_id + 1
         
         section = TheorySection(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             description=form.description.data,
             order=form.order.data,
@@ -172,12 +164,8 @@ def add_topic():
             flash('Invalid section selected.', 'danger')
             return render_template('theory/topic_form.html', form=form, title='Add Topic')
         
-        # Find the highest existing topic ID and add 1
-        highest_id = db.session.query(db.func.max(TheoryTopic.id)).scalar() or 0
-        next_id = highest_id + 1
         
         topic = TheoryTopic(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             content=form.content.data,
             section_id=form.section_id.data,
@@ -266,49 +254,13 @@ def delete_topic(topic_id):
     
     return redirect(url_for('theory.section', slug=section_slug))
 
-# Video Management
-@bp.route('/add_video/<int:topic_id>', methods=['GET', 'POST'])
-@login_required
-@coach_required
-def add_video(topic_id):
-    topic = TheoryTopic.query.filter_by(
-        id=topic_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
-    form = TheoryVideoForm()
-    
-    if form.validate_on_submit():
-        # Find the highest existing video ID and add 1
-        highest_id = db.session.query(db.func.max(TheoryVideo.id)).scalar() or 0
-        next_id = highest_id + 1
-        
-        video = TheoryVideo(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
-            topic_id=topic_id,
-            title=form.title.data,
-            url=form.url.data,
-            description=form.description.data,
-            order=form.order.data,
-            team_organization_id=get_current_team_id()  # Add team organization ID
-        )
-        db.session.add(video)
-        try:
-            db.session.commit()
-            flash(f'Video "{video.title}" has been added!', 'success')
-            return redirect(url_for('theory.topic', topic_id=topic_id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error adding video: {str(e)}', 'danger')
-    
-    return render_template('theory/video_form.html', form=form, topic=topic, title='Add Video')
 
 # Error Handlers
 @bp.errorhandler(404)
 def not_found_error(error):
-    return render_template('404.html'), 404
+    return render_template('error.html', error_message='Page not found.'), 404
 
 @bp.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
-    return render_template('500.html'), 500
+    return render_template('error.html', error_message='Something went wrong. Please try again.'), 500

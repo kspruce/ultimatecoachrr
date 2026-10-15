@@ -1218,16 +1218,16 @@ def shared_clip_view(token):
     try:
         data = s.loads(token)
     except BadSignature:
-        return render_template('errors/share_invalid.html'), 400
+        return render_template('error.html', error_message='This share link is not valid.'), 400
 
     # Check expiry
     if int(time.time()) > int(data.get('exp', 0)):
-        return render_template('errors/share_expired.html'), 410
+        return render_template('error.html', error_message='This share link has expired.'), 410
 
     clip_id = data.get('clip_id')
     team_id = data.get('team_id')
     if not clip_id or not team_id:
-        return render_template('errors/share_invalid.html'), 400
+        return render_template('error.html', error_message='This share link is not valid.'), 400
 
     # Enforce team scoping
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()

@@ -66,12 +66,8 @@ def add_report():
     ]
     
     if form.validate_on_submit():
-        # Find the highest existing report ID and add 1
-        highest_id = db.session.query(db.func.max(ScoutingReport.id)).scalar() or 0
-        next_id = highest_id + 1
         
         report = ScoutingReport(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             team_name=form.team_name.data,
             date=form.date.data,
             tournament_id=form.tournament_id.data if form.tournament_id.data > 0 else None,
@@ -229,12 +225,8 @@ def add_player(report_id):
     form = OpponentPlayerForm()
     
     if form.validate_on_submit():
-        # Find the highest existing player ID and add 1
-        highest_id = db.session.query(db.func.max(OpponentPlayer.id)).scalar() or 0
-        next_id = highest_id + 1
         
         player = OpponentPlayer(
-            id=next_id,  # Explicitly set the ID
             scouting_report_id=report.id,
             name=form.name.data,
             jersey_number=form.jersey_number.data,
@@ -349,12 +341,8 @@ def add_clip(report_id):
         # Create standardized YouTube link
         standard_link = f'https://www.youtube.com/watch?v={video_id}'
         
-        # Find the highest existing clip ID and add 1
-        highest_id = db.session.query(db.func.max(ScoutingClip.id)).scalar() or 0
-        next_id = highest_id + 1
         
         clip = ScoutingClip(
-            id=next_id,  # Explicitly set the ID
             scouting_report_id=report.id,
             title=form.title.data,
             youtube_link=standard_link,

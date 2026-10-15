@@ -141,12 +141,8 @@ def add():
     form = GameForm(team_id=get_current_team_id())
     
     if form.validate_on_submit():
-        # Find the highest existing game ID and add 1
-        highest_id = db.session.query(db.func.max(Game.id)).scalar() or 0
-        next_id = highest_id + 1
         
         game = Game(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             opponent=form.opponent.data,
             our_score=form.our_score.data,
             their_score=form.their_score.data,
@@ -186,9 +182,7 @@ def add():
             ]
 
         for player_id in auto_player_ids:
-            next_gp_id = (db.session.query(db.func.max(GamePlayer.id)).scalar() or 0) + 1
             db.session.add(GamePlayer(
-                id=next_gp_id,
                 game_id=game.id,
                 player_id=player_id,
                 team_organization_id=team_id
@@ -198,12 +192,8 @@ def add():
         if form.players_present.data:
             point = Point.query.filter_by(game_id=game.id).first()
             if not point:
-                # Find the highest existing point ID and add 1
-                highest_point_id = db.session.query(db.func.max(Point.id)).scalar() or 0
-                next_point_id = highest_point_id + 1
                 
                 point = Point(
-                    id=next_point_id,  # Explicitly set the ID
                     game_id=game.id,
                     point_number=1,
                     our_line_type='O-Line',
@@ -219,12 +209,8 @@ def add():
                 db.session.flush()
 
             for player_id in form.players_present.data:
-                # Find the highest existing lineup ID and add 1
-                highest_lineup_id = db.session.query(db.func.max(LineUp.id)).scalar() or 0
-                next_lineup_id = highest_lineup_id + 1
                 
                 lineup = LineUp(
-                    id=next_lineup_id,  # Explicitly set the ID
                     player_id=player_id, 
                     point_id=point.id, 
                     line_type='O-Line',
@@ -392,12 +378,8 @@ def update_players(game_id):
     
     # Add new GamePlayer records
     for player_id in player_ids:
-        # Find the highest existing GamePlayer ID and add 1
-        highest_id = db.session.query(db.func.max(GamePlayer.id)).scalar() or 0
-        next_id = highest_id + 1
         
         game_player = GamePlayer(
-            id=next_id,  # Explicitly set the ID
             game_id=game_id,
             player_id=player_id,
             team_organization_id=get_current_team_id()  # Add team organization ID
@@ -424,12 +406,8 @@ def add_multiple():
         games_count = len(games_data.get('opponent[]', []))
         
         for i in range(games_count):
-            # Find the highest existing game ID and add 1
-            highest_id = db.session.query(db.func.max(Game.id)).scalar() or 0
-            next_id = highest_id + 1
             
             game = Game(
-                id=next_id,  # Explicitly set the ID
                 opponent=games_data['opponent[]'][i],
                 our_score=int(games_data['our_score[]'][i]),
                 their_score=int(games_data['their_score[]'][i]),

@@ -76,12 +76,8 @@ def detail(tournament_id):
 def add():
     form = TournamentForm()
     if form.validate_on_submit():
-        # Find the highest existing tournament ID and add 1
-        highest_id = db.session.query(db.func.max(Tournament.id)).scalar() or 0
-        next_id = highest_id + 1
         
         tournament = Tournament(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             start_date=form.start_date.data,
             end_date=form.end_date.data,
@@ -251,12 +247,8 @@ def rsvp(tournament_id):
                 existing_rsvp.status = status
                 existing_rsvp.notes = notes
             else:
-                # Find the highest existing RSVP ID and add 1
-                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
-                next_id = highest_id + 1
                 
                 new_rsvp = TournamentRSVP(
-                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player.id,
                     status=status,
@@ -278,12 +270,8 @@ def rsvp(tournament_id):
                 existing_rsvp.status = form.status.data
                 existing_rsvp.notes = form.notes.data
             else:
-                # Find the highest existing RSVP ID and add 1
-                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
-                next_id = highest_id + 1
                 
                 new_rsvp = TournamentRSVP(
-                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player.id,
                     status=form.status.data,
@@ -393,13 +381,9 @@ def update_selections(tournament_id):
         for player_id in selected_player_ids:
             player_id = int(player_id)
             if player_id not in rsvp_player_ids:
-                # Find the highest existing RSVP ID and add 1
-                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
-                next_id = highest_id + 1
                 
                 # Create a new RSVP with admin selection
                 new_rsvp = TournamentRSVP(
-                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player_id,
                     status='attending',  # Default status

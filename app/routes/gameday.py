@@ -1,3 +1,4 @@
+from werkzeug.exceptions import HTTPException
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required
 from sqlalchemy import func
@@ -632,7 +633,10 @@ def delete_line_template(template_id):
 
 @bp.errorhandler(Exception)
 def handle_error(e):
+    if isinstance(e, HTTPException):
+        return e  # 404s, 403s etc. keep their status
     db.session.rollback()
+    current_app.logger.exception('Unhandled error in gameday')
     return jsonify({
         'success': False,
         'error': str(e)
