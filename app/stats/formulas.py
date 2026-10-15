@@ -1,6 +1,4 @@
 """Pure stat formulas: no database access."""
-from app.models.point import Point, LineUp
-from app.utils.team_filter import get_current_team_id
 
 
 
@@ -15,88 +13,56 @@ PER_WEIGHTS = {
 
 TURNOVER_EVENTS = {'throwaway', 'drop', 'stall'}
 
-def calculate_unadjusted_per(stats):
-    """Calculate raw unadjusted PER without team average adjustments"""
-    if stats['points_played'] == 0:
-        return 0
-    
-    # Define weights
-    WEIGHTS = PER_WEIGHTS
-    
-    # Box score component calculations
-    goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
-    assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
-    hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
-    turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
-    blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
-    stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
-    callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
-    
-    box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
-    
-    # Passing component calculations
-    completion_factor = (stats['completion_rate']/100) ** 3.0
-    catch_factor = (stats['catch_rate']/100) ** 3.0
-    completions_component = (stats['completions'] ** 0.75) * completion_factor
-    catches_component = (stats['catches'] ** 0.75) * catch_factor
-    passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
-    
-    # Calculate raw unadjusted PER (without plus-minus component)
-    raw_uper = (1 / stats['points_played']) * (box_component + passing_component)
-    
-    return raw_uper
+def _box_and_passing(stats):
+    """The event-count part of PER: box score (goals, assists, blocks,
+    turnovers...) plus passing volume weighted by completion/catch rate."""
+    w = PER_WEIGHTS
+    box = (w['scoring'] * stats['goals'] ** 0.75
+           + w['assist'] * stats['assists'] ** 0.75
+           + w['assist'] * 0.5 * stats['hockey_assists'] ** 0.75
+           + w['turnover'] * (stats['throwaways'] + stats['drops']) ** 0.75
+           + w['defense'] * stats['blocks'] ** 0.75
+           - w['defense'] * stats.get('stalls', 0) ** 0.75
+           + 1.0 * stats.get('callahans', 0) ** 0.75)
+    completion_factor = (stats['completion_rate'] / 100) ** 3.0
+    catch_factor = (stats['catch_rate'] / 100) ** 3.0
+    passing = w['throw'] * (stats['completions'] ** 0.75 * completion_factor
+                            + stats['catches'] ** 0.75 * catch_factor)
+    return box + passing
 
-def calculate_per_from_stats(stats, team_avgs):
-    """Calculate PER using pre-loaded stats without additional database queries"""
+
+def calculate_unadjusted_per(stats):
+    """Raw PER per point, without the plus-minus term or league scaling.
+    Used to work out the team average that PER is scaled against."""
     if stats['points_played'] == 0:
         return 0
-    
-    # Define weights
-    WEIGHTS = PER_WEIGHTS
-    
-    # Box score component calculations
-    goals_component = WEIGHTS['scoring'] * (stats['goals'] ** 0.75)
-    assists_component = WEIGHTS['assist'] * (stats['assists'] ** 0.75)
-    hockey_assists_component = WEIGHTS['assist'] * 0.5 * (stats['hockey_assists'] ** 0.75)
-    turnovers_component = WEIGHTS['turnover'] * ((stats['throwaways'] + stats['drops']) ** 0.75)
-    blocks_component = WEIGHTS['defense'] * (stats['blocks'] ** 0.75)
-    stalls_component = WEIGHTS['defense'] * (-1) * (stats.get('stalls', 0) ** 0.75)
-    callahans_component = 1.0 * (stats.get('callahans', 0) ** 0.75)
-    
-    box_component = goals_component + assists_component + hockey_assists_component + turnovers_component + blocks_component + stalls_component + callahans_component
-    
-    # Passing component calculations
-    completion_factor = (stats['completion_rate']/100) ** 3.0
-    catch_factor = (stats['catch_rate']/100) ** 3.0
-    completions_component = (stats['completions'] ** 0.75) * completion_factor
-    catches_component = (stats['catches'] ** 0.75) * catch_factor
-    passing_component = WEIGHTS['throw'] * (completions_component + catches_component)
-    
-    # Get number of points played in each line
+    return (1 / stats['points_played']) * _box_and_passing(stats)
+
+def calculate_per(stats, team_avgs):
+    """Player Efficiency Rating, scaled so the team average is 15.
+
+    PER = (box score + passing + plus-minus vs team average) per point,
+    multiplied by 15 / team average unadjusted PER. team_avgs comes from
+    app.stats.team.calculate_team_averages for the same set of games."""
+    if stats['points_played'] == 0:
+        return 0
+
     o_line_points = stats.get('o_line_points_played', 0)
     d_line_points = stats.get('d_line_points_played', 0)
     total_points = o_line_points + d_line_points
-    
-    # Calculate weighted plus-minus component
-    plus_minus_component = 0
+    plus_minus = 0
     if total_points > 0:
-        o_line_weight = o_line_points / total_points if o_line_points > 0 else 0
-        d_line_weight = d_line_points / total_points if d_line_points > 0 else 0
-        
-        o_line_component = o_line_weight * (stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
-        d_line_component = d_line_weight * (stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
-        
-        plus_minus_component = WEIGHTS['plus_minus'] * (o_line_component + d_line_component)
-    
-    # Calculate raw unadjusted PER
-    raw_uper = (1 / stats['points_played']) * (box_component + passing_component + plus_minus_component)
-    
-    # Scale to league average of 15
+        o_part = (o_line_points / total_points) * (
+            stats.get('o_line_plus_minus_per_point', 0) - team_avgs.get('avg_o_line_plus_minus_per_point', 0))
+        d_part = (d_line_points / total_points) * (
+            stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
+        plus_minus = PER_WEIGHTS['plus_minus'] * (o_part + d_part)
+
+    raw = (1 / stats['points_played']) * (_box_and_passing(stats) + plus_minus)
     avg_uper = team_avgs.get('avg_uper', 1)
     if avg_uper <= 0:
         avg_uper = 1
-    
-    return raw_uper * (15 / avg_uper)
+    return raw * (15 / avg_uper)
 
 def calculate_impact_score(stats):
     """Calculate impact score for a player"""
@@ -157,53 +123,18 @@ def calculate_team_avg_stats(player_stats):
     
     return team_avg_stats
 
-def calculate_player_line_efficiency(player, is_offensive=True):
-    """Calculate a player's line efficiency based on points scored vs points played"""
-    # Query for lineups where this player participated
-    lineup_query = LineUp.query.join(Point).filter(
-        LineUp.player_id == player.id,
-        Point.our_line_type == ('O-line' if is_offensive else 'D-line'),
-        LineUp.team_organization_id == get_current_team_id(),
-        Point.team_organization_id == get_current_team_id()
-    )
-    
-    # Get all points where this player was in the lineup
-    lineups = lineup_query.all()
-    points_played = len(lineups)
-    
-    if points_played == 0:
-        return 0
-    
-    # Count points where we scored
-    points_scored = sum(1 for lineup in lineups if lineup.point.we_scored)
-    
-    # Calculate efficiency as scoring percentage
-    return points_scored / points_played
 
 def calculate_optimized_line_efficiency(players, player_stats, is_offensive=True):
-    """Calculate line efficiency with gender separation using preloaded stats"""
+    """Players ranked by line conversion (share of their O-line points we
+    held, or D-line points we broke), for the games player_stats covers.
+    Returns [(player, fraction 0-1), ...], best first."""
+    line = 'o_line' if is_offensive else 'd_line'
     player_efficiency = {}
-    
     for player in players:
-        if player.id not in player_stats:
-            continue
-            
-        stats = player_stats[player.id]
-        
-        # Get the appropriate points played count
-        if is_offensive:
-            points_played = stats.get('o_line_points_played', 0)
-            # We need to calculate how many O-line points with this player resulted in scoring
-            # This requires additional data that might not be in the player_stats
-        else:
-            points_played = stats.get('d_line_points_played', 0)
-            # Similar for D-line points
-        
-        if points_played > 0:
-            # We need to query the database to get the actual points data
-            # This is a more complex calculation that requires point-level data
-            player_efficiency[player] = calculate_player_line_efficiency(player, is_offensive)
-    
+        stats = player_stats.get(player.id)
+        if stats and stats.get(f'{line}_points_played', 0) > 0:
+            player_efficiency[player] = (stats[f'{line}_points_scored']
+                                         / stats[f'{line}_points_played'])
     return sorted(player_efficiency.items(), key=lambda x: x[1], reverse=True)
 
 # --- Core Statistical Calculation Functions ---

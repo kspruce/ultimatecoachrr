@@ -7,10 +7,12 @@ from app.models.tournament import Tournament
 from app.utils.team_filter import get_current_team_id
 
 from app.routes.stats import bp
-from app.stats.cache import calculate_per, get_cached_team_averages
+from app.stats.formulas import calculate_per
+from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_optimized_line_efficiency
 from app.stats.players import get_players_base_stats
 from app.stats.team import calculate_additional_team_metrics, calculate_performance_trends, calculate_possession_based_team_metrics, calculate_team_summary, get_previous_period_games
+from app.stats.loaders import preload_game_points
 
 
 @bp.route('/team')
@@ -42,11 +44,8 @@ def team_stats():
     
     games = games_query.order_by(Game.date).all()
     
-    # For each game, explicitly load points to handle dynamic relationship
-    for game in games:
-        # Force loading of points
-        if hasattr(game.points, 'all'):
-            _ = game.points.all()
+    # Load every game's points (and events) in one go for the calculations below
+    preload_game_points(games)
 
     
   
@@ -98,7 +97,7 @@ def team_stats():
         if player.id in player_stats_dict:
             stats = player_stats_dict[player.id]
             if stats['points_played'] > 0:
-                stats['per'] = calculate_per(player, games, team_avgs)
+                stats['per'] = calculate_per(stats, team_avgs)
                 player_stats.append({
                     'player': player,
                     'stats': stats

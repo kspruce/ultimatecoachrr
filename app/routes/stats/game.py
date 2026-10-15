@@ -7,11 +7,13 @@ from app.models.point import Point, LineUp
 import json
 from app.utils.team_filter import get_current_team_id
 
-from app.routes.stats import bp, is_admin, is_coach
-from app.stats.cache import calculate_per, get_cached_team_averages
+from app.routes.stats import bp
+from app.stats.formulas import calculate_per
+from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_impact_score
 from app.stats.players import get_players_base_stats
 from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, generate_player_connections, process_heatmap_data
+from app.stats.loaders import game_points
 
 
 @bp.route('/game/<int:game_id>')
@@ -52,7 +54,7 @@ def game_stats(game_id):
     for player in players:
         if player.id in player_stats_dict:
             stats = player_stats_dict[player.id]
-            stats['per'] = calculate_per(player, [game], team_avgs)
+            stats['per'] = calculate_per(stats, team_avgs)
             player_stats.append({
                 'player': player,
                 'stats': stats
@@ -63,7 +65,7 @@ def game_stats(game_id):
     
     # Generate visualization data — point_ids already scopes to this game,
     # so team_name filtering is redundant and Player.team doesn't exist anyway.
-    point_ids = [p.id for p in game.points]
+    point_ids = [p.id for p in game_points(game)]
     heatmap_data = process_heatmap_data(point_ids=point_ids)
     connection_data = generate_player_connections(min_connections=2, point_ids=point_ids)
     
@@ -78,6 +80,4 @@ def game_stats(game_id):
         heatmap_data=json.dumps(heatmap_data),
         connections=json.dumps(connection_data),
         calculate_impact_score=calculate_impact_score,
-        is_admin=is_admin,
-        is_coach=is_coach
     )

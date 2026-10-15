@@ -1,17 +1,14 @@
 from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
-from app import db
 from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
-from app.models.point import Point, LineUp
-from app.models.event import Event
 from app.models.cutting_skill import CuttingSkill
 from app.utils.team_filter import get_current_team_id
 
-from app.routes.stats import bp, is_admin, is_coach
+from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import calculate_per_from_stats
+from app.stats.formulas import calculate_per
 from app.stats.history import get_player_game_history
 from app.stats.players import calculate_cutting_stats, calculate_most_common_throwaway_direction, calculate_most_common_throwaway_location, get_players_base_stats, get_point_ids_from_games
 from app.stats.team import calculate_additional_team_metrics, calculate_possession_based_team_metrics, calculate_team_summary
@@ -26,7 +23,7 @@ def player_stats(player_id):
     ).first_or_404()
     
     # Check if user has permission to view this player's stats
-    if not (is_admin(current_user) or is_coach(current_user) or (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player.id)):
+    if not (current_user.is_coach or (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player.id)):
         flash("You don't have permission to view this player's statistics", "danger")
         return redirect(url_for('stats_dashboard.index'))
     
@@ -64,10 +61,7 @@ def player_stats(player_id):
     team_avgs = get_cached_team_averages(games)
     
     if stats['points_played'] > 0:
-        stats['per'] = calculate_per_from_stats(stats, team_avgs)
-    
-    # Add hucks to player stats
-    stats['hucks'] = sum(1 for t in stats['throw_vectors'] if t['distance'] > 20)
+        stats['per'] = calculate_per(stats, team_avgs)
     
     # Get point IDs for filtering if games are selected
     point_ids = get_point_ids_from_games(games)
@@ -118,46 +112,7 @@ def player_stats(player_id):
             stats['blocks_per_point'] = 0
             stats['turnovers_forced_per_point'] = 0
             
-        # O-Line Conversion Rate Calculation
-        if stats['o_line_points_played'] > 0:
-            o_line_points_player_was_in = db.session.query(Point).join(LineUp).filter(
-                LineUp.player_id == player.id, 
-                Point.our_line_type == 'O-line',
-                Point.id.in_(point_ids)
-            )
-            o_line_scores = o_line_points_player_was_in.filter(Point.we_scored == True).count()
-            stats['o_line_conversion_rate'] = (o_line_scores / stats['o_line_points_played']) * 100
-        else:
-            stats['o_line_conversion_rate'] = 0
-
-        # --- OPTIMIZED D-LINE CONVERSION CALCULATION ---
-        # Get the count of D-line points the player participated in
-        d_line_points_query = db.session.query(Point).join(
-            Event, Point.id == Event.point_id
-        ).filter(
-            Point.our_line_type == 'D-line',
-            Event.player_id == player.id,
-            Point.game_id.in_([g.id for g in games]),
-            Point.team_organization_id == get_current_team_id()
-        ).distinct(Point.id)
-        
-        # Count total points and scored points
-        d_line_points_played = 0
-        d_line_points_scored = 0
-        
-        for point in d_line_points_query:
-            d_line_points_played += 1
-            if point.we_scored:
-                d_line_points_scored += 1
-        
-        # Calculate D-line conversion rate
-        if d_line_points_played > 0:
-            stats['d_line_conversion_rate'] = (d_line_points_scored / d_line_points_played) * 100
-            # Log for debugging
-            current_app.logger.debug(f"DEBUG: Player {player.name} - D-line points played: {d_line_points_played}, scored: {d_line_points_scored}, rate: {stats['d_line_conversion_rate']}%")
-        else:
-            stats['d_line_conversion_rate'] = 0
-        
+        # o_line_conversion_rate / d_line_conversion_rate come from the player stats
         # This also serves as the Defensive Efficiency for the player
         stats['defensive_efficiency'] = stats['d_line_conversion_rate']
     else:

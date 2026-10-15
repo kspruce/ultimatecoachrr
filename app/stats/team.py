@@ -10,7 +10,8 @@ import json
 from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import TURNOVER_EVENTS, calculate_unadjusted_per, get_point_starting_possession, point_we_scored
-from app.stats.players import get_players_base_stats
+from app.stats.players import HUCK_DISTANCE, get_players_base_stats
+from app.stats.loaders import preload_game_points, game_points, game_line_points
 
 
 def calculate_team_averages(games=None):
@@ -68,7 +69,7 @@ def calculate_game_stats(game):
     Calculate per-game statistics using the SAME possession logic as team stats.
     """
 
-    all_points = game.points.all() if hasattr(game.points, 'all') else game.points
+    all_points = game_points(game)
     all_points = sorted(all_points, key=lambda p: p.point_number)
 
 
@@ -194,17 +195,8 @@ def calculate_performance_trends(games):
         }
     
     # Filter out games with no points
-    games_with_points = []
-    for game in games:
-        try:
-            # If game.points is a query object
-            points = game.points.all()
-            if len(points) > 0:
-                games_with_points.append(game)
-        except AttributeError:
-            # If game.points is already a list
-            if len(game.points) > 0:
-                games_with_points.append(game)
+    preload_game_points(games)
+    games_with_points = [game for game in games if game_points(game)]
     
     # If no games with points, return empty data
     if not games_with_points:
@@ -242,36 +234,21 @@ def calculate_performance_trends(games):
 
         
         # Calculate O-line efficiency - handle both query objects and lists
-        try:
-            # If game.o_line_points is a query object
-            o_points = game.o_line_points.all()
-        except AttributeError:
-            # If game.o_line_points is already a list
-            o_points = game.o_line_points
+        o_points = game_line_points(game, 'O-line')
         
         o_points_count = len(o_points)
         o_conversions = sum(1 for p in o_points if point_we_scored(p))
         o_line_efficiency.append((o_conversions / o_points_count * 100) if o_points_count > 0 else 0)
         
         # Calculate D-line efficiency - handle both query objects and lists
-        try:
-            # If game.d_line_points is a query object
-            d_points = game.d_line_points.all()
-        except AttributeError:
-            # If game.d_line_points is already a list
-            d_points = game.d_line_points
+        d_points = game_line_points(game, 'D-line')
         
         d_points_count = len(d_points)
         d_conversions = sum(1 for p in d_points if point_we_scored(p))
         d_line_efficiency.append((d_conversions / d_points_count * 100) if d_points_count > 0 else 0)
         
         # Calculate break percentage - handle both query objects and lists
-        try:
-            # If game.points is a query object
-            all_points = game.points.all()
-        except AttributeError:
-            # If game.points is already a list
-            all_points = game.points
+        all_points = game_points(game)
         
         total_points = len(all_points)
         breaks = sum(1 for p in all_points if p.is_break)
@@ -303,7 +280,7 @@ def calculate_possession_based_team_metrics(games):
     # Collect all points
     points = []
     for g in games:
-        pts = g.points.all() if hasattr(g.points, 'all') else g.points
+        pts = game_points(g)
         points.extend(list(pts))
 
     if not points:
@@ -423,25 +400,22 @@ def calculate_team_summary(games):
     # Safely count total points
     for game in games:
         try:
-            if hasattr(game.points, 'all'):
-                points = game.points.all()
-            else:
-                points = game.points
+            points = game_points(game)
             summary['total_points'] += len(points)
         except Exception as e:
             current_app.logger.error(f"Error counting points for game {game.id}: {str(e)}")
 
 
     for game in games:
-        o_points = game.o_line_points
-        d_points = game.d_line_points
+        o_points = game_line_points(game, 'O-line')
+        d_points = game_line_points(game, 'D-line')
         
         summary['o_line_points'] += len(o_points)
         summary['o_line_conversions'] += sum(1 for p in o_points if point_we_scored(p))
         summary['d_line_points'] += len(d_points)
         summary['d_line_conversions'] += sum(1 for p in d_points if point_we_scored(p))
-        summary['breaks'] += sum(1 for p in game.points if p.is_break)
-        summary['holds'] += sum(1 for p in game.points if p.is_hold)
+        summary['breaks'] += sum(1 for p in game_points(game) if p.is_break)
+        summary['holds'] += sum(1 for p in game_points(game) if p.is_hold)
 
     summary['win_percentage'] = (
         (summary['wins'] / summary['games_played'] * 100) 
@@ -587,7 +561,7 @@ def calculate_additional_team_metrics(games):
     total_points = 0
     for game in games:
         try:
-            points = game.points.all() if hasattr(game.points, 'all') else game.points
+            points = game_points(game)
             total_points += len(points)
         except Exception as e:
             current_app.logger.error(f"Error counting points for game {game.id}: {str(e)}")
@@ -599,7 +573,7 @@ def calculate_additional_team_metrics(games):
     point_ids = []
     for game in games:
         try:
-            points = game.points.all() if hasattr(game.points, 'all') else game.points
+            points = game_points(game)
             point_ids.extend([p.id for p in points])
         except Exception as e:
             current_app.logger.error(f"Error getting points for game {game.id}: {str(e)}")
@@ -651,14 +625,14 @@ def calculate_additional_team_metrics(games):
     turnovers_forced = turnovers_forced_query.count() + blocks
 
     # Count hucks
-    hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > 20)
+    hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > HUCK_DISTANCE)
 
     # Calculate D-line totals once
     d_points_count = 0
     d_conversions = 0
 
     for game in games:
-        d_points = game.d_line_points.all() if hasattr(game.d_line_points, 'all') else game.d_line_points
+        d_points = game_line_points(game, 'D-line')
         d_points_count += len(d_points)
         d_conversions += sum(1 for p in d_points if point_we_scored(p))
 
@@ -672,7 +646,7 @@ def calculate_additional_team_metrics(games):
     o_points_count = 0
     for game in games:
         try:
-            o_points = game.o_line_points.all() if hasattr(game.o_line_points, 'all') else game.o_line_points
+            o_points = game_line_points(game, 'O-line')
             o_points_count += len(o_points)
         except Exception as e:
             current_app.logger.error(f"Error calculating o-line stats for game {game.id}: {str(e)}")
@@ -743,7 +717,7 @@ def get_previous_period_games(season, tournament_id):
     # Default: return empty list if no previous period found
     return []
 
-def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, limit=None, point_ids=None):
+def process_heatmap_data(player_id=None, opposition_team=None, limit=None, point_ids=None):
     """Process throw data for heatmap visualization with limit and point filtering"""
     heatmap_data = []
     
@@ -762,12 +736,11 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
     throw_query = Throw.query.filter_by(team_organization_id=get_current_team_id())
     if player_id:
         throw_query = throw_query.filter(Throw.thrower_id == player_id)
-    if team_name:
-        throw_query = throw_query.join(Throw.thrower).filter(Player.team == team_name)
     if point_ids:
         throw_query = throw_query.filter(Throw.point_id.in_(point_ids))
     if limit:
-        throw_query = throw_query.limit(limit)
+        # The most recent throws
+        throw_query = throw_query.order_by(Throw.id.desc()).limit(limit)
     for throw in throw_query.all():
         if throw.x_start is not None and throw.y_start is not None:
             heatmap_data.append({
@@ -786,36 +759,29 @@ def process_heatmap_data(team_name=None, player_id=None, opposition_team=None, l
         )
         if player_id:
             event_query = event_query.filter_by(player_id=player_id)
-        if team_name:
-            event_query = event_query.join(Event.player).filter(Player.team == team_name)
         if point_ids:
             event_query = event_query.filter(Event.point_id.in_(point_ids))
         if limit:
-            event_query = event_query.limit(limit)
+            event_query = event_query.order_by(Event.id.desc()).limit(limit)
         
         add_events_to_heatmap(event_query, event_type)
 
     return heatmap_data
 
-def generate_player_connections(team_name=None, opposition_team=None, min_connections=1, point_ids=None):
+def generate_player_connections(opposition_team=None, min_connections=1, point_ids=None):
     """Generate player connection data using Throws model with minimum connection threshold"""
     query = Throw.query.filter(
         Throw.receiver_id.isnot(None),
         Throw.team_organization_id == get_current_team_id()
     )
     
-    if team_name:
-        query = query.join(Throw.thrower).filter(Player.team == team_name)
     if opposition_team:
         query = query.filter(Throw.opposition_team == opposition_team)
     if point_ids:
         query = query.filter(Throw.point_id.in_(point_ids))
     
     throws = query.all()
-    
-    # Rest of the function remains the same...
 
-    
     # Track unique players and their connections
     players = set()
     connections = {}
@@ -844,12 +810,13 @@ def generate_player_connections(team_name=None, opposition_team=None, min_connec
         player_ids_in_connections.add(conn['source'])
         player_ids_in_connections.add(conn['target'])
     
+    players_by_id = {p.id: p for p in Player.query.filter(
+        Player.id.in_(player_ids_in_connections),
+        Player.team_organization_id == get_current_team_id()
+    )} if player_ids_in_connections else {}
     nodes = []
     for player_id in player_ids_in_connections:
-        player = Player.query.filter_by(
-            id=player_id,
-            team_organization_id=get_current_team_id()
-        ).first()
+        player = players_by_id.get(player_id)
         if player:
             nodes.append({
                 'id': player.id,

@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session, current_app
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, request, jsonify, current_app
+from flask_login import login_required
 from sqlalchemy import func
 from app import db
 from app.models.game import Game
@@ -8,7 +8,7 @@ from app.models.game_player import GamePlayer
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
 from app.models.team_organization import TeamOrganization  # Add this import
-from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.utils import stat_taker_required
 
 bp = Blueprint('gameday', __name__, url_prefix='/gameday')
 
@@ -629,67 +629,6 @@ def delete_line_template(template_id):
             'error': str(e)
         })
 
-@bp.route('/admin/fix_missing_team_ids', methods=['GET'])
-@login_required
-@admin_required
-def fix_missing_team_ids():
-    """
-    Administrative route to fix any records that might be missing team_organization_id
-    This is useful during the transition to multi-team support
-    """
-    try:
-        # Only allow this operation for admin users
-        if not current_user.is_admin:
-            return jsonify({'error': 'Unauthorized'}), 403
-            
-        # Get the current team ID
-        team_id = get_current_team_id()
-        if not team_id:
-            return jsonify({'error': 'No team ID available'}), 400
-            
-        # Fix GameDayEvent records
-        events_fixed = GameDayEvent.query.filter(GameDayEvent.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix GameDayPlayerStats records
-        stats_fixed = GameDayPlayerStats.query.filter(GameDayPlayerStats.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix LineTemplate records
-        templates_fixed = LineTemplate.query.filter(LineTemplate.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix LineTemplatePlayer records
-        template_players_fixed = LineTemplatePlayer.query.filter(LineTemplatePlayer.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Fixed missing team IDs',
-            'stats': {
-                'events_fixed': events_fixed,
-                'stats_fixed': stats_fixed,
-                'templates_fixed': templates_fixed,
-                'template_players_fixed': template_players_fixed
-            }
-        })
-        
-    except Exception as e:
-        import traceback
-        current_app.logger.error("Error in fix_missing_team_ids:", str(e))
-        current_app.logger.error(traceback.format_exc())
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.errorhandler(Exception)
 def handle_error(e):
@@ -1066,7 +1005,6 @@ def team_stats():
         team_totals=team_totals
     )
 
-from sqlalchemy import text  # Add this import at the top of your file
 from app.utils.team_filter import get_current_team_id
 
 
@@ -1082,58 +1020,3 @@ def get_csrf_token():
     from flask_wtf.csrf import generate_csrf
     return jsonify({'csrf_token': generate_csrf()})
 
-@bp.route('/admin/reset_all_sequences', methods=['GET'])
-@login_required
-@admin_required
-def reset_all_sequences():
-    """Reset ID sequences for all tables that might have issues"""
-    results = {}
-    
-    try:
-        # Get list of all tables in the database
-        table_list_query = text("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema='public' 
-            AND table_type='BASE TABLE'
-        """)
-        
-        tables = [row[0] for row in db.session.execute(table_list_query)]
-        
-        # For each table, check if it has an ID column and reset its sequence
-        for table in tables:
-            try:
-                # Check if table has an id column
-                has_id_query = text(f"""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='{table}' AND column_name='id'
-                """)
-                
-                has_id = db.session.execute(has_id_query).fetchone()
-                
-                if has_id:
-                    # Reset the sequence for this table
-                    reset_query = text(f"""
-                        SELECT setval(pg_get_serial_sequence('{table}', 'id'), 
-                                     (SELECT COALESCE(MAX(id), 1) FROM {table}))
-                    """)
-                    
-                    result = db.session.execute(reset_query)
-                    results[table] = result.scalar()
-            except Exception as table_error:
-                results[table] = f"Error: {str(table_error)}"
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'All sequences reset successfully',
-            'results': results
-        })
-    except Exception as e:
-        db.session.rollback()
-        import traceback
-        current_app.logger.error("Error resetting sequences:", str(e))
-        current_app.logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'error': str(e)}), 500

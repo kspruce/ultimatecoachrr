@@ -2,269 +2,16 @@
 from flask import current_app
 from app import db
 from app.models.player import Player
-from app.models.point import Point, LineUp
+from app.models.point import LineUp
 from app.models.event import Event
 from app.models.throws import Throw
-from app.models.clip import Clip
 import math
 from app.utils.team_filter import get_current_team_id
+from app.stats.formulas import point_we_scored
+from app.stats.loaders import preload_game_points, game_points
 
 
 
-def get_player_base_stats(player, games=None):
-    """Get comprehensive player statistics"""
-    current_app.logger.debug(f"Calculating stats for player {player.id}")
-    # Start with default values for ALL possible stats
-    stats = {
-        # Basic stats
-        'points_played': 0,
-        'games_played': 0,
-        'goals': 0,
-        'assists': 0,
-        'hockey_assists': 0,
-        'blocks': 0,
-        'catches': 0,
-        'throws': 0,
-        'completions': 0,
-        'throwaways': 0,
-        'drops': 0,
-        'turnovers': 0,
-        
-        # Calculated rates
-        'completion_rate': 0,
-        'catch_rate': 0,
-        
-        # O/D line stats
-        'o_line_points_played': 0,
-        'd_line_points_played': 0,
-        'o_line_plus_minus': 0,
-        'd_line_plus_minus': 0,
-        'o_line_plus_minus_per_point': 0,
-        'd_line_plus_minus_per_point': 0,
-        
-        # Throw statistics
-        'total_throw_distance': 0,
-        'avg_throw_distance': 0,
-        'throw_vectors': [], #store throw vectors
-        'break_throws': 0,
-        'break_throw_percentage': 0,
-        
-        # Efficiency metrics
-        'per': 0,
-        'plus_minus': 0,
-        
-        # Additional stats
-        'callahans': 0,
-        'stalls': 0,
-        'offensive_points_played': 0,
-        'defensive_points_played': 0,
-        'offensive_conversion_rate': 0,
-        'defensive_conversion_rate': 0,
-        
-        # Clip statistics
-        'clips': 0,
-        'highlight_plays': 0
-    }
-    
-    try:
-        # Get points played
-        lineup_query = LineUp.query.filter_by(
-            player_id=player.id,
-            team_organization_id=get_current_team_id()
-        )
-        if games:
-            if isinstance(games, list):
-                point_ids = [p.id for g in games for p in g.points]
-            else:
-                point_ids = [p.id for p in games.points]
-            lineup_query = lineup_query.filter(LineUp.point_id.in_(point_ids))
-        
-        points_played = lineup_query.all()
-        stats['points_played'] = len(points_played)
-        
-        if stats['points_played'] == 0:
-            return stats
-
-        # Get games played
-        if games:
-            stats['games_played'] = len(games) if isinstance(games, list) else 1
-        else:
-            stats['games_played'] = len(set(lineup.point.game_id for lineup in points_played))
-
-        # Get all throws for this player
-        throws_query = Throw.query.filter(
-            Throw.thrower_id == player.id,
-            Throw.team_organization_id == get_current_team_id()
-        )
-        if games:
-            throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
-
-        # Get unique throws by coordinates and timestamp
-        unique_throws = {}
-        for throw in throws_query.all():
-            # Create a key based on coordinates
-            key = (throw.x_start, throw.y_start, throw.x_end, throw.y_end)
-            if key not in unique_throws:
-                unique_throws[key] = throw
-
-        # Count different types of throws
-        stats['throws'] = len(unique_throws)
-        stats['completions'] = sum(1 for t in unique_throws.values() if t.is_completion)
-        stats['assists'] = sum(1 for t in unique_throws.values() if t.throw_type == 'assist')
-        stats['hockey_assists'] = sum(1 for t in unique_throws.values() if t.throw_type == 'hockey_assist')
-        stats['throwaways'] = sum(1 for t in unique_throws.values() if t.throw_type == 'throwaway')
-
-        # Calculate throw distances
-        total_distance = sum(t.calculate_distance() for t in unique_throws.values() if t.calculate_distance())
-        stats['total_throw_distance'] = total_distance
-        stats['avg_throw_distance'] = total_distance / stats['throws'] if stats['throws'] > 0 else 0
-
-        # Store throw vectors for visualization
-        stats['throw_vectors'] = [
-            {
-                'start_x': t.x_start,
-                'start_y': t.y_start,
-                'end_x': t.x_end,
-                'end_y': t.y_end,
-                'type': t.throw_type,
-                'distance': t.calculate_distance()
-            }
-            for t in unique_throws.values()
-        ]
-
-        # Get all events for this player
-        events_query = Event.query.filter_by(
-            player_id=player.id,
-            team_organization_id=get_current_team_id()
-        )
-        if games:
-            events_query = events_query.filter(Event.point_id.in_(point_ids))
-        
-        # Count each event type
-        for event in events_query.all():
-            if event.event_type == 'goal':
-                stats['goals'] += 1
-            elif event.event_type == 'block':
-                stats['blocks'] += 1
-            elif event.event_type == 'catch':
-                stats['catches'] += 1
-            elif event.event_type == 'drop':
-                stats['drops'] += 1
-
-        # Calculate derived stats
-        stats['turnovers'] = stats['throwaways'] + stats['drops']
-        
-        # Calculate rates
-        if stats['throws'] > 0:
-            stats['completion_rate'] = (stats['completions'] / stats['throws']) * 100
-        if stats['catches'] + stats['drops'] > 0:
-            stats['catch_rate'] = (stats['catches'] / (stats['catches'] + stats['drops'])) * 100
-
-        # Calculate plus/minus
-        stats['plus_minus'] = (
-            stats['goals'] + 
-            stats['assists'] + 
-            stats['blocks'] - 
-            stats['turnovers']
-        )
-
-        current_app.logger.debug(f"Stats retrieved for {player.name}:")
-        current_app.logger.debug(f"Throws: {stats['throws']}")
-        current_app.logger.debug(f"Total Distance: {stats['total_throw_distance']:.1f}m")
-        current_app.logger.debug(f"Avg Distance: {stats['avg_throw_distance']:.1f}m")
-        current_app.logger.debug(f"Goals: {stats['goals']}")
-        current_app.logger.debug(f"Assists: {stats['assists']}")
-        current_app.logger.debug(f"Blocks: {stats['blocks']}")
-        current_app.logger.debug(f"Turnovers: {stats['turnovers']}")
-        current_app.logger.debug(f"Plus/Minus: {stats['plus_minus']}")
-
-        # Calculate O-line and D-line stats
-        o_line_points = [p for p in points_played if p.point.our_line_type == 'O-line']
-        d_line_points = [p for p in points_played if p.point.our_line_type == 'D-line']
-        
-        stats['o_line_points_played'] = len(o_line_points)
-        stats['d_line_points_played'] = len(d_line_points)
-        
-        # Initialize plus/minus counters for each line
-        stats['o_line_plus_minus'] = 0
-        stats['d_line_plus_minus'] = 0
-        
-        # Get all events for this player
-        events_query = Event.query.filter_by(
-            player_id=player.id,
-            team_organization_id=get_current_team_id()
-        )
-        if games:
-            if isinstance(games, list):
-                point_ids = [p.id for g in games for p in g.points]
-            else:
-                point_ids = [p.id for p in games.points]
-            events_query = events_query.filter(Event.point_id.in_(point_ids))
-        
-        # Define positive and negative event types
-        positive_events = ['goal', 'assist', 'block']
-        negative_events = ['throwaway', 'drop', 'stall']
-        
-        # Process all events for this player
-        for event in events_query.all():
-            # Get the point for this event
-            point = Point.query.filter_by(
-                id=event.point_id,
-                team_organization_id=get_current_team_id()
-            ).first()
-            
-            # Skip if point is None
-            if not point:
-                continue
-                
-            # Determine if this is an O-line or D-line point
-            is_o_line = point.our_line_type == 'O-line'
-            
-            # Update plus/minus based on event type
-            if event.event_type in positive_events:
-                if is_o_line:
-                    stats['o_line_plus_minus'] += 1
-                else:
-                    stats['d_line_plus_minus'] += 1
-            elif event.event_type in negative_events:
-                if is_o_line:
-                    stats['o_line_plus_minus'] -= 1
-                else:
-                    stats['d_line_plus_minus'] -= 1
-        
-        # Calculate per point stats
-        if stats['o_line_points_played'] > 0:
-            stats['o_line_plus_minus_per_point'] = stats['o_line_plus_minus'] / stats['o_line_points_played']
-        if stats['d_line_points_played'] > 0:
-            stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['d_line_points_played']
-
-        # Get clips statistics using new relationship pattern
-        clips_query = player.clip_appearances.filter_by(
-            team_organization_id=get_current_team_id()
-        )
-        if games:
-            if isinstance(games, list):
-                game_ids = [g.id for g in games]
-                clips_query = clips_query.filter(Clip.game_id.in_(game_ids))
-            else:
-                clips_query = clips_query.filter(Clip.game_id == games.id)
-        
-        stats['clips'] = clips_query.count()
-        # You could add more clip-related statistics here if needed
-        
-        # Count break throws
-        stats['break_throws'] = sum(1 for t in unique_throws.values() if t.break_throw)
-        
-        # Count hockey assists directly from throw type
-        stats['hockey_assists'] = sum(1 for t in unique_throws.values() if t.throw_type == 'hockey_assist')
-
-
-    except Exception as e:
-        current_app.logger.error(f"Error getting stats for {player.name}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-    
-    return stats
 
 def get_players_base_stats(players, games=None):
     """Get stats for multiple players in a single batch of queries"""
@@ -274,28 +21,10 @@ def get_players_base_stats(players, games=None):
     # Determine point IDs if games are specified
     point_ids = None
     if games:
-        if isinstance(games, list):
-            point_ids = []
-            for g in games:
-                # Handle both regular attribute access and query objects
-                try:
-                    if hasattr(g.points, 'all'):
-                        points = g.points.all()
-                    else:
-                        points = g.points
-                    point_ids.extend([p.id for p in points])
-                except Exception as e:
-                    current_app.logger.error(f"Error getting points for game {g.id}: {str(e)}")
-        else:
-            try:
-                if hasattr(games.points, 'all'):
-                    points = games.points.all()
-                else:
-                    points = games.points
-                point_ids = [p.id for p in points]
-            except Exception as e:
-                current_app.logger.error(f"Error getting points for game: {str(e)}")
-    
+        games = games if isinstance(games, list) else [games]
+        preload_game_points(games)
+        point_ids = [p.id for g in games for p in game_points(g)]
+
     # 1. Preload all lineups for these players in one query
     lineup_query = LineUp.query.filter(
         LineUp.player_id.in_(player_ids),
@@ -366,6 +95,10 @@ def get_players_base_stats(players, games=None):
     
     return player_stats
 
+# Same definition as the team huck count in app.stats.team.
+HUCK_DISTANCE = 20  # metres
+
+
 def process_player_stats(player, lineups, throws_by_player, throws_to_player, events, games=None):
     """Process preloaded data for a single player"""
     # Start with default values for ALL possible stats
@@ -410,10 +143,10 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         # Additional stats
         'callahans': 0,
         'stalls': 0,
-        'offensive_points_played': 0,
-        'defensive_points_played': 0,
-        'offensive_conversion_rate': 0,
-        'defensive_conversion_rate': 0,
+        'o_line_points_scored': 0,
+        'd_line_points_scored': 0,
+        'o_line_conversion_rate': 0,
+        'd_line_conversion_rate': 0,
         
         # Clip statistics
         'clips': 0,
@@ -437,15 +170,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     if stats['points_played'] == 0:
         return stats
 
-    # Calculate games played
-    if games:
-        stats['games_played'] = len(games) if isinstance(games, list) else 1
-    else:
-        game_ids = set()
-        for lineup in lineups:
-            if hasattr(lineup.point, 'game_id'):
-                game_ids.add(lineup.point.game_id)
-        stats['games_played'] = len(game_ids)
+    # Games this player was on a line in (not the number of games in the filter)
+    stats['games_played'] = len({lineup.point.game_id for lineup in lineups})
 
     # Process throws
     stats['throws'] = len(throws_by_player)
@@ -458,6 +184,7 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     # Calculate throw distances
     distances = [t.calculate_distance() for t in throws_by_player if t.calculate_distance()]
     stats['total_throw_distance'] = sum(distances) if distances else 0
+    stats['hucks'] = sum(1 for d in distances if d > HUCK_DISTANCE)
     stats['avg_throw_distance'] = stats['total_throw_distance'] / stats['throws'] if stats['throws'] > 0 else 0
     
     # Store throw vectors for visualization
@@ -566,6 +293,13 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     stats['o_line_points_played'] = len(o_line_points)
     stats['d_line_points_played'] = len(d_line_points)
+    # Conversion: share of their O-line points we held, D-line points we broke
+    stats['o_line_points_scored'] = sum(1 for l in o_line_points if point_we_scored(l.point))
+    stats['d_line_points_scored'] = sum(1 for l in d_line_points if point_we_scored(l.point))
+    if o_line_points:
+        stats['o_line_conversion_rate'] = 100 * stats['o_line_points_scored'] / len(o_line_points)
+    if d_line_points:
+        stats['d_line_conversion_rate'] = 100 * stats['d_line_points_scored'] / len(d_line_points)
     
     # Calculate O-line and D-line plus/minus
     o_line_plus_minus = 0
@@ -926,10 +660,7 @@ def get_point_ids_from_games(games):
     for game in games:
         try:
             # Handle dynamic relationship
-            if hasattr(game.points, 'all'):
-                points = game.points.all()
-            else:
-                points = game.points
+            points = game_points(game)
                 
             point_ids.extend([p.id for p in points])
         except Exception as e:

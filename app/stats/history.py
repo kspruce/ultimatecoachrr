@@ -3,7 +3,7 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.utils.team_filter import get_current_team_id
 from app.stats.cache import get_cached_team_averages
-from app.stats.formulas import calculate_per_from_stats
+from app.stats.formulas import calculate_per
 from app.stats.players import get_players_base_stats
 
 
@@ -21,7 +21,7 @@ def get_player_game_history(player, tournament_id, game_id):
             game_stats_dict = get_players_base_stats([player], [game])
             game_stats = game_stats_dict[player.id]
             game_team_avgs = get_cached_team_averages([game])
-            game_stats['per'] = calculate_per_from_stats(game_stats, game_team_avgs)
+            game_stats['per'] = calculate_per(game_stats, game_team_avgs)
             player_games.append({'game': game, 'stats': game_stats})
             
     return player_games

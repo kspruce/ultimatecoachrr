@@ -2465,34 +2465,8 @@ function initializeSankeyDiagram() {
         }
     }
     
-    // Extract the player ID from the URL path
-    const urlPath = window.location.pathname;
-    const playerIdMatch = urlPath.match(/\/stats\/player\/(\d+)/);
-    let playerId;
-    
-    if (playerIdMatch && playerIdMatch[1]) {
-        playerId = playerIdMatch[1];
-        console.log(`Using player ID ${playerId} from URL path`);
-    } else {
-        // Fallback: Try to get player ID from the form action URL
-        const form = document.querySelector('form[action*="/stats/dashboard/player/"]');
-        if (form) {
-            const formAction = form.getAttribute('action');
-            const formPlayerIdMatch = formAction.match(/\/player\/(\d+)/);
-            if (formPlayerIdMatch && formPlayerIdMatch[1]) {
-                playerId = formPlayerIdMatch[1];
-                console.log(`Using player ID ${playerId} from form action`);
-            }
-        }
-    }
-    
-    // If we still don't have a player ID, show an error
-    if (!playerId) {
-        console.error('Could not determine player ID for Sankey diagram');
-        container.innerHTML = '<div class="alert alert-danger">Could not determine player ID for connection diagram</div>';
-        return;
-    }
-    
+    const playerId = {{ player.id }};
+
     // Get current URL parameters for filtering
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournament_id');
