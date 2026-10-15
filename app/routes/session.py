@@ -1,10 +1,11 @@
 from flask import (
     Blueprint, abort, render_template, redirect, url_for, flash,
-    request, jsonify, current_app, render_template_string, session
+    request, jsonify, current_app, render_template_string, session, make_response
 )
 from flask_login import login_required, current_user
 from app import db
 from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance, SessionRSVP
+from app.models.drill import DrillDiagram
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
@@ -58,6 +59,36 @@ def index():
     
     if session_type:
         query = query.filter(SessionPlan.session_type == session_type)
+
+    # Season plan filters (season / phase / block / squad)
+    season = request.args.get('season', '')
+    phase = request.args.get('phase', '')
+    block = request.args.get('block', '')
+    squad = request.args.get('squad', '')
+    team_plans = SessionPlan.query.filter_by(team_organization_id=get_current_team_id())
+
+    def distinct_values(*columns):
+        rows = team_plans.with_entities(*columns).filter(columns[0].isnot(None)).distinct().all()
+        return sorted(rows, key=lambda r: tuple('' if v is None else v for v in r))
+
+    form.season.choices = [('', 'All Seasons')] + [(s, s) for (s,) in distinct_values(SessionPlan.season)]
+    form.phase.choices = [('', 'All Phases')] + [
+        (str(n), name or f'Phase {n}')
+        for n, name in distinct_values(SessionPlan.phase_number, SessionPlan.phase_name)]
+    form.block.choices = [('', 'All Blocks')] + [(b, b) for (b,) in distinct_values(SessionPlan.block)]
+    form.squad.choices = [('', 'All Squads')] + [
+        (value, label) for value, label in SessionPlan.SQUAD_CHOICES
+        if value in {s for (s,) in distinct_values(SessionPlan.squad)}]
+    form.season.data, form.phase.data, form.block.data, form.squad.data = season, phase, block, squad
+
+    if season:
+        query = query.filter(SessionPlan.season == season)
+    if phase.isdigit():
+        query = query.filter(SessionPlan.phase_number == int(phase))
+    if block:
+        query = query.filter(SessionPlan.block == block)
+    if squad:
+        query = query.filter(SessionPlan.squad == squad)
     
     if date_range != 'all':
         today = datetime.now().date()
@@ -70,8 +101,12 @@ def index():
         
         query = query.filter(SessionPlan.date >= start_date)
     
-    # Get sessions and sort by date (newest first)
-    sessions = query.order_by(SessionPlan.date.desc()).all()
+    # Get sessions and sort by date (newest first); a season's plans in week order
+    if season:
+        sessions = query.order_by(SessionPlan.week_number.asc(), SessionPlan.squad.asc(),
+                                  SessionPlan.id.asc()).all()
+    else:
+        sessions = query.order_by(SessionPlan.date.desc()).all()
 
     # Build per-type sequential numbers (ascending by date, so earliest = #1)
     # First collect ALL sessions for the team ordered oldest-first to assign numbers
@@ -236,7 +271,46 @@ def drill_detail(drill_id):
     session_id = session_component.session_id if session_component else None
 
     return render_template('session/drills/detail.html', drill=drill, session_id=session_id)
-    
+
+
+# Drill diagram images are stored in the database (see DrillDiagram). These
+# routes are public so guest share links can show them; the filename must
+# match the start of the image's hash, so ids alone can't be enumerated.
+def _get_diagram_or_404(diagram_id, filename, digest_attr):
+    diagram = DrillDiagram.query.get_or_404(diagram_id)
+    digest = getattr(diagram, digest_attr)
+    if not digest or filename.rsplit('.', 1)[0] != digest[:16]:
+        abort(404)
+    return diagram
+
+
+def _immutable_response(body, mimetype):
+    response = make_response(body)
+    response.mimetype = mimetype
+    response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
+@bp.route('/drills/diagrams/<int:diagram_id>/<string:filename>')
+def drill_diagram_image(diagram_id, filename):
+    diagram = _get_diagram_or_404(diagram_id, filename, 'image_hash')
+    if not diagram.image_data:
+        abort(404)
+    return _immutable_response(base64.b64decode(diagram.image_data), diagram.image_mime)
+
+
+@bp.route('/drills/diagrams/<int:diagram_id>/svg/<string:filename>')
+def drill_diagram_svg(diagram_id, filename):
+    diagram = _get_diagram_or_404(diagram_id, filename, 'svg_hash')
+    if not diagram.svg_data:
+        abort(404)
+    response = _immutable_response(diagram.svg_data, 'image/svg+xml')
+    # SVG can carry script; stop it running if the file is opened directly.
+    response.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+    return response
+
+
 # Drill API Routes
 @bp.route('/api/drills', methods=['POST'])
 @login_required
@@ -434,6 +508,7 @@ def add_component(session_id):
             component_type=form.component_type.data,
             focus_area=form.focus_area.data,
             notes=form.notes.data,
+            coach_cue=form.coach_cue.data,
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
         
@@ -494,6 +569,7 @@ def edit_component(component_id):
         component.component_type = form.component_type.data
         component.focus_area = form.focus_area.data
         component.notes = form.notes.data
+        component.coach_cue = form.coach_cue.data
         
         # Update drill association
         if form.drill_id.data and form.drill_id.data > 0:

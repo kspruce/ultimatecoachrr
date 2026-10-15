@@ -23,6 +23,31 @@ class SessionPlan(db.Model):
     share_token_expires = db.Column(db.DateTime, nullable=True)  # Optional: for expiring links
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+
+    # Season plan fields (filled by `flask import-season`; all optional)
+    external_id = db.Column(db.String(100), nullable=True)
+    season = db.Column(db.String(20), nullable=True)
+    phase_number = db.Column(db.Integer, nullable=True)
+    phase_name = db.Column(db.String(100), nullable=True)
+    block = db.Column(db.String(200), nullable=True)
+    week_number = db.Column(db.Integer, nullable=True)
+    week_commencing = db.Column(db.Date, nullable=True)
+    squad = db.Column(db.String(10), nullable=True)  # joint / 1s / 2s
+    aim = db.Column(db.Text, nullable=True)
+    learning_points = db.Column(db.JSON, nullable=True)  # list of strings
+    key_terms = db.Column(db.JSON, nullable=True)  # list of [term, meaning] pairs
+    run_by = db.Column(db.String(100), nullable=True)
+    kit = db.Column(db.String(255), nullable=True)
+    sources = db.Column(db.Text, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('team_organization_id', 'external_id',
+                            name='uq_session_plan_team_external_id'),
+        db.Index('ix_session_plan_team_season', 'team_organization_id', 'season'),
+    )
+
+    SQUAD_CHOICES = [('joint', 'Joint'), ('1s', '1s'), ('2s', '2s')]
+
     # Relationships
     components = db.relationship('SessionComponent', back_populates='session', 
                                lazy='dynamic', cascade='all, delete-orphan')
@@ -140,10 +165,22 @@ class SessionComponent(db.Model):
     component_type = db.Column(db.String(20), nullable=False)
     focus_area = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    coach_cue = db.Column(db.Text, nullable=True)  # what the coach says and watches for
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     team_organization_id = db.Column(Integer, ForeignKey('team_organization.id'))
-    
+
+    COMPONENT_TYPE_CHOICES = [
+        ('warmup', 'Warm-up'),
+        ('drill', 'Drill'),
+        ('scrimmage', 'Scrimmage'),
+        ('cooldown', 'Cool-down'),
+        ('discussion', 'Discussion'),
+        ('water', 'Water'),
+        ('other', 'Other'),
+    ]
+    COMPONENT_TYPES = [value for value, _ in COMPONENT_TYPE_CHOICES]
+
     session = db.relationship('SessionPlan', back_populates='components')
     saved_drill = db.relationship('SavedDrill', back_populates='components')
 

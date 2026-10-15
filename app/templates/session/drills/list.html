@@ -99,6 +99,10 @@
                     <div class="drill-video-container">
                         {{ drill.ultiplay_embed|safe }}
                     </div>
+                {% elif drill.first_diagram %}
+                    <div class="drill-placeholder">
+                        <img src="{{ drill.first_diagram.image_url }}" alt="{{ drill.first_diagram.caption or drill.title }}" loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    </div>
                 {% else %}
                     <div class="drill-placeholder">
                         <i class="bi bi-camera-video fa-3x text-muted"></i>
@@ -112,6 +116,9 @@
                     {% endif %}
                     
                     <div class="mb-2">
+                        {% if drill.is_standard_card %}
+                        <span class="badge bg-warning text-dark">{{ drill.card_code or 'Standard card' }}</span>
+                        {% endif %}
                         {% if drill.skill_level %}
                         <span class="badge bg-primary">{{ drill.skill_level|capitalize }}</span>
                         {% endif %}

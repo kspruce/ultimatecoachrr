@@ -6,6 +6,7 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, NumberRange, Length, URL
 from app.models.player import Player
+from app.models.session import SessionComponent
 from app import db
 from flask_wtf.file import FileField, FileAllowed
 from werkzeug.utils import secure_filename
@@ -80,15 +81,10 @@ class SessionComponentForm(FlaskForm):
     duration_minutes = IntegerField('Duration (minutes)', 
                                   validators=[Optional(), NumberRange(min=1)])
     order = IntegerField('Order', validators=[DataRequired(), NumberRange(min=1)])
-    component_type = SelectField('Component Type', choices=[
-        ('warmup', 'Warm-up'),
-        ('drill', 'Drill'),
-        ('scrimmage', 'Scrimmage'),
-        ('cooldown', 'Cool-down'),
-        ('discussion', 'Discussion'),
-        ('other', 'Other')
-    ], validators=[DataRequired()])
+    component_type = SelectField('Component Type', choices=SessionComponent.COMPONENT_TYPE_CHOICES,
+                                 validators=[DataRequired()])
     focus_area = StringField('Focus Area', validators=[Optional(), Length(max=100)])
+    coach_cue = TextAreaField('Coach Cue', validators=[Optional()])
     notes = TextAreaField('Notes', validators=[Optional()])
     drill_id = SelectField('Use Saved Drill', coerce=int, validators=[Optional()])
     plays = SelectMultipleField('Plays Used', coerce=int)
@@ -142,6 +138,11 @@ class SessionFilterForm(FlaskForm):
         default='',
         validators=[]
     )
+    # Season plan filters; choices are filled per team in the session.index route
+    season = SelectField('Season', choices=[('', 'All Seasons')], default='', validators=[Optional()])
+    phase = SelectField('Phase', choices=[('', 'All Phases')], default='', validators=[Optional()])
+    block = SelectField('Block', choices=[('', 'All Blocks')], default='', validators=[Optional()])
+    squad = SelectField('Squad', choices=[('', 'All Squads')], default='', validators=[Optional()])
     
     def __init__(self, *args, **kwargs):
         super(SessionFilterForm, self).__init__(*args, **kwargs)

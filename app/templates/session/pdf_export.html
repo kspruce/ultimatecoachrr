@@ -56,6 +56,35 @@
         .other {
             background-color: #95a5a6;
         }
+        .water {
+            background-color: #5dade2;
+        }
+        .season-plan {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .season-plan h3 {
+            margin: 10px 0 5px;
+            font-size: 15px;
+            color: #2c3e50;
+        }
+        .key-terms td, .key-terms th {
+            text-align: left;
+            vertical-align: top;
+            padding: 2px 8px 2px 0;
+            font-size: 14px;
+        }
+        .coach-cue {
+            border-left: 3px solid #f39c12;
+            padding-left: 8px;
+            margin: 8px 0;
+        }
+        .drill-thumb img {
+            max-width: 240px;
+            max-height: 180px;
+        }
         .component-details {
             font-size: 14px;
             color: #555;
@@ -93,11 +122,54 @@
         <p><strong>Location:</strong> {{ session.location }}</p>
         <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
         <p><strong>Session Type:</strong> {{ session.session_type_display }}</p>
+        {% if session.season %}
+        <p><strong>Season:</strong> {{ session.season }}{% if session.week_number %} · Week {{ session.week_number }}{% endif %}{% if session.week_commencing %} (w/c {{ session.week_commencing.strftime('%Y-%m-%d') }}){% endif %}</p>
+        {% endif %}
+        {% if session.phase_name or session.phase_number %}
+        <p><strong>Phase:</strong> {{ session.phase_name or ('Phase ' ~ session.phase_number) }}</p>
+        {% endif %}
+        {% if session.block %}
+        <p><strong>Block:</strong> {{ session.block }}</p>
+        {% endif %}
+        {% if session.squad %}
+        <p><strong>Squad:</strong> {{ session.squad }}</p>
+        {% endif %}
+        {% if session.run_by %}
+        <p><strong>Run by:</strong> {{ session.run_by }}</p>
+        {% endif %}
+        {% if session.kit %}
+        <p><strong>Kit:</strong> {{ session.kit }}</p>
+        {% endif %}
         {% if session.notes %}
         <p><strong>Notes:</strong> {{ session.notes }}</p>
         {% endif %}
     </div>
     
+    {% if session.aim or session.learning_points or session.key_terms %}
+    <div class="season-plan">
+        {% if session.aim %}
+        <h3>Aim</h3>
+        <div>{{ session.aim }}</div>
+        {% endif %}
+        {% if session.learning_points %}
+        <h3>Learning Points</h3>
+        <ol>
+            {% for point in session.learning_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ol>
+        {% endif %}
+        {% if session.key_terms %}
+        <h3>Key Terms</h3>
+        <table class="key-terms">
+            {% for term, meaning in session.key_terms %}
+            <tr><th>{{ term }}</th><td>{{ meaning }}</td></tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <h2>Session Components</h2>
     {% if components %}
         {% for component in components %}
@@ -108,6 +180,16 @@
             </div>
             {% if component.description %}
             <p>{{ component.description }}</p>
+            {% endif %}
+            {% if component.coach_cue %}
+            <div class="coach-cue"><strong>Coach:</strong> {{ component.coach_cue }}</div>
+            {% endif %}
+            {% if component.saved_drill and component.saved_drill.first_diagram %}
+            {% set diagram = component.saved_drill.first_diagram %}
+            <div class="drill-thumb">
+                <img src="data:{{ diagram.image_mime }};base64,{{ diagram.image_data }}" alt="{{ diagram.caption or component.saved_drill.title }}">
+                {% if diagram.step_label or diagram.caption %}<div class="component-details">{{ diagram.step_label }}{% if diagram.step_label and diagram.caption %}: {% endif %}{{ diagram.caption }}</div>{% endif %}
+            </div>
             {% endif %}
             <div class="component-details">
                 <p>Duration: {{ component.duration_minutes }} minutes</p>

@@ -107,6 +107,15 @@
                             {% endfor %}
                         </div>
 
+                        <!-- Coach Cue -->
+                        <div class="mb-3">
+                            {{ form.coach_cue.label(class="form-label") }}
+                            {{ form.coach_cue(class="form-control", rows=2, placeholder="What the coach says and watches for...") }}
+                            {% for error in form.coach_cue.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
                         <!-- Notes -->
                         <div class="mb-3">
                             {{ form.notes.label(class="form-label") }}

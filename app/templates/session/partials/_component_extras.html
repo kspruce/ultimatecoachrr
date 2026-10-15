@@ -1,0 +1,17 @@
+{# Coach cue and linked-drill diagram thumbnail for a SessionComponent (detail and guest pages). #}
+{% if component.coach_cue %}
+<div class="border-start border-3 border-warning ps-2 mb-2 small">
+    <strong><i class="bi bi-megaphone"></i> Coach:</strong> {{ component.coach_cue }}
+</div>
+{% endif %}
+{% if component.saved_drill and component.saved_drill.first_diagram %}
+{% set diagram = component.saved_drill.first_diagram %}
+<figure class="mb-2 drill-thumb">
+    <a href="{{ diagram.image_url }}" target="_blank">
+        <img src="{{ diagram.image_url }}" alt="{{ diagram.caption or component.saved_drill.title }}" loading="lazy">
+    </a>
+    {% if diagram.step_label or diagram.caption %}
+    <figcaption class="small text-muted">{{ diagram.step_label }}{% if diagram.step_label and diagram.caption %}: {% endif %}{{ diagram.caption }}</figcaption>
+    {% endif %}
+</figure>
+{% endif %}
