@@ -3,6 +3,7 @@ from wtforms import StringField, IntegerField, TextAreaField, SelectField, Selec
 from wtforms.validators import DataRequired, Optional, NumberRange
 from app.models.annotation import AnnotationTag
 from app.models.player import Player
+from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
 from flask import session
 
@@ -81,9 +82,7 @@ class AnnotationForm(FlaskForm):
 
         # Resolve the current team — same pattern used by ClipForm
         if current_user.is_authenticated:
-            team_id = (session.get('current_team_id')
-                       if current_user.is_admin
-                       else current_user.team_organization_id)
+            team_id = get_current_team_id()
         else:
             team_id = None
 

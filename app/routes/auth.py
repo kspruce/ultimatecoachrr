@@ -85,7 +85,7 @@ def _link_player_to_user(user, player_id):
         return
 
     player = Player.query.get(player_id)
-    if not player:
+    if not player or player.team_organization_id != user.team_organization_id:
         return
 
     # Unlink from previous user if needed
@@ -376,7 +376,7 @@ def link_player():
             flash('Please select a player.', 'warning')
             return redirect(url_for('auth.link_player'))
 
-        player = Player.query.get(player_id)
+        player = next((p for p in available_players if p.id == player_id), None)
 
         if not player:
             flash('Invalid player selected.', 'danger')

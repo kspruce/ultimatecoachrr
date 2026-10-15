@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, g
 from flask_login import login_required, current_user
 from app import db
+from app.utils.team_filter import accessible_teams, can_access_team
 from app.models.team_organization import TeamOrganization
 from app.forms.team_organization import TeamOrganizationForm
 import logging
@@ -17,16 +18,16 @@ def index():
     if not current_user.is_admin:
         flash('You do not have permission to access this page.', 'danger')
         return redirect(url_for('main.index'))
-    
-    teams = TeamOrganization.query.all()
+
+    teams = accessible_teams(current_user)
     return render_template('team_organization/index.html', teams=teams)
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add():
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
+    if not current_user.is_superadmin:
+        flash('Only site superadmins can add teams.', 'danger')
+        return redirect(url_for('team_organization.index'))
     
     form = TeamOrganizationForm()
     if form.validate_on_submit():
@@ -48,10 +49,10 @@ def add():
 @bp.route('/edit/<int:team_id>', methods=['GET', 'POST'])
 @login_required
 def edit(team_id):
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
+    if not (current_user.is_admin and can_access_team(current_user, team_id)):
+        flash('You can only edit your own team.', 'danger')
         return redirect(url_for('main.index'))
-    
+
     team = TeamOrganization.query.get_or_404(team_id)
     form = TeamOrganizationForm(obj=team, team_id=team_id)  # Pass team_id here
     if form.validate_on_submit():
@@ -71,8 +72,8 @@ def edit(team_id):
 @bp.route('/switch/<int:team_id>')
 @login_required
 def switch(team_id):
-    if not current_user.is_admin:
-        flash('Only administrators can switch teams.', 'danger')
+    if not current_user.is_superadmin:
+        flash('Only site superadmins can switch teams.', 'danger')
         return redirect(url_for('main.index'))
 
     team = TeamOrganization.query.get_or_404(team_id)

@@ -1,5 +1,5 @@
 # app/routes/fitness.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, session
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, session
 from flask_login import login_required, current_user
 from app import db
 from app.models.fitness import FitnessMetric, FitnessRecord, TestingPhase
@@ -504,6 +504,15 @@ def add_metric():
                           form=form, 
                           title="Add New Fitness Metric")
 
+def _editable_metric_or_404(metric_id):
+    """Metrics are shared between teams; a team admin may only change their
+    own team's metrics, a superadmin any (including shared ones)."""
+    metric = FitnessMetric.query.get_or_404(metric_id)
+    if not current_user.is_superadmin and metric.team_organization_id != get_current_team_id():
+        abort(404)
+    return metric
+
+
 @bp.route('/metrics/edit/<int:metric_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -514,7 +523,7 @@ def edit_metric(metric_id):
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
     
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _editable_metric_or_404(metric_id)
     form = FitnessMetricForm(obj=metric)
     
     # Get player count for this metric
@@ -567,7 +576,7 @@ def delete_metric(metric_id):
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
 
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _editable_metric_or_404(metric_id)
     
     try:
         # Check if there are any records using this metric

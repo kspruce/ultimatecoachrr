@@ -14,7 +14,7 @@ from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
 from app.utils.utils import admin_required, coach_required, stat_taker_required
 from wtforms import SubmitField, HiddenField
-from app.utils.team_filter import get_current_team_id
+from app.utils.team_filter import get_current_team_id, team_row_or_404
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -509,8 +509,9 @@ def update_game_players(tournament_id, game_id):
 
 @bp.route('/<int:tournament_id>/bulk-update', methods=['POST'])
 @login_required
+@coach_required
 def bulk_update_game_players(tournament_id):
-    tournament = Tournament.query.get_or_404(tournament_id)
+    tournament = team_row_or_404(Tournament, tournament_id)
 
     for game in tournament.games:
 
