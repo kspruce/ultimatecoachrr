@@ -31,6 +31,17 @@ logging.basicConfig(level=logging.INFO,
                     datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 
+def _attr_key(model, column):
+    """The model attribute that holds a table column (usually the same name)."""
+    return model.__mapper__.get_property_by_column(column).key
+
+
+def _column_attr_keys(model):
+    """{column name: model attribute name} for every column of the model."""
+    return {c.name: _attr_key(model, c) for c in model.__table__.columns}
+
+
+
 class EnhancedDataManager:
     """Enhanced data manager with Excel export and ZIP functionality"""
     
@@ -231,7 +242,7 @@ class EnhancedDataManager:
                         for record in records:
                             record_dict = {}
                             for column in model.__table__.columns:
-                                value = getattr(record, column.name)
+                                value = getattr(record, _attr_key(model, column))
                                 # Handle datetime objects
                                 if isinstance(value, (date, time)):  # datetime is a date too
                                     value = value.isoformat()
@@ -313,7 +324,7 @@ class EnhancedDataManager:
                         for record in records:
                             record_dict = {}
                             for column in model.__table__.columns:
-                                value = getattr(record, column.name)
+                                value = getattr(record, _attr_key(model, column))
                                 # Handle datetime objects
                                 if isinstance(value, (date, time)):  # datetime is a date too
                                     value = value.isoformat()
@@ -363,7 +374,7 @@ class EnhancedDataManager:
                                 for record in records:
                                     record_dict = {}
                                     for column in model.__table__.columns:
-                                        value = getattr(record, column.name)
+                                        value = getattr(record, _attr_key(model, column))
                                         # Handle datetime objects
                                         if isinstance(value, (date, time)):  # datetime is a date too
                                             value = value.isoformat()
@@ -456,7 +467,7 @@ class EnhancedDataManager:
                         for record in records:
                             record_dict = {}
                             for column in model.__table__.columns:
-                                value = getattr(record, column.name)
+                                value = getattr(record, _attr_key(model, column))
                                 # Handle datetime objects
                                 if isinstance(value, (date, time)):  # datetime is a date too
                                     value = value.isoformat()
@@ -519,7 +530,7 @@ class EnhancedDataManager:
                             for record in records:
                                 record_dict = {}
                                 for column in model.__table__.columns:
-                                    value = getattr(record, column.name)
+                                    value = getattr(record, _attr_key(model, column))
                                     # Handle datetime objects
                                     if isinstance(value, (date, time)):  # datetime is a date too
                                         value = value.isoformat()
@@ -721,6 +732,54 @@ class EnhancedDataManager:
 
 
     
+    @staticmethod
+    def _build_record(model, record_data):
+        """A model instance from one exported row (column names -> attributes,
+        ISO strings -> dates/times, '' -> None for non-text columns)."""
+        record = model()
+
+        column_keys = _column_attr_keys(model)
+        for key, value in record_data.items():
+            column = model.__table__.columns.get(key)
+            # Files use column names; a few differ from the
+            # model attribute (user.is_admin -> is_admin_flag).
+            key = column_keys.get(key, key)
+            if key not in column_keys.values():
+                continue
+            # An empty string can't go into a number/date
+            # column (e.g. a blank jersey number): store nothing.
+            if value == '' and column is not None and not isinstance(column.type, db.String):
+                value = None
+            if isinstance(value, str) and 'T' in value:
+                try:
+                    if value.endswith('Z'):
+                        value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    else:
+                        value = datetime.fromisoformat(value)
+                except ValueError:
+                    pass
+            elif isinstance(value, str) and value:
+                # Handle db.Date columns stored as "YYYY-MM-DD" strings
+                # and db.Time columns stored as "HH:MM:SS" strings
+                col = column
+                col_type = getattr(col.type, '__visit_name__', '') if col is not None else ''
+                if col_type == 'date':
+                    try:
+                        value = date.fromisoformat(value)
+                    except ValueError:
+                        pass
+                elif col_type == 'time':
+                    from datetime import time as time_type
+                    try:
+                        parts = value.split(':')
+                        h, m = int(parts[0]), int(parts[1])
+                        s = int(float(parts[2])) if len(parts) > 2 else 0
+                        value = time_type(h, m, s)
+                    except (ValueError, IndexError):
+                        pass
+            setattr(record, key, value)
+        return record
+
     def import_all_data(self, import_dir, clear_existing=False):
         """Import all data from JSON files"""
         logger.info(f"Starting import from directory: {import_dir}")
@@ -775,6 +834,7 @@ class EnhancedDataManager:
         
         # Import data in dependency order
         logger.info("Starting data import in dependency order")
+        fk_retry = {}
         for table_name in dependency_order:
             if table_name in self.models:
                 model = self.models[table_name]
@@ -816,39 +876,7 @@ class EnhancedDataManager:
                             # record doesn't roll back the entire session.
                             sp = db.session.begin_nested()
 
-                            record = model()
-
-                            for key, value in record_data.items():
-                                if not hasattr(record, key):
-                                    continue
-                                if isinstance(value, str) and 'T' in value:
-                                    try:
-                                        if value.endswith('Z'):
-                                            value = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                                        else:
-                                            value = datetime.fromisoformat(value)
-                                    except ValueError:
-                                        pass
-                                elif isinstance(value, str) and value:
-                                    # Handle db.Date columns stored as "YYYY-MM-DD" strings
-                                    # and db.Time columns stored as "HH:MM:SS" strings
-                                    col = model.__table__.columns.get(key)
-                                    col_type = getattr(col.type, '__visit_name__', '') if col is not None else ''
-                                    if col_type == 'date':
-                                        try:
-                                            value = date.fromisoformat(value)
-                                        except ValueError:
-                                            pass
-                                    elif col_type == 'time':
-                                        from datetime import time as time_type
-                                        try:
-                                            parts = value.split(':')
-                                            h, m = int(parts[0]), int(parts[1])
-                                            s = int(float(parts[2])) if len(parts) > 2 else 0
-                                            value = time_type(h, m, s)
-                                        except (ValueError, IndexError):
-                                            pass
-                                setattr(record, key, value)
+                            record = self._build_record(model, record_data)
 
                             # Use merge instead of add so existing rows (e.g. seed
                             # data created during db_reset) are updated rather than
@@ -862,6 +890,10 @@ class EnhancedDataManager:
                             sp.rollback()        # only this record is rolled back
                             skipped_count += 1
                             errors.append(str(e))
+                            if 'foreign key' in str(e).lower():
+                                # Its parent row may be in a table imported later
+                                # (users, players and teams refer to each other).
+                                fk_retry.setdefault(table_name, []).append(record_data)
 
                     # Commit all successfully imported records for this table
                     db.session.commit()
@@ -884,6 +916,36 @@ class EnhancedDataManager:
                         'error': str(e)
                     }
         
+        # Retry rows that failed only because a row they point at hadn't been
+        # imported yet, until a pass makes no progress.
+        progress = True
+        while fk_retry and progress:
+            progress = False
+            for table_name, records in list(fk_retry.items()):
+                model = self.models[table_name]
+                still_failing = []
+                for record_data in records:
+                    sp = db.session.begin_nested()
+                    try:
+                        db.session.merge(self._build_record(model, record_data))
+                        db.session.flush()
+                        sp.commit()
+                    except Exception:
+                        sp.rollback()
+                        still_failing.append(record_data)
+                        continue
+                    progress = True
+                    result = import_summary['results'][table_name]
+                    result['records_imported'] += 1
+                    result['records_skipped'] -= 1
+                    if result['records_skipped'] == 0:
+                        result.update(status='completed', errors=[])
+                db.session.commit()
+                if still_failing:
+                    fk_retry[table_name] = still_failing
+                else:
+                    del fk_retry[table_name]
+
         # Import association tables (db.Table objects not represented as models,
         # e.g. clip_tag_relation, clip_player).  These are saved with an "assoc_" prefix.
         for filename in sorted(os.listdir(import_dir)):
@@ -952,7 +1014,7 @@ class EnhancedDataManager:
             for record in records:
                 record_dict = {}
                 for column in model.__table__.columns:
-                    value = getattr(record, column.name)
+                    value = getattr(record, _attr_key(model, column))
                     # Handle datetime objects
                     if isinstance(value, (date, time)):  # datetime is a date too
                         value = value.isoformat()
@@ -982,7 +1044,7 @@ class EnhancedDataManager:
                             for record in records:
                                 record_dict = {}
                                 for column in model.__table__.columns:
-                                    value = getattr(record, column.name)
+                                    value = getattr(record, _attr_key(model, column))
                                     # Handle datetime objects
                                     if isinstance(value, (date, time)):  # datetime is a date too
                                         value = value.isoformat()

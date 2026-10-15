@@ -10,7 +10,6 @@ from app.models.drill import SavedDrill, DrillDiagram
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
-import os
 import base64
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
@@ -355,12 +354,7 @@ def manage_drill(drill_id):
 
         if request.method == 'DELETE':
             try:
-                # Delete associated diagram if it exists
-                if drill.diagram_url:
-                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], drill.diagram_url)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                        current_app.logger.info(f"Deleted file: {file_path}")
+                # Diagrams are DrillDiagram rows, deleted with the drill.
 
                 # Delete associated components
                 components_deleted = SessionComponent.query.filter_by(
@@ -388,6 +382,22 @@ def manage_drill(drill_id):
                     'success': False,
                     'message': f'Error deleting drill: {str(e)}'
                 }), 500
+
+
+        if request.method == 'GET':
+            first = drill.first_diagram
+            return jsonify({
+                'success': True,
+                'id': drill.id,
+                'title': drill.title,
+                'description': drill.description,
+                'setup_instructions': drill.setup_instructions,
+                'skill_level': drill.skill_level,
+                'focus_area': drill.focus_area,
+                'diagram_url': first.image_url if first else None,
+            })
+
+        return jsonify({'success': False, 'message': 'Editing drills here is not supported'}), 405
 
     except HTTPException:
         raise
@@ -1250,7 +1260,7 @@ def search_drills():
         'description': drill.description,
         'skill_level': drill.skill_level,
         'focus_area': drill.focus_area,
-        'diagram_url': drill.diagram_url
+        'diagram_url': drill.first_diagram.image_url if drill.first_diagram else None
     } for drill in drills])
 
 @bp.route('/api/drills/duplicate/<int:drill_id>', methods=['POST'])
