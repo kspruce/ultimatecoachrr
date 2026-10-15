@@ -1,13 +1,11 @@
-from flask import Blueprint, jsonify, request, render_template, url_for, session, current_app
-from flask_login import login_required, current_user
+from flask import Blueprint, jsonify, request, render_template, url_for, current_app, flash, redirect
+from flask_login import login_required
 from app import db
 from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.game import Game
-from app.models.stats import PlayerPointStats
 from app.models.throws import Throw
-from app.utils.stat_utils import determine_possession, is_point_ending_event
-from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.utils import admin_required, stat_taker_required
 import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
@@ -220,41 +218,6 @@ def record_events(point_id):
                 )
                 db.session.add(throwaway)
 
-            # Update PlayerPointStats
-            stats = PlayerPointStats.query.filter_by(
-                player_id=event.player_id,
-                point_id=point_id,
-                team_organization_id=get_current_team_id()
-            ).first()
-
-            if not stats:
-                # Get the next available ID for PlayerPointStats
-                result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM player_point_stats"))
-                next_stats_id = result.scalar()
-                
-                stats = PlayerPointStats(
-                    id=next_stats_id,  # Explicitly set the ID
-                    player_id=event.player_id,
-                    point_id=point_id,
-                    o_line_plus_minus=0.0,
-                    d_line_plus_minus=0.0,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(stats)
-
-
-            # Update stats based on event type
-            if point.our_line_type == 'O-line':
-                if event.event_type in ['goal', 'assist']:
-                    stats.o_line_plus_minus += 1
-                elif event.event_type in ['throwaway', 'drop']:
-                    stats.o_line_plus_minus -= 1
-            else:  # D-line
-                if event.event_type in ['block', 'forced_turnover']:
-                    stats.d_line_plus_minus += 1
-                elif event.event_type == 'scored_on':
-                    stats.d_line_plus_minus -= 1
-
             # Update point status for point-ending events and keep the
             # game-level score in sync so the scoreboard stays correct
             # even when the point outcome is determined via event recording.
@@ -354,29 +317,6 @@ def undo_event(point_id):
             
             # Don't try to update point.is_offensive as it doesn't exist
             # The client-side code will handle possession state
-
-            # Update player stats if necessary
-            from app.models.stats import PlayerPointStats
-            stats = PlayerPointStats.query.filter_by(
-                player_id=last_event.player_id,
-                point_id=point_id,
-                team_organization_id=get_current_team_id()  # Add team ID
-            ).first()
-            
-            if stats:
-                # Reverse the stat changes based on event type
-                if point.our_line_type == 'O-line':
-                    if last_event.event_type in ['goal', 'assist']:
-                        stats.o_line_plus_minus -= 1
-                    elif last_event.event_type in ['throwaway', 'drop']:
-                        stats.o_line_plus_minus += 1
-                else:  # D-line
-                    if last_event.event_type in ['block', 'forced_turnover']:
-                        stats.d_line_plus_minus -= 1
-                    elif last_event.event_type == 'scored_on':
-                        stats.d_line_plus_minus += 1
-                
-                db.session.add(stats)
 
             db.session.add(point)
             db.session.commit()
@@ -502,28 +442,6 @@ def finish_point(point_id):
             for duplicate in duplicate_throws:
                 current_app.logger.debug(f"Removing duplicate throw: {duplicate.id} (regular) in favor of hockey assist: {hockey.id}")
                 db.session.delete(duplicate)
-
-        # Calculate final stats for all players in the point
-        for lineup in point.lineups:
-            stats = PlayerPointStats.query.filter_by(
-                player_id=lineup.player_id,
-                point_id=point_id,
-                team_organization_id=get_current_team_id()
-            ).first()
-            
-            if not stats:
-                # Get the next available ID for PlayerPointStats
-                result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM player_point_stats"))
-                next_stats_id = result.scalar()
-                
-                stats = PlayerPointStats(
-                    id=next_stats_id,  # Explicitly set the ID
-                    player_id=lineup.player_id,
-                    point_id=point_id,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(stats)
-
 
         throws_without_distance = Throw.query.filter_by(
             point_id=point_id,
@@ -654,98 +572,41 @@ def create_throw_from_events(previous_event, current_event):
     
     return throw
 
-@bp.route('/admin/mark_break_throws')
-@login_required
-@stat_taker_required
-def mark_break_throws():
-    """Retroactively mark break throws in the database"""
-    # Get all throws that don't have break_throw set
-    throws = Throw.query.filter(
-        Throw.break_throw.is_(None),
-        Throw.team_organization_id == get_current_team_id()  # Add team ID
-    ).all()
-    
-    count = 0
-    for throw in throws:
-        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-            throw.break_throw = is_break_throw(throw.x_start, throw.y_start, throw.x_end, throw.y_end)
-            if throw.break_throw:
-                count += 1
-    
-    db.session.commit()
-    return jsonify({
-        'message': f'Marked {count} throws as break throws',
-        'total_processed': len(throws)
-    })
-
-@bp.route('/debug/break_throws')
+@bp.route('/admin/mark_break_throws', methods=['POST'])
 @login_required
 @admin_required
-def debug_break_throws():
-    """Debug route to check break throws"""
-    # Get all throws
-    all_throws = Throw.query.filter_by(
-        team_organization_id=get_current_team_id()  # Add team ID
+def mark_break_throws():
+    """Mark break throws on this team's throws that were recorded without it."""
+    throws = Throw.query.filter(
+        Throw.break_throw.is_(None),
+        Throw.team_organization_id == get_current_team_id()
     ).all()
-    
-    # Count break throws
-    break_throws = [t for t in all_throws if t.break_throw]
-    
-    # Get sample break throws
-    sample_break_throws = break_throws[:10]
-    
-    return jsonify({
-        'total_throws': len(all_throws),
-        'break_throws': len(break_throws),
-        'percentage': (len(break_throws) / len(all_throws) * 100) if all_throws else 0,
-        'sample_break_throws': [{
-            'id': t.id,
-            'thrower_id': t.thrower_id,
-            'thrower_name': t.thrower.name if t.thrower else 'Unknown',
-            'throw_type': t.throw_type,
-            'x_start': t.x_start,
-            'y_start': t.y_start,
-            'x_end': t.x_end,
-            'y_end': t.y_end,
-            'is_completion': t.is_completion
-        } for t in sample_break_throws]
-    })
+    count = 0
+    for throw in throws:
+        if None not in (throw.x_start, throw.y_start, throw.x_end, throw.y_end):
+            throw.break_throw = is_break_throw(throw.x_start, throw.y_start, throw.x_end, throw.y_end)
+            count += bool(throw.break_throw)
+    db.session.commit()
+    flash(f'Checked {len(throws)} throws; marked {count} as break throws.', 'success')
+    return redirect(url_for('data_management.data_management'))
 
-@bp.route('/admin/recalculate_throw_distances')
+
+@bp.route('/admin/recalculate_throw_distances', methods=['POST'])
 @login_required
-@stat_taker_required
+@admin_required
 def recalculate_throw_distances():
-    """Recalculate distances for all throws in the database"""
-    try:
-        from app.models.throws import Throw
-        import math
-        
-        # Get all throws
-        throws = Throw.query.filter_by(
-            team_organization_id=get_current_team_id()  # Add team ID
-        ).all()
-        updated_count = 0
-        
-        for throw in throws:
-            if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-                old_distance = throw.distance
-                throw.distance = math.sqrt(
-                    (throw.x_end - throw.x_start) ** 2 +
-                    (throw.y_end - throw.y_start) ** 2
-                )
-                
-                if old_distance != throw.distance:
-                    updated_count += 1
-        
-        db.session.commit()
-        return jsonify({
-            'message': f'Recalculated distances for {updated_count} throws',
-            'total_throws': len(throws)
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    """Recalculate the distance of every one of this team's throws."""
+    throws = Throw.query.filter_by(team_organization_id=get_current_team_id()).all()
+    updated = 0
+    for throw in throws:
+        if None not in (throw.x_start, throw.y_start, throw.x_end, throw.y_end):
+            distance = math.hypot(throw.x_end - throw.x_start, throw.y_end - throw.y_start)
+            if throw.distance != distance:
+                throw.distance = distance
+                updated += 1
+    db.session.commit()
+    flash(f'Recalculated distances: {updated} of {len(throws)} throws changed.', 'success')
+    return redirect(url_for('data_management.data_management'))
 
 
 
@@ -1111,124 +972,7 @@ def get_throws(point_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@bp.route('/admin/fix_missing_team_ids', methods=['GET'])
-@login_required
-@admin_required
-def fix_missing_team_ids():
-    """
-    Administrative route to fix any records that might be missing team_organization_id
-    This is useful during the transition to multi-team support
-    """
-    try:
-        # Only allow this operation for admin users
-        if not current_user.is_admin:
-            return jsonify({'error': 'Unauthorized'}), 403
-            
-        # Get the current team ID
-        team_id = get_current_team_id()
-        if not team_id:
-            return jsonify({'error': 'No team ID available'}), 400
-            
-        # Fix Events
-        events_fixed = Event.query.filter(Event.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix Throws
-        throws_fixed = Throw.query.filter(Throw.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix PlayerPointStats
-        stats_fixed = PlayerPointStats.query.filter(PlayerPointStats.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix LineUps
-        lineups_fixed = LineUp.query.filter(LineUp.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix Points
-        points_fixed = Point.query.filter(Point.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix Games
-        games_fixed = Game.query.filter(Game.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        # Fix CuttingSkills
-        from app.models.cutting_skill import CuttingSkill
-        cutting_skills_fixed = CuttingSkill.query.filter(CuttingSkill.team_organization_id.is_(None)).update(
-            {'team_organization_id': team_id}, 
-            synchronize_session=False
-        )
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Fixed missing team IDs',
-            'stats': {
-                'events_fixed': events_fixed,
-                'throws_fixed': throws_fixed,
-                'stats_fixed': stats_fixed,
-                'lineups_fixed': lineups_fixed,
-                'points_fixed': points_fixed,
-                'games_fixed': games_fixed,
-                'cutting_skills_fixed': cutting_skills_fixed
-            }
-        })
-        
-    except Exception as e:
-        import traceback
-        current_app.logger.error("Error in fix_missing_team_ids:", str(e))
-        current_app.logger.error(traceback.format_exc())
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-from sqlalchemy import text
 from app.utils.team_filter import get_current_team_id
 
-@bp.route('/admin/reset_all_sequences', methods=['GET'])
-@login_required
-@admin_required
-def reset_all_sequences():
-    """Reset ID sequences for all tables"""
-    results = {}
-    tables = [
-        'point', 'line_up', 'player_point_stats', 'event', 'throw', 
-        'cutting_skill', 'gameday_event', 'gameday_player_stats'
-    ]
-    
-    try:
-        for table in tables:
-            try:
-                sql = text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), (SELECT COALESCE(MAX(id), 1) FROM {table}))")
-                result = db.session.execute(sql)
-                results[table] = result.scalar()
-            except Exception as table_error:
-                results[table] = f"Error: {str(table_error)}"
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'All sequences reset successfully',
-            'results': results
-        })
-    except Exception as e:
-        db.session.rollback()
-        import traceback
-        current_app.logger.error("Error resetting sequences:", str(e))
-        current_app.logger.error(traceback.format_exc())
-        return jsonify({'success': False, 'error': str(e)}), 500
 

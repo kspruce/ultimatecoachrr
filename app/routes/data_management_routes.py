@@ -14,13 +14,12 @@ import zipfile
 import logging
 from datetime import datetime
 import math
-from flask import current_app
 # New imports for Season Reset
 from app.models.player import Player
 from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.tournament import Tournament
-from app.models.clip import Clip, ClipTag
+from app.models.clip import Clip
 from app.models.annotation import ClipAnnotation
 from app.models.event import Event, Pull
 
@@ -30,10 +29,9 @@ try:
 except Exception:
     Throw = None
 
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 
 
-from sqlalchemy import and_, or_
 
 # Optional relationship models (import if present)
 try:
@@ -167,8 +165,6 @@ def get_manager():
     return manager
 
 # Add near the top with your other imports
-from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
-from sqlalchemy import text
 
 # Helper to resolve the target team to reset
 def _resolve_target_team_id():
@@ -232,20 +228,13 @@ def season_reset():
       - Clip library not linked to a game/point for this team
     """
     from app import db
-    from sqlalchemy import or_
 
     # Core models
     from app.models.user import User
     from app.models.player import Player
-    from app.models.team_organization import TeamOrganization
-    from app.models.game import Game
-    from app.models.point import Point, LineUp
-    from app.models.tournament import Tournament
     from app.models.tournament_rsvp import TournamentRSVP
-    from app.models.event import Event, Pull
     from app.models.throws import Throw
-    from app.models.clip import Clip, ClipTag, clip_tag_relation, clip_player
-    from app.models.annotation import ClipAnnotation
+    from app.models.clip import clip_tag_relation, clip_player
 
     # Player/point/game-linked models
     from app.models.stats import PlayerPointStats

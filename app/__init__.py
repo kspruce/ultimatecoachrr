@@ -39,26 +39,6 @@ def create_app(config_class=Config):
                          'shared clip links stop working on every restart. Set SECRET_KEY.')
         app.config['SECRET_KEY'] = os.urandom(24)
 
-    # Lightweight auto-migration: ensure newer columns exist
-    # (covers local runs that bypass the deploy-time migration scripts)
-    with app.app_context():
-        try:
-            from sqlalchemy import inspect as sa_inspect, text as sa_text
-            inspector = sa_inspect(db.engine)
-            if inspector.has_table('play'):
-                play_cols = [c['name'] for c in inspector.get_columns('play')]
-                wanted = {
-                    'image_url': 'VARCHAR(255)',
-                    'sort_order': 'INTEGER',
-                }
-                for col, ddl in wanted.items():
-                    if col not in play_cols:
-                        with db.engine.begin() as conn:
-                            conn.execute(sa_text(f'ALTER TABLE play ADD COLUMN {col} {ddl}'))
-                        app.logger.info(f'Auto-migration: added play.{col} column')
-        except Exception as e:
-            app.logger.warning(f'Auto-migration check failed (play columns): {e}')
-
     # Configure S3: warn if not configured, expose s3_bucket_url in templates
     with app.app_context():
         from app.utils.s3_utils import check_s3_configuration

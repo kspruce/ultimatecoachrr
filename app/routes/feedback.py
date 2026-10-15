@@ -6,10 +6,10 @@ from flask import (
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from app import db
-from app.models.session import SessionPlan, Attendance, SessionRSVP
+from app.models.session import SessionPlan
 from app.models.player import Player
 from app.models.feedback import PlayerFeedback
-from app.utils.team_filter import get_current_team_id
+from app.utils.team_filter import get_current_team_id, team_row_or_404
 
 bp = Blueprint('feedback', __name__)
 
@@ -77,7 +77,7 @@ def hub():
 def quick_capture(session_id):
     _require_coach()
 
-    session_obj = SessionPlan.query.get_or_404(session_id)
+    session_obj = team_row_or_404(SessionPlan, session_id)
 
     # Collect players via attendance records *and* 'attending' RSVPs
     attended_ids = {
@@ -128,7 +128,7 @@ def save_feedback(session_id):
         return jsonify({'success': False, 'message': 'Forbidden'}), 403
 
     # Verify session exists
-    session_obj = SessionPlan.query.get_or_404(session_id)
+    session_obj = team_row_or_404(SessionPlan, session_id)
 
     data = request.get_json(silent=True) or {}
     player_id = data.get('player_id')
@@ -142,7 +142,7 @@ def save_feedback(session_id):
     if context_tag not in PlayerFeedback.CONTEXT_TAGS:
         context_tag = 'General'
 
-    player = Player.query.get(player_id)
+    player = Player.query.filter_by(id=player_id, team_organization_id=get_current_team_id()).first()
     if not player:
         return jsonify({'success': False, 'message': 'Player not found'}), 404
 
@@ -175,7 +175,7 @@ def save_feedback(session_id):
 def player_feedback(player_id):
     _require_coach()
 
-    player = Player.query.get_or_404(player_id)
+    player = team_row_or_404(Player, player_id)
 
     entries = (
         PlayerFeedback.query
@@ -198,7 +198,10 @@ def player_feedback(player_id):
 def delete_feedback(feedback_id):
     _require_coach()
 
-    fb = PlayerFeedback.query.get_or_404(feedback_id)
+    fb = (PlayerFeedback.query.join(Player, PlayerFeedback.player_id == Player.id)
+          .filter(PlayerFeedback.id == feedback_id,
+                  Player.team_organization_id == get_current_team_id())
+          .first_or_404())
     player_id = fb.player_id
     db.session.delete(fb)
     db.session.commit()

@@ -147,7 +147,7 @@ class DiscordWebhook:
         
         embed = {
             "title": f"New Game Added: vs {opponent}",
-            "description": f"A new game has been added to the calendar!",
+            "description": "A new game has been added to the calendar!",
             "color": 5814783,  # Blue color
             "fields": [
                 {
@@ -215,7 +215,7 @@ class DiscordWebhook:
         
         embed = {
             "title": title,
-            "description": f"Get ready for our upcoming game!",
+            "description": "Get ready for our upcoming game!",
             "color": 15105570,  # Orange color
             "fields": [
                 {
@@ -261,7 +261,7 @@ class DiscordWebhook:
         
         embed = {
             "title": f"New Training Session: {session.title}",
-            "description": f"A new training session has been added to the calendar!",
+            "description": "A new training session has been added to the calendar!",
             "color": 3066993,  # Green color
             "fields": [
                 {
@@ -328,7 +328,7 @@ class DiscordWebhook:
         
         embed = {
             "title": title,
-            "description": f"Get ready for our upcoming training session!",
+            "description": "Get ready for our upcoming training session!",
             "color": 3066993,  # Green color
             "fields": [
                 {
@@ -395,7 +395,7 @@ class DiscordWebhook:
         
         embed = {
             "title": f"New Tournament: {tournament.name}",
-            "description": f"A new tournament has been added to the calendar!",
+            "description": "A new tournament has been added to the calendar!",
             "color": 15844367,  # Gold color
             "fields": [
                 {
@@ -467,7 +467,7 @@ class DiscordWebhook:
         
         embed = {
             "title": title,
-            "description": f"Get ready for our upcoming tournament!",
+            "description": "Get ready for our upcoming tournament!",
             "color": 15844367,  # Gold color
             "fields": [
                 {

@@ -1,12 +1,12 @@
 # app/routes/fitness.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, session
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from app import db
 from app.models.fitness import FitnessMetric, FitnessRecord, TestingPhase
 from app.models.player import Player
 from app.utils.utils import admin_required
 from sqlalchemy import func, and_
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import FloatField, TextAreaField, SubmitField, SelectField, StringField, BooleanField, DateField
@@ -52,9 +52,6 @@ class TestingPhaseForm(FlaskForm):
     end_date = DateField('End Date', validators=[Optional()])
     active = BooleanField('Active', default=True)
     submit = SubmitField('Save Phase')
-
-class ImportForm(FlaskForm):
-    file = FileField('CSV File', validators=[FileRequired(), FileAllowed(['csv'])])
 
 @bp.route('/')
 @login_required
@@ -504,6 +501,15 @@ def add_metric():
                           form=form, 
                           title="Add New Fitness Metric")
 
+def _editable_metric_or_404(metric_id):
+    """Metrics are shared between teams; a team admin may only change their
+    own team's metrics, a superadmin any (including shared ones)."""
+    metric = FitnessMetric.query.get_or_404(metric_id)
+    if not current_user.is_superadmin and metric.team_organization_id != get_current_team_id():
+        abort(404)
+    return metric
+
+
 @bp.route('/metrics/edit/<int:metric_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -514,7 +520,7 @@ def edit_metric(metric_id):
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
     
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _editable_metric_or_404(metric_id)
     form = FitnessMetricForm(obj=metric)
     
     # Get player count for this metric
@@ -567,7 +573,7 @@ def delete_metric(metric_id):
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
 
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _editable_metric_or_404(metric_id)
     
     try:
         # Check if there are any records using this metric
@@ -1132,79 +1138,10 @@ def import_data():
 @bp.route('/player/<int:player_id>/goals')
 @login_required
 def player_goals(player_id):
-    """View and manage fitness goals for a player"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))   
-    
-    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    
-    # Check permissions
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to view this player\'s goals.', 'danger')
-        return redirect(url_for('team.player_detail', player_id=player_id))
-    
-    try:
-        # This assumes you have a FitnessGoal model
-        from app.models.fitness import FitnessGoal
-        
-        # Get active goals
-        active_goals = FitnessGoal.query.filter_by(
-            player_id=player_id,
-            completed=False,
-            team_organization_id=team_id
-        ).order_by(FitnessGoal.target_date).all()
-        
-        # Get completed goals
-        completed_goals = FitnessGoal.query.filter_by(
-            player_id=player_id,
-            completed=True,
-            team_organization_id=team_id
-        ).order_by(FitnessGoal.completed_date.desc()).all()
-        
-       
-        # Process goals to add current values and progress
-        processed_active_goals = []
-        for goal in active_goals:
-            # Get current value for this metric
-            latest = FitnessRecord.query.filter_by(
-                player_id=player_id,
-                metric_id=goal.metric_id,
-                team_organization_id=team_id
-            ).order_by(FitnessRecord.date_recorded.desc()).first()
-            
-            current_value = latest.value if latest else None
-            
-            # Calculate progress percentage
-            if current_value is not None and goal.target_value != 0:
-                if goal.metric.higher_is_better:
-                    progress = min(100, (current_value / goal.target_value) * 100)
-                else:
-                    progress = min(100, (goal.target_value / current_value) * 100) if current_value > 0 else 0
-            else:
-                progress = 0
-            
-            processed_active_goals.append({
-                'goal': goal,
-                'current_value': current_value,
-                'progress': int(progress)
-            })
-        
-        # Get available metrics for setting new goals
-        available_metrics = FitnessMetric.query.filter_by(active=True).all()
-        
-        return render_template('fitness/player_goals.html',
-                              player=player,
-                              active_goals=processed_active_goals,
-                              completed_goals=completed_goals,
-                              available_metrics=available_metrics)
-    
-    except ImportError:
-        flash('Goal tracking is not yet implemented.', 'warning')
-        return redirect(url_for('fitness.player_fitness', player_id=player_id))
+    """Goal-setting page: its template was never built, so send people back to
+    the player's fitness page (which lists their goals) instead of an error."""
+    flash('Setting goals from this page is not available yet.', 'info')
+    return redirect(url_for('fitness.player_fitness', player_id=player_id))
 
 @bp.route('/goal/<int:goal_id>/complete', methods=['POST'])
 @login_required
@@ -1333,11 +1270,6 @@ def add_goal(player_id):
         flash(f'Error adding goal: {str(e)}', 'danger')
         return redirect(url_for('fitness.player_fitness', player_id=player_id))
 
-@bp.route('/fitness-model')
-@login_required
-def fitness_model():
-    """Information about the fitness model and how metrics are calculated"""
-    return render_template('fitness/fitness_model.html')
 
 
 # ─── Testing Phase management ────────────────────────────────────────────────

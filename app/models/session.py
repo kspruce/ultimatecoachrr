@@ -1,9 +1,7 @@
 from app import db
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Boolean
+from sqlalchemy import Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from app.models.drill import SavedDrill
-from app.models.player import Player
 
 
 class SessionPlan(db.Model):

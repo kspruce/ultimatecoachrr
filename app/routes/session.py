@@ -1,32 +1,24 @@
+from werkzeug.exceptions import HTTPException
 from flask import (
     Blueprint, abort, render_template, redirect, url_for, flash,
-    request, jsonify, current_app, render_template_string, session, make_response
+    request, jsonify, current_app, render_template_string, make_response
 )
 from flask_login import login_required, current_user
 from app import db
-from app.models.session import SessionPlan, SessionComponent, SavedDrill, Attendance, SessionRSVP
-from app.models.drill import DrillDiagram
+from app.models.session import SessionPlan, SessionComponent, Attendance, SessionRSVP
+from app.models.drill import SavedDrill, DrillDiagram
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
-import os
-import uuid
-from app.utils.utils import save_uploaded_file, delete_file
-from werkzeug.utils import secure_filename
-from PIL import Image
-from io import BytesIO
 import base64
 from flask_wtf.csrf import CSRFProtect
-from app.utils.s3_utils import upload_file_to_s3, delete_file_from_s3
-from app.utils.storage import store_file
-from app.utils.utils import admin_required, coach_required, stat_taker_required
+from app.utils.utils import admin_required, coach_required
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
     SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm,
     AdminSessionRSVPForm
 )
 from secrets import token_urlsafe
-from datetime import datetime, timedelta
 
 csrf = CSRFProtect()
 
@@ -152,12 +144,8 @@ def add_session():
     form = SessionPlanForm()
     
     if form.validate_on_submit():
-        # Find the highest existing session ID and add 1
-        highest_id = db.session.query(db.func.max(SessionPlan.id)).scalar() or 0
-        next_id = highest_id + 1
         
         session_plan = SessionPlan(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             title=form.title.data,
             date=form.date.data,
             start_time=form.start_time.data,
@@ -198,12 +186,8 @@ def add_drill(drill_type='basic'):
     form = DrillForm()
 
     if form.validate_on_submit():
-        # Find the highest existing drill ID and add 1
-        highest_id = db.session.query(db.func.max(SavedDrill.id)).scalar() or 0
-        next_id = highest_id + 1
         
         drill = SavedDrill(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             title=form.title.data,
             description=form.description.data,
             setup_instructions=form.setup_instructions.data,
@@ -244,16 +228,6 @@ def drill_editor(drill_id=None):
     
     return render_template('session/drills/editor.html', drill=drill, hide_container=True)
 
-@bp.route('/drills/view/<int:drill_id>')
-@login_required
-def drill_viewer(drill_id):
-    """View a drill"""
-    drill = SavedDrill.query.filter_by(
-        id=drill_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
-    return render_template('session/drills/viewer.html', drill=drill)
 
 @bp.route('/drills/<int:drill_id>')
 @login_required
@@ -321,12 +295,8 @@ def create_drill():
     try:
         data = request.get_json()
         
-        # Find the highest existing drill ID and add 1
-        highest_id = db.session.query(db.func.max(SavedDrill.id)).scalar() or 0
-        next_id = highest_id + 1
         
         drill = SavedDrill(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             title=data.get('title', 'Untitled Drill'),
             description=data.get('description', ''),
             setup_instructions=data.get('setup_instructions', ''),
@@ -384,12 +354,7 @@ def manage_drill(drill_id):
 
         if request.method == 'DELETE':
             try:
-                # Delete associated diagram if it exists
-                if drill.diagram_url:
-                    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], drill.diagram_url)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                        current_app.logger.info(f"Deleted file: {file_path}")
+                # Diagrams are DrillDiagram rows, deleted with the drill.
 
                 # Delete associated components
                 components_deleted = SessionComponent.query.filter_by(
@@ -418,6 +383,24 @@ def manage_drill(drill_id):
                     'message': f'Error deleting drill: {str(e)}'
                 }), 500
 
+
+        if request.method == 'GET':
+            first = drill.first_diagram
+            return jsonify({
+                'success': True,
+                'id': drill.id,
+                'title': drill.title,
+                'description': drill.description,
+                'setup_instructions': drill.setup_instructions,
+                'skill_level': drill.skill_level,
+                'focus_area': drill.focus_area,
+                'diagram_url': first.image_url if first else None,
+            })
+
+        return jsonify({'success': False, 'message': 'Editing drills here is not supported'}), 405
+
+    except HTTPException:
+        raise
     except Exception as e:
         current_app.logger.error(f"Error in manage_drill: {str(e)}")
         return jsonify({
@@ -495,12 +478,8 @@ def add_component(session_id):
     form.order.data = next_order
     
     if form.validate_on_submit():
-        # Find the highest existing component ID and add 1
-        highest_id = db.session.query(db.func.max(SessionComponent.id)).scalar() or 0
-        next_id = highest_id + 1
         
         component = SessionComponent(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             session_id=session_id,
             title=form.title.data,
             description=form.description.data,
@@ -642,11 +621,8 @@ def attendance(session_id):
             ).first()
 
             if player:
-                highest_id = db.session.query(db.func.max(Attendance.id)).scalar() or 0
-                next_id = highest_id + 1
 
                 attendance = Attendance(
-                    id=next_id,
                     session_id=session_id,
                     player_id=player_id,
                     status=status,
@@ -1284,7 +1260,7 @@ def search_drills():
         'description': drill.description,
         'skill_level': drill.skill_level,
         'focus_area': drill.focus_area,
-        'diagram_url': drill.diagram_url
+        'diagram_url': drill.first_diagram.image_url if drill.first_diagram else None
     } for drill in drills])
 
 @bp.route('/api/drills/duplicate/<int:drill_id>', methods=['POST'])
@@ -1297,13 +1273,9 @@ def duplicate_drill(drill_id):
         team_organization_id=get_current_team_id()
     ).first_or_404()
     
-    # Find the highest existing drill ID and add 1
-    highest_id = db.session.query(db.func.max(SavedDrill.id)).scalar() or 0
-    next_id = highest_id + 1
     
     # Create new drill with copied data
     new_drill = SavedDrill(
-        id=next_id,  # Explicitly set the ID to avoid conflicts
         title=f"Copy of {original_drill.title}",
         description=original_drill.description,
         setup_instructions=original_drill.setup_instructions,
@@ -1696,8 +1668,6 @@ def printable_view(session_id):
 
         
 # Add these imports to your existing imports at the top of session.py
-from secrets import token_urlsafe
-from datetime import datetime, timedelta
 from app.utils.team_filter import get_current_team_id
 
 # Add this route to your session.py Blueprint

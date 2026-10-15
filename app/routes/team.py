@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
@@ -9,16 +9,13 @@ from app.forms.team import PlayerForm, PlayerFilterForm
 from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.session import Attendance, SessionRSVP
-from app.utils.utils import admin_required, coach_required, stat_taker_required
-from app.models.session import SessionPlan
+from app.utils.utils import coach_required
 from app.models.team_organization import TeamOrganization
 from app.models.team_settings import TeamSettings
 from datetime import datetime
-from markupsafe import Markup
 from app.utils.team_filter import get_current_team_id
 import re
 import random
-import string
 
 bp = Blueprint('team', __name__, url_prefix='/team')
 
@@ -78,13 +75,9 @@ def add_player():
     form = PlayerForm()
     if form.validate_on_submit():
         try:
-            # Find the highest existing player ID and add 1
-            highest_id = db.session.query(db.func.max(Player.id)).scalar() or 0
-            next_id = highest_id + 1
             
             # Create the player
             player = Player(
-                id=next_id,  # Explicitly set the ID to avoid conflicts
                 name=form.name.data,
                 jersey_number=form.jersey_number.data,
                 position=form.position.data,
@@ -105,12 +98,8 @@ def add_player():
                     flash(f'Username {form.username.data} is already taken.', 'danger')
                     return render_template('team/player_form.html', title='Add Player', form=form)
                 
-                # Find the highest existing user ID and add 1
-                highest_user_id = db.session.query(db.func.max(User.id)).scalar() or 0
-                next_user_id = highest_user_id + 1
                 
                 user = User(
-                    id=next_user_id,  # Explicitly set the ID
                     username=form.username.data,
                     email=form.email.data,
                     role='player',
@@ -192,13 +181,9 @@ def edit_player(player_id):
                         flash(f'Username {form.username.data} is already taken.', 'danger')
                         return render_template('team/player_form.html', title='Edit Player', form=form, player=player)
                     
-                    # Find the highest existing user ID and add 1
-                    highest_user_id = db.session.query(db.func.max(User.id)).scalar() or 0
-                    next_user_id = highest_user_id + 1
                     
                     # Create new user account
                     user = User(
-                        id=next_user_id,  # Explicitly set the ID
                         username=form.username.data,
                         email=form.email.data,
                         role='player',

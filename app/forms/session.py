@@ -1,16 +1,12 @@
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, DateField, TimeField, TextAreaField, SelectField, 
-    IntegerField, BooleanField, SelectMultipleField, SubmitField, 
-    URLField
+    IntegerField, BooleanField, SelectMultipleField, SubmitField
 )
-from wtforms.validators import DataRequired, Optional, NumberRange, Length, URL
+from wtforms.validators import DataRequired, Optional, NumberRange, Length
 from app.models.player import Player
 from app.models.session import SessionComponent
 from app import db
-from flask_wtf.file import FileField, FileAllowed
-from werkzeug.utils import secure_filename
-import os
 
 class SessionPlanForm(FlaskForm):
     title = StringField('Session Title', validators=[DataRequired(), Length(max=100)])

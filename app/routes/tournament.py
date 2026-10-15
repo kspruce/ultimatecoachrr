@@ -1,6 +1,6 @@
 # app/routes/tournament.py
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text, and_
@@ -12,9 +12,9 @@ from app.models.game_player import GamePlayer
 from app.models.player import Player
 from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
-from app.utils.utils import admin_required, coach_required, stat_taker_required
-from wtforms import SubmitField, HiddenField
-from app.utils.team_filter import get_current_team_id
+from app.utils.utils import coach_required
+from wtforms import SubmitField
+from app.utils.team_filter import get_current_team_id, team_row_or_404
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -76,12 +76,8 @@ def detail(tournament_id):
 def add():
     form = TournamentForm()
     if form.validate_on_submit():
-        # Find the highest existing tournament ID and add 1
-        highest_id = db.session.query(db.func.max(Tournament.id)).scalar() or 0
-        next_id = highest_id + 1
         
         tournament = Tournament(
-            id=next_id,  # Explicitly set the ID to avoid conflicts
             name=form.name.data,
             start_date=form.start_date.data,
             end_date=form.end_date.data,
@@ -251,12 +247,8 @@ def rsvp(tournament_id):
                 existing_rsvp.status = status
                 existing_rsvp.notes = notes
             else:
-                # Find the highest existing RSVP ID and add 1
-                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
-                next_id = highest_id + 1
                 
                 new_rsvp = TournamentRSVP(
-                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player.id,
                     status=status,
@@ -278,12 +270,8 @@ def rsvp(tournament_id):
                 existing_rsvp.status = form.status.data
                 existing_rsvp.notes = form.notes.data
             else:
-                # Find the highest existing RSVP ID and add 1
-                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
-                next_id = highest_id + 1
                 
                 new_rsvp = TournamentRSVP(
-                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player.id,
                     status=form.status.data,
@@ -393,13 +381,9 @@ def update_selections(tournament_id):
         for player_id in selected_player_ids:
             player_id = int(player_id)
             if player_id not in rsvp_player_ids:
-                # Find the highest existing RSVP ID and add 1
-                highest_id = db.session.query(db.func.max(TournamentRSVP.id)).scalar() or 0
-                next_id = highest_id + 1
                 
                 # Create a new RSVP with admin selection
                 new_rsvp = TournamentRSVP(
-                    id=next_id,  # Explicitly set the ID
                     tournament_id=tournament_id,
                     player_id=player_id,
                     status='attending',  # Default status
@@ -509,8 +493,9 @@ def update_game_players(tournament_id, game_id):
 
 @bp.route('/<int:tournament_id>/bulk-update', methods=['POST'])
 @login_required
+@coach_required
 def bulk_update_game_players(tournament_id):
-    tournament = Tournament.query.get_or_404(tournament_id)
+    tournament = team_row_or_404(Tournament, tournament_id)
 
     for game in tournament.games:
 

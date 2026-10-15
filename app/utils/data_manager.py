@@ -186,7 +186,7 @@ class DataManager:
             # Get all columns
             mapper = sqlalchemy_inspect(model)
             for column in mapper.columns:
-                value = getattr(record, column.name)
+                value = getattr(record, model.__mapper__.get_property_by_column(column).key)
                 # Convert datetime objects to ISO format strings
                 if isinstance(value, (date, time)):  # datetime is a date too
                     value = value.isoformat()

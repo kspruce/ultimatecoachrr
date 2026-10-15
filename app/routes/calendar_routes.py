@@ -1,10 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash, session
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
 from flask_login import login_required, current_user
 from app import db
 from app.models.session import SessionPlan, SessionRSVP
 from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP
-from app.models.player import Player
 from datetime import datetime, timedelta
 import json
 from app.utils.team_filter import get_current_team_id

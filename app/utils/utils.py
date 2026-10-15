@@ -2,8 +2,6 @@
 import os
 from werkzeug.utils import secure_filename
 from flask import current_app, flash, redirect, url_for
-from PIL import Image
-import uuid
 from datetime import datetime
 from functools import wraps
 from flask_login import current_user

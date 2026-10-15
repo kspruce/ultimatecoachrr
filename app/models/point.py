@@ -11,7 +11,7 @@ class Point(db.Model):
     our_score_after = db.Column(db.Integer, default=0)
     their_score_after = db.Column(db.Integer, default=0)
     starting_position = db.Column(db.String(20), nullable=False)
-    point_outcome = db.Column(db.String(20), nullable=False)
+    point_outcome = db.Column(db.String(20), nullable=True)  # empty while a point is in progress
     duration = db.Column(db.Integer, nullable=True)
     timestamp_in_video = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

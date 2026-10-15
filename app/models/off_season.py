@@ -1,11 +1,7 @@
 # app/models/off_season.py
 from app import db
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Boolean, Date, ForeignKey, Float, Enum
-from sqlalchemy.orm import relationship
 import enum
-from app.models.fitness import FitnessMetric
-from app.models.user import User
 
 class TrackWorkoutWeek(db.Model):
     """Model representing a week in the track workout plan"""

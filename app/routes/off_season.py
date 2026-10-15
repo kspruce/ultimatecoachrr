@@ -1,5 +1,5 @@
 # app/routes/off_season.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
 from app.models.off_season import (
@@ -9,14 +9,12 @@ from app.models.off_season import (
 )
 from app.models.session import SessionPlan, SessionComponent
 from app.models.fitness import FitnessMetric, FitnessRecord
-from app.models.player import Player
 from app.utils.utils import admin_required
-from sqlalchemy import func, and_
 from datetime import datetime, timedelta, date
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, TextAreaField, SubmitField, SelectField, DateField, 
-    IntegerField, FloatField, BooleanField, SelectMultipleField
+    IntegerField, FloatField, SelectMultipleField
 )
 from wtforms.validators import DataRequired, Optional, Length, NumberRange
 import markdown
@@ -460,7 +458,7 @@ def add_session(schedule_id):
         ).first()
         
         if existing:
-            flash(f'A session already exists for this day!', 'danger')
+            flash('A session already exists for this day!', 'danger')
             return redirect(url_for('off_season.view_schedule', schedule_id=schedule.id))
         
         session = ScheduleSession(
@@ -522,7 +520,7 @@ def edit_session(session_id):
             ).first()
             
             if existing and existing.id != session.id:
-                flash(f'A session already exists for this day!', 'danger')
+                flash('A session already exists for this day!', 'danger')
                 return redirect(url_for('off_season.view_schedule', schedule_id=session.schedule_id))
         
         session.day_of_week = form.day_of_week.data
@@ -686,7 +684,7 @@ def add_phase_metric(phase_id):
         ).first()
         
         if existing:
-            flash(f'This metric is already added to this phase!', 'danger')
+            flash('This metric is already added to this phase!', 'danger')
             return redirect(url_for('off_season.view_phase', phase_id=phase.id))
         
         phase_metric = PhaseMetric(

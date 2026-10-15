@@ -1,11 +1,12 @@
 from flask import Blueprint, render_template, redirect, url_for
+from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
 from app import db
 from app.models.player import Player
 from app.models.game import Game
 from app.models.session import SessionPlan
 from app.models.tournament import Tournament
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import request, flash, jsonify
 from app.utils.data_manager import DataManager
 import os
@@ -18,7 +19,6 @@ from werkzeug.utils import secure_filename
 import logging
 import math
 from sqlalchemy import inspect as sqlalchemy_inspect
-import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -654,24 +654,6 @@ def system_status():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def get_current_team_id():
-    """Helper function to get the current team ID based on user role"""
-    from flask import session
-    
-    if current_user.is_superadmin:
-        # For admins, use the team selected in the session
-        team_id = session.get('current_team_id')
-        if not team_id and hasattr(current_user, 'team_organization_id') and current_user.team_organization_id:
-            team_id = current_user.team_organization_id
-    else:
-        # For regular users, use their assigned team
-        team_id = None
-        if hasattr(current_user, 'team_organization_id') and current_user.team_organization_id:
-            team_id = current_user.team_organization_id
-        elif hasattr(current_user, 'player') and current_user.player and hasattr(current_user.player, 'team_organization_id'):
-            team_id = current_user.player.team_organization_id
-    
-    return team_id
 
     
 def get_directory_size(path):

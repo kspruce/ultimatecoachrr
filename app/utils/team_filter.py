@@ -3,27 +3,57 @@ from flask import session, g
 from flask_login import current_user
 
 def get_current_team_id():
-    """Get the current team ID from session or user.
+    """The team whose data the current user is working on.
 
-    For any admin (superadmin or team admin), the session selection always
-    takes precedence so that team-switching works correctly.  Falls back to
-    the user's own team_organization_id if no session value is present, and
-    to None if neither is set (edge-case on very first login).
+    Superadmins can switch between every team (the choice is kept in the
+    session) and default to their own team. Everyone else, team admins
+    included, only ever sees their own team.
     """
     if not current_user.is_authenticated:
         return None
 
-    if current_user.is_admin:
-        # Admins can switch between teams – respect the session selection first.
-        session_team_id = session.get('current_team_id')
-        if session_team_id:
-            return session_team_id
-        # Fall back to their own assigned team (if any) so data is never empty
-        # on the very first request before the context processor has set the session.
-        return current_user.team_organization_id
+    if current_user.is_superadmin:
+        if 'superadmin_team_id' not in g:
+            g.superadmin_team_id = _valid_superadmin_team_id()
+        return g.superadmin_team_id
 
-    # Regular players always see their own team only.
-    return current_user.team_organization_id
+    if current_user.team_organization_id:
+        return current_user.team_organization_id
+    player = getattr(current_user, 'player', None)
+    return player.team_organization_id if player else None
+
+
+def team_row_or_404(model, row_id):
+    """Fetch a row by id only if it belongs to the current team, else 404."""
+    return model.query.filter_by(id=row_id, team_organization_id=get_current_team_id()).first_or_404()
+
+
+def accessible_teams(user):
+    """Teams the user may view and switch to, in a stable order."""
+    from app.models.team_organization import TeamOrganization
+    if not user.is_authenticated:
+        return []
+    if user.is_superadmin:
+        return TeamOrganization.query.order_by(TeamOrganization.id).all()
+    if user.team_organization_id:
+        team = TeamOrganization.query.get(user.team_organization_id)
+        return [team] if team else []
+    return []
+
+
+def can_access_team(user, team_id):
+    return user.is_authenticated and (user.is_superadmin or user.team_organization_id == team_id)
+
+
+def _valid_superadmin_team_id():
+    """The superadmin's chosen team if it still exists, else their own team,
+    else the first team."""
+    from app.models.team_organization import TeamOrganization
+    for team_id in (session.get('current_team_id'), current_user.team_organization_id):
+        if team_id and TeamOrganization.query.get(team_id):
+            return team_id
+    team = TeamOrganization.query.order_by(TeamOrganization.id).first()
+    return team.id if team else None
 
 def team_context(f):
     """Store current team ID in g object for use in route functions"""

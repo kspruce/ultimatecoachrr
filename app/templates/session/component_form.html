@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'session/partials/_badges.html' import component_colour %}
 
 {% block content %}
 <div class="container">
@@ -176,7 +177,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center py-2 small
                         {% if component is defined and comp.id == component.id %} active{% endif %}">
                         <span>
-                            <span class="badge bg-{% if comp.component_type == 'warmup' %}warning text-dark{% elif comp.component_type == 'drill' %}primary{% elif comp.component_type == 'scrimmage' %}success{% elif comp.component_type == 'cooldown' %}info{% elif comp.component_type == 'discussion' %}dark{% else %}secondary{% endif %} me-1">{{ comp.order }}</span>
+                            <span class="badge bg-{{ component_colour(comp.component_type, dark_text=True) }} me-1">{{ comp.order }}</span>
                             {{ comp.title }}
                         </span>
                         {% if comp.duration_minutes %}

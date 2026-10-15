@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'session/partials/_badges.html' import session_type_colour, component_colour, component_icon %}
 
 {% block content %}
 <div class="container">
@@ -34,7 +35,7 @@
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-secondary rounded-pill">{{ component.order }}</span>
                         <h5 class="mb-0">{{ component.title }}</h5>
-                        <span class="badge bg-{% if component.component_type == 'warmup' %}warning text-dark{% elif component.component_type == 'drill' %}primary{% elif component.component_type == 'scrimmage' %}success{% elif component.component_type == 'cooldown' %}info{% elif component.component_type == 'discussion' %}dark{% else %}secondary{% endif %}">
+                        <span class="badge bg-{{ component_colour(component.component_type, dark_text=True) }}">
                             {{ component.component_type|replace('_', ' ')|capitalize }}
                         </span>
                     </div>

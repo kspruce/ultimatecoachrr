@@ -1,11 +1,11 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, TextAreaField, SelectField, SelectMultipleField, SubmitField, HiddenField, BooleanField
-from wtforms.validators import DataRequired, Optional, URL, NumberRange, Length
+from wtforms import StringField, IntegerField, TextAreaField, SelectField, SelectMultipleField, SubmitField, BooleanField
+from wtforms.validators import DataRequired, Optional, URL, Length
 from app.models.game import Game
 from app.models.player import Player
 from app.models.clip import ClipTag
+from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
-from flask import session
 
 
 class ClipForm(FlaskForm):
@@ -34,10 +34,7 @@ class ClipForm(FlaskForm):
         
         # Get current team ID
         if current_user.is_authenticated:
-            if current_user.is_admin:
-                team_id = session.get('current_team_id')
-            else:
-                team_id = current_user.team_organization_id
+            team_id = get_current_team_id()
         else:
             team_id = None
         
@@ -136,10 +133,7 @@ class ClipTagForm(FlaskForm):
         
         # Get current team ID
         if current_user.is_authenticated:
-            if current_user.is_admin:
-                team_id = session.get('current_team_id')
-            else:
-                team_id = current_user.team_organization_id
+            team_id = get_current_team_id()
         else:
             team_id = None
         
@@ -205,10 +199,7 @@ class ClipFilterForm(FlaskForm):
         
         # Get current team ID
         if current_user.is_authenticated:
-            if current_user.is_admin:
-                team_id = session.get('current_team_id')
-            else:
-                team_id = current_user.team_organization_id
+            team_id = get_current_team_id()
         else:
             team_id = None
         

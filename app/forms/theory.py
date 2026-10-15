@@ -2,10 +2,9 @@
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, TextAreaField, IntegerField, SelectField, 
-    URLField, SelectMultipleField, BooleanField
+    URLField, SelectMultipleField
 )
 from wtforms.validators import DataRequired, Optional, Length, URL, ValidationError
-from flask_wtf.file import FileField, FileAllowed
 
 class TheorySectionForm(FlaskForm):
     name = StringField('Section Name', 

@@ -318,8 +318,27 @@
     }
     .uc-theme-btn:hover { background: rgba(255,255,255,.18); color: white; }
 
-    /* ─── Mobile: user dropdown positioned inside viewport ───── */
+    /* ─── Mobile: collapsed menu ─────────────────────────────── */
     @media (max-width: 991.98px) {
+      /* The navbar is sticky, so an open menu taller than the screen can't be
+         reached by scrolling the page: the menu scrolls inside itself instead. */
+      #navbarNav.show,
+      #navbarNav.collapsing {
+        max-height: calc(100dvh - 64px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Theme button and user menu: keep the button at the top of the row
+         and let the user menu use the full width when it opens. */
+      .uc-nav-right {
+        align-items: flex-start;
+        padding: .5rem 0 .25rem;
+      }
+      .uc-nav-right > .nav-item {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
       /* Inside the collapsed nav, dropdowns open inline (not absolute) */
       #navbarNav .dropdown-menu {
         position: static !important;
@@ -331,20 +350,8 @@
         margin: .25rem 0 .25rem .75rem !important;
         padding: .25rem !important;
       }
-      /* The user pill button dropdown (outside the collapse) stays absolute but clipped to screen */
       .uc-nav-right .dropdown-menu {
-        position: fixed !important;
-        top: 60px !important;
-        right: .5rem !important;
-        left: auto !important;
-        transform: none !important;
-        max-width: calc(100vw - 1rem) !important;
-        min-width: 210px !important;
-        max-height: calc(100dvh - 70px) !important;
-        overflow-y: scroll !important;
-        -webkit-overflow-scrolling: touch !important;
-        overscroll-behavior: contain !important;
-        z-index: 1050 !important;
+        min-width: 0 !important;
       }
     }
 

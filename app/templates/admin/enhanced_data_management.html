@@ -456,6 +456,24 @@
                                     </button>
                                 </div>
                             </form>
+
+                            <hr>
+                            <h6>Stats maintenance (current team)</h6>
+                            <p class="small text-muted">Recalculate stored throw data for the team you're viewing, e.g. after importing old games.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <form method="POST" action="{{ url_for('stat.mark_break_throws') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-secondary">
+                                        <i class="bi bi-shuffle me-1"></i>Mark missing break throws
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('stat.recalculate_throw_distances') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-secondary">
+                                        <i class="bi bi-rulers me-1"></i>Recalculate throw distances
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
         
