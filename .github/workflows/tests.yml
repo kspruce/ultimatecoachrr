@@ -8,6 +8,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # The committed .env points uploads at /app (Railway's app folder),
+      # which the CI runner can't write to; real env vars take priority.
+      UPLOAD_FOLDER: /tmp/uploads
     services:
       postgres:
         image: postgres:16
@@ -32,7 +36,9 @@ jobs:
           DATABASE_URL: sqlite:///ci.db
           SECRET_KEY: ci
           FLASK_APP: run.py
-        run: test "$(flask db heads 2>/dev/null | grep -c '(head)')" = "1"
+        run: |
+          flask db heads | tee heads.txt
+          test "$(grep -c '(head)' heads.txt)" = "1"
       - name: Tests (SQLite)
         run: python -m pytest tests -q
       - name: Tests (Postgres)

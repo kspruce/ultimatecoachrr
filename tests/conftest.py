@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 
 import pytest
 
@@ -9,6 +10,8 @@ sys.path.insert(0, ROOT)
 # Never let a test touch a real database: point at a throwaway SQLite file
 # unless TEST_DATABASE_URL is given (e.g. a local Postgres).
 os.environ['DATABASE_URL'] = os.environ.get('TEST_DATABASE_URL', 'sqlite:///:memory:')
+# Somewhere writable for uploads (.env may point at Railway's /app folder).
+os.environ['UPLOAD_FOLDER'] = tempfile.mkdtemp(prefix='herd-uploads-')
 for key in ('AWS_ACCESS_KEY', 'AWS_SECRET_KEY', 'AWS_BUCKET_NAME'):
     os.environ.pop(key, None)
 
