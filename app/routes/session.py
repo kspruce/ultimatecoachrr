@@ -1,4 +1,3 @@
-from werkzeug.exceptions import HTTPException
 from flask import (
     Blueprint, abort, render_template, redirect, url_for, flash,
     request, jsonify, current_app, render_template_string, make_response
@@ -11,6 +10,7 @@ from app.models.player import Player
 from datetime import datetime, timedelta
 import json
 import base64
+import hashlib
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
 from app.forms.session import (
@@ -213,20 +213,20 @@ def add_drill(drill_type='basic'):
 @bp.route('/drills/editor')
 @bp.route('/drills/editor/<int:drill_id>')
 @login_required
+@coach_required
 def drill_editor(drill_id=None):
-    """Render the drill editor page"""
+    """Draw a drill diagram (players, cones, cuts and throws on a field)."""
     drill = None
+    editor_state = None
     if drill_id:
         drill = SavedDrill.query.filter_by(
             id=drill_id,
             team_organization_id=get_current_team_id()
         ).first_or_404()
-        
-        # Ensure user has permission to edit this drill
-        if drill.created_by != current_user.id and not current_user.is_admin:
-            abort(403)
-    
-    return render_template('session/drills/editor.html', drill=drill, hide_container=True)
+        if drill.editor_diagram:
+            editor_state = json.loads(drill.editor_diagram.editor_json)
+    return render_template('session/drills/editor.html', drill=drill, editor_state=editor_state,
+                           other_diagrams=[d for d in (drill.diagrams if drill else []) if not d.editor_json])
 
 
 @bp.route('/drills/<int:drill_id>')
@@ -286,128 +286,139 @@ def drill_diagram_svg(diagram_id, filename):
     return response
 
 
-# Drill API Routes
+# Drill API Routes (used by the drill editor, static/js/drill_editor.js)
+EDITOR_DIAGRAM_ORDER = 1000  # after any imported diagrams
+MAX_EDITOR_PNG = 5 * 1024 * 1024
+MAX_EDITOR_TEXT = 2 * 1024 * 1024
+
+
+def _int_or_none(value):
+    try:
+        return int(value) if value not in (None, '') else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _apply_editor_fields(drill, data):
+    drill.title = (data.get('title') or 'Untitled Drill').strip()[:100]
+    drill.description = data.get('description') or None
+    drill.setup_instructions = data.get('setup_instructions') or None
+    drill.recommended_duration = _int_or_none(data.get('recommended_duration'))
+    drill.min_players = _int_or_none(data.get('min_players'))
+    drill.max_players = _int_or_none(data.get('max_players'))
+    drill.skill_level = (data.get('skill_level') or None) and data['skill_level'][:20]
+    drill.focus_area = (data.get('focus_area') or None) and data['focus_area'][:100]
+    drill.equipment_needed = (data.get('equipment_needed') or None) and data['equipment_needed'][:200]
+    drill.is_public = bool(data.get('is_public'))
+
+
+def _save_editor_diagram(drill):
+    """Store the posted drawing (PNG, SVG and the editor's JSON) as the
+    drill's editor diagram. Returns an error message, or None."""
+    png = request.files.get('diagram')
+    editor = request.form.get('editor')
+    if not png or not editor:
+        return None  # details only
+    png_bytes = png.read(MAX_EDITOR_PNG + 1)
+    if len(png_bytes) > MAX_EDITOR_PNG or not png_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'The diagram image is not a PNG or is too large.'
+    svg = request.form.get('svg') or None
+    if len(editor) > MAX_EDITOR_TEXT or (svg and len(svg) > MAX_EDITOR_TEXT):
+        return 'The diagram is too large to save.'
+    try:
+        json.loads(editor)
+    except ValueError:
+        return 'The diagram data is not valid.'
+
+    diagram = drill.editor_diagram
+    if diagram is None:
+        diagram = DrillDiagram(order=EDITOR_DIAGRAM_ORDER, source='Drill editor',
+                               team_organization_id=drill.team_organization_id)
+        drill.diagrams.append(diagram)
+    diagram.image_data = base64.b64encode(png_bytes).decode('ascii')
+    diagram.image_mime = 'image/png'
+    diagram.image_hash = hashlib.sha256(png_bytes).hexdigest()
+    diagram.svg_data = svg
+    diagram.svg_hash = hashlib.sha256(svg.encode()).hexdigest() if svg else None
+    diagram.editor_json = editor
+    db.session.flush()  # the URLs need the id
+    diagram.image_url = url_for('session.drill_diagram_image', diagram_id=diagram.id,
+                                filename=f'{diagram.image_hash[:16]}.png')
+    diagram.svg_url = (url_for('session.drill_diagram_svg', diagram_id=diagram.id,
+                               filename=f'{diagram.svg_hash[:16]}.svg') if svg else None)
+    return None
+
+
+def _editor_payload():
+    try:
+        return json.loads(request.form.get('data') or '{}')
+    except ValueError:
+        abort(400)
+
+
 @bp.route('/api/drills', methods=['POST'])
 @login_required
 @coach_required
 def create_drill():
-    """Create a new drill via API"""
-    try:
-        data = request.get_json()
-        
-        
-        drill = SavedDrill(
-            title=data.get('title', 'Untitled Drill'),
-            description=data.get('description', ''),
-            setup_instructions=data.get('setup_instructions', ''),
-            recommended_duration=data.get('recommended_duration'),
-            min_players=data.get('min_players'),
-            max_players=data.get('max_players'),
-            skill_level=data.get('skill_level'),
-            focus_area=data.get('focus_area'),
-            equipment_needed=data.get('equipment_needed'),
-            ultiplay_embed=data.get('ultiplay_embed'),
-            is_public=data.get('is_public', False),
-            created_by=current_user.id,
-            team_organization_id=get_current_team_id()  # Add team organization ID
-        )
-
-        db.session.add(drill)
-        db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'drill_id': drill.id,
-            'message': 'Drill created successfully'
-        }), 201
-
-    except Exception as e:
+    """Create a drill from the drill editor."""
+    drill = SavedDrill(created_by=current_user.id, team_organization_id=get_current_team_id())
+    _apply_editor_fields(drill, _editor_payload())
+    db.session.add(drill)
+    error = _save_editor_diagram(drill)
+    if error:
         db.session.rollback()
-        current_app.logger.error(f"Error creating drill: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'Failed to create drill'
-        }), 500
+        return jsonify({'success': False, 'message': error}), 400
+    db.session.commit()
+    return jsonify({'success': True, 'drill_id': drill.id,
+                    'editor_url': url_for('session.drill_editor', drill_id=drill.id),
+                    'detail_url': url_for('session.drill_detail', drill_id=drill.id)}), 201
+
 
 @bp.route('/api/drills/<int:drill_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def manage_drill(drill_id):
-    # Add error handling for authentication
-    if not current_user.is_authenticated:
+    drill = SavedDrill.query.filter_by(
+        id=drill_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+
+    if request.method == 'GET':
+        editor = drill.editor_diagram
         return jsonify({
-            'success': False,
-            'message': 'Authentication required'
-        }), 401
+            'success': True,
+            'id': drill.id,
+            'title': drill.title,
+            'description': drill.description,
+            'setup_instructions': drill.setup_instructions,
+            'skill_level': drill.skill_level,
+            'focus_area': drill.focus_area,
+            'diagram_url': drill.first_diagram.image_url if drill.first_diagram else None,
+            'editor': json.loads(editor.editor_json) if editor else None,
+        })
 
-    try:
-        drill = SavedDrill.query.filter_by(
-            id=drill_id,
-            team_organization_id=get_current_team_id()
-        ).first_or_404()
-        
-        # Check permissions
-        if drill.created_by != current_user.id and not current_user.is_admin:
-            return jsonify({
-                'success': False,
-                'message': 'Permission denied'
-            }), 403
+    if not current_user.is_coach:
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
-        if request.method == 'DELETE':
-            try:
-                # Diagrams are DrillDiagram rows, deleted with the drill.
+    if request.method == 'PUT':
+        _apply_editor_fields(drill, _editor_payload())
+        error = _save_editor_diagram(drill)
+        if error:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': error}), 400
+        db.session.commit()
+        return jsonify({'success': True, 'drill_id': drill.id,
+                        'editor_url': url_for('session.drill_editor', drill_id=drill.id),
+                        'detail_url': url_for('session.drill_detail', drill_id=drill.id)})
 
-                # Delete associated components
-                components_deleted = SessionComponent.query.filter_by(
-                    drill_id=drill.id,
-                    team_organization_id=get_current_team_id()
-                ).delete()
-                
-                current_app.logger.info(f"Deleted {components_deleted} components")
-
-                # Delete the drill
-                title = drill.title
-                db.session.delete(drill)
-                db.session.commit()
-
-                current_app.logger.info(f"Successfully deleted drill: {title}")
-                return jsonify({
-                    'success': True,
-                    'message': f'Drill "{title}" has been deleted successfully'
-                })
-
-            except Exception as e:
-                db.session.rollback()
-                current_app.logger.error(f"Error deleting drill: {str(e)}")
-                return jsonify({
-                    'success': False,
-                    'message': f'Error deleting drill: {str(e)}'
-                }), 500
-
-
-        if request.method == 'GET':
-            first = drill.first_diagram
-            return jsonify({
-                'success': True,
-                'id': drill.id,
-                'title': drill.title,
-                'description': drill.description,
-                'setup_instructions': drill.setup_instructions,
-                'skill_level': drill.skill_level,
-                'focus_area': drill.focus_area,
-                'diagram_url': first.image_url if first else None,
-            })
-
-        return jsonify({'success': False, 'message': 'Editing drills here is not supported'}), 405
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        current_app.logger.error(f"Error in manage_drill: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': f'Server error: {str(e)}'
-        }), 500
-
+    # DELETE
+    if drill.created_by != current_user.id and not current_user.is_admin:
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
+    SessionComponent.query.filter_by(drill_id=drill.id,
+                                     team_organization_id=get_current_team_id()).delete()
+    title = drill.title
+    db.session.delete(drill)
+    db.session.commit()
+    return jsonify({'success': True, 'message': f'Drill "{title}" has been deleted'})
 
 
 # Drill data API for component form auto-fill
@@ -1228,77 +1239,6 @@ def clean_drill_elements(elements):
     return [el for el in elements if el.get('type') in valid_types]
 
 # Additional API Routes for Drill Management
-@bp.route('/api/drills/search')
-@login_required
-def search_drills():
-    """Search drills based on criteria"""
-    query = request.args.get('q', '')
-    skill_level = request.args.get('skill_level', '')
-    focus_area = request.args.get('focus_area', '')
-    
-    drills = SavedDrill.query.filter_by(team_organization_id=get_current_team_id())
-    
-    if query:
-        drills = drills.filter(
-            db.or_(
-                SavedDrill.title.ilike(f'%{query}%'),
-                SavedDrill.description.ilike(f'%{query}%')
-            )
-        )
-    
-    if skill_level:
-        drills = drills.filter(SavedDrill.skill_level == skill_level)
-    
-    if focus_area:
-        drills = drills.filter(SavedDrill.focus_area == focus_area)
-    
-    drills = drills.order_by(SavedDrill.title).all()
-    
-    return jsonify([{
-        'id': drill.id,
-        'title': drill.title,
-        'description': drill.description,
-        'skill_level': drill.skill_level,
-        'focus_area': drill.focus_area,
-        'diagram_url': drill.first_diagram.image_url if drill.first_diagram else None
-    } for drill in drills])
-
-@bp.route('/api/drills/duplicate/<int:drill_id>', methods=['POST'])
-@login_required
-@coach_required
-def duplicate_drill(drill_id):
-    """Create a copy of an existing drill"""
-    original_drill = SavedDrill.query.filter_by(
-        id=drill_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
-    
-    # Create new drill with copied data
-    new_drill = SavedDrill(
-        title=f"Copy of {original_drill.title}",
-        description=original_drill.description,
-        setup_instructions=original_drill.setup_instructions,
-        recommended_duration=original_drill.recommended_duration,
-        min_players=original_drill.min_players,
-        max_players=original_drill.max_players,
-        skill_level=original_drill.skill_level,
-        focus_area=original_drill.focus_area,
-        equipment_needed=original_drill.equipment_needed,
-        created_by=current_user.id,
-        elements=original_drill.elements,
-        team_organization_id=get_current_team_id()  # Add team organization ID
-    )
-    
-    db.session.add(new_drill)
-    db.session.commit()
-    
-    return jsonify({
-        'success': True,
-        'drill_id': new_drill.id,
-        'message': 'Drill duplicated successfully'
-    })
-
 @bp.route('/<int:session_id>/detail')
 @login_required
 def detail(session_id):
@@ -1542,93 +1482,43 @@ def before_request():
 @bp.route('/<int:session_id>/export_pdf')
 @login_required
 def export_pdf(session_id):
-    """Export session plan as PDF"""
+    """Download the session plan as a PDF."""
+    from io import BytesIO
+    from flask import send_file
+    from slugify import slugify
+    from app.utils.pdf import html_to_pdf
+
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id,
+        team_organization_id=get_current_team_id()
+    ).first_or_404()
+
+    components = session_plan.components.filter_by(
+        team_organization_id=get_current_team_id()
+    ).order_by(SessionComponent.order).all()
+
+    attendance_by_status = {'present': [], 'absent': [], 'late': [], 'excused': []}
+    for attendance in session_plan.attendances.filter_by(
+            team_organization_id=get_current_team_id()):
+        if attendance.status in attendance_by_status:
+            attendance_by_status[attendance.status].append(attendance)
+
+    html = render_template('session/pdf_export.html', session=session_plan,
+                           components=components, attendance_by_status=attendance_by_status)
     try:
-        import pdfkit
-        from flask import make_response
-        
-        session_plan = SessionPlan.query.filter_by(
-            id=session_id,
-            team_organization_id=get_current_team_id()
-        ).first_or_404()
-        
-        components = session_plan.components.filter_by(
-            team_organization_id=get_current_team_id()
-        ).order_by(SessionComponent.order).all()
-        
-        attendances = session_plan.attendances.filter_by(
-            team_organization_id=get_current_team_id()
-        ).all()
-        
-        # Group attendances by status
-        attendance_by_status = {
-            'present': [],
-            'absent': [],
-            'late': [],
-            'excused': []
-        }
-        
-        for attendance in attendances:
-            if attendance.status in attendance_by_status:
-                attendance_by_status[attendance.status].append(attendance)
-        
-        # Render the template to HTML
-        html = render_template(
-            'session/pdf_export.html',
-            session=session_plan,
-            components=components,
-            attendance_by_status=attendance_by_status
-        )
-        
-        # PDF options
-        options = {
-            'page-size': 'A4',
-            'margin-top': '0.75in',
-            'margin-right': '0.75in',
-            'margin-bottom': '0.75in',
-            'margin-left': '0.75in',
-            'encoding': "UTF-8",
-        }
-        
-        # Generate PDF from HTML
-        try:
-            pdf = pdfkit.from_string(html, False, options=options)
-        except Exception as e:
-            current_app.logger.error(f"PDF generation error: {str(e)}")
-            # Fallback to simpler options
-            pdf = pdfkit.from_string(html, False)
-        
-        # Create response with PDF
-        response = make_response(pdf)
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session_plan.title.replace(" ", "_")}.pdf'
-        
-        return response
-        
+        pdf = html_to_pdf(html)
     except ImportError:
-        # If pdfkit is not available, try WeasyPrint
-        try:
-            from weasyprint import HTML
-            
-            html = render_template(
-                'session/pdf_export.html',
-                session=session_plan,
-                components=components,
-                attendance_by_status=attendance_by_status
-            )
-            
-            pdf = HTML(string=html).write_pdf()
-            
-            response = make_response(pdf)
-            response.headers['Content-Type'] = 'application/pdf'
-            response.headers['Content-Disposition'] = f'attachment; filename=session_{session_id}_{session_plan.title.replace(" ", "_")}.pdf'
-            
-            return response
-            
-        except Exception as e:
-            current_app.logger.error(f"PDF generation error: {str(e)}")
-            flash(f"Could not generate PDF: {str(e)}", "error")
-            return redirect(url_for('session.detail', session_id=session_id))
+        current_app.logger.error('Session PDF export: playwright is not installed')
+        flash('PDF export is not available: Playwright is not installed on the server.', 'danger')
+        return redirect(url_for('session.detail', session_id=session_id))
+    except Exception as e:
+        current_app.logger.error(f'Session PDF export failed: {e}')
+        flash('PDF export failed. Please try again or use the printable page.', 'danger')
+        return redirect(url_for('session.detail', session_id=session_id))
+
+    name = slugify(session_plan.title or 'session') or 'session'
+    return send_file(BytesIO(pdf), mimetype='application/pdf', as_attachment=True,
+                     download_name=f'session_{session_id}_{name}.pdf')
 
 @bp.route('/<int:session_id>/printable')
 @login_required

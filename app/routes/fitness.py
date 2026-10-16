@@ -2,7 +2,7 @@
 from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from app import db
-from app.models.fitness import FitnessMetric, FitnessRecord, TestingPhase
+from app.models.fitness import FitnessGoal, FitnessMetric, FitnessRecord, TestingPhase
 from app.models.player import Player
 from app.utils.utils import admin_required
 from sqlalchemy import func, and_
@@ -33,11 +33,6 @@ class FitnessMetricForm(FlaskForm):
     higher_is_better = BooleanField('Higher Values Are Better', default=True)
     active = BooleanField('Active', default=True)
     submit = SubmitField('Save Metric')
-
-class FitnessGoalForm(FlaskForm):
-    target_value = FloatField('Target Value', validators=[DataRequired()])
-    target_date = DateField('Target Date', validators=[DataRequired()])
-    submit = SubmitField('Set Goal')
 
 class TestingPhaseForm(FlaskForm):
     name = StringField('Phase Name', validators=[DataRequired(), Length(max=100)])
@@ -304,51 +299,8 @@ def player_fitness(player_id):
     all_player_metrics.sort(key=lambda x: x['percentile'], reverse=True)
     top_metrics = all_player_metrics[:4]
     
-    # Get fitness goals for this player
-    fitness_goals = []
-    try:
-        # This assumes you have a FitnessGoal model - if not, leave as empty list
-        from app.models.fitness import FitnessGoal
-        goals = FitnessGoal.query.filter_by(
-            player_id=player_id, 
-            completed=False,
-            team_organization_id=team_id
-        ).all()
-        
-        for goal in goals:
-            # Get current value for this metric
-            latest = FitnessRecord.query.filter_by(
-                player_id=player_id,
-                metric_id=goal.metric_id,
-                team_organization_id=team_id
-            ).order_by(FitnessRecord.date_recorded.desc()).first()
-            
-            current_value = latest.value if latest else None
-            
-            # Calculate progress percentage
-            if current_value is not None and goal.target_value != 0:
-                if goal.metric.higher_is_better:
-                    progress = min(100, (current_value / goal.target_value) * 100)
-                    achieved = current_value >= goal.target_value
-                else:
-                    progress = min(100, (goal.target_value / current_value) * 100) if current_value > 0 else 0
-                    achieved = current_value <= goal.target_value
-            else:
-                progress = 0
-                achieved = False
-            
-            fitness_goals.append({
-                'metric': goal.metric,
-                'target_value': goal.target_value,
-                'target_date': goal.target_date,
-                'current_value': current_value,
-                'progress': int(progress),
-                'achieved': achieved
-            })
-    except ImportError:
-        # FitnessGoal model doesn't exist yet
-        pass
-    
+    fitness_goals = _goal_progress(player_id, team_id, completed=False)
+
     # Get recent records for this player
     recent_records = FitnessRecord.query.filter_by(
         player_id=player_id,
@@ -413,29 +365,14 @@ def record_fitness(player_id):
             db.session.add(record)
             db.session.commit()
             
-            # Check if this record achieves any goals
-            try:
-                from app.models.fitness import FitnessGoal
-                metric = FitnessMetric.query.get(form.metric.data)
-                goals = FitnessGoal.query.filter_by(
-                    player_id=player_id,
-                    metric_id=form.metric.data,
-                    completed=False,
-                    team_organization_id=team_id
-                ).all()
-                
-                for goal in goals:
-                    if (metric.higher_is_better and form.value.data >= goal.target_value) or \
-                       (not metric.higher_is_better and form.value.data <= goal.target_value):
-                        goal.completed = True
-                        goal.completed_date = datetime.utcnow()
-                        flash(f'Congratulations! You achieved your goal for {metric.name}!', 'success')
-                
-                db.session.commit()
-            except ImportError:
-                # FitnessGoal model doesn't exist yet
-                pass
-                
+            for goal in FitnessGoal.query.filter_by(player_id=player_id, metric_id=record.metric_id,
+                                                    completed=False, team_organization_id=team_id):
+                if goal.is_met_by(record.value):
+                    goal.completed = True
+                    goal.completed_date = datetime.utcnow()
+                    flash(f'Congratulations! Goal achieved for {goal.metric.name}!', 'success')
+            db.session.commit()
+
             flash('Fitness record added successfully!', 'success')
             return redirect(url_for('fitness.player_fitness', player_id=player_id))
         except Exception as e:
@@ -745,52 +682,12 @@ def player_metric_history(player_id, metric_id):
 @bp.route('/set-goal/<int:player_id>/<int:metric_id>', methods=['POST'])
 @login_required
 def set_goal(player_id, metric_id):
-    """Set a fitness goal for a player"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-    
-    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    metric = FitnessMetric.query.get_or_404(metric_id)
-    
-    # Check permissions
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to set goals for this player.', 'danger')
-        return redirect(url_for('fitness.player_fitness', player_id=player_id))
-    
-    try:
-        # This assumes you have a FitnessGoal model
-        from app.models.fitness import FitnessGoal
-        
-        target_value = float(request.form.get('target_value'))
-        target_date_str = request.form.get('target_date')
-        target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-        
-        # Create the goal
-        goal = FitnessGoal(
-            player_id=player_id,
-            metric_id=metric_id,
-            target_value=target_value,
-            target_date=target_date,
-            created_at=datetime.utcnow(),
-            completed=False,
-            team_organization_id=team_id  # Add team ID
-        )
-        
-        db.session.add(goal)
-        db.session.commit()
-        
-        flash(f'Goal set for {metric.name}!', 'success')
-    except ImportError:
-        flash('Goal setting is not yet implemented.', 'warning')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error setting goal: {str(e)}', 'danger')
-    
-    return redirect(url_for('fitness.player_metric_history', player_id=player_id, metric_id=metric_id))
+    """Set a goal from a player's metric history page."""
+    player = _goal_player_or_404(player_id)
+    goal = _create_goal(player, _team_metric_or_404(metric_id))
+    if goal:
+        flash(f'Goal set for {goal.metric.name}!', 'success')
+    return redirect(url_for('fitness.player_metric_history', player_id=player.id, metric_id=metric_id))
 
 @bp.route('/batch-record', methods=['GET', 'POST'])
 @login_required
@@ -1135,141 +1032,133 @@ def import_data():
     
     return redirect(url_for('fitness.manage_metrics'))
 
+def _team_metric_or_404(metric_id):
+    """Metrics are either shared (no team) or belong to one team."""
+    metric = FitnessMetric.query.get_or_404(metric_id)
+    if metric.team_organization_id not in (None, get_current_team_id()):
+        abort(404)
+    return metric
+
+
+def _goal_player_or_404(player_id):
+    """The player, if the current user may manage their goals: coaches and
+    admins for anyone on their team, players for themselves."""
+    player = Player.query.filter_by(id=player_id,
+                                    team_organization_id=get_current_team_id()).first_or_404()
+    own = getattr(current_user, 'player', None) is not None and current_user.player.id == player.id
+    if not (current_user.is_coach or own):
+        abort(403)
+    return player
+
+
+def _latest_value(player_id, metric_id, team_id):
+    latest = FitnessRecord.query.filter_by(
+        player_id=player_id, metric_id=metric_id, team_organization_id=team_id
+    ).order_by(FitnessRecord.date_recorded.desc()).first()
+    return latest.value if latest else None
+
+
+def _goal_progress(player_id, team_id, completed=None):
+    query = FitnessGoal.query.filter_by(player_id=player_id, team_organization_id=team_id)
+    if completed is not None:
+        query = query.filter_by(completed=completed)
+    out = []
+    for goal in query.order_by(FitnessGoal.completed, FitnessGoal.target_date.is_(None),
+                               FitnessGoal.target_date, FitnessGoal.id):
+        current = _latest_value(player_id, goal.metric_id, team_id)
+        out.append({'goal': goal, 'id': goal.id, 'metric': goal.metric,
+                    'target_value': goal.target_value, 'target_date': goal.target_date,
+                    'current_value': current, 'progress': goal.progress(current),
+                    'achieved': goal.completed or goal.is_met_by(current)})
+    return out
+
+
+def _create_goal(player, metric):
+    """Add a goal from the posted target_value / target_date / notes.
+    Returns the goal, or None (with a flash) if the form was invalid."""
+    try:
+        target_value = float(request.form.get('target_value', ''))
+    except ValueError:
+        flash('Enter a number for the target.', 'danger')
+        return None
+    target_date = None
+    if request.form.get('target_date'):
+        try:
+            target_date = datetime.strptime(request.form['target_date'], '%Y-%m-%d').date()
+        except ValueError:
+            flash('Enter a valid target date.', 'danger')
+            return None
+    goal = FitnessGoal(player_id=player.id, metric_id=metric.id, target_value=target_value,
+                       target_date=target_date, notes=request.form.get('notes') or None,
+                       created_by=current_user.id, team_organization_id=player.team_organization_id)
+    db.session.add(goal)
+    db.session.flush()
+    if goal.is_met_by(_latest_value(player.id, metric.id, player.team_organization_id)):
+        goal.completed = True
+        goal.completed_date = datetime.utcnow()
+    db.session.commit()
+    return goal
+
+
 @bp.route('/player/<int:player_id>/goals')
 @login_required
 def player_goals(player_id):
-    """Goal-setting page: its template was never built, so send people back to
-    the player's fitness page (which lists their goals) instead of an error."""
-    flash('Setting goals from this page is not available yet.', 'info')
-    return redirect(url_for('fitness.player_fitness', player_id=player_id))
+    """A player's fitness goals: progress on open ones, achieved ones, and a
+    form to add more."""
+    player = _goal_player_or_404(player_id)
+    team_id = player.team_organization_id
+    goals = _goal_progress(player.id, team_id)
+    metrics = FitnessMetric.query.filter(
+        FitnessMetric.active.is_(True),
+        db.or_(FitnessMetric.team_organization_id == team_id,
+               FitnessMetric.team_organization_id.is_(None))
+    ).order_by(FitnessMetric.name).all()
+    return render_template('fitness/player_goals.html', player=player, metrics=metrics,
+                           open_goals=[g for g in goals if not g['goal'].completed],
+                           done_goals=[g for g in goals if g['goal'].completed])
+
+
+def _goal_or_404(goal_id):
+    goal = FitnessGoal.query.filter_by(id=goal_id,
+                                       team_organization_id=get_current_team_id()).first_or_404()
+    _goal_player_or_404(goal.player_id)
+    return goal
+
 
 @bp.route('/goal/<int:goal_id>/complete', methods=['POST'])
 @login_required
 def complete_goal(goal_id):
-    """Mark a goal as completed"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))    
-    
-    try:
-        from app.models.fitness import FitnessGoal
-        
-        goal = FitnessGoal.query.filter_by(id=goal_id, team_organization_id=team_id).first_or_404()
-        player_id = goal.player_id
-        
-        # Check permissions
-        if not (current_user.is_admin or 
-                (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-                (hasattr(current_user, 'role') and current_user.role == 'coach')):
-            flash('You do not have permission to update this goal.', 'danger')
-            return redirect(url_for('fitness.player_goals', player_id=player_id))
-        
-        goal.completed = True
-        goal.completed_date = datetime.utcnow()
-        db.session.commit()
-        
-        flash('Goal marked as completed!', 'success')
-        return redirect(url_for('fitness.player_goals', player_id=player_id))
-    
-    except ImportError:
-        flash('Goal tracking is not yet implemented.', 'warning')
-        return redirect(url_for('fitness.index'))
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating goal: {str(e)}', 'danger')
-        return redirect(url_for('fitness.index'))
+    goal = _goal_or_404(goal_id)
+    goal.completed = True
+    goal.completed_date = datetime.utcnow()
+    db.session.commit()
+    flash('Goal marked as completed!', 'success')
+    return redirect(url_for('fitness.player_goals', player_id=goal.player_id))
+
 
 @bp.route('/goal/<int:goal_id>/delete', methods=['POST'])
 @login_required
 def delete_goal(goal_id):
-    """Delete a fitness goal"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-    
-    try:
-        from app.models.fitness import FitnessGoal
-        
-        goal = FitnessGoal.query.filter_by(id=goal_id, team_organization_id=team_id).first_or_404()
-        player_id = goal.player_id
-        
-        # Check permissions
-        if not (current_user.is_admin or 
-                (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-                (hasattr(current_user, 'role') and current_user.role == 'coach')):
-            flash('You do not have permission to delete this goal.', 'danger')
-            return redirect(url_for('fitness.player_goals', player_id=player_id))
-        
-        db.session.delete(goal)
-        db.session.commit()
-        
-        flash('Goal deleted successfully.', 'success')
-        return redirect(url_for('fitness.player_goals', player_id=player_id))
-    
-    except ImportError:
-        flash('Goal tracking is not yet implemented.', 'warning')
-        return redirect(url_for('fitness.index'))
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error deleting goal: {str(e)}', 'danger')
-        return redirect(url_for('fitness.index'))
+    goal = _goal_or_404(goal_id)
+    player_id = goal.player_id
+    db.session.delete(goal)
+    db.session.commit()
+    flash('Goal deleted.', 'success')
+    return redirect(url_for('fitness.player_goals', player_id=player_id))
+
 
 @bp.route('/add-goal/<int:player_id>', methods=['POST'])
 @login_required
 def add_goal(player_id):
-    """Add a new fitness goal for a player"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-
-    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    
-    # Check permissions
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to add goals for this player.', 'danger')
-        return redirect(url_for('fitness.player_fitness', player_id=player_id))
-    
+    player = _goal_player_or_404(player_id)
     try:
-        from app.models.fitness import FitnessGoal
-        
-        metric_id = int(request.form.get('metric_id'))
-        target_value = float(request.form.get('target_value'))
-        target_date_str = request.form.get('target_date')
-        target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
-        
-        # Validate the metric exists
-        metric = FitnessMetric.query.get_or_404(metric_id)
-        
-        # Create the goal
-        goal = FitnessGoal(
-            player_id=player_id,
-            metric_id=metric_id,
-            target_value=target_value,
-            target_date=target_date,
-            created_at=datetime.utcnow(),
-            completed=False,
-            team_organization_id=team_id  # Add team ID
-        )
-        
-        db.session.add(goal)
-        db.session.commit()
-        
-        flash(f'New goal for {metric.name} added successfully!', 'success')
-        return redirect(url_for('fitness.player_goals', player_id=player_id))
-    
-    except ImportError:
-        flash('Goal tracking is not yet implemented.', 'warning')
-        return redirect(url_for('fitness.player_fitness', player_id=player_id))
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error adding goal: {str(e)}', 'danger')
-        return redirect(url_for('fitness.player_fitness', player_id=player_id))
-
+        metric_id = int(request.form.get('metric_id', ''))
+    except ValueError:
+        abort(400)
+    goal = _create_goal(player, _team_metric_or_404(metric_id))
+    if goal:
+        flash(f'New goal for {goal.metric.name} added.', 'success')
+    return redirect(url_for('fitness.player_goals', player_id=player.id))
 
 
 # ─── Testing Phase management ────────────────────────────────────────────────

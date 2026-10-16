@@ -15,29 +15,18 @@ SQLite and Postgres in GitHub Actions on every pull request.
    `git rm --cached .env`.
 
 **Code**
-3. **Duplicate URLs.** `main` and `data_management` both define the six
-   `/admin/export-data`, `/admin/import-data`, ... routes, and `calendar` and
-   `session` both define `/sessions/<id>/rsvp`. The first blueprint registered
-   wins silently, so the other copy is dead code. Pick one of each and delete
-   the other.
-4. **Fitness goals are half-built.** There's no `FitnessGoal` model, so the
-   goal code paths fall back to "not implemented", and the "Set New Goal" page
-   has no template (its button is hidden for now).
-5. **Session PDF export** (`/sessions/<id>/export_pdf`) can't work: neither
-   `pdfkit` nor `weasyprint` is installed. It isn't linked anywhere; the
-   printable page is the working route.
-6. `routes/session.py` `drills()` ignores the drill library's search form.
-7. The session list's focus-area dropdown lists every team's focus areas.
-8. `error_handlers.py` calls `db.session.remove()` after every request,
+3. `routes/session.py` `drills()` ignores the drill library's search form.
+4. The session list's focus-area dropdown lists every team's focus areas.
+5. `error_handlers.py` calls `db.session.remove()` after every request,
    which throws away unsaved work in code that briefly opens a request
    context (Flask-SQLAlchemy already cleans up).
-9. Smaller broken imports in rarely used paths: `app/discord/notifications.py`
+6. Smaller broken imports in rarely used paths: `app/discord/notifications.py`
    (`Session`), `data_management_routes.py` (`Stat`).
-10. `Throw.opposition_team` is never filled in when recording, so the
-    opposition filter on the connections chart never matches anything.
-11. 25 unused variables, 6 `raise` without `from`, and ~240 broad
-    `except Exception` blocks; `process_player_stats` (app/stats/players.py)
-    is still one 250-line function.
+7. `Throw.opposition_team` is never filled in when recording, so the
+   opposition filter on the connections chart never matches anything.
+8. 25 unused variables, 6 `raise` without `from`, and ~240 broad
+   `except Exception` blocks; `process_player_stats` (app/stats/players.py)
+   is still one 250-line function.
 
 ## Done
 
@@ -79,6 +68,22 @@ SQLite and Postgres in GitHub Actions on every pull request.
   links), the blank database-error message, and 404s returned as 500s.
 - Pages whose templates were never written removed (drill viewer, fitness
   model, add theory video, the unregistered `drill_routes` module).
+
+**Redundant and unfinished pages**
+- One data management page: `/admin/data-management` redirects to the
+  enhanced page, whose export/import buttons used to be answered by the old
+  page's routes. Both exports include the link tables.
+- One session RSVP page (the calendar's copy of `/sessions/<id>/rsvp` hid
+  the fuller one); a test fails if two routes ever share a URL again.
+- The drill editor (`/sessions/drills/editor`) works: players, discs,
+  cones, cuts, throws and text on a field, saved as a diagram (PNG, SVG and
+  the editable drawing). Linked from the drill library and each drill.
+- Session PDF download uses Playwright, like the playbook export.
+- Fitness goals: `FitnessGoal` model, a goals page per player, goals
+  complete themselves when a record meets them.
+- Removed `/team/debug`, the unused drill search/duplicate APIs,
+  `drill_viewer.js`, seven unused templates and `index.html.orig`; the clip
+  library planning notes moved from `app/update/` to `docs/clip-library/`.
 
 **Tidiness**
 - ~190 lint fixes (unused/duplicate imports), 14 one-off scripts deleted,

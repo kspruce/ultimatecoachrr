@@ -124,6 +124,9 @@
                         <a href="{{ url_for('session.printable_view', session_id=session.id) }}" class="btn btn-outline-primary" target="_blank">
                             <i class="bi bi-printer"></i> View Printable Page
                         </a>
+                        <a href="{{ url_for('session.export_pdf', session_id=session.id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-file-earmark-pdf"></i> Download PDF
+                        </a>
                     </div>
                 </div>
             </div>

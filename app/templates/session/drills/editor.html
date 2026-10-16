@@ -14,7 +14,7 @@
 
     .editor-container {
         display: grid;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
         height: calc(100vh - 56px); /* Account for navbar */
         overflow: hidden;
     }
@@ -30,7 +30,9 @@
     /* Main Editor Layout */
     .editor-main {
         display: grid;
-        grid-template-columns: 80px 1fr 250px;
+        grid-template-columns: 80px 1fr;
+        grid-template-rows: minmax(0, 1fr);
+        min-height: 0;
         gap: 1rem;
         padding: 1rem;
         background: #f8f9fa;
@@ -45,7 +47,9 @@
         padding: 0.5rem;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.25rem;
+        overflow-y: auto;
+        min-height: 0;
     }
 
     .tool-group {
@@ -85,6 +89,8 @@
 
     /* Canvas Area Styles */
     .canvas-area {
+        min-width: 0;
+        min-height: 0;
         background: #fff;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -99,60 +105,12 @@
         border-bottom: 1px solid #dee2e6;
     }
 
-    .canvas-container {
+    .canvas-holder {
         flex: 1;
+        min-height: 0;
+        min-width: 0;
         position: relative;
         overflow: hidden;
-    }
-
-    /* Animation Panel Styles */
-    .animation-panel {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        width: 250px;
-    }
-
-    .animation-controls {
-        padding: 1rem;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .frames-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .frame-item {
-        border: 2px solid #dee2e6;
-        border-radius: 6px;
-        overflow: hidden;
-        cursor: pointer;
-        position: relative;
-    }
-
-    .frame-preview {
-        width: 100%;
-        height: 120px;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .frame-info {
-        padding: 0.5rem;
-        background: #fff;
-        border-top: 1px solid #dee2e6;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
     }
 
     /* Tool Preview Styles */
@@ -187,6 +145,32 @@
         border-left: 12px solid transparent;
         border-right: 12px solid transparent;
         border-bottom: 20px solid #ffa500;
+    }
+    .tool-btn.active {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+    }
+
+    .preview-arrow {
+        width: 24px;
+        border-top: 3px dashed #333;
+        position: relative;
+    }
+
+    .editor-note {
+        font-size: 0.85rem;
+    }
+
+    @media (max-width: 767.98px) {
+        body { overflow: auto; height: auto; }
+        .editor-container { height: auto; }
+        .editor-header .d-flex { flex-wrap: wrap; gap: 0.5rem; }
+        #drill-title { width: 100% !important; }
+        .editor-main { grid-template-columns: 1fr; grid-template-rows: auto auto; padding: 0.5rem; }
+        .toolbar { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.25rem; }
+        .tool-group { flex-direction: row; border-bottom: none; padding: 0; }
+        .canvas-holder { height: 60vh; }
     }
 </style>
 {% endblock %}
@@ -266,10 +250,16 @@
             <!-- Drawing -->
             <div class="tool-group">
                 <div class="tool-wrapper">
-                    <button class="tool-btn" data-tool="path" title="Draw Path (P)">
+                    <button class="tool-btn" data-tool="path" title="Cut: draw a freehand arrow (P)">
                         <i class="bi bi-pen"></i>
                     </button>
-                    <span class="tool-label">Path</span>
+                    <span class="tool-label">Cut</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="throw" title="Throw: drag a straight dashed arrow (R)">
+                        <div class="preview-arrow"></div>
+                    </button>
+                    <span class="tool-label">Throw</span>
                 </div>
                 <div class="tool-wrapper">
                     <button class="tool-btn" data-tool="text" title="Add Text (T)">
@@ -289,9 +279,15 @@
                 </div>
                 <div class="tool-wrapper">
                     <button class="tool-btn" data-action="clear" title="Clear Canvas">
-                        <i class="bi bi-trash"></i>
+                        <i class="bi bi-x-octagon"></i>
                     </button>
                     <span class="tool-label">Clear</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal" title="Keyboard shortcuts">
+                        <i class="bi bi-keyboard"></i>
+                    </button>
+                    <span class="tool-label">Keys</span>
                 </div>
             </div>
         </div>
@@ -314,7 +310,13 @@
                     </button>
                 </div>
             </div>
-            <div class="canvas-container">
+            {% if other_diagrams %}
+            <div class="alert alert-info editor-note m-2 mb-0 py-2">
+                This drill already has {{ other_diagrams|length }} imported diagram{{ 's' if other_diagrams|length != 1 }}.
+                They stay as they are; what you draw here is saved as an extra diagram.
+            </div>
+            {% endif %}
+            <div class="canvas-holder">
                 <canvas id="drill-canvas"></canvas>
             </div>
         </div>
@@ -396,9 +398,9 @@
                         <label class="form-label">Skill Level</label>
                         <select id="skill-level" class="form-select">
                             <option value="">Any Level</option>
-                            <option value="beginner">Beginner</option>
-                            <option value="intermediate">Intermediate</option>
-                            <option value="advanced">Advanced</option>
+                            {% for value, label in [('beginner', 'Beginner'), ('intermediate', 'Intermediate'), ('advanced', 'Advanced')] %}
+                            <option value="{{ value }}" {% if drill and drill.skill_level == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -471,7 +473,8 @@
                             <li><kbd>D</kbd> Defense Player</li>
                             <li><kbd>F</kbd> Disc</li>
                             <li><kbd>C</kbd> Cone</li>
-                            <li><kbd>P</kbd> Path</li>
+                            <li><kbd>P</kbd> Cut (freehand)</li>
+                            <li><kbd>R</kbd> Throw (straight)</li>
                             <li><kbd>T</kbd> Text</li>
                         </ul>
                     </div>
@@ -480,11 +483,9 @@
                         <ul class="list-unstyled">
                             <li><kbd>Delete</kbd> Delete Selected</li>
                             <li><kbd>Ctrl</kbd> + <kbd>S</kbd> Save Drill</li>
-                            <li><kbd>Space</kbd> Play/Pause</li>
-                            <li><kbd>←</kbd> Previous Frame</li>
-                            <li><kbd>→</kbd> Next Frame</li>
-                            <li><kbd>+</kbd> Add Frame</li>
-                            <li><kbd>Ctrl</kbd> + <kbd>D</kbd> Duplicate Frame</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> Undo</li>
+                            <li><kbd>Esc</kbd> Back to Select</li>
+                            <li>Double-click text to edit it</li>
                         </ul>
                     </div>
                 </div>
@@ -494,13 +495,15 @@
 </div>
 
 <!-- Hidden data for initialization -->
-{% if drill %}
-<div id="drill-data" data-drill-id="{{ drill.id }}" style="display: none;"></div>
-{% endif %}
+<div id="drill-data" style="display: none;"
+     data-drill-id="{{ drill.id if drill else '' }}"
+     data-create-url="{{ url_for('session.create_drill') }}"
+     data-update-url="{{ url_for('session.manage_drill', drill_id=drill.id) if drill else '' }}"></div>
+<script id="editor-state" type="application/json">{{ editor_state|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
 <script src="{{ url_for('static', filename='js/drill_editor.js') }}"></script>
 {% endblock %}

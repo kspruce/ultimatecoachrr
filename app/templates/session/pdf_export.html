@@ -119,8 +119,8 @@
     <div class="session-info">
         <p><strong>Date:</strong> {{ session.date.strftime('%Y-%m-%d') if session.date else 'No date' }}</p>
         <p><strong>Time:</strong> {{ session.formatted_time }}</p>
-        <p><strong>Location:</strong> {{ session.location }}</p>
-        <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
+        {% if session.location %}<p><strong>Location:</strong> {{ session.location }}</p>{% endif %}
+        {% if session.focus_area %}<p><strong>Focus Area:</strong> {{ session.focus_area }}</p>{% endif %}
         <p><strong>Session Type:</strong> {{ session.session_type_display }}</p>
         {% if session.season %}
         <p><strong>Season:</strong> {{ session.season }}{% if session.week_number %} · Week {{ session.week_number }}{% endif %}{% if session.week_commencing %} (w/c {{ session.week_commencing.strftime('%Y-%m-%d') }}){% endif %}</p>
@@ -192,7 +192,7 @@
             </div>
             {% endif %}
             <div class="component-details">
-                <p>Duration: {{ component.duration_minutes }} minutes</p>
+                {% if component.duration_minutes %}<p>Duration: {{ component.duration_minutes }} minutes</p>{% endif %}
                 {% if component.focus_area %}
                 <p>Focus: {{ component.focus_area }}</p>
                 {% endif %}

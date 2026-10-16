@@ -71,6 +71,10 @@ class Client:
         with self.app.app_context():
             return self.client.post(url, **kw)
 
+    def put(self, url, **kw):
+        with self.app.app_context():
+            return self.client.put(url, **kw)
+
 
 def _play_point(client, rng, point_id, line_type, line):
     """Post a plausible sequence of events for one point."""

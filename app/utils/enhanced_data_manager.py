@@ -201,6 +201,26 @@ class EnhancedDataManager:
         return model_info
 
     
+    def _write_association_tables(self, zipf, export_summary):
+        """Add the link tables (db.Table objects such as clip_tag_relation,
+        clip_player, play_session_component) that have no model class, as
+        assoc_<table>.json. import_all_data restores them."""
+        model_table_names = set(self.models.keys())
+        for table_name, table in db.metadata.tables.items():
+            if table_name in model_table_names:
+                continue  # exported with the models
+            try:
+                rows = db.session.execute(table.select()).fetchall()
+                data = [dict(row._mapping) for row in rows]
+                zipf.writestr(f"assoc_{table_name}.json", json.dumps(data, indent=2, default=str))
+                export_summary[f'assoc_{table_name}'] = {
+                    'records_exported': len(data),
+                    'file': f"assoc_{table_name}.json"
+                }
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error exporting association table {table_name}: {e}")
+
     def export_all_data(self, timestamp=True, custom_name=None, format='json', in_memory=False):
         """Export all data to in-memory ZIP file"""
         if custom_name:
@@ -276,6 +296,7 @@ class EnhancedDataManager:
                         }
 
             # Update and save summary
+            self._write_association_tables(zipf, export_summary)
             export_summary['status'] = 'completed'
             export_summary['completed_timestamp'] = datetime.now().isoformat()
             zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))
@@ -493,24 +514,7 @@ class EnhancedDataManager:
                             'file': f"{table_name}.json"
                         }
             
-            # Export association tables (db.Table objects like clip_tag_relation,
-            # clip_player) that are not represented as SQLAlchemy model classes.
-            model_table_names = set(self.models.keys())
-            for table_name, table in db.metadata.tables.items():
-                if table_name in model_table_names:
-                    continue  # already exported above
-                try:
-                    rows = db.session.execute(table.select()).fetchall()
-                    data = [dict(row._mapping) for row in rows]
-                    zipf.writestr(f"assoc_{table_name}.json", json.dumps(data, indent=2, default=str))
-                    export_summary[f'assoc_{table_name}'] = {
-                        'records_exported': len(data),
-                        'file': f"assoc_{table_name}.json"
-                    }
-                    logger.info(f"Exported {len(data)} rows from association table {table_name}")
-                except Exception as e:
-                    db.session.rollback()
-                    logger.error(f"Error exporting association table {table_name}: {e}")
+            self._write_association_tables(zipf, export_summary)
 
             # Save summary in the same format as server export
             zipf.writestr('export_summary.json', json.dumps(export_summary, indent=2))

@@ -327,7 +327,10 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-info text-white">
-                    <h5><i class="bi bi-flag"></i> Fitness Goals</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-flag"></i> Fitness Goals</h5>
+                        <a href="{{ url_for('fitness.player_goals', player_id=player.id) }}" class="btn btn-sm btn-light">Manage goals</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if fitness_goals %}
@@ -354,7 +357,7 @@
                                             </div>
                                             <p class="card-text">
                                                 <small {% if not goal.achieved %}class="text-muted"{% endif %}>
-                                                    Target date: {{ goal.target_date.strftime('%Y-%m-%d') }}
+                                                    {% if goal.target_date %}Target date: {{ goal.target_date.strftime('%d %b %Y') }}{% else %}No target date{% endif %}
                                                 </small>
                                             </p>
                                         </div>
