@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Young+Serif&display=swap">
     {# Team colours (Team settings -> Colours & crest); theme.css builds everything else from them #}
     <style>{{ team_theme_css | default('') | safe }}</style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}?v=4">
 
     {% block styles %}{% endblock %}
 </head>
@@ -39,7 +39,7 @@
 {# Shortcut for feature settings #}
 {% set ts = current_team.settings if (current_team and current_team.settings) else none %}
 
-<nav class="uc-navbar navbar navbar-expand-lg{% if team_palette is defined and team_palette.show_stripe and not uc_full_hero %} uc-has-stripe{% endif %}">
+<nav class="uc-navbar navbar navbar-expand-xl{% if team_palette is defined and team_palette.show_stripe and not uc_full_hero %} uc-has-stripe{% endif %}">
 <div class="container d-flex align-items-center gap-2">
 
   {# ── Brand ─────────────────────────────────────────────── #}
@@ -58,7 +58,7 @@
   </a>
 
   {# ── Mobile: right side (badge + toggler) ──────────────── #}
-  <div class="d-flex align-items-center gap-2 ms-auto d-lg-none">
+  <div class="d-flex align-items-center gap-2 ms-auto d-xl-none">
     {% if current_user.is_authenticated and current_user.is_admin and current_team %}
     <a href="#" class="uc-team-badge d-none d-sm-flex" data-bs-toggle="dropdown">
       <i class="bi bi-shield-check" style="font-size:.7rem"></i>{{ current_team.name }}
@@ -220,7 +220,7 @@
 
       {# Admin: active team badge (desktop) #}
       {% if current_user.is_admin and current_team %}
-      <a href="{{ url_for('team_organization.index') }}" class="uc-team-badge d-none d-lg-flex">
+      <a href="{{ url_for('team_organization.index') }}" class="uc-team-badge d-none d-xxl-flex">
         <i class="bi bi-shield-check" style="font-size:.7rem"></i>{{ current_team.name }}
       </a>
       {% endif %}
@@ -229,7 +229,7 @@
       <div class="nav-item dropdown">
         <a class="uc-user-btn dropdown-toggle" data-bs-toggle="dropdown" role="button">
           <div class="uc-user-avatar">{{ current_user.username[0].upper() }}</div>
-          <span class="d-none d-md-inline" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          <span class="uc-user-name d-none d-md-inline">
             {{ current_user.username }}
           </span>
           <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6;margin-left:.1rem"></i>
