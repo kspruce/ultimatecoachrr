@@ -140,7 +140,8 @@
       <h6 class="fw-bold mb-1">Email</h6>
       {% if email_enabled %}
       <p class="small mb-2"><span class="badge bg-success me-1">Set up</span>
-        Sending from <code>{{ config.MAIL_DEFAULT_SENDER }}</code> via <code>{{ config.MAIL_SERVER }}</code>.
+        Sending from <code>{{ config.MAIL_DEFAULT_SENDER }}</code> via
+        <code>{{ {'brevo': 'Brevo', 'resend': 'Resend'}.get(email_provider) or config.MAIL_SERVER }}</code>.
         Used for password resets, sign-up links and new-team alerts.</p>
       <form method="POST" action="{{ url_for('team_organization.send_test_email') }}" class="d-flex gap-2" style="max-width:480px">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -151,8 +152,7 @@
       {% else %}
       <p class="small mb-0"><span class="badge bg-secondary me-1">Not set up</span>
         Everything still works without email: coaches make password reset links from User Management,
-        and you copy sign-up links from this page. To switch email on, add the <code>MAIL_*</code>
-        settings described in <code>docs/EMAIL_SETUP.md</code> to your Railway variables.</p>
+        and you copy sign-up links from this page. To switch email on, add the settings described in <code>docs/EMAIL_SETUP.md</code> to your Railway variables.</p>
       {% endif %}
     </div>
   </div>
