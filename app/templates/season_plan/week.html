@@ -24,7 +24,11 @@
     <div><div class="sp-label">Classroom</div><p>{% if classroom_page %}<a href="{{ url_for('season_plan.page', slug=classroom_page.slug) }}">{{ week.classroom }}</a>{% else %}{{ week.classroom }}{% endif %}</p></div>
     {% endif %}
     {% if week.off_pitch %}<div><div class="sp-label">Off-pitch</div><p>{{ week.off_pitch }}</p></div>{% endif %}
-    {% if week.session_plan %}
+    {% if built_sessions %}
+    <div><div class="sp-label">Sessions</div><p>
+      {% for s in built_sessions %}<a href="{{ url_for('session.detail', session_id=s.id) }}">{{ {'joint': 'Joint session', '1s': '1s session', '2s': '2s session'}.get(s.squad, s.title) }}{% if s.date %} · {{ s.date.strftime('%a %-d %b') }}{% endif %}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}
+    </p></div>
+    {% elif week.session_plan %}
     <div><div class="sp-label">Session plan</div><p><a href="{{ url_for('session.detail', session_id=week.session_plan.id) }}">{{ week.session_plan.title }}</a></p></div>
     {% endif %}
   </div>

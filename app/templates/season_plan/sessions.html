@@ -1,0 +1,107 @@
+{% extends "season_plan/_layout.html" %}
+
+{% block sp_styles %}
+<style>
+  .sp-session-settings { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .sp-session-settings h3 { font-size: 1rem; margin-bottom: .5rem; }
+  .sp-status { font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap; }
+  .sp-status-created { background: var(--club-tint); color: var(--club); }
+  .sp-status-updated { background: #fff3cd; color: #7a5a00; }
+  .sp-status-unchanged { color: var(--ink-3); }
+  .sp-table-wrap { overflow-x: auto; }
+</style>
+{% endblock %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Sessions from the plan</h1>
+    <p>Each week's timed tables become sessions: the joint session table makes a joint session, and the split sessions table makes a 1s session and a 2s session. Every row becomes an activity.
+      Once built, editing a week here or re-importing the plan updates its sessions, so the plan is the only place you edit them.</p>
+  </div>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card">
+    <div class="sp-session-settings">
+      {% for key, title in [('joint', 'Joint session'), ('split', 'Split sessions')] %}
+      <div>
+        <h3>{{ title }}</h3>
+        <label class="form-label sp-label" for="{{ key }}_weekday">Day</label>
+        <select class="form-select form-select-sm mb-2" id="{{ key }}_weekday" name="{{ key }}_weekday">
+          <option value="">No date</option>
+          {% for day in weekdays %}
+          <option value="{{ loop.index0 }}" {{ 'selected' if form[key ~ '_weekday'] == loop.index0 }}>{{ day }}</option>
+          {% endfor %}
+        </select>
+        <div class="d-flex gap-2">
+          <div>
+            <label class="form-label sp-label" for="{{ key }}_start">Start</label>
+            <input class="form-control form-control-sm" type="time" id="{{ key }}_start" name="{{ key }}_start" value="{{ form[key ~ '_start'].strftime('%H:%M') if form[key ~ '_start'] else '' }}">
+          </div>
+          <div>
+            <label class="form-label sp-label" for="{{ key }}_end">End</label>
+            <input class="form-control form-control-sm" type="time" id="{{ key }}_end" name="{{ key }}_end" value="{{ form[key ~ '_end'].strftime('%H:%M') if form[key ~ '_end'] else '' }}">
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      <div>
+        <h3>Where</h3>
+        <label class="form-label sp-label" for="session_location">Location</label>
+        <input class="form-control form-control-sm" id="session_location" name="session_location" maxlength="100" value="{{ form.session_location or '' }}">
+      </div>
+    </div>
+    <p class="sp-muted small mt-3 mb-0">The day is counted from each week's w/c date. A session's last activity runs to the end time, unless the table's heading gives a length such as "(about 2 hours)".</p>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
+    <button type="submit" name="action" value="preview" class="btn btn-outline-secondary">Preview with these settings</button>
+    <button type="submit" name="action" value="build" class="btn btn-primary">
+      <i class="bi bi-hammer"></i> {{ 'Update' if plan.sessions_built_at else 'Build' }} sessions ({{ report.summary() }})
+    </button>
+  </div>
+</form>
+
+{% if report.warnings %}
+<div class="alert alert-warning">{% for w in report.warnings %}<div>{{ w }}</div>{% endfor %}</div>
+{% endif %}
+{% if report.removed %}
+<div class="alert alert-info"><b>No longer in the plan, so building removes:</b>{% for r in report.removed %}<div>{{ r }}</div>{% endfor %}</div>
+{% endif %}
+
+<div class="sp-card sp-table-wrap">
+  <table class="table sp-table mb-0">
+    <thead>
+      <tr><th>Wk</th><th>Session</th><th>Date</th><th>Activities</th><th>Building will</th></tr>
+    </thead>
+    <tbody>
+      {% for r in report.rows %}
+      <tr>
+        <td><a href="{{ url_for('season_plan.week', number=r.week) }}">{{ r.week }}</a></td>
+        <td>{% if r.status != 'created' %}<a href="{{ url_for('session.detail', session_id=r.session_id) }}">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</td>
+        <td class="text-nowrap">{{ r.date.strftime('%a %-d %b') if r.date else '—' }}</td>
+        <td>{{ r.activities }}</td>
+        <td><span class="sp-status sp-status-{{ r.status }}">{{ {'created': 'Create', 'updated': 'Update', 'unchanged': 'Up to date'}[r.status] }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="sp-muted">No week has a session table yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if report.skipped %}
+<details class="sp-card">
+  <summary>{{ report.skipped|length }} weeks have no sessions to build</summary>
+  <p class="sp-muted small mt-2">A week needs a table whose first column is Time, with an Activity column (joint) or 1s and 2s columns (split).</p>
+  <ul class="mb-0">
+    {% for number, why in report.skipped %}
+    <li><a href="{{ url_for('season_plan.week', number=number) }}">Week {{ number }}</a>: {{ why }}</li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+{% endblock %}

@@ -25,6 +25,7 @@
   {% endfor %}
   {% endif %}
   {% if current_user.is_coach %}
+  <a href="{{ url_for('season_plan.sessions') }}" class="{{ 'active' if sp_ep == 'season_plan.sessions' }}"><i class="bi bi-hammer"></i> Sessions</a>
   <a href="{{ url_for('season_plan.access') }}" class="{{ 'active' if sp_ep == 'season_plan.access' }}"><i class="bi bi-eye"></i> Player access</a>
   {% endif %}
 </nav>

@@ -27,6 +27,19 @@ class SeasonPlan(db.Model):
     players_see_session_notes = db.Column(db.Boolean, default=False, nullable=False)
     players_see_phases = db.Column(db.Boolean, default=False, nullable=False)
 
+    # When the sessions built from the plan happen (Season plan > Sessions).
+    # Weekdays are 0 = Monday ... 6 = Sunday, counted from each week's w/c.
+    joint_weekday = db.Column(db.Integer)
+    joint_start = db.Column(db.Time)
+    joint_end = db.Column(db.Time)
+    split_weekday = db.Column(db.Integer)
+    split_start = db.Column(db.Time)
+    split_end = db.Column(db.Time)
+    session_location = db.Column(db.String(100))
+    # Set once sessions have been built; from then on editing a week or
+    # re-importing the plan keeps them in step.
+    sessions_built_at = db.Column(db.DateTime)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

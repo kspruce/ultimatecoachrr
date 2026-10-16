@@ -16,7 +16,9 @@ every tab is stored as a SeasonPage.
 The import is an upsert on (team, season): phases match on number, weeks on
 week number and pages on slug, and anything no longer in the export is
 removed. Coaches' notes, SessionPlan links and who-can-see-what settings are
-kept. The whole import is one transaction, rolled back for dry runs.
+kept. Once sessions have been built from the plan (Season plan > Sessions),
+the import updates them too. The whole import is one transaction, rolled
+back for dry runs.
 """
 import json
 import os
@@ -69,6 +71,7 @@ class ImportReport:
     skipped: list = field(default_factory=list)  # rows that couldn't be parsed
     removed: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
+    sessions: object = None  # season_sessions.BuildReport when sessions were built
 
     def text(self):
         out = ['DRY RUN: nothing was written' if self.dry_run else 'Import complete']
@@ -78,6 +81,8 @@ class ImportReport:
             out.append('Created a new plan' if self.plan_created else 'Updated the existing plan')
         for kind in ('phases', 'weeks', 'session notes', 'pages', 'milestones'):
             out.append(f'{kind}: {self.counts.get(kind, 0)}')
+        if self.sessions is not None:
+            out.append(self.sessions.text())
         for line in self.removed:
             out.append(f'removed: {line}')
         for line in self.warnings:
@@ -110,18 +115,19 @@ def _split_row(line):
 
 
 def parse_tables(markdown):
-    """Every pipe table in the text: [{'header': [...], 'rows': [[...], ...]}].
+    """Every pipe table in the text: [{'header': [...], 'rows': [[...], ...],
+    'start': first line index, 'end': index after the last row}].
     Header cells are lower-cased; body cells are raw (see clean_cell)."""
     tables, lines, i = [], markdown.splitlines(), 0
     while i < len(lines) - 1:
         if (lines[i].lstrip().startswith('|')
                 and re.match(r'^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$', lines[i + 1])):
             header = [(clean_cell(c) or '').lower() for c in _split_row(lines[i])]
-            rows, i = [], i + 2
+            start, rows, i = i, [], i + 2
             while i < len(lines) and lines[i].lstrip().startswith('|'):
                 rows.append(_split_row(lines[i]))
                 i += 1
-            tables.append({'header': header, 'rows': rows})
+            tables.append({'header': header, 'rows': rows, 'start': start, 'end': i})
         else:
             i += 1
     return tables
@@ -482,8 +488,17 @@ def _apply(obj, values):
         setattr(obj, key, value)
 
 
-def import_season_plan(folder, team, season=None, dry_run=False, replace=False, now=None):
-    """Import the export in `folder` into `team` (a TeamOrganization)."""
+# Kept across --replace, so sessions built from the plan stay in step
+SESSION_SETTINGS = ['joint_weekday', 'joint_start', 'joint_end', 'split_weekday', 'split_start',
+                    'split_end', 'session_location', 'sessions_built_at']
+
+
+def import_season_plan(folder, team, season=None, dry_run=False, replace=False, now=None,
+                       build_sessions=None):
+    """Import the export in `folder` into `team` (a TeamOrganization).
+    build_sessions: True builds the plan's sessions, False leaves them, and
+    None (the default) updates them only if they were built before."""
+    from app.utils import season_sessions
     manifest, tabs = load_export(folder)
     data = parse_export(manifest, tabs, season=season)
     report = ImportReport(dry_run=dry_run, skipped=data['skipped'], warnings=data['warnings'])
@@ -492,7 +507,9 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
     try:
         plan = SeasonPlan.query.filter_by(team_organization_id=team_id,
                                           season=data['plan']['season']).first()
+        kept = {}
         if plan and replace:
+            kept = {name: getattr(plan, name) for name in SESSION_SETTINGS}
             db.session.delete(plan)
             db.session.flush()
             plan, report.replaced = None, True
@@ -500,7 +517,7 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
             plan = SeasonPlan(team_organization_id=team_id, is_active=True)
             db.session.add(plan)
             report.plan_created = True
-        _apply(plan, data['plan'])
+        _apply(plan, {**kept, **data['plan']})
         plan.imported_at = now or datetime.utcnow()
         db.session.flush()
 
@@ -554,6 +571,9 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
             plan.milestones.append(SeasonMilestone(team_organization_id=team_id, **values))
 
         db.session.flush()
+        db.session.expire(plan, ['weeks'])  # in week order for the session build
+        if build_sessions or (build_sessions is None and plan.sessions_built_at):
+            report.sessions = season_sessions.build_sessions(plan, commit=False)
         report.counts = {'phases': len(data['phases']), 'weeks': len(data['weeks']),
                          'session notes': data['notes_count'], 'pages': len(data['pages']),
                          'milestones': len(data['milestones'])}

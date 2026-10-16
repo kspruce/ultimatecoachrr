@@ -5,7 +5,7 @@ for everyone else every page here is a 404.
 Captains, coaches and admins see everything. Players see only the parts a
 coach has opened to them (Season plan > Player access).
 """
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -14,6 +14,7 @@ from app import db, login
 from app.models.season_plan import SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage
 from app.models.session import SessionPlan
 from app.models.team_settings import TeamSettings
+from app.utils.season_sessions import WEEKDAYS, build_sessions, sync_week, week_sessions
 from app.utils.team_filter import get_current_team_id
 from app.utils.utils import coach_required
 
@@ -220,7 +221,8 @@ def week(number):
     return render_template('season_plan/week.html', plan=plan, week=wk, prev_wk=prev_wk,
                            next_wk=next_wk, show_notes=can_see(plan, 'session_notes'),
                            show_phase=can_see(plan, 'phases'), classroom_page=classroom_page,
-                           current=plan.week_for(date.today()), pages=visible_pages(plan))
+                           current=plan.week_for(date.today()), pages=visible_pages(plan),
+                           built_sessions=week_sessions(plan, wk))
 
 
 @bp.route('/week/<int:number>/edit', methods=['GET', 'POST'])
@@ -246,6 +248,11 @@ def edit_week(number):
         wk.session_plan_id = sp_id if sp_id and any(s.id == sp_id for s in session_plans) else None
         db.session.commit()
         flash(f'Week {wk.week_number} saved.', 'success')
+        report = sync_week(plan, wk)
+        if report and (report.rows or report.removed):
+            flash(f'Sessions for week {wk.week_number}: {report.summary()}.', 'info')
+        for warning in report.warnings if report else []:
+            flash(warning, 'warning')
         return redirect(url_for('season_plan.week', number=wk.week_number))
 
     return render_template('season_plan/edit_week.html', plan=plan, week=wk,
@@ -288,3 +295,54 @@ def access():
         flash('Player access saved.', 'success')
         return redirect(url_for('season_plan.access'))
     return render_template('season_plan/access.html', plan=plan, sections=SECTIONS, pages=plan.pages)
+
+
+SESSION_SETTINGS = ['joint_weekday', 'joint_start', 'joint_end',
+                    'split_weekday', 'split_start', 'split_end', 'session_location']
+
+
+def _read_session_settings(form):
+    """Session settings from the form, or (None, error)."""
+    values = {}
+    for name in SESSION_SETTINGS:
+        raw = (form.get(name) or '').strip()
+        if name.endswith('weekday'):
+            values[name] = int(raw) if raw.isdigit() and int(raw) < 7 else None
+        elif name == 'session_location':
+            if len(raw) > 100:
+                return None, 'Location must be at most 100 characters.'
+            values[name] = raw or None
+        else:
+            try:
+                values[name] = time.fromisoformat(raw) if raw else None
+            except ValueError:
+                return None, 'Times look like 18:30.'
+    return values, None
+
+
+@bp.route('/sessions', methods=['GET', 'POST'])
+@coach_required
+def sessions():
+    """Build the team's sessions from the plan's weekly session notes."""
+    plan = _plan_or_404()
+    form = {name: getattr(plan, name) for name in SESSION_SETTINGS}
+    status = 200
+    if request.method == 'POST':
+        values, error = _read_session_settings(request.form)
+        if error:
+            flash(error, 'danger')
+            status = 400
+        else:
+            form = values
+            for name, value in values.items():
+                setattr(plan, name, value)
+            if request.form.get('action') == 'build':
+                report = build_sessions(plan)
+                flash(f'Sessions built from the plan: {report.summary()}.', 'success')
+                for warning in report.warnings:
+                    flash(warning, 'warning')
+                return redirect(url_for('season_plan.sessions'))
+    # A dry run shows what building would do (and undoes any unsaved settings)
+    report = build_sessions(plan, dry_run=True)
+    return render_template('season_plan/sessions.html', plan=plan, form=form, report=report,
+                           weekdays=WEEKDAYS, pages=visible_pages(plan)), status

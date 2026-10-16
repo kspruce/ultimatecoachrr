@@ -5,7 +5,8 @@
   <div>
     <div class="sp-label">{{ plan.season }}{% if week.week_commencing %} · w/c {{ week.week_commencing.strftime('%-d %b %Y') }}{% endif %}</div>
     <h1>Edit week {{ week.week_number }}</h1>
-    <p>Re-importing the plan replaces these fields with the export's text, except the coaches' notes and the session plan link.</p>
+    <p>Re-importing the plan replaces these fields with the export's text, except the coaches' notes and the session plan link.
+      {% if plan.sessions_built_at %}Saving also updates this week's sessions from the session notes.{% endif %}</p>
   </div>
 </div>
 

@@ -169,8 +169,11 @@ def import_season_command(season_file, images_dir, team_org_id, dry_run):
 @click.option('--season', help='Season label (e.g. 2027/28); read from the manifest if not given')
 @click.option('--dry-run', is_flag=True, help='Parse and report, but write nothing')
 @click.option('--replace', is_flag=True, help='Wipe the existing plan for this season and import it fresh')
+@click.option('--build-sessions', is_flag=True,
+              help='Build sessions from the weekly session notes (after the first build, '
+                   'every import updates them anyway)')
 @with_appcontext
-def import_season_plan_command(folder, team_slug, season, dry_run, replace):
+def import_season_plan_command(folder, team_slug, season, dry_run, replace, build_sessions):
     """Import a season plan (manifest.json plus markdown tabs) into a team.
 
     Re-running updates the same plan (matched on team and season). The
@@ -185,7 +188,8 @@ def import_season_plan_command(folder, team_slug, season, dry_run, replace):
         raise click.ClickException(f'No team with slug {team_slug!r}')
 
     try:
-        report = import_season_plan(folder, team, season=season, dry_run=dry_run, replace=replace)
+        report = import_season_plan(folder, team, season=season, dry_run=dry_run, replace=replace,
+                                    build_sessions=build_sessions or None)
     except SeasonPlanImportError as e:
         click.echo(f'Import failed, nothing was written ({len(e.errors)} problems):', err=True)
         for error in e.errors:
