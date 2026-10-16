@@ -1,0 +1,85 @@
+{
+ "plan": "Thundering Herd Season Plan 2027/28",
+ "team": "herd-2028",
+ "exported": "2026-10-16",
+ "source": "Claude Doc export (markdown)",
+ "tabs": [
+  {
+   "order": 1,
+   "title": "Season plan",
+   "slug": "season-plan",
+   "file": "tabs/01-season-plan.md",
+   "bytes": 28866
+  },
+  {
+   "order": 2,
+   "title": "Season at a glance",
+   "slug": "season-at-a-glance",
+   "file": "tabs/02-season-at-a-glance.md",
+   "bytes": 14836
+  },
+  {
+   "order": 3,
+   "title": "Weekly plan",
+   "slug": "weekly-plan",
+   "file": "tabs/03-weekly-plan.md",
+   "bytes": 12111
+  },
+  {
+   "order": 4,
+   "title": "Phase 1 sessions",
+   "slug": "phase-1-sessions",
+   "file": "tabs/04-phase-1-sessions.md",
+   "bytes": 58963
+  },
+  {
+   "order": 5,
+   "title": "Phase 2 sessions",
+   "slug": "phase-2-sessions",
+   "file": "tabs/05-phase-2-sessions.md",
+   "bytes": 49615
+  },
+  {
+   "order": 6,
+   "title": "Phase 3 sessions",
+   "slug": "phase-3-sessions",
+   "file": "tabs/06-phase-3-sessions.md",
+   "bytes": 43734
+  },
+  {
+   "order": 7,
+   "title": "Phase 4 sessions",
+   "slug": "phase-4-sessions",
+   "file": "tabs/07-phase-4-sessions.md",
+   "bytes": 17605
+  },
+  {
+   "order": 8,
+   "title": "Phase 5 sessions",
+   "slug": "phase-5-sessions",
+   "file": "tabs/08-phase-5-sessions.md",
+   "bytes": 12544
+  },
+  {
+   "order": 9,
+   "title": "Drills by phase and source",
+   "slug": "drills-by-phase-and-source",
+   "file": "tabs/09-drills-by-phase-and-source.md",
+   "bytes": 17065
+  },
+  {
+   "order": 10,
+   "title": "Captains' and coaches' guide",
+   "slug": "captains-and-coaches-guide",
+   "file": "tabs/10-captains-and-coaches-guide.md",
+   "bytes": 31154
+  },
+  {
+   "order": 11,
+   "title": "Classroom sessions",
+   "slug": "classroom-sessions",
+   "file": "tabs/11-classroom-sessions.md",
+   "bytes": 15315
+  }
+ ]
+}
