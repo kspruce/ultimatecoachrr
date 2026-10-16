@@ -1,11 +1,11 @@
 from werkzeug.exceptions import HTTPException
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from app import db
 from app.models.game import Game
 from app.models.player import Player
-from app.models.game_player import GamePlayer
+from app.utils.point_flow import get_game_roster
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
 from app.models.team_organization import TeamOrganization  # Add this import
@@ -47,27 +47,8 @@ def game_dashboard(game_id):
     
     team_id = get_current_team_id()
 
-    # Get players assigned to this game via GamePlayer records
-    all_game_players = (
-        Player.query
-        .join(GamePlayer, GamePlayer.player_id == Player.id)
-        .filter(
-            GamePlayer.game_id == game_id,
-            # Older bulk assignments were saved without a team id.
-            or_(GamePlayer.team_organization_id == team_id,
-                GamePlayer.team_organization_id.is_(None)),
-            Player.team_organization_id == team_id,
-        )
-        .all()
-    )
-
-    # Fallback: if no GamePlayer records exist (e.g. game created before auto-assign),
-    # show the full active roster so stat-takers are never left with an empty list.
-    if not all_game_players:
-        all_game_players = Player.query.filter_by(
-            active=True,
-            team_organization_id=team_id
-        ).order_by(Player.jersey_number).all()
+    # Players assigned to this game (the full active roster if nobody is)
+    all_game_players = get_game_roster(game)
 
     # Split players by gender
     mmp_players = [p for p in all_game_players if p.gender == "male"]

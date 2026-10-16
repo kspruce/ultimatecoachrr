@@ -15,6 +15,12 @@
             </p>
         </div>
         <div class="col-md-4 text-end">
+            {% if next_to_analyse %}
+            <a href="{{ url_for('stat.record_events', point_id=next_to_analyse.id) }}" class="btn btn-success"
+               title="Points recorded on Game Day keep their line and score; add the positional detail">
+                Analyse Point {{ next_to_analyse.point_number }}
+            </a>
+            {% endif %}
             <a href="{{ url_for('point.add_point', game_id=game.id) }}" class="btn btn-primary">Add Point</a>
             <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-secondary">Back to Game</a>
         </div>

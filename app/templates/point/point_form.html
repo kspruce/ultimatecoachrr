@@ -99,17 +99,32 @@
 <div class="container py-4">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 gap-2 flex-wrap">
         <div>
-            <h3 class="mb-1">{{ title }}</h3>
+            <h3 class="mb-1">
+                {% if point %}Edit Point {{ point.point_number }}{% else %}Point {{ form.point_number.data }}{% endif %}
+                <small class="text-muted fw-normal">vs {{ game.opponent }}</small>
+            </h3>
             <div class="text-muted">
-                Score: {{ game.our_score }} – {{ game.their_score }}
+                Score: {{ game.our_score or 0 }} – {{ game.their_score or 0 }}
+                {% if halftime_now %}<span class="badge bg-secondary ms-1">Halftime</span>{% endif %}
             </div>
         </div>
 
-        <span class="division-badge badge-{{ game.team_organization.division }}">
-            {{ game.team_organization.division|capitalize }}
-        </span>
+        <div class="d-flex align-items-center gap-2">
+            {% if not point and (can_call_halftime or halftime_now) %}
+            <form method="POST" action="{{ url_for('point.toggle_halftime', game_id=game.id) }}" class="m-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pause-circle"></i>
+                    {% if halftime_now %}Undo halftime{% else %}Halftime{% endif %}
+                </button>
+            </form>
+            {% endif %}
+            <span class="division-badge badge-{{ game.team_organization.division }}">
+                {{ game.team_organization.division|capitalize }}
+            </span>
+        </div>
     </div>
 
     <form method="POST">
@@ -124,52 +139,62 @@
 
                 <div class="row g-3">
 
-                    <div class="col-6 col-md-3">
-                        {{ form.point_number.label(class="form-label") }}
-                        {{ form.point_number(class="form-control") }}
-                    </div>
-
-                    <div class="col-6 col-md-3">
-                        {{ form.duration.label(class="form-label") }}
-                        {{ form.duration(class="form-control") }}
-                    </div>
-
-                    <div class="col-6 col-md-3">
-                        {{ form.our_line_type.label(class="form-label") }}
-                        {{ form.our_line_type(class="form-select") }}
-                    </div>
-
-                    <div class="col-6 col-md-3">
-                        {{ form.starting_position.label(class="form-label") }}
-                        {{ form.starting_position(class="form-select") }}
-                    </div>
-
-                    <div class="col-6 col-md-3">
-                        {{ form.force_direction.label(class="form-label") }}
-                        {{ form.force_direction(class="form-select") }}
-                    </div>
-
-                    <div class="col-6 col-md-3">
-                        {{ form.point_outcome.label(class="form-label") }}
-                        {{ form.point_outcome(class="form-select") }}
-                    </div>
-
-                    {% if line_reason %}
-                    <div class="col-12">
-                        <div class="small text-muted">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label d-block">Starting On</label>
+                        <div class="btn-group w-100" role="group" aria-label="Starting on">
+                            {% for value, label in [('offense', 'Offense (O-line)'), ('defense', 'Defense (D-line)')] %}
+                            <input type="radio" class="btn-check" name="starting_position" id="start-{{ value }}"
+                                   value="{{ value }}" autocomplete="off"
+                                   {% if (form.starting_position.data or 'offense') == value %}checked{% endif %}>
+                            <label class="btn btn-outline-{{ 'success' if value == 'offense' else 'danger' }}"
+                                   for="start-{{ value }}">{{ label }}</label>
+                            {% endfor %}
+                        </div>
+                        {% if line_reason %}
+                        <div class="small text-muted mt-1">
                             <i class="bi bi-arrow-repeat"></i> {{ line_reason }}
                         </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
 
-                    {% if game.team_organization.division == "mixed" %}
+                    {% if division == "mixed" %}
                     <div class="col-6 col-md-3">
                         {{ form.gender_ratio.label(class="form-label") }}
                         {{ form.gender_ratio(class="form-select") }}
                     </div>
                     {% endif %}
 
+                    <div class="col-6 col-md-3">
+                        {{ form.force_direction.label(class="form-label") }}
+                        {{ form.force_direction(class="form-select") }}
+                    </div>
+
+                    {% if point %}
+                    <div class="col-6 col-md-3">
+                        {{ form.point_outcome.label(class="form-label") }}
+                        {{ form.point_outcome(class="form-select") }}
+                    </div>
+                    {% endif %}
+
                 </div>
+
+                <details class="mt-3"{% if form.errors.get('point_number') or form.errors.get('duration') or form.errors.get('timestamp_in_video') %} open{% endif %}>
+                    <summary class="small text-muted">More (point number, duration, video time)</summary>
+                    <div class="row g-3 mt-1">
+                        <div class="col-4">
+                            {{ form.point_number.label(class="form-label") }}
+                            {{ form.point_number(class="form-control") }}
+                        </div>
+                        <div class="col-4">
+                            {{ form.duration.label(class="form-label") }}
+                            {{ form.duration(class="form-control") }}
+                        </div>
+                        <div class="col-4">
+                            {{ form.timestamp_in_video.label(class="form-label") }}
+                            {{ form.timestamp_in_video(class="form-control") }}
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
 
@@ -179,6 +204,7 @@
         <div class="card section-card mb-4">
             <div class="card-body">
 
+                <div class="small text-muted mb-2" id="suggested-note"></div>
                 <div class="selection-bar">
                     Selected: <span id="selected-count">0</span> / 7
                     {% if game.team_organization.division == "mixed" %}
@@ -265,6 +291,44 @@ cards.forEach(card=>{
 });
 
 updateCounts();
+
+// Switching O/D swaps in the last line from that side, unless the
+// selection has been changed by hand.
+const suggestions = {{ (suggestions or {}) | tojson }};
+const note = document.getElementById("suggested-note");
+let untouched = true;
+
+function showSuggestion(side){
+    const s = suggestions[side];
+    note.innerHTML = s && s.from_point
+        ? `<i class="bi bi-people"></i> Same line as point ${s.from_point}. Tap to swap players.`
+        : "";
+}
+
+function applySuggestion(side){
+    const ids = ((suggestions[side] || {}).players || []).map(String);
+    selected = [];
+    cards.forEach(card => {
+        const on = ids.includes(card.dataset.playerId);
+        card.classList.toggle("selected", on);
+        if(on) selected.push(card.dataset.playerId);
+    });
+    playersInput.value = selected.join(",");
+    updateCounts();
+}
+
+cards.forEach(card => card.addEventListener("click", () => { untouched = false; }));
+
+document.querySelectorAll('input[name="starting_position"]').forEach(radio => {
+    radio.addEventListener("change", function(){
+        if(!suggestions[this.value]) return;
+        if(untouched) applySuggestion(this.value);
+        showSuggestion(untouched ? this.value : null);
+    });
+});
+
+const checkedSide = document.querySelector('input[name="starting_position"]:checked');
+if(checkedSide) showSuggestion(checkedSide.value);
 </script>
 
 {% endblock %}
