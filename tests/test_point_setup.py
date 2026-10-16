@@ -2,6 +2,7 @@
 game's players are offered, O/D, ratio and line follow from earlier
 points, and the score and next point stay right when analysing a game
 taken live on Game Day."""
+import json
 import re
 
 import pytest
@@ -262,3 +263,21 @@ def test_game_day_points_are_analysed_in_order_without_rewinding_the_score(setup
 
     html = setup['client'].get(f"/points/game/{setup['game_id']}").get_data(as_text=True)
     assert 'Analyse Point 1' in html  # still not analysed
+
+
+# --- recording canvas -------------------------------------------------------
+
+def test_reopening_a_point_shows_what_was_recorded(setup):
+    point_id = _add_point(setup, 1, None)
+    player = _line()[0]
+    r = setup['client'].post(f'/stats/record/{point_id}', json={
+        'player_id': player, 'event_type': 'catch', 'field_position_x': 40,
+        'field_position_y': 12, 'is_offensive': True})
+    assert r.status_code == 201, r.get_data(as_text=True)
+
+    html = setup['client'].get(f'/stats/record/{point_id}').get_data(as_text=True)
+    match = re.search(r'const existing = (\{.*?\});\n', html)
+    existing = json.loads(match.group(1))
+    assert [(e['event_type'], e['field_position_x'], e['player_id']) for e in existing['events']] \
+        == [('catch', 40.0, player)]
+    assert 'id="attack-toggle"' in html
