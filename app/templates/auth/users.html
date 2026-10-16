@@ -101,6 +101,39 @@
     </div>
     {% endif %}
 
+    {% if roster_signup and roster_signup.active %}
+    <!-- Roster sign-up progress -->
+    <div class="card shadow-sm mb-4" id="signup">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <h6 class="fw-bold mb-1"><i class="bi bi-person-check me-1"></i>Roster sign-up</h6>
+                    <p class="text-muted small mb-0">
+                        {{ roster_signup.joined }} of {{ roster_signup.active }} active players have an account.
+                        {% if roster_signup.waiting %}Share the join link above, or send someone a personal
+                        invite from the <a href="{{ url_for('team.index') }}">roster</a>.{% endif %}
+                    </p>
+                </div>
+                <span class="badge {{ 'bg-success' if not roster_signup.waiting else 'bg-warning text-dark' }}">
+                    {{ (roster_signup.joined * 100 / roster_signup.active)|round|int }}%
+                </span>
+            </div>
+            <div class="progress mb-2" style="height:6px" role="progressbar" aria-label="Players with accounts"
+                 aria-valuenow="{{ roster_signup.joined }}" aria-valuemin="0" aria-valuemax="{{ roster_signup.active }}">
+                <div class="progress-bar bg-success" style="width:{{ roster_signup.joined * 100 / roster_signup.active }}%"></div>
+            </div>
+            {% if roster_signup.waiting %}
+            <div class="small">
+                <span class="text-muted">Still to join:</span>
+                {% for p in roster_signup.waiting %}
+                <a href="{{ url_for('team.player_detail', player_id=p.id) }}" class="badge bg-light text-dark border text-decoration-none">{{ p.name }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if viewing_unassigned %}
     <div class="alert alert-info mb-4" style="border-radius:10px">
         <i class="bi bi-info-circle me-2"></i>
@@ -120,6 +153,7 @@
                         <th>Role</th>
                         {% if is_superadmin %}<th>Team</th>{% endif %}
                         <th>Linked Player</th>
+                        <th title="Linked to the roster · has an email · has RSVPed">Set up</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -133,7 +167,7 @@
                             <span class="badge
                                 {% if user.role == 'admin' %}bg-dark
                                 {% elif user.role == 'coach' %}bg-primary
-                                {% elif user.role == 'captain' %}bg-info text-dark
+                                {% elif user.role == 'captain' %}bg-dark
                                 {% elif user.role == 'guest' %}bg-warning text-dark
                                 {% else %}bg-secondary{% endif %}">
                                 {% if user.role == 'guest' %}<i class="bi bi-eye me-1"></i>{% endif %}
@@ -163,6 +197,18 @@
                                 </span>
                             {% else %}
                                 <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-nowrap">
+                            {% set st = member_status.get(user.id) %}
+                            {% if st and user.role != 'guest' %}
+                            <i class="bi bi-person-check{{ '-fill text-success' if st.linked else ' text-muted opacity-50' }}"
+                               title="{{ 'Linked to the roster' if st.linked else 'Not linked to the roster yet' }}"></i>
+                            <i class="bi bi-envelope{{ '-fill text-success' if st.email else ' text-muted opacity-50' }} ms-1"
+                               title="{{ "Has an email" if st.email else "No email, so they can't reset their own password" }}"></i>
+                            <i class="bi bi-calendar-check{{ '-fill text-success' if st.rsvp else ' text-muted opacity-50' }} ms-1"
+                               title="{{ "Has RSVPed" if st.rsvp else "Hasn't RSVPed yet" }}"></i>
                             {% endif %}
                         </td>
 

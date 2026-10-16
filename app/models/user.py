@@ -4,15 +4,20 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
-# Role hierarchy (team-scoped)
+# Role hierarchy (team-scoped). Captains and team admins share the top level:
+# both run everything on their own team. Only superadmins (is_superadmin)
+# reach other teams.
 ROLE_ORDER = {
     "guest": 0,
     "player": 1,
     "stat_taker": 2,
-    "captain": 3,
-    "coach": 4,
-    "admin": 5,
+    "coach": 3,
+    "captain": 4,
+    "admin": 4,
 }
+
+# Roles with full control of their own team
+TEAM_ADMIN_ROLES = ("admin", "captain")
 
 class User(UserMixin, db.Model):
     __tablename__ = "user"
@@ -63,9 +68,14 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         """
         Backwards compatibility property.
-        True if user is global superadmin or team admin.
+        True if user is global superadmin or runs their team (team admin or
+        captain).
         """
-        return self.is_superadmin or self.role == "admin"
+        return self.is_superadmin or self.role in TEAM_ADMIN_ROLES
+
+    @property
+    def is_captain(self):
+        return self.role == "captain"
 
     @property
     def is_coach(self):
@@ -73,7 +83,7 @@ class User(UserMixin, db.Model):
 
     @property
     def is_stat_taker(self):
-        """True for stat_taker, captain, coach, and admin — anyone at or
+        """True for stat_taker, coach, captain, and admin — anyone at or
         above the stat_taker level in the role hierarchy."""
         return self.role_level() >= ROLE_ORDER["stat_taker"]
 

@@ -43,7 +43,7 @@ def can_manage_user(target, actor=None) -> bool:
 def grantable_roles(actor=None):
     """Role keys `actor` may give someone: superadmins any role, everyone
     else roles up to their own (so a coach can add a co-coach, but only a
-    team admin can make someone a team admin)."""
+    captain or team admin can make someone a captain or team admin)."""
     actor = actor or current_user
     if actor.is_superadmin:
         return list(ROLE_ORDER)

@@ -64,6 +64,9 @@ from app.models.off_season import (
     UserSchedulePreference
 )
 
+# Getting-started guide
+from app.models.onboarding import UserOnboarding
+
 __all__ = [
     # Core
     'TeamOrganization', 'User', 'Player',
@@ -101,5 +104,7 @@ __all__ = [
     # Off-Season
     'TrackWorkoutWeek', 'OffSeasonPhase', 'PhaseMetric', 'PhaseSchedule',
     'ScheduleSession', 'WorkoutPlan', 'UserSessionCompletion', 'SMARTGoal',
-    'UserSchedulePreference'
+    'UserSchedulePreference',
+    # Getting-started guide
+    'UserOnboarding',
 ]

@@ -29,8 +29,8 @@ class UserForm(FlaskForm):
             ('guest', 'Guest (Read-only Demo)'),
             ('player', 'Player'),
             ('stat_taker', 'Stat Taker'),
-            ('captain', 'Captain'),
             ('coach', 'Coach'),
+            ('captain', 'Captain (runs the team)'),
             ('admin', 'Team Admin'),
         ],
         validators=[DataRequired()]

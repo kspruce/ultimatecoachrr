@@ -202,6 +202,10 @@ def create_app(config_class=Config):
     from app.routes.feedback import bp as feedback_bp
     app.register_blueprint(feedback_bp)
 
+    # Getting-started guide
+    from app.routes.onboarding import bp as onboarding_bp
+    app.register_blueprint(onboarding_bp)
+
     # Import the models package so ALL models are registered.
     # This ensures all models are loaded into SQLAlchemy's metadata
     from app import models as app_models  # noqa: F401

@@ -107,6 +107,12 @@
   .welcome p { color: var(--ink-2); font-size: .9rem; margin: 0; }
   .welcome i { font-size: 1.4rem; color: var(--club-ink); }
 
+  /* ─── Getting started ───────────────────────────────────── */
+  .ob-card { margin-top: 1.75rem; }
+  .ob-signup { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .ob-signup-t { font-size: 1.05rem; color: var(--ink); margin: .3rem 0 .15rem; }
+  .ob-signup-t b { color: var(--club-ink); }
+
   @media (max-width: 991.98px) {
     .poster { grid-template-columns: 1fr; }
     .poster > * + * { border-left: 0; border-top: 1px solid var(--rule); }
@@ -183,7 +189,7 @@
   {% else %}
   <div class="poster-cell">
     <div class="uc-eyebrow">Next game</div>
-    <div class="pc-empty">No games scheduled.{% if current_user.is_coach %} <a href="{{ url_for('game.index') }}">Add one</a>{% endif %}</div>
+    <div class="pc-empty">No games scheduled.{% if current_user.is_coach %} <a href="{{ url_for('game.index') }}">Add one</a>{% else %} Your coaches will add them here.{% endif %}</div>
   </div>
   {% endif %}
 
@@ -205,7 +211,7 @@
   {% else %}
   <div class="poster-cell">
     <div class="uc-eyebrow">Next tournament</div>
-    <div class="pc-empty">No tournaments coming up.{% if current_user.is_coach %} <a href="{{ url_for('tournament.index') }}">Plan one</a>{% endif %}</div>
+    <div class="pc-empty">No tournaments coming up.{% if current_user.is_coach %} <a href="{{ url_for('tournament.index') }}">Plan one</a>{% else %} You'll be able to RSVP here once one is added.{% endif %}</div>
   </div>
   {% endif %}
 
@@ -222,10 +228,40 @@
   {% else %}
   <div class="poster-cell">
     <div class="uc-eyebrow">Next session</div>
-    <div class="pc-empty">No sessions planned.{% if current_user.is_coach and (not s or s.sessions_enabled) %} <a href="{{ url_for('session.index') }}">Plan one</a>{% endif %}</div>
+    <div class="pc-empty">No sessions planned.{% if current_user.is_coach and (not s or s.sessions_enabled) %} <a href="{{ url_for('session.index') }}">Plan one</a>{% elif not current_user.is_coach %} Practices show up here once they're planned.{% endif %}</div>
   </div>
   {% endif %}
 </section>
+
+{# ══════════ GETTING STARTED ══════════ #}
+{% if checklist %}
+<section class="panel ob-card">
+  <div class="panel-h">
+    <h2>Getting started{% if checklist.role %} as {{ checklist.role.name|lower }}{% endif %}</h2>
+    <form method="POST" action="{{ url_for('onboarding.dismiss') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-link btn-sm p-0 text-muted" title="Hide the checklist" aria-label="Hide the checklist">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </form>
+  </div>
+  {% include 'onboarding/_checklist.html' %}
+</section>
+{% endif %}
+
+{% if roster_signup and roster_signup.waiting %}
+<section class="panel ob-card ob-signup">
+  <div>
+    <div class="uc-eyebrow">Team sign-up</div>
+    <div class="ob-signup-t">
+      <b>{{ roster_signup.waiting|length }}</b> of {{ roster_signup.active }} players
+      {{ "hasn't" if roster_signup.waiting|length == 1 else "haven't" }} joined yet
+    </div>
+    <div class="pc-meta">{{ roster_signup.waiting[:4] | map(attribute='name') | join(', ') }}{% if roster_signup.waiting|length > 4 %} and {{ roster_signup.waiting|length - 4 }} more{% endif %}</div>
+  </div>
+  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('auth.users') }}#signup">Invite them</a>
+</section>
+{% endif %}
 
 {# ══════════ BODY ══════════ #}
 <div class="dash">
