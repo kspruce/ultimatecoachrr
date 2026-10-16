@@ -64,7 +64,11 @@
         <td>{{ w.joint_theme or '' }}</td>
         {% if squad in ('all', '1s') %}<td>{{ w.firsts_theme or '' }}</td>{% endif %}
         {% if squad in ('all', '2s') %}<td>{{ w.seconds_theme or '' }}</td>{% endif %}
-        <td>{{ w.classroom or '' }}</td>
+        <td>
+          {% if link_classroom and w.classroom_sessions %}
+            {% for cs in w.classroom_sessions %}<a href="{{ url_for('season_plan.classroom', code=cs.code) }}">{{ w.classroom if loop.length == 1 and w.classroom else cs.code ~ ' ' ~ cs.title }}</a>{% if not loop.last %}<br>{% endif %}{% endfor %}
+          {% else %}{{ w.classroom or '' }}{% endif %}
+        </td>
         <td>{{ w.off_pitch or '' }}</td>
       </tr>
       {% endfor %}

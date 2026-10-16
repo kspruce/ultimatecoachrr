@@ -24,6 +24,9 @@
      title="Phase {{ ph.number }}: {{ ph.name }}"><span class="sp-badge sp-badge-phase">{{ ph.number }}</span> {{ ph.name }}</a>
   {% endfor %}
   {% endif %}
+  {% if sees_all or plan.players_see_classroom %}
+  <a href="{{ url_for('season_plan.classroom_list') }}" class="{{ 'active' if sp_ep.startswith('season_plan.') and 'classroom' in sp_ep }}"><i class="bi bi-easel"></i> Classroom</a>
+  {% endif %}
   {% if current_user.is_coach %}
   <a href="{{ url_for('season_plan.sessions') }}" class="{{ 'active' if sp_ep == 'season_plan.sessions' }}"><i class="bi bi-hammer"></i> Sessions</a>
   <a href="{{ url_for('season_plan.access') }}" class="{{ 'active' if sp_ep == 'season_plan.access' }}"><i class="bi bi-eye"></i> Player access</a>

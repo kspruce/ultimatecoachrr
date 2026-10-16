@@ -1,0 +1,149 @@
+{% extends "season_plan/_layout.html" %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">Classroom {{ cs.code }}{% if cs.week %} · week {{ cs.week.week_number }}{% endif %}</div>
+    <h1>Edit {{ cs.code }}</h1>
+    <p>Re-importing the plan only refreshes the session plan. Everything else here is kept.</p>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('season_plan.classroom', code=cs.code) }}">Back to the session</a>
+</div>
+
+<form method="post" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card">
+    <h3>Details</h3>
+    <div class="mb-3">
+      <label class="form-label" for="title">Title</label>
+      <input class="form-control" id="title" name="title" maxlength="200" required value="{{ cs.title or '' }}">
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label" for="format">Format</label>
+        <input class="form-control" id="format" name="format" maxlength="100" value="{{ cs.format or '' }}" placeholder="Online">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="audience">Who</label>
+        <input class="form-control" id="audience" name="audience" maxlength="200" value="{{ cs.audience or '' }}" placeholder="All">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="main_source">Main source</label>
+        <input class="form-control" id="main_source" name="main_source" maxlength="200" value="{{ cs.main_source or '' }}">
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-4">
+        <label class="form-label" for="start_date">Date</label>
+        <input class="form-control" type="date" id="start_date" name="start_date" value="{{ cs.starts_at.strftime('%Y-%m-%d') if cs.starts_at else '' }}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" for="start_time">Start time</label>
+        <input class="form-control" type="time" id="start_time" name="start_time" value="{{ cs.starts_at.strftime('%H:%M') if cs.starts_at else '' }}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" for="duration_minutes">Length (min)</label>
+        <input class="form-control" type="number" min="5" max="600" id="duration_minutes" name="duration_minutes" value="{{ cs.duration_minutes or '' }}" placeholder="60">
+      </div>
+    </div>
+    <div>
+      <label class="form-label" for="join_url">Join link (Zoom, Teams, Meet)</label>
+      <input class="form-control" type="url" id="join_url" name="join_url" maxlength="500" value="{{ cs.join_url or '' }}" placeholder="https://zoom.us/j/...">
+      <div class="form-text">Shown to everyone who can see this session until it has finished.</div>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <h3>Before the session</h3>
+    <div class="mb-3">
+      <label class="form-label" for="goal">Goal</label>
+      <textarea class="form-control" id="goal" name="goal" rows="2">{{ cs.goal or '' }}</textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="prep_md">Prep for players (markdown)</label>
+      <textarea class="form-control font-monospace" id="prep_md" name="prep_md" rows="8" style="font-size:.85rem">{{ cs.prep_md or '' }}</textarea>
+    </div>
+    <div>
+      <label class="form-label" for="plan_md">Session plan, coaches and captains only (markdown; replaced when the plan is re-imported)</label>
+      <textarea class="form-control font-monospace" id="plan_md" name="plan_md" rows="10" style="font-size:.85rem">{{ cs.plan_md or '' }}</textarea>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <h3>After the session</h3>
+    <div class="mb-3">
+      <label class="form-label" for="summary_md">What we discussed (markdown)</label>
+      <textarea class="form-control" id="summary_md" name="summary_md" rows="8">{{ cs.summary_md or '' }}</textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="commitments_md">What we committed to (markdown)</label>
+      <textarea class="form-control" id="commitments_md" name="commitments_md" rows="4">{{ cs.commitments_md or '' }}</textarea>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="summary_published" name="summary_published" {{ 'checked' if cs.summary_published }}>
+      <label class="form-check-label" for="summary_published">Publish the summary and commitments to players</label>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2 mb-4">
+    <a class="btn btn-outline-secondary" href="{{ url_for('season_plan.classroom', code=cs.code) }}">Cancel</a>
+    <button class="btn btn-primary" type="submit">Save session</button>
+  </div>
+</form>
+
+<div class="sp-card" id="resources" style="max-width:860px">
+  <h3>Recordings, slides and links</h3>
+  <p class="sp-muted" style="font-size:.9rem">Paste a link. YouTube, Vimeo, Google Drive files and Google Slides/Docs are embedded on the page; anything else (a Zoom cloud recording, Dropbox) is shown as a button.</p>
+  {% if cs.resources %}
+  <div class="mb-3">
+    {% for r in cs.resources %}
+    <div class="sp-res-row">
+      <span class="sp-badge sp-badge-break">{{ r.kind_label }}</span>
+      <a class="sp-res-title" href="{{ r.url }}" target="_blank" rel="noopener" title="{{ r.url }}">{{ r.title }}</a>
+      {% if r.coaches_only %}<span class="sp-badge sp-badge-event">Coaches only</span>{% endif %}
+      {% if embed_url(r.url) %}<span class="sp-muted" style="font-size:.75rem">embeds</span>{% endif %}
+      <form method="post" action="{{ url_for('season_plan.move_classroom_resource', code=cs.code, resource_id=r.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="direction" value="up">
+        <button class="btn btn-sm btn-link px-1" {{ 'disabled' if loop.first }} aria-label="Move up"><i class="bi bi-arrow-up"></i></button>
+      </form>
+      <form method="post" action="{{ url_for('season_plan.move_classroom_resource', code=cs.code, resource_id=r.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="direction" value="down">
+        <button class="btn btn-sm btn-link px-1" {{ 'disabled' if loop.last }} aria-label="Move down"><i class="bi bi-arrow-down"></i></button>
+      </form>
+      <form method="post" action="{{ url_for('season_plan.delete_classroom_resource', code=cs.code, resource_id=r.id) }}"
+            onsubmit='return confirm({{ ("Remove " ~ r.title ~ "?")|tojson }})'>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm btn-outline-danger" aria-label="Remove">Remove</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('season_plan.add_classroom_resource', code=cs.code) }}" class="row g-2 align-items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-md-3">
+      <label class="form-label" for="kind">Type</label>
+      <select class="form-select" id="kind" name="kind">
+        {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="res_title">Title</label>
+      <input class="form-control" id="res_title" name="title" maxlength="200" placeholder="e.g. Recording">
+    </div>
+    <div class="col-md-5">
+      <label class="form-label" for="url">Link</label>
+      <input class="form-control" type="url" id="url" name="url" maxlength="500" required placeholder="https://...">
+    </div>
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="coaches_only" name="coaches_only">
+        <label class="form-check-label" for="coaches_only">Coaches and captains only</label>
+      </div>
+      <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-plus"></i> Add</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

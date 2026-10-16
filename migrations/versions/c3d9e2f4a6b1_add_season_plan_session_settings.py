@@ -3,7 +3,7 @@ day, times and location for joint and split sessions, and when sessions
 were last built
 
 Revision ID: c3d9e2f4a6b1
-Revises: f0a1b2c3d4e5
+Revises: a2b3c4d5e6f7
 Create Date: 2026-10-16 18:00:00.000000
 
 All columns are nullable and start empty, so nothing changes until a coach
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 
 revision = 'c3d9e2f4a6b1'
-down_revision = 'f0a1b2c3d4e5'
+down_revision = 'a2b3c4d5e6f7'
 branch_labels = None
 depends_on = None
 

@@ -1,0 +1,41 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_classroom.html" import status_badge, when %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Classroom sessions</h1>
+    <p>Short off-pitch sessions. Each page has the prep and a join link beforehand, then the recording, slides and a summary afterwards.</p>
+  </div>
+</div>
+
+{% if not cards %}
+<div class="sp-card"><p class="m-0 sp-muted">No classroom sessions in this plan yet.{% if current_user.is_coach %} They're imported from the plan's classroom tab: re-run the import to add them.{% endif %}</p></div>
+{% endif %}
+
+<div class="sp-cl-list">
+  {% for card in cards %}
+  {% set cs = card.s %}
+  <a class="sp-cl-item {{ 'sp-current' if next_card and next_card.s.id == cs.id }}"
+     style="--phase: {{ cs.week.phase.colour if cs.week and cs.week.phase and cs.week.phase.colour else 'var(--rule)' }}"
+     href="{{ url_for('season_plan.classroom', code=cs.code) }}">
+    <div class="sp-cl-code">{{ cs.code }}</div>
+    <div>
+      <div class="fw-semibold">{{ cs.title }}</div>
+      <div class="sp-cl-meta">
+        {{ when(cs) }}{% if cs.format %} · {{ cs.format }}{% endif %}{% if cs.audience and cs.audience != 'All' %} · {{ cs.audience }}{% endif %}
+      </div>
+      {% if card.resources or card.show_summary %}
+      <div class="sp-cl-meta mt-1">
+        {% if card.video %}<i class="bi bi-play-circle"></i> Recording{% endif %}
+        {% if card.resources|selectattr('kind', 'equalto', 'slides')|list %} · <i class="bi bi-easel"></i> Slides{% endif %}
+        {% if card.show_summary %} · <i class="bi bi-journal-text"></i> Summary{% if not cs.summary_published %} (draft){% endif %}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div>{{ status_badge(card) }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

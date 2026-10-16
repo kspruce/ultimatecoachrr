@@ -26,6 +26,7 @@ class SeasonPlan(db.Model):
     players_see_weeks = db.Column(db.Boolean, default=False, nullable=False)
     players_see_session_notes = db.Column(db.Boolean, default=False, nullable=False)
     players_see_phases = db.Column(db.Boolean, default=False, nullable=False)
+    players_see_classroom = db.Column(db.Boolean, default=False, nullable=False)
 
     # When the sessions built from the plan happen (Season plan > Sessions).
     # Weekdays are 0 = Monday ... 6 = Sunday, counted from each week's w/c.
@@ -51,6 +52,9 @@ class SeasonPlan(db.Model):
                             cascade='all, delete-orphan')
     milestones = db.relationship('SeasonMilestone', back_populates='plan',
                                  order_by='SeasonMilestone.order', cascade='all, delete-orphan')
+    classroom_sessions = db.relationship('ClassroomSession', back_populates='plan',
+                                         order_by='ClassroomSession.number',
+                                         cascade='all, delete-orphan')
 
     __table_args__ = (
         db.UniqueConstraint('team_organization_id', 'season', name='uq_season_plan_team_season'),
@@ -131,6 +135,8 @@ class SeasonWeek(db.Model):
     plan = db.relationship('SeasonPlan', back_populates='weeks')
     phase = db.relationship('SeasonPhase', back_populates='weeks')
     session_plan = db.relationship('SessionPlan')
+    classroom_sessions = db.relationship('ClassroomSession', back_populates='week',
+                                         order_by='ClassroomSession.number')
 
     __table_args__ = (
         db.UniqueConstraint('plan_id', 'week_number', name='uq_season_week_plan_number'),
@@ -182,3 +188,86 @@ class SeasonMilestone(db.Model):
 
     def __repr__(self):
         return f'<SeasonMilestone {self.when_label}>'
+
+
+class ClassroomSession(db.Model):
+    """An off-pitch session (C1, C2, ...): when and how to join beforehand;
+    the recording, slides, summary and commitments afterwards."""
+    __tablename__ = 'classroom_session'
+
+    DEFAULT_MINUTES = 60
+
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('season_plan.id', ondelete='CASCADE'), nullable=False, index=True)
+    week_id = db.Column(db.Integer, db.ForeignKey('season_week.id', ondelete='SET NULL'), nullable=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False)
+    code = db.Column(db.String(10), nullable=False)  # "C4"
+    number = db.Column(db.Integer, nullable=False)   # 4, for ordering
+    title = db.Column(db.String(200), nullable=False)
+    format = db.Column(db.String(100))      # "Online", "In person, by squad"
+    audience = db.Column(db.String(200))    # "All", "1s", "Captains, player leaders and anyone interested"
+    main_source = db.Column(db.String(200))
+    goal = db.Column(db.Text)
+    starts_at = db.Column(db.DateTime)      # local time; null until a coach sets it
+    duration_minutes = db.Column(db.Integer)
+    join_url = db.Column(db.String(500))
+    plan_md = db.Column(db.Text)            # the facilitator's plan (coaches and captains only)
+    prep_md = db.Column(db.Text)            # what players see beforehand
+    summary_md = db.Column(db.Text)
+    commitments_md = db.Column(db.Text)
+    summary_published = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    plan = db.relationship('SeasonPlan', back_populates='classroom_sessions')
+    week = db.relationship('SeasonWeek', back_populates='classroom_sessions')
+    resources = db.relationship('ClassroomResource', back_populates='session',
+                                order_by='ClassroomResource.order', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('plan_id', 'code', name='uq_classroom_session_plan_code'),
+    )
+
+    @property
+    def has_coach_content(self):
+        """True once a coach has added anything an import doesn't provide."""
+        return bool(self.resources or self.summary_md or self.commitments_md
+                    or self.join_url or self.starts_at)
+
+    def ends_at(self):
+        """When the session is over: start + duration, or the end of its week."""
+        if self.starts_at:
+            return self.starts_at + timedelta(minutes=self.duration_minutes or self.DEFAULT_MINUTES)
+        if self.week and self.week.week_commencing:
+            return datetime.combine(self.week.week_ending, datetime.max.time())
+        return None
+
+    def __repr__(self):
+        return f'<ClassroomSession {self.code}>'
+
+
+class ClassroomResource(db.Model):
+    """A link attached to a classroom session: a recording, slides, a document."""
+    __tablename__ = 'classroom_resource'
+
+    KINDS = [('video', 'Recording'), ('slides', 'Slides'), ('document', 'Document'), ('link', 'Link')]
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('classroom_session.id', ondelete='CASCADE'),
+                           nullable=False, index=True)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False)
+    kind = db.Column(db.String(20), nullable=False, default='link')
+    title = db.Column(db.String(200), nullable=False)
+    url = db.Column(db.String(500), nullable=False)
+    order = db.Column(db.Integer, nullable=False, default=0)
+    coaches_only = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    session = db.relationship('ClassroomSession', back_populates='resources')
+
+    @property
+    def kind_label(self):
+        return dict(self.KINDS).get(self.kind, 'Link')
+
+    def __repr__(self):
+        return f'<ClassroomResource {self.kind} {self.title}>'
