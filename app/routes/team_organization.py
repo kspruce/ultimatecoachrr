@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.site_settings import SiteSettings
 from app.models.team_signup_invite import TeamSignupInvite
-from app.utils.email import email_configured, is_real_email, send_email
+from app.utils.email import email_configured, email_provider, is_real_email, send_email
 from app.utils.utils import superadmin_required
 from app.utils.team_filter import accessible_teams, can_access_team
 from app.models.team_organization import TeamOrganization
@@ -176,6 +176,7 @@ def signups():
                            settings=SiteSettings.get(), links=links,
                            link_days=SIGNUP_LINK_DAYS,
                            email_enabled=email_configured(),
+                           email_provider=email_provider(),
                            admin_email=(current_user.email if is_real_email(current_user.email) else ''))
 
 
