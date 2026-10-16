@@ -154,6 +154,14 @@
                         {{ form.point_outcome(class="form-select") }}
                     </div>
 
+                    {% if line_reason %}
+                    <div class="col-12">
+                        <div class="small text-muted">
+                            <i class="bi bi-arrow-repeat"></i> {{ line_reason }}
+                        </div>
+                    </div>
+                    {% endif %}
+
                     {% if game.team_organization.division == "mixed" %}
                     <div class="col-6 col-md-3">
                         {{ form.gender_ratio.label(class="form-label") }}
@@ -180,8 +188,9 @@
                 </div>
 
                 <div class="player-grid" id="player-grid">
+                    {% set chosen = form.players.data or [] %}
                     {% for player in all_players %}
-                        <div class="player-card"
+                        <div class="player-card{% if player.id in chosen %} selected{% endif %}"
                              data-player-id="{{ player.id }}"
                              data-gender="{{ player.gender }}">
 
@@ -212,7 +221,9 @@
 const cards = document.querySelectorAll(".player-card");
 const playersInput = document.getElementById("players-input");
 
-let selected = [];
+let selected = Array.from(document.querySelectorAll(".player-card.selected"))
+    .map(card => card.dataset.playerId);
+playersInput.value = selected.join(",");
 
 function updateCounts(){
     document.getElementById("selected-count").innerText = selected.length;
@@ -252,6 +263,8 @@ cards.forEach(card=>{
         updateCounts();
     });
 });
+
+updateCounts();
 </script>
 
 {% endblock %}
