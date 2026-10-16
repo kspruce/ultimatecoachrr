@@ -771,6 +771,7 @@ def process_heatmap_data(player_id=None, opposition_team=None, limit=None, point
 def generate_player_connections(opposition_team=None, min_connections=1, point_ids=None):
     """Generate player connection data using Throws model with minimum connection threshold"""
     query = Throw.query.filter(
+        Throw.thrower_id.isnot(None),
         Throw.receiver_id.isnot(None),
         Throw.team_organization_id == get_current_team_id()
     )

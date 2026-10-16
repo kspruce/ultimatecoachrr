@@ -810,8 +810,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 eventData.is_unknown_player = true;
             } else if (selectedPlayer === 'opponent') {
                 eventData.is_opponent = true;
-                // For opponent, we still need a player_id, use a placeholder
-                eventData.player_id = document.querySelector('.player-card').dataset.playerId; // Use first player as placeholder
             }
         }
     
@@ -860,8 +858,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const eventData = data.event || data;
                 
                 // Add player name to the event data if it's not already there
-                if (!eventData.player_name && eventData.player_id) {
-                    eventData.player_name = getPlayerNameFromDOM(eventData.player_id);
+                if (!eventData.player_name && (eventData.player_id || eventData.is_opponent)) {
+                    eventData.player_name = getPlayerNameFromDOM(eventData.player_id || 'opponent');
                     console.log(`Added player name to event: ${eventData.player_name} (ID: ${eventData.player_id})`);
                 }
                 
