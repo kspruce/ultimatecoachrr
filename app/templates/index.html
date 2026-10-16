@@ -1,451 +1,325 @@
 {% extends "base.html" %}
+{# The navbar runs straight into the header band here, so it drops its own stripe #}
+{% set uc_full_hero = true %}
 
 {% block styles %}
 <style>
-  /* NOTE: design tokens are defined in base.html — do NOT redeclare :root here
-     as it would override the dark-mode variable remapping in [data-theme="dark"]. */
+  /* ─── Header band with the kit sash ─────────────────────── */
+  .sash {
+    background: var(--header-bg); color: var(--on-club);
+    position: relative; overflow: hidden;
+    padding: 2.4rem 0 7.5rem; margin-bottom: -5.25rem;
+  }
+  .sash::before, .sash::after {
+    content: ''; position: absolute; left: -10%; right: -10%;
+    background: var(--accent); transform: rotate(-3.5deg); pointer-events: none;
+  }
+  .sash::before { bottom: 2.6rem; height: 3.1rem; }
+  .sash::after  { bottom: 1.6rem; height: .55rem; opacity: .55; }
+  .sash.no-stripe::before, .sash.no-stripe::after { display: none; }
+  .sash-inner { position: relative; z-index: 1; }
+  .sash-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: color-mix(in srgb, var(--on-club) 70%, transparent); }
+  .sash h1 { color: var(--on-club); font-size: clamp(2rem, 4.2vw, 2.9rem); line-height: 1.08; margin: .5rem 0 .6rem; max-width: 760px; }
+  .sash h1 em { font-style: normal; color: var(--accent); }
+  .sash p { color: color-mix(in srgb, var(--on-club) 80%, transparent); font-size: 1rem; margin: 0; max-width: 640px; }
+  .sash .sash-cta { margin-top: 1.4rem; display: flex; gap: .6rem; flex-wrap: wrap; }
 
-  /* ─── Hero ──────────────────────────────────────────── */
-  .uc-hero {
-    background: linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 55%,#3B82F6 100%);
-    border-radius: var(--uc-radius);
-    padding: 2.25rem 2.5rem 2.5rem;
-    color: white;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 1.75rem;
+  /* ─── Poster: next game / squad / session ───────────────── */
+  .poster {
+    position: relative; z-index: 2;
+    background: var(--card); border: 1px solid var(--rule); border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    display: grid; grid-template-columns: 1.25fr 1fr 1fr; overflow: hidden;
   }
-  .uc-hero::before {
-    content:''; position:absolute; top:-80px; right:-60px;
-    width:320px; height:320px; background:rgba(255,255,255,.06);
-    border-radius:50%; pointer-events:none;
-  }
-  .uc-hero::after {
-    content:''; position:absolute; bottom:-90px; left:-30px;
-    width:240px; height:240px; background:rgba(255,255,255,.04);
-    border-radius:50%; pointer-events:none;
-  }
-  .uc-hero-inner    { position:relative; z-index:1; }
-  .uc-hero-kicker   { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; opacity:.65; margin-bottom:.3rem; }
-  .uc-hero-title    { font-size:2rem; font-weight:700; letter-spacing:-.025em; margin-bottom:.35rem; }
-  .uc-hero-sub      { font-size:.95rem; opacity:.8; margin:0; }
-  .uc-hero-stats    { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.5rem; }
-  .uc-stat-pill     {
-    display:inline-flex; align-items:center; gap:.5rem;
-    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2);
-    border-radius:50px; padding:.4rem 1rem; font-size:.82rem; color:white;
-  }
-  .uc-stat-pill strong { font-size:.92rem; }
+  .poster > * { padding: 1.4rem 1.6rem; color: var(--ink); text-decoration: none; display: block; }
+  .poster > * + * { border-left: 1px solid var(--rule); }
+  a.poster-cell:hover { background: var(--club-soft); color: var(--ink); }
+  .pc-title { font-family: var(--font-serif); font-size: 1.55rem; line-height: 1.15; margin: .55rem 0 .4rem; }
+  .pc-title .vs { font-family: var(--font-sans); font-size: .8rem; font-weight: 800; color: var(--ink-3); margin: 0 .35rem; vertical-align: middle; }
+  .pc-meta { color: var(--ink-2); font-size: .86rem; line-height: 1.5; }
+  .pc-big { font-family: var(--font-serif); font-size: 2.6rem; line-height: 1; color: var(--club-ink); margin: .55rem 0 .3rem; }
+  .pc-big small { font-size: 1.05rem; color: var(--ink-3); }
+  .pc-empty { color: var(--ink-3); font-size: .9rem; margin-top: .6rem; }
+  .pc-empty a { font-weight: 700; }
+  .dots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: .55rem; }
+  .dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--club-ink); }
+  .dots i.m { background: var(--accent); } .dots i.o { background: var(--bad); opacity: .55; } .dots i.n { background: var(--rule-strong); }
+  .legend { display: flex; flex-wrap: wrap; gap: .25rem .8rem; margin-top: .5rem; font-size: .76rem; color: var(--ink-2); }
+  .legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .3rem; background: var(--club-ink); }
+  .legend .m::before { background: var(--accent); } .legend .o::before { background: var(--bad); opacity: .55; } .legend .n::before { background: var(--rule-strong); }
 
-  /* ─── Section labels ────────────────────────────────── */
-  .uc-section      { display:flex; align-items:center; gap:.75rem; margin:1.75rem 0 .875rem; }
-  .uc-section-text { font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--uc-gray-400); white-space:nowrap; }
-  .uc-section-line { flex:1; height:1px; background:var(--uc-gray-200); }
+  /* ─── Body columns ──────────────────────────────────────── */
+  .dash { display: grid; grid-template-columns: 1.15fr 1.15fr .9fr; gap: 1.5rem; margin-top: 1.75rem; }
+  .panel { background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 1.35rem 1.5rem; }
+  .dash > div > .panel + .panel { margin-top: 1.5rem; }
+  .panel-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .75rem; }
+  .panel-h h2 { font-size: 1.3rem; margin: 0; }
+  .panel-h a { font-size: .8rem; font-weight: 700; text-decoration: none; }
+  .ev { display: grid; grid-template-columns: 48px 1fr auto; gap: .85rem; align-items: center; padding: .7rem 0; border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none; }
+  .ev:hover { color: var(--ink); } .ev:hover .ev-t { color: var(--club-ink); }
+  .ev-d { text-align: center; border: 1px solid var(--rule); border-radius: 10px; padding: .3rem 0; font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); line-height: 1.2; }
+  .ev-d b { display: block; font-family: var(--font-serif); font-weight: 400; font-size: 1.2rem; letter-spacing: 0; color: var(--ink); }
+  .ev-t { font-weight: 700; font-size: .92rem; line-height: 1.3; }
+  .ev-m { color: var(--ink-3); font-size: .78rem; }
+  .tag { font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: .2rem .5rem; border-radius: 999px; white-space: nowrap; }
+  .tag.game { background: var(--club); color: var(--on-club); }
+  .tag.practice { background: var(--club-soft); color: var(--club-ink); }
+  .tag.tournament { background: var(--accent-soft); color: var(--ink); }
+  .res { display: flex; align-items: center; gap: .8rem; padding: .7rem 0; border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none; }
+  .res:hover { color: var(--club-ink); }
+  .wl { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: .72rem; font-weight: 800; color: #fff; background: var(--ok); flex-shrink: 0; }
+  .wl.L { background: var(--bad); } .wl.T { background: var(--ink-3); }
+  .res-o { flex: 1; min-width: 0; font-weight: 600; }
+  .res-o small { display: block; color: var(--ink-3); font-weight: 500; font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-s { font-family: var(--font-serif); font-size: 1.1rem; }
+  .form-row { display: flex; gap: 5px; margin-bottom: .4rem; }
+  .form-row span { flex: 1; height: 30px; border-radius: 7px; display: grid; place-items: center; font-weight: 800; font-size: .78rem; color: #fff; background: var(--ok); }
+  .form-row span.L { background: var(--bad); } .form-row span.T { background: var(--ink-3); }
+  .stat { padding: .8rem 0; border-top: 1px solid var(--rule); }
+  .stat:first-of-type { border-top: 0; padding-top: .2rem; }
+  .stat b { display: block; font-family: var(--font-serif); font-weight: 400; font-size: 2rem; line-height: 1.1; }
+  .stat span { color: var(--ink-2); font-size: .84rem; }
+  .pos { color: var(--ok); } .neg { color: var(--bad); }
+  /* Point differential per game: wins rise above the line, losses hang below */
+  .bars { margin-top: .6rem; }
+  .bars-row { display: flex; gap: 3px; height: 26px; }
+  .bars-row.up { align-items: flex-end; border-bottom: 1px solid var(--rule-strong); }
+  .bars-row.down { align-items: flex-start; }
+  .bars-row i { flex: 1; background: var(--ok); }
+  .bars-row.up i { border-radius: 3px 3px 0 0; }
+  .bars-row.down i { background: var(--bad); border-radius: 0 0 3px 3px; }
+  [data-theme="dark"] .wl, [data-theme="dark"] .form-row span { color: #161311; }
+  .me { display: flex; gap: .9rem; align-items: center; }
+  .me-av { width: 46px; height: 46px; border-radius: 50%; background: var(--club); color: var(--on-club); display: grid; place-items: center; font-family: var(--font-serif); font-size: 1.15rem; flex-shrink: 0; box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
+  .me b { display: block; font-weight: 700; }
+  .me span { color: var(--ink-3); font-size: .82rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+  .pills a { font-size: .8rem; font-weight: 700; padding: .3rem .75rem; border-radius: 999px; background: var(--club-soft); color: var(--club-ink); text-decoration: none; }
+  .pills a:hover { background: var(--club); color: var(--on-club); }
+  .links { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 2rem; margin-top: 1.5rem; }
+  .links a { display: flex; align-items: center; gap: .7rem; padding: .8rem 0; border-top: 1px solid var(--rule); color: var(--ink); text-decoration: none; font-weight: 600; }
+  .links a i { color: var(--club-ink); width: 18px; text-align: center; }
+  .links a span { margin-left: auto; color: var(--ink-3); transition: transform .15s; }
+  .links a:hover { color: var(--club-ink); } .links a:hover span { transform: translateX(3px); color: var(--club-ink); }
+  .empty { color: var(--ink-3); font-size: .9rem; padding: .6rem 0 .2rem; border-top: 1px solid var(--rule); }
+  .welcome { background: var(--card); border: 1px solid var(--rule); border-radius: 20px; padding: 2.5rem; position: relative; z-index: 2; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .welcome h3 { font-size: 1.2rem; margin: .6rem 0 .3rem; }
+  .welcome p { color: var(--ink-2); font-size: .9rem; margin: 0; }
+  .welcome i { font-size: 1.4rem; color: var(--club-ink); }
 
-  /* ─── Feature grid ──────────────────────────────────── */
-  .uc-feature-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.875rem; }
-  .uc-feat {
-    background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
-    padding:1.375rem; display:flex; flex-direction:column; gap:.625rem;
-    text-decoration:none; color:inherit; position:relative;
-    transition:box-shadow .2s,transform .2s,border-color .2s;
+  @media (max-width: 991.98px) {
+    .poster { grid-template-columns: 1fr; }
+    .poster > * + * { border-left: 0; border-top: 1px solid var(--rule); }
+    .dash { grid-template-columns: 1fr 1fr; }
+    .dash > :last-child { grid-column: span 2; }
+    .welcome { grid-template-columns: 1fr; }
   }
-  .uc-feat:hover { box-shadow:var(--uc-shadow-md); transform:translateY(-3px); border-color:transparent; text-decoration:none; color:inherit; }
-  .uc-feat:hover .uc-feat-arrow { opacity:1; transform:translateX(3px); }
-  .uc-feat-icon  { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; flex-shrink:0; }
-  .uc-feat-name  { font-weight:600; font-size:.9rem; color:var(--uc-gray-800); margin:0; }
-  .uc-feat-desc  { font-size:.79rem; color:var(--uc-gray-400); line-height:1.45; margin:0; }
-  .uc-feat-arrow { position:absolute; top:1.25rem; right:1.125rem; color:var(--uc-gray-400); font-size:.8rem; opacity:0; transition:opacity .2s,transform .2s; }
-
-  /* ─── Spotlight cards ──────────────────────────────── */
-  .uc-spotlight {
-    display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1.5rem;
+  @media (max-width: 640px) {
+    .sash { padding: 1.75rem 0 6.5rem; }
+    .dash { grid-template-columns: 1fr; }
+    .dash > :last-child { grid-column: auto; }
   }
-  .uc-spot {
-    background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.2);
-    border-radius:10px; padding:.85rem 1rem; text-decoration:none; color:white;
-    transition:background .15s;
-  }
-  .uc-spot:hover { background:rgba(255,255,255,.2); text-decoration:none; color:white; }
-  .uc-spot-kicker {
-    font-size:.67rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
-    opacity:.65; display:flex; align-items:center; gap:.35rem; margin-bottom:.4rem;
-  }
-  .uc-spot-title { font-size:.95rem; font-weight:700; line-height:1.3; margin-bottom:.25rem; }
-  .uc-spot-meta  { font-size:.77rem; opacity:.75; display:flex; align-items:center; gap:.3rem; margin-bottom:.15rem; }
-  .uc-spot-empty {
-    background:rgba(255,255,255,.07); border:1px dashed rgba(255,255,255,.2);
-    border-radius:10px; padding:.85rem 1rem; color:rgba(255,255,255,.5);
-    font-size:.82rem; display:flex; align-items:center; gap:.5rem;
-  }
-  @media (max-width:540px) { .uc-spotlight { grid-template-columns:1fr; } }
-
-  /* ─── Icon colour helpers ───────────────────────────── */
-  .ic-blue   { background:#EFF6FF; color:var(--uc-blue);   }
-  .ic-indigo { background:#EEF2FF; color:var(--uc-indigo); }
-  .ic-teal   { background:#F0FDFA; color:var(--uc-teal);   }
-  .ic-green  { background:#ECFDF5; color:var(--uc-green);  }
-  .ic-amber  { background:#FFFBEB; color:var(--uc-amber);  }
-  .ic-orange { background:#FFF7ED; color:var(--uc-orange); }
-  .ic-red    { background:#FEF2F2; color:var(--uc-red);    }
-  .ic-purple { background:#F5F3FF; color:var(--uc-purple); }
-  .ic-sky    { background:#F0F9FF; color:var(--uc-sky);    }
-
-  /* ─── Player card ───────────────────────────────────── */
-  .uc-player-card {
-    background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
-    padding:1.375rem 1.5rem; display:flex; gap:1.25rem; align-items:flex-start; margin-bottom:1.75rem;
-  }
-  .uc-avatar {
-    width:54px; height:54px; border-radius:13px;
-    background:linear-gradient(135deg,var(--uc-blue),#1D4ED8);
-    display:flex; align-items:center; justify-content:center; color:white; font-size:1.35rem; flex-shrink:0;
-    box-shadow:0 4px 12px rgba(59,130,246,.28);
-  }
-  .uc-player-pills { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.625rem; }
-  .uc-pill {
-    display:inline-flex; align-items:center; gap:.3rem; padding:.28rem .7rem;
-    background:var(--uc-gray-100); border-radius:50px; font-size:.79rem; font-weight:500;
-    color:var(--uc-gray-600); text-decoration:none; transition:background .15s,color .15s;
-  }
-  .uc-pill:hover { background:var(--uc-blue); color:white; text-decoration:none; }
-  .uc-upcoming         { min-width:200px; max-width:250px; border-left:1px solid var(--uc-gray-200); padding-left:1.25rem; }
-  .uc-upcoming-kicker  { font-size:.67rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--uc-gray-400); margin-bottom:.625rem; }
-  .uc-event            { display:flex; gap:.75rem; padding:.5rem 0; border-bottom:1px solid var(--uc-gray-100); }
-  .uc-event:last-child { border-bottom:none; padding-bottom:0; }
-  .uc-event-dot        { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
-  .uc-event-dot.game       { background:var(--uc-red);   }
-  .uc-event-dot.practice   { background:var(--uc-green); }
-  .uc-event-dot.tournament { background:var(--uc-amber); }
-  .uc-event-title      { font-size:.82rem; font-weight:600; color:var(--uc-gray-800); text-decoration:none; }
-  .uc-event-title:hover{ color:var(--uc-blue); text-decoration:none; }
-  .uc-event-meta       { font-size:.74rem; color:var(--uc-gray-400); }
-
-  /* ─── Activity feed ─────────────────────────────────── */
-  .uc-card { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius); box-shadow:var(--uc-shadow-sm); overflow:hidden; }
-  .uc-activity {
-    display:flex; align-items:center; gap:.875rem; padding:.75rem 1.375rem;
-    border-bottom:1px solid var(--uc-gray-100); text-decoration:none; color:inherit; transition:background .12s;
-  }
-  .uc-activity:last-child { border-bottom:none; }
-  .uc-activity:hover { background:var(--uc-gray-50); text-decoration:none; color:inherit; }
-  .uc-act-icon { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:white; font-size:.9rem; flex-shrink:0; }
-  .uc-act-icon.game       { background:var(--uc-red);    }
-  .uc-act-icon.practice   { background:var(--uc-green);  }
-  .uc-act-icon.tournament { background:var(--uc-amber);  }
-  .uc-act-icon.stats      { background:var(--uc-indigo); }
-  .uc-act-icon.playbook   { background:var(--uc-blue);   }
-  .uc-act-icon.theory     { background:var(--uc-purple); }
-  .uc-act-title { font-size:.865rem; font-weight:600; color:var(--uc-gray-800); }
-  .uc-act-time  { font-size:.75rem;  color:var(--uc-gray-400); }
-
-  /* ─── Auth CTA ──────────────────────────────────────── */
-  .uc-auth-cta { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius); padding:3.5rem 2rem; text-align:center; margin-top:.5rem; }
-  .uc-auth-cta h2 { font-weight:700; color:var(--uc-gray-800); }
-
-  /* ─── Responsive ────────────────────────────────────── */
-  @media (max-width:640px) {
-    .uc-hero { padding:1.75rem 1.375rem; }
-    .uc-hero-title { font-size:1.5rem; }
-    .uc-feature-grid { grid-template-columns:1fr 1fr; gap:.625rem; }
-    .uc-player-card { flex-direction:column; }
-    .uc-upcoming { min-width:0; max-width:100%; border-left:none; padding-left:0; border-top:1px solid var(--uc-gray-200); padding-top:1rem; }
-  }
-  @media (max-width:380px) { .uc-feature-grid { grid-template-columns:1fr; } }
-
-  /* ─── Dark mode overrides ───────────────────────────── */
-  /* Icon colour helpers — swap pastel light bg for a dark tinted equivalent */
-  [data-theme="dark"] .ic-blue   { background:rgba(59,130,246,.15);  color:var(--uc-blue);   }
-  [data-theme="dark"] .ic-indigo { background:rgba(99,102,241,.15);  color:var(--uc-indigo); }
-  [data-theme="dark"] .ic-teal   { background:rgba(13,148,136,.15);  color:var(--uc-teal);   }
-  [data-theme="dark"] .ic-green  { background:rgba(16,185,129,.15);  color:var(--uc-green);  }
-  [data-theme="dark"] .ic-amber  { background:rgba(245,158,11,.15);  color:var(--uc-amber);  }
-  [data-theme="dark"] .ic-orange { background:rgba(249,115,22,.15);  color:var(--uc-orange); }
-  [data-theme="dark"] .ic-red    { background:rgba(239,68,68,.15);   color:var(--uc-red);    }
-  [data-theme="dark"] .ic-purple { background:rgba(139,92,246,.15);  color:var(--uc-purple); }
-  [data-theme="dark"] .ic-sky    { background:rgba(14,165,233,.15);  color:var(--uc-sky);    }
 </style>
 {% endblock %}
 
-{% block content %}
-
-{# ─── Feature settings shortcut ─────────────────────── #}
+{# ─── Values used across the page ─────────────────────────── #}
 {% set s = current_team.settings if (current_team and current_team.settings) else none %}
+{% set short_name = (current_team.name.split()[-1] if current_team and current_team.name.split()|length > 1 else (current_team.name if current_team else 'Us')) %}
+{% set first_name = current_user.username.split(' ')[0] if current_user.is_authenticated and current_user.username else '' %}
+{% set days_to_game = (next_game.date - today).days if next_game else none %}
+{% set session_today = next_session and today and next_session.date == today %}
 
-{# ─── Section visibility (hide header when all cards gated) #}
-{% set show_training = not s or s.sessions_enabled or s.fitness_enabled or s.drills_enabled %}
-{% set show_strategy = not s or s.playbook_enabled or s.scouting_enabled %}
-{% set show_analysis = not s or s.stats_enabled    or s.clip_enabled %}
-{% set show_theory   = not s or s.theory_enabled %}
+{% macro day_word(d) -%}
+  {%- set n = (d - today).days -%}
+  {%- if n == 0 %}today{% elif n == 1 %}tomorrow{% elif n < 7 %}on {{ d.strftime('%A') }}{% else %}on {{ d.strftime('%a') }} {{ d.day }} {{ d.strftime('%b') }}{% endif -%}
+{%- endmacro %}
 
-
-{# ══════════════ HERO ════════════════════════════════════ #}
-<div class="uc-hero">
-  <div class="uc-hero-inner">
-    <p class="uc-hero-kicker">
-      {% if current_user.is_authenticated and current_team %}{{ current_team.name }}{% else %}Ultimate Coach{% endif %}
-    </p>
-    <h1 class="uc-hero-title">
-      {% if current_user.is_authenticated %}
-        Welcome back{% if current_user.username %}, {{ current_user.username.split(' ')[0] }}{% endif %} 👋
-      {% else %}
-        Ultimate Coach
-      {% endif %}
-    </h1>
-    <p class="uc-hero-sub">
-      {% if current_user.is_authenticated %}Your all-in-one ultimate frisbee management platform.
-      {% else %}Team management, game analysis and coaching — all in one place.{% endif %}
-    </p>
-
+{% block hero %}
+<header class="sash{% if team_palette is defined and not team_palette.show_stripe %} no-stripe{% endif %}">
+  <div class="container sash-inner">
     {% if current_user.is_authenticated %}
-    <div class="uc-spotlight">
-
-      {# ── Next session ── #}
-      {% if next_session %}
-      <a href="{{ url_for('session.detail', session_id=next_session.id) }}" class="uc-spot">
-        <div class="uc-spot-kicker"><i class="bi bi-calendar-check-fill"></i> Next Session</div>
-        <div class="uc-spot-title">{{ next_session.title }}</div>
-        <div class="uc-spot-meta"><i class="bi bi-calendar3"></i> {{ next_session.date.strftime('%a %d %b') }}{% if next_session.formatted_time %} &middot; {{ next_session.formatted_time }}{% endif %}</div>
-        {% if next_session.location %}<div class="uc-spot-meta"><i class="bi bi-geo-alt"></i> {{ next_session.location }}</div>{% endif %}
-        {% if next_session.focus_area %}<div class="uc-spot-meta"><i class="bi bi-bullseye"></i> {{ next_session.focus_area }}</div>{% endif %}
-      </a>
-      {% else %}
-      <div class="uc-spot-empty"><i class="bi bi-calendar-check"></i> No upcoming sessions scheduled</div>
-      {% endif %}
-
-      {# ── Next tournament ── #}
-      {% if next_tournament %}
-      <a href="{{ url_for('tournament.detail', tournament_id=next_tournament.id) }}" class="uc-spot">
-        <div class="uc-spot-kicker"><i class="bi bi-trophy-fill"></i> Next Tournament</div>
-        <div class="uc-spot-title">{{ next_tournament.name }}</div>
-        <div class="uc-spot-meta"><i class="bi bi-calendar3"></i>
-          {% if next_tournament.formatted_date_range %}{{ next_tournament.formatted_date_range }}
-          {% else %}{{ next_tournament.start_date.strftime('%a %d %b') }}{% endif %}
-        </div>
-        {% if next_tournament.location %}<div class="uc-spot-meta"><i class="bi bi-geo-alt"></i> {{ next_tournament.location }}</div>{% endif %}
-      </a>
-      {% else %}
-      <div class="uc-spot-empty"><i class="bi bi-trophy"></i> No upcoming tournaments scheduled</div>
-      {% endif %}
-
+    <div class="sash-kicker">{{ today.strftime('%A') if today else '' }}{% if today %} {{ today.day }} {{ today.strftime('%B') }}{% endif %}{% if current_team %} · {{ current_team.name }}{% endif %}</div>
+    <h1>
+      {%- if days_to_game == 0 -%}Game day{% if first_name %}, {{ first_name }}{% endif %}. <em>Let's go.</em>
+      {%- elif days_to_game is not none and days_to_game < 7 -%}Big week ahead{% if first_name %}, {{ first_name }}{% endif %}.
+      {%- elif session_today -%}Training tonight{% if first_name %}, {{ first_name }}{% endif %}.
+      {%- else -%}Welcome back{% if first_name %}, {{ first_name }}{% endif %}.
+      {%- endif -%}
+    </h1>
+    <p>
+      {%- if next_game -%}{{ short_name }} play {{ next_game.opponent }} {{ day_word(next_game.date) }}{% if later_games %}, then {{ later_games[0].opponent }}{% endif %}.{% endif %}
+      {%- if next_session %} {% if session_today %}Session tonight{% else %}Next session {{ day_word(next_session.date) }}{% endif %}{% if next_session.focus_area %}: {{ next_session.focus_area }}{% endif %}.{% endif %}
+      {%- if squad and squad.no_reply %} {{ squad.no_reply }} still to reply for {{ squad.tournament.name }}.{% endif %}
+      {%- if not next_game and not next_session and not squad %}Nothing on the calendar yet. Add a session or game to get started.{% endif -%}
+    </p>
+    {% else %}
+    <div class="sash-kicker">Ultimate Coach</div>
+    <h1>Run your club like <em>a proper club.</em></h1>
+    <p>Sessions, stats, scouting and selection for ultimate frisbee teams, in your colours.</p>
+    <div class="sash-cta">
+      <a href="{{ url_for('auth.register') }}" class="uc-nav-cta" style="padding:.6rem 1.2rem!important;font-size:.92rem">Get started</a>
+      <a href="{{ url_for('auth.login') }}" class="uc-nav-ghost" style="padding:.55rem 1.2rem">Log in</a>
     </div>
     {% endif %}
   </div>
-</div>
+</header>
+{% endblock %}
 
-
+{% block content %}
 {% if current_user.is_authenticated %}
 
-{# ══════════════ PLAYER CARD ═════════════════════════════ #}
-{% if current_user.player %}
-<div class="uc-player-card">
-  <div class="uc-avatar"><i class="bi bi-person-fill"></i></div>
-  <div class="flex-grow-1">
-    <div class="d-flex align-items-baseline gap-2 flex-wrap">
-      <span class="fw-bold" style="font-size:1.05rem;color:var(--uc-gray-800)">{{ current_user.player.name }}</span>
-      {% if current_user.player.position %}
-      <span style="font-size:.75rem;font-weight:600;padding:.15rem .65rem;background:var(--uc-gray-100);border-radius:50px;color:var(--uc-gray-600);">{{ current_user.player.position|capitalize }}</span>
-      {% endif %}
+{# ══════════ POSTER ══════════ #}
+<section class="poster">
+  {# Next game #}
+  {% if next_game %}
+  <a class="poster-cell" href="{{ url_for('game.detail', game_id=next_game.id) }}">
+    <div class="uc-eyebrow">{{ next_game.date.strftime('%a') }} {{ next_game.date.day }} {{ next_game.date.strftime('%b') }}{% if next_game.tournament %} · {{ next_game.tournament.name }}{% endif %}</div>
+    <div class="pc-title">{{ short_name }}<span class="vs">VS</span>{{ next_game.opponent }}</div>
+    <div class="pc-meta">
+      {% if days_to_game == 0 %}Today{% elif days_to_game == 1 %}Tomorrow{% else %}In {{ days_to_game }} days{% endif %}
+      {% if later_games %}<br>Then <b>{{ later_games | map(attribute='opponent') | join(', ') }}</b>{% endif %}
     </div>
-    <div class="text-muted" style="font-size:.8rem;margin-top:.15rem;">Linked player profile</div>
-    <div class="uc-player-pills">
-      <a href="{{ url_for('team.player_detail', player_id=current_user.player.id) }}" class="uc-pill"><i class="bi bi-person-vcard"></i> Profile</a>
-      {% if not s or s.stats_enabled %}<a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}" class="uc-pill"><i class="bi bi-graph-up"></i> My Stats</a>{% endif %}
-      {% if not s or s.sessions_enabled %}<a href="{{ url_for('session.player_attendance', player_id=current_user.player.id) }}" class="uc-pill"><i class="bi bi-calendar-check"></i> Attendance</a>{% endif %}
-      {% if not s or s.fitness_enabled %}<a href="{{ url_for('fitness.player_fitness', player_id=current_user.player.id) }}" class="uc-pill"><i class="bi bi-heart-pulse"></i> Fitness</a>{% endif %}
-    </div>
+  </a>
+  {% else %}
+  <div class="poster-cell">
+    <div class="uc-eyebrow">Next game</div>
+    <div class="pc-empty">No games scheduled.{% if current_user.is_coach %} <a href="{{ url_for('game.index') }}">Add one</a>{% endif %}</div>
   </div>
-  {% if upcoming_events %}
-  <div class="uc-upcoming d-none d-md-block">
-    <div class="uc-upcoming-kicker">Upcoming</div>
-    {% for event in upcoming_events[:3] %}
-    <div class="uc-event">
-      <div class="uc-event-dot {{ event.type }}"></div>
+  {% endif %}
+
+  {# Tournament squad #}
+  {% if squad %}
+  <a class="poster-cell" href="{{ url_for('tournament.detail', tournament_id=squad.tournament.id) }}">
+    <div class="uc-eyebrow">{{ squad.tournament.name }} · {{ squad.tournament.formatted_date_range or squad.tournament.start_date.strftime('%d %b') }}</div>
+    <div class="pc-big">{{ squad.attending }}<small> / {{ squad.active }} in</small></div>
+    {% if squad.active <= 40 %}
+    <div class="dots" aria-hidden="true">
+      {%- for _ in range(squad.attending) %}<i></i>{% endfor -%}
+      {%- for _ in range(squad.maybe) %}<i class="m"></i>{% endfor -%}
+      {%- for _ in range(squad.out) %}<i class="o"></i>{% endfor -%}
+      {%- for _ in range(squad.no_reply) %}<i class="n"></i>{% endfor -%}
+    </div>
+    {% endif %}
+    <div class="legend"><span>{{ squad.attending }} in</span><span class="m">{{ squad.maybe }} maybe</span><span class="o">{{ squad.out }} out</span><span class="n">{{ squad.no_reply }} no reply</span></div>
+  </a>
+  {% else %}
+  <div class="poster-cell">
+    <div class="uc-eyebrow">Next tournament</div>
+    <div class="pc-empty">No tournaments coming up.{% if current_user.is_coach %} <a href="{{ url_for('tournament.index') }}">Plan one</a>{% endif %}</div>
+  </div>
+  {% endif %}
+
+  {# Next session #}
+  {% if next_session and (not s or s.sessions_enabled) %}
+  <a class="poster-cell" href="{{ url_for('session.detail', session_id=next_session.id) }}">
+    <div class="uc-eyebrow">{% if session_today %}Tonight{% else %}{{ next_session.date.strftime('%a') }} {{ next_session.date.day }} {{ next_session.date.strftime('%b') }}{% endif %}{% if next_session.start_time %} · {{ next_session.start_time.strftime('%H:%M') }}{% endif %}</div>
+    <div class="pc-title" style="font-size:1.35rem">{{ next_session.title }}</div>
+    <div class="pc-meta">
+      {% if next_session.location %}{{ next_session.location }}{% endif %}
+      {% if next_session.focus_area %}<br>Focus: {{ next_session.focus_area }}{% endif %}
+    </div>
+  </a>
+  {% else %}
+  <div class="poster-cell">
+    <div class="uc-eyebrow">Next session</div>
+    <div class="pc-empty">No sessions planned.{% if current_user.is_coach and (not s or s.sessions_enabled) %} <a href="{{ url_for('session.index') }}">Plan one</a>{% endif %}</div>
+  </div>
+  {% endif %}
+</section>
+
+{# ══════════ BODY ══════════ #}
+<div class="dash">
+  {# Coming up #}
+  <section class="panel">
+    <div class="panel-h"><h2>Coming up</h2><a href="{{ url_for('calendar.index') }}">Calendar →</a></div>
+    {% for event in upcoming_events %}
+    <a class="ev" href="{{ event.link }}">
+      <div class="ev-d">{{ event.sort_date.strftime('%a') }}<b>{{ event.sort_date.day }}</b></div>
       <div>
-        <a href="{{ event.link }}" class="uc-event-title">{{ event.title }}</a>
-        <div class="uc-event-meta">{{ event.date_time }}</div>
+        <div class="ev-t">{{ event.title }}</div>
+        <div class="ev-m">{{ event.sort_date.strftime('%b') }}{% if event.location and event.location != 'No location' %} · {{ event.location }}{% endif %}</div>
       </div>
-    </div>
+      <span class="tag {{ event.type }}">{{ 'Game' if event.type == 'game' else ('Session' if event.type == 'practice' else 'Tourney') }}</span>
+    </a>
+    {% else %}
+    <div class="empty">Nothing scheduled yet.</div>
     {% endfor %}
-  </div>
-  {% endif %}
-</div>
-{% endif %}
+  </section>
 
-
-{# ══════════════ ORGANISATION ════════════════════════════ #}
-<div class="uc-section" {% if not current_user.player %}style="margin-top:.25rem"{% endif %}>
-  <span class="uc-section-text">Organisation</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="uc-feature-grid">
-  <a href="{{ url_for('calendar.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-teal"><i class="bi bi-calendar3"></i></div>
-    <p class="uc-feat-name">Team Calendar</p>
-    <p class="uc-feat-desc">View and manage your team's schedule, practices and events.</p>
-  </a>
-  <a href="{{ url_for('game.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-blue"><i class="bi bi-controller"></i></div>
-    <p class="uc-feat-name">Games</p>
-    <p class="uc-feat-desc">Record and review game results and statistics.</p>
-  </a>
-  <a href="{{ url_for('tournament.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-amber"><i class="bi bi-trophy"></i></div>
-    <p class="uc-feat-name">Tournaments</p>
-    <p class="uc-feat-desc">Organise tournaments, RSVPs and player selection.</p>
-  </a>
-  <a href="{{ url_for('team.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-indigo"><i class="bi bi-people-fill"></i></div>
-    <p class="uc-feat-name">Team Roster</p>
-    <p class="uc-feat-desc">View and manage player profiles and roles.</p>
-  </a>
-</div>
-
-
-{# ══════════════ TRAINING ════════════════════════════════ #}
-{% if show_training %}
-<div class="uc-section">
-  <span class="uc-section-text">Training</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="uc-feature-grid">
-  {% if not s or s.sessions_enabled %}
-  <a href="{{ url_for('session.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-green"><i class="bi bi-calendar-check-fill"></i></div>
-    <p class="uc-feat-name">Session Plans</p>
-    <p class="uc-feat-desc">Create and manage practice plans and track attendance.</p>
-  </a>
-  {% endif %}
-  {% if not s or s.drills_enabled %}
-  <a href="{{ url_for('session.drills') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-green"><i class="bi bi-clipboard2-check"></i></div>
-    <p class="uc-feat-name">Drill Library</p>
-    <p class="uc-feat-desc">Browse and manage your collection of training drills.</p>
-  </a>
-  {% endif %}
-  {% if not s or s.fitness_enabled %}
-  <a href="{{ url_for('fitness.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-red"><i class="bi bi-heart-pulse"></i></div>
-    <p class="uc-feat-name">Fitness Tracking</p>
-    <p class="uc-feat-desc">Track, analyse and improve player fitness metrics.</p>
-  </a>
-  {% endif %}
-</div>
-{% endif %}
-
-
-{# ══════════════ STRATEGY ════════════════════════════════ #}
-{% if show_strategy %}
-<div class="uc-section">
-  <span class="uc-section-text">Strategy</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="uc-feature-grid">
-  {% if not s or s.playbook_enabled %}
-  <a href="{{ url_for('playbook.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-purple"><i class="bi bi-book-fill"></i></div>
-    <p class="uc-feat-name">Playbook</p>
-    <p class="uc-feat-desc">Create, organise and review team plays and formations.</p>
-  </a>
-  {% endif %}
-  {% if not s or s.scouting_enabled %}
-  <a href="{{ url_for('scouting.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-orange"><i class="bi bi-binoculars-fill"></i></div>
-    <p class="uc-feat-name">Scouting Reports</p>
-    <p class="uc-feat-desc">Track opponent information for game preparation.</p>
-  </a>
-  {% endif %}
-</div>
-{% endif %}
-
-
-{# ══════════════ ANALYSIS ════════════════════════════════ #}
-{% if show_analysis %}
-<div class="uc-section">
-  <span class="uc-section-text">Analysis</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="uc-feature-grid">
-  {% if not s or s.stats_enabled %}
-  <a href="{{ url_for('stats_dashboard.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-indigo"><i class="bi bi-graph-up"></i></div>
-    <p class="uc-feat-name">Statistics</p>
-    <p class="uc-feat-desc">Visualise player and team performance with detailed analytics.</p>
-  </a>
-  {% endif %}
-  {% if not s or s.clip_enabled %}
-  <a href="{{ url_for('clip.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-sky"><i class="bi bi-camera-video-fill"></i></div>
-    <p class="uc-feat-name">Clip Library</p>
-    <p class="uc-feat-desc">Store and review video clips of games and plays.</p>
-  </a>
-  {% endif %}
-</div>
-{% endif %}
-
-
-{# ══════════════ LEARNING ════════════════════════════════ #}
-{% if show_theory %}
-<div class="uc-section">
-  <span class="uc-section-text">Learning</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="uc-feature-grid">
-  {% if not s or s.theory_enabled %}
-  <a href="{{ url_for('theory.index') }}" class="uc-feat">
-    <i class="uc-feat-arrow bi bi-arrow-right"></i>
-    <div class="uc-feat-icon ic-amber"><i class="bi bi-mortarboard-fill"></i></div>
-    <p class="uc-feat-name">Theory</p>
-    <p class="uc-feat-desc">Access educational content and learn ultimate concepts.</p>
-  </a>
-  {% endif %}
-</div>
-{% endif %}
-
-
-{# ══════════════ RECENT ACTIVITY ═════════════════════════ #}
-{% if recent_activities %}
-<div class="uc-section">
-  <span class="uc-section-text">Recent Activity</span>
-  <span class="uc-section-line"></span>
-</div>
-<div class="uc-card mb-4">
-  {% for activity in recent_activities %}
-  <a href="{{ activity.link }}" class="uc-activity">
-    <div class="uc-act-icon {{ activity.type }}"><i class="bi {{ activity.icon }}"></i></div>
-    <div class="flex-grow-1">
-      <div class="uc-act-title">{{ activity.title }}</div>
-      <div class="uc-act-time">{{ activity.timestamp }}</div>
+  {# Results #}
+  <section class="panel">
+    <div class="panel-h"><h2>Recent results</h2><a href="{{ url_for('game.index') }}">All games →</a></div>
+    {% if recent_results %}
+    <div class="form-row" aria-label="Form, most recent first">
+      {% for r in recent_results %}<span class="{{ r.result }}">{{ r.result }}</span>{% endfor %}
     </div>
-    <i class="bi bi-chevron-right" style="color:var(--uc-gray-200);font-size:.75rem;"></i>
-  </a>
-  {% endfor %}
-</div>
-{% endif %}
+    {% for r in recent_results %}
+    <a class="res" href="{{ r.link }}">
+      <span class="wl {{ r.result }}">{{ r.result }}</span>
+      <span class="res-o">{{ r.opponent }}<small>{{ r.date.day }} {{ r.date.strftime('%b') }}{% if r.tournament %} · {{ r.tournament }}{% endif %}</small></span>
+      <span class="res-s">{{ r.score }}</span>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="empty">No results yet. Scores show up here once games are recorded.</div>
+    {% endif %}
+  </section>
 
+  {# Season + player #}
+  <div>
+    {% if current_user.player %}
+    <section class="panel">
+      <div class="me">
+        <div class="me-av">{{ current_user.player.name | initials }}</div>
+        <div><b>{{ current_user.player.name }}</b><span>{% if current_user.player.jersey_number %}#{{ current_user.player.jersey_number }} · {% endif %}{{ (current_user.player.position or 'Player') | capitalize }}</span></div>
+      </div>
+      <div class="pills">
+        <a href="{{ url_for('team.player_detail', player_id=current_user.player.id) }}">Profile</a>
+        {% if not s or s.stats_enabled %}<a href="{{ url_for('stats_dashboard.player_stats', player_id=current_user.player.id) }}">My stats</a>{% endif %}
+        {% if not s or s.sessions_enabled %}<a href="{{ url_for('session.player_attendance', player_id=current_user.player.id) }}">Attendance</a>{% endif %}
+        {% if not s or s.fitness_enabled %}<a href="{{ url_for('fitness.player_fitness', player_id=current_user.player.id) }}">Fitness</a>{% endif %}
+      </div>
+    </section>
+    {% endif %}
+    <section class="panel">
+      <div class="panel-h"><h2>Season {{ season.year if season else '' }}</h2>{% if not s or s.stats_enabled %}<a href="{{ url_for('stats_dashboard.index') }}">Stats →</a>{% endif %}</div>
+      {% if season and season.games %}
+      <div class="stat"><b>{{ season.wins }}–{{ season.losses }}</b><span>Won–lost · {{ season.win_rate }}% of {{ season.games }} games</span></div>
+      <div class="stat">
+        <b class="{{ 'pos' if season.point_diff > 0 else ('neg' if season.point_diff < 0 else '') }}">{{ '+' if season.point_diff > 0 }}{{ season.point_diff }}</b>
+        <span>Point differential</span>
+        {% set peak = [season.diffs | map('abs') | max, 1] | max %}
+        <div class="bars" aria-hidden="true">
+          <div class="bars-row up">{% for d in season.diffs %}<i style="height:{{ ((d / peak * 100) | round) if d > 0 else 0 }}%"></i>{% endfor %}</div>
+          <div class="bars-row down">{% for d in season.diffs %}<i style="height:{{ ((-d / peak * 100) | round) if d < 0 else 0 }}%"></i>{% endfor %}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty">No games played this year yet.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+{# ══════════ AROUND THE CLUB ══════════ #}
+<div class="links">
+  <a href="{{ url_for('team.index') }}"><i class="bi bi-people"></i>Squad<span>→</span></a>
+  <a href="{{ url_for('tournament.index') }}"><i class="bi bi-trophy"></i>Tournaments<span>→</span></a>
+  {% if not s or s.sessions_enabled %}<a href="{{ url_for('session.index') }}"><i class="bi bi-calendar-check"></i>Session plans<span>→</span></a>{% endif %}
+  {% if not s or s.drills_enabled %}<a href="{{ url_for('session.drills') }}"><i class="bi bi-clipboard2-check"></i>Drill library<span>→</span></a>{% endif %}
+  {% if not s or s.playbook_enabled %}<a href="{{ url_for('playbook.index') }}"><i class="bi bi-book"></i>Playbook<span>→</span></a>{% endif %}
+  {% if not s or s.scouting_enabled %}<a href="{{ url_for('scouting.index') }}"><i class="bi bi-binoculars"></i>Scouting<span>→</span></a>{% endif %}
+  {% if not s or s.clip_enabled %}<a href="{{ url_for('clip.index') }}"><i class="bi bi-camera-video"></i>Clip library<span>→</span></a>{% endif %}
+  {% if not s or s.fitness_enabled %}<a href="{{ url_for('fitness.index') }}"><i class="bi bi-heart-pulse"></i>Fitness<span>→</span></a>{% endif %}
+  {% if not s or s.theory_enabled %}<a href="{{ url_for('theory.index') }}"><i class="bi bi-mortarboard"></i>Theory<span>→</span></a>{% endif %}
+</div>
 
 {% else %}
-{# ══════════════ LOGGED-OUT CTA ══════════════════════════ #}
-<div class="uc-auth-cta">
-  <div style="font-size:3rem;margin-bottom:1rem">🥏</div>
-  <h2>Get started with Ultimate Coach</h2>
-  <p class="text-muted mb-0">Log in or register to access all features and start managing your team.</p>
-  <div class="d-flex justify-content-center gap-3 flex-wrap mt-4">
-    <a href="{{ url_for('auth.login') }}" class="btn btn-primary px-4 py-2"><i class="bi bi-box-arrow-in-right me-2"></i>Log in</a>
-    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary px-4 py-2"><i class="bi bi-person-plus me-2"></i>Get started</a>
-  </div>
-</div>
+{# ══════════ LOGGED OUT ══════════ #}
+<section class="welcome">
+  <div><i class="bi bi-calendar-check"></i><h3>Plan every session</h3><p>Session plans, a drill library and attendance in one place.</p></div>
+  <div><i class="bi bi-graph-up"></i><h3>Know your numbers</h3><p>Record games from the sideline and see holds, breaks and who's in form.</p></div>
+  <div><i class="bi bi-palette"></i><h3>In your colours</h3><p>Pick your club's colours and the whole site is yours.</p></div>
+</section>
 {% endif %}
-
 {% endblock %}

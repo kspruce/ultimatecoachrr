@@ -5,7 +5,7 @@
     .color-preview {
         width: 50px;
         height: 50px;
-        border: 2px solid #ccc;
+        border: 2px solid var(--rule);
         border-radius: 5px;
         display: inline-block;
         vertical-align: middle;
@@ -117,7 +117,7 @@
                                 <h6 class="card-title">Preview</h6>
                                 <p class="card-text">
                                     This is how your tag will appear: 
-                                    <span class="badge ms-2" id="tag-preview" style="background-color: {{ form.color.data or '#3F51B5' }}; color: white;">
+                                    <span class="badge ms-2" id="tag-preview" style="background-color: {{ form.color.data or 'var(--uc-blue)' }}; color: white;">
                                         <span id="preview-name">{{ form.name.data or 'Tag Name' }}</span>
                                     </span>
                                 </p>

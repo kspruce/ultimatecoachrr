@@ -34,7 +34,7 @@
 .qa-list-btn { display:flex; align-items:center; gap:.65rem; padding:.6rem .8rem;
   border-radius:8px; font-size:.875rem; font-weight:600; color:var(--uc-gray-800);
   text-decoration:none; border:1px solid var(--uc-card-border); background:var(--uc-card-bg); transition:all .15s }
-.qa-list-btn:hover { border-color:var(--uc-blue); color:var(--uc-blue); background:rgba(59,130,246,.04) }
+.qa-list-btn:hover { border-color:var(--uc-blue); color:var(--uc-blue); background:color-mix(in srgb, var(--club-ink) 4%, transparent) }
 .qa-list-btn i { font-size:1rem; flex-shrink:0 }
 </style>
 
@@ -76,14 +76,14 @@
         <div class="card-body">
 
           {% if report.offense_strategy %}
-          <div class="strategy-block" style="background:rgba(59,130,246,.06);border-left:3px solid var(--uc-blue)">
+          <div class="strategy-block" style="background:color-mix(in srgb, var(--club-ink) 6%, transparent);border-left:3px solid var(--uc-blue)">
             <h6 style="color:var(--uc-blue)"><i class="bi bi-arrow-right-circle me-1"></i>Offensive Strategy</h6>
             <p style="font-size:.9rem;margin:0;color:var(--uc-gray-800)">{{ report.offense_strategy|nl2br }}</p>
           </div>
           {% endif %}
 
           {% if report.defense_strategy %}
-          <div class="strategy-block" style="background:rgba(239,68,68,.06);border-left:3px solid var(--uc-red)">
+          <div class="strategy-block" style="background:color-mix(in srgb, var(--bad) 6%, transparent);border-left:3px solid var(--uc-red)">
             <h6 style="color:var(--uc-red)"><i class="bi bi-shield-fill me-1"></i>Defensive Strategy</h6>
             <p style="font-size:.9rem;margin:0;color:var(--uc-gray-800)">{{ report.defense_strategy|nl2br }}</p>
           </div>
@@ -96,12 +96,12 @@
               <div class="section-kicker"><i class="bi bi-arrow-up-circle me-1"></i>Strengths — watch out for</div>
               <div class="sw-chip-wrap">
                 {% for line in report.strengths.split('\n') if line.strip() %}
-                <div class="sw-chip" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15)">
+                <div class="sw-chip" style="background:color-mix(in srgb, var(--bad) 6%, transparent);border:1px solid color-mix(in srgb, var(--bad) 15%, transparent)">
                   <i class="bi bi-exclamation-circle-fill" style="color:var(--uc-red);font-size:.9rem;margin-top:.1rem;flex-shrink:0"></i>
                   {{ line.strip() }}
                 </div>
                 {% else %}
-                <div class="sw-chip" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15)">
+                <div class="sw-chip" style="background:color-mix(in srgb, var(--bad) 6%, transparent);border:1px solid color-mix(in srgb, var(--bad) 15%, transparent)">
                   <i class="bi bi-exclamation-circle-fill" style="color:var(--uc-red);font-size:.9rem;flex-shrink:0"></i>
                   {{ report.strengths }}
                 </div>
@@ -115,12 +115,12 @@
               <div class="section-kicker"><i class="bi bi-arrow-down-circle me-1"></i>Weaknesses — exploit these</div>
               <div class="sw-chip-wrap">
                 {% for line in report.weaknesses.split('\n') if line.strip() %}
-                <div class="sw-chip" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2)">
+                <div class="sw-chip" style="background:color-mix(in srgb, var(--ok) 6%, transparent);border:1px solid color-mix(in srgb, var(--ok) 20%, transparent)">
                   <i class="bi bi-check-circle-fill" style="color:var(--uc-green);font-size:.9rem;margin-top:.1rem;flex-shrink:0"></i>
                   {{ line.strip() }}
                 </div>
                 {% else %}
-                <div class="sw-chip" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2)">
+                <div class="sw-chip" style="background:color-mix(in srgb, var(--ok) 6%, transparent);border:1px solid color-mix(in srgb, var(--ok) 20%, transparent)">
                   <i class="bi bi-check-circle-fill" style="color:var(--uc-green);font-size:.9rem;flex-shrink:0"></i>
                   {{ report.weaknesses }}
                 </div>
@@ -189,7 +189,7 @@
                 <!-- Overall skill bar -->
                 <div class="mini-skill-bar">
                   <div class="mini-skill-fill"
-                       style="width:{{ (avg / 5 * 100)|int }}%;background:linear-gradient(90deg,var(--uc-blue),var(--uc-indigo))"></div>
+                       style="width:{{ (avg / 5 * 100)|int }}%;background:var(--club-ink)"></div>
                 </div>
                 {% if player.notes %}
                   <p style="font-size:.72rem;color:var(--uc-gray-500);margin:.4rem 0 0;
@@ -234,10 +234,10 @@
                      onerror="this.style.display='none'">
                 {% if clip.clip_type %}
                 <span class="clip-type-badge"
-                      style="{% if clip.clip_type == 'offense' %}background:rgba(59,130,246,.85)
-                             {% elif clip.clip_type == 'defense' %}background:rgba(239,68,68,.85)
-                             {% elif clip.clip_type == 'set_play' %}background:rgba(139,92,246,.85)
-                             {% elif clip.clip_type == 'pull' %}background:rgba(16,185,129,.85)
+                      style="{% if clip.clip_type == 'offense' %}background:color-mix(in srgb, var(--club-ink) 85%, transparent)
+                             {% elif clip.clip_type == 'defense' %}background:color-mix(in srgb, var(--bad) 85%, transparent)
+                             {% elif clip.clip_type == 'set_play' %}background:color-mix(in srgb, var(--accent) 85%, transparent)
+                             {% elif clip.clip_type == 'pull' %}background:color-mix(in srgb, var(--ok) 85%, transparent)
                              {% else %}background:rgba(0,0,0,.6){% endif %};color:#fff">
                   {{ clip.clip_type|replace('_',' ') }}
                 </span>

@@ -6,13 +6,95 @@ from app.models.player import Player
 from app.models.game import Game
 from app.models.session import SessionPlan
 from app.models.tournament import Tournament
-from datetime import datetime
+from datetime import date, datetime
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
 bp = Blueprint('main', __name__)
+
+
+def _dashboard_extras(team_id):
+    """Results, season numbers, next game and tournament sign-ups for the
+    homepage. Kept apart from the older upcoming/activity code above."""
+    from app.models.tournament_rsvp import TournamentRSVP
+
+    today = date.today()
+    played = (Game.query
+              .filter(Game.team_organization_id == team_id,
+                      Game.date.isnot(None), Game.date <= today)
+              .order_by(Game.date.desc(), Game.id.desc())
+              .all())
+    # A game with no points scored yet hasn't really been played
+    played = [g for g in played if (g.our_score or 0) + (g.their_score or 0) > 0]
+
+    season_games = [g for g in played if g.date.year == today.year]
+    wins = sum(1 for g in season_games if g.is_win)
+    losses = sum(1 for g in season_games if g.is_loss)
+    season = {
+        'year': today.year,
+        'games': len(season_games),
+        'wins': wins,
+        'losses': losses,
+        'win_rate': round(wins / len(season_games) * 100) if season_games else 0,
+        'point_diff': sum((g.our_score or 0) - (g.their_score or 0) for g in season_games),
+        # Oldest first, for the little bar chart
+        'diffs': [(g.our_score or 0) - (g.their_score or 0) for g in reversed(season_games[:12])],
+    }
+    recent_results = [{
+        'opponent': g.opponent,
+        'score': f'{g.our_score}–{g.their_score}',
+        'result': 'W' if g.is_win else ('L' if g.is_loss else 'T'),
+        'date': g.date,
+        'tournament': g.tournament.name if g.tournament else None,
+        'link': url_for('game.detail', game_id=g.id),
+    } for g in played[:5]]
+
+    next_game = (Game.query
+                 .filter(Game.team_organization_id == team_id,
+                         Game.date.isnot(None), Game.date >= today,
+                         Game.our_score == 0, Game.their_score == 0)
+                 .order_by(Game.date.asc(), Game.id.asc())
+                 .first())
+    later_games = []
+    if next_game:
+        later_games = (Game.query
+                       .filter(Game.team_organization_id == team_id,
+                               Game.date == next_game.date, Game.id != next_game.id,
+                               Game.our_score == 0, Game.their_score == 0)
+                       .order_by(Game.id.asc()).limit(3).all())
+
+    squad = None
+    next_tournament = (Tournament.query
+                       .filter(Tournament.team_organization_id == team_id,
+                               Tournament.start_date.isnot(None), Tournament.start_date >= today)
+                       .order_by(Tournament.start_date.asc()).first())
+    if next_tournament:
+        counts = dict(db.session.query(TournamentRSVP.status, db.func.count(TournamentRSVP.id))
+                      .filter(TournamentRSVP.tournament_id == next_tournament.id)
+                      .group_by(TournamentRSVP.status).all())
+        active = Player.query.filter_by(team_organization_id=team_id, active=True).count()
+        attending = counts.get('attending', 0)
+        maybe = counts.get('maybe', 0)
+        out = counts.get('not_attending', 0)
+        squad = {
+            'tournament': next_tournament,
+            'attending': attending,
+            'maybe': maybe,
+            'out': out,
+            'no_reply': max(active - attending - maybe - out, 0),
+            'active': active,
+        }
+
+    return {
+        'season': season,
+        'recent_results': recent_results,
+        'next_game': next_game,
+        'later_games': later_games,
+        'squad': squad,
+        'today': today,
+    }
 
 @bp.route('/')
 @bp.route('/index')
@@ -30,6 +112,7 @@ def index():
     team_name = None
     next_session = None
     next_tournament = None
+    extras = {}
 
     if current_user.is_authenticated:
         try:
@@ -143,7 +226,7 @@ def index():
                 # Upcoming Events
                 # Future Games
                 future_games = Game.query.filter(
-                    Game.date >= datetime.now(),
+                    Game.date >= date.today(),
                     Game.team_organization_id == team_id
                 ).order_by(Game.date.asc()).limit(3).all()
                 logger.debug(f"Found {len(future_games)} future games")
@@ -159,7 +242,8 @@ def index():
                             'type': 'game',
                             'title': f'vs {game.opponent}',
                             'date_time': game.date.strftime('%b %d, %Y - %I:%M %p'),
-                            'sort_date': game.date,
+                            # Game.date is a date; sessions use datetimes, so match them to sort together
+                            'sort_date': datetime.combine(game.date, datetime.min.time()),
                             'location': game.location if hasattr(game, 'location') and game.location else "No location",
                             'badge_color': 'danger',
                             'link': url_for('game.detail', game_id=game.id)
@@ -273,6 +357,8 @@ def index():
                     Tournament.team_organization_id == team_id
                 ).order_by(Tournament.start_date.asc()).first()
 
+                extras = _dashboard_extras(team_id)
+
         except Exception as e:
             # Log any errors but don't crash the application
             logger.exception(f"Error generating dashboard data: {str(e)}")
@@ -285,7 +371,8 @@ def index():
                          upcoming_events=upcoming_events,
                          team_name=team_name,
                          next_session=next_session,
-                         next_tournament=next_tournament)
+                         next_tournament=next_tournament,
+                         **extras)
 
 
 @bp.route('/about')

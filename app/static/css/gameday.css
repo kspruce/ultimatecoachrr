@@ -28,7 +28,7 @@
 }
 
 .player-card.selected {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: color-mix(in srgb, var(--club-ink) 10%, transparent);
   border-color: var(--uc-blue);
 }
 
@@ -186,16 +186,16 @@
 
 /* ─── Pull section ──────────────────────────────────────── */
 .pull-section-card {
-  background: rgba(13, 148, 136, 0.07);
-  border: 1px solid rgba(13, 148, 136, 0.25);
+  background: color-mix(in srgb, var(--info) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 14px;
 }
 
 [data-theme="dark"] .pull-section-card {
-  background: rgba(13, 148, 136, 0.1);
-  border-color: rgba(13, 148, 136, 0.3);
+  background: color-mix(in srgb, var(--info) 10%, transparent);
+  border-color: color-mix(in srgb, var(--info) 30%, transparent);
 }
 
 .pull-section-card h6 {
@@ -221,16 +221,16 @@
 
 /* ─── ABBA indicator ────────────────────────────────────── */
 .abba-card {
-  background: rgba(59, 130, 246, 0.06);
-  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: color-mix(in srgb, var(--club-ink) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--club-ink) 18%, transparent);
   border-radius: 10px;
   padding: 12px 14px;
   margin-bottom: 12px;
 }
 
 [data-theme="dark"] .abba-card {
-  background: rgba(59, 130, 246, 0.09);
-  border-color: rgba(59, 130, 246, 0.22);
+  background: color-mix(in srgb, var(--club-ink) 9%, transparent);
+  border-color: color-mix(in srgb, var(--club-ink) 22%, transparent);
 }
 
 .abba-label {
@@ -264,15 +264,15 @@
 }
 
 .abba-dot.ratio-a {
-  background: rgba(59, 130, 246, 0.15);
+  background: color-mix(in srgb, var(--club-ink) 15%, transparent);
   color: var(--uc-blue);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid color-mix(in srgb, var(--club-ink) 30%, transparent);
 }
 
 .abba-dot.ratio-b {
-  background: rgba(139, 92, 246, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--uc-purple);
-  border: 1px solid rgba(139, 92, 246, 0.25);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .abba-dot.current {
@@ -283,12 +283,12 @@
 
 .abba-dot.current.ratio-a {
   border-color: var(--uc-blue);
-  background: rgba(59, 130, 246, 0.25);
+  background: color-mix(in srgb, var(--club-ink) 25%, transparent);
 }
 
 .abba-dot.current.ratio-b {
   border-color: var(--uc-purple);
-  background: rgba(139, 92, 246, 0.22);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .abba-dot.future {
@@ -297,18 +297,18 @@
 
 /* ─── Power line button ─────────────────────────────────── */
 #power-line {
-  background: linear-gradient(135deg, #F59E0B, #D97706);
+  background: var(--accent);
   border: none;
   color: white;
   font-weight: 600;
   border-radius: 10px;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.28);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--warn) 28%, transparent);
 }
 
 #power-line:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.38);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--warn) 38%, transparent);
 }
 
 /* ─── Line status ────────────────────────────────────────── */

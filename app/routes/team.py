@@ -400,6 +400,48 @@ def feature_settings():
     return render_template('team/feature_settings.html', team=team)
 
 
+@bp.route('/settings/colours', methods=['GET', 'POST'])
+@login_required
+@coach_required
+def colour_settings():
+    """Team colours: two colours the whole site's theme is built from."""
+    from app.utils import theme
+
+    team_id = get_current_team_id()
+    team = TeamOrganization.query.get_or_404(team_id)
+    if team.settings is None:
+        team.settings = TeamSettings(team_id=team.id)
+        db.session.add(team.settings)
+        db.session.commit()
+    settings = team.settings
+
+    if request.method == 'POST':
+        if request.form.get('action') == 'reset':
+            settings.primary_color = None
+            settings.accent_color = None
+            settings.show_kit_stripe = True
+            db.session.commit()
+            flash('Colours reset to the Ultimate Coach defaults.', 'success')
+            return redirect(url_for('team.colour_settings'))
+
+        primary = theme.normalize_hex(request.form.get('primary_color'))
+        accent = theme.normalize_hex(request.form.get('accent_color'))
+        if not primary or not accent:
+            flash('Pick both colours as hex codes, like #6E1F2F.', 'danger')
+            return redirect(url_for('team.colour_settings'))
+        settings.primary_color = primary
+        settings.accent_color = accent
+        settings.show_kit_stripe = bool(request.form.get('show_kit_stripe'))
+        db.session.commit()
+        flash('Team colours saved.', 'success')
+        return redirect(url_for('team.colour_settings'))
+
+    palette = theme.team_palette(settings)
+    return render_template('team/colour_settings.html', team=team, palette=palette,
+                           presets=theme.PRESETS,
+                           contrast=round(theme.contrast_ratio(palette['primary'], palette['on_primary']), 1))
+
+
 # ─────────────────────────────────────────────────────────
 # Bulk Player Import
 # ─────────────────────────────────────────────────────────

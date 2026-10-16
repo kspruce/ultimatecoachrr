@@ -3,15 +3,15 @@
 {% block styles %}
 <style>
     .attendance-rate-high {
-        color: #28a745;
+        color: var(--uc-green);
     }
     
     .attendance-rate-medium {
-        color: #ffc107;
+        color: var(--uc-amber);
     }
     
     .attendance-rate-low {
-        color: #dc3545;
+        color: var(--uc-red);
     }
     
     .attendance-chart {
@@ -19,19 +19,19 @@
     }
     
     .status-present {
-        background-color: rgba(40, 167, 69, 0.2);
+        background-color: color-mix(in srgb, var(--ok) 20%, transparent);
     }
     
     .status-late {
-        background-color: rgba(255, 193, 7, 0.2);
+        background-color: color-mix(in srgb, var(--warn) 20%, transparent);
     }
     
     .status-absent {
-        background-color: rgba(220, 53, 69, 0.2);
+        background-color: color-mix(in srgb, var(--bad) 20%, transparent);
     }
     
     .status-excused {
-        background-color: rgba(23, 162, 184, 0.2);
+        background-color: color-mix(in srgb, var(--info) 20%, transparent);
     }
     
     .status-unknown {

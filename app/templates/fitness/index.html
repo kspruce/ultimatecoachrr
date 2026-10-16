@@ -39,7 +39,7 @@
   background:var(--uc-card-bg);font-size:.78rem;font-weight:600;color:var(--uc-gray-800);
   text-decoration:none;transition:all .15s;text-align:center;flex:1;min-width:80px}
 .qa-btn i{font-size:1.3rem}
-.qa-btn:hover{border-color:var(--uc-blue);color:var(--uc-blue);background:rgba(59,130,246,.04)}
+.qa-btn:hover{border-color:var(--uc-blue);color:var(--uc-blue);background:color-mix(in srgb, var(--club-ink) 4%, transparent)}
 
 /* ── Activity feed ─────────────────────────────────────── */
 .act-row{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;
@@ -76,25 +76,25 @@
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
       <div class="fit-stat">
-        <div class="fit-stat-icon" style="background:rgba(59,130,246,.1);color:var(--uc-blue)"><i class="bi bi-clipboard-data-fill"></i></div>
+        <div class="fit-stat-icon" style="background:color-mix(in srgb, var(--club-ink) 10%, transparent);color:var(--uc-blue)"><i class="bi bi-clipboard-data-fill"></i></div>
         <div><div class="fit-stat-val">{{ total_records }}</div><div class="fit-stat-lbl">Total Records</div></div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="fit-stat">
-        <div class="fit-stat-icon" style="background:rgba(16,185,129,.1);color:var(--uc-green)"><i class="bi bi-people-fill"></i></div>
+        <div class="fit-stat-icon" style="background:color-mix(in srgb, var(--ok) 10%, transparent);color:var(--uc-green)"><i class="bi bi-people-fill"></i></div>
         <div><div class="fit-stat-val">{{ players_tested }}/{{ total_players }}</div><div class="fit-stat-lbl">Players Tested</div></div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="fit-stat">
-        <div class="fit-stat-icon" style="background:rgba(139,92,246,.1);color:var(--uc-purple)"><i class="bi bi-layers-fill"></i></div>
+        <div class="fit-stat-icon" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--uc-purple)"><i class="bi bi-layers-fill"></i></div>
         <div><div class="fit-stat-val">{{ active_phases|length }}</div><div class="fit-stat-lbl">Active Phases</div></div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="fit-stat">
-        <div class="fit-stat-icon" style="background:rgba(245,158,11,.1);color:var(--uc-amber)"><i class="bi bi-lightning-charge-fill"></i></div>
+        <div class="fit-stat-icon" style="background:color-mix(in srgb, var(--warn) 10%, transparent);color:var(--uc-amber)"><i class="bi bi-lightning-charge-fill"></i></div>
         <div><div class="fit-stat-val">{{ metric_data|length }}</div><div class="fit-stat-lbl">Active Metrics</div></div>
       </div>
     </div>

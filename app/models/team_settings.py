@@ -31,6 +31,10 @@ class TeamSettings(db.Model):
     scouting_enabled = db.Column(db.Boolean, default=True)
     fitness_enabled = db.Column(db.Boolean, default=True)
 
+    # Team colours (#RRGGBB); empty means the default Ultimate Coach colours
+    primary_color = db.Column(db.String(7))
+    accent_color = db.Column(db.String(7))
+    show_kit_stripe = db.Column(db.Boolean, default=True)
     
     def __repr__(self):
         return f'<TeamSettings id={self.id} team_id={self.team_id}>'

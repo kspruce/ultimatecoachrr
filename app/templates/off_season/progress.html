@@ -355,24 +355,24 @@
     text-align: center;
     font-weight: bold;
     padding: 5px;
-    background-color: #f8f9fa;
+    background-color: var(--sunken);
 }
 
 .calendar-day {
     height: 60px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--rule);
     padding: 5px;
     position: relative;
 }
 
 .calendar-day.empty {
-    background-color: #f8f9fa;
+    background-color: var(--sunken);
     border: 1px solid #f8f9fa;
 }
 
 .calendar-day.today {
     background-color: #e8f4f8;
-    border: 2px solid #0dcaf0;
+    border: 2px solid var(--uc-teal);
 }
 
 .calendar-day.has-activity {
@@ -390,7 +390,7 @@
     position: absolute;
     bottom: 5px;
     right: 5px;
-    color: #198754;
+    color: var(--uc-green);
     font-size: 1.2rem;
 }
 </style>

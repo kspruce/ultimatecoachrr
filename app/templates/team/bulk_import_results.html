@@ -2,12 +2,12 @@
 {% block content %}
 <style>
   .res-header {
-    background: linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 55%,#3B82F6 100%);
+    background: var(--club);
     border-radius: var(--uc-radius); padding: 2rem 2.5rem;
-    color: white; margin-bottom: 1.75rem;
+    color: var(--on-club); margin-bottom: 1.75rem;
   }
   .res-card {
-    background: white; border: 1px solid var(--uc-gray-200);
+    background: var(--card); border: 1px solid var(--uc-gray-200);
     border-radius: var(--uc-radius); overflow: hidden;
     box-shadow: var(--uc-shadow-sm); margin-bottom: 1.25rem;
   }
@@ -20,8 +20,8 @@
     min-width:26px; height:26px; border-radius:8px;
     font-size:.78rem; font-weight:700; padding:0 .45rem;
   }
-  .res-count.success { background:#ECFDF5; color:#059669; }
-  .res-count.danger  { background:#FEF2F2; color:#DC2626; }
+  .res-count.success { background:var(--ok-soft); color:var(--uc-green); }
+  .res-count.danger  { background:var(--bad-soft); color:var(--uc-red); }
   .res-table { width:100%; border-collapse:collapse; }
   .res-table th {
     padding:.625rem 1rem; font-size:.72rem; font-weight:700;
@@ -39,7 +39,7 @@
                 border-radius:5px; padding:.1rem .4rem; font-size:.8rem; }
   .error-list { list-style:none; padding:0; margin:0; }
   .error-list li {
-    padding:.625rem 1.375rem; font-size:.83rem; color:#B91C1C;
+    padding:.625rem 1.375rem; font-size:.83rem; color:var(--uc-red);
     border-bottom:1px solid var(--uc-gray-100);
   }
   .error-list li:last-child { border-bottom:none; }
@@ -48,8 +48,8 @@
     display:inline-flex; align-items:center; gap:.4rem;
     border-radius:50px; padding:.35rem 1rem; font-size:.82rem; font-weight:600;
   }
-  .summary-pill.ok  { background:#ECFDF5; color:#059669; }
-  .summary-pill.err { background:#FEF2F2; color:#DC2626; }
+  .summary-pill.ok  { background:var(--ok-soft); color:var(--uc-green); }
+  .summary-pill.err { background:var(--bad-soft); color:var(--uc-red); }
 </style>
 
 <div style="max-width:900px;margin:0 auto">
