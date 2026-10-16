@@ -1,5 +1,6 @@
 {% extends "season_plan/_layout.html" %}
 {% from "season_plan/_themes.html" import themes, badges %}
+{% from "season_plan/_classroom.html" import mini %}
 {% from "season_plan/_toc.html" import toc_mobile %}
 
 {% block sp_content %}
@@ -54,13 +55,14 @@
         <div>{{ badges(featured) }}</div>
       </div>
       {{ themes(featured) }}
-      {% if featured.classroom or featured.off_pitch %}
+      {% if (featured.classroom and not featured_classroom) or featured.off_pitch %}
       <p class="mb-2" style="font-size:.92rem">
-        {% if featured.classroom %}<i class="bi bi-easel"></i> {{ featured.classroom }}{% endif %}
-        {% if featured.classroom and featured.off_pitch %}<br>{% endif %}
+        {% if featured.classroom and not featured_classroom %}<i class="bi bi-easel"></i> {{ featured.classroom }}{% endif %}
+        {% if featured.classroom and featured.off_pitch and not featured_classroom %}<br>{% endif %}
         {% if featured.off_pitch %}<i class="bi bi-flag"></i> {{ featured.off_pitch }}{% endif %}
       </p>
       {% endif %}
+      {% for card in featured_classroom %}<div class="mb-3">{{ mini(card) }}</div>{% endfor %}
       {% if season_plan_sees_all() or plan.players_see_weeks %}
       <a class="btn btn-primary btn-sm" href="{{ url_for('season_plan.week', number=featured.week_number) }}">
         {% if featured.session_detail_md and (season_plan_sees_all() or plan.players_see_session_notes) %}Full session notes{% else %}Week details{% endif %} <i class="bi bi-arrow-right"></i>
@@ -78,7 +80,7 @@
       {% if next_event %}
       <div class="mb-3">
         <div class="sp-label">Next event</div>
-        <div class="fw-semibold">{{ next_event.block }}</div>
+        <div class="fw-semibold">{{ next_event.block if next_event.block and next_event.block|length > 2 else (next_event.joint_theme or next_event.block) }}</div>
         <div class="sp-muted" style="font-size:.88rem">
           Week {{ next_event.week_number }} · w/c {{ next_event.week_commencing.strftime('%-d %b') }}
           {% set days = (next_event.week_commencing - today).days %}
