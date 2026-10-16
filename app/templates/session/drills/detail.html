@@ -24,6 +24,11 @@
             <a href="{{ url_for('session.edit_drill', drill_id=drill.id) }}" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit Drill
             </a>
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('session.drill_editor', drill_id=drill.id) }}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil-square"></i> {{ 'Edit Diagram' if drill.editor_diagram else 'Draw Diagram' }}
+            </a>
+            {% endif %}
         </div>
     </div>
 

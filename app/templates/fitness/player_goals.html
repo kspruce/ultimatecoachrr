@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Fitness Goals - {{ player.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Fitness Goals: {{ player.name }}</h1>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('fitness.player_fitness', player_id=player.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Fitness Profile
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-flag"></i> Working towards</h5>
+                </div>
+                <div class="card-body">
+                    {% for g in open_goals %}
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <h6 class="mb-1">
+                                    <a href="{{ url_for('fitness.player_metric_history', player_id=player.id, metric_id=g.metric.id) }}">{{ g.metric.name }}</a>
+                                </h6>
+                                <small class="text-muted">
+                                    Target {{ g.target_value }} {{ g.metric.unit }}
+                                    ({{ 'or more' if g.metric.higher_is_better else 'or less' }})
+                                    {% if g.target_date %} by {{ g.target_date.strftime('%d %b %Y') }}{% endif %}
+                                    · Latest: {{ g.current_value if g.current_value is not none else 'not recorded' }}
+                                </small>
+                                {% if g.goal.notes %}<p class="mb-0 mt-1 small">{{ g.goal.notes }}</p>{% endif %}
+                            </div>
+                            <div class="d-flex gap-1">
+                                <form method="POST" action="{{ url_for('fitness.complete_goal', goal_id=g.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm btn-outline-success" title="Mark achieved"><i class="bi bi-check-lg"></i></button>
+                                </form>
+                                <form method="POST" action="{{ url_for('fitness.delete_goal', goal_id=g.id) }}"
+                                      onsubmit="return confirm('Delete this goal?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="progress mt-2" style="height: 1.25rem;">
+                            <div class="progress-bar {% if g.achieved %}bg-success{% endif %}" role="progressbar"
+                                 style="width: {{ g.progress }}%;" aria-valuenow="{{ g.progress }}"
+                                 aria-valuemin="0" aria-valuemax="100">{{ g.progress }}%</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No open goals. Add one below or from a metric's history page.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if done_goals %}
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-trophy"></i> Achieved</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for g in done_goals %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            {{ g.metric.name }}: {{ g.target_value }} {{ g.metric.unit }}
+                            {% if g.goal.completed_date %}<small class="text-muted">· {{ g.goal.completed_date.strftime('%d %b %Y') }}</small>{% endif %}
+                        </span>
+                        <form method="POST" action="{{ url_for('fitness.delete_goal', goal_id=g.id) }}"
+                              onsubmit="return confirm('Delete this goal?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-link text-danger p-0" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add a goal</h5>
+                </div>
+                <div class="card-body">
+                    {% if metrics %}
+                    <form method="POST" action="{{ url_for('fitness.add_goal', player_id=player.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="metricId" class="form-label">Metric</label>
+                            <select class="form-select" id="metricId" name="metric_id" required>
+                                {% for m in metrics %}
+                                <option value="{{ m.id }}">{{ m.name }} ({{ m.unit }}, {{ 'higher' if m.higher_is_better else 'lower' }} is better)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="targetValue" class="form-label">Target</label>
+                            <input type="number" class="form-control" id="targetValue" name="target_value" step="any" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="targetDate" class="form-label">Target date <small class="text-muted">(optional)</small></label>
+                            <input type="date" class="form-control" id="targetDate" name="target_date">
+                        </div>
+                        <div class="mb-3">
+                            <label for="goalNotes" class="form-label">Notes <small class="text-muted">(optional)</small></label>
+                            <textarea class="form-control" id="goalNotes" name="notes" rows="2"></textarea>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-warning">Add goal</button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <p class="text-muted mb-0">There are no active fitness metrics yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

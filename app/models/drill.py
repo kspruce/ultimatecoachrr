@@ -65,6 +65,10 @@ class SavedDrill(db.Model):
     def first_diagram(self):
         return self.diagrams[0] if self.diagrams else None
 
+    @property
+    def editor_diagram(self):
+        return next((d for d in self.diagrams if d.editor_json), None)
+
     def __repr__(self):
         return f'<SavedDrill {self.title}>'
 
@@ -91,6 +95,10 @@ class DrillDiagram(db.Model):
     image_hash = db.Column(db.String(64), nullable=True)  # sha256 of the raw image bytes
     svg_data = db.Column(db.Text, nullable=True)  # raw SVG markup
     svg_hash = db.Column(db.String(64), nullable=True)
+    # Set on the diagram drawn in the drill editor (session.drill_editor):
+    # the editable drawing, so it can be reopened. Imported diagrams leave it
+    # empty, and the season import leaves editor diagrams alone.
+    editor_json = db.Column(db.Text, nullable=True)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

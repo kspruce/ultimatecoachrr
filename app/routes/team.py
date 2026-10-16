@@ -334,15 +334,6 @@ def player_detail(player_id):
 
 
 
-@bp.route('/debug')
-@login_required
-def debug():
-    players = Player.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    return render_template('team/debug.html', players=players)
-
 @bp.route('/player/<int:player_id>/update_goals', methods=['POST'])
 @login_required
 def update_player_goals(player_id):

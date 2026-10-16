@@ -259,3 +259,46 @@ class FitnessRecord(db.Model):
     metric = db.relationship('FitnessMetric', back_populates='records')
     testing_phase = db.relationship('TestingPhase', back_populates='records')
 
+
+
+class FitnessGoal(db.Model):
+    """A target a player is working towards on one metric, e.g. a 40-yard
+    sprint under 5.2 seconds by the start of the season."""
+    __tablename__ = 'fitness_goal'
+
+    id = db.Column(db.Integer, primary_key=True)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id', ondelete='CASCADE'),
+                          nullable=False, index=True)
+    metric_id = db.Column(db.Integer, db.ForeignKey('fitness_metric.id', ondelete='CASCADE'),
+                          nullable=False)
+    target_value = db.Column(db.Float, nullable=False)
+    target_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text)
+    completed = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    completed_date = db.Column(db.DateTime)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), index=True)
+
+    player = db.relationship('Player')
+    metric = db.relationship('FitnessMetric')
+
+    def is_met_by(self, value):
+        if value is None:
+            return False
+        if self.metric.higher_is_better:
+            return value >= self.target_value
+        return value <= self.target_value
+
+    def progress(self, value):
+        """0-100: how close the value is to the target."""
+        if value is None or not self.target_value:
+            return 0
+        if self.metric.higher_is_better:
+            pct = value / self.target_value * 100
+        else:
+            pct = self.target_value / value * 100 if value > 0 else 0
+        return int(max(0, min(100, pct)))
+
+    def __repr__(self):
+        return f'<FitnessGoal player={self.player_id} metric={self.metric_id}>'

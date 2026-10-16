@@ -386,14 +386,16 @@ def _sync_diagrams(drill, wanted, team_org_id):
     def key(order, image_hash, svg_hash, caption, step_label, source):
         return (order, image_hash, svg_hash, caption, step_label, source)
 
+    # Diagrams drawn in the drill editor aren't in the file; keep them.
+    imported = [d for d in drill.diagrams if not d.editor_json]
     current = [key(d.order, d.image_hash, d.svg_hash, d.caption, d.step_label, d.source)
-               for d in drill.diagrams]
+               for d in imported]
     target = [key(w['order'], w['image_hash'], w['svg_hash'], w['caption'], w['step_label'],
                   w['source']) for w in wanted]
     if current == target:
         return False
 
-    for old in list(drill.diagrams):
+    for old in imported:
         drill.diagrams.remove(old)  # delete-orphan cascade removes the row
     for w in wanted:
         diagram = DrillDiagram(
@@ -411,6 +413,8 @@ def _sync_diagrams(drill, wanted, team_org_id):
         drill.diagrams.append(diagram)
     db.session.flush()  # assigns the ids the image URLs contain
     for diagram in drill.diagrams:
+        if diagram.editor_json:
+            continue
         ext = diagram.image_mime.split('/')[1].replace('jpeg', 'jpg')
         diagram.image_url = _diagram_url('session.drill_diagram_image', diagram,
                                          diagram.image_hash, ext)

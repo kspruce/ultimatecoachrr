@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
+from flask import Blueprint, render_template, url_for, request, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.models.session import SessionPlan, SessionRSVP
@@ -117,87 +117,6 @@ def index():
     
     # Use the improved template
     return render_template('calendar/index.html', events=json.dumps(events))
-
-@calendar_bp.route('/sessions/<int:session_id>/rsvp', methods=['GET', 'POST'])
-@login_required
-def session_rsvp(session_id):
-    """Handle RSVP for a session."""
-    if not current_user.player:
-        flash('You need to link your account to a player profile to RSVP.', 'warning')
-        return redirect(url_for('auth.link_player'))
-    
-    # Get current team ID
-    team_id = get_current_team_id()
-    
-    # Filter session by team
-    session = SessionPlan.query.filter_by(
-        id=session_id,
-        team_organization_id=team_id
-    ).first_or_404()
-    
-    # Check if user has already RSVP'd
-    existing_rsvp = SessionRSVP.query.filter_by(
-        session_id=session.id,
-        player_id=current_user.player.id,
-        team_organization_id=team_id  # Add team filter
-    ).first()
-    
-    # Handle AJAX request
-    if request.method == 'POST' and request.is_json:
-        data = request.get_json()
-        status = data.get('status')
-        notes = data.get('notes', '')
-        
-        if status not in ['attending', 'maybe', 'not_attending']:
-            return jsonify({'success': False, 'message': 'Invalid status'})
-        
-        if existing_rsvp:
-            existing_rsvp.status = status
-            existing_rsvp.notes = notes
-            existing_rsvp.updated_at = datetime.utcnow()
-        else:
-            new_rsvp = SessionRSVP(
-                session_id=session.id,
-                player_id=current_user.player.id,
-                status=status,
-                notes=notes,
-                team_organization_id=team_id  # Add team ID
-            )
-            db.session.add(new_rsvp)
-        
-        db.session.commit()
-        return jsonify({'success': True})
-    
-    # Handle form submission
-    from app.forms.rsvp_form import RSVPForm
-    form = RSVPForm()
-    
-    if form.validate_on_submit():
-        if existing_rsvp:
-            existing_rsvp.status = form.status.data
-            existing_rsvp.notes = form.notes.data
-            existing_rsvp.updated_at = datetime.utcnow()
-        else:
-            new_rsvp = SessionRSVP(
-                session_id=session.id,
-                player_id=current_user.player.id,
-                status=form.status.data,
-                notes=form.notes.data,
-                team_organization_id=team_id  # Add team ID
-            )
-            db.session.add(new_rsvp)
-        
-        db.session.commit()
-        flash('Your RSVP has been recorded.', 'success')
-        return redirect(url_for('session.detail', session_id=session.id))
-    
-    # Pre-populate form with existing RSVP data
-    if existing_rsvp:
-        form.status.data = existing_rsvp.status
-        form.notes.data = existing_rsvp.notes
-    
-    return render_template('calendar/rsvp.html', form=form, session=session, existing_rsvp=existing_rsvp)
-
 
 @calendar_bp.route('/api/rsvp', methods=['POST'])
 @login_required
