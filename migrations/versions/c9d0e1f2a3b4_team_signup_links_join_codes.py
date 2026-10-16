@@ -1,7 +1,7 @@
 """Team sign-up links, team join codes and site settings
 
-Revision ID: b8c9d0e1f2a3
-Revises: a7b8c9d0e1f2
+Revision ID: c9d0e1f2a3b4
+Revises: b8c9d0e1f2a3
 Create Date: 2026-10-16
 
 - site_settings: one row of site-wide switches (open team registration).
@@ -18,8 +18,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = 'b8c9d0e1f2a3'
-down_revision = 'a7b8c9d0e1f2'
+revision = 'c9d0e1f2a3b4'
+down_revision = 'b8c9d0e1f2a3'
 branch_labels = None
 depends_on = None
 
