@@ -4,8 +4,8 @@ from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
 
-from app import db, limiter
-from app.models.user import User
+from app import db, limiter, onboarding
+from app.models.user import ROLE_ORDER, User
 from app.models.player import Player
 from app.models.team_organization import TeamOrganization, generate_join_code, normalize_join_code
 from app.models.team_settings import TeamSettings
@@ -287,6 +287,8 @@ def users():
         is_superadmin=current_user.is_superadmin,
         manageable_ids={u.id for u in users if can_manage_user(u)},
         email_enabled=email_configured(),
+        member_status=onboarding.member_status(users),
+        roster_signup=onboarding.roster_signup(current_team.id) if current_team else None,
     )
 
 
@@ -383,7 +385,9 @@ def edit_user(user_id):
 
         user.username = form.username.data.strip()
         user.email = _clean_email(form.email.data)
+        old_role = user.role
         user.role = form.role.data.lower()
+        promoted = ROLE_ORDER.get(user.role, 0) > ROLE_ORDER.get(old_role, 0)
 
         if current_user.is_superadmin:
             user.team_organization_id = form.team_organization_id.data
@@ -396,6 +400,9 @@ def edit_user(user_id):
         db.session.commit()
 
         flash("User updated.", "success")
+        if promoted and user.role in onboarding.ROLES:
+            flash(f"{user.username} will see a short welcome to their new role next time "
+                  "they open the dashboard.", "info")
         return redirect(url_for("auth.users", team_id=user.team_organization_id))
 
     return render_template("auth/user_form.html", form=form, title="Edit User")
