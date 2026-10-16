@@ -150,7 +150,8 @@ def test_unparseable_rows_are_reported_not_fatal(tmp_path):
 def test_dry_run_writes_nothing(app, herd):
     report = do_import(herd['team'], dry_run=True)
     assert counts() == [0, 0, 0, 0, 0]
-    assert report.counts == {'phases': 5, 'weeks': 51, 'session notes': 49, 'pages': 11, 'milestones': 9}
+    assert report.counts == {'phases': 5, 'weeks': 51, 'session notes': 49, 'pages': 11, 'milestones': 9,
+                             'classroom sessions': 12}
     assert 'DRY RUN' in report.text()
 
 

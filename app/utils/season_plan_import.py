@@ -11,12 +11,16 @@ their header row, wherever they are:
   Area | Phase 1 | Phase 2 | ...               -> SeasonPhase.progression
 
 Every "## Week N" section of any tab becomes that week's session notes, and
-every tab is stored as a SeasonPage.
+every tab is stored as a SeasonPage. Classroom sessions come from the
+"# | Week | Format | Who | Title" table and the "### C1 · Week 3 · ..." sections.
 
 The import is an upsert on (team, season): phases match on number, weeks on
 week number and pages on slug, and anything no longer in the export is
 removed. Coaches' notes, SessionPlan links and who-can-see-what settings are
-kept. The whole import is one transaction, rolled back for dry runs.
+kept. Classroom sessions are refined by hand, so an import only fills their
+empty fields (except the facilitator plan) and never touches summaries,
+links, dates or resources. The whole import is one transaction, rolled back
+for dry runs.
 """
 import json
 import os
@@ -25,7 +29,9 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
 from app import db
-from app.models.season_plan import SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone
+from app.models.season_plan import (
+    SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone, ClassroomSession,
+)
 
 MONTHS = {m: i for i, m in enumerate(
     ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'], start=1)}
@@ -45,12 +51,16 @@ PHASE_COLUMNS = ('phase', 'dates', 'weeks')
 WEEK_COLUMNS = ('wk', 'w/c', 'ph', 'joint')
 MILESTONE_COLUMNS = ('when', 'what')
 PROGRESSION_COLUMNS = ('area', 'phase 1')
+CLASSROOM_COLUMNS = ('#', 'week', 'format', 'title')
+CLASSROOM_HEADING_RE = re.compile(r'^###\s+(C(\d+))\b\s*(.*)$')
 
 LIMITS = {
     'plan.title': 200, 'plan.season': 20, 'plan.source': 200,
     'phase.name': 100, 'phase.classroom_refs': 200,
     'week.block': 200, 'week.classroom': 200, 'week.session_title': 200,
     'page.slug': 100, 'page.title': 200, 'milestone.when_label': 100,
+    'classroom.code': 10, 'classroom.title': 200, 'classroom.format': 100,
+    'classroom.audience': 200, 'classroom.main_source': 200,
 }
 
 
@@ -76,7 +86,7 @@ class ImportReport:
             out.append('Replaced: the existing plan was wiped first')
         elif not self.dry_run:
             out.append('Created a new plan' if self.plan_created else 'Updated the existing plan')
-        for kind in ('phases', 'weeks', 'session notes', 'pages', 'milestones'):
+        for kind in ('phases', 'weeks', 'session notes', 'pages', 'milestones', 'classroom sessions'):
             out.append(f'{kind}: {self.counts.get(kind, 0)}')
         for line in self.removed:
             out.append(f'removed: {line}')
@@ -186,6 +196,69 @@ def first_paragraph(markdown):
         if block and not block.startswith(('#', '|', '-', '*', '>')):
             return block
     return None
+
+
+def split_classroom_sections(markdown):
+    """{'C1': (heading_rest, body)} for each '### C1 · Week 3 · ... · Title'
+    section. A section runs to the next heading of level 1-3."""
+    sections, current, buf = {}, None, []
+
+    def close():
+        if current:
+            sections[current[0]] = (current[1], '\n'.join(buf).strip())
+
+    for line in markdown.splitlines():
+        if re.match(r'^#{1,3}\s', line):
+            close()
+            current, buf = None, []
+            m = CLASSROOM_HEADING_RE.match(line)
+            if m:
+                current = (m.group(1).upper(), m.group(3).lstrip('·').strip())
+            continue
+        if current:
+            buf.append(line)
+    close()
+    return sections
+
+
+def _bold_field(body, label):
+    """The text after '**Label:**' on its line."""
+    m = re.search(r'^\*\*' + re.escape(label) + r':\*\*\s*(.+)$', body or '', re.M | re.I)
+    return m.group(1).strip() if m else None
+
+
+def _bold_list(body, label):
+    """The '- ' items under a '**Label:**' line."""
+    lines = (body or '').splitlines()
+    for i, line in enumerate(lines):
+        if re.match(r'^\*\*' + re.escape(label) + r':\*\*\s*$', line.strip(), re.I):
+            items = []
+            for nxt in lines[i + 1:]:
+                text = nxt.strip()
+                if text.startswith(('- ', '* ')):
+                    items.append(text[2:].strip())
+                elif text:
+                    break
+            return items
+    return []
+
+
+def classroom_prep(body):
+    """A starting 'before the session' note for players: the idea, the
+    discussion questions and the commitment, which coaches then refine."""
+    parts = []
+    idea = _bold_list(body, 'The idea')
+    if idea:
+        parts.append("**What it's about**\n\n" + '\n'.join(f'- {i}' for i in idea))
+    elif _bold_field(body, 'The idea'):
+        parts.append(f"**What it's about:** {_bold_field(body, 'The idea')}")
+    questions = _bold_list(body, 'Small-group questions')
+    if questions:
+        parts.append("**Questions we'll discuss**\n\n" + '\n'.join(f'- {q}' for q in questions))
+    commitment = _bold_field(body, 'Commitment')
+    if commitment:
+        parts.append(f"**What we'll ask you to try:** {commitment}")
+    return '\n\n'.join(parts) or None
 
 
 # --------------------------------------------------------------------------
@@ -443,6 +516,8 @@ def parse_export(manifest, tabs, season=None):
         heading, body = notes.get(w['week_number'], (None, None))
         w['session_title'], w['session_detail_md'] = heading, body
 
+    classroom = _parse_classroom(tabs, table, week_numbers, skipped, warnings)
+
     summary = None
     if phase_tab:
         summary = first_paragraph(dict((t['slug'], txt) for t, txt in tabs)[phase_tab['slug']])
@@ -455,16 +530,71 @@ def parse_export(manifest, tabs, season=None):
         'source': clean_cell(manifest.get('source')),
     }
 
-    _check_lengths(errors, plan, phases, weeks, pages, milestones)
+    _check_lengths(errors, plan, phases, weeks, pages, milestones, classroom)
     if errors:
         raise SeasonPlanImportError(errors)
     return {'plan': plan, 'phases': phases, 'weeks': weeks, 'pages': pages,
-            'milestones': milestones, 'skipped': skipped, 'warnings': warnings,
-            'notes_count': len(notes)}
+            'milestones': milestones, 'classroom': classroom, 'skipped': skipped,
+            'warnings': warnings, 'notes_count': len(notes)}
 
 
-def _check_lengths(errors, plan, phases, weeks, pages, milestones):
-    groups = {'plan': [plan], 'phase': phases, 'week': weeks, 'page': pages, 'milestone': milestones}
+def _parse_classroom(tabs, table, week_numbers, skipped, warnings):
+    """Classroom sessions from the series table and the '### C1 ...' sections.
+    Either is enough on its own; the table wins where both give a value."""
+    sections = {}
+    for tab, text in tabs:
+        for code, value in split_classroom_sections(text).items():
+            if code in sections:
+                warnings.append(f'classroom {code} appears in two tabs; using {tab["slug"]}')
+            sections[code] = value
+
+    rows = {}
+    _, series = table(*CLASSROOM_COLUMNS)
+    if series:
+        for row in series['rows']:
+            r = _row_dict(series, row)
+            code = (r.get('#') or '').upper()
+            if not re.fullmatch(r'C\d+', code):
+                skipped.append(f'classroom row {r.get("#")!r}: no session code like C1')
+                continue
+            rows[code] = r
+
+    sessions = []
+    for code in sorted(set(rows) | set(sections), key=lambda c: int(c[1:])):
+        r = rows.get(code, {})
+        heading, body = sections.get(code, ('', None))
+        # Heading: "Week 3 (w/c 18 Oct) · Online · [audience ·] Title"
+        parts = [p.strip() for p in heading.split('·') if p.strip()]
+        week_part = parts.pop(0) if parts and re.match(r'weeks?\b', parts[0], re.I) else None
+        h_title = clean_cell(parts[-1]) if parts else None
+        h_format = clean_cell(parts[0]) if len(parts) > 1 else None
+        h_audience = clean_cell(' · '.join(parts[1:-1])) if len(parts) > 2 else None
+        week_no = _int(r.get('week'))
+        if week_no is None and week_part:
+            week_no = _int(re.sub(r'(?i)^weeks?\s*', '', week_part))
+        title = r.get('title') or h_title
+        if not title:
+            skipped.append(f'classroom {code}: no title')
+            continue
+        if week_no is not None and week_no not in week_numbers:
+            warnings.append(f'classroom {code}: week {week_no} is not in the week table')
+            week_no = None
+        sessions.append({
+            'code': code, 'number': int(code[1:]), 'title': title,
+            'format': r.get('format') or h_format,
+            'audience': _col(r, 'who', 'audience') or h_audience,
+            'main_source': _col(r, 'main source', 'source'),
+            'goal': _bold_field(body, 'Goal'),
+            'plan_md': body or None,
+            'prep_md': classroom_prep(body),
+            'week_number': week_no,
+        })
+    return sessions
+
+
+def _check_lengths(errors, plan, phases, weeks, pages, milestones, classroom=()):
+    groups = {'plan': [plan], 'phase': phases, 'week': weeks, 'page': pages,
+              'milestone': milestones, 'classroom': list(classroom)}
     for key, limit in LIMITS.items():
         kind, attr = key.split('.')
         for item in groups[kind]:
@@ -553,10 +683,13 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
         for values in data['milestones']:
             plan.milestones.append(SeasonMilestone(team_organization_id=team_id, **values))
 
+        _sync_classroom(plan, data['classroom'], team_id, report)
+
         db.session.flush()
         report.counts = {'phases': len(data['phases']), 'weeks': len(data['weeks']),
                          'session notes': data['notes_count'], 'pages': len(data['pages']),
-                         'milestones': len(data['milestones'])}
+                         'milestones': len(data['milestones']),
+                         'classroom sessions': len(data['classroom'])}
         if dry_run:
             db.session.rollback()
         else:
@@ -565,3 +698,31 @@ def import_season_plan(folder, team, season=None, dry_run=False, replace=False, 
         db.session.rollback()
         raise
     return report
+
+
+# Classroom fields an import fills only while they're empty, so a coach's
+# refinements survive a re-import. plan_md and the week always follow the export.
+CLASSROOM_FILL_ONLY = ('title', 'format', 'audience', 'main_source', 'goal', 'prep_md')
+
+
+def _sync_classroom(plan, sessions, team_id, report):
+    existing = {c.code: c for c in plan.classroom_sessions}
+    week_by_number = {w.week_number: w for w in plan.weeks}
+    for values in sessions:
+        cs = existing.pop(values['code'], None)
+        if cs is None:
+            cs = ClassroomSession(team_organization_id=team_id, code=values['code'])
+            plan.classroom_sessions.append(cs)
+        cs.number = values['number']
+        cs.plan_md = values['plan_md']
+        cs.week = week_by_number.get(values['week_number'])
+        for name in CLASSROOM_FILL_ONLY:
+            if not getattr(cs, name) and values.get(name):
+                setattr(cs, name, values[name])
+    for cs in existing.values():
+        if cs.has_coach_content:
+            report.warnings.append(f'classroom {cs.code} is no longer in the export; kept because '
+                                   'it has a date, link, summary or resources')
+        else:
+            report.removed.append(f'classroom {cs.code}')
+            plan.classroom_sessions.remove(cs)
