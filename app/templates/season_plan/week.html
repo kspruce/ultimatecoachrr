@@ -1,5 +1,6 @@
 {% extends "season_plan/_layout.html" %}
 {% from "season_plan/_themes.html" import themes, badges %}
+{% from "season_plan/_classroom.html" import mini %}
 
 {% block sp_content %}
 {% set colour = week.phase.colour if week.phase and week.phase.colour else 'var(--club)' %}
@@ -20,7 +21,7 @@
 <div class="sp-card sp-week-card" style="--phase: {{ colour }}">
   {{ themes(week) }}
   <div class="sp-defs">
-    {% if week.classroom %}
+    {% if week.classroom and not classroom %}
     <div><div class="sp-label">Classroom</div><p>{% if classroom_page %}<a href="{{ url_for('season_plan.page', slug=classroom_page.slug) }}">{{ week.classroom }}</a>{% else %}{{ week.classroom }}{% endif %}</p></div>
     {% endif %}
     {% if week.off_pitch %}<div><div class="sp-label">Off-pitch</div><p>{{ week.off_pitch }}</p></div>{% endif %}
@@ -28,6 +29,7 @@
     <div><div class="sp-label">Session plan</div><p><a href="{{ url_for('session.detail', session_id=week.session_plan.id) }}">{{ week.session_plan.title }}</a></p></div>
     {% endif %}
   </div>
+  {% for card in classroom %}{{ mini(card) }}{% endfor %}
   {% if week.notes %}
   <div class="mt-2"><div class="sp-label">Coaches' notes</div><div class="sp-md">{{ week.notes|markdown }}</div></div>
   {% endif %}

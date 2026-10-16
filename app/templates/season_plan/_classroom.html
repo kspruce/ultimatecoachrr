@@ -1,0 +1,54 @@
+{# Classroom session macros. A "card" comes from classroom_card() in the route. #}
+
+{% macro status_badge(card) %}
+<span class="sp-badge sp-cl-{{ card.status }}">{{ card.label }}</span>
+{% endmacro %}
+
+{% macro when(cs) %}
+{%- if cs.starts_at -%}
+  {{ cs.starts_at.strftime('%a %-d %b %Y, %H:%M') }}
+{%- elif cs.week and cs.week.week_commencing -%}
+  Week {{ cs.week.week_number }} · w/c {{ cs.week.week_commencing.strftime('%-d %b %Y') }}
+{%- endif -%}
+{% endmacro %}
+
+{# Compact block for the overview and week pages #}
+{% macro mini(card) %}
+{% set cs = card.s %}
+<div class="sp-cl-mini">
+  <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+    <div>
+      <div class="sp-label">Classroom {{ cs.code }}{% if cs.format %} · {{ cs.format }}{% endif %}</div>
+      <a class="fw-semibold" href="{{ url_for('season_plan.classroom', code=cs.code) }}">{{ cs.title }}</a>
+      {% if cs.starts_at %}<div class="sp-muted" style="font-size:.85rem">{{ when(cs) }}</div>{% endif %}
+    </div>
+    {{ status_badge(card) }}
+  </div>
+  <div class="d-flex flex-wrap gap-2 mt-2">
+    {% if card.show_join %}<a class="btn btn-primary btn-sm" href="{{ cs.join_url }}" target="_blank" rel="noopener"><i class="bi bi-camera-video"></i> Join</a>{% endif %}
+    {% if card.video %}<a class="btn btn-outline-primary btn-sm" href="{{ url_for('season_plan.classroom', code=cs.code) }}#recording"><i class="bi bi-play-circle"></i> Watch the recording</a>{% endif %}
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('season_plan.classroom', code=cs.code) }}">Session page</a>
+  </div>
+</div>
+{% endmacro %}
+
+{# A resource: embedded when the host allows it, otherwise a button #}
+{% macro resource(r, open=true) %}
+{% set src = embed_url(r.url) %}
+<div class="sp-res" {% if r.kind == 'video' %}id="recording"{% endif %}>
+  <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+    <div><span class="sp-label">{{ r.kind_label }}</span>{% if r.coaches_only %} <span class="sp-badge sp-badge-break">Coaches only</span>{% endif %}
+      <div class="fw-semibold">{{ r.title }}</div></div>
+    <a class="btn btn-outline-primary btn-sm" href="{{ r.url }}" target="_blank" rel="noopener">
+      {% if r.kind == 'video' %}<i class="bi bi-play-circle"></i> {{ 'Open' if src else 'Watch' }}{% else %}<i class="bi bi-box-arrow-up-right"></i> Open{% endif %}
+    </a>
+  </div>
+  {% if src and open %}
+  <div class="sp-embed {{ 'sp-embed-video' if r.kind == 'video' else 'sp-embed-doc' }}">
+    <iframe src="{{ src }}" title="{{ r.title }}" loading="lazy" allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
+            referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}

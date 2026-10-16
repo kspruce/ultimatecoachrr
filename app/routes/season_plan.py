@@ -4,16 +4,24 @@ for everyone else every page here is a 404.
 
 Captains, coaches and admins see everything. Players see only the parts a
 coach has opened to them (Season plan > Player access).
-"""
-from datetime import date, timedelta
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+Classroom sessions (C1, C2, ...) have their own pages: prep and a join link
+beforehand; the recording, slides, summary and commitments afterwards.
+Videos and slides are links (embedded where the host allows it), never
+uploads.
+"""
+from datetime import date, datetime, time, timedelta
+
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 
 from app import db, login
-from app.models.season_plan import SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage
+from app.models.season_plan import (
+    SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, ClassroomSession, ClassroomResource,
+)
 from app.models.session import SessionPlan
 from app.models.team_settings import TeamSettings
+from app.utils.media_embed import embed_url, is_web_url
 from app.utils.team_filter import get_current_team_id
 from app.utils.utils import coach_required
 
@@ -24,6 +32,7 @@ SECTIONS = [
     ('weeks', 'Weeks', 'The week-by-week table and each week\'s themes'),
     ('session_notes', 'Session notes', 'The full session plan for each week'),
     ('phases', 'Phases', 'Each phase\'s aim, focus and strategic anchor'),
+    ('classroom', 'Classroom sessions', 'Prep, join links, recordings, slides and published summaries'),
 ]
 WEEK_TEXT_FIELDS = ['block', 'joint_theme', 'firsts_theme', 'seconds_theme', 'classroom',
                     'off_pitch', 'session_title', 'session_detail_md', 'notes']
@@ -84,7 +93,8 @@ def season_plan_nav():
             return True
         plan = active_plan(team_id)
         return bool(plan and (any(can_see(plan, s) for s, _, _ in SECTIONS) or visible_pages(plan)))
-    return {'season_plan_nav': show, 'season_plan_sees_all': sees_everything}
+    return {'season_plan_nav': show, 'season_plan_sees_all': sees_everything,
+            'embed_url': embed_url}
 
 
 def _plan_or_404():
@@ -169,6 +179,8 @@ def index():
             return redirect(url_for('season_plan.weeks'))
         if can_see(plan, 'phases') and plan.phases:
             return redirect(url_for('season_plan.phase', number=plan.phases[0].number))
+        if can_see(plan, 'classroom'):
+            return redirect(url_for('season_plan.classroom_list'))
         pages = visible_pages(plan)
         if pages:
             return redirect(url_for('season_plan.page', slug=pages[0].slug))
@@ -177,8 +189,11 @@ def index():
     today = _today()
     current, featured, featured_label = _week_status(plan, today)
     next_event, next_milestone = _upcoming(plan, today)
+    featured_classroom = (classroom_cards(plan, featured.classroom_sessions, _now())
+                          if featured and can_see(plan, 'classroom') else [])
     return render_template(
         'season_plan/overview.html', plan=plan, today=today, current=current,
+        featured_classroom=featured_classroom,
         featured=featured, featured_label=featured_label, timeline=_timeline(plan, today),
         next_event=next_event, next_milestone=next_milestone, pages=visible_pages(plan),
         days_to_start=(plan.start_date - today).days if plan.start_date and today < plan.start_date else None)
@@ -196,7 +211,8 @@ def weeks():
     rows = [w for w in plan.weeks if not phase_no or (w.phase and w.phase.number == phase_no)]
     current = plan.week_for(today)
     return render_template('season_plan/weeks.html', plan=plan, weeks=rows, phase_no=phase_no,
-                           squad=squad, current=current, today=today, pages=visible_pages(plan))
+                           squad=squad, current=current, today=today, pages=visible_pages(plan),
+                           link_classroom=can_see(plan, 'classroom'))
 
 
 def _week_or_404(plan, number):
@@ -217,8 +233,10 @@ def week(number):
     prev_wk = plan.weeks[i - 1] if i > 0 else None
     next_wk = plan.weeks[i + 1] if i + 1 < len(plan.weeks) else None
     classroom_page = next((p for p in visible_pages(plan) if 'classroom' in p.slug), None)
+    cards = classroom_cards(plan, wk.classroom_sessions, _now()) if can_see(plan, 'classroom') else []
     return render_template('season_plan/week.html', plan=plan, week=wk, prev_wk=prev_wk,
                            next_wk=next_wk, show_notes=can_see(plan, 'session_notes'),
+                           classroom=cards,
                            show_phase=can_see(plan, 'phases'), classroom_page=classroom_page,
                            current=plan.week_for(date.today()), pages=visible_pages(plan))
 
@@ -288,3 +306,225 @@ def access():
         flash('Player access saved.', 'success')
         return redirect(url_for('season_plan.access'))
     return render_template('season_plan/access.html', plan=plan, sections=SECTIONS, pages=plan.pages)
+
+
+# --------------------------------------------------------------------------
+# Classroom sessions
+# --------------------------------------------------------------------------
+
+CLASSROOM_TEXT_FIELDS = {  # form field -> max length (None = Text)
+    'title': 200, 'format': 100, 'audience': 200, 'main_source': 200, 'goal': None,
+    'prep_md': None, 'plan_md': None, 'summary_md': None, 'commitments_md': None,
+}
+
+
+def _now():
+    """Now in the team's local time (naive, like starts_at). A coach's
+    ?on=YYYY-MM-DD preview counts as midday on that date."""
+    on = request.args.get('on')
+    if on and current_user.is_coach:
+        try:
+            return datetime.combine(date.fromisoformat(on), time(12))
+        except ValueError:
+            pass
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(current_app.config.get('SEASON_PLAN_TIMEZONE', 'Europe/London'))
+        return datetime.now(tz).replace(tzinfo=None)
+    except Exception:
+        return datetime.now()
+
+
+def visible_resources(cs):
+    return [r for r in cs.resources if sees_everything() or not r.coaches_only]
+
+
+def classroom_card(cs, now):
+    """Everything a template needs to show one session to the current user."""
+    resources = visible_resources(cs)
+    show_summary = bool((cs.summary_md or cs.commitments_md)
+                        and (cs.summary_published or sees_everything()))
+    end = cs.ends_at()
+    if cs.starts_at:
+        start = cs.starts_at
+    elif cs.week and cs.week.week_commencing:
+        start = datetime.combine(cs.week.week_commencing, time.min)
+    else:
+        start = None
+
+    if end and now > end:
+        if any(r.kind == 'video' for r in resources):
+            status = ('recording', 'Recording available')
+        elif show_summary and cs.summary_published:
+            status = ('summary', 'Summary available')
+        else:
+            status = ('done', 'Done')
+    elif start and now >= start:
+        status = ('now', 'Happening now' if cs.starts_at else 'This week')
+    elif start and (start - now) <= timedelta(days=7):
+        status = ('soon', 'Coming up')
+    else:
+        status = ('upcoming', 'Upcoming')
+
+    return {
+        's': cs, 'status': status[0], 'label': status[1], 'resources': resources,
+        'video': next((r for r in resources if r.kind == 'video'), None),
+        'show_summary': show_summary,
+        'show_join': bool(cs.join_url and (end is None or now <= end)),
+        'show_plan': sees_everything() and bool(cs.plan_md),
+    }
+
+
+def classroom_cards(plan, sessions, now):
+    return [classroom_card(cs, now) for cs in sessions]
+
+
+def _classroom_or_404(plan, code):
+    cs = ClassroomSession.query.filter_by(plan_id=plan.id, code=code.upper(),
+                                          team_organization_id=plan.team_organization_id).first()
+    if cs is None:
+        abort(404)
+    return cs
+
+
+@bp.route('/classroom')
+def classroom_list():
+    plan = _plan_or_404()
+    _require(plan, 'classroom')
+    now = _now()
+    cards = classroom_cards(plan, plan.classroom_sessions, now)
+    next_card = next((c for c in cards if c['status'] in ('now', 'soon', 'upcoming')), None)
+    return render_template('season_plan/classroom_list.html', plan=plan, cards=cards,
+                           next_card=next_card, now=now, pages=visible_pages(plan))
+
+
+@bp.route('/classroom/<code>')
+def classroom(code):
+    plan = _plan_or_404()
+    _require(plan, 'classroom')
+    cs = _classroom_or_404(plan, code)
+    sessions = plan.classroom_sessions
+    i = sessions.index(cs)
+    return render_template('season_plan/classroom.html', plan=plan, card=classroom_card(cs, _now()),
+                           prev_cs=sessions[i - 1] if i > 0 else None,
+                           next_cs=sessions[i + 1] if i + 1 < len(sessions) else None,
+                           show_week=can_see(plan, 'weeks'), pages=visible_pages(plan))
+
+
+def _parse_start(form):
+    """starts_at from the date and time inputs; (value, error)."""
+    day, at = (form.get('start_date') or '').strip(), (form.get('start_time') or '').strip()
+    if not day:
+        return None, None
+    try:
+        start_day = date.fromisoformat(day)
+        start_time = time.fromisoformat(at) if at else time(19, 0)
+    except ValueError:
+        return None, 'Dates look like 2027-10-20 and times like 19:30.'
+    return datetime.combine(start_day, start_time), None
+
+
+@bp.route('/classroom/<code>/edit', methods=['GET', 'POST'])
+@coach_required
+def edit_classroom(code):
+    plan = _plan_or_404()
+    cs = _classroom_or_404(plan, code)
+
+    def form_again(error):
+        flash(error, 'danger')
+        return render_template('season_plan/edit_classroom.html', plan=plan, cs=cs,
+                               kinds=ClassroomResource.KINDS, pages=visible_pages(plan)), 400
+
+    if request.method == 'POST':
+        values = {}
+        for name, limit in CLASSROOM_TEXT_FIELDS.items():
+            value = (request.form.get(name) or '').strip()
+            if limit and len(value) > limit:
+                return form_again(f'{name.replace("_", " ").capitalize()} must be at most {limit} characters.')
+            values[name] = value or None
+        if not values['title']:
+            return form_again('A session needs a title.')
+        join_url = (request.form.get('join_url') or '').strip()
+        if join_url and (not is_web_url(join_url) or len(join_url) > 500):
+            return form_again('The join link must be a web address starting with https://')
+        starts_at, error = _parse_start(request.form)
+        if error:
+            return form_again(error)
+        duration = request.form.get('duration_minutes', type=int)
+        if duration is not None and not 5 <= duration <= 600:
+            return form_again('Length must be between 5 and 600 minutes.')
+
+        for name, value in values.items():
+            setattr(cs, name, value)
+        cs.join_url = join_url or None
+        cs.starts_at = starts_at
+        cs.duration_minutes = duration
+        cs.summary_published = bool(request.form.get('summary_published'))
+        db.session.commit()
+        flash(f'{cs.code} saved.', 'success')
+        return redirect(url_for('season_plan.classroom', code=cs.code))
+
+    return render_template('season_plan/edit_classroom.html', plan=plan, cs=cs,
+                           kinds=ClassroomResource.KINDS, pages=visible_pages(plan))
+
+
+@bp.route('/classroom/<code>/resources', methods=['POST'])
+@coach_required
+def add_classroom_resource(code):
+    plan = _plan_or_404()
+    cs = _classroom_or_404(plan, code)
+    kind = request.form.get('kind') or 'link'
+    title = (request.form.get('title') or '').strip()
+    url = (request.form.get('url') or '').strip()
+    back = redirect(url_for('season_plan.edit_classroom', code=cs.code) + '#resources')
+    if kind not in dict(ClassroomResource.KINDS):
+        kind = 'link'
+    if not is_web_url(url) or len(url) > 500:
+        flash('Links must be web addresses starting with https://', 'danger')
+        return back
+    if len(title) > 200:
+        flash('Titles must be at most 200 characters.', 'danger')
+        return back
+    cs.resources.append(ClassroomResource(
+        team_organization_id=plan.team_organization_id, kind=kind,
+        title=title or dict(ClassroomResource.KINDS)[kind], url=url,
+        order=max((r.order for r in cs.resources), default=0) + 1,
+        coaches_only=bool(request.form.get('coaches_only'))))
+    db.session.commit()
+    flash('Added.', 'success')
+    return back
+
+
+def _resource_or_404(cs, resource_id):
+    resource = next((r for r in cs.resources if r.id == resource_id), None)
+    if resource is None:
+        abort(404)
+    return resource
+
+
+@bp.route('/classroom/<code>/resources/<int:resource_id>/delete', methods=['POST'])
+@coach_required
+def delete_classroom_resource(code, resource_id):
+    plan = _plan_or_404()
+    cs = _classroom_or_404(plan, code)
+    cs.resources.remove(_resource_or_404(cs, resource_id))
+    db.session.commit()
+    flash('Removed.', 'success')
+    return redirect(url_for('season_plan.edit_classroom', code=cs.code) + '#resources')
+
+
+@bp.route('/classroom/<code>/resources/<int:resource_id>/move', methods=['POST'])
+@coach_required
+def move_classroom_resource(code, resource_id):
+    plan = _plan_or_404()
+    cs = _classroom_or_404(plan, code)
+    items = list(cs.resources)
+    resource = _resource_or_404(cs, resource_id)
+    i = items.index(resource)
+    j = i - 1 if request.form.get('direction') == 'up' else i + 1
+    if 0 <= j < len(items):
+        items[i], items[j] = items[j], items[i]
+        for n, item in enumerate(items, start=1):
+            item.order = n
+        db.session.commit()
+    return redirect(url_for('season_plan.edit_classroom', code=cs.code) + '#resources')
