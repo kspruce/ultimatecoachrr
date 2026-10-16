@@ -110,13 +110,18 @@
       </li>
 
       {# Training #}
-      {% if not ts or ts.sessions_enabled or ts.fitness_enabled %}
-      {% set in_training = in_training or request.endpoint.startswith('feedback.') %}
+      {% set show_season_plan = ts and ts.season_plan_enabled and season_plan_nav() %}
+      {% if not ts or ts.sessions_enabled or ts.fitness_enabled or show_season_plan %}
+      {% set in_training = in_training or request.endpoint.startswith('feedback.') or ep.startswith('season_plan.') %}
       <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-lightning-charge-fill"></i> Training
         </a>
         <ul class="dropdown-menu">
+          {% if show_season_plan %}
+          <li><a class="dropdown-item" href="{{ url_for('season_plan.index') }}">
+            <i class="bi bi-calendar-range-fill"></i> Season Plan</a></li>
+          {% endif %}
           {% if not ts or ts.sessions_enabled %}
           <li><a class="dropdown-item" href="{{ url_for('session.index') }}">
             <i class="bi bi-calendar-check-fill"></i> Session Plans</a></li>

@@ -1,0 +1,15 @@
+{% extends "season_plan/_layout.html" %}
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Season plan</h1>
+    <p>No season plan has been imported for {{ current_team.name if current_team else 'this team' }} yet.</p>
+  </div>
+</div>
+<div class="sp-card" style="max-width:720px">
+  <h3>Importing a plan</h3>
+  <p>A season plan is imported from a markdown export (a folder with <code>manifest.json</code> and one file per tab) on the server:</p>
+  <pre class="mb-2"><code>flask import-season-plan path/to/export --team {{ current_team.slug if current_team else '&lt;team-slug&gt;' }} --dry-run</code></pre>
+  <p class="sp-muted mb-0">Run it with <code>--dry-run</code> first to check what it found, then without to import.</p>
+</div>
+{% endblock %}

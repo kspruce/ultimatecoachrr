@@ -1,0 +1,96 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_themes.html" import badges %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>Week by week</h1>
+    <p>Every week's block, themes, classroom session and off-pitch work.</p>
+  </div>
+</div>
+
+<form method="get" class="sp-filters">
+  <div>
+    <label class="form-label sp-label" for="phase">Phase</label>
+    <select class="form-select form-select-sm" id="phase" name="phase" onchange="this.form.submit()">
+      <option value="">All phases</option>
+      {% for ph in plan.phases %}
+      <option value="{{ ph.number }}" {{ 'selected' if phase_no == ph.number }}>{{ ph.number }}. {{ ph.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label sp-label" for="squad">Squad</label>
+    <select class="form-select form-select-sm" id="squad" name="squad" onchange="this.form.submit()">
+      <option value="all" {{ 'selected' if squad == 'all' }}>All</option>
+      <option value="1s" {{ 'selected' if squad == '1s' }}>1s</option>
+      <option value="2s" {{ 'selected' if squad == '2s' }}>2s</option>
+    </select>
+  </div>
+  {% if request.args.get('on') %}<input type="hidden" name="on" value="{{ request.args.get('on') }}">{% endif %}
+  <noscript><button class="btn btn-sm btn-primary" type="submit">Filter</button></noscript>
+  {% if current %}
+  <a class="btn btn-sm btn-outline-primary d-none d-md-inline-block" href="#week-{{ current.week_number }}">Jump to this week</a>
+  <a class="btn btn-sm btn-outline-primary d-md-none" href="#m-week-{{ current.week_number }}">Jump to this week</a>
+  {% endif %}
+</form>
+
+{% if not weeks %}
+<div class="sp-card"><p class="m-0 sp-muted">No weeks in this phase.</p></div>
+{% endif %}
+
+{# Desktop: one table #}
+<div class="table-responsive d-none d-md-block">
+  <table class="table sp-table">
+    <thead>
+      <tr>
+        <th>Wk</th><th>w/c</th><th>Block or event</th><th>Joint</th>
+        {% if squad in ('all', '1s') %}<th>1s</th>{% endif %}
+        {% if squad in ('all', '2s') %}<th>2s</th>{% endif %}
+        <th>Classroom</th><th>Off-pitch</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in weeks %}
+      <tr id="week-{{ w.week_number }}" style="--phase: {{ w.phase.colour if w.phase and w.phase.colour else 'transparent' }}"
+          class="{{ 'sp-current' if current and current.id == w.id }} {{ 'sp-break' if w.is_break }}">
+        <td><a href="{{ url_for('season_plan.week', number=w.week_number) }}" class="fw-bold">{{ w.week_number }}</a></td>
+        <td class="text-nowrap">{{ w.week_commencing.strftime('%-d %b') if w.week_commencing }}</td>
+        <td>
+          <a href="{{ url_for('season_plan.week', number=w.week_number) }}">{{ w.block or '' }}</a>
+          <div>{{ badges(w, current) }}</div>
+        </td>
+        <td>{{ w.joint_theme or '' }}</td>
+        {% if squad in ('all', '1s') %}<td>{{ w.firsts_theme or '' }}</td>{% endif %}
+        {% if squad in ('all', '2s') %}<td>{{ w.seconds_theme or '' }}</td>{% endif %}
+        <td>{{ w.classroom or '' }}</td>
+        <td>{{ w.off_pitch or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Phones: one card per week #}
+<div class="sp-week-list d-md-none">
+  {% for w in weeks %}
+  <a id="m-week-{{ w.week_number }}" href="{{ url_for('season_plan.week', number=w.week_number) }}"
+     class="sp-week-item {{ 'sp-current' if current and current.id == w.id }} {{ 'sp-break' if w.is_break }}"
+     style="--phase: {{ w.phase.colour if w.phase and w.phase.colour else 'var(--rule)' }}">
+    <div class="d-flex justify-content-between gap-2">
+      <b>Week {{ w.week_number }}{% if w.week_commencing %} · {{ w.week_commencing.strftime('%-d %b') }}{% endif %}</b>
+      <span>{{ badges(w, current) }}</span>
+    </div>
+    {% if w.block %}<div class="sp-muted" style="font-size:.9rem">{{ w.block }}</div>{% endif %}
+    <dl>
+      {% if w.joint_theme %}<dt>Joint</dt><dd>{{ w.joint_theme }}</dd>{% endif %}
+      {% if squad in ('all', '1s') and w.firsts_theme %}<dt>1s</dt><dd>{{ w.firsts_theme }}</dd>{% endif %}
+      {% if squad in ('all', '2s') and w.seconds_theme %}<dt>2s</dt><dd>{{ w.seconds_theme }}</dd>{% endif %}
+      {% if w.classroom %}<dt>Class</dt><dd>{{ w.classroom }}</dd>{% endif %}
+      {% if w.off_pitch %}<dt>Off-pitch</dt><dd>{{ w.off_pitch }}</dd>{% endif %}
+    </dl>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

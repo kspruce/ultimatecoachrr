@@ -1,0 +1,58 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_themes.html" import badges %}
+
+{% block sp_content %}
+{% set colour = phase.colour or 'var(--club)' %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">
+      Phase {{ phase.number }}
+      {% if phase.start_date and phase.end_date %} · {{ phase.start_date.strftime('%-d %b') }} – {{ phase.end_date.strftime('%-d %b %Y') }}{% endif %}
+      {% if phase.start_week and phase.end_week %} · weeks {{ phase.start_week }}–{{ phase.end_week }}{% endif %}
+    </div>
+    <h1><span class="sp-badge sp-badge-phase" style="--phase: {{ colour }}; font-size:1rem; vertical-align: .2em">{{ phase.number }}</span> {{ phase.name }}</h1>
+    {% if phase.aim %}<p style="max-width:62ch">{{ phase.aim }}</p>{% endif %}
+  </div>
+  {% if phase_page %}
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('season_plan.page', slug=phase_page.slug) }}"><i class="bi bi-journal-text"></i> {{ phase_page.title }}</a>
+  {% endif %}
+</div>
+
+<div class="sp-card sp-week-card" style="--phase: {{ colour }}">
+  <div class="sp-defs">
+    {% if phase.training_focus %}<div><div class="sp-label">Training focus</div><p>{{ phase.training_focus }}</p></div>{% endif %}
+    {% if phase.strategic_anchor %}<div><div class="sp-label">Strategic anchor</div><p>{{ phase.strategic_anchor }}</p></div>{% endif %}
+    {% if phase.events %}<div><div class="sp-label">Events</div><p>{{ phase.events }}</p></div>{% endif %}
+    {% if phase.classroom_refs %}<div><div class="sp-label">Classroom sessions</div><p>{{ phase.classroom_refs }}</p></div>{% endif %}
+  </div>
+</div>
+
+{% if phase.progression %}
+<div class="sp-card">
+  <h3>By the end of this phase</h3>
+  <div class="sp-defs">
+    {% for area, text in phase.progression.items() %}
+    <div><div class="sp-label">{{ area }}</div><p>{{ text }}</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if show_weeks %}
+<div class="sp-card">
+  <h3>Weeks</h3>
+  <div class="sp-week-list">
+    {% for w in phase.weeks %}
+    <a href="{{ url_for('season_plan.week', number=w.week_number) }}" style="--phase: {{ colour }}"
+       class="sp-week-item {{ 'sp-current' if current and current.id == w.id }}">
+      <div class="d-flex justify-content-between gap-2">
+        <b>Week {{ w.week_number }}{% if w.week_commencing %} · {{ w.week_commencing.strftime('%-d %b') }}{% endif %}{% if w.block %} · {{ w.block }}{% endif %}</b>
+        <span>{{ badges(w, current) }}</span>
+      </div>
+      {% if w.joint_theme %}<div class="sp-muted" style="font-size:.9rem">{{ w.joint_theme }}</div>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

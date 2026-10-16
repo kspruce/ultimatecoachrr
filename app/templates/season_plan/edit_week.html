@@ -1,0 +1,76 @@
+{% extends "season_plan/_layout.html" %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}{% if week.week_commencing %} · w/c {{ week.week_commencing.strftime('%-d %b %Y') }}{% endif %}</div>
+    <h1>Edit week {{ week.week_number }}</h1>
+    <p>Re-importing the plan replaces these fields with the export's text, except the coaches' notes and the session plan link.</p>
+  </div>
+</div>
+
+<form method="post" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card">
+    <div class="mb-3">
+      <label class="form-label" for="block">Block or event</label>
+      <input class="form-control" id="block" name="block" maxlength="200" value="{{ week.block or '' }}">
+    </div>
+    {% for name, label in [('joint_theme', 'Joint session'), ('firsts_theme', '1s split'), ('seconds_theme', '2s split')] %}
+    <div class="mb-3">
+      <label class="form-label" for="{{ name }}">{{ label }}</label>
+      <textarea class="form-control" id="{{ name }}" name="{{ name }}" rows="2">{{ week[name] or '' }}</textarea>
+    </div>
+    {% endfor %}
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="classroom">Classroom</label>
+        <input class="form-control" id="classroom" name="classroom" maxlength="200" value="{{ week.classroom or '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="off_pitch">Off-pitch</label>
+        <input class="form-control" id="off_pitch" name="off_pitch" value="{{ week.off_pitch or '' }}">
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-4 mt-3">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="is_event" name="is_event" {{ 'checked' if week.is_event }}>
+        <label class="form-check-label" for="is_event">Event week</label>
+      </div>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" id="is_break" name="is_break" {{ 'checked' if week.is_break }}>
+        <label class="form-check-label" for="is_break">Break</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="sp-card">
+    <div class="mb-3">
+      <label class="form-label" for="session_title">Session title</label>
+      <input class="form-control" id="session_title" name="session_title" maxlength="200" value="{{ week.session_title or '' }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="session_detail_md">Session notes (markdown)</label>
+      <textarea class="form-control font-monospace" id="session_detail_md" name="session_detail_md" rows="16" style="font-size:.85rem">{{ week.session_detail_md or '' }}</textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="notes">Coaches' notes (markdown; kept when the plan is re-imported)</label>
+      <textarea class="form-control" id="notes" name="notes" rows="4">{{ week.notes or '' }}</textarea>
+    </div>
+    <div>
+      <label class="form-label" for="session_plan_id">Linked session plan</label>
+      <select class="form-select" id="session_plan_id" name="session_plan_id">
+        <option value="">None</option>
+        {% for sp in session_plans %}
+        <option value="{{ sp.id }}" {{ 'selected' if week.session_plan_id == sp.id }}>{{ sp.title }}{% if sp.date %} ({{ sp.date.strftime('%-d %b %Y') }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2">
+    <a class="btn btn-outline-secondary" href="{{ url_for('season_plan.week', number=week.week_number) }}">Cancel</a>
+    <button class="btn btn-primary" type="submit">Save week</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_themes.html" import themes, badges %}
+
+{% block sp_content %}
+{% set colour = week.phase.colour if week.phase and week.phase.colour else 'var(--club)' %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">
+      {% if week.week_commencing %}w/c {{ week.week_commencing.strftime('%-d %b %Y') }}{% endif %}
+      {% if week.phase %} · {% if show_phase %}<a href="{{ url_for('season_plan.phase', number=week.phase.number) }}">Phase {{ week.phase.number }}: {{ week.phase.name }}</a>{% else %}Phase {{ week.phase.number }}: {{ week.phase.name }}{% endif %}{% endif %}
+    </div>
+    <h1>Week {{ week.week_number }}{% if week.block %}: {{ week.block }}{% endif %}</h1>
+    <div>{{ badges(week, current) }}</div>
+  </div>
+  {% if current_user.is_coach %}
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('season_plan.edit_week', number=week.week_number) }}"><i class="bi bi-pencil"></i> Edit week</a>
+  {% endif %}
+</div>
+
+<div class="sp-card sp-week-card" style="--phase: {{ colour }}">
+  {{ themes(week) }}
+  <div class="sp-defs">
+    {% if week.classroom %}
+    <div><div class="sp-label">Classroom</div><p>{% if classroom_page %}<a href="{{ url_for('season_plan.page', slug=classroom_page.slug) }}">{{ week.classroom }}</a>{% else %}{{ week.classroom }}{% endif %}</p></div>
+    {% endif %}
+    {% if week.off_pitch %}<div><div class="sp-label">Off-pitch</div><p>{{ week.off_pitch }}</p></div>{% endif %}
+    {% if week.session_plan %}
+    <div><div class="sp-label">Session plan</div><p><a href="{{ url_for('session.detail', session_id=week.session_plan.id) }}">{{ week.session_plan.title }}</a></p></div>
+    {% endif %}
+  </div>
+  {% if week.notes %}
+  <div class="mt-2"><div class="sp-label">Coaches' notes</div><div class="sp-md">{{ week.notes|markdown }}</div></div>
+  {% endif %}
+</div>
+
+{% if show_notes %}
+  {% if week.session_detail_md %}
+  <div class="sp-card">
+    <div class="sp-label">Session notes</div>
+    {% if week.session_title %}<h2 class="mt-1">{{ week.session_title }}</h2>{% endif %}
+    <div class="sp-md">{{ week.session_detail_md|markdown }}</div>
+  </div>
+  {% elif not week.is_break %}
+  <div class="sp-card"><p class="m-0 sp-muted">No session notes for this week.</p></div>
+  {% endif %}
+{% endif %}
+
+<div class="sp-pager">
+  {% if prev_wk %}<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('season_plan.week', number=prev_wk.week_number) }}"><i class="bi bi-arrow-left"></i> Week {{ prev_wk.week_number }}</a>{% else %}<span></span>{% endif %}
+  {% if next_wk %}<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('season_plan.week', number=next_wk.week_number) }}">Week {{ next_wk.week_number }} <i class="bi bi-arrow-right"></i></a>{% endif %}
+</div>
+{% endblock %}

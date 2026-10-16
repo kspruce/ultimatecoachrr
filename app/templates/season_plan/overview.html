@@ -1,0 +1,110 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_themes.html" import themes, badges %}
+{% from "season_plan/_toc.html" import toc_mobile %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="sp-label">{{ plan.season }}</div>
+    <h1>{{ plan.title }}</h1>
+    {% if plan.summary %}<p style="max-width:62ch">{{ plan.summary }}</p>{% endif %}
+  </div>
+  {% if current_user.is_coach and request.args.get('on') %}
+  <span class="sp-badge sp-badge-event">Previewing {{ today.strftime('%-d %b %Y') }}</span>
+  {% endif %}
+</div>
+
+{% set link_phases = season_plan_sees_all() or plan.players_see_phases %}
+{% if timeline and timeline.bands %}
+<div class="sp-card">
+  <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-1">
+    <h3 class="m-0">Phases</h3>
+    {% if days_to_start %}<span class="sp-muted" style="font-size:.88rem">Season starts in {{ days_to_start }} day{{ 's' if days_to_start != 1 }}</span>{% endif %}
+  </div>
+  <div class="sp-timeline-scroll">
+    <div>
+      <div class="sp-timeline" role="img" aria-label="Phase timeline">
+        <div class="sp-timeline-track"></div>
+        {% for b in timeline.bands %}
+        <{{ 'a' if link_phases else 'div' }} class="sp-band" {% if link_phases %}href="{{ url_for('season_plan.phase', number=b.phase.number) }}"{% endif %}
+           style="left: {{ '%.2f'|format(b.left) }}%; width: {{ '%.2f'|format(b.width) }}%; --phase: {{ b.phase.colour or 'var(--club)' }}"
+           title="Phase {{ b.phase.number }}: {{ b.phase.name }} ({{ b.phase.start_date.strftime('%-d %b') }} – {{ b.phase.end_date.strftime('%-d %b') }})">
+          <b>{{ b.phase.number }}. {{ b.phase.name }}</b>
+          <span>{{ b.phase.start_date.strftime('%-d %b') }} – {{ b.phase.end_date.strftime('%-d %b') }}</span>
+        </{{ 'a' if link_phases else 'div' }}>
+        {% endfor %}
+        {% if timeline.marker is not none %}<div class="sp-today" style="left: {{ '%.2f'|format(timeline.marker) }}%"></div>{% endif %}
+      </div>
+      <div class="sp-timeline-ends"><span>{{ timeline.start.strftime('%-d %b %Y') }}</span><span>{{ timeline.end.strftime('%-d %b %Y') }}</span></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    {% if featured %}
+    <div class="sp-card sp-week-card" style="--phase: {{ featured.phase.colour if featured.phase and featured.phase.colour else 'var(--club)' }}">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <div class="sp-label">{{ featured_label }}{% if featured.week_commencing %} · w/c {{ featured.week_commencing.strftime('%-d %b') }}{% endif %}</div>
+          <h2 class="mt-1 mb-1">Week {{ featured.week_number }}{% if featured.block %}: {{ featured.block }}{% endif %}</h2>
+          {% if featured.phase %}<span class="sp-muted" style="font-size:.88rem">Phase {{ featured.phase.number }} · {{ featured.phase.name }}</span>{% endif %}
+        </div>
+        <div>{{ badges(featured) }}</div>
+      </div>
+      {{ themes(featured) }}
+      {% if featured.classroom or featured.off_pitch %}
+      <p class="mb-2" style="font-size:.92rem">
+        {% if featured.classroom %}<i class="bi bi-easel"></i> {{ featured.classroom }}{% endif %}
+        {% if featured.classroom and featured.off_pitch %}<br>{% endif %}
+        {% if featured.off_pitch %}<i class="bi bi-flag"></i> {{ featured.off_pitch }}{% endif %}
+      </p>
+      {% endif %}
+      {% if season_plan_sees_all() or plan.players_see_weeks %}
+      <a class="btn btn-primary btn-sm" href="{{ url_for('season_plan.week', number=featured.week_number) }}">
+        {% if featured.session_detail_md and (season_plan_sees_all() or plan.players_see_session_notes) %}Full session notes{% else %}Week details{% endif %} <i class="bi bi-arrow-right"></i>
+      </a>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="sp-card"><p class="m-0 sp-muted">The season is over.{% if season_plan_sees_all() or plan.players_see_weeks %} Every week is still in the <a href="{{ url_for('season_plan.weeks') }}">week list</a>.{% endif %}</p></div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="sp-card">
+      <h3>Coming up</h3>
+      {% if next_event %}
+      <div class="mb-3">
+        <div class="sp-label">Next event</div>
+        <div class="fw-semibold">{{ next_event.block }}</div>
+        <div class="sp-muted" style="font-size:.88rem">
+          Week {{ next_event.week_number }} · w/c {{ next_event.week_commencing.strftime('%-d %b') }}
+          {% set days = (next_event.week_commencing - today).days %}
+          {% if days > 0 %} · in {{ (days / 7)|round(0, 'ceil')|int }} week{{ 's' if (days / 7)|round(0, 'ceil')|int != 1 }}{% elif current and current.id == next_event.id %} · this week{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if next_milestone %}
+      {% set m, mweek = next_milestone %}
+      <div>
+        <div class="sp-label">Next milestone</div>
+        <div class="fw-semibold">{{ m.what }}</div>
+        <div class="sp-muted" style="font-size:.88rem">{{ m.when_label }} · w/c {{ mweek.week_commencing.strftime('%-d %b') }}</div>
+      </div>
+      {% endif %}
+      {% if not next_event and not next_milestone %}<p class="sp-muted m-0">Nothing else this season.</p>{% endif %}
+    </div>
+
+    {% if pages %}
+    <div class="sp-card">
+      <h3>Pages</h3>
+      {% for p in pages %}
+      <div><a href="{{ url_for('season_plan.page', slug=p.slug) }}">{{ p.title }}</a></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

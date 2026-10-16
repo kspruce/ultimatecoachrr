@@ -163,10 +163,47 @@ def import_season_command(season_file, images_dir, team_org_id, dry_run):
     click.echo(summary.report())
 
 
+@click.command('import-season-plan')
+@click.argument('folder', type=click.Path(exists=True, file_okay=False))
+@click.option('--team', 'team_slug', required=True, help='Slug of the team to import into')
+@click.option('--season', help='Season label (e.g. 2027/28); read from the manifest if not given')
+@click.option('--dry-run', is_flag=True, help='Parse and report, but write nothing')
+@click.option('--replace', is_flag=True, help='Wipe the existing plan for this season and import it fresh')
+@with_appcontext
+def import_season_plan_command(folder, team_slug, season, dry_run, replace):
+    """Import a season plan (manifest.json plus markdown tabs) into a team.
+
+    Re-running updates the same plan (matched on team and season). The
+    team's Season plan feature is left as it is; switch it on in team
+    settings.
+    """
+    from app.models.team_organization import TeamOrganization
+    from app.utils.season_plan_import import import_season_plan, SeasonPlanImportError
+
+    team = TeamOrganization.query.filter_by(slug=team_slug).first()
+    if team is None:
+        raise click.ClickException(f'No team with slug {team_slug!r}')
+
+    try:
+        report = import_season_plan(folder, team, season=season, dry_run=dry_run, replace=replace)
+    except SeasonPlanImportError as e:
+        click.echo(f'Import failed, nothing was written ({len(e.errors)} problems):', err=True)
+        for error in e.errors:
+            click.echo(f'  - {error}', err=True)
+        raise SystemExit(1)
+
+    click.echo(f'{team.name} ({team.slug})')
+    click.echo(report.text())
+    settings = team.settings
+    if not dry_run and not (settings and settings.season_plan_enabled):
+        click.echo('The Season plan feature is off for this team: switch it on in Team settings > Features.')
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
     app.cli.add_command(export_data)
     app.cli.add_command(import_season_command)
+    app.cli.add_command(import_season_plan_command)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
     register_tag_commands(app)
