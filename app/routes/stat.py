@@ -81,15 +81,22 @@ def record_events(point_id):
                 team_organization_id=get_current_team_id()
             ).first_or_404()
             
-            # Handle special player IDs
-            player_id = data.get('player_id')
-            is_unknown_player = data.get('is_unknown_player', False)
-            is_opponent = data.get('is_opponent', False)
-            
+            # Opponent / Unknown plays have no player of ours. Ignore any
+            # player_id sent with them (older clients sent a placeholder),
+            # so nobody is credited with the play.
+            is_unknown_player = bool(data.get('is_unknown_player', False))
+            is_opponent = bool(data.get('is_opponent', False))
+            if is_unknown_player or is_opponent:
+                player_id = None
+            elif data.get('player_id') in (None, ''):
+                return jsonify({'error': 'player_id is required'}), 400
+            else:
+                player_id = int(data['player_id'])
+
             # Create new event
             event = Event(
                 point_id=point_id,
-                player_id=int(player_id),
+                player_id=player_id,
                 event_type=data['event_type'],
                 field_position_x=float(data.get('field_position_x', 0)),
                 field_position_y=float(data.get('field_position_y', 0)),
@@ -122,9 +129,13 @@ def record_events(point_id):
                 # Only promote events that are valid precursors to a goal
                 # (catch or pickup). Blocks, drops, throwaways etc. should
                 # never be silently retyped as assists.
+                # Opponent plays are never part of our passing chain.
                 ASSISTABLE = ('catch', 'pickup')
 
-                if previous_events and previous_events[0].event_type in ASSISTABLE:
+                def assistable(e):
+                    return e.event_type in ASSISTABLE and not e.is_opponent
+
+                if previous_events and assistable(previous_events[0]):
                     # Mark first previous event as assist
                     assist_event = previous_events[0]
                     assist_event.event_type = 'assist'
@@ -154,7 +165,7 @@ def record_events(point_id):
 
                     # If there's a second previous event of a valid type,
                     # mark it as hockey assist
-                    if len(previous_events) >= 2 and previous_events[1].event_type in ASSISTABLE:
+                    if len(previous_events) >= 2 and assistable(previous_events[1]):
                         hockey_assist_event = previous_events[1]
                         hockey_assist_event.event_type = 'hockey_assist'
                         
@@ -183,8 +194,8 @@ def record_events(point_id):
                         # Remove any regular throws that are now hockey assists
                         regular_throw = Throw.query.filter(
                             Throw.point_id == point_id,
-                            Throw.thrower_id == hockey_assist_event.player_id,
-                            Throw.receiver_id == assist_event.player_id,
+                            Throw.throwing_event_id == hockey_assist_event.id,
+                            Throw.receiving_event_id == assist_event.id,
                             Throw.throw_type == 'regular',
                             Throw.team_organization_id == get_current_team_id()  # Add team ID
                         ).first()
@@ -195,7 +206,9 @@ def record_events(point_id):
 
                         
                         
-            # Create regular throw if this is a catch
+            # Create regular throw if this is a catch. The thrower is NULL
+            # after an Opponent/Unknown play; the throw still counts for the
+            # team and the catch for the receiver.
             elif event.event_type == 'catch' and previous_event:
                 regular_throw = Throw(
                     point_id=point_id,

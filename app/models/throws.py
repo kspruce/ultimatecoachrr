@@ -7,7 +7,9 @@ import math
 class Throw(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
-    thrower_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    # NULL when the thrower wasn't one of our identified players (e.g. a catch
+    # after an Unknown catch); the throw still counts for the team.
+    thrower_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
     receiver_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     

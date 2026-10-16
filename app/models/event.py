@@ -10,7 +10,9 @@ VALID_EVENT_TYPES = [
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     point_id = db.Column(db.Integer, db.ForeignKey('point.id'), nullable=False)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    # NULL for plays by the opponent or by an unidentified player of ours
+    # (is_opponent / is_unknown_player), which no player gets credit for.
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
     receiver_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
     event_type = db.Column(db.String(20), nullable=False)  # Simplified event types
     field_position_x = db.Column(db.Float, nullable=True)
@@ -19,8 +21,8 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_offensive = db.Column(db.Boolean, nullable=False, default=True)  # Track possession
-    is_unknown_player = db.Column(db.Boolean, default=False)  # Add this line
-    is_opponent = db.Column(db.Boolean, default=False)  # Add this line
+    is_unknown_player = db.Column(db.Boolean, default=False)
+    is_opponent = db.Column(db.Boolean, default=False)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True) # Nullable for migration
     
     point = db.relationship('Point', back_populates='events')
@@ -69,7 +71,9 @@ class Event(db.Model):
             'field_position_y': self.field_position_y,
             'timestamp': self.timestamp,
             'receiver_id': self.receiver_id,
-            'is_offensive': self.is_offensive
+            'is_offensive': self.is_offensive,
+            'is_opponent': bool(self.is_opponent),
+            'is_unknown_player': bool(self.is_unknown_player),
         }
 
 
