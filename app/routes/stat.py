@@ -318,10 +318,16 @@ def undo_event(point_id):
                         prior_events[0].event_type = 'catch'
                     if len(prior_events) >= 2 and prior_events[1].event_type == 'hockey_assist':
                         prior_events[1].event_type = 'catch'
+                        # The goal replaced that pass's regular throw with a
+                        # hockey-assist throw; make it a regular throw again,
+                        # or re-recording the goal would count the pass twice.
+                        Throw.query.filter_by(
+                            receiving_event_id=prior_events[0].id,
+                            throw_type='hockey_assist',
+                            team_organization_id=get_current_team_id()
+                        ).update({'throw_type': 'regular'})
 
             # First, delete any throws associated with this event
-            from app.models.throws import Throw
-
             # Delete throws where this event is the receiving event
             throws_received = Throw.query.filter_by(
                 receiving_event_id=last_event.id,

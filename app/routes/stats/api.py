@@ -80,7 +80,7 @@ def api_connection_data():
     """API endpoint for player connection data"""
     # Get filter parameters
     opposition_team = request.args.get('opposition_team')
-    min_connections = request.args.get('min_connections', 2, type=int)
+    min_connections = request.args.get('min_connections', 1, type=int)
 
     # team_organization_id scoping happens inside generate_player_connections via get_current_team_id()
     connection_data = generate_player_connections(

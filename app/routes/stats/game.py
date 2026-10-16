@@ -67,7 +67,7 @@ def game_stats(game_id):
     # so team_name filtering is redundant and Player.team doesn't exist anyway.
     point_ids = [p.id for p in game_points(game)]
     heatmap_data = process_heatmap_data(point_ids=point_ids)
-    connection_data = generate_player_connections(min_connections=2, point_ids=point_ids)
+    connection_data = generate_player_connections(point_ids=point_ids)
     
     # Add additional team metrics
     team_stats.update(calculate_additional_team_metrics([game]))
