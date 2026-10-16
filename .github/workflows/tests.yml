@@ -9,8 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      # The committed .env points uploads at /app (Railway's app folder),
-      # which the CI runner can't write to; real env vars take priority.
+      # Somewhere the CI runner can write uploads to.
       UPLOAD_FOLDER: /tmp/uploads
     services:
       postgres:

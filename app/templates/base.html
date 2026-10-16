@@ -662,6 +662,8 @@
 
           <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">
             <i class="bi bi-person-circle"></i> Profile</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('auth.account') }}">
+            <i class="bi bi-key"></i> Account Settings</a></li>
 
           {% if current_user.is_coach %}
           <li><a class="dropdown-item" href="{{ url_for('team.feature_settings') }}">
@@ -671,21 +673,31 @@
           <li><a class="dropdown-item" href="{{ url_for('main.how_to_use') }}">
             <i class="bi bi-question-circle"></i> How to Use</a></li>
 
-          {% if current_user.is_admin %}
+          {% if current_user.is_coach %}
           <li><hr class="dropdown-divider"></li>
           <li><span class="dropdown-header">Admin</span></li>
 
           <li><a class="dropdown-item" href="{{ url_for('auth.users') }}">
             <i class="bi bi-people"></i> User Management</a></li>
+          {% endif %}
+
+          {% if current_user.is_superadmin %}
           <li><a class="dropdown-item" href="{{ url_for('data_management.data_management') }}">
             <i class="bi bi-database"></i> Data Management</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('team_organization.signups') }}">
+            <i class="bi bi-envelope-paper"></i> Team Sign-ups</a></li>
+          {% endif %}
+
+          {% if current_user.is_admin %}
           {% if has_endpoint('discord.settings') %}
           <li><a class="dropdown-item" href="{{ url_for('discord.settings') }}">
             <i class="bi bi-discord"></i> Discord Settings</a></li>
           {% endif %}
           <li><a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
             <i class="bi bi-gear-fill"></i> Manage Teams</a></li>
+          {% endif %}
 
+          {% if current_user.is_superadmin %}
           <li><hr class="dropdown-divider"></li>
           <li><span class="dropdown-header">Switch Team</span></li>
 
@@ -719,7 +731,7 @@
       <a href="{{ url_for('auth.register') }}"
          class="btn btn-sm btn-primary"
          style="border-radius:8px;padding:.3rem .9rem;font-size:.845rem">
-        Register
+        Get started
       </a>
       {% endif %}
 

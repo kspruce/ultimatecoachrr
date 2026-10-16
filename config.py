@@ -28,9 +28,20 @@ class Config:
     # Application URL
     BASE_URL = os.environ.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
 
-    # Team self-registration: set TEAM_REGISTRATION_CODE in env to require a
-    # code when new clubs sign up. Leave blank (default) for open registration.
-    TEAM_REGISTRATION_CODE = os.environ.get('TEAM_REGISTRATION_CODE', '')
+    # Team sign-up is invite-link only unless a superadmin opens it to
+    # everyone (Manage Teams -> Team sign-ups); that switch lives in the DB.
+
+    # Rate limits on login, sign-up and password reset. Limits are counted in
+    # memory per server process; set RATELIMIT_STORAGE_URI (e.g. redis://...)
+    # to share them between processes.
+    RATELIMIT_ENABLED = os.environ.get('RATELIMIT_ENABLED', '1') != '0'
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
+    RATELIMIT_HEADERS_ENABLED = True
+
+    # How many proxies sit in front of the app (Railway: 1). Needed so rate
+    # limits see each visitor's own IP and links in emails use https.
+    # Set to 0 when the app is reached directly.
+    PROXY_COUNT = int(os.environ.get('PROXY_COUNT', '1'))
     
     # S3 Configuration
     AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
@@ -62,13 +73,18 @@ class Config:
     # Fallback to temporary directory if DATA_EXPORT_DIR is not writable
     TEMP_EXPORT_DIR = os.environ.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
     
-    # Mail settings
+    # Mail settings (SMTP). Email is optional: without MAIL_SERVER the site
+    # still works, and coaches hand out reset links instead. See docs/EMAIL_SETUP.md.
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes')
+    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() in ('1', 'true', 'yes')
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    ADMINS = [os.environ.get('ADMIN_EMAIL', 'your-email@example.com')]
+    # The "From" address, e.g. "Ultimate Coach <coach@yourdomain.com>".
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or os.environ.get('MAIL_USERNAME')
+    # Gets an email when a new team registers (if email is set up)
+    ADMINS = [os.environ['ADMIN_EMAIL']] if os.environ.get('ADMIN_EMAIL') else []
 
     @staticmethod
     def init_app(app):

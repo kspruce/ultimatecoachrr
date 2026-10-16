@@ -47,7 +47,8 @@
                         {{ form.password.label(class="form-label") }}
                         {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
                         <div class="form-text">
-                            Leave blank to keep current password
+                            {% if title == 'Add User' %}Optional. Leave blank and use <strong>Reset link</strong>
+                            on the user list so they choose their own.{% else %}Leave blank to keep current password.{% endif %}
                         </div>
                         {% if form.password.errors %}
                             <div class="invalid-feedback d-block">
@@ -91,6 +92,9 @@
                     <div class="col-md-6">
                         {{ form.role.label(class="form-label") }}
                         {{ form.role(class="form-select" + (" is-invalid" if form.role.errors else "")) }}
+                        <div class="form-text">
+                            You can give roles up to your own. Team Admins manage everyone on the team, coaches included.
+                        </div>
                         {% if form.role.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.role.errors %}

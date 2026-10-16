@@ -47,6 +47,60 @@
         </div>
     </div>
 
+    {% if current_team %}
+    <!-- Team join link -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                    <h6 class="fw-bold mb-1"><i class="bi bi-link-45deg me-1"></i>Team join link</h6>
+                    <p class="text-muted small mb-0">
+                        Share one link with the whole team (group chat, email, QR code). Anyone with it
+                        can create a <strong>player</strong> account on {{ current_team.name }}. Turn it
+                        off once everyone has joined.
+                    </p>
+                </div>
+                <span class="badge {{ 'bg-success' if current_team.join_enabled else 'bg-secondary' }}">
+                    {{ 'On' if current_team.join_enabled else 'Off' }}
+                </span>
+            </div>
+
+            {% if current_team.join_enabled and current_team.join_code %}
+            {% set join_url = url_for('auth.join_team', code=current_team.join_code, _external=True) %}
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-sm" id="joinLink" value="{{ join_url }}" readonly>
+                        <button type="button" class="btn btn-sm btn-primary" data-copy="#joinLink">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 small text-muted">
+                    Or join code: <strong style="font-family:ui-monospace,monospace;letter-spacing:.1em">{{ current_team.join_code }}</strong>
+                    at {{ url_for('auth.join', _external=True) }}
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('auth.manage_join_link', team_id=current_team.id) }}" class="d-flex flex-wrap gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if current_team.join_enabled %}
+                <button name="action" value="disable" class="btn btn-sm btn-outline-secondary">Turn off</button>
+                <button name="action" value="regenerate" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Make a new link? The current link will stop working.')">
+                    New link
+                </button>
+                {% else %}
+                <button name="action" value="enable" class="btn btn-sm btn-success">
+                    <i class="bi bi-toggle-on me-1"></i>Turn on join link
+                </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
     {% if viewing_unassigned %}
     <div class="alert alert-info mb-4" style="border-radius:10px">
         <i class="bi bi-info-circle me-2"></i>
@@ -73,7 +127,7 @@
                 {% for user in users %}
                     <tr>
                         <td class="fw-semibold">{{ user.username }}</td>
-                        <td>{{ user.email or '—' }}</td>
+                        <td>{% if user.email and not user.email.endswith('@no-email.placeholder') %}{{ user.email }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
 
                         <td>
                             <span class="badge
@@ -83,8 +137,9 @@
                                 {% elif user.role == 'guest' %}bg-warning text-dark
                                 {% else %}bg-secondary{% endif %}">
                                 {% if user.role == 'guest' %}<i class="bi bi-eye me-1"></i>{% endif %}
-                                {{ user.role|capitalize }}
+                                {{ 'Team Admin' if user.role == 'admin' else user.role|replace('_', ' ')|title }}
                             </span>
+                            {% if user.is_superadmin %}<span class="badge bg-danger ms-1">Superadmin</span>{% endif %}
                         </td>
 
                         {% if is_superadmin %}
@@ -111,13 +166,28 @@
                             {% endif %}
                         </td>
 
-                        <td class="text-end">
+                        <td class="text-end text-nowrap">
+                            {% if user.id == current_user.id and not is_superadmin %}
+                            <a href="{{ url_for('auth.account') }}" class="btn btn-sm btn-outline-dark">
+                                My account
+                            </a>
+                            {% elif user.id in manageable_ids %}
                             <a href="{{ url_for('auth.edit_user', user_id=user.id) }}"
                                class="btn btn-sm btn-outline-dark">
                                 Edit
                             </a>
 
                             {% if user.id != current_user.id %}
+                            <form method="POST"
+                                  action="{{ url_for('auth.create_reset_link', user_id=user.id) }}"
+                                  class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        title="Make a link that lets {{ user.username }} choose a new password">
+                                    Reset link
+                                </button>
+                            </form>
+
                             <form method="POST"
                                   action="{{ url_for('auth.delete_user', user_id=user.id) }}"
                                   class="d-inline">
@@ -128,6 +198,11 @@
                                 </button>
                             </form>
                             {% endif %}
+                            {% else %}
+                            <span class="text-muted small" title="Only someone with a higher role can change this account">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
@@ -137,6 +212,8 @@
     </div>
 
 </div>
+
+{% include "auth/_copy_script.html" %}
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>

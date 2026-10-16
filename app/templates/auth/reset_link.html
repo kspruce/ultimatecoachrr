@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "auth/_styles.html" %}
+
+<div class="ac-wrap wide">
+  <div class="ac-card">
+    <div class="ac-icon"><i class="bi bi-link-45deg"></i></div>
+    <h1 class="ac-title">Password reset link for {{ user.username }}</h1>
+    <p class="ac-sub">
+      Send this link to {{ user.username }} (by message, WhatsApp, email…). It lets them choose a
+      new password, works once, and expires in {{ days }} days.
+    </p>
+
+    <div class="ac-copy mb-3">
+      <input type="text" class="ac-input" id="resetLink" value="{{ link }}" readonly>
+      <button type="button" class="btn btn-primary" data-copy="#resetLink"><i class="bi bi-clipboard"></i> Copy</button>
+    </div>
+
+    {% if emailed %}
+    <div class="alert alert-success mb-0" style="font-size:.85rem">
+      <i class="bi bi-envelope-check me-1"></i>We also emailed it to {{ user.email }}.
+    </div>
+    {% endif %}
+  </div>
+  <p class="ac-footer"><a href="{{ url_for('auth.users', team_id=user.team_organization_id) }}">Back to User Management</a></p>
+</div>
+{% include "auth/_copy_script.html" %}
+{% endblock %}

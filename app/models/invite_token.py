@@ -20,7 +20,8 @@ class InviteToken(db.Model):
     player_id           = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=False)
 
-    created_by_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # Nullable so the coach who sent the invite can later be deleted
+    created_by_id       = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at          = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at          = db.Column(db.DateTime, nullable=False)
 
