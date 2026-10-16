@@ -21,6 +21,9 @@ EXPORT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
                       'imports', 'season-plan-export')
 needs_export = pytest.mark.skipif(not os.path.isdir(EXPORT), reason='season plan export not present')
 
+# Any page with the site nav (the home page may redirect to onboarding)
+NAV_PAGE = '/team/'
+
 MODELS = (SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone)
 
 
@@ -260,7 +263,7 @@ def test_toggle_is_off_by_default(app, herd):
 def test_off_hides_the_nav_and_every_route_is_404(app, herd):
     do_import(herd['team'])
     c = client(app, herd, 'coach')
-    home = c.get('/').get_data(as_text=True)
+    home = c.get(NAV_PAGE).get_data(as_text=True)
     assert '/season-plan/' not in home
     for url in ('/season-plan/', '/season-plan/weeks', '/season-plan/week/1', '/season-plan/week/1/edit',
                 '/season-plan/phase/1', '/season-plan/page/season-plan', '/season-plan/access'):
@@ -277,7 +280,7 @@ def test_coach_switches_it_on_in_feature_settings(app, herd):
     r = c.post('/team/settings/features', data={'season_plan_enabled': 'on', 'sessions_enabled': 'on'})
     assert r.status_code == 302
     assert TeamSettings.query.filter_by(team_id=herd['team']).one().season_plan_enabled is True
-    assert 'href="/season-plan/"' in c.get('/').get_data(as_text=True)
+    assert 'href="/season-plan/"' in c.get(NAV_PAGE).get_data(as_text=True)
     assert c.get('/season-plan/').status_code == 200
 
 
@@ -332,7 +335,7 @@ def test_players_see_only_what_a_coach_opens(app, herd):
     do_import(herd['team'])
     enable(herd['team'])
     player = client(app, herd, 'player')
-    assert '/season-plan/' not in player.get('/').get_data(as_text=True)
+    assert '/season-plan/' not in player.get(NAV_PAGE).get_data(as_text=True)
     assert player.get('/season-plan/').status_code == 404
     assert player.get('/season-plan/weeks').status_code == 404
     assert player.get('/season-plan/page/season-plan').status_code == 404
@@ -347,7 +350,7 @@ def test_players_see_only_what_a_coach_opens(app, herd):
     plan = SeasonPlan.query.one()
     assert plan.players_see_weeks and not plan.players_see_session_notes
 
-    assert 'href="/season-plan/"' in player.get('/').get_data(as_text=True)
+    assert 'href="/season-plan/"' in player.get(NAV_PAGE).get_data(as_text=True)
     assert player.get('/season-plan/').headers['Location'].endswith('/season-plan/weeks')
     assert player.get('/season-plan/weeks').status_code == 200
     week = player.get('/season-plan/week/1').get_data(as_text=True)
@@ -358,14 +361,15 @@ def test_players_see_only_what_a_coach_opens(app, herd):
 
 
 @needs_export
-def test_captains_see_everything_but_cannot_edit(app, herd):
+def test_captains_see_and_manage_everything(app, herd):
+    """Captains are team admins, so they can edit and set player access too."""
     do_import(herd['team'])
     enable(herd['team'])
     captain = client(app, herd, 'captain')
-    for url in ('/season-plan/', '/season-plan/weeks', '/season-plan/phase/1', '/season-plan/page/season-plan'):
+    for url in ('/season-plan/', '/season-plan/weeks', '/season-plan/phase/1', '/season-plan/page/season-plan',
+                '/season-plan/week/1/edit', '/season-plan/access'):
         assert captain.get(url).status_code == 200, url
     assert 'Learning points' in captain.get('/season-plan/week/1').get_data(as_text=True)
-    assert captain.get('/season-plan/week/1/edit').status_code == 302
 
 
 @needs_export

@@ -14,7 +14,6 @@ from app import db, login
 from app.models.season_plan import SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage
 from app.models.session import SessionPlan
 from app.models.team_settings import TeamSettings
-from app.models.user import ROLE_ORDER
 from app.utils.team_filter import get_current_team_id
 from app.utils.utils import coach_required
 
@@ -38,8 +37,10 @@ def feature_enabled(team_id):
 
 
 def sees_everything(user=None):
+    """Coaches, captains and admins (captains are team admins, so is_coach
+    covers all three)."""
     user = user or current_user
-    return user.is_authenticated and (user.is_coach or user.role_level() >= ROLE_ORDER['captain'])
+    return user.is_authenticated and user.is_coach
 
 
 def active_plan(team_id):
