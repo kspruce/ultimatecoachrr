@@ -33,7 +33,7 @@
                             <span class="badge
                                 {% if current_user.role == 'admin' %}bg-dark
                                 {% elif current_user.role == 'coach' %}bg-primary
-                                {% elif current_user.role == 'captain' %}bg-info text-dark
+                                {% elif current_user.role == 'captain' %}bg-dark
                                 {% else %}bg-secondary{% endif %}
                                 " style="font-size:.72rem">
                                 {{ current_user.role|capitalize }}

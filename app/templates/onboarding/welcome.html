@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+  .wl-hero { background: var(--club); color: var(--on-club); border-radius: 20px; padding: 2rem 2.25rem; margin-bottom: 1.5rem; }
+  .wl-hero .kicker { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
+  .wl-hero h1 { color: var(--on-club); font-size: clamp(1.7rem, 3.6vw, 2.4rem); margin: .4rem 0 .5rem; }
+  .wl-hero p { margin: 0; max-width: 640px; opacity: .9; }
+  .wl-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.5rem; align-items: start; }
+  .wl-panel { background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 1.35rem 1.5rem; }
+  .wl-panel h2 { font-size: 1.2rem; margin: 0 0 .25rem; }
+  .wl-can { list-style: none; padding: 0; margin: .5rem 0 0; }
+  .wl-can li { padding: .4rem 0; color: var(--ink-2); font-size: .9rem; display: flex; gap: .55rem; }
+  .wl-can li i { color: var(--club-ink); }
+  @media (max-width: 860px) { .wl-grid { grid-template-columns: 1fr; } .wl-hero { padding: 1.5rem 1.25rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="wl-hero">
+    <div class="kicker">{% if team %}{{ team.name }} · {% endif %}{{ role.name if role else 'Getting started' }}</div>
+    <h1>Welcome{% if team %} to {{ team.name }}{% endif %}, {{ current_user.username }}.</h1>
+    <p>{{ role.intro if role else "Here's how to find your way around." }}</p>
+  </div>
+
+  <div class="wl-grid">
+    <section class="wl-panel">
+      <h2>Your getting-started checklist</h2>
+      {% if checklist %}
+        {% if checklist.complete %}
+        <p class="text-muted small mb-3"><i class="bi bi-stars me-1"></i>You're all set. Anything below is optional or there if you want to revisit it.</p>
+        {% else %}
+        <p class="text-muted small mb-2">Work through these in any order. Most tick themselves off once you've done them.</p>
+        {% endif %}
+        {% include 'onboarding/_checklist.html' %}
+      {% else %}
+        <p class="text-muted mb-0">There's nothing to set up for your account.</p>
+      {% endif %}
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Go to the dashboard</a>
+        {% if checklist and checklist.dismissed %}
+        <form method="POST" action="{{ url_for('onboarding.restore') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-secondary">Show the checklist on my dashboard</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if role %}
+    <aside class="wl-panel">
+      <h2>As {{ 'an' if role.name[0] in 'AEIOU' else 'a' }} {{ role.name|lower }} you can</h2>
+      <ul class="wl-can">
+        {% for line in role.can %}<li><i class="bi bi-check2-circle"></i>{{ line }}</li>{% endfor %}
+      </ul>
+      <p class="small text-muted mt-3 mb-0">
+        Stuck? The <a href="{{ url_for('main.how_to_use') }}">How to Use guide</a> walks through every feature.
+      </p>
+    </aside>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

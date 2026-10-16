@@ -2,6 +2,7 @@
 page, and the colours reaching every page through base.html."""
 from app import db
 from app.models.team_settings import TeamSettings
+from app.models.onboarding import UserOnboarding
 from app.models.user import User
 from app.utils import theme
 from tests import stats_data
@@ -47,6 +48,9 @@ def _coach_client(app, role='coach'):
                 is_admin_flag=role == 'admin', team_organization_id=team.id)
     user.set_password('x')
     db.session.add(user)
+    db.session.flush()
+    # An existing user who has already seen the welcome page
+    db.session.add(UserOnboarding(user_id=user.id, welcomed_role=role, completed_steps=[]))
     db.session.commit()
     return team, stats_data.Client(app, user.id, team.id)
 

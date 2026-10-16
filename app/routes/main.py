@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
-from app import db
+from app import db, onboarding
 from app.models.player import Player
 from app.models.game import Game
 from app.models.session import SessionPlan
@@ -99,6 +99,10 @@ def _dashboard_extras(team_id):
 @bp.route('/')
 @bp.route('/index')
 def index():
+    # First visit (or a promotion): show the welcome for their role
+    if current_user.is_authenticated and onboarding.needs_welcome(current_user):
+        return redirect(url_for('onboarding.welcome'))
+
     # Initialize stats and activities
     stats = {
         'active_players_count': 0,
@@ -364,6 +368,19 @@ def index():
             logger.exception(f"Error generating dashboard data: {str(e)}")
             # Don't empty the upcoming_events list here
 
+    checklist = None
+    roster_signup = None
+    if current_user.is_authenticated and not current_user.is_guest:
+        from app.models.team_organization import TeamOrganization
+        current_team_id = get_current_team_id()
+        team = TeamOrganization.query.get(current_team_id) if current_team_id else None
+        if team:
+            checklist = onboarding.progress(current_user, team)
+            if checklist and (checklist['dismissed'] or checklist['complete']):
+                checklist = None
+            if current_user.is_coach:
+                roster_signup = onboarding.roster_signup(team.id)
+
     return render_template('index.html',
                          title='Home',
                          stats=stats,
@@ -372,6 +389,8 @@ def index():
                          team_name=team_name,
                          next_session=next_session,
                          next_tournament=next_tournament,
+                         checklist=checklist,
+                         roster_signup=roster_signup,
                          **extras)
 
 

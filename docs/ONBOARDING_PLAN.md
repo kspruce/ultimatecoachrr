@@ -1,5 +1,21 @@
 # Role-based onboarding plan
 
+> **Status: implemented.** Code lives in `app/onboarding.py` (steps and role lists),
+> `app/routes/onboarding.py` (`/welcome`), `app/models/onboarding.py`, migration
+> `77b543744ffe`, and `tests/test_onboarding.py`. Differences from the original plan:
+>
+> - **Captains run their team.** `captain` now shares the top team level with `admin`
+>   (`ROLE_ORDER`, `TEAM_ADMIN_ROLES` in `app/models/user.py`), so `is_admin` is true for
+>   captains on their own team. Only superadmins reach other teams, switch teams, control
+>   team sign-up and use site-wide data tools. Captains and team admins can't manage each
+>   other (same level); the superadmin manages everyone.
+> - The welcome redirect happens only from the dashboard, so deep links (Discord, email,
+>   `?next=`) are never hijacked.
+> - Manual "go and look" steps tick off when opened from the checklist (`/welcome/go/<key>`).
+> - Coaches can't add plays or fitness metrics (admin-only routes), so those steps sit on the
+>   admin/captain lists; coaches get the game-day and squad steps instead.
+> - Email/Discord nudges (4.3) are not built yet.
+
 A plan for first-run onboarding for each team role: **admin, coach, captain, player**
 (plus how stat takers, guests and superadmins are handled). It's written against the
 code as it stands, so every step links to a route that already exists.

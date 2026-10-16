@@ -148,11 +148,41 @@
   <span class="uc-section-line"></span>
 </div>
 
-{% if current_user.is_authenticated and current_user.is_admin %}
+{% if current_user.is_authenticated and not current_user.is_guest %}
+<div class="htu-card">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <div style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Your personal checklist</div>
+      <div style="font-size:.83rem;color:var(--uc-gray-600)">Steps for your role that tick themselves off as you go.</div>
+    </div>
+    <a href="{{ url_for('onboarding.welcome') }}" class="btn btn-sm btn-primary" style="border-radius:7px;font-size:.8rem">
+      <i class="bi bi-flag me-1"></i>Getting started
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="htu-card">
+  <div style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800);margin-bottom:.5rem">Who can do what</div>
+  <div class="htu-steps">
+    <div class="htu-step"><div><div class="htu-step-title">Captain &amp; Team Admin</div>
+      <div class="htu-step-desc">Run everything for their own team: roster, users (coaches and other roles below them), colours, features, Discord, sessions, tournaments, selection and stats. They can't see or change other teams.</div></div></div>
+    <div class="htu-step"><div><div class="htu-step-title">Coach</div>
+      <div class="htu-step-desc">Plan sessions and drills, manage the roster and players' accounts, add tournaments and games, pick squads and record stats.</div></div></div>
+    <div class="htu-step"><div><div class="htu-step-title">Stat Taker</div>
+      <div class="htu-step-desc">Record stats on game day and view the team's numbers.</div></div></div>
+    <div class="htu-step"><div><div class="htu-step-title">Player</div>
+      <div class="htu-step-desc">RSVP, see their stats, learn the playbook and track fitness goals.</div></div></div>
+    <div class="htu-step"><div><div class="htu-step-title">Superadmin</div>
+      <div class="htu-step-desc">Site owner. Creates and manages every team, controls team sign-up and site-wide backups.</div></div></div>
+  </div>
+</div>
+
+{% if current_user.is_authenticated and current_user.is_coach %}
 {# ── ADMIN / COACH ONBOARDING ─── #}
 <div class="htu-card">
   <div class="d-flex align-items-center gap-2 mb-1">
-    <span class="htu-role admin"><i class="bi bi-shield-fill"></i> Admin / Coach</span>
+    <span class="htu-role admin"><i class="bi bi-shield-fill"></i> Captain / Admin / Coach</span>
     <span style="font-weight:700;font-size:.9rem;color:var(--uc-gray-800)">Setting up a new team</span>
   </div>
   <p style="font-size:.83rem;color:var(--uc-gray-600);margin-bottom:1rem">
