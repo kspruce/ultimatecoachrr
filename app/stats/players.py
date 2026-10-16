@@ -19,8 +19,10 @@ def get_players_base_stats(players, games=None):
     player_ids = [p.id for p in players]
     
     # Determine point IDs if games are specified
+    # Games given but with no points (or none found) means no stats, not
+    # every game's: an empty list still scopes the queries below.
     point_ids = None
-    if games:
+    if games is not None:
         games = games if isinstance(games, list) else [games]
         preload_game_points(games)
         point_ids = [p.id for g in games for p in game_points(g)]
@@ -30,8 +32,8 @@ def get_players_base_stats(players, games=None):
         LineUp.player_id.in_(player_ids),
         LineUp.team_organization_id == get_current_team_id()
     )
-    if point_ids:
-        lineup_query = lineup_query.filter(LineUp.point_id.in_(point_ids))
+    if point_ids is not None:
+        lineup_query =lineup_query.filter(LineUp.point_id.in_(point_ids))
     
     # Eager load related point data for line type determination
     lineup_query = lineup_query.options(db.joinedload(LineUp.point))
@@ -49,8 +51,8 @@ def get_players_base_stats(players, games=None):
         (Throw.receiver_id.in_(player_ids)),
         Throw.team_organization_id == get_current_team_id()
     )
-    if point_ids:
-        throws_query = throws_query.filter(Throw.point_id.in_(point_ids))
+    if point_ids is not None:
+        throws_query =throws_query.filter(Throw.point_id.in_(point_ids))
     
     # Group throws by thrower_id and receiver_id
     throws_by_thrower = {}
@@ -71,9 +73,9 @@ def get_players_base_stats(players, games=None):
         Event.player_id.in_(player_ids),
         Event.team_organization_id == get_current_team_id()
     )
-    if point_ids:
+    if point_ids is not None:
         events_query = events_query.filter(Event.point_id.in_(point_ids))
-    
+
     # Group events by player_id
     events_by_player = {}
     for event in events_query.all():

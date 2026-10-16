@@ -1,5 +1,5 @@
-"""Player connections (who threw to whom) from points recorded in
-Positional Analysis."""
+"""Stats recorded in Positional Analysis: player connections (who threw
+to whom), the game score after corrections, and per-game player stats."""
 import json
 import re
 
@@ -55,3 +55,49 @@ def test_undoing_and_rerecording_a_goal_counts_each_pass_once(setup):
 
     _record(setup, point.id, c, 'goal')
     assert _pairs() == after_goal
+
+
+# --- related stats checks ----------------------------------------------------
+
+def test_correcting_an_earlier_point_carries_through_to_the_game_score(setup):
+    from app import db
+    from app.models.game import Game
+    from tests.test_point_setup import _add_point
+
+    first = _add_point(setup, 1, None)
+    a = _line()[0]
+    _record(setup, first, a, 'catch')
+    _record(setup, first, a, 'goal')
+    second = _add_point(setup, 2, None, start='defense', ours=1)
+
+    # Point 1 was actually theirs: undo the goal and record it as scored on.
+    client = setup['client']
+    assert client.post(f'/stats/undo_event/{first}').status_code == 200
+    r = client.post(f'/stats/record/{first}', json={
+        'player_id': str(a), 'event_type': 'scored_on',
+        'field_position_x': 5, 'field_position_y': 18, 'is_offensive': False})
+    assert r.status_code == 201, r.get_data(as_text=True)
+
+    db.session.expire_all()
+    game = db.session.get(Game, setup['game_id'])
+    assert (game.our_score, game.their_score) == (0, 1)
+    p2 = db.session.get(Point, second)
+    assert (p2.our_score_before, p2.their_score_before) == (0, 1)
+
+
+def test_a_game_with_no_points_has_no_player_stats(setup):
+    from app import db
+    from app.models.game import Game
+
+    _save(setup, _line())
+    point = Point.query.filter_by(game_id=setup['game_id']).one()
+    a, b = _line()[:2]
+    _record(setup, point.id, a, 'catch')
+    _record(setup, point.id, b, 'goal')
+
+    empty = Game(opponent='Not played yet', team_organization_id=setup['team_id'])
+    db.session.add(empty)
+    db.session.commit()
+    rows = setup['client'].get(f'/stats/api/player-stats?game_id={empty.id}').get_json()
+    rows = rows if isinstance(rows, list) else rows.get('players', rows)
+    assert all(not (r.get('goals') or r.get('assists')) for r in rows), rows

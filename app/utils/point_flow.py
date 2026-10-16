@@ -143,10 +143,27 @@ def next_point_to_analyse(game, after_number=0):
 
 
 def sync_game_score(game):
-    """Set the game score from its last point, so finishing or undoing an
-    earlier point (e.g. analysing a Game Day game from footage) never
-    rewinds the scoreboard."""
-    last = _points(game).order_by(Point.point_number.desc()).first()
-    if last:
-        game.our_score = last.our_score_after or 0
-        game.their_score = last.their_score_after or 0
+    """Re-chain every point's before/after score in point order and set the
+    game score from the result, so finishing or undoing an earlier point
+    (e.g. analysing a Game Day game from footage) never rewinds the
+    scoreboard, and correcting an earlier point's result carries through
+    to the later points and the game."""
+    points = _points(game).order_by(Point.point_number).all()
+    if not points:
+        return
+    # Start from the first point's score: analysis may begin mid-game.
+    ours, theirs = points[0].our_score_before or 0, points[0].their_score_before or 0
+    for point in points:
+        if point.point_outcome == 'scored':
+            delta = (1, 0)
+        elif point.point_outcome == 'conceded':
+            delta = (0, 1)
+        elif point.point_outcome is None:
+            delta = (0, 0)  # in progress
+        else:  # older outcome values: keep whatever the point recorded
+            delta = ((point.our_score_after or 0) - (point.our_score_before or 0),
+                     (point.their_score_after or 0) - (point.their_score_before or 0))
+        point.our_score_before, point.their_score_before = ours, theirs
+        ours, theirs = ours + delta[0], theirs + delta[1]
+        point.our_score_after, point.their_score_after = ours, theirs
+    game.our_score, game.their_score = ours, theirs
