@@ -59,6 +59,24 @@
     .endzone-right {
         right: 0;
     }
+
+    /* Which way we're attacking: shown in the endzones */
+    .endzone-label {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        white-space: nowrap;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.85);
+        pointer-events: none;
+    }
+    .endzone.attacking {
+        background-color: rgba(255, 255, 255, 0.35);
+    }
     
     .center-line {
         position: absolute;
@@ -248,6 +266,10 @@
                 </p>
             </div>
             <div class="col text-end">
+                <button id="attack-toggle" class="btn btn-outline-dark me-2"
+                        title="Which endzone we're attacking on screen. Positions are saved the same either way.">
+                    Attacking →
+                </button>
                 <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
                 <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
                 <button id="finish-point" class="btn btn-success me-2">End Point</button>
@@ -262,9 +284,9 @@
 
     <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
-        <div class="endzone endzone-left"></div>
+        <div class="endzone endzone-left"><span class="endzone-label"></span></div>
         <div class="center-line"></div>
-        <div class="endzone endzone-right"></div>
+        <div class="endzone endzone-right"><span class="endzone-label"></span></div>
     </div>
 
     <!-- Tables container with both tables side by side -->
@@ -399,6 +421,10 @@
                             <tr>
                                 <td><kbd>E</kbd></td>
                                 <td>End point</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>D</kbd></td>
+                                <td>Switch which endzone we're attacking</td>
                             </tr>
                             <tr>
                                 <td><kbd>Esc</kbd></td>
@@ -580,6 +606,85 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the possession indicator
     updatePossessionIndicator();
 
+    // ── Attacking direction ─────────────────────────────────────────────
+    // Positions are always saved as if we attack the right-hand endzone
+    // (x = 100 is their goal line), whichever way the field is shown, so
+    // stats and heatmaps don't change. Showing it the other way rotates the
+    // field 180°, the same as turning the phone round.
+    // Ends swap every point, so the default flips from the last point
+    // whose direction this device remembers.
+    const DIRECTION_KEY = 'uc-attack-direction-game-{{ point.game_id }}';
+    const POINT_NUMBER = {{ point.point_number }};
+    const attackToggle = document.getElementById('attack-toggle');
+
+    function loadDirections() {
+        try { return JSON.parse(localStorage.getItem(DIRECTION_KEY)) || {}; }
+        catch (e) { return {}; }
+    }
+
+    function defaultAttackRight() {
+        const saved = loadDirections();
+        if (saved[POINT_NUMBER]) return saved[POINT_NUMBER] === 'right';
+        const known = Object.keys(saved).map(Number).filter(n => n < POINT_NUMBER);
+        if (!known.length) return true;
+        const nearest = Math.max(...known);
+        const sameEnd = (POINT_NUMBER - nearest) % 2 === 0;
+        return (saved[nearest] === 'right') === sameEnd;
+    }
+
+    let attackRight = defaultAttackRight();
+
+    function screenToField(relX, relY) {
+        // relX/relY are 0–1 across the field as shown
+        return {
+            x: (attackRight ? relX : 1 - relX) * 100,
+            y: (attackRight ? relY : 1 - relY) * 37,
+        };
+    }
+
+    function placeMarker(marker) {
+        const x = parseFloat(marker.dataset.fieldX);
+        const y = parseFloat(marker.dataset.fieldY);
+        marker.style.left = `${attackRight ? x : 100 - x}%`;
+        marker.style.top = `${((attackRight ? y : 37 - y) / 37) * 100}%`;
+    }
+
+    function rememberDirection() {
+        try {
+            const saved = loadDirections();
+            saved[POINT_NUMBER] = attackRight ? 'right' : 'left';
+            localStorage.setItem(DIRECTION_KEY, JSON.stringify(saved));
+        } catch (e) { /* storage unavailable: still works on this page */ }
+    }
+
+    function showDirection() {
+        attackToggle.textContent = attackRight ? 'Attacking →' : '← Attacking';
+        const left = document.querySelector('.endzone-left');
+        const right = document.querySelector('.endzone-right');
+        const [attack, defend] = attackRight ? [right, left] : [left, right];
+        attack.classList.add('attacking');
+        defend.classList.remove('attacking');
+        attack.querySelector('.endzone-label').textContent = 'Attacking';
+        defend.querySelector('.endzone-label').textContent = 'Defending';
+        document.querySelectorAll('.event-marker, .cutting-marker').forEach(placeMarker);
+    }
+
+    attackToggle.addEventListener('click', function() {
+        attackRight = !attackRight;
+        rememberDirection();
+        showDirection();
+    });
+
+    rememberDirection();  // so the next point flips from this one
+    showDirection();
+
+    // Possession from the start of the point, replaying every event.
+    function recomputePossession() {
+        gameState.is_offensive = {{ 'true' if point.starting_position == 'offense' else 'false' }};
+        gameState.events.forEach(e => handlePossessionChange(e.event_type));
+        updatePossessionIndicator();
+    }
+
     /**
      * Apply possession-change rules for a given action and update the UI.
      * Extracted into a shared function so both the online and offline paths
@@ -720,12 +825,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Field click handler for both events and cutting skills
     field.addEventListener('click', function(e) {
         const rect = field.getBoundingClientRect();
-        const relativeX = (e.clientX - rect.left) / rect.width;
-        const relativeY = (e.clientY - rect.top) / rect.height;
+        const relativeX = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+        const relativeY = Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1);
 
         selectedPosition = {
-            x: Math.min(Math.max(relativeX * 100, 0), 100),
-            y: Math.min(Math.max(relativeY * 37, 0), 37),
+            ...screenToField(relativeX, relativeY),
             inEndzone: relativeX < 0.18 || relativeX > 0.82
         };
 
@@ -1219,8 +1323,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const marker = document.createElement('div');
         marker.className = 'event-marker';
-        marker.style.left = `${event.field_position_x}%`;
-        marker.style.top = `${(event.field_position_y / 37) * 100}%`;
+        marker.dataset.fieldX = event.field_position_x;
+        marker.dataset.fieldY = event.field_position_y;
+        placeMarker(marker);
         marker.title = `${event.player_name || 'Unknown'}: ${event.event_type}`;
         marker.dataset.eventId = event.id;
         
@@ -1236,8 +1341,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const marker = document.createElement('div');
         marker.className = 'cutting-marker';
-        marker.style.left = `${cuttingSkill.field_position_x}%`;
-        marker.style.top = `${(cuttingSkill.field_position_y / 37) * 100}%`;
+        marker.dataset.fieldX = cuttingSkill.field_position_x;
+        marker.dataset.fieldY = cuttingSkill.field_position_y;
+        placeMarker(marker);
         marker.title = `${cuttingSkill.player_name || 'Unknown'}: ${cuttingSkill.cutting_type} (${cuttingSkill.outcome})`;
         marker.dataset.cuttingSkillId = cuttingSkill.id;
         
@@ -1457,11 +1563,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         gameState.events.pop();
                         updateEventsTable();
                         
-                        // Reverse the possession change that was caused by this event.
-                        // handlePossessionChange applies the forward rule, so calling it
-                        // again on the same event effectively toggles back.
-                        console.log("Undoing event:", lastEvent);
-                        handlePossessionChange(lastEvent.event_type);
+                        // Work possession out again from the events that are left.
+                        recomputePossession();
                     } else {
                         gameState.cuttingSkills.pop();
                         updateCuttingSkillsTable();
@@ -1569,6 +1672,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 subPlayerButton.click();
                 break;
                 
+            case 'd': // Switch attacking direction (d key)
+                attackToggle.click();
+                break;
+
             case 'e': // End point (e key)
                 if (confirm('Are you sure you want to end this point?')) {
                     finishPointButton.click();
@@ -1594,6 +1701,17 @@ document.addEventListener('DOMContentLoaded', function() {
     subPlayerButton.setAttribute('title', 'Substitution (S)');
     modeToggle.setAttribute('title', 'Toggle Mode (M)');
     undoButton.setAttribute('title', 'Undo (U)');
+
+    // Reopening a point: show what's already been recorded.
+    const existing = {{ existing | tojson }};
+    existing.events.forEach(e => { addEventMarker(e); updateEventsState(e); });
+    existing.cutting_skills.forEach(c => { addCuttingSkillMarker(c); updateCuttingSkillsState(c); });
+    if (existing.events.length || existing.cutting_skills.length) {
+        updateEventsTable();
+        updateCuttingSkillsTable();
+        recomputePossession();
+        undoButton.style.display = 'block';
+    }
 });
 
 // Substitution handling
