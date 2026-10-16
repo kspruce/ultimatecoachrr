@@ -289,6 +289,15 @@ small, .small { color: inherit; }
 .uc-toggler:focus { box-shadow: none; }
 .uc-theme-btn:hover { background: color-mix(in srgb, var(--on) 18%, transparent); color: var(--on); }
 .uc-nav-right { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.uc-user-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Between 1200px and 1400px the full menu only just fits: drop the icons,
+   the username next to the avatar and some padding so nothing is pushed off */
+@media (min-width: 1200px) and (max-width: 1399.98px) {
+  .uc-nav-links .nav-link { padding: .45rem .5rem !important; }
+  .uc-nav-links > .nav-item > .nav-link > i { display: none; }
+  .uc-brand-name { max-width: 170px; }
+  .uc-nav-right .uc-user-name { display: none !important; }
+}
 .uc-nav-cta {
   background: var(--accent); color: var(--on-accent) !important;
   border-radius: 999px; padding: .38rem .9rem !important; font-weight: 800; font-size: .82rem;
@@ -300,7 +309,7 @@ small, .small { color: inherit; }
   border-radius: 999px; padding: .35rem .9rem; font-size: .84rem; font-weight: 600; text-decoration: none;
 }
 
-@media (max-width: 991.98px) {
+@media (max-width: 1199.98px) {
   /* The navbar is sticky, so an open menu taller than the screen can't be
      reached by scrolling the page: the menu scrolls inside itself instead. */
   #navbarNav.show, #navbarNav.collapsing {
