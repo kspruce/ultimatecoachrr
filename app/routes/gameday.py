@@ -1,7 +1,7 @@
 from werkzeug.exceptions import HTTPException
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app import db
 from app.models.game import Game
 from app.models.player import Player
@@ -53,7 +53,9 @@ def game_dashboard(game_id):
         .join(GamePlayer, GamePlayer.player_id == Player.id)
         .filter(
             GamePlayer.game_id == game_id,
-            GamePlayer.team_organization_id == team_id,
+            # Older bulk assignments were saved without a team id.
+            or_(GamePlayer.team_organization_id == team_id,
+                GamePlayer.team_organization_id.is_(None)),
             Player.team_organization_id == team_id,
         )
         .all()

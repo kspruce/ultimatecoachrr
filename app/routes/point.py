@@ -1,14 +1,15 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required
+from sqlalchemy import or_
 from app import db
 from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.models.player import Player
+from app.models.game_player import GamePlayer
 from app.models.event import Pull, Event
 from app.forms.point import PointForm
 from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
-from app.models.tournament_rsvp import TournamentRSVP
 from app.utils.utils import admin_required
 from app.utils.team_filter import get_current_team_id
 
@@ -226,17 +227,94 @@ def determine_gender_ratio(point_number):
 
 
 # ---------------------------------------
+# Game Roster
+# ---------------------------------------
+def get_game_roster(game, include_ids=()):
+    """Players assigned to the game, by jersey number.
+
+    Falls back to the full active roster when nobody is assigned (games
+    created before auto-assign), as the gameday screen does. include_ids
+    keeps players already on a point's line listed when editing it, even
+    if they have since been taken off the game.
+    """
+    team_id = get_current_team_id()
+    players = (
+        Player.query
+        .join(GamePlayer, GamePlayer.player_id == Player.id)
+        .filter(
+            GamePlayer.game_id == game.id,
+            # Bulk assignment used to save rows without a team id; the game
+            # is already this team's, so those rows count too.
+            or_(GamePlayer.team_organization_id == team_id,
+                GamePlayer.team_organization_id.is_(None)),
+            Player.team_organization_id == team_id,
+        )
+        .all()
+    )
+    if not players:
+        players = Player.query.filter_by(
+            active=True,
+            team_organization_id=team_id
+        ).all()
+
+    listed = {p.id for p in players}
+    missing = [pid for pid in include_ids if pid not in listed]
+    if missing:
+        players += Player.query.filter(
+            Player.id.in_(missing),
+            Player.team_organization_id == team_id
+        ).all()
+
+    return sorted(players, key=lambda p: (p.jersey_number is None, p.jersey_number or 0, p.name))
+
+
+# ---------------------------------------
 # Line & Position Logic
 # ---------------------------------------
-def determine_line_and_position(previous_point):
+def determine_line_and_position(game, previous_point):
+    """Whether the next point starts on O or D, and why.
 
+    After a goal the scoring team pulls, so we start on D after we score
+    and on O after they score. The first point of the second half goes
+    the other way from the first point of the game. Returns
+    (line_type, starting_position, reason); line_type is None when there
+    is nothing to go on and the form defaults should stand.
+    """
     if not previous_point:
-        return 'O-line', 'offense'
+        return None, None, None
+
+    def as_line(position):
+        return ('O-line', 'offense') if position == 'offense' else ('D-line', 'defense')
+
+    # First point after halftime: flip the side we started the game on.
+    if game.halftime_our_score is not None and game.halftime_their_score is not None \
+            and previous_point.point_outcome \
+            and previous_point.our_score_after == game.halftime_our_score \
+            and previous_point.their_score_after == game.halftime_their_score:
+        first_point = Point.query.filter_by(
+            game_id=game.id,
+            team_organization_id=get_current_team_id()
+        ).order_by(Point.point_number).first()
+        if first_point and first_point.starting_position in ('offense', 'defense'):
+            flipped = 'defense' if first_point.starting_position == 'offense' else 'offense'
+            line, position = as_line(flipped)
+            return line, position, (
+                f'Second half: we started the game on '
+                f'{"O" if first_point.starting_position == "offense" else "D"}, '
+                f'so we start this half on {"O" if flipped == "offense" else "D"}.'
+            )
 
     if previous_point.point_outcome == 'scored':
-        return 'D-line', 'defense'
-    else:
-        return 'O-line', 'offense'
+        return 'D-line', 'defense', f'We scored point {previous_point.point_number}, so we pull.'
+    if previous_point.point_outcome == 'conceded':
+        return 'O-line', 'offense', f'They scored point {previous_point.point_number}, so we receive.'
+
+    # Previous point not finished yet: carry its line over rather than guess.
+    line, position = as_line(previous_point.starting_position)
+    return line, position, (
+        f'Point {previous_point.point_number} has no result yet, so this '
+        f'follows its line. Finish it to set O/D automatically.'
+    )
 
 
 # ---------------------------------------
@@ -257,10 +335,8 @@ def add_point(game_id):
 
     form = PointForm()
 
-    all_players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).order_by(Player.jersey_number).all()
+    all_players = get_game_roster(game)
+    line_reason = None
 
     last_point = Point.query.filter_by(
         game_id=game_id,
@@ -282,6 +358,11 @@ def add_point(game_id):
             form.gender_ratio.data = determine_gender_ratio(next_point_number)
         else:
             form.gender_ratio.data = None
+
+        line_type, position, line_reason = determine_line_and_position(game, last_point)
+        if line_type:
+            form.our_line_type.data = line_type
+            form.starting_position.data = position
 
     # ------------------------
     # Process Players on POST
@@ -305,8 +386,9 @@ def add_point(game_id):
     # ------------------------
     if form.validate_on_submit():
 
-        if len(form.players.data) != 7:
-            flash('You must select exactly 7 players.', 'danger')
+        roster_ids = {p.id for p in all_players}
+        if len(form.players.data) != 7 or not set(form.players.data) <= roster_ids:
+            flash('You must select exactly 7 players from this game\'s roster.', 'danger')
             return render_template(
                 'point/point_form.html',
                 form=form,
@@ -372,7 +454,7 @@ def add_point(game_id):
             gender_ratio=form.gender_ratio.data if division == "mixed" else None,
             majority_gender=majority,
             force_direction=form.force_direction.data,
-            point_outcome=form.point_outcome.data,
+            point_outcome=form.point_outcome.data or None,
             duration=form.duration.data,
             timestamp_in_video=form.timestamp_in_video.data,
             team_organization_id=get_current_team_id()
@@ -385,14 +467,10 @@ def add_point(game_id):
         point.our_score_before = current_our_score
         point.their_score_before = current_their_score
 
-        if form.point_outcome.data == 'scored':
-            point.our_score_after = current_our_score + 1
-            point.their_score_after = current_their_score
-        else:
-            point.our_score_after = current_our_score
-            point.their_score_after = current_their_score + 1
-
-
+        # A point left as "determined from events" doesn't move the score
+        # until it's finished (stat.finish_point sets it from the last event).
+        point.our_score_after = current_our_score + (form.point_outcome.data == 'scored')
+        point.their_score_after = current_their_score + (form.point_outcome.data == 'conceded')
 
         db.session.add(point)
         db.session.commit()
@@ -418,7 +496,8 @@ def add_point(game_id):
         form=form,
         game=game,
         division=division,
-        all_players=all_players
+        all_players=all_players,
+        line_reason=line_reason
     )
 
                            
@@ -442,10 +521,7 @@ def edit_point(point_id):
 
     form = PointForm(obj=point)
 
-    all_players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).order_by(Player.jersey_number).all()
+    all_players = get_game_roster(game, include_ids=[lu.player_id for lu in point.lineups])
 
     # ------------------------
     # Preselect Players (GET)
@@ -475,8 +551,9 @@ def edit_point(point_id):
     # ------------------------
     if form.validate_on_submit():
 
-        if len(form.players.data) != 7:
-            flash('You must select exactly 7 players.', 'danger')
+        roster_ids = {p.id for p in all_players}
+        if len(form.players.data) != 7 or not set(form.players.data) <= roster_ids:
+            flash('You must select exactly 7 players from this game\'s roster.', 'danger')
             return render_template(
                 'point/point_form.html',
                 form=form,
@@ -534,7 +611,7 @@ def edit_point(point_id):
         point.point_number = form.point_number.data
         point.our_line_type = form.our_line_type.data
         point.starting_position = form.starting_position.data
-        point.point_outcome = form.point_outcome.data
+        point.point_outcome = form.point_outcome.data or None
         point.duration = form.duration.data
         point.timestamp_in_video = form.timestamp_in_video.data
         point.force_direction = form.force_direction.data
@@ -542,12 +619,10 @@ def edit_point(point_id):
         if division == "mixed":
             point.gender_ratio = form.gender_ratio.data
 
-        if form.point_outcome.data == 'scored':
-            point.our_score_after = form.our_score_before.data + 1
-            point.their_score_after = form.their_score_before.data
-        else:
-            point.our_score_after = form.our_score_before.data
-            point.their_score_after = form.their_score_before.data + 1
+        our_before = form.our_score_before.data or 0
+        their_before = form.their_score_before.data or 0
+        point.our_score_after = our_before + (form.point_outcome.data == 'scored')
+        point.their_score_after = their_before + (form.point_outcome.data == 'conceded')
 
         LineUp.query.filter_by(
             point_id=point.id,
@@ -754,26 +829,7 @@ def fix_lineups(point_id):
         flash('Lineups have been updated!', 'success')
         return redirect(url_for('point.point_detail', point_id=point_id))
 
-    all_players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).order_by(Player.jersey_number).all()
-
-    if game.tournament_id:
-        selected_player_ids = db.session.query(TournamentRSVP.player_id).filter_by(
-            tournament_id=game.tournament_id,
-            selected_by_admin=True,
-            team_organization_id=get_current_team_id()
-        ).all()
-
-        selected_player_ids = [id[0] for id in selected_player_ids]
-
-        if selected_player_ids:
-            all_players = Player.query.filter(
-                Player.active == True,
-                Player.id.in_(selected_player_ids),
-                Player.team_organization_id == get_current_team_id()
-            ).order_by(Player.jersey_number).all()
+    all_players = get_game_roster(game, include_ids=[lu.player_id for lu in point.lineups])
 
     return render_template(
         'point/fix_lineups.html',

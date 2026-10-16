@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from flask_wtf import FlaskForm
-from sqlalchemy import text
+from sqlalchemy import or_, text
 from sqlalchemy.orm import joinedload
 from app import db
 from app.models.game import Game
@@ -84,7 +84,9 @@ def detail(game_id):
         .join(GamePlayer, GamePlayer.player_id == Player.id)
         .filter(
             GamePlayer.game_id == game_id,
-            GamePlayer.team_organization_id == get_current_team_id(),
+            # Older bulk assignments were saved without a team id.
+            or_(GamePlayer.team_organization_id == get_current_team_id(),
+                GamePlayer.team_organization_id.is_(None)),
             Player.team_organization_id == get_current_team_id(),
         )
         .all()

@@ -510,7 +510,8 @@ def bulk_update_game_players(tournament_id):
         for player_id in selected_player_ids:
             assignment = GamePlayer(
                 game_id=game.id,
-                player_id=int(player_id)
+                player_id=int(player_id),
+                team_organization_id=get_current_team_id()
             )
             db.session.add(assignment)
 
