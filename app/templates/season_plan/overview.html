@@ -12,6 +12,8 @@
   </div>
   {% if current_user.is_coach and request.args.get('on') %}
   <span class="sp-badge sp-badge-event">Previewing {{ today.strftime('%-d %b %Y') }}</span>
+  {% elif current_user.is_coach %}
+  <a class="btn btn-primary btn-sm" href="{{ url_for('season_plan.sessions') }}"><i class="bi bi-hammer"></i> {{ 'Update sessions' if plan.sessions_built_at else 'Build sessions' }}</a>
   {% endif %}
 </div>
 
