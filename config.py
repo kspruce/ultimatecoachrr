@@ -73,7 +73,7 @@ class Config:
     # Fallback to temporary directory if DATA_EXPORT_DIR is not writable
     TEMP_EXPORT_DIR = os.environ.get('TEMP_EXPORT_DIR', '/tmp/data_exports')
     
-    # Mail settings (SMTP). Email is optional: without MAIL_SERVER the site
+    # Mail settings. Email is optional: without it the site
     # still works, and coaches hand out reset links instead. See docs/EMAIL_SETUP.md.
     MAIL_SERVER = os.environ.get('MAIL_SERVER')
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
@@ -81,6 +81,10 @@ class Config:
     MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() in ('1', 'true', 'yes')
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    # Or send through an email API over HTTPS (use this when the host blocks
+    # SMTP, as Railway does below its Pro plan). Takes priority over SMTP.
+    BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
     # The "From" address, e.g. "Ultimate Coach <coach@yourdomain.com>".
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or os.environ.get('MAIL_USERNAME')
     # Gets an email when a new team registers (if email is set up)

@@ -11,39 +11,56 @@ Once email is set up, the site also:
 - emails team sign-up links when you enter an address,
 - emails `ADMIN_EMAIL` whenever a new team registers.
 
-## 1. Pick a sending service
+> **Railway blocks SMTP below its Pro plan** (you'll see `Network is unreachable`).
+> Use Brevo or Resend below: they send over HTTPS, which isn't blocked.
 
-Any service that offers SMTP will do. Good options with a free tier:
+## Option A: Brevo (recommended, no domain needed)
 
-| Service | Free tier | Notes |
-|---|---|---|
-| [Brevo](https://www.brevo.com) | 300 emails/day | Easiest: works without your own domain to start with |
-| [Resend](https://resend.com) | 3,000 emails/month | Needs a domain you own (add a few DNS records) |
-| Gmail | ~500/day | Needs 2-step verification and an [App Password](https://myaccount.google.com/apppasswords). Fine for a small site |
+Free for 300 emails a day. You can send from a Gmail address.
 
-For a site used by teams around the world, sending from your own domain (with the DNS records the service gives you) keeps emails out of spam folders.
+1. Sign up at https://www.brevo.com.
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender**: enter the address to send from
+   (e.g. `ultimatecoach00@gmail.com`) and click the confirmation link Brevo emails to it.
+3. **SMTP & API → API Keys → Generate a new API key**, name it `Ultimate Coach`, copy it.
+   (Brevo may ask you to activate the transactional email platform first; follow its prompts.)
+4. In Railway → your app service → **Variables**:
 
-## 2. Add the settings in Railway
+| Variable | Value |
+|---|---|
+| `BREVO_API_KEY` | the API key (starts with `xkeysib-`) |
+| `MAIL_DEFAULT_SENDER` | `Ultimate Coach <ultimatecoach00@gmail.com>` (must be the sender you verified) |
+| `ADMIN_EMAIL` | where you want new-team alerts |
 
-Railway → your app service → **Variables**:
+Any `MAIL_SERVER`/`MAIL_*` SMTP variables can stay or go: an API key takes priority.
 
-| Variable | Example | |
-|---|---|---|
-| `MAIL_SERVER` | `smtp-relay.brevo.com` | SMTP host from your provider |
-| `MAIL_PORT` | `587` | 587 for TLS (most providers), 465 for SSL |
-| `MAIL_USE_TLS` | `true` | Use with port 587 |
-| `MAIL_USE_SSL` | `false` | Set `true` (and TLS `false`) for port 465 |
-| `MAIL_USERNAME` | your SMTP login | |
-| `MAIL_PASSWORD` | your SMTP password / API key | |
-| `MAIL_DEFAULT_SENDER` | `Ultimate Coach <coach@yourdomain.com>` | Must be an address your provider lets you send from |
-| `ADMIN_EMAIL` | your address | Gets new-team alerts |
+Sending from a `@gmail.com` address through another service can land in spam more often.
+Once you own a domain, verify it in Brevo (Senders, Domains → Domains) and send from
+an address on it.
 
-Provider SMTP hosts: Brevo `smtp-relay.brevo.com`, Resend `smtp.resend.com` (username `resend`, password = API key), Gmail `smtp.gmail.com`.
+## Option B: Resend (needs your own domain)
 
-Railway redeploys automatically when you save variables.
+Free for 3,000 emails a month. Add your domain at https://resend.com/domains (a few DNS
+records), create an API key, then set `RESEND_API_KEY` and
+`MAIL_DEFAULT_SENDER=Ultimate Coach <coach@yourdomain.com>`.
 
-## 3. Test it
+## Option C: SMTP (Railway Pro or another host)
 
-Log in as superadmin → menu → **Team Sign-ups** → **Email** → **Send test email**. If it fails, the error from the mail server is shown on the page.
+| Variable | Example |
+|---|---|
+| `MAIL_SERVER` | `smtp.gmail.com` |
+| `MAIL_PORT` | `587` (or `465` with `MAIL_USE_SSL=true`, `MAIL_USE_TLS=false`) |
+| `MAIL_USE_TLS` | `true` |
+| `MAIL_USERNAME` | `ultimatecoach00@gmail.com` |
+| `MAIL_PASSWORD` | for Gmail, a 16-character [App Password](https://myaccount.google.com/apppasswords) (needs 2-Step Verification) |
+| `MAIL_DEFAULT_SENDER` | `Ultimate Coach <ultimatecoach00@gmail.com>` |
+
+## Test it
+
+Log in as superadmin → menu → **Team Sign-ups** → **Email** → **Send test email**.
+If it fails, the error from the email service is shown on the page, for example:
+
+- `api.brevo.com said 401`: the API key is wrong.
+- `api.brevo.com said 400 ... sender ... not valid`: `MAIL_DEFAULT_SENDER` isn't a verified Brevo sender.
+- `Network is unreachable`: SMTP is blocked; use Brevo or Resend.
 
 Then ask your players to add an email address under **Account Settings** so they can reset their own passwords.
