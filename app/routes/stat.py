@@ -47,7 +47,31 @@ def record_events(point_id):
             id=point_id,
             team_organization_id=get_current_team_id()
         ).first_or_404()
-        return render_template('stats/record.html', point=point)
+        # Anything already recorded, so reopening a point picks up where it left off.
+        from app.models.cutting_skill import CuttingSkill
+        events = Event.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).order_by(Event.id).all()
+        skills = CuttingSkill.query.filter_by(
+            point_id=point.id,
+            team_organization_id=get_current_team_id()
+        ).order_by(CuttingSkill.id).all()
+        existing = {
+            'events': [{
+                'id': e.id, 'event_type': e.event_type, 'player_id': e.player_id,
+                'player_name': e.player.name if getattr(e, 'player', None) else None,
+                'field_position_x': e.field_position_x, 'field_position_y': e.field_position_y,
+                'is_offensive': e.is_offensive,
+            } for e in events],
+            'cutting_skills': [{
+                'id': c.id, 'cutting_type': c.cutting_type, 'outcome': c.outcome,
+                'player_id': c.player_id,
+                'player_name': c.player.name if getattr(c, 'player', None) else None,
+                'field_position_x': c.field_position_x, 'field_position_y': c.field_position_y,
+            } for c in skills],
+        }
+        return render_template('stats/record.html', point=point, existing=existing)
 
     if request.method == 'POST':
         try:
