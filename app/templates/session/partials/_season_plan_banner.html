@@ -1,0 +1,7 @@
+{% if session.external_id and session.external_id.startswith('plan-') %}
+<div class="alert alert-info d-flex align-items-center gap-2">
+    <i class="bi bi-diagram-3"></i>
+    <div>Built from the season plan{% if session.week_number %} (week {{ session.week_number }}){% endif %}. Edit it there: changes made here are replaced the next time the week is saved or the plan is re-imported. Attendance and RSVPs are always kept.
+    {% if season_plan_nav() and session.week_number and current_user.is_coach %}<a href="{{ url_for('season_plan.edit_week', number=session.week_number) }}">Edit week {{ session.week_number }}</a>{% endif %}</div>
+</div>
+{% endif %}
