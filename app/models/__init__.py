@@ -15,6 +15,7 @@ from app.models.session import (
 )
 from app.models.playbook import Play, Formation, PlayTag, PlayerPosition, PlayAssignment
 from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
+from app.models.season_plan import SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone
 
 # Game and Tournament models
 from app.models.tournament import Tournament
@@ -69,6 +70,8 @@ __all__ = [
     # Drills & Sessions
     'SavedDrill', 'Drill', 'DrillFrame', 'DrillDiagram', 'SessionPlan', 'SessionComponent', 
     'Attendance', 'SessionRSVP',
+    # Season plan
+    'SeasonPlan', 'SeasonPhase', 'SeasonWeek', 'SeasonPage', 'SeasonMilestone',
     # Playbook
     'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment',
     # Theory

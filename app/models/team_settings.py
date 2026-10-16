@@ -1,4 +1,6 @@
 # app/models/team_settings.py
+import sqlalchemy as sa
+
 from app import db
 
 class TeamSettings(db.Model):
@@ -30,6 +32,9 @@ class TeamSettings(db.Model):
     clip_enabled = db.Column(db.Boolean, default=True)
     scouting_enabled = db.Column(db.Boolean, default=True)
     fitness_enabled = db.Column(db.Boolean, default=True)
+
+    # Off by default: only teams that import a season plan switch it on
+    season_plan_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
 
     # Team colours (#RRGGBB); empty means the default Ultimate Coach colours
     primary_color = db.Column(db.String(7))

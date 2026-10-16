@@ -392,6 +392,7 @@ def feature_settings():
         settings.clip_enabled = bool(request.form.get('clip_enabled'))
         settings.scouting_enabled = bool(request.form.get('scouting_enabled'))
         settings.fitness_enabled = bool(request.form.get('fitness_enabled'))
+        settings.season_plan_enabled = bool(request.form.get('season_plan_enabled'))
 
         db.session.commit()
         flash('Feature visibility updated.', 'success')
