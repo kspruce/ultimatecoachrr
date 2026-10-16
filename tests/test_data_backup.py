@@ -84,3 +84,29 @@ def test_backup_restores_users_and_blank_numbers(app, team, tmp_path):
     assert user.is_admin_flag is True and user.check_password('x')
     restored = Player.query.filter_by(name='Blank Number').one()
     assert restored.jersey_number is None and restored.user_id == user.id
+
+
+def test_both_exports_include_link_tables(app, team, tmp_path):
+    """Link tables (no model class) used to be left out of the "Export data"
+    button's zip, so a restore lost clip tags, clip players and play components."""
+    manager = EnhancedDataManager(export_dir=str(tmp_path))
+    for buffer, _ in (manager.export_all_data(timestamp=False),
+                      manager.export_all_to_json_zip(timestamp=False)):
+        with zipfile.ZipFile(buffer) as z:
+            names = z.namelist()
+        assert 'assoc_clip_tag_relation.json' in names, names
+
+
+def test_old_data_management_page_redirects_to_the_new_one(app, team):
+    from tests import stats_data
+    admin = stats_data.build_admin(team, 'kit')
+    client = stats_data.Client(app, admin.id, team.id)
+    r = client.get('/admin/data-management')
+    assert r.status_code == 301
+    assert r.headers['Location'].endswith('/admin/enhanced-data-management')
+    # The new page's forms post here; the old page's handlers used to answer.
+    endpoints = {rule.rule: rule.endpoint for rule in app.url_map.iter_rules()}
+    for url in ('/admin/export-data', '/admin/import-data', '/admin/download-export',
+                '/admin/delete-export'):
+        assert endpoints[url].startswith('data_management.'), url
+    assert client.get('/admin/enhanced-data-management').status_code == 200
