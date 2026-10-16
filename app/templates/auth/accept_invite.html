@@ -9,9 +9,9 @@
   }
   .invite-avatar {
     width:56px; height:56px; border-radius:14px;
-    background:linear-gradient(135deg,var(--uc-blue),#1D4ED8);
+    background:var(--club);
     display:flex; align-items:center; justify-content:center;
-    font-size:1.5rem; color:white; margin:0 auto 1.25rem;
+    font-size:1.5rem; color:var(--on-club); margin:0 auto 1.25rem;
   }
   .invite-label {
     font-size:.75rem; font-weight:700; letter-spacing:.07em;
@@ -22,7 +22,7 @@
     padding:.65rem .875rem; font-size:.9rem; color:var(--uc-gray-800);
     outline:none; transition:border-color .15s;
   }
-  .invite-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+  .invite-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px color-mix(in srgb, var(--club-ink) 12%, transparent); }
   .invite-submit {
     width:100%; padding:.7rem; border-radius:9px; font-weight:600;
     font-size:.9rem; background:var(--uc-blue); color:white; border:none;

@@ -177,7 +177,7 @@
                             {% for icon, color, heading, body in tips %}
                             <div class="d-flex gap-3 {% if not loop.last %}mb-3 pb-3{% endif %}" {% if not loop.last %}style="border-bottom:1px solid var(--uc-gray-100)"{% endif %}>
                                 <div style="width:32px;height:32px;flex-shrink:0;border-radius:8px;
-                                            background:rgba(59,130,246,.08);display:flex;
+                                            background:color-mix(in srgb, var(--club-ink) 8%, transparent);display:flex;
                                             align-items:center;justify-content:center;
                                             color:var(--{{ color }});font-size:.85rem">
                                     <i class="bi {{ icon }}"></i>

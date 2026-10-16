@@ -17,10 +17,10 @@
 /* ── Threat badge ───────────────────────────────────────── */
 .threat-badge { display:inline-block; padding:.18rem .55rem; border-radius:20px;
   font-size:.68rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase }
-.threat-elite   { background:#fef3c7; color:#92400e; border:1px solid #fde68a }
-.threat-high    { background:#fee2e2; color:#991b1b; border:1px solid #fecaca }
-.threat-medium  { background:#fef9c3; color:#713f12; border:1px solid #fef08a }
-.threat-low     { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0 }
+.threat-elite   { background:var(--accent-soft); color:var(--ink); border:1px solid var(--accent) }
+.threat-high    { background:var(--bad-soft); color:var(--ink); border:1px solid var(--bad) }
+.threat-medium  { background:var(--warn-soft); color:var(--ink); border:1px solid var(--warn) }
+.threat-low     { background:var(--ok-soft); color:var(--ink); border:1px solid var(--ok) }
 
 /* ── Skill bars ─────────────────────────────────────────── */
 .skill-row { display:flex; align-items:center; gap:.5rem; margin-bottom:.45rem }
@@ -38,7 +38,7 @@
   border:1.5px solid var(--uc-card-border); background:var(--uc-card-bg); cursor:pointer; transition:all .15s;
   text-decoration:none; color:var(--uc-gray-800) }
 .filter-pill.active, .filter-pill:hover { border-color:var(--uc-blue); color:var(--uc-blue);
-  background:rgba(59,130,246,.06) }
+  background:color-mix(in srgb, var(--club-ink) 6%, transparent) }
 </style>
 
 <div class="container py-4">
@@ -105,9 +105,9 @@
                 <div class="opp-meta d-flex flex-wrap gap-2 mt-1">
                   {% if player.position %}
                   <span class="pos-badge"
-                    style="{% if player.position == 'handler' %}background:rgba(59,130,246,.1);color:var(--uc-blue)
-                           {% elif player.position == 'cutter' %}background:rgba(239,68,68,.1);color:var(--uc-red)
-                           {% else %}background:rgba(16,185,129,.1);color:var(--uc-green){% endif %}">
+                    style="{% if player.position == 'handler' %}background:color-mix(in srgb, var(--club-ink) 10%, transparent);color:var(--uc-blue)
+                           {% elif player.position == 'cutter' %}background:color-mix(in srgb, var(--bad) 10%, transparent);color:var(--uc-red)
+                           {% else %}background:color-mix(in srgb, var(--ok) 10%, transparent);color:var(--uc-green){% endif %}">
                     {{ player.position }}
                   </span>
                   {% endif %}

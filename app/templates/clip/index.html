@@ -25,18 +25,18 @@
   padding-left: 2.2rem;
   border-radius: 10px;
   border: 1.5px solid var(--uc-gray-200);
-  background: #fff;
+  background: var(--card);
   font-size: .875rem;
   height: 38px;
 }
 .clip-search-input:focus {
   border-color: var(--uc-blue);
-  box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--club-ink) 12%, transparent);
 }
 
 /* ── Clip cards ─────────────────────────────────────────── */
 .clip-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius);
   overflow: hidden;
@@ -49,7 +49,7 @@
 }
 .clip-card.featured {
   border-color: var(--uc-amber);
-  box-shadow: 0 0 0 1px rgba(245,158,11,.3);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warn) 30%, transparent);
 }
 
 /* ── Thumbnail ──────────────────────────────────────────── */
@@ -82,7 +82,7 @@
 
 .clip-featured-badge {
   position: absolute; top: 8px; left: 8px;
-  background: var(--uc-amber); color: #000;
+  background: var(--uc-amber); color: var(--ink);
   font-size: .62rem; font-weight: 700; letter-spacing: .04em;
   padding: .18rem .5rem; border-radius: 20px;
   text-transform: uppercase;
@@ -118,9 +118,9 @@
 .clip-group-divider::after {
   content: ''; flex: 1; height: 1px; background: var(--uc-gray-200);
 }
-.clip-group-divider.group-flagged { color: #16a34a; }
+.clip-group-divider.group-flagged { color: var(--uc-green); }
 .clip-group-divider.group-flagged::after { background: rgba(22,163,74,.25); }
-.clip-group-divider.group-hidden  { color: #d97706; }
+.clip-group-divider.group-hidden  { color: var(--uc-amber); }
 .clip-group-divider.group-hidden::after  { background: rgba(217,119,6,.25); }
 .clip-views {
   position: absolute; bottom: 6px; right: 8px;
@@ -171,7 +171,7 @@
 
 /* ── Sidebar sections ───────────────────────────────────── */
 .sidebar-card {
-  background: #fff; border: 1px solid var(--uc-gray-200);
+  background: var(--card); border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius); overflow: hidden;
   margin-bottom: .85rem;
 }
@@ -215,7 +215,7 @@
 .active-chip {
   display: inline-flex; align-items: center; gap: .3rem;
   font-size: .73rem; font-weight: 600;
-  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.25);
+  background: color-mix(in srgb, var(--club-ink) 8%, transparent); border: 1px solid color-mix(in srgb, var(--club-ink) 25%, transparent);
   color: var(--uc-blue); padding: .2rem .6rem; border-radius: 20px;
   margin: .15rem;
 }
@@ -237,12 +237,12 @@
 .sort-btn {
   padding: .25rem .7rem; border-radius: 20px; font-size: .78rem;
   font-weight: 600; border: 1.5px solid var(--uc-gray-200);
-  background: #fff; cursor: pointer; text-decoration: none;
+  background: var(--card); cursor: pointer; text-decoration: none;
   color: var(--uc-gray-700); transition: all .12s;
 }
 .sort-btn.active, .sort-btn:hover {
   border-color: var(--uc-blue); color: var(--uc-blue);
-  background: rgba(59,130,246,.06);
+  background: color-mix(in srgb, var(--club-ink) 6%, transparent);
 }
 
 /* ── Empty state ────────────────────────────────────────── */
@@ -288,14 +288,14 @@
 [data-theme="dark"] .sort-btn:hover {
   border-color: var(--uc-blue);
   color: var(--uc-blue);
-  background: rgba(59,130,246,.12);
+  background: color-mix(in srgb, var(--club-ink) 12%, transparent);
 }
 [data-theme="dark"] .tag-row:hover { background: var(--uc-gray-100); }
 [data-theme="dark"] .tag-row .tag-pill { color: var(--uc-gray-600); }
 /* Group divider labels — dark green/amber are near-invisible on dark bg */
-[data-theme="dark"] .clip-group-divider.group-flagged { color: #34d399; }
+[data-theme="dark"] .clip-group-divider.group-flagged { color: var(--ok); }
 [data-theme="dark"] .clip-group-divider.group-flagged::after { background: rgba(52,211,153,.25); }
-[data-theme="dark"] .clip-group-divider.group-hidden { color: #fcd34d; }
+[data-theme="dark"] .clip-group-divider.group-hidden { color: var(--warn); }
 [data-theme="dark"] .clip-group-divider.group-hidden::after { background: rgba(252,211,77,.2); }
 </style>
 {% endblock %}

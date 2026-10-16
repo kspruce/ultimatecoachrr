@@ -6,7 +6,7 @@
     /* Header styling with dynamic gradient based on concept type */
     .concept-header {
         background: linear-gradient(135deg, 
-            {% if formation.type == 'offense' %}#007bff, #0056b3{% else %}#dc3545, #a71d2a{% endif %});
+            {% if formation.type == 'offense' %}var(--uc-blue), var(--uc-blue){% else %}var(--uc-red), #a71d2a{% endif %});
         color: white;
         padding: 2.5rem 0;
         margin-bottom: 2rem;
@@ -24,7 +24,7 @@
         bottom: 0;
         left: 0;
         background: linear-gradient(45deg, 
-            {% if formation.type == 'offense' %}rgba(0,123,255,0.1), rgba(0,86,179,0.2){% else %}rgba(220,53,69,0.1), rgba(167,29,42,0.2){% endif %});
+            {% if formation.type == 'offense' %}color-mix(in srgb, var(--club-ink) 10%, transparent), rgba(0,86,179,0.2){% else %}color-mix(in srgb, var(--bad) 10%, transparent), rgba(167,29,42,0.2){% endif %});
         z-index: 1;
         pointer-events: none;
     }
@@ -60,7 +60,7 @@
     }
     
     .card-header {
-        background: linear-gradient(to right, #f8f9fa, #ffffff);
+        background: var(--sunken);
         border-bottom: none;
         padding: 1.25rem 1.5rem;
         border-radius: 12px 12px 0 0 !important;
@@ -154,12 +154,12 @@
     }
     
     .related-play-item {
-        border-left: 4px solid {% if formation.type == 'offense' %}#007bff{% else %}#dc3545{% endif %};
+        border-left: 4px solid {% if formation.type == 'offense' %}var(--uc-blue){% else %}var(--uc-red){% endif %};
         transition: all 0.2s ease;
     }
     
     .related-play-item:hover {
-        background-color: #f8f9fa;
+        background-color: var(--sunken);
         transform: translateX(5px);
     }
     
@@ -171,7 +171,7 @@
     }
     
     .btn-light:hover {
-        background: #ffffff;
+        background: var(--card);
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
     
@@ -192,7 +192,7 @@
         font-size: 1.8rem;
         margin-top: 1.5rem;
         margin-bottom: 1rem;
-        color: #333;
+        color: var(--ink);
     }
     
     .markdown-content h2 {
@@ -206,7 +206,7 @@
         font-size: 1.3rem;
         margin-top: 1rem;
         margin-bottom: 0.7rem;
-        color: #555;
+        color: var(--ink-2);
     }
     
     .markdown-content ul, .markdown-content ol {
@@ -215,15 +215,15 @@
     }
     
     .markdown-content blockquote {
-        border-left: 4px solid #e9ecef;
+        border-left: 4px solid var(--rule);
         padding-left: 1rem;
-        color: #6c757d;
+        color: var(--ink-2);
         margin-bottom: 1rem;
         font-style: italic;
     }
     
     .markdown-content pre {
-        background-color: #f8f9fa;
+        background-color: var(--sunken);
         padding: 1rem;
         border-radius: 0.5rem;
         overflow-x: auto;
@@ -231,7 +231,7 @@
     }
     
     .markdown-content code {
-        background-color: #f8f9fa;
+        background-color: var(--sunken);
         padding: 0.2rem 0.4rem;
         border-radius: 0.25rem;
         font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -246,11 +246,11 @@
     .markdown-content table th,
     .markdown-content table td {
         padding: 0.75rem;
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--rule);
     }
     
     .markdown-content table th {
-        background-color: #f8f9fa;
+        background-color: var(--sunken);
         font-weight: 600;
     }
     

@@ -18,17 +18,17 @@
 
 /* Session type badges */
 .badge-invited {
-    background-color: #0d6efd;
+    background-color: var(--uc-blue);
     color: white;
 }
 
 .badge-open {
-    background-color: #198754;
+    background-color: var(--uc-green);
     color: white;
 }
 
 .badge-pod {
-    background-color: #0dcaf0;
+    background-color: var(--uc-teal);
     color: white;
 }
 
@@ -177,15 +177,15 @@
 
 /* Session type border colors */
 .border-invited_training {
-    border-left: 4px solid #0d6efd;
+    border-left: 4px solid var(--uc-blue);
 }
 
 .border-open_training {
-    border-left: 4px solid #198754;
+    border-left: 4px solid var(--uc-green);
 }
 
 .border-pod_training {
-    border-left: 4px solid #0dcaf0;
+    border-left: 4px solid var(--uc-teal);
 }
 
 /* Improved buttons */

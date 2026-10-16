@@ -9,16 +9,16 @@
   }
   .login-logo {
     width:52px; height:52px; border-radius:13px;
-    background:linear-gradient(135deg,#0F172A,#1D4ED8);
+    background:var(--club);
     display:flex; align-items:center; justify-content:center;
-    font-size:1.4rem; color:white; margin:0 auto 1rem;
+    font-size:1.4rem; color:var(--on-club); margin:0 auto 1rem;
   }
   .login-input {
     width:100%; border:1px solid var(--uc-gray-200); border-radius:9px;
     padding:.65rem .875rem; font-size:.9rem; color:var(--uc-gray-800);
     outline:none; transition:border-color .15s;
   }
-  .login-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+  .login-input:focus { border-color:var(--uc-blue); box-shadow:0 0 0 3px color-mix(in srgb, var(--club-ink) 12%, transparent); }
   .login-label {
     font-size:.75rem; font-weight:700; letter-spacing:.07em;
     text-transform:uppercase; color:var(--uc-gray-400); margin-bottom:.35rem;

@@ -2,7 +2,7 @@
 
 /* Calendar Container */
 .calendar-container {
-    background-color: #fff;
+    background-color: var(--card);
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin-bottom: 30px;
@@ -80,25 +80,25 @@
 }
 
 .event-tournament {
-    background-color: #28a745;
+    background-color: var(--uc-green);
     border-color: #1e7e34;
 }
 
 /* RSVP Status Indicators */
 .event-rsvp-yes {
-    border-left: 5px solid #28a745;
+    border-left: 5px solid var(--uc-green);
 }
 
 .event-rsvp-maybe {
-    border-left: 5px solid #ffc107;
+    border-left: 5px solid var(--uc-amber);
 }
 
 .event-rsvp-no {
-    border-left: 5px solid #dc3545;
+    border-left: 5px solid var(--uc-red);
 }
 
 .event-selected {
-    border-left: 5px solid #6f42c1;
+    border-left: 5px solid var(--uc-purple);
 }
 
 /* Calendar Legend */
@@ -108,7 +108,7 @@
     gap: 15px;
     margin-bottom: 20px;
     padding: 12px;
-    background-color: #f8f9fa;
+    background-color: var(--sunken);
     border-radius: 6px;
 }
 
@@ -146,7 +146,7 @@
 }
 
 .event-modal.tournament-event .modal-header {
-    border-bottom-color: #28a745;
+    border-bottom-color: var(--uc-green);
 }
 
 .event-modal .modal-title {
@@ -170,11 +170,11 @@
 .event-modal .event-details p i {
     width: 20px;
     margin-right: 8px;
-    color: #6c757d;
+    color: var(--ink-2);
 }
 
 .event-modal .event-notes {
-    background-color: #f8f9fa;
+    background-color: var(--sunken);
     padding: 10px;
     border-radius: 4px;
     margin-top: 15px;
@@ -199,7 +199,7 @@
 
 /* Admin Section */
 .admin-section {
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--rule);
     padding-top: 15px;
     margin-top: 20px;
 }
@@ -211,7 +211,7 @@
 
 /* Multi-day event styling */
 .fc-event.fc-event-multi-day {
-    background-color: #28a745;
+    background-color: var(--uc-green);
     border-color: #1e7e34;
 }
 
@@ -249,7 +249,7 @@
     background: var(--uc-gray-100);
 }
 [data-theme="dark"] .fc .fc-daygrid-day.fc-day-today {
-    background: rgba(59, 130, 246, 0.08);
+    background: color-mix(in srgb, var(--club-ink) 8%, transparent);
 }
 [data-theme="dark"] .fc-theme-standard .fc-list-day-cushion,
 [data-theme="dark"] .fc .fc-list-event:hover td {

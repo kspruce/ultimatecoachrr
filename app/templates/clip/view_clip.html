@@ -42,7 +42,7 @@
 
 /* ── Clip header bar ────────────────────────────────────── */
 .clip-header-bar {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius);
   padding: 1rem 1.25rem;
@@ -82,7 +82,7 @@
 
 /* ── Add annotation card ────────────────────────────────── */
 .annotation-actions-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius);
   padding: .85rem 1rem;
@@ -96,7 +96,7 @@
 
 /* ── Sidebar panels ─────────────────────────────────────── */
 .side-panel {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius);
   overflow: hidden;
@@ -120,24 +120,24 @@
   border: 1px solid var(--uc-gray-200);
   margin-bottom: .55rem;
   transition: box-shadow .12s;
-  background: #fff;
+  background: var(--card);
 }
 .ann-card:hover { box-shadow: var(--uc-shadow-sm); }
 .ann-card.key-moment {
   border-color: var(--uc-amber);
-  background: rgba(251,191,36,.04);
+  background: color-mix(in srgb, var(--warn) 4%, transparent);
 }
 
 .ann-timestamp {
   display: inline-flex; align-items: center; gap: .3rem;
   font-size: .75rem; font-weight: 700; color: var(--uc-blue);
   cursor: pointer; padding: .12rem .4rem;
-  border-radius: 6px; background: rgba(59,130,246,.08);
-  border: 1px solid rgba(59,130,246,.2);
+  border-radius: 6px; background: color-mix(in srgb, var(--club-ink) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--club-ink) 20%, transparent);
   transition: background .12s;
   text-decoration: none;
 }
-.ann-timestamp:hover { background: rgba(59,130,246,.15); color: var(--uc-blue); }
+.ann-timestamp:hover { background: color-mix(in srgb, var(--club-ink) 15%, transparent); color: var(--uc-blue); }
 
 .ann-title { font-size: .82rem; font-weight: 700; color: var(--uc-gray-800); margin: .3rem 0 .2rem; }
 .ann-notes { font-size: .78rem; color: var(--uc-gray-600); margin-bottom: .35rem; line-height: 1.45; }
@@ -178,12 +178,12 @@
   padding: .1rem .4rem; border-radius: 20px;
 }
 .ann-private-badge.coaches {
-  background: rgba(124,58,237,.1); color: #7c3aed;
-  border: 1px solid rgba(124,58,237,.25);
+  background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--uc-purple);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .ann-private-badge.specific {
-  background: rgba(16,185,129,.1); color: #059669;
-  border: 1px solid rgba(16,185,129,.3);
+  background: color-mix(in srgb, var(--ok) 10%, transparent); color: var(--uc-green);
+  border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
 }
 .ann-private-badge.private {
   background: rgba(15,23,42,.07); color: var(--uc-gray-600);
@@ -705,7 +705,7 @@
               <div class="d-flex flex-wrap gap-1 my-1">
                 {% if annotation.event_type %}
                 <span class="ann-badge"
-                      style="background:rgba(59,130,246,.1);color:var(--uc-blue);border:1px solid rgba(59,130,246,.2)">
+                      style="background:color-mix(in srgb, var(--club-ink) 10%, transparent);color:var(--uc-blue);border:1px solid color-mix(in srgb, var(--club-ink) 20%, transparent)">
                   {{ annotation.event_type|title }}
                 </span>
                 {% endif %}

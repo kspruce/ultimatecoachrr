@@ -92,7 +92,7 @@
     }
     
     .cutting-quadrant {
-        border: 1px solid #ddd;
+        border: 1px solid var(--rule);
         border-radius: 4px;
         padding: 10px;
         display: flex;
@@ -681,15 +681,15 @@
                             <div class="text-center mt-2">
                                 <div class="d-flex justify-content-center align-items-center">
                                     <div class="d-flex align-items-center me-4">
-                                        <div style="width: 20px; height: 20px; background-color: rgba(40, 167, 69, 0.7); margin-right: 5px;"></div>
+                                        <div style="width: 20px; height: 20px; background-color: color-mix(in srgb, var(--ok) 70%, transparent); margin-right: 5px;"></div>
                                         <span>High Success (90%+)</span>
                                     </div>
                                     <div class="d-flex align-items-center me-4">
-                                        <div style="width: 20px; height: 20px; background-color: rgba(255, 193, 7, 0.7); margin-right: 5px;"></div>
+                                        <div style="width: 20px; height: 20px; background-color: color-mix(in srgb, var(--warn) 70%, transparent); margin-right: 5px;"></div>
                                         <span>Medium Success (70-90%)</span>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <div style="width: 20px; height: 20px; background-color: rgba(220, 53, 69, 0.7); margin-right: 5px;"></div>
+                                        <div style="width: 20px; height: 20px; background-color: color-mix(in srgb, var(--bad) 70%, transparent); margin-right: 5px;"></div>
                                         <span>Low Success (<70%)</span>
                                     </div>
                                 </div>
@@ -1058,7 +1058,7 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-4">
-                        <i class="bi bi-shield-lock" style="font-size: 4rem; color: #dc3545;"></i>
+                        <i class="bi bi-shield-lock" style="font-size: 4rem; color: var(--uc-red);"></i>
                     </div>
                     <h4>You don't have permission to view this player's statistics</h4>
                     <p class="text-muted">You can only view your own statistics or you need admin/coach privileges to view other players' stats.</p>

@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+  .cs-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1.75rem; align-items: start; }
+  .cs-card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.4rem 1.5rem; margin-bottom: 1.25rem; }
+  .cs-card h3 { font-size: 1.25rem; margin: 0 0 .2rem; }
+  .cs-card .cs-hint { color: var(--ink-2); font-size: .88rem; margin: 0 0 1rem; }
+  .cs-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; }
+  .cs-preset { border: 1.5px solid var(--rule); border-radius: 12px; padding: .5rem; background: var(--card); text-align: left; color: var(--ink); cursor: pointer; }
+  .cs-preset:hover { border-color: var(--rule-strong); }
+  .cs-preset.on { border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+  .cs-preset .sw { height: 42px; border-radius: 8px; display: flex; overflow: hidden; }
+  .cs-preset .sw i:first-child { flex: 3; } .cs-preset .sw i:last-child { flex: 1; }
+  .cs-preset small { display: block; margin-top: .4rem; font-weight: 600; font-size: .78rem; line-height: 1.25; }
+  .cs-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .cs-field { display: flex; align-items: center; gap: .6rem; border: 1.5px solid var(--rule); border-radius: 10px; padding: .4rem .5rem; background: var(--card); }
+  .cs-field input[type=color] { width: 38px; height: 34px; border: 0; padding: 0; background: none; cursor: pointer; }
+  .cs-field input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  .cs-field input[type=color]::-webkit-color-swatch { border: 0; border-radius: 7px; }
+  .cs-field input[type=text] { border: 0 !important; box-shadow: none !important; padding: 0 !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; background: transparent !important; }
+  .cs-check { display: flex; gap: .6rem; margin-top: 1rem; padding: .75rem .9rem; border-radius: 10px; font-size: .86rem; background: var(--ok-soft); color: var(--ink); }
+  .cs-check i { color: var(--ok); }
+  .cs-check.warn { background: var(--warn-soft); } .cs-check.warn i { color: var(--warn); }
+  .cs-crest { display: flex; gap: 1rem; align-items: center; }
+  .cs-crest .b { width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-serif); font-size: 1.6rem; flex-shrink: 0; }
+  .cs-actions { display: flex; justify-content: flex-end; gap: .6rem; }
+
+  /* Live preview: a small dashboard drawn with the colours being picked */
+  .cs-preview { position: sticky; top: 96px; }
+  .pv { border: 1px solid var(--rule); border-radius: 18px; overflow: hidden; background: var(--paper); box-shadow: var(--shadow-md); }
+  .pv-hd { background: var(--pv-club); color: var(--pv-on); padding: 1rem 1.1rem 3.3rem; position: relative; overflow: hidden; }
+  .pv-hd::before { content: ''; position: absolute; left: -10%; right: -10%; bottom: 1.1rem; height: 1.35rem; background: var(--pv-accent); transform: rotate(-4deg); }
+  .pv.no-stripe .pv-hd::before { display: none; }
+  .pv-nav { display: flex; align-items: center; gap: .5rem; font-family: var(--font-serif); position: relative; }
+  .pv-nav b { width: 26px; height: 26px; border-radius: 7px; background: var(--pv-on); color: var(--pv-club); display: grid; place-items: center; font-weight: 400; font-size: .85rem; }
+  .pv-hd h4 { font-family: var(--font-serif); font-weight: 400; font-size: 1.35rem; margin: .8rem 0 0; color: var(--pv-on); position: relative; }
+  .pv-bd { padding: 0 .9rem 1rem; margin-top: -1.9rem; position: relative; }
+  .pv-c { background: var(--card); border-radius: 12px; padding: .8rem .9rem; box-shadow: var(--shadow-md); margin-bottom: .6rem; border: 1px solid var(--rule); }
+  .pv-c .l { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+  .pv-c .v { font-family: var(--font-serif); font-size: 1.1rem; color: var(--ink); }
+  .pv-row { display: flex; gap: .6rem; } .pv-row .pv-c { flex: 1; }
+  .pv-k { font-family: var(--font-serif); font-size: 1.6rem; color: var(--ink); }
+  .pv-btn { display: inline-block; margin-top: .5rem; background: var(--pv-club); color: var(--pv-on); border-radius: 999px; padding: .3rem .8rem; font-size: .75rem; font-weight: 700; }
+  .pv-tag { display: inline-block; background: var(--pv-accent); color: var(--pv-on-accent); border-radius: 999px; padding: .1rem .5rem; font-size: .68rem; font-weight: 800; letter-spacing: .08em; }
+  @media (max-width: 1199.98px) { .cs-grid { grid-template-columns: 1fr; } .cs-preview { position: static; } }
+  @media (max-width: 575.98px) { .cs-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cs-pick { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="uc-settings">
+  {% include "team/_settings_nav.html" %}
+  <div>
+    <div class="uc-page-header">
+      <div>
+        <h1>Colours &amp; crest</h1>
+        <p>Make Ultimate Coach look like {{ team.name }}. Everyone on the team sees these colours.</p>
+      </div>
+    </div>
+
+    <form method="POST" id="colour-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="cs-grid">
+        <div>
+          <div class="cs-card">
+            <h3>Start from a kit</h3>
+            <p class="cs-hint">Pick a preset, then fine-tune it below.</p>
+            <div class="cs-presets">
+              {% for name, primary, accent in presets %}
+              <button type="button" class="cs-preset{% if primary == palette.primary and accent == palette.accent %} on{% endif %}"
+                      data-primary="{{ primary }}" data-accent="{{ accent }}">
+                <span class="sw"><i style="background:{{ primary }}"></i><i style="background:{{ accent }}"></i></span>
+                <small>{{ name }}</small>
+              </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="cs-card">
+            <h3>Your colours</h3>
+            <p class="cs-hint">Primary is used for the header and buttons. Accent is the kit stripe, highlights and tags.</p>
+            <div class="cs-pick">
+              <div>
+                <label class="form-label" for="primary_text">Primary</label>
+                <div class="cs-field">
+                  <input type="color" id="primary_picker" value="{{ palette.primary }}" aria-label="Primary colour picker">
+                  <input type="text" class="form-control" id="primary_text" name="primary_color" value="{{ palette.primary }}" maxlength="7" pattern="#?[0-9A-Fa-f]{6}" required>
+                </div>
+                <div class="form-text">Header, buttons, links</div>
+              </div>
+              <div>
+                <label class="form-label" for="accent_text">Accent</label>
+                <div class="cs-field">
+                  <input type="color" id="accent_picker" value="{{ palette.accent }}" aria-label="Accent colour picker">
+                  <input type="text" class="form-control" id="accent_text" name="accent_color" value="{{ palette.accent }}" maxlength="7" pattern="#?[0-9A-Fa-f]{6}" required>
+                </div>
+                <div class="form-text">Kit stripe, tags, highlights</div>
+              </div>
+            </div>
+            <div class="cs-check" id="contrast-check">
+              <i class="bi bi-check-circle-fill"></i>
+              <div><strong>Easy to read.</strong> <span id="contrast-text">Header text on your primary has a contrast of {{ contrast }} : 1.</span></div>
+            </div>
+            <div class="form-check form-switch mt-3">
+              <input class="form-check-input" type="checkbox" role="switch" id="show_kit_stripe" name="show_kit_stripe" {% if palette.show_stripe %}checked{% endif %}>
+              <label class="form-check-label" for="show_kit_stripe">Show the kit stripe under the header</label>
+            </div>
+          </div>
+
+          <div class="cs-card">
+            <h3>Crest</h3>
+            <p class="cs-hint">Shown in the header. Without a logo, your team's initial is used.</p>
+            <div class="cs-crest">
+              {% if team.logo %}
+              <img src="{{ team.logo }}" alt="{{ team.name }}" class="cs-crest-img" style="width:60px;height:60px;border-radius:12px;object-fit:cover">
+              {% else %}
+              <div class="b" id="crest-preview" style="background:{{ palette.primary }};color:{{ palette.on_primary }};box-shadow:0 0 0 3px var(--card),0 0 0 5px {{ palette.accent }}">{{ team.name[0] | upper }}</div>
+              {% endif %}
+              <div class="text-muted small">
+                {% if current_user.is_admin %}
+                Change the logo from <a href="{{ url_for('team_organization.edit', team_id=team.id) }}">Manage Teams</a>.
+                {% else %}
+                Ask a site admin to add your team's logo.
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="cs-actions">
+            <button type="submit" name="action" value="reset" class="btn btn-outline-secondary" formnovalidate>Reset to default</button>
+            <button type="submit" name="action" value="save" class="btn btn-primary">Save colours</button>
+          </div>
+        </div>
+
+        <div class="cs-preview">
+          <div class="uc-eyebrow mb-2">Live preview</div>
+          <div class="pv{% if not palette.show_stripe %} no-stripe{% endif %}" id="preview"
+               style="--pv-club:{{ palette.primary }};--pv-accent:{{ palette.accent }};--pv-on:{{ palette.on_primary }};--pv-on-accent:{{ palette.on_accent }}">
+            <div class="pv-hd">
+              <div class="pv-nav"><b>{{ team.name[0] | upper }}</b>{{ team.name }}</div>
+              <h4>Big weekend ahead.</h4>
+            </div>
+            <div class="pv-bd">
+              <div class="pv-c"><div class="l">Saturday · 11:00</div><div class="v">{{ team.name.split()[-1] }} vs Bluebirds</div><span class="pv-btn">Open game →</span></div>
+              <div class="pv-row">
+                <div class="pv-c"><div class="l">Available</div><div class="pv-k">18<span style="font-size:.9rem;color:var(--ink-3)"> / 24</span></div></div>
+                <div class="pv-c"><div class="l">Record</div><div class="pv-k">14–5</div><span class="pv-tag">W W L W W</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="form-text mt-2">The whole site switches to these colours once you save, in light and dark mode.</p>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // Same maths as app/utils/theme.py, so the preview matches what gets saved.
+  var LIGHT = '#FBF6EC', DARK = '#1E1A18';
+  function norm(v) {
+    var m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec((v || '').trim());
+    if (!m) return null;
+    var d = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1];
+    return '#' + d.toUpperCase();
+  }
+  function lum(h) {
+    return [1, 3, 5].map(function (i) {
+      var c = parseInt(h.substr(i, 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }).reduce(function (a, c, i) { return a + c * [0.2126, 0.7152, 0.0722][i]; }, 0);
+  }
+  function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function textOn(h) { return ratio(h, LIGHT) >= ratio(h, DARK) ? LIGHT : DARK; }
+
+  var form = document.getElementById('colour-form');
+  var preview = document.getElementById('preview');
+  var crest = document.getElementById('crest-preview');
+  var fields = {
+    primary: [document.getElementById('primary_picker'), document.getElementById('primary_text')],
+    accent: [document.getElementById('accent_picker'), document.getElementById('accent_text')]
+  };
+
+  function update() {
+    var p = norm(fields.primary[1].value), a = norm(fields.accent[1].value);
+    if (!p || !a) return;
+    var on = textOn(p), r = ratio(p, on);
+    preview.style.setProperty('--pv-club', p);
+    preview.style.setProperty('--pv-accent', a);
+    preview.style.setProperty('--pv-on', on);
+    preview.style.setProperty('--pv-on-accent', textOn(a));
+    if (crest) { crest.style.background = p; crest.style.color = on; crest.style.boxShadow = '0 0 0 3px var(--card),0 0 0 5px ' + a; }
+    var check = document.getElementById('contrast-check');
+    check.classList.toggle('warn', on === DARK);
+    check.querySelector('strong').textContent = on === DARK ? 'Light colour.' : 'Easy to read.';
+    document.getElementById('contrast-text').textContent = on === DARK
+      ? 'Header text will switch to dark so it stays readable (' + r.toFixed(1) + ' : 1).'
+      : 'Header text on your primary has a contrast of ' + r.toFixed(1) + ' : 1.';
+    document.querySelectorAll('.cs-preset').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.primary === p && b.dataset.accent === a);
+    });
+  }
+
+  Object.keys(fields).forEach(function (k) {
+    var picker = fields[k][0], text = fields[k][1];
+    picker.addEventListener('input', function () { text.value = picker.value.toUpperCase(); update(); });
+    text.addEventListener('input', function () { var v = norm(text.value); if (v) picker.value = v; update(); });
+  });
+  document.querySelectorAll('.cs-preset').forEach(function (b) {
+    b.addEventListener('click', function () {
+      fields.primary[1].value = fields.primary[0].value = b.dataset.primary;
+      fields.accent[1].value = fields.accent[0].value = b.dataset.accent;
+      update();
+    });
+  });
+  document.getElementById('show_kit_stripe').addEventListener('change', function (e) {
+    preview.classList.toggle('no-stripe', !e.target.checked);
+  });
+  update();
+})();
+</script>
+{% endblock %}

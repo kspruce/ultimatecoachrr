@@ -117,12 +117,12 @@
                         <!-- Badges -->
                         <div class="d-flex gap-1 mt-1">
                             {% if topic.related_videos %}
-                            <span class="badge" style="background:rgba(14,165,233,.12);color:var(--uc-sky);font-size:.67rem">
+                            <span class="badge" style="background:color-mix(in srgb, var(--info) 12%, transparent);color:var(--uc-sky);font-size:.67rem">
                                 <i class="bi bi-camera-video me-1"></i>{{ topic.related_videos|length }} video{{ 's' if topic.related_videos|length != 1 }}
                             </span>
                             {% endif %}
                             {% if topic.related_drills %}
-                            <span class="badge" style="background:rgba(16,185,129,.1);color:var(--uc-green);font-size:.67rem">
+                            <span class="badge" style="background:color-mix(in srgb, var(--ok) 10%, transparent);color:var(--uc-green);font-size:.67rem">
                                 <i class="bi bi-list-check me-1"></i>{{ topic.related_drills|length }} drill{{ 's' if topic.related_drills|length != 1 }}
                             </span>
                             {% endif %}

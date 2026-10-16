@@ -9,7 +9,7 @@
   gap: .75rem;
   flex-wrap: wrap;
   padding: .875rem 1rem;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius);
   margin-bottom: 1.5rem;
@@ -69,7 +69,7 @@
 
 /* ── Clip card ────────────────────────────────────────── */
 .clip-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--uc-gray-200);
   border-radius: var(--uc-radius);
   overflow: hidden;
@@ -138,10 +138,10 @@
   border-radius: 50%;
   border: 1.5px solid rgba(255,255,255,.6);
 }
-.dot-offense  { background: #60a5fa; }
-.dot-defense  { background: #f87171; }
-.dot-set_play { background: #a78bfa; }
-.dot-pull     { background: #34d399; }
+.dot-offense  { background: var(--club-ink); }
+.dot-defense  { background: var(--bad); }
+.dot-set_play { background: var(--accent-ink); }
+.dot-pull     { background: var(--ok); }
 .dot-other    { background: #9ca3af; }
 
 /* Timestamp chip */
@@ -202,7 +202,7 @@
   height: 28px;
   border-radius: 6px;
   border: 1px solid var(--uc-gray-200);
-  background: #fff;
+  background: var(--card);
   color: var(--uc-gray-600);
   display: flex;
   align-items: center;
@@ -213,7 +213,7 @@
   text-decoration: none;
 }
 .clip-action-btn:hover { border-color: var(--uc-gray-400); color: var(--uc-gray-800); }
-.clip-action-btn.del:hover { border-color: var(--uc-red); color: var(--uc-red); background: rgba(239,68,68,.04); }
+.clip-action-btn.del:hover { border-color: var(--uc-red); color: var(--uc-red); background: color-mix(in srgb, var(--bad) 4%, transparent); }
 
 /* ── No results ───────────────────────────────────────── */
 .no-results {
@@ -378,7 +378,7 @@
                       allowfullscreen></iframe>
               {% else %}
               <div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
-                          background:#111;color:#555;font-size:.875rem">
+                          background:#111;color:var(--ink-2);font-size:.875rem">
                 No valid video link
               </div>
               {% endif %}

@@ -34,11 +34,11 @@
 
   /* Fix white-on-white for table-success/danger rows in dark mode */
   [data-theme="dark"] .table-success > td {
-    background-color: rgba(16, 185, 129, 0.12) !important;
+    background-color: color-mix(in srgb, var(--ok) 12%, transparent) !important;
     color: var(--uc-page-text) !important;
   }
   [data-theme="dark"] .table-danger > td {
-    background-color: rgba(239, 68, 68, 0.12) !important;
+    background-color: color-mix(in srgb, var(--bad) 12%, transparent) !important;
     color: var(--uc-page-text) !important;
   }
 

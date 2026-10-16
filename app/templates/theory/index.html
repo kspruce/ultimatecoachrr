@@ -112,7 +112,7 @@
                             {% set palette = ['uc-blue','uc-teal','uc-amber','uc-purple','uc-sky','uc-green'] %}
                             {% set c = palette[loop.index0 % palette|length] %}
                             <div style="width:32px;height:32px;border-radius:9px;flex-shrink:0;
-                                        background:rgba(59,130,246,.08);display:flex;
+                                        background:color-mix(in srgb, var(--club-ink) 8%, transparent);display:flex;
                                         align-items:center;justify-content:center;
                                         color:var(--{{ c }});font-size:.9rem">
                                 <i class="bi bi-book-fill"></i>
@@ -152,12 +152,12 @@
                             </div>
                             <div class="d-flex gap-1 ms-2 flex-shrink-0">
                                 {% if topic.related_videos %}
-                                <span class="badge" style="background:rgba(14,165,233,.12);color:var(--uc-sky);font-size:.65rem">
+                                <span class="badge" style="background:color-mix(in srgb, var(--info) 12%, transparent);color:var(--uc-sky);font-size:.65rem">
                                     <i class="bi bi-camera-video"></i>
                                 </span>
                                 {% endif %}
                                 {% if topic.image_url %}
-                                <span class="badge" style="background:rgba(16,185,129,.1);color:var(--uc-green);font-size:.65rem">
+                                <span class="badge" style="background:color-mix(in srgb, var(--ok) 10%, transparent);color:var(--uc-green);font-size:.65rem">
                                     <i class="bi bi-image"></i>
                                 </span>
                                 {% endif %}

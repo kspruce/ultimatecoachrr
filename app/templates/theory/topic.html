@@ -9,7 +9,7 @@
     position: fixed; top: 0; left: 0; z-index: 9999;
     height: 3px; width: 0%; background: var(--uc-blue);
     transition: width .1s linear;
-    box-shadow: 0 0 6px rgba(59,130,246,.4);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--club-ink) 40%, transparent);
 }
 
 /* ── Topic content typography ──────────────────────── */
@@ -30,7 +30,7 @@
 .topic-content li { margin-bottom: .4rem; font-size: .925rem; line-height: 1.65; }
 .topic-content blockquote {
     border-left: 3px solid var(--uc-blue); padding: .75rem 1.1rem;
-    background: rgba(59,130,246,.04); border-radius: 0 10px 10px 0;
+    background: color-mix(in srgb, var(--club-ink) 4%, transparent); border-radius: 0 10px 10px 0;
     margin: 1.25rem 0; color: var(--uc-gray-600); font-style: italic;
 }
 .topic-content code {
@@ -131,7 +131,7 @@
 }
 .section-nav-link:hover { background: var(--uc-gray-50); color: var(--uc-gray-800); }
 .section-nav-link.active {
-    background: rgba(59,130,246,.08); color: var(--uc-blue); font-weight: 600;
+    background: color-mix(in srgb, var(--club-ink) 8%, transparent); color: var(--uc-blue); font-weight: 600;
 }
 .section-nav-num {
     width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
@@ -327,7 +327,7 @@
                                 {{ topic.section.name }}
                             </div>
                             {% if section_topics %}
-                            <span style="font-size:.7rem;font-weight:700;color:var(--uc-blue);background:rgba(59,130,246,.08);padding:.15rem .5rem;border-radius:20px">
+                            <span style="font-size:.7rem;font-weight:700;color:var(--uc-blue);background:color-mix(in srgb, var(--club-ink) 8%, transparent);padding:.15rem .5rem;border-radius:20px">
                                 {{ current_idx + 1 }}/{{ section_topics|length }}
                             </span>
                             {% endif %}
