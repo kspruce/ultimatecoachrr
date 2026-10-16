@@ -1,7 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SelectField, SelectMultipleField, SubmitField, HiddenField
 from wtforms.validators import DataRequired, NumberRange, Optional
-from app.models.player import Player
 
 # Create a custom field that doesn't validate choices
 class FlexibleSelectMultipleField(SelectMultipleField):
@@ -27,15 +26,12 @@ class PointForm(FlaskForm):
     game_id = HiddenField('Game ID')
     players_hidden = HiddenField('Players Hidden')
     point_number = IntegerField('Point Number', validators=[DataRequired(), NumberRange(min=1)])
-    our_line_type = SelectField('Line Type', choices=[
-        ('O-line', 'Offense Line'),
-        ('D-line', 'Defense Line')
-    ], validators=[DataRequired()])
     our_score_before = IntegerField('Our Score Before', validators=[Optional(), NumberRange(min=0)])
     their_score_before = IntegerField('Their Score Before', validators=[Optional(), NumberRange(min=0)])
-    starting_position = SelectField('Starting Position', choices=[
-        ('offense', 'Offense'),
-        ('defense', 'Defense')
+    # The line type (O-line/D-line) follows from this.
+    starting_position = SelectField('Starting On', choices=[
+        ('offense', 'Offense (O-line)'),
+        ('defense', 'Defense (D-line)')
     ], validators=[DataRequired()])
     point_outcome = SelectField('Point Outcome', 
                                choices=[('', 'Will be determined from events'), 
@@ -63,9 +59,8 @@ class PointForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(PointForm, self).__init__(*args, **kwargs)
-        # Populate player choices
-        self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
-                               for p in Player.query.filter_by(active=True).order_by(Player.jersey_number).all()]
+        # The routes check the line against the game's roster themselves.
+        self.players.choices = []
 
 # Add the PullForm class back to avoid import errors
 class PullForm(FlaskForm):

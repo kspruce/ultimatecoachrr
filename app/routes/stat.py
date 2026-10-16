@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify, request, render_template, url_for, current_app, flash, redirect
-from flask_login import login_required
+from flask_login import current_user, login_required
 from app import db
 from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.game import Game
 from app.models.throws import Throw
 from app.utils.utils import admin_required, stat_taker_required
+from app.utils.point_flow import get_game_roster, next_point_to_analyse, sync_game_score
 import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
@@ -225,14 +226,12 @@ def record_events(point_id):
                 point.point_outcome = 'scored'
                 point.our_score_after = point.our_score_before + 1
                 point.their_score_after = point.their_score_before
-                point.game.our_score = point.our_score_after
-                point.game.their_score = point.their_score_after
+                sync_game_score(point.game)
             elif event.event_type == 'scored_on':
                 point.point_outcome = 'conceded'
                 point.their_score_after = point.their_score_before + 1
                 point.our_score_after = point.our_score_before
-                point.game.our_score = point.our_score_after
-                point.game.their_score = point.their_score_after
+                sync_game_score(point.game)
 
             # Calculate distances for throws
             for throw in db.session.new:
@@ -306,14 +305,14 @@ def undo_event(point_id):
             db.session.delete(last_event)
 
             # Update point outcome and keep game score in sync
-            if last_event.event_type == 'goal':
+            if last_event.event_type in ('goal', 'callahan'):
                 point.point_outcome = None
                 point.our_score_after = point.our_score_before
-                point.game.our_score = point.our_score_before
+                sync_game_score(point.game)
             elif last_event.event_type == 'scored_on':
                 point.point_outcome = None
                 point.their_score_after = point.their_score_before
-                point.game.their_score = point.their_score_before
+                sync_game_score(point.game)
             
             # Don't try to update point.is_offensive as it doesn't exist
             # The client-side code will handle possession state
@@ -411,8 +410,7 @@ def finish_point(point_id):
             }), 400
 
         # Update game score
-        game.our_score = point.our_score_after
-        game.their_score = point.their_score_after
+        sync_game_score(game)
 
         # Remove duplicate throws (regular throws that were later marked as hockey assists)
         from app.models.throws import Throw
@@ -460,21 +458,15 @@ def finish_point(point_id):
 
         db.session.commit()
 
-        # Find the next unfinished point for this game (auto-advance support)
-        next_point = (
-            Point.query
-            .filter(
-                Point.game_id == game.id,
-                Point.team_organization_id == get_current_team_id(),
-                Point.point_number > point.point_number,
-                Point.point_outcome.is_(None)
-            )
-            .order_by(Point.point_number.asc())
-            .first()
-        )
-        next_point_url = (
-            url_for('stat.record_events', point_id=next_point.id) if next_point else None
-        )
+        # Auto-advance: the next point not analysed yet (e.g. taken live on
+        # Game Day), otherwise set up a new one.
+        next_point = next_point_to_analyse(game, after_number=point.point_number)
+        if next_point:
+            next_point_url = url_for('stat.record_events', point_id=next_point.id)
+        elif current_user.is_admin:
+            next_point_url = url_for('point.add_point', game_id=game.id)
+        else:
+            next_point_url = None  # setting up points is admin-only
 
         # Return both redirect and redirect_url for compatibility
         return jsonify({
@@ -631,14 +623,8 @@ def available_players(point_id):
         current_player_ids = [lineup.player_id for lineup in point.lineups]
         current_app.logger.debug(f"Current player IDs in lineup: {current_player_ids}")
         
-        # Get all active players not in the current lineup
-        from app.models.player import Player
-        
-        # Get all active players
-        available_players = Player.query.filter_by(
-            active=True,
-            team_organization_id=get_current_team_id()  # Add team ID
-        ).all()
+        # Players on the game's roster who aren't on the line
+        available_players = get_game_roster(game)
         
         # Filter out players already in the lineup
         available_players = [p for p in available_players if p.id not in current_player_ids]

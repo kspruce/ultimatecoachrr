@@ -459,6 +459,27 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/offline_queue.js') }}"></script>
 <script>
+// Short notice in the corner instead of a blocking alert(), so tapping
+// through a point isn't interrupted.
+window.notify = function(message, variant = 'danger') {
+    let stack = document.getElementById('notice-stack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'notice-stack';
+        stack.className = 'position-fixed bottom-0 start-50 translate-middle-x p-3';
+        stack.style.zIndex = '1080';
+        document.body.appendChild(stack);
+    }
+    const notice = document.createElement('div');
+    notice.className = `alert alert-${variant} shadow-sm py-2 mb-2`;
+    notice.setAttribute('role', variant === 'danger' ? 'alert' : 'status');
+    notice.textContent = message;
+    notice.addEventListener('click', () => notice.remove());
+    stack.appendChild(notice);
+    setTimeout(() => notice.remove(), variant === 'danger' ? 6000 : 3500);
+};
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Helper function to safely get player name from DOM
     function getPlayerNameFromDOM(playerId) {
@@ -689,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error finishing point:', error);
-            alert('Error finishing point: ' + error.message);
+            notify('Error finishing point: ' + error.message);
             // Hide loading indicator only on error
             hideLoading();
         });
@@ -728,11 +749,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedPlayer === 'unknown' || selectedPlayer === 'opponent') {
                 // For special players, check if they're appropriate for current possession
                 if (selectedPlayer === 'opponent' && gameState.is_offensive) {
-                    alert("Cannot select 'Opponent' during offensive possession");
+                    notify("Cannot select 'Opponent' during offensive possession", 'warning');
                     return;
                 }
                 if (selectedPlayer === 'unknown' && !gameState.is_offensive) {
-                    alert("Cannot select 'Unknown' during defensive possession");
+                    notify("Cannot select 'Unknown' during defensive possession", 'warning');
                     return;
                 }
             }
@@ -753,7 +774,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate position data before sending
         if (!selectedPosition || typeof selectedPosition.x !== 'number' || typeof selectedPosition.y !== 'number') {
             console.error('Invalid position data:', selectedPosition);
-            alert('Invalid position data. Please try again.');
+            notify('Invalid position data. Please try again.');
             return;
         }
     
@@ -761,14 +782,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         if (!csrfMeta) {
             console.error('CSRF token meta tag not found');
-            alert('Error: CSRF token not found. Please refresh the page.');
+            notify('Error: CSRF token not found. Please refresh the page.');
             return;
         }
         
         const csrfToken = csrfMeta.getAttribute('content');
         if (!csrfToken) {
             console.error('CSRF token is empty');
-            alert('Error: CSRF token is empty. Please refresh the page.');
+            notify('Error: CSRF token is empty. Please refresh the page.');
             return;
         }
     
@@ -944,7 +965,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error recording event:', error);
-            alert('Error recording event: ' + error.message);
+            notify('Error recording event: ' + error.message);
         })
         .finally(() => {
             // Hide loading indicator
@@ -969,7 +990,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate position data before sending
         if (!selectedPosition || typeof selectedPosition.x !== 'number' || typeof selectedPosition.y !== 'number') {
             console.error('Invalid position data:', selectedPosition);
-            alert('Invalid position data. Please try again.');
+            notify('Invalid position data. Please try again.');
             return;
         }
         
@@ -1112,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(fallbackError => {
                 console.error("Fallback also failed:", fallbackError);
-                alert("Error recording cutting skill: " + error.message);
+                notify("Error recording cutting skill: " + error.message);
                 
                 // Even if both attempts fail, add a local marker to keep the UI responsive
                 const localCuttingSkill = {
@@ -1455,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Error undoing action:', error);
-                    alert('Error undoing action: ' + error.message);
+                    notify('Error undoing action: ' + error.message);
                     
                     // Even if the server request fails, remove the item from the local state
                     // This ensures the UI stays usable even if the backend has issues
@@ -1635,7 +1656,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching available players:', error);
-                alert('Error loading available players: ' + error.message);
+                notify('Error loading available players: ' + error.message);
             })
             .finally(() => {
                 // Hide loading indicator
@@ -1652,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const playerInId = playerInSelect.value;
         
         if (!playerOutId || !playerInId) {
-            alert('Please select both a player to sub out and a player to sub in');
+            notify('Please select both a player to sub out and a player to sub in', 'warning');
             return;
         }
         
@@ -1691,14 +1712,14 @@ document.addEventListener('DOMContentLoaded', function() {
             subModal.hide();
             
             // Update the UI to reflect the substitution
-            alert(`Substitution successful: ${data.player_out.name} (#${data.player_out.jersey_number}) → ${data.player_in.name} (#${data.player_in.jersey_number})`);
+            notify(`Substitution successful: ${data.player_out.name} (#${data.player_out.jersey_number}) → ${data.player_in.name} (#${data.player_in.jersey_number})`, 'success');
             
             // Refresh the page to update the lineup display
             location.reload();
         })
         .catch(error => {
             console.error('Error performing substitution:', error);
-            alert('Error performing substitution: ' + error.message);
+            notify('Error performing substitution: ' + error.message);
         })
         .finally(() => {
             // Hide loading indicator
