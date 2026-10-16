@@ -1,16 +1,22 @@
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
 
-from app import db
+from app import db, limiter
 from app.models.user import User
 from app.models.player import Player
-from app.models.team_organization import TeamOrganization
+from app.models.team_organization import TeamOrganization, generate_join_code, normalize_join_code
 from app.models.team_settings import TeamSettings
 from app.models.invite_token import InviteToken
-from app.forms.auth import LoginForm, RegistrationForm, UserForm
-from app.utils.permissions import can_manage_team_users
+from app.models.site_settings import SiteSettings
+from app.models.team_signup_invite import TeamSignupInvite
+from app.forms.auth import LoginForm, UserForm
+from app.utils.email import email_configured, is_real_email, send_email
+from app.utils.password_reset import (COACH_LINK_SECONDS, EMAIL_LINK_SECONDS,
+                                      reset_url, user_for_reset_token)
+from app.utils.permissions import can_manage_team_users, can_manage_user, grantable_roles
 from app.utils.team_filter import get_current_team_id
 
 # ---------------------------------------
@@ -22,25 +28,27 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('auth', __name__)
 
+MIN_PASSWORD_LENGTH = 8
+
+# Rate limits (per visitor IP) on pages that take passwords or create accounts
+LOGIN_LIMIT = '10 per minute;60 per hour'
+SIGNUP_LIMIT = '10 per hour'
+TEAM_SIGNUP_LIMIT = '5 per hour'
+RESET_REQUEST_LIMIT = '5 per 15 minutes'
+
+# Tables whose user column can't be emptied but whose rows belong to the
+# team rather than the person: when the user is deleted, the rows move to
+# whoever deleted them instead of being lost.
+_REASSIGN_ON_USER_DELETE = {('player_feedback', 'coach_id')}
+
 # ---------------------------------------
 # Internal Helpers
 # ---------------------------------------
 
 def _get_managed_team_id():
     if current_user.is_superadmin:
-        team_id = request.args.get('team_id', type=int)
-
-        if team_id:
-            return team_id
-
-        first_team = TeamOrganization.query.order_by(
-            TeamOrganization.name
-        ).first()
-
-        return first_team.id if first_team else None
-
+        return request.args.get('team_id', type=int) or get_current_team_id()
     return current_user.team_organization_id
-
 
 
 def _populate_team_choices(form, selected_team_id, set_default=True):
@@ -60,6 +68,13 @@ def _populate_team_choices(form, selected_team_id, set_default=True):
             form.team_organization_id.data = team.id
 
 
+def _populate_role_choices(form):
+    """Only offer roles the current user is allowed to give (the form then
+    rejects any other role that's posted)."""
+    allowed = set(grantable_roles())
+    form.role.choices = [(value, label) for value, label in form.role.choices if value in allowed]
+
+
 def _populate_player_choices(form, team_id):
 
     players = Player.query.filter_by(
@@ -71,7 +86,6 @@ def _populate_player_choices(form, team_id):
         (p.id, f"{p.name} ({p.jersey_number or ''})")
         for p in players
     ]
-
 
 
 def _link_player_to_user(user, player_id):
@@ -102,11 +116,81 @@ def _link_player_to_user(user, player_id):
     player.team_organization_id = user.team_organization_id
 
 
+def _clean_email(raw):
+    """Stripped email address, or None when left blank."""
+    return (raw or '').strip() or None
+
+
+def _new_account_errors(username, email, password, confirm):
+    """Problems with the details someone typed to create an account."""
+    errors = []
+    if not username or len(username) < 3:
+        errors.append('Username must be at least 3 characters.')
+    elif len(username) > 64:
+        errors.append('Username must be 64 characters or fewer.')
+    elif User.query.filter_by(username=username).first():
+        errors.append('That username is already taken — please choose another.')
+    if email:
+        if not is_real_email(email):
+            errors.append('That email address doesn\'t look right.')
+        elif User.query.filter_by(email=email).first():
+            errors.append('That email address is already registered.')
+    errors.extend(_password_errors(password, confirm))
+    return errors
+
+
+def _password_errors(password, confirm):
+    errors = []
+    if len(password or '') < MIN_PASSWORD_LENGTH:
+        errors.append(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.')
+    if password != confirm:
+        errors.append('Passwords do not match.')
+    return errors
+
+
+def _flash_all(errors):
+    for e in errors:
+        flash(e, 'danger')
+
+
+def _detach_user_rows(user_id):
+    """Clear every reference to a user so they can be deleted: optional links
+    are emptied, team records they wrote move to the person deleting them,
+    and their own personal records (workout logs, preferences, ...) go."""
+    for table in reversed(db.metadata.sorted_tables):
+        for fk in table.foreign_keys:
+            if fk.column.table.name != 'user' or table.name == 'user':
+                continue
+            column = fk.parent
+            if column.nullable:
+                values = {column.name: None}
+            elif (table.name, column.name) in _REASSIGN_ON_USER_DELETE:
+                values = {column.name: current_user.id}
+            else:
+                db.session.execute(table.delete().where(column == user_id))
+                continue
+            db.session.execute(table.update().where(column == user_id).values(**values))
+
+
+def _unlinked_players_exist(team_id):
+    return Player.query.filter_by(team_organization_id=team_id, active=True,
+                                  user_id=None).first() is not None
+
+
+def _after_joining(user):
+    """Where a new team member goes after creating their account."""
+    if not user.player and _unlinked_players_exist(user.team_organization_id):
+        flash('Pick your name from the roster so your stats and RSVPs are linked to you.', 'info')
+        return redirect(url_for('auth.link_player'))
+    return redirect(url_for('main.index'))
+
+
 # ---------------------------------------
 # Authentication Routes
 # ---------------------------------------
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit(LOGIN_LIMIT, methods=['POST'])
 def login():
     try:
         if current_user.is_authenticated:
@@ -119,7 +203,7 @@ def login():
 
             logger.info(f"Login attempt for user: {form.username.data}")
 
-            if user is None or not user.check_password(form.password.data):
+            if user is None or not user.password_hash or not user.check_password(form.password.data):
                 logger.warning(f"Failed login attempt for user: {form.username.data}")
                 flash('Invalid username or password', 'danger')
                 return redirect(url_for('auth.login'))
@@ -140,33 +224,14 @@ def login():
         return redirect(url_for('auth.login'))
 
 
-@bp.route('/register', methods=['GET', 'POST'])
+@bp.route('/register')
 def register():
-    try:
-        if current_user.is_authenticated:
-            return redirect(url_for('main.index'))
-
-        form = RegistrationForm()
-
-        if form.validate_on_submit():
-            user = User(
-                username=form.username.data,
-                email=form.email.data
-            )
-            user.set_password(form.password.data)
-
-            db.session.add(user)
-            db.session.commit()
-
-            flash('Registration successful.', 'success')
-            return redirect(url_for('auth.login'))
-
-        return render_template('auth/register.html', title='Register', form=form)
-
-    except Exception as e:
-        logger.error(f"Registration error: {str(e)}")
-        flash('An error occurred during registration.', 'danger')
-        return redirect(url_for('auth.register'))
+    """Getting started: join an existing team with a code, or register a new
+    team. (Accounts always belong to a team, so there's no team-less sign-up.)"""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    return render_template('auth/get_started.html', title='Get Started',
+                           team_signup_open=SiteSettings.get().open_team_registration)
 
 
 @bp.route('/logout')
@@ -219,7 +284,9 @@ def users():
         teams=teams,
         current_team=current_team,
         viewing_unassigned=viewing_unassigned,
-        is_superadmin=current_user.is_superadmin
+        is_superadmin=current_user.is_superadmin,
+        manageable_ids={u.id for u in users if can_manage_user(u)},
+        email_enabled=email_configured(),
     )
 
 
@@ -241,17 +308,16 @@ def add_user():
 
     # Populate choices but only set defaults on GET request
     _populate_team_choices(form, team_id, set_default=(request.method == 'GET'))
+    _populate_role_choices(form)
     _populate_player_choices(form, team_id)
-
-    if request.method == "POST":
-        current_app.logger.debug("VALID: %s", form.validate())
-        current_app.logger.error("ERRORS: %s", form.errors)
+    if request.method == 'GET':
+        form.role.data = 'player'
 
     if form.validate_on_submit():
 
         user = User(
-            username=form.username.data,
-            email=form.email.data,
+            username=form.username.data.strip(),
+            email=_clean_email(form.email.data),
             role=form.role.data,
             team_organization_id=form.team_organization_id.data,
             is_superadmin=False
@@ -267,8 +333,12 @@ def add_user():
 
         db.session.commit()
 
-        flash(f"User {user.username} created.", "success")
-        return redirect(url_for("auth.users", team_id=team_id))
+        if form.password.data:
+            flash(f"User {user.username} created.", "success")
+        else:
+            flash(f"User {user.username} created. They have no password yet: use "
+                  "Reset link to send them a link to set one.", "success")
+        return redirect(url_for("auth.users", team_id=user.team_organization_id))
 
     return render_template("auth/user_form.html", form=form, title="Add User")
 
@@ -280,9 +350,17 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     team_id = user.team_organization_id
 
-    if not can_manage_team_users(team_id):
-        flash("You do not have permission.", "danger")
-        return redirect(url_for("main.index"))
+    if user.id == current_user.id and not current_user.is_superadmin:
+        return redirect(url_for('auth.account'))
+
+    if not can_manage_user(user):
+        flash("You can only edit people whose role is below yours.", "danger")
+        return redirect(url_for("auth.users") if can_manage_team_users(team_id)
+                        else url_for("main.index"))
+
+    if team_id is None:
+        # Unassigned account (superadmin only): offer the current team
+        team_id = get_current_team_id()
 
     form = UserForm(
         original_username=user.username,
@@ -291,23 +369,20 @@ def edit_user(user_id):
 
     # Populate choices but only set defaults on GET request
     _populate_team_choices(form, team_id, set_default=(request.method == 'GET'))
+    _populate_role_choices(form)
     _populate_player_choices(form, team_id)
 
     if request.method == "GET":
         form.username.data = user.username
         form.email.data = user.email
         form.role.data = user.role
-        form.team_organization_id.data = user.team_organization_id
+        form.team_organization_id.data = team_id
         form.player_id.data = user.player.id if user.player else 0
-
-    if request.method == "POST":
-        current_app.logger.debug("VALID: %s", form.validate())
-        current_app.logger.error("ERRORS: %s", form.errors)
 
     if form.validate_on_submit():
 
-        user.username = form.username.data
-        user.email = form.email.data
+        user.username = form.username.data.strip()
+        user.email = _clean_email(form.email.data)
         user.role = form.role.data.lower()
 
         if current_user.is_superadmin:
@@ -331,23 +406,231 @@ def edit_user(user_id):
 def delete_user(user_id):
 
     user = User.query.get_or_404(user_id)
+    team_id = user.team_organization_id
 
     if user.id == current_user.id:
         flash("You cannot delete yourself.", "danger")
         return redirect(url_for("auth.users"))
 
-    if not can_manage_team_users(user.team_organization_id):
+    if not can_manage_user(user):
+        flash("You can only delete people whose role is below yours.", "danger")
+        return redirect(url_for("main.index"))
+
+    try:
+        _detach_user_rows(user.id)
+        db.session.delete(user)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error deleting user {user_id}: {e}', exc_info=True)
+        flash('That user could not be deleted. Change their role to Guest instead.', 'danger')
+        return redirect(url_for("auth.users", team_id=team_id))
+
+    flash("User deleted.", "success")
+    return redirect(url_for("auth.users", team_id=team_id))
+
+
+@bp.route('/users/<int:user_id>/reset-link', methods=['POST'])
+@login_required
+def create_reset_link(user_id):
+    """A coach makes a password-reset link for one of their players (for
+    players without email, or when email isn't set up). Also emailed to the
+    player when possible."""
+    user = User.query.get_or_404(user_id)
+    if not can_manage_user(user):
+        flash("You can only reset passwords for people whose role is below yours.", "danger")
+        return redirect(url_for("main.index"))
+
+    link = reset_url(user, COACH_LINK_SECONDS)
+    emailed = send_email(
+        user.email, 'Set your Ultimate Coach password',
+        f'Hi {user.username},\n\n'
+        f'{current_user.username} sent you a link to set a new password for '
+        f'Ultimate Coach:\n\n{link}\n\n'
+        f'The link works once and expires in {COACH_LINK_SECONDS // 86400} days.\n')
+    return render_template('auth/reset_link.html', title='Password reset link', user=user,
+                           link=link, days=COACH_LINK_SECONDS // 86400, emailed=emailed)
+
+
+# ---------------------------------------
+# Team join link
+# ---------------------------------------
+
+@bp.route('/join-link', methods=['POST'])
+@login_required
+def manage_join_link():
+    """Coach turns the team's join link on or off, or replaces it with a new
+    one (which stops the old link working)."""
+    team_id = _get_managed_team_id()
+    if not team_id or not can_manage_team_users(team_id):
         flash("You do not have permission.", "danger")
         return redirect(url_for("main.index"))
 
-    if user.player:
-        user.player.user_id = None
-
-    db.session.delete(user)
+    team = TeamOrganization.query.get_or_404(team_id)
+    action = request.form.get('action')
+    if action == 'enable':
+        team.join_code = team.join_code or generate_join_code()
+        team.join_enabled = True
+        flash('Join link is on. Share it with your players.', 'success')
+    elif action == 'disable':
+        team.join_enabled = False
+        flash('Join link is off. Nobody new can join with it.', 'info')
+    elif action == 'regenerate':
+        team.join_code = generate_join_code()
+        team.join_enabled = True
+        flash('New join link created. The old link no longer works.', 'success')
     db.session.commit()
+    return redirect(url_for('auth.users', team_id=team.id))
 
-    flash("User deleted.", "success")
-    return redirect(url_for("auth.users", team_id=user.team_organization_id))
+
+@bp.route('/join', methods=['GET', 'POST'])
+@limiter.limit(SIGNUP_LIMIT, methods=['POST'])
+def join():
+    """Enter a team's join code."""
+    if request.method == 'POST':
+        code = normalize_join_code(request.form.get('code'))
+        team = TeamOrganization.query.filter_by(join_code=code, join_enabled=True).first() if code else None
+        if team:
+            return redirect(url_for('auth.join_team', code=code))
+        flash('That join code isn\'t valid. Check it with your coach.', 'danger')
+    return render_template('auth/join.html', title='Join a Team', team=None, form_data={})
+
+
+@bp.route('/join/<code>', methods=['GET', 'POST'])
+@limiter.limit(SIGNUP_LIMIT, methods=['POST'])
+def join_team(code):
+    """Public: a player creates their account on the team the link is for."""
+    code = normalize_join_code(code)
+    team = TeamOrganization.query.filter_by(join_code=code, join_enabled=True).first()
+    if not team:
+        flash('This join link isn\'t valid any more. Ask your coach for the current one.', 'warning')
+        return redirect(url_for('auth.join'))
+
+    if current_user.is_authenticated:
+        if current_user.team_organization_id == team.id:
+            return redirect(url_for('main.index'))
+        flash(f'You\'re logged in to another team. Log out first to create an account on {team.name}.',
+              'warning')
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = _clean_email(request.form.get('email'))
+        password = request.form.get('password', '')
+        errors = _new_account_errors(username, email, password, request.form.get('confirm_password', ''))
+        if errors:
+            _flash_all(errors)
+            return render_template('auth/join.html', title=f'Join {team.name}', team=team,
+                                   code=code, form_data=request.form)
+
+        user = User(username=username, email=email, role='player', is_superadmin=False,
+                    team_organization_id=team.id)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        login_user(user)
+        flash(f'Welcome to {team.name}, {username}!', 'success')
+        return _after_joining(user)
+
+    return render_template('auth/join.html', title=f'Join {team.name}', team=team,
+                           code=code, form_data={})
+
+
+# ---------------------------------------
+# Passwords & Account Settings
+# ---------------------------------------
+
+@bp.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit(RESET_REQUEST_LIMIT, methods=['POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.account'))
+
+    can_email = email_configured()
+    if request.method == 'POST' and can_email:
+        identifier = request.form.get('identifier', '').strip()
+        user = None
+        if identifier:
+            user = (User.query.filter_by(username=identifier).first()
+                    or User.query.filter(db.func.lower(User.email) == identifier.lower()).first())
+        if user and is_real_email(user.email):
+            link = reset_url(user, EMAIL_LINK_SECONDS)
+            send_email(
+                user.email, 'Reset your Ultimate Coach password',
+                f'Hi {user.username},\n\n'
+                f'Someone (hopefully you) asked to reset your Ultimate Coach password. '
+                f'Use this link to choose a new one:\n\n{link}\n\n'
+                f'It works once and expires in {EMAIL_LINK_SECONDS // 60} minutes. '
+                f'If you didn\'t ask for this, you can ignore this email.\n')
+        # Same answer whether or not the account exists, so this page can't
+        # be used to find out who has an account
+        flash('If that account has an email address, a reset link is on its way. '
+              'Check your spam folder too. No email on your account? Ask your coach '
+              'for a reset link.', 'info')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/forgot_password.html', title='Forgot Password', can_email=can_email)
+
+
+@bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit(SIGNUP_LIMIT, methods=['POST'])
+def reset_password(token):
+    user = user_for_reset_token(token)
+    if user is None:
+        flash('That reset link has expired or was already used. Ask for a new one.', 'warning')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        errors = _password_errors(password, request.form.get('confirm_password', ''))
+        if errors:
+            _flash_all(errors)
+        else:
+            user.set_password(password)
+            db.session.commit()
+            logout_user()
+            flash('Your password has been changed. Log in with your new password.', 'success')
+            return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password.html', title='Choose a New Password', user=user)
+
+
+@bp.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    """Change your own email address or password."""
+    if request.method == 'POST':
+        action = request.form.get('action')
+        current_password = request.form.get('current_password', '')
+        if current_user.password_hash and not current_user.check_password(current_password):
+            flash('Your current password is incorrect.', 'danger')
+            return redirect(url_for('auth.account'))
+
+        if action == 'email':
+            email = _clean_email(request.form.get('email'))
+            if email and not is_real_email(email):
+                flash('That email address doesn\'t look right.', 'danger')
+            elif email and User.query.filter(User.email == email, User.id != current_user.id).first():
+                flash('That email address is already registered.', 'danger')
+            else:
+                current_user.email = email
+                db.session.commit()
+                flash('Email address saved.' if email else 'Email address removed.', 'success')
+        elif action == 'password':
+            password = request.form.get('password', '')
+            errors = _password_errors(password, request.form.get('confirm_password', ''))
+            if errors:
+                _flash_all(errors)
+            else:
+                current_user.set_password(password)
+                db.session.commit()
+                flash('Password changed.', 'success')
+        return redirect(url_for('auth.account'))
+
+    return render_template('auth/account.html', title='Account Settings',
+                           email_enabled=email_configured(),
+                           has_real_email=is_real_email(current_user.email))
 
 
 # ---------------------------------------
@@ -432,6 +715,7 @@ def create_invite(player_id):
 
 
 @bp.route('/invite/accept/<token>', methods=['GET', 'POST'])
+@limiter.limit(SIGNUP_LIMIT, methods=['POST'])
 def accept_invite(token):
     """Public: player follows invite link and sets up their account."""
     invite = InviteToken.query.filter_by(token=token).first_or_404()
@@ -445,34 +729,25 @@ def accept_invite(token):
         flash('You are already logged in.', 'info')
         return redirect(url_for('main.index'))
 
+    player_email = invite.player.email if invite.player and is_real_email(invite.player.email) else None
+    if player_email and User.query.filter_by(email=player_email).first():
+        player_email = None  # already used by another account
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
+        email = _clean_email(request.form.get('email'))
         password = request.form.get('password', '')
-        confirm  = request.form.get('confirm_password', '')
-
-        errors = []
-        if not username or len(username) < 3:
-            errors.append('Username must be at least 3 characters.')
-        if User.query.filter_by(username=username).first():
-            errors.append('That username is already taken — please choose another.')
-        if len(password) < 6:
-            errors.append('Password must be at least 6 characters.')
-        if password != confirm:
-            errors.append('Passwords do not match.')
+        errors = _new_account_errors(username, email, password, request.form.get('confirm_password', ''))
 
         if errors:
-            for e in errors:
-                flash(e, 'danger')
-            return render_template('auth/accept_invite.html', invite=invite, username=username)
-
-        # Use player's email if available, else placeholder until DB constraint is relaxed
-        player_email = invite.player.email if invite.player else None
-        resolved_email = player_email if player_email else f'{username}@no-email.placeholder'
+            _flash_all(errors)
+            return render_template('auth/accept_invite.html', invite=invite, username=username,
+                                   email=email or '', min_password=MIN_PASSWORD_LENGTH)
 
         # Create the user account
         user = User(
             username=username,
-            email=resolved_email,
+            email=email,
             role='player',
             is_superadmin=False,
             team_organization_id=invite.team_organization_id,
@@ -486,7 +761,6 @@ def accept_invite(token):
             invite.player.user_id = user.id
 
         # Mark invite as used
-        from datetime import datetime
         invite.used_at = datetime.utcnow()
         invite.used_by_user_id = user.id
 
@@ -496,7 +770,8 @@ def accept_invite(token):
         flash(f'Welcome to Ultimate Coach, {username}! Your account is all set.', 'success')
         return redirect(url_for('main.index'))
 
-    return render_template('auth/accept_invite.html', invite=invite, username='')
+    return render_template('auth/accept_invite.html', invite=invite, username='',
+                           email=player_email or '', min_password=MIN_PASSWORD_LENGTH)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -504,48 +779,47 @@ def accept_invite(token):
 # ─────────────────────────────────────────────────────────────
 
 @bp.route('/register-team', methods=['GET', 'POST'])
+@limiter.limit(TEAM_SIGNUP_LIMIT, methods=['POST'])
 def register_team():
-    """Public: a new club admin registers their team."""
+    """Public: a new club registers their team. Needs a sign-up link from a
+    superadmin, unless a superadmin has opened sign-up to everyone."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
-    reg_code = current_app.config.get('TEAM_REGISTRATION_CODE', '')
-    requires_code = bool(reg_code)
+    token = request.values.get('invite', '').strip()
+    signup_invite = TeamSignupInvite.find_valid(token)
+    if token and not signup_invite:
+        flash('This team sign-up link has expired or was already used. '
+              'Ask for a new one.', 'warning')
+    is_open = SiteSettings.get().open_team_registration
+    if not (is_open or signup_invite):
+        return render_template('auth/register_team.html', closed=True, form_data={})
+
+    def form_page(form_data):
+        return render_template('auth/register_team.html', closed=False, invite_token=token if signup_invite else '',
+                               form_data=form_data, min_password=MIN_PASSWORD_LENGTH)
 
     if request.method == 'POST':
         team_name  = request.form.get('team_name', '').strip()
         username   = request.form.get('username', '').strip()
-        email      = request.form.get('email', '').strip()
+        email      = _clean_email(request.form.get('email'))
         password   = request.form.get('password', '')
-        confirm    = request.form.get('confirm_password', '')
-        entered_code = request.form.get('access_code', '').strip()
 
         errors = []
         if not team_name:
             errors.append('Team name is required.')
-        if not username or len(username) < 3:
-            errors.append('Username must be at least 3 characters.')
-        if User.query.filter_by(username=username).first():
-            errors.append('That username is already taken.')
-        if email and User.query.filter_by(email=email).first():
-            errors.append('That email address is already registered.')
-        if TeamOrganization.query.filter(
+        elif len(team_name) > 100:
+            errors.append('Team name must be 100 characters or fewer.')
+        elif TeamOrganization.query.filter(
             db.func.lower(TeamOrganization.name) == team_name.lower()
         ).first():
             errors.append(f'A team called "{team_name}" already exists.')
-        if len(password) < 6:
-            errors.append('Password must be at least 6 characters.')
-        if password != confirm:
-            errors.append('Passwords do not match.')
-        if requires_code and entered_code != reg_code:
-            errors.append('Access code is incorrect.')
+        errors.extend(_new_account_errors(username, email, password,
+                                          request.form.get('confirm_password', '')))
 
         if errors:
-            for e in errors:
-                flash(e, 'danger')
-            return render_template('auth/register_team.html',
-                                   requires_code=requires_code,
-                                   form_data=request.form)
+            _flash_all(errors)
+            return form_page(request.form)
 
         # Create team
         slug = team_name.lower().replace(' ', '-')
@@ -563,26 +837,43 @@ def register_team():
         settings = TeamSettings(team_id=team.id)
         db.session.add(settings)
 
-        # Use provided email, or a unique placeholder until the DB constraint is relaxed
-        resolved_email = email if email else f'{username}@no-email.placeholder'
-
-        # Create team coach account (coach role — admin is reserved for site superadmins)
+        # The person who registers the team is its team admin, so they can
+        # manage everyone they add, coaches included. (Team admin powers are
+        # limited to their own team; site-wide tools are superadmin only.)
         user = User(
             username=username,
-            email=resolved_email,
-            role='coach',
+            email=email,
+            role='admin',
             is_superadmin=False,
             team_organization_id=team.id,
         )
         user.set_password(password)
         db.session.add(user)
+        db.session.flush()
+
+        if signup_invite:
+            signup_invite.used_at = datetime.utcnow()
+            signup_invite.used_by_user_id = user.id
+            signup_invite.team_organization_id = team.id
         db.session.commit()
+
+        _notify_admins_of_new_team(team, user, signup_invite)
 
         login_user(user)
         flash(f'Welcome! Your team "{team_name}" has been created. '
               'Start by importing your roster below.', 'success')
         return redirect(url_for('team.bulk_import'))
 
-    return render_template('auth/register_team.html',
-                           requires_code=requires_code,
-                           form_data={})
+    return form_page({'email': signup_invite.email if signup_invite and signup_invite.email else ''})
+
+
+def _notify_admins_of_new_team(team, user, signup_invite):
+    """Let the site owner know a team signed up (when email is set up)."""
+    how = (f'sign-up link "{signup_invite.note or signup_invite.email or signup_invite.id}"'
+           if signup_invite else 'open registration')
+    for admin_email in current_app.config.get('ADMINS', []):
+        send_email(admin_email, f'New team on Ultimate Coach: {team.name}',
+                   f'{team.name} just registered via {how}.\n\n'
+                   f'Team admin: {user.username} ({user.email or "no email"})\n\n'
+                   f'Manage teams: {url_for("team_organization.signups", _external=True)}\n')
+

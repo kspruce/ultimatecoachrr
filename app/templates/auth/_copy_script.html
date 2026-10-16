@@ -1,0 +1,20 @@
+<script>
+// Copy buttons: <button data-copy="#inputId">
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-copy]');
+  if (!btn) return;
+  var input = document.querySelector(btn.getAttribute('data-copy'));
+  if (!input) return;
+  input.select();
+  var done = function () {
+    var old = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check2"></i> Copied';
+    setTimeout(function () { btn.innerHTML = old; }, 1500);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(input.value).then(done, function () { document.execCommand('copy'); done(); });
+  } else {
+    document.execCommand('copy'); done();
+  }
+});
+</script>

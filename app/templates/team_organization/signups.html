@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4" style="max-width:960px">
+
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1">Team Sign-ups</h2>
+    <p class="text-muted mb-0">Control who can register a new team, and check email is working.</p>
+  </div>
+
+  <!-- Who can register -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <h6 class="fw-bold mb-1">Who can register a team</h6>
+          {% if settings.open_team_registration %}
+          <p class="mb-0"><span class="badge bg-warning text-dark me-1">Open</span>
+            Anyone can register a team at
+            <code>{{ url_for('auth.register_team', _external=True) }}</code></p>
+          {% else %}
+          <p class="mb-0"><span class="badge bg-success me-1">Invite-only</span>
+            New teams need a sign-up link from below.</p>
+          {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('team_organization.set_signup_open') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if settings.open_team_registration %}
+          <button name="open" value="0" class="btn btn-outline-dark btn-sm">Make invite-only</button>
+          {% else %}
+          <button name="open" value="1" class="btn btn-outline-warning btn-sm"
+                  onclick="return confirm('Let anyone register a team without a link?')">
+            Open to everyone
+          </button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- New sign-up link -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h6 class="fw-bold mb-1">Create a team sign-up link</h6>
+      <p class="text-muted small">
+        Each link lets one club register one team; whoever uses it becomes that team's admin.
+        {% if email_enabled %}Add an email address and we'll send it for you.{% else %}Email isn't set up, so copy the link and send it yourself.{% endif %}
+      </p>
+      <form method="POST" action="{{ url_for('team_organization.create_signup_link') }}" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-4">
+          <label class="form-label small mb-1">Who it's for</label>
+          <input type="text" name="note" class="form-control form-control-sm" maxlength="200"
+                 placeholder="e.g. Sam, Brighton Biscuits">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-1">Email {% if not email_enabled %}(saved only){% endif %}</label>
+          <input type="email" name="email" class="form-control form-control-sm" maxlength="120"
+                 placeholder="optional">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-1">Expires in</label>
+          <select name="days" class="form-select form-select-sm">
+            {% for d in link_days %}
+            <option value="{{ d }}" {% if d == 14 %}selected{% endif %}>{{ d }} days</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-dark btn-sm w-100">Create link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Links -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>For</th>
+            <th>Status</th>
+            <th>Link</th>
+            <th class="text-end"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for link in links %}
+          <tr {% if request.args.get('new')|int == link.id %}class="table-success"{% endif %}>
+            <td>
+              <div class="fw-semibold">{{ link.note or '—' }}</div>
+              <div class="small text-muted">{{ link.email or '' }}</div>
+            </td>
+            <td class="small">
+              {% if link.status == 'active' %}
+                <span class="badge bg-success">Active</span><br>until {{ link.expires_at.strftime('%d %b %Y') }}
+              {% elif link.status == 'used' %}
+                <span class="badge bg-primary">Used</span><br>
+                {{ link.team.name if link.team else 'team since deleted' }}
+              {% elif link.status == 'revoked' %}
+                <span class="badge bg-secondary">Revoked</span>
+              {% else %}
+                <span class="badge bg-light text-dark border">Expired</span>
+              {% endif %}
+            </td>
+            <td style="min-width:260px">
+              {% if link.status == 'active' %}
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control" id="signupLink{{ link.id }}" readonly
+                       value="{{ url_for('auth.register_team', invite=link.token, _external=True) }}">
+                <button type="button" class="btn btn-outline-primary" data-copy="#signupLink{{ link.id }}">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+              </div>
+              {% else %}
+              <span class="text-muted small">Created {{ link.created_at.strftime('%d %b %Y') }}</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if link.status == 'active' %}
+              <form method="POST" action="{{ url_for('team_organization.revoke_signup_link', link_id=link.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Revoke this link?')">Revoke</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No sign-up links yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Email -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h6 class="fw-bold mb-1">Email</h6>
+      {% if email_enabled %}
+      <p class="small mb-2"><span class="badge bg-success me-1">Set up</span>
+        Sending from <code>{{ config.MAIL_DEFAULT_SENDER }}</code> via <code>{{ config.MAIL_SERVER }}</code>.
+        Used for password resets, sign-up links and new-team alerts.</p>
+      <form method="POST" action="{{ url_for('team_organization.send_test_email') }}" class="d-flex gap-2" style="max-width:480px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="email" name="email" class="form-control form-control-sm" value="{{ admin_email }}"
+               placeholder="send a test to…" required>
+        <button class="btn btn-sm btn-outline-dark text-nowrap">Send test email</button>
+      </form>
+      {% else %}
+      <p class="small mb-0"><span class="badge bg-secondary me-1">Not set up</span>
+        Everything still works without email: coaches make password reset links from User Management,
+        and you copy sign-up links from this page. To switch email on, add the <code>MAIL_*</code>
+        settings described in <code>docs/EMAIL_SETUP.md</code> to your Railway variables.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% include "auth/_copy_script.html" %}
+{% endblock %}

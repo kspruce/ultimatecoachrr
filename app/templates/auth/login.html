@@ -78,6 +78,9 @@
           {{ form.remember_me(class="form-check-input m-0") }}
           Remember me
         </label>
+        <a href="{{ url_for('auth.forgot_password') }}" style="font-size:.83rem;color:var(--uc-blue)">
+          Forgot password?
+        </a>
       </div>
 
       <button type="submit" class="login-btn">
@@ -88,9 +91,11 @@
   </div>
 
   <p style="text-align:center;font-size:.8rem;color:var(--uc-gray-400);margin-top:1.25rem">
-    New team?
+    New here?
+    <a href="{{ url_for('auth.join') }}" style="color:var(--uc-blue);font-weight:600">Join your team</a>
+    &middot;
     <a href="{{ url_for('auth.register_team') }}" style="color:var(--uc-blue);font-weight:600">
-      Register your team &rarr;
+      Register a new team &rarr;
     </a>
   </p>
 </div>

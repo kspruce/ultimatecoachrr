@@ -1,7 +1,13 @@
 # app/routes/team_organization.py
+from datetime import datetime
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_required, current_user
 from app import db
+from app.models.site_settings import SiteSettings
+from app.models.team_signup_invite import TeamSignupInvite
+from app.utils.email import email_configured, is_real_email, send_email
+from app.utils.utils import superadmin_required
 from app.utils.team_filter import accessible_teams, can_access_team
 from app.models.team_organization import TeamOrganization
 from app.forms.team_organization import TeamOrganizationForm
@@ -152,3 +158,97 @@ def _delete_team_data(team_id):
         result = db.session.execute(table.delete().where(condition))
         if result.rowcount:
             logger.info(f'[TeamDelete] {table.name}: {result.rowcount} rows')
+
+
+# ─────────────────────────────────────────────────────────────
+# Team sign-ups (superadmin): who may register a new team
+# ─────────────────────────────────────────────────────────────
+
+SIGNUP_LINK_DAYS = (7, 14, 30, 90)
+
+
+@bp.route('/signups')
+@login_required
+@superadmin_required
+def signups():
+    links = TeamSignupInvite.query.order_by(TeamSignupInvite.created_at.desc()).limit(100).all()
+    return render_template('team_organization/signups.html',
+                           settings=SiteSettings.get(), links=links,
+                           link_days=SIGNUP_LINK_DAYS,
+                           email_enabled=email_configured(),
+                           admin_email=(current_user.email if is_real_email(current_user.email) else ''))
+
+
+@bp.route('/signups/open', methods=['POST'])
+@login_required
+@superadmin_required
+def set_signup_open():
+    settings = SiteSettings.get()
+    settings.open_team_registration = request.form.get('open') == '1'
+    db.session.commit()
+    if settings.open_team_registration:
+        flash('Team sign-up is open: anyone can register a team.', 'warning')
+    else:
+        flash('Team sign-up is invite-only: new teams need a sign-up link.', 'success')
+    return redirect(url_for('team_organization.signups'))
+
+
+@bp.route('/signups/links', methods=['POST'])
+@login_required
+@superadmin_required
+def create_signup_link():
+    note = request.form.get('note', '').strip()[:200]
+    email = request.form.get('email', '').strip()[:120]
+    if email and not is_real_email(email):
+        flash("That email address doesn't look right.", 'danger')
+        return redirect(url_for('team_organization.signups'))
+    days = request.form.get('days', type=int)
+    days = days if days in SIGNUP_LINK_DAYS else 14
+
+    invite = TeamSignupInvite.create(current_user.id, note=note, email=email, expires_days=days)
+    db.session.add(invite)
+    db.session.commit()
+
+    link = url_for('auth.register_team', invite=invite.token, _external=True)
+    if email and send_email(
+            email, "You're invited to set up your team on Ultimate Coach",
+            f'Hi{" " + note if note else ""},\n\n'
+            f'You\'ve been invited to set up your team on Ultimate Coach. '
+            f'Use this link to create your team and your team admin account:\n\n{link}\n\n'
+            f'The link works once and expires in {days} days.\n'):
+        flash(f'Sign-up link created and emailed to {email}.', 'success')
+    else:
+        flash('Sign-up link created. Copy it below and send it to the club.', 'success')
+    return redirect(url_for('team_organization.signups', new=invite.id))
+
+
+@bp.route('/signups/links/<int:link_id>/revoke', methods=['POST'])
+@login_required
+@superadmin_required
+def revoke_signup_link(link_id):
+    invite = TeamSignupInvite.query.get_or_404(link_id)
+    if invite.is_valid:
+        invite.revoked_at = datetime.utcnow()
+        db.session.commit()
+        flash('Sign-up link revoked.', 'success')
+    return redirect(url_for('team_organization.signups'))
+
+
+@bp.route('/signups/test-email', methods=['POST'])
+@login_required
+@superadmin_required
+def send_test_email():
+    to = request.form.get('email', '').strip()
+    if not email_configured():
+        flash('Email is not set up yet. See docs/EMAIL_SETUP.md.', 'warning')
+    elif not is_real_email(to):
+        flash('Enter the address to send the test email to.', 'danger')
+    else:
+        try:
+            send_email(to, 'Ultimate Coach test email',
+                       'Email from Ultimate Coach is working.\n', wait=True)
+            flash(f'Test email sent to {to}. Check the inbox (and spam folder).', 'success')
+        except Exception as e:
+            logger.error(f'Test email failed: {e}', exc_info=True)
+            flash(f'Sending failed: {e}', 'danger')
+    return redirect(url_for('team_organization.signups'))

@@ -1,6 +1,8 @@
 # app/models/team_organization.py
-from app import db
+import secrets
 from datetime import datetime
+
+from app import db
 
 class TeamOrganization(db.Model):
     __tablename__ = 'team_organization'
@@ -12,7 +14,12 @@ class TeamOrganization(db.Model):
     logo = db.Column(db.String(255))
     division = db.Column(db.String(20), nullable=False, default="mixed")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    # Reusable join link (/auth/join/<code>) a coach shares so players can
+    # create their own accounts on this team. Off until a coach turns it on.
+    join_code = db.Column(db.String(16), unique=True, nullable=True)
+    join_enabled = db.Column(db.Boolean, default=False, nullable=False)
+
     # Define relationships using backref
     users = db.relationship('User', backref='team_organization')
     players = db.relationship('Player', backref='team_organization')
@@ -47,3 +54,21 @@ class TeamOrganization(db.Model):
     
     def __repr__(self):
         return f'<TeamOrganization {self.name}>'
+
+
+# No 0/O or 1/I/L, so codes read out loud or copied by hand still work
+JOIN_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+JOIN_CODE_LENGTH = 8
+
+
+def generate_join_code():
+    """A join code no other team is using."""
+    while True:
+        code = ''.join(secrets.choice(JOIN_CODE_ALPHABET) for _ in range(JOIN_CODE_LENGTH))
+        if not TeamOrganization.query.filter_by(join_code=code).first():
+            return code
+
+
+def normalize_join_code(code):
+    """Accept codes typed with spaces, dashes or lower case."""
+    return ''.join(ch for ch in (code or '').upper() if ch.isalnum())

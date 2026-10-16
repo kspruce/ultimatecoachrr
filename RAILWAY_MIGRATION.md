@@ -65,8 +65,8 @@ AWS_BUCKET_NAME=<your bucket>
 
 # Optional
 BASE_URL=https://<your-app>.railway.app   # update after deploy
-TEAM_REGISTRATION_CODE=<if you use one>
-MAIL_SERVER=<if configured>
+# Team sign-up is invite-link only; open it from Team Sign-ups in the app
+MAIL_SERVER=<if configured, see docs/EMAIL_SETUP.md>
 MAIL_PORT=<if configured>
 MAIL_USERNAME=<if configured>
 MAIL_PASSWORD=<if configured>

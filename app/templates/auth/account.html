@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "auth/_styles.html" %}
+
+<div class="ac-wrap wide">
+  <h1 class="ac-title" style="text-align:left">Account settings</h1>
+  <p class="ac-sub" style="text-align:left">Signed in as <strong>{{ current_user.username }}</strong></p>
+
+  <div class="ac-card">
+    <div class="ac-section">Email address</div>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="email">
+      <div class="mb-3">
+        <p class="ac-label">Email</p>
+        <input type="email" name="email" class="ac-input" autocomplete="email"
+               value="{{ current_user.email if has_real_email else '' }}" placeholder="you@example.com">
+        <p class="ac-hint">
+          {% if email_enabled %}Used to email you a link if you forget your password.
+          {% else %}Saved for password resets once email is switched on for this site.{% endif %}
+          Leave blank to remove it.
+        </p>
+      </div>
+      {% if current_user.password_hash %}
+      <div class="mb-3">
+        <p class="ac-label">Current password</p>
+        <input type="password" name="current_password" class="ac-input" required autocomplete="current-password">
+      </div>
+      {% endif %}
+      <button type="submit" class="ac-btn">Save email</button>
+    </form>
+  </div>
+
+  <div class="ac-card">
+    <div class="ac-section">Change password</div>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="password">
+      {% if current_user.password_hash %}
+      <div class="mb-3">
+        <p class="ac-label">Current password</p>
+        <input type="password" name="current_password" class="ac-input" required autocomplete="current-password">
+      </div>
+      {% endif %}
+      <div class="mb-3">
+        <p class="ac-label">New password</p>
+        <input type="password" name="password" class="ac-input" placeholder="At least 8 characters"
+               required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="mb-3">
+        <p class="ac-label">Confirm new password</p>
+        <input type="password" name="confirm_password" class="ac-input" required minlength="8"
+               autocomplete="new-password">
+      </div>
+      <button type="submit" class="ac-btn">Change password</button>
+    </form>
+  </div>
+
+  <p class="ac-footer"><a href="{{ url_for('auth.profile') }}">Back to profile</a></p>
+</div>
+{% endblock %}

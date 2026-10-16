@@ -22,6 +22,9 @@ from config import Config  # noqa: E402
 class TestConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False  # tests/test_accounts.py turns it on where it's tested
+    MAIL_SERVER = None  # no email unless a test sets it up
+    ADMINS = []
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
 
 

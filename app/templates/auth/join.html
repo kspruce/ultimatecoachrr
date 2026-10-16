@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "auth/_styles.html" %}
+
+<div class="ac-wrap">
+  <div class="ac-card">
+    <div class="ac-icon"><i class="bi bi-people-fill"></i></div>
+
+    {% if not team %}
+    <h1 class="ac-title">Join a team</h1>
+    <p class="ac-sub">Enter the join code your coach gave you.</p>
+    <form method="POST" action="{{ url_for('auth.join') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <p class="ac-label">Team join code</p>
+      <input type="text" name="code" class="ac-input ac-code mb-3" placeholder="ABCD2345"
+             required autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button type="submit" class="ac-btn"><i class="bi bi-arrow-right-circle me-2"></i>Continue</button>
+    </form>
+
+    {% else %}
+    <h1 class="ac-title">Join {{ team.name }}</h1>
+    <p class="ac-sub">Create your account to see the team's sessions, playbook and stats.</p>
+
+    <form method="POST" action="{{ url_for('auth.join_team', code=code) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <p class="ac-label">Username *</p>
+        <input type="text" name="username" class="ac-input" value="{{ form_data.get('username', '') }}"
+               placeholder="e.g. alexj7" required minlength="3" maxlength="64" autocomplete="username">
+        <p class="ac-hint">This is what you'll use to log in.</p>
+      </div>
+
+      <div class="mb-3">
+        <p class="ac-label">Email <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></p>
+        <input type="email" name="email" class="ac-input" value="{{ form_data.get('email', '') }}"
+               placeholder="you@example.com" autocomplete="email">
+        <p class="ac-hint">Lets you reset your own password if you forget it.</p>
+      </div>
+
+      <div class="mb-3">
+        <p class="ac-label">Password *</p>
+        <input type="password" name="password" class="ac-input" placeholder="At least 8 characters"
+               required minlength="8" autocomplete="new-password">
+      </div>
+
+      <div class="mb-4">
+        <p class="ac-label">Confirm password *</p>
+        <input type="password" name="confirm_password" class="ac-input" placeholder="Repeat your password"
+               required minlength="8" autocomplete="new-password">
+      </div>
+
+      <button type="submit" class="ac-btn"><i class="bi bi-check-circle me-2"></i>Create my account</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <p class="ac-footer">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></p>
+</div>
+{% endblock %}

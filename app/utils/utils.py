@@ -15,6 +15,17 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def superadmin_required(f):
+    """Site-wide tools (whole-database backups, imports, id sequences) that
+    touch every team's data: site superadmins only, not team admins."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_superadmin:
+            flash('Only site superadmins can do that.', 'danger')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def coach_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

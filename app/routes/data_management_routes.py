@@ -3,7 +3,7 @@ Enhanced data management routes for Flask Application
 """
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
-from app.utils.utils import admin_required
+from app.utils.utils import superadmin_required
 from app.utils.enhanced_data_manager import EnhancedDataManager
 import os
 import json
@@ -208,7 +208,7 @@ def _get_admin_player_id():
 
 @bp.route('/season-reset', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def season_reset():
     """
     Team-scoped Season Reset.
@@ -529,7 +529,7 @@ def season_reset():
 
 @bp.route('/enhanced-data-management')
 @login_required
-@admin_required
+@superadmin_required
 def data_management():
     """Enhanced data management interface."""
     try:
@@ -601,7 +601,7 @@ def data_management():
 
 @bp.route('/fix-sequences', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def fix_sequences():
     """Reset all PostgreSQL sequences to fix duplicate key (UniqueViolation) errors."""
     try:
@@ -634,7 +634,7 @@ def fix_sequences():
 
 @bp.route('/export-data', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def export_data_route():
     """Export data via web interface."""
     try:
@@ -671,7 +671,7 @@ def export_data_route():
 
 @bp.route('/export-excel-zip')
 @login_required
-@admin_required
+@superadmin_required
 def export_excel_zip_route():
     """Export all data to Excel files in a ZIP archive."""
     try:
@@ -704,7 +704,7 @@ def export_excel_zip_route():
 
 @bp.route('/export-json-zip')
 @login_required
-@admin_required
+@superadmin_required
 def export_json_zip_route():
     """Export all data to JSON files in a ZIP archive."""
     try:
@@ -740,7 +740,7 @@ def export_json_zip_route():
 
 @bp.route('/import-data', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def import_data_route():
     """Import data via web interface."""
     # Log all form data for debugging
@@ -840,7 +840,7 @@ def import_data_route():
 
 @bp.route('/export-details/<path:export_path>')
 @login_required
-@admin_required
+@superadmin_required
 def export_details(export_path):
     """Get detailed information about an export."""
     try:
@@ -885,7 +885,7 @@ def export_details(export_path):
 
 @bp.route('/download-export')
 @login_required
-@admin_required
+@superadmin_required
 def download_export():
     """Download an export as a ZIP file."""
     export_path = request.args.get('path')
@@ -920,7 +920,7 @@ def download_export():
 
 @bp.route('/download-excel')
 @login_required
-@admin_required
+@superadmin_required
 def download_excel():
     """Download data as Excel file."""
     table_name = request.args.get('table')
@@ -944,7 +944,7 @@ def download_excel():
 
 @bp.route('/delete-export', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def delete_export():
     """Delete an export directory."""
     try:
@@ -987,7 +987,7 @@ def delete_export():
 
 @bp.route('/model-details/<table_name>')
 @login_required
-@admin_required
+@superadmin_required
 def model_details_api(table_name):
     """Get detailed information about a specific model."""
     manager = get_manager()  # Get the manager instance
@@ -1047,7 +1047,7 @@ def format_file_size(size_bytes):
 
 @bp.route('/debug-zip', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def debug_zip():
     """Debug route for ZIP file issues."""
     if 'import_file' not in request.files:
@@ -1103,7 +1103,7 @@ def debug_zip():
 
 @bp.route('/import-zip-file', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def import_zip_file_route():
     """Direct route for importing ZIP files."""
     logger.info("ZIP file import route called")
@@ -1216,7 +1216,7 @@ def import_zip_file_route():
 
 @bp.route('/reset-sequences', methods=['POST'])
 @login_required
-@admin_required
+@superadmin_required
 def reset_sequences():
     """Reset database sequences for all models after an import."""
     try:

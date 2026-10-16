@@ -6,6 +6,9 @@ from flask_caching import Cache
 from config import Config
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_moment import Moment
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 from markupsafe import Markup
 import os
 import json
@@ -19,6 +22,8 @@ login.login_message = 'Please log in to access this page.'
 csrf = CSRFProtect()
 moment = Moment()
 cache = Cache()
+# Limits are set per route (login, sign-up, password reset); nothing global
+limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app(config_class=Config):
@@ -32,6 +37,13 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     moment.init_app(app)
     cache.init_app(app)
+    limiter.init_app(app)
+
+    # Behind Railway's proxy, take the visitor's IP and https from the
+    # X-Forwarded-* headers (for rate limits and links in emails)
+    proxies = app.config.get('PROXY_COUNT', 0)
+    if proxies:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
 
     # Ensure the SECRET_KEY is set
     if not app.config.get('SECRET_KEY'):
@@ -106,6 +118,13 @@ def create_app(config_class=Config):
             'success': False,
             'message': 'CSRF token missing or invalid'
         }), 400
+
+    @app.errorhandler(429)
+    def too_many_requests(e):
+        from flask import render_template
+        return render_template('error.html', error_message=(
+            'Too many attempts from your connection. Please wait a few minutes '
+            'and try again.')), 429
 
     @app.errorhandler(413)
     def too_large(e):
