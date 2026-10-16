@@ -1,0 +1,49 @@
+{% extends "season_plan/_layout.html" %}
+
+{% block sp_styles %}
+<style>
+  .sp-access-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--rule); }
+  .sp-access-row:first-of-type { border-top: 0; }
+  .sp-access-row b { display: block; font-weight: 700; }
+  .sp-access-row span { color: var(--ink-3); font-size: .85rem; }
+  .sp-access-row .form-check-input { width: 2.6em; height: 1.4em; margin: 0; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block sp_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Player access</h1>
+    <p>Captains, coaches and admins always see the whole plan. Choose what players can see.</p>
+  </div>
+</div>
+
+<form method="post" style="max-width:720px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="sp-card">
+    <h3>Sections</h3>
+    {% for key, label, hint in sections %}
+    <label class="sp-access-row" for="{{ key }}">
+      <div><b>{{ label }}</b><span>{{ hint }}</span></div>
+      <div class="form-check form-switch m-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="{{ key }}" name="{{ key }}" {{ 'checked' if plan['players_see_' ~ key] }}>
+      </div>
+    </label>
+    {% endfor %}
+  </div>
+  <div class="sp-card">
+    <h3>Pages</h3>
+    {% for p in pages %}
+    <label class="sp-access-row" for="page_{{ p.id }}">
+      <div><b>{{ p.title }}</b></div>
+      <div class="form-check form-switch m-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="page_{{ p.id }}" name="page_{{ p.id }}" {{ 'checked' if p.players_can_view }}>
+      </div>
+    </label>
+    {% endfor %}
+  </div>
+  <div class="d-flex justify-content-end">
+    <button type="submit" class="btn btn-primary">Save player access</button>
+  </div>
+</form>
+{% endblock %}

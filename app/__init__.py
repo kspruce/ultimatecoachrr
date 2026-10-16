@@ -167,6 +167,9 @@ def create_app(config_class=Config):
     from app.routes.session import bp as session_bp
     app.register_blueprint(session_bp)
 
+    from app.routes.season_plan import bp as season_plan_bp
+    app.register_blueprint(season_plan_bp)
+
     from app.routes.scouting import bp as scouting_bp
     app.register_blueprint(scouting_bp)
 

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{# Shared by every season plan page: stylesheet and the season plan sub-nav. #}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/season_plan.css') }}">
+{% block sp_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+{% set sp_ep = request.endpoint or '' %}
+{% set sees_all = season_plan_sees_all() %}
+{% if plan %}
+<nav class="sp-subnav" aria-label="Season plan">
+  {% if sees_all or plan.players_see_overview %}
+  <a href="{{ url_for('season_plan.index') }}" class="{{ 'active' if sp_ep == 'season_plan.index' }}"><i class="bi bi-compass"></i> Overview</a>
+  {% endif %}
+  {% if sees_all or plan.players_see_weeks %}
+  <a href="{{ url_for('season_plan.weeks') }}" class="{{ 'active' if sp_ep in ('season_plan.weeks', 'season_plan.week', 'season_plan.edit_week') }}"><i class="bi bi-calendar-week"></i> Weeks</a>
+  {% endif %}
+  {% if sees_all or plan.players_see_phases %}
+  {% for ph in plan.phases %}
+  <a href="{{ url_for('season_plan.phase', number=ph.number) }}" style="--phase: {{ ph.colour or 'var(--club)' }}"
+     class="{{ 'active' if sp_ep == 'season_plan.phase' and phase is defined and phase.number == ph.number }}"
+     title="Phase {{ ph.number }}: {{ ph.name }}"><span class="sp-badge sp-badge-phase">{{ ph.number }}</span> {{ ph.name }}</a>
+  {% endfor %}
+  {% endif %}
+  {% if current_user.is_coach %}
+  <a href="{{ url_for('season_plan.access') }}" class="{{ 'active' if sp_ep == 'season_plan.access' }}"><i class="bi bi-eye"></i> Player access</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% block sp_content %}{% endblock %}
+{% endblock %}

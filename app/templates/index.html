@@ -305,6 +305,7 @@
 <div class="links">
   <a href="{{ url_for('team.index') }}"><i class="bi bi-people"></i>Squad<span>→</span></a>
   <a href="{{ url_for('tournament.index') }}"><i class="bi bi-trophy"></i>Tournaments<span>→</span></a>
+  {% if s and s.season_plan_enabled and season_plan_nav() %}<a href="{{ url_for('season_plan.index') }}"><i class="bi bi-calendar-range"></i>Season plan<span>→</span></a>{% endif %}
   {% if not s or s.sessions_enabled %}<a href="{{ url_for('session.index') }}"><i class="bi bi-calendar-check"></i>Session plans<span>→</span></a>{% endif %}
   {% if not s or s.drills_enabled %}<a href="{{ url_for('session.drills') }}"><i class="bi bi-clipboard2-check"></i>Drill library<span>→</span></a>{% endif %}
   {% if not s or s.playbook_enabled %}<a href="{{ url_for('playbook.index') }}"><i class="bi bi-book"></i>Playbook<span>→</span></a>{% endif %}

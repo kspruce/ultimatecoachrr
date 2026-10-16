@@ -1,0 +1,21 @@
+{# Contents list of the plan's pages: a sidebar on desktop, a drop-down on phones.
+   Expects `pages` and optionally `page` (the one being shown). #}
+{% macro toc(pages, current=none) %}
+<aside class="sp-toc" aria-label="Season plan pages">
+  <div class="sp-label mb-2">Pages</div>
+  {% for p in pages %}
+  <a href="{{ url_for('season_plan.page', slug=p.slug) }}" class="{{ 'active' if current and current.id == p.id }}">{{ p.title }}</a>
+  {% endfor %}
+</aside>
+{% endmacro %}
+
+{% macro toc_mobile(pages, current=none) %}
+<details class="sp-toc-mobile">
+  <summary><i class="bi bi-list-ul"></i> {{ current.title if current else 'Pages' }}</summary>
+  <div>
+    {% for p in pages %}
+    <a href="{{ url_for('season_plan.page', slug=p.slug) }}" class="{{ 'active' if current and current.id == p.id }}">{{ p.title }}</a>
+    {% endfor %}
+  </div>
+</details>
+{% endmacro %}

@@ -1,0 +1,19 @@
+{% extends "season_plan/_layout.html" %}
+{% from "season_plan/_toc.html" import toc, toc_mobile %}
+
+{% block sp_content %}
+<div class="sp-with-toc">
+  {{ toc(pages, page) }}
+  <div>
+    {{ toc_mobile(pages, page) }}
+    <article class="sp-card sp-md">
+      {{ page.body_markdown|markdown }}
+    </article>
+    {% set i = pages.index(page) if page in pages else -1 %}
+    <div class="sp-pager">
+      {% if i > 0 %}<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('season_plan.page', slug=pages[i - 1].slug) }}"><i class="bi bi-arrow-left"></i> {{ pages[i - 1].title }}</a>{% else %}<span></span>{% endif %}
+      {% if i >= 0 and i + 1 < pages|length %}<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('season_plan.page', slug=pages[i + 1].slug) }}">{{ pages[i + 1].title }} <i class="bi bi-arrow-right"></i></a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

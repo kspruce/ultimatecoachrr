@@ -96,7 +96,8 @@
 {% block content %}
 {# Feature settings shortcut — same logic as index.html #}
 {% set s = current_team.settings if (current_team and current_team.settings) else none %}
-{% set show_training = not s or s.sessions_enabled or s.fitness_enabled or s.drills_enabled %}
+{% set show_season_plan = s and s.season_plan_enabled and season_plan_nav() %}
+{% set show_training = not s or s.sessions_enabled or s.fitness_enabled or s.drills_enabled or show_season_plan %}
 {% set show_strategy = not s or s.playbook_enabled or s.scouting_enabled %}
 {% set show_analysis = not s or s.stats_enabled    or s.clip_enabled %}
 {% set show_theory   = not s or s.theory_enabled %}
@@ -352,6 +353,21 @@
       <li>Players can RSVP in advance from their profile</li>
     </ol>
     <a href="{{ url_for('session.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Session Plans</a>
+  </div>
+  {% endif %}
+
+  {% if show_season_plan %}
+  <div class="htu-feat">
+    <div class="htu-feat-icon ic-green"><i class="bi bi-calendar-range-fill"></i></div>
+    <div class="htu-feat-name">Season Plan</div>
+    <div class="htu-feat-desc">The season's phases, every week's joint, 1s and 2s themes, and the full session notes.</div>
+    <ol class="htu-feat-steps">
+      <li>Open the overview to see this week and what's coming up</li>
+      <li>Filter the week list by phase or squad</li>
+      <li>Open a week for its full session notes</li>
+      {% if current_user.is_coach %}<li>Choose what players can see under Player access</li>{% endif %}
+    </ol>
+    <a href="{{ url_for('season_plan.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Season Plan</a>
   </div>
   {% endif %}
 
