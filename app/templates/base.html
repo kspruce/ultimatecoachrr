@@ -253,6 +253,10 @@
           <li><a class="dropdown-item" href="{{ url_for('team.colour_settings') }}">
             <i class="bi bi-palette"></i> Colours &amp; Crest</a></li>
           {% endif %}
+          {% if current_user.is_admin %}
+          <li><a class="dropdown-item" href="{{ url_for('team.data_settings') }}">
+            <i class="bi bi-database"></i> Your Team's Data</a></li>
+          {% endif %}
 
           {% if not current_user.is_guest %}
           <li><a class="dropdown-item" href="{{ url_for('onboarding.welcome') }}">

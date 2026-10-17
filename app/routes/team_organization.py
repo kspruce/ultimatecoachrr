@@ -12,7 +12,7 @@ from app.utils.team_filter import accessible_teams, can_access_team
 from app.models.team_organization import TeamOrganization
 from app.forms.team_organization import TeamOrganizationForm
 import logging
-from sqlalchemy import or_
+from app.utils.team_data import delete_team_data
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +106,7 @@ def delete(team_id):
         return redirect(url_for('team_organization.index'))
 
     try:
-        _delete_team_data(team_id)
-        db.session.delete(team)
+        delete_team_data(team_id)
         db.session.commit()
         # Clear session if we just deleted the active team
         if session.get('current_team_id') == team_id:
@@ -119,45 +118,6 @@ def delete(team_id):
         flash(f'Error deleting team: {str(e)}', 'danger')
 
     return redirect(url_for('team_organization.index'))
-
-
-def _delete_team_data(team_id):
-    """Delete every row that belongs to a team, children before parents.
-
-    Walks all tables in reverse foreign-key order, so new tables are covered
-    without editing this function: tables with team_organization_id lose
-    that team's rows; tables without it (association tables, player
-    feedback, ...) lose the rows that point at one of the team's rows.
-    Superadmins are detached from the team rather than deleted.
-    """
-    from sqlalchemy import select
-    from app.models.user import User
-
-    User.query.filter_by(team_organization_id=team_id, is_superadmin=True).update(
-        {'team_organization_id': None}, synchronize_session=False)
-
-    tables = db.metadata.sorted_tables  # parents before children
-    scoped = {t.name for t in tables if 'team_organization_id' in t.c}
-    for table in reversed(tables):
-        if table.name == 'team_organization':
-            continue
-        if 'team_organization_id' in table.c:
-            condition = table.c.team_organization_id == team_id
-        else:
-            links = []
-            for fk in table.foreign_keys:
-                parent = fk.column.table
-                if parent.name == 'team_organization':
-                    links.append(fk.parent == team_id)
-                elif parent.name in scoped:
-                    links.append(fk.parent.in_(
-                        select(fk.column).where(parent.c.team_organization_id == team_id)))
-            if not links:
-                continue
-            condition = or_(*links)
-        result = db.session.execute(table.delete().where(condition))
-        if result.rowcount:
-            logger.info(f'[TeamDelete] {table.name}: {result.rowcount} rows')
 
 
 # ─────────────────────────────────────────────────────────────
