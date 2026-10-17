@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
 
-from app import db, limiter, onboarding
+from app import csrf, db, limiter, onboarding
 from app.models.user import ROLE_ORDER, User
 from app.models.player import Player
 from app.models.team_organization import TeamOrganization, generate_join_code, normalize_join_code
@@ -29,6 +29,17 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('auth', __name__)
 
 MIN_PASSWORD_LENGTH = 8
+# The first passwords anyone guessing tries (8+ characters, lower case), plus
+# the obvious ones for this site
+COMMON_PASSWORDS = frozenset('''
+12345678 123456789 1234567890 0123456789 87654321 11111111 00000000 12341234
+password password1 password12 password123 passw0rd p@ssword p@ssw0rd qwertyuiop
+qwerty123 qwerty12 1q2w3e4r 1qaz2wsx zaq12wsx asdfghjk asdfghjkl iloveyou
+sunshine princess football baseball welcome1 welcome123 letmein1 trustno1
+superman starwars whatever abc12345 abcd1234 aa123456 changeme computer
+liverpool chelsea1 arsenal1 admin123 administrator
+ultimate frisbee ultimate1 frisbee1 ultimatefrisbee ultimatecoach
+'''.split())
 
 # Rate limits (per visitor IP) on pages that take passwords or create accounts
 LOGIN_LIMIT = '10 per minute;60 per hour'
@@ -143,6 +154,8 @@ def _password_errors(password, confirm):
     errors = []
     if len(password or '') < MIN_PASSWORD_LENGTH:
         errors.append(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.')
+    elif password.lower() in COMMON_PASSWORDS or len(set(password)) < 3:
+        errors.append('That password is too easy to guess. Try a few words together.')
     if password != confirm:
         errors.append('Passwords do not match.')
     return errors
@@ -236,9 +249,12 @@ def register():
                            team_signup_open=SiteSettings.get().open_team_registration)
 
 
-@bp.route('/logout')
+@bp.route('/logout', methods=['GET', 'POST'])
+@csrf.exempt  # a stale page must still log out; SameSite cookies stop other sites
 def logout():
-    logout_user()
+    # Only a POST logs out, so a link or image on another site can't
+    if request.method == 'POST':
+        logout_user()
     return redirect(url_for('main.index'))
 
 
@@ -634,7 +650,11 @@ def account():
             else:
                 current_user.set_password(password)
                 db.session.commit()
-                flash('Password changed.', 'success')
+                # Signs out other devices; keep this one logged in
+                login_user(current_user._get_current_object(),
+                           remember=current_app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
+                           in request.cookies)
+                flash('Password changed. Any other devices have been signed out.', 'success')
         return redirect(url_for('auth.account'))
 
     return render_template('auth/account.html', title='Account Settings',

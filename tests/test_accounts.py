@@ -314,6 +314,42 @@ def test_changing_password_needs_the_current_one(app, teams):
     assert user('herd-player').check_password('new-password')
 
 
+
+def test_changing_password_signs_out_other_devices(app, teams):
+    phone = login(app, teams['player'])
+    laptop = login(app, teams['player'])
+    assert laptop.get('/auth/account').status_code == 200
+    phone.post('/auth/account', data={'action': 'password', 'current_password': 'old-password',
+                                      'password': 'brand-new-pw', 'confirm_password': 'brand-new-pw'})
+    assert phone.get('/auth/account').status_code == 200  # the device that changed it stays in
+    assert laptop.get('/auth/account').status_code == 302  # back to the login page
+
+
+def test_coach_reset_link_signs_the_player_out(app, teams):
+    from app.utils.password_reset import make_reset_token
+    player = login(app, teams['player'])
+    with app.test_request_context():
+        token = make_reset_token(db.session.get(User, teams['player']))
+    Anon(app).post(f'/auth/reset-password/{token}',
+                   data={'password': 'second-use-pw', 'confirm_password': 'second-use-pw'})
+    assert user('herd-player').check_password('second-use-pw')
+    assert player.get('/auth/account').status_code == 302
+
+
+def test_old_style_login_cookies_are_ignored(app, teams):
+    client = app.test_client()
+    with client.session_transaction() as s:
+        s['_user_id'] = str(teams['player'])  # plain id, no password fingerprint
+    assert client.get('/auth/account').status_code == 302
+
+
+@pytest.mark.parametrize('weak', ['password123', 'Ultimate1', 'aaaaaaaa', 'abababab'])
+def test_common_passwords_are_refused(app, teams, weak):
+    c = login(app, teams['player'])
+    c.post('/auth/account', data={'action': 'password', 'current_password': 'old-password',
+                                  'password': weak, 'confirm_password': weak})
+    assert user('herd-player').check_password('old-password')
+
 # ── Rate limits ──────────────────────────────────────────────
 
 @pytest.fixture
@@ -331,3 +367,13 @@ def test_login_is_rate_limited(rate_limited, teams):
              for _ in range(11)]
     assert codes[:10] == [302] * 10
     assert codes[10] == 429
+
+
+def test_logout_needs_a_post(app, teams):
+    c = login(app, teams['player'])
+    c.get('/auth/logout')  # e.g. an <img> on another site
+    assert c.get('/auth/account').status_code == 200
+    app.config['WTF_CSRF_ENABLED'] = True  # works from a page whose token has expired
+    c.post('/auth/logout')
+    app.config['WTF_CSRF_ENABLED'] = False
+    assert c.get('/auth/account').status_code == 302

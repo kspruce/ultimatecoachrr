@@ -3,6 +3,7 @@ from app import db, login
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import hashlib
 
 # Role hierarchy (team-scoped). Captains and team admins share the top level:
 # both run everything on their own team. Only superadmins (is_superadmin)
@@ -55,6 +56,15 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def password_fingerprint(self):
+        """Changes whenever the password does (and never reveals it)."""
+        return hashlib.sha256((self.password_hash or 'no-password').encode()).hexdigest()[:16]
+
+    def get_id(self):
+        # Logins and remember-me cookies carry the password fingerprint, so
+        # changing or resetting a password signs out every other device
+        return f"{self.id}:{self.password_fingerprint()}"
+
     @property
     def player(self):
         return self.player_profile
@@ -96,4 +106,10 @@ class User(UserMixin, db.Model):
 
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    user_id, _, fingerprint = str(id).partition(':')
+    if not user_id.isdigit():
+        return None
+    user = db.session.get(User, int(user_id))
+    if user is None or fingerprint != user.password_fingerprint():
+        return None
+    return user

@@ -19,7 +19,7 @@ FIELD_WIDTH = 37.0
 
 def _login(client, user_id, team_id):
     with client.session_transaction() as s:
-        s['_user_id'] = str(user_id)
+        s['_user_id'] = db.session.get(User, user_id).get_id()
         s['_fresh'] = True
         s['current_team_id'] = team_id
 

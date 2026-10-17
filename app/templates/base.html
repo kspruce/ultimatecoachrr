@@ -304,8 +304,9 @@
           {% endif %}
 
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item uc-danger" href="{{ url_for('auth.logout') }}">
-            <i class="bi bi-box-arrow-right"></i> Log out</a></li>
+          <li><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+            <button type="submit" class="dropdown-item uc-danger">
+              <i class="bi bi-box-arrow-right"></i> Log out</button></form></li>
 
         </ul>
       </div>
