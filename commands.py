@@ -203,6 +203,21 @@ def import_season_plan_command(folder, team_slug, season, dry_run, replace, buil
         click.echo('The Season plan feature is off for this team: switch it on in Team settings > Features.')
 
 
+@click.command('reset-two-factor')
+@click.argument('username')
+@with_appcontext
+def reset_two_factor(username):
+    """Turn off two-step sign-in for someone who lost their phone and their
+    recovery codes. A superadmin is asked to set it up again at next login."""
+    from app.utils import two_factor
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        raise click.UsageError(f'No user called {username}.')
+    two_factor.disable(user)
+    db.session.commit()
+    click.echo(f'Two-step sign-in is off for {username}; they can log in with their password.')
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
     app.cli.add_command(export_data)
@@ -210,4 +225,5 @@ def register_commands(app):
     app.cli.add_command(import_season_plan_command)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
+    app.cli.add_command(reset_two_factor)
     register_tag_commands(app)

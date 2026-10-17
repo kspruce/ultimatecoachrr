@@ -23,6 +23,7 @@ class TestConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
     SESSION_COOKIE_SECURE = REMEMBER_COOKIE_SECURE = False  # the test client is plain http
+    TWO_FACTOR_REQUIRED = False  # tests/test_two_factor.py turns it on
     RATELIMIT_ENABLED = False  # tests/test_accounts.py turns it on where it's tested
     MAIL_SERVER = None  # no email unless a test sets it up
     ADMINS = []

@@ -56,6 +56,24 @@
     </form>
   </div>
 
+  {% if current_user.two_factor_enabled %}
+  <div class="ac-card">
+    <div class="ac-section">Two-step sign-in</div>
+    <p style="font-size:.9rem;color:var(--uc-gray-600)">
+      <i class="bi bi-shield-check text-success"></i> On: logging in needs a code from your authenticator app.
+      {{ recovery_left }} recovery code{{ '' if recovery_left == 1 else 's' }} left.</p>
+    <a href="{{ url_for('auth.two_factor_setup') }}" class="ac-btn secondary mb-3">Move to a new phone</a>
+    <form method="POST" action="{{ url_for('auth.new_recovery_codes') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-2">
+        <p class="ac-label">Your password</p>
+        <input type="password" name="password" class="ac-input" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="ac-btn secondary">Make new recovery codes</button>
+    </form>
+  </div>
+  {% endif %}
+
   <p class="ac-footer"><a href="{{ url_for('auth.profile') }}">Back to profile</a></p>
 </div>
 {% endblock %}

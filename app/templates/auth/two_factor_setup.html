@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "auth/_styles.html" %}
+<style>
+  .tf-qr { display:block; margin:0 auto 1rem; width:200px; height:200px; image-rendering:pixelated;
+           background:#fff; border-radius:10px; padding:6px; }
+  .tf-key { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.85rem; word-break:break-all;
+            text-align:center; background:var(--uc-gray-100, #f3f4f6); border-radius:8px; padding:.5rem .75rem; }
+  .tf-steps { color:var(--uc-gray-600); font-size:.9rem; padding-left:1.1rem; }
+</style>
+
+<div class="ac-wrap">
+  <div class="ac-card">
+    <div class="ac-icon"><i class="bi bi-shield-lock-fill"></i></div>
+    <h1 class="ac-title">Set up two-step sign-in</h1>
+    <p class="ac-sub">
+      {% if required %}Superadmins can see every team, so logging in needs a code from your phone as well as your password.
+      {% else %}This replaces the authenticator you set up before; the old one stops working.{% endif %}
+    </p>
+
+    <ol class="tf-steps">
+      <li>Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password...).</li>
+      <li>Add an account and scan this code.</li>
+      <li>Type the 6-digit code it shows.</li>
+    </ol>
+    {% if qr %}<img class="tf-qr" src="{{ qr }}" alt="QR code for your authenticator app">{% endif %}
+    <p class="ac-label text-center">Or enter this key by hand</p>
+    <p class="tf-key mb-4">{{ secret }}</p>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if not required and current_user.two_factor_enabled %}
+      <div class="mb-3">
+        <p class="ac-label">Your password</p>
+        <input type="password" name="password" class="ac-input" required autocomplete="current-password">
+      </div>
+      {% endif %}
+      <div class="mb-3">
+        <p class="ac-label">Code from the app</p>
+        <input name="code" class="ac-input ac-code" inputmode="numeric" autocomplete="one-time-code"
+               placeholder="123 456" required maxlength="7">
+      </div>
+      <button type="submit" class="ac-btn"><i class="bi bi-check-circle me-2"></i>Turn on two-step sign-in</button>
+    </form>
+    <form method="post" action="{{ url_for('auth.logout') }}" class="ac-footer">
+      <button type="submit" class="btn btn-link p-0" style="font-size:.8rem">Log out</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

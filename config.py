@@ -35,6 +35,9 @@ class Config:
     # a page left open at a tournament can still save
     WTF_CSRF_TIME_LIMIT = None
 
+    # Superadmins must use two-step sign-in (an authenticator app)
+    TWO_FACTOR_REQUIRED = os.environ.get('TWO_FACTOR_REQUIRED', '1') != '0'
+
     # Error reports to Sentry (optional): set SENTRY_DSN from your Sentry project
     SENTRY_DSN = os.environ.get('SENTRY_DSN')
     
