@@ -43,7 +43,7 @@
                                         <tr>
                                             <td>{{ metric.name }}</td>
                                             <td>{{ metric.unit }}</td>
-                                            <td>{{ metric.description|truncate(50) }}</td>
+                                            <td>{{ (metric.description or "")|truncate(50) }}</td>
                                             <td>
                                                 {% if metric.higher_is_better %}
                                                     <span class="badge bg-success">Higher is better</span>
