@@ -9,22 +9,18 @@ SQLite and Postgres in GitHub Actions on every pull request.
 **You need to do these yourself**
 1. **Change the admin password.** The old one is still in git history (and
    so are the seed passwords that were in `db_manager.py`).
-2. **`.env` is committed.** `config.py` loads it at startup, so the live site
-   may read settings from it. Copy what it needs into Railway's Variables
-   (especially `SECRET_KEY`), change any real keys in it, then
-   `git rm --cached .env`.
+2. **Check `SECRET_KEY` is set in Railway's Variables.** `.env` is no longer
+   committed, so the live site must get it from Railway.
 
 **Code**
-3. `routes/session.py` `drills()` ignores the drill library's search form.
-4. The session list's focus-area dropdown lists every team's focus areas.
-5. `error_handlers.py` calls `db.session.remove()` after every request,
+3. `error_handlers.py` calls `db.session.remove()` after every request,
    which throws away unsaved work in code that briefly opens a request
    context (Flask-SQLAlchemy already cleans up).
-6. Smaller broken imports in rarely used paths: `app/discord/notifications.py`
+4. Smaller broken imports in rarely used paths: `app/discord/notifications.py`
    (`Session`), `data_management_routes.py` (`Stat`).
-7. `Throw.opposition_team` is never filled in when recording, so the
+5. `Throw.opposition_team` is never filled in when recording, so the
    opposition filter on the connections chart never matches anything.
-8. 25 unused variables, 6 `raise` without `from`, and ~240 broad
+6. 25 unused variables, 6 `raise` without `from`, and ~240 broad
    `except Exception` blocks; `process_player_stats` (app/stats/players.py)
    is still one 250-line function.
 
@@ -38,6 +34,14 @@ SQLite and Postgres in GitHub Actions on every pull request.
 - Third-party `myninja.ai` script removed from 29 templates.
 
 **Teams**
+- Cross-team audit (October 2026): every page, search box, filter, JSON
+  endpoint, form submit and delete was probed as another team's captain and
+  player with Thundering Herd's ids. Fixed: scouting/session filter dropdowns,
+  session component plays, fitness metric lists and lookups, clip segment
+  delete, stat recording, game/tournament player selection, session quick
+  check-in and off-season track weeks. `team_player_ids()` drops posted
+  players from other teams; `tests/test_team_isolation.py` covers each one.
+- The drill library search, skill level and focus area filters work.
 - Only superadmins switch, add or edit other teams; team admins see only
   their own. Superadmins default to their own team.
 - Lookups by id check the team: player feedback, quick capture, tournament

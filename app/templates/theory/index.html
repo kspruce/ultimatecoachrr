@@ -76,7 +76,7 @@
                     </div>
                     {% if section.description %}
                     <div style="font-size:.78rem;color:var(--uc-gray-400);line-height:1.45">
-                        {{ section.description|truncate(60) }}
+                        {{ (section.description or "")|truncate(60) }}
                     </div>
                     {% endif %}
                     {% set tc = section.topics.count() %}

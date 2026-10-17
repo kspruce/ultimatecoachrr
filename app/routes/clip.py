@@ -408,6 +408,7 @@ def delete_segment(clip_id, segment_id):
     # Optional: restrict to admins/coaches
     if not (current_user.is_admin or current_user.is_coach):
         abort(403)
+    Clip.query.filter_by(id=clip_id, team_organization_id=get_current_team_id()).first_or_404()
     seg = ClipPointSegment.query.filter_by(id=segment_id, clip_id=clip_id).first_or_404()
     db.session.delete(seg)
     db.session.commit()

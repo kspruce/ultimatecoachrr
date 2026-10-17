@@ -740,7 +740,8 @@ def goals():
     return render_template(
         'off_season/goals.html',
         active_goals=active_goals,
-        completed_goals=completed_goals
+        completed_goals=completed_goals,
+        today=date.today(),
     )
 
 @bp.route('/goals/add', methods=['GET', 'POST'])
@@ -1014,6 +1015,13 @@ def manage_track_workout():
                           weeks=weeks,
                           session_plans=session_plans)
 
+def _team_session_plan_id(session_plan_id, team_id):
+    """The session plan id if it's one of this team's, else None."""
+    if session_plan_id and SessionPlan.query.filter_by(id=session_plan_id, team_organization_id=team_id).first():
+        return session_plan_id
+    return None
+
+
 @bp.route('/track-workout/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -1025,7 +1033,7 @@ def add_track_workout_week():
         week_number = request.form.get('week_number', type=int)
         title = request.form.get('title')
         description = request.form.get('description')
-        session_plan_id = request.form.get('session_plan_id', type=int)
+        session_plan_id = _team_session_plan_id(request.form.get('session_plan_id', type=int), team_id)
         
         if not week_number or not title:
             flash('Week number and title are required', 'danger')
@@ -1077,7 +1085,7 @@ def edit_track_workout_week(week_id):
         week.week_number = request.form.get('week_number', type=int)
         week.title = request.form.get('title')
         week.description = request.form.get('description')
-        week.session_plan_id = request.form.get('session_plan_id', type=int) or None
+        week.session_plan_id = _team_session_plan_id(request.form.get('session_plan_id', type=int), team_id)
         
         db.session.commit()
         

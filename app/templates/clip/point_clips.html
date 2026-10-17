@@ -31,7 +31,7 @@
                     </div>
                     <div class="card-body">
                         {% if clip.description %}
-                        <p class="card-text">{{ clip.description|truncate(100) }}</p>
+                        <p class="card-text">{{ (clip.description or "")|truncate(100) }}</p>
                         {% endif %}
                         
                         {% if clip.tag_list %}
