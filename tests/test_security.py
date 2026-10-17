@@ -113,3 +113,22 @@ def test_login_cookies_are_secure_by_default():
     from config import Config
     assert Config.SESSION_COOKIE_SECURE and Config.REMEMBER_COOKIE_SECURE
     assert Config.SESSION_COOKIE_SAMESITE == 'Lax'
+
+
+@pytest.mark.parametrize('url,resolves_to,ok', [
+    ('https://i.imgur.com/a.png', '151.101.0.193', True),
+    ('http://169.254.169.254/latest/meta-data/', '169.254.169.254', False),
+    ('http://localhost:5432/', '127.0.0.1', False),
+    ('http://intranet/', '10.0.0.5', False),
+    ('http://rebind.example/', '::1', False),
+    ('file:///etc/passwd', None, False),
+    ('ftp://example.com/x', '93.184.216.34', False),
+])
+def test_pdf_renderer_only_fetches_public_urls(monkeypatch, url, resolves_to, ok):
+    """Exports render text people typed in a server-side browser, so it must
+    not be able to reach internal addresses."""
+    import socket
+    from app.utils import pdf
+    monkeypatch.setattr(socket, 'getaddrinfo',
+                        lambda *a, **kw: [(None, None, None, '', (resolves_to, 0))])
+    assert pdf.is_public_url(url) is ok
