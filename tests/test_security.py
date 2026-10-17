@@ -144,3 +144,25 @@ def test_csp_reports_are_accepted_without_login(app):
     r = app.test_client().post('/csp-report', data='{"csp-report": {"blocked-uri": "https://evil.example"}}',
                                content_type='application/csp-report')
     assert r.status_code == 204
+
+
+def test_expired_form_shows_a_page_not_json(app, season):
+    app.config['WTF_CSRF_ENABLED'] = True
+    r = season['coach'].post('/games/add', data={'opponent': 'X'})
+    app.config['WTF_CSRF_ENABLED'] = False
+    assert r.status_code == 400 and r.mimetype == 'text/html'
+    assert 'refresh the page' in r.get_data(as_text=True)
+
+
+def test_sentry_starts_only_when_configured(monkeypatch):
+    import sentry_sdk
+    from app import create_app
+    from tests.conftest import TestConfig
+    calls = []
+    monkeypatch.setattr(sentry_sdk, 'init', lambda **kw: calls.append(kw))
+
+    class WithSentry(TestConfig):
+        TESTING = False
+        SENTRY_DSN = 'https://key@example.ingest.sentry.io/1'
+    create_app(WithSentry)
+    assert calls and calls[0]['send_default_pii'] is False

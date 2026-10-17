@@ -31,6 +31,12 @@ class Config:
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
     SESSION_COOKIE_HTTPONLY = REMEMBER_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = REMEMBER_COOKIE_SAMESITE = 'Lax'
+    # Form tokens last as long as the login, not Flask-WTF's default hour, so
+    # a page left open at a tournament can still save
+    WTF_CSRF_TIME_LIMIT = None
+
+    # Error reports to Sentry (optional): set SENTRY_DSN from your Sentry project
+    SENTRY_DSN = os.environ.get('SENTRY_DSN')
     
     # Application URL
     BASE_URL = os.environ.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')

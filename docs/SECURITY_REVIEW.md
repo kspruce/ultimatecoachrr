@@ -38,54 +38,44 @@ old code.
 `SESSION_COOKIE_SECURE=0` is needed to log in over plain http locally
 (it's off automatically with `FLASK_DEBUG=1`).
 
+## Second round
+
+Also covered by tests (`tests/test_security.py`, `tests/test_accounts.py`).
+
+| Change | Why |
+|---|---|
+| Updated Flask, Werkzeug, Jinja2, Pillow, requests, sqlparse, Mako, Markdown, python-dotenv, idna, zipp (and blinker, itsdangerous for Flask 3.1); CI runs `pip-audit` | All had published vulnerabilities; CI now fails on new ones |
+| PDF exports only fetch http(s) URLs on public addresses | The server-side browser could otherwise be pointed at cloud metadata or internal services from a coach's text |
+| gunicorn runs 8 threads in one process | One slow export or backup no longer stalls everyone. It must stay one process: the stats cache, rate limits, playbook export progress and the Discord bot live in its memory |
+| Logins carry a fingerprint of the password hash | Changing a password, or using a reset link, signs out every other device and remember-me cookie. Everyone logs in once more after this deploys |
+| Common passwords refused at sign-up and password change | The first guesses an attacker tries |
+| Logout is a POST (exempt from CSRF, so an old page can still log out) | Other sites could log people out with a link |
+| CSP: the safe parts enforced, the full policy report-only, violations logged by `/csp-report` | A crawl of every page in Chromium found no violations. Watch the logs for `CSP would block`; when they're quiet, merge `CSP_REPORT_ONLY` into `CSP` in `app/__init__.py` |
+| Share tokens compared in constant time; unused annotation forms that listed every team's users deleted | Small leftovers |
+| Form tokens last as long as the login, and an expired form shows a page instead of raw JSON | Pages left open for over an hour (e.g. at a tournament) couldn't save |
+| Optional Sentry error reports (`SENTRY_DSN`), without personal data | You find out about errors before customers tell you |
+
 ## Still to do before selling access
 
-Roughly in priority order.
+These need a decision or an account from you, so they aren't built yet.
 
-1. **Update pinned dependencies.** Several have published CVEs:
-   Pillow 10.0.0 (fixed in 10.3+), Jinja2 3.1.3 (3.1.6), Werkzeug 3.0.2
-   (3.0.6+) and requests 2.31.0 (2.32.4). Run
-   `pip-audit -r requirements.txt` and add it to CI.
-2. **PDF export renders user content in Chromium on the server.** Markdown is
-   now cleaned, but Playwright will still fetch any `<img src>` in the page,
-   including internal addresses. In `app/utils/pdf.py`, block network
-   requests (`page.route('**/*', ...)` allowing only `data:` URLs) since
-   images are already inlined.
-3. **One gunicorn worker.** `Procfile`/`railway.toml` start gunicorn with the
-   default single sync worker and a 300s timeout, so one slow PDF export or
-   backup stalls the site for everyone. Use `--workers 2-4` (or
-   `--worker-class gthread --threads 4`), and move rate-limit storage to Redis
-   (`RATELIMIT_STORAGE_URI`) so limits hold across workers.
-4. **Logging out other sessions.** Changing a password doesn't sign out
-   other devices or remember-me cookies (Flask-Login uses the plain user id).
-   Add a per-user session token used as `get_id()`, rotate it on password
-   change, and set `login.session_protection = 'strong'`.
-5. **Logout is a GET.** Any site can log a user out with an `<img>` tag.
-   Make `/auth/logout` POST-only (the guest write-block already allows it).
-6. **Content-Security-Policy.** The headers above stop framing; a CSP is the
-   next layer against XSS. The templates use a lot of inline `<script>` and
-   CDN scripts, so start with `Content-Security-Policy-Report-Only` and
-   tighten it.
-7. **Password policy.** Only an 8-character minimum. Consider rejecting
-   common/breached passwords and offering 2FA for admin and superadmin
-   accounts. The superadmin can see every team; protect it hardest.
-8. **Players' data on public share links.** `/sessions/<id>/guest/<token>`
-   shows the attendance list (player names) to anyone with the link. Check
-   that's intended; consider expiring links (`share_token_expires` already
-   exists but is never set). Compare tokens with `hmac.compare_digest`.
-9. **Dead code that leaks across teams if reused.** `app/forms/annotation_forms.py`
-   and `AnnotationFilterForm` in `app/forms/annotation.py` list every team's
-   users and players. Nothing imports them today; delete them.
-10. **Fitness metrics.** Some fitness pages load a metric by id without a
-    team check. Metrics can be shared on purpose, and the records shown are
-    filtered by team, so only another team's metric name can show. Use
-    `_team_metric_or_404` everywhere for consistency.
-11. **Legal and commercial basics before charging:** a privacy policy and
-    terms (you store minors' names and fitness/attendance data, possibly
-    under GDPR), a way for a team to export and delete its data, offsite
-    database backups with a tested restore, error monitoring (e.g. Sentry),
-    and billing through a hosted checkout (Stripe Checkout and its customer
-    portal) so card details never touch this app.
+1. **Two-factor sign-in for admins and the superadmin.** The superadmin can
+   see every team. TOTP (an authenticator app) is the usual choice.
+2. **Public share links show attendance.** `/sessions/<id>/guest/<token>`
+   shows player names to anyone with the link. Decide whether it should,
+   and whether links should expire (`share_token_expires` exists but is
+   never set).
+3. **Team self-service export and deletion.** Only the superadmin can back up
+   or delete data today. Paying teams (and GDPR) expect to download and
+   delete their own.
+4. **Privacy policy and terms.** You hold players' names, fitness and
+   attendance data, possibly of minors. Get these written properly.
+5. **Backups.** Make sure the production database has automatic offsite
+   backups, and test a restore.
+6. **Billing.** Use a hosted checkout (Stripe Checkout and its customer
+   portal) so card details never touch this app.
+7. **Rate limits across restarts.** They're counted in memory, so a restart
+   resets them. Set `RATELIMIT_STORAGE_URI` to a Redis URL if you add one.
 
 ## Checked and fine
 

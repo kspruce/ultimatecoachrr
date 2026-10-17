@@ -61,6 +61,12 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    if app.config.get('SENTRY_DSN') and not app.testing:
+        import sentry_sdk
+        # No names, emails or form contents in error reports
+        sentry_sdk.init(dsn=app.config['SENTRY_DSN'], send_default_pii=False,
+                        traces_sample_rate=0)
+
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
@@ -169,10 +175,12 @@ def create_app(config_class=Config):
     # Error handlers
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
-        return jsonify({
-            'success': False,
-            'message': 'CSRF token missing or invalid'
-        }), 400
+        from flask import request, render_template
+        message = 'This page had expired. Go back, refresh the page and try again.'
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' \
+                or request.accept_mimetypes.best == 'application/json':
+            return jsonify({'success': False, 'message': message}), 400
+        return render_template('error.html', error_message=message), 400
 
     @app.errorhandler(429)
     def too_many_requests(e):
