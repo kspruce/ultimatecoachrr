@@ -3,6 +3,7 @@ from wtforms import StringField, DateField, TextAreaField, SelectField, IntegerF
 from wtforms.validators import DataRequired, Optional, URL, NumberRange, Length
 from app.models.tournament import Tournament
 from app.models.game import Game
+from app.utils.team_filter import get_current_team_id
 
 class ScoutingReportForm(FlaskForm):
     team_name = StringField('Team Name', validators=[DataRequired(), Length(max=100)])
@@ -20,12 +21,12 @@ class ScoutingReportForm(FlaskForm):
         super(ScoutingReportForm, self).__init__(*args, **kwargs)
         # Populate tournament choices
         self.tournament_id.choices = [(0, 'None')] + [
-            (t.id, t.name) for t in Tournament.query.order_by(Tournament.start_date.desc()).all()
+            (t.id, t.name) for t in Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
         ]
         # Populate game choices
         self.game_id.choices = [(0, 'None')] + [
             (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})") 
-            for g in Game.query.order_by(Game.date.desc()).all()
+            for g in Game.query.filter_by(team_organization_id=get_current_team_id()).order_by(Game.date.desc()).all()
         ]
 
 class OpponentPlayerForm(FlaskForm):
@@ -105,5 +106,5 @@ class ScoutingFilterForm(FlaskForm):
         super(ScoutingFilterForm, self).__init__(*args, **kwargs)
         # Populate tournament choices
         self.tournament_id.choices = [(0, 'All Tournaments')] + [
-            (t.id, t.name) for t in Tournament.query.order_by(Tournament.start_date.desc()).all()
+            (t.id, t.name) for t in Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
         ]

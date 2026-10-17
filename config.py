@@ -24,6 +24,13 @@ class Config:
     
     # Debug configuration
     DEBUG = os.environ.get('FLASK_DEBUG', '0') == '1'
+
+    # Login cookies: https only (set SESSION_COOKIE_SECURE=0 to log in over
+    # plain http locally), hidden from scripts, left off other sites' posts
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', '0' if DEBUG else '1') == '1'
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
+    SESSION_COOKIE_HTTPONLY = REMEMBER_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = REMEMBER_COOKIE_SAMESITE = 'Lax'
     
     # Application URL
     BASE_URL = os.environ.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')

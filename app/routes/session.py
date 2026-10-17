@@ -9,6 +9,7 @@ from app.models.drill import SavedDrill, DrillDiagram
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
+from jinja2.utils import htmlsafe_json_dumps
 import base64
 import hashlib
 from flask_wtf.csrf import CSRFProtect
@@ -1104,7 +1105,7 @@ def attendance_analytics():
         players=players,
         player_stats=player_stats,
         overall_attendance_rate=overall_attendance_rate,
-        trend_data=json.dumps(trend_data),
+        trend_data=htmlsafe_json_dumps(trend_data),
         selected_player=selected_player
     )
 
@@ -1207,7 +1208,7 @@ def player_attendance(player_id):
         absent_count=absent_count,
         excused_count=excused_count,
         attendance_rate=attendance_rate,
-        trend_data=json.dumps(trend_data),
+        trend_data=htmlsafe_json_dumps(trend_data),
         # Add tournament data to template context
         tournament_data=tournament_data,
         total_tournaments=total_tournaments,
@@ -1662,11 +1663,16 @@ def revoke_share_link(session_id):
     
 @bp.route('/<int:session_id>/quick_checkin', methods=['POST'])
 @login_required
+@admin_required
 def quick_checkin(session_id):
+    # Same people as the admin RSVP page it's used from, and only for this
+    # team's sessions and players
+    SessionPlan.query.filter_by(id=session_id, team_organization_id=get_current_team_id()).first_or_404()
+    data = request.get_json(silent=True) or {}
 
-    data = request.get_json()
-
-    player_id = data.get("player_id")
+    player = Player.query.filter_by(id=data.get("player_id"),
+                                    team_organization_id=get_current_team_id()).first_or_404()
+    player_id = player.id
     status = data.get("status")
 
     existing = SessionRSVP.query.filter_by(

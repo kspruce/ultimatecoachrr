@@ -88,7 +88,7 @@
                 </div>
                 <div class="card-body">
                     <div class="embed-container">
-                        {{ play.ultiplay_embed|safe }}
+                        {{ play.ultiplay_embed|embed_html }}
                     </div>
                 </div>
             </div>
@@ -227,7 +227,7 @@
                     <h6>{{ play.formation.name }}</h6>
                     {% if play.formation.ultiplay_embed %}
                     <div class="embed-container mb-3">
-                        {{ play.formation.ultiplay_embed|safe }}
+                        {{ play.formation.ultiplay_embed|embed_html }}
                     </div>
                     {% endif %}
                     {% if play.formation.description %}

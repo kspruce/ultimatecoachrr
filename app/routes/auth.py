@@ -211,7 +211,9 @@ def login():
             login_user(user, remember=form.remember_me.data)
 
             next_page = request.args.get('next')
-            if not next_page or urlparse(next_page).netloc != '':
+            # Only paths on this site (browsers read //x and /\x as other sites)
+            if (not next_page or not next_page.startswith('/') or next_page.startswith(('//', '/\\'))
+                    or urlparse(next_page).netloc):
                 next_page = url_for('main.index')
 
             return redirect(next_page)

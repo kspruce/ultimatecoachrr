@@ -88,7 +88,9 @@ class SessionComponentForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(SessionComponentForm, self).__init__(*args, **kwargs)
         from app.models.playbook import Play
-        self.plays.choices = [(p.id, p.name) for p in Play.query.order_by(Play.name).all()]    
+        from app.utils.team_filter import get_current_team_id
+        self.plays.choices = [(p.id, p.name) for p in Play.query.filter_by(
+            team_organization_id=get_current_team_id()).order_by(Play.name).all()]
     submit = SubmitField('Save Component')
 
 class AttendanceForm(FlaskForm):
@@ -144,7 +146,9 @@ class SessionFilterForm(FlaskForm):
         super(SessionFilterForm, self).__init__(*args, **kwargs)
         # Populate focus area choices dynamically
         from app.models.session import SessionPlan
-        focus_areas = db.session.query(SessionPlan.focus_area).distinct().all()
+        from app.utils.team_filter import get_current_team_id
+        focus_areas = (db.session.query(SessionPlan.focus_area)
+                       .filter_by(team_organization_id=get_current_team_id()).distinct().all())
         self.focus_area.choices = [('', 'All Focus Areas')] + \
                                 [(fa[0], fa[0]) for fa in focus_areas if fa[0]]
 

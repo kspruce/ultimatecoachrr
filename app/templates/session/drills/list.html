@@ -102,7 +102,7 @@
             <div class="card h-100">
                 {% if drill.ultiplay_embed %}
                     <div class="drill-video-container">
-                        {{ drill.ultiplay_embed|safe }}
+                        {{ drill.ultiplay_embed|embed_html }}
                     </div>
                 {% elif drill.first_diagram %}
                     <div class="drill-placeholder">

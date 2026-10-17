@@ -9,10 +9,11 @@ from flask_moment import Moment
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
-from markupsafe import Markup
+from markupsafe import Markup, escape
 import os
 import json
 import markdown
+import nh3
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -24,6 +25,15 @@ moment = Moment()
 cache = Cache()
 # Limits are set per route (login, sign-up, password reset); nothing global
 limiter = Limiter(key_func=get_remote_address)
+
+# What the markdown and embed filters keep, on top of nh3's safe defaults
+MARKDOWN_ATTRIBUTES = {**nh3.ALLOWED_ATTRIBUTES,
+                       '*': {'class', 'id', 'title', 'width', 'height', 'align'}}
+EMBED_ATTRIBUTES = {
+    'iframe': {'src', 'width', 'height', 'style', 'title', 'allow', 'allowfullscreen',
+               'frameborder', 'scrolling', 'loading'},
+    'div': {'class', 'style'}, 'p': {'class', 'style'}, 'a': {'href', 'title', 'target'},
+}
 
 
 def create_app(config_class=Config):
@@ -85,9 +95,10 @@ def create_app(config_class=Config):
 
     @app.template_filter('nl2br')
     def nl2br_filter(s):
+        # Escape first: players write some of this text (their goals)
         if s is None:
             return ''
-        return s.replace('\n', '<br>')
+        return Markup('<br>'.join(escape(line) for line in str(s).split('\n')))
 
     @app.template_filter('tojsonfilter')
     def tojsonfilter(obj):
@@ -109,7 +120,27 @@ def create_app(config_class=Config):
                 'markdown.extensions.attr_list'
             ]
         )
-        return Markup(md_html)
+        # Markdown passes raw HTML through, so strip scripts, event
+        # handlers and javascript: links before it reaches the page
+        return Markup(nh3.clean(md_html, attributes=MARKDOWN_ATTRIBUTES))
+
+    @app.template_filter('embed_html')
+    def embed_html_filter(html):
+        """Pasted embed code (e.g. Ultiplay): keep only https iframes."""
+        if not html:
+            return ''
+        return Markup(nh3.clean(html, tags={'iframe', 'div', 'p', 'a'},
+                                attributes=EMBED_ATTRIBUTES, url_schemes={'https'}))
+
+    @app.after_request
+    def security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        # Pages may only be framed by this site (stops clickjacking)
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        if app.config.get('SESSION_COOKIE_SECURE'):
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
+        return response
 
     # Error handlers
     @app.errorhandler(CSRFError)

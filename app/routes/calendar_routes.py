@@ -5,7 +5,7 @@ from app.models.session import SessionPlan, SessionRSVP
 from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP
 from datetime import datetime, timedelta
-import json
+from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
 calendar_bp = Blueprint('calendar', __name__)
@@ -116,7 +116,7 @@ def index():
         events.append(event)
     
     # Use the improved template
-    return render_template('calendar/index.html', events=json.dumps(events))
+    return render_template('calendar/index.html', events=htmlsafe_json_dumps(events))
 
 @calendar_bp.route('/api/rsvp', methods=['POST'])
 @login_required
