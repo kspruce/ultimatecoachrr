@@ -35,6 +35,27 @@ EMBED_ATTRIBUTES = {
     'div': {'class', 'style'}, 'p': {'class', 'style'}, 'a': {'href', 'title', 'target'},
 }
 
+# Content-Security-Policy. The enforced part can't break a page: no plugins,
+# no <base> hijacking, forms only post here, only this site may frame us.
+CSP = "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+# The full policy is report-only for now: browsers report what it would block
+# to /csp-report (logged as warnings). Once the logs are quiet, merge it into
+# CSP above. Images and frames stay open to https: for pasted links and embeds.
+_CDNS = ('https://cdn.jsdelivr.net https://cdn.datatables.net https://cdn.quilljs.com '
+         'https://cdnjs.cloudflare.com https://code.jquery.com https://d3js.org')
+CSP_REPORT_ONLY = '; '.join([
+    "default-src 'self'",
+    f"script-src 'self' 'unsafe-inline' {_CDNS}",
+    f"style-src 'self' 'unsafe-inline' {_CDNS} https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    "frame-src https:",
+    f"connect-src 'self' {_CDNS}",
+    "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'",
+    "report-uri /csp-report",
+])
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -140,6 +161,9 @@ def create_app(config_class=Config):
         response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
         if app.config.get('SESSION_COOKIE_SECURE'):
             response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
+        if 'Content-Security-Policy' not in response.headers:  # some routes set their own
+            response.headers['Content-Security-Policy'] = CSP
+            response.headers['Content-Security-Policy-Report-Only'] = CSP_REPORT_ONLY
         return response
 
     # Error handlers

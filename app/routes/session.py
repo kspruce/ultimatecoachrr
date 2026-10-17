@@ -12,6 +12,7 @@ import json
 from jinja2.utils import htmlsafe_json_dumps
 import base64
 import hashlib
+import hmac
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
 from app.forms.session import (
@@ -1578,7 +1579,7 @@ def guest_view(session_id, share_token):
     session_plan = SessionPlan.query.filter_by(id=session_id).first_or_404()
     
     # Verify the share token matches
-    if not session_plan.share_token or session_plan.share_token != share_token:
+    if not session_plan.share_token or not hmac.compare_digest(session_plan.share_token, share_token):
         abort(404)  # Return 404 instead of 403 to hide existence
     
     # Check if token has expired (optional - if you added expiration)

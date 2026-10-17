@@ -132,3 +132,15 @@ def test_pdf_renderer_only_fetches_public_urls(monkeypatch, url, resolves_to, ok
     monkeypatch.setattr(socket, 'getaddrinfo',
                         lambda *a, **kw: [(None, None, None, '', (resolves_to, 0))])
     assert pdf.is_public_url(url) is ok
+
+
+def test_pages_send_a_content_security_policy(season):
+    r = season['coach'].get('/')
+    assert "object-src 'none'" in r.headers['Content-Security-Policy']
+    assert 'report-uri /csp-report' in r.headers['Content-Security-Policy-Report-Only']
+
+
+def test_csp_reports_are_accepted_without_login(app):
+    r = app.test_client().post('/csp-report', data='{"csp-report": {"blocked-uri": "https://evil.example"}}',
+                               content_type='application/csp-report')
+    assert r.status_code == 204

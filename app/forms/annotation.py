@@ -159,43 +159,6 @@ class QuickAnnotationForm(FlaskForm):
         ]
 
 
-class AnnotationFilterForm(FlaskForm):
-    """Form for filtering annotations"""
-    tag_id = SelectMultipleField('Filter by Tags', coerce=int, validators=[Optional()])
-    player_id = SelectField('Filter by Player', coerce=int, validators=[Optional()])
-    event_type = SelectField('Filter by Event', 
-        choices=[
-            (0, 'All Events'),
-            ('goal', 'Goals'),
-            ('turnover', 'Turnovers'),
-            ('block', 'Blocks'),
-            ('assist', 'Assists')
-        ],
-        validators=[Optional()]
-    )
-    creator_id = SelectField('Filter by Creator', coerce=int, validators=[Optional()])
-    key_moments_only = BooleanField('Key Moments Only')
-    submit = SubmitField('Apply Filters')
-    
-    def __init__(self, *args, **kwargs):
-        from app.models.user import User
-        super(AnnotationFilterForm, self).__init__(*args, **kwargs)
-        
-        # Populate tag choices
-        self.tag_id.choices = [(t.id, t.name) for t in AnnotationTag.query.filter_by(is_active=True).order_by(AnnotationTag.name).all()]
-        
-        # Populate player choices
-        self.player_id.choices = [(0, 'All Players')] + [
-            (p.id, f"{p.name} (#{p.jersey_number})") 
-            for p in Player.query.filter_by(active=True).order_by(Player.name).all()
-        ]
-        
-        # Populate creator choices (users who have created annotations)
-        self.creator_id.choices = [(0, 'All Users')] + [
-            (u.id, u.username) for u in User.query.order_by(User.username).all()
-        ]
-
-
 class AnnotationTagForm(FlaskForm):
     """Form for creating and editing annotation tags"""
     name = StringField('Tag Name', validators=[DataRequired()])

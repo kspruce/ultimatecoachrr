@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, request, url_for
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
-from app import db, onboarding
+from app import csrf, db, limiter, onboarding
 from app.models.player import Player
 from app.models.game import Game
 from app.models.session import SessionPlan
@@ -407,3 +407,16 @@ def how_to_use():
 def data_management():
     """The old backup page: everything now lives on the enhanced page."""
     return redirect(url_for('data_management.data_management'), code=301)
+
+
+@bp.route('/csp-report', methods=['POST'])
+@csrf.exempt
+@limiter.limit('30 per minute')
+def csp_report():
+    """Browsers post here when a page breaks the report-only CSP (see
+    CSP_REPORT_ONLY in app/__init__.py)."""
+    report = (request.get_json(force=True, silent=True) or {}).get('csp-report') or {}
+    logger.warning('CSP would block %s (%s) on %s', str(report.get('blocked-uri'))[:200],
+                   str(report.get('violated-directive'))[:80],
+                   str(report.get('document-uri'))[:200])
+    return '', 204
