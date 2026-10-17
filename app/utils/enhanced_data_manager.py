@@ -141,8 +141,10 @@ class EnhancedDataManager:
             if table not in visited:
                 visit(table)
         
-        # Reverse to get correct order (dependencies first)
-        return list(reversed(order))
+        # visit() adds each table after the tables it refers to, so this is
+        # already parents first (reversing it put children first, and on
+        # Postgres "clear existing" then failed to delete parents)
+        return order
         
     def get_model_info(self):
         """Get information about all models"""
@@ -201,6 +203,24 @@ class EnhancedDataManager:
         return model_info
 
     
+    def _association_tables(self):
+        """Link tables with no model class (e.g. clip_tag_relation)."""
+        model_tables = {model.__table__.name for model in self.models.values()}
+        return [t for t in db.metadata.sorted_tables if t.name not in model_tables]
+
+    @staticmethod
+    def _assoc_row(table, row):
+        """Exported text timestamps back to datetimes (SQLite insists)."""
+        row = dict(row)
+        for key, value in row.items():
+            column = table.c.get(key)
+            if isinstance(value, str) and column is not None and isinstance(column.type, db.DateTime):
+                try:
+                    row[key] = datetime.fromisoformat(value)
+                except ValueError:
+                    pass
+        return row
+
     def _write_association_tables(self, zipf, export_summary):
         """Add the link tables (db.Table objects such as clip_tag_relation,
         clip_player, play_session_component) that have no model class, as
@@ -811,16 +831,19 @@ class EnhancedDataManager:
             'results': {}
         }
         
-        # Determine the dependency order to use
-        # If metadata contains a dependency_order, use that
-        # Otherwise use the default dependency order
-        dependency_order = metadata.get('dependency_order', self.dependency_order)
-        logger.info(f"Using dependency order from {'metadata' if 'dependency_order' in metadata else 'default'}")
+        # Our own order, not the one saved in the backup: older backups saved
+        # it the wrong way round (children before parents)
+        dependency_order = self.dependency_order
         
         # Process each model in dependency order
         # If clear_existing is True, delete all data in reverse dependency order
         if clear_existing:
             logger.info("Clearing existing data before import")
+            # Link tables first: they refer to the model tables, and they're
+            # restored from the backup below (keeping them doubled every row)
+            for table in self._association_tables():
+                db.session.execute(table.delete())
+            db.session.commit()
             for table_name in reversed(dependency_order):
                 if table_name in self.models:
                     try:
@@ -835,6 +858,9 @@ class EnhancedDataManager:
                             'status': 'error',
                             'error': f"Failed to clear table: {str(e)}"
                         }
+            # Forget rows loaded before the wipe (e.g. the logged-in user),
+            # which are now marked deleted and would block restoring them
+            db.session.expunge_all()
         
         # Import data in dependency order
         logger.info("Starting data import in dependency order")
@@ -972,7 +998,7 @@ class EnhancedDataManager:
                 for row in assoc_data:
                     try:
                         sp = db.session.begin_nested()
-                        db.session.execute(table.insert().values(**row))
+                        db.session.execute(table.insert().values(**self._assoc_row(table, row)))
                         db.session.flush()
                         sp.commit()
                         imported_count += 1
@@ -992,6 +1018,14 @@ class EnhancedDataManager:
                 db.session.rollback()
                 logger.error(f"Error importing association table {table_name}: {e}")
                 import_summary['results'][f'assoc_{table_name}'] = {'status': 'error', 'error': str(e)}
+
+        # Rows came in with their ids, so move each id counter past them; on
+        # Postgres every new row would otherwise hit a duplicate key
+        try:
+            import_summary['sequences'] = self.reset_sequences()
+        except Exception as e:
+            logger.error(f"Resetting sequences after import failed: {e}")
+            import_summary['sequences'] = {'error': str(e)}
 
         # Update summary
         import_summary['status'] = 'completed'
