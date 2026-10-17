@@ -166,3 +166,22 @@ def test_sentry_starts_only_when_configured(monkeypatch):
         SENTRY_DSN = 'https://key@example.ingest.sentry.io/1'
     create_app(WithSentry)
     assert calls and calls[0]['send_default_pii'] is False
+
+
+def test_privacy_policy_is_public_and_matches_the_setup(app):
+    app.config.update(SITE_OPERATOR='Herd Ultimate Ltd', PRIVACY_CONTACT_EMAIL='privacy@herd.example',
+                      BACKUP_RETENTION_DAYS=14, SENTRY_DSN=None)
+    page = app.test_client().get('/privacy').get_data(as_text=True)
+    assert 'Herd Ultimate Ltd runs Ultimate Coach' in page
+    assert 'mailto:privacy@herd.example' in page and 'kept for 14 days' in page
+    assert 'Sentry' not in page  # only listed when it's switched on
+    app.config['SENTRY_DSN'] = 'https://key@example.ingest.sentry.io/1'
+    assert 'Sentry' in app.test_client().get('/privacy').get_data(as_text=True)
+    for url in ('/auth/register-team', '/auth/join', '/'):
+        assert '/privacy' in app.test_client().get(url).get_data(as_text=True), url
+
+
+def test_remember_me_lasts_30_days():
+    from datetime import timedelta
+    from config import Config
+    assert Config.REMEMBER_COOKIE_DURATION == timedelta(days=30)

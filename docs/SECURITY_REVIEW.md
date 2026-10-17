@@ -55,27 +55,29 @@ Also covered by tests (`tests/test_security.py`, `tests/test_accounts.py`).
 | Form tokens last as long as the login, and an expired form shows a page instead of raw JSON | Pages left open for over an hour (e.g. at a tournament) couldn't save |
 | Optional Sentry error reports (`SENTRY_DSN`), without personal data | You find out about errors before customers tell you |
 
+## Third round
+
+| Change | Notes |
+|---|---|
+| Site backups fixed and tested | A test fills two teams, backs up through both export buttons, changes the data, restores through both restore buttons with "clear existing" and compares every row of every table, on SQLite and Postgres. It found four bugs, now fixed: the table order was backwards (on Postgres "clear existing" silently left newer data behind), link tables were doubled, the restoring superadmin's own account wasn't restored, and "Import data" didn't reset Postgres id counters (every new row then failed) |
+| Team admins: Team settings -> Your data | Download everything the team holds (CSV and JSON, no passwords, secrets or live invite links), or delete the team (team name + password; emails the site owner). `app/utils/team_data.py` decides which rows are a team's; tests check the other team is never included or touched |
+| Two-step sign-in for superadmins | Authenticator app codes, required for superadmins (`TWO_FACTOR_REQUIRED=0` turns that off), 10 hashed recovery codes, single-use codes, `flask reset-two-factor <username>` for a lost phone |
+| Privacy policy at /privacy | Linked from the footer and sign-up pages. Set `SITE_OPERATOR`, `PRIVACY_CONTACT_EMAIL` and `BACKUP_RETENTION_DAYS`; services are listed only when they're switched on |
+| "Remember me" lasts 30 days | Was Flask-Login's default of a year |
+
 ## Still to do before selling access
 
-These need a decision or an account from you, so they aren't built yet.
-
-1. **Two-factor sign-in for admins and the superadmin.** The superadmin can
-   see every team. TOTP (an authenticator app) is the usual choice.
-2. **Public share links show attendance.** `/sessions/<id>/guest/<token>`
-   shows player names to anyone with the link. Decide whether it should,
-   and whether links should expire (`share_token_expires` exists but is
-   never set).
-3. **Team self-service export and deletion.** Only the superadmin can back up
-   or delete data today. Paying teams (and GDPR) expect to download and
-   delete their own.
-4. **Privacy policy and terms.** You hold players' names, fitness and
-   attendance data, possibly of minors. Get these written properly.
-5. **Backups.** Make sure the production database has automatic offsite
-   backups, and test a restore.
-6. **Billing.** Use a hosted checkout (Stripe Checkout and its customer
-   portal) so card details never touch this app.
-7. **Rate limits across restarts.** They're counted in memory, so a restart
-   resets them. Set `RATELIMIT_STORAGE_URI` to a Redis URL if you add one.
+1. **Check Railway's database backups.** These are set on the Postgres
+   service's Backups tab in Railway (a paid-plan feature), not in this code,
+   so I couldn't check them from here. Turn on scheduled
+   backups, set `BACKUP_RETENTION_DAYS` to match how long they're kept, and
+   occasionally restore one into a spare database to check it. The site's own
+   JSON backup (Data management) is a second copy you can download.
+2. **Have the privacy policy reviewed** by someone who knows data protection
+   law where you operate, and add terms of service before charging.
+3. **Billing** (on hold): use a hosted checkout such as Stripe Checkout.
+4. **Rate limits across restarts**: set `RATELIMIT_STORAGE_URI` to Redis if
+   you add one.
 
 ## Checked and fine
 

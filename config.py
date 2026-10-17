@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -31,12 +32,20 @@ class Config:
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
     SESSION_COOKIE_HTTPONLY = REMEMBER_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = REMEMBER_COOKIE_SAMESITE = 'Lax'
+    # "Remember me" keeps you logged in for 30 days (Flask-Login's default is a year)
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
     # Form tokens last as long as the login, not Flask-WTF's default hour, so
     # a page left open at a tournament can still save
     WTF_CSRF_TIME_LIMIT = None
 
     # Superadmins must use two-step sign-in (an authenticator app)
     TWO_FACTOR_REQUIRED = os.environ.get('TWO_FACTOR_REQUIRED', '1') != '0'
+
+    # Shown on the privacy policy (/privacy): who runs the site, how to reach
+    # them about personal data, and how long database backups are kept
+    SITE_OPERATOR = os.environ.get('SITE_OPERATOR')
+    PRIVACY_CONTACT_EMAIL = os.environ.get('PRIVACY_CONTACT_EMAIL') or os.environ.get('ADMIN_EMAIL')
+    BACKUP_RETENTION_DAYS = int(os.environ.get('BACKUP_RETENTION_DAYS') or 30)
 
     # Error reports to Sentry (optional): set SENTRY_DSN from your Sentry project
     SENTRY_DSN = os.environ.get('SENTRY_DSN')

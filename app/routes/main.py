@@ -394,6 +394,21 @@ def index():
                          **extras)
 
 
+@bp.route('/privacy')
+def privacy():
+    from flask import current_app
+    from app.utils.email import email_provider
+    config = current_app.config
+    return render_template('privacy.html', title='Privacy policy',
+                           operator=config.get('SITE_OPERATOR'),
+                           contact=config.get('PRIVACY_CONTACT_EMAIL'),
+                           backup_days=config.get('BACKUP_RETENTION_DAYS', 30),
+                           email_service=email_provider(),
+                           sentry=bool(config.get('SENTRY_DSN')),
+                           s3=bool(config.get('AWS_BUCKET_NAME')),
+                           discord='discord.settings' in current_app.view_functions)
+
+
 @bp.route('/about')
 def about():
     return render_template('about.html', title='About')
