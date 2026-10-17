@@ -27,7 +27,9 @@ jobs:
           python-version: '3.11'
           cache: pip
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest ruff
+        run: pip install -r requirements.txt pytest ruff pip-audit
+      - name: No dependencies with known vulnerabilities
+        run: pip-audit -r requirements.txt
       - name: Lint (errors only)
         run: ruff check --select F821,F811,F401,E9 app run.py commands.py config.py
       - name: Migrations have a single head
