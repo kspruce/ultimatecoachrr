@@ -15,7 +15,7 @@ from app.utils.utils import coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
 from app.models.tournament_rsvp import TournamentRSVP
-from app.utils.team_filter import get_current_team_id
+from app.utils.team_filter import get_current_team_id, team_player_ids
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -370,7 +370,7 @@ def update_players(game_id):
         team_organization_id=get_current_team_id()
     ).first_or_404()
     
-    player_ids = request.form.getlist('player_ids', type=int)
+    player_ids = team_player_ids(request.form.getlist('player_ids'))
 
     # Delete existing GamePlayer records
     GamePlayer.query.filter_by(

@@ -172,10 +172,19 @@ def add_session():
 @bp.route('/drills')
 @login_required
 def drills():
-    """Display all drills in the library"""
-    drills = SavedDrill.query.filter_by(
-        team_organization_id=get_current_team_id()
-    ).order_by(SavedDrill.title).all()
+    """Display the team's drill library, filtered by the search form"""
+    query = SavedDrill.query.filter_by(team_organization_id=get_current_team_id())
+    q = request.args.get('q', '').strip()
+    if q:
+        like = f'%{q}%'
+        query = query.filter(db.or_(SavedDrill.title.ilike(like), SavedDrill.description.ilike(like)))
+    skill_level = request.args.get('skill_level', '').strip()
+    if skill_level:
+        query = query.filter(SavedDrill.skill_level == skill_level)
+    focus_area = request.args.get('focus_area', '').strip()
+    if focus_area:
+        query = query.filter(SavedDrill.focus_area.ilike(f'%{focus_area}%'))
+    drills = query.order_by(SavedDrill.title).all()
     
     return render_template('session/drills/list.html', drills=drills)
 
@@ -1665,15 +1674,18 @@ def revoke_share_link(session_id):
 @login_required
 @admin_required
 def quick_checkin(session_id):
-    # Same people as the admin RSVP page it's used from, and only for this
-    # team's sessions and players
-    SessionPlan.query.filter_by(id=session_id, team_organization_id=get_current_team_id()).first_or_404()
+    # Same people as the admin RSVP page that calls this
+    session_plan = SessionPlan.query.filter_by(
+        id=session_id, team_organization_id=get_current_team_id()).first_or_404()
+
     data = request.get_json(silent=True) or {}
 
-    player = Player.query.filter_by(id=data.get("player_id"),
-                                    team_organization_id=get_current_team_id()).first_or_404()
-    player_id = player.id
     status = data.get("status")
+    player = Player.query.filter_by(
+        id=data.get("player_id"), team_organization_id=session_plan.team_organization_id).first()
+    if player is None:
+        return {"status": "error", "message": "Player not found"}, 404
+    player_id = player.id
 
     existing = SessionRSVP.query.filter_by(
         session_id=session_id,

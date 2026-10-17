@@ -14,7 +14,7 @@ from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
 from app.utils.utils import coach_required
 from wtforms import SubmitField
-from app.utils.team_filter import get_current_team_id, team_row_or_404
+from app.utils.team_filter import get_current_team_id, team_player_ids, team_row_or_404
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -361,7 +361,7 @@ def update_selections(tournament_id):
     ).first_or_404()
     
     # Get selected player IDs from form
-    selected_player_ids = request.form.getlist('selected_players')
+    selected_player_ids = [str(pid) for pid in team_player_ids(request.form.getlist('selected_players'))]
     
     try:
         # Update all RSVPs for this tournament
@@ -472,7 +472,7 @@ def update_game_players(tournament_id, game_id):
     ).first_or_404()
     
     # Get selected player IDs from form
-    selected_player_ids = request.form.getlist('game_players')
+    selected_player_ids = team_player_ids(request.form.getlist('game_players'))
     
     # Remove existing assignments
     GamePlayer.query.filter_by(game_id=game_id).delete()
@@ -499,9 +499,9 @@ def bulk_update_game_players(tournament_id):
 
     for game in tournament.games:
 
-        selected_player_ids = request.form.getlist(
+        selected_player_ids = team_player_ids(request.form.getlist(
             f'game_players_{game.id}'
-        )
+        ))
 
         # Delete existing assignments
         GamePlayer.query.filter_by(game_id=game.id).delete()

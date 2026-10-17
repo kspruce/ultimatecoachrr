@@ -18,6 +18,15 @@ from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('fitness', __name__, url_prefix='/fitness')
 
+
+def _team_metrics():
+    """Active metrics this team can use: its own plus shared ones (no team)."""
+    return FitnessMetric.query.filter(
+        FitnessMetric.active.is_(True),
+        db.or_(FitnessMetric.team_organization_id == get_current_team_id(),
+               FitnessMetric.team_organization_id.is_(None))
+    ).order_by(FitnessMetric.name)
+
 # Helper function to get current team ID
 
 class FitnessRecordForm(FlaskForm):
@@ -58,7 +67,7 @@ def index():
         return redirect(url_for('team.select_team'))
         
     # Active metrics
-    metrics = FitnessMetric.query.filter_by(active=True).all()
+    metrics = _team_metrics().all()
 
     # Metric summary (team avg + record holder)
     metric_data = []
@@ -174,7 +183,7 @@ def player_fitness(player_id):
     }
     
     # Get all metrics - filter by team
-    all_metrics = FitnessMetric.query.filter_by(active=True).all()
+    all_metrics = _team_metrics().all()
     
     # Organize metrics by category
     categorized_metrics = {}
@@ -346,7 +355,7 @@ def record_fitness(player_id):
     form = FitnessRecordForm()
     
     # Get all active metrics for the form dropdown
-    active_metrics = FitnessMetric.query.filter_by(active=True).all()
+    active_metrics = _team_metrics().all()
     form.metric.choices = [(m.id, f"{m.name} ({m.unit})") for m in active_metrics]
     
     # Create a dictionary of metric descriptions for the JavaScript
@@ -402,7 +411,7 @@ def manage_metrics():
     if team_id is None:
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))    
-    metrics = FitnessMetric.query.filter_by(active=True).all()
+    metrics = _team_metrics().all()
     return render_template('fitness/manage_metrics.html', metrics=metrics)
 
 @bp.route('/metrics/add', methods=['GET', 'POST'])
@@ -576,7 +585,7 @@ def team_leaderboard():
         flash('Please select a team first', 'warning')
         return redirect(url_for('team.select_team'))
 
-    metrics = FitnessMetric.query.filter_by(active=True).all()
+    metrics = _team_metrics().all()
     
     leaderboards = []
     for metric in metrics:
@@ -615,7 +624,7 @@ def player_metric_history(player_id, metric_id):
         return redirect(url_for('team.select_team'))    
     
     player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _team_metric_or_404(metric_id)
     
     # Check permissions
     if not (current_user.is_admin or 
@@ -702,10 +711,10 @@ def batch_record():
     metric_id = request.args.get('metric_id', type=int)
     
     if not metric_id:
-        metrics = FitnessMetric.query.filter_by(active=True).all()
+        metrics = _team_metrics().all()
         return render_template('fitness/batch_select_metric.html', metrics=metrics)    
    
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _team_metric_or_404(metric_id)
     active_players = Player.query.filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
     
     # Get top records for this metric to display on the page
@@ -744,6 +753,8 @@ def batch_record():
 
             # Optional phase
             phase_id = request.form.get('phase_id', type=int) or None
+            if phase_id and not TestingPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first():
+                phase_id = None
 
             for player in active_players:
                 value_key = f'value_{player.id}'
@@ -790,7 +801,7 @@ def api_player_metric_chart_data(player_id, metric_id):
         return jsonify({'error': 'Please select a team first'}), 400
 
     player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _team_metric_or_404(metric_id)
 
     if not (current_user.is_admin or 
             (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
@@ -821,7 +832,7 @@ def api_previous_values(metric_id):
         return jsonify({'error': 'Please select a team first'}), 400
     
     # Verify metric belongs to current team
-    metric = FitnessMetric.query.get_or_404(metric_id)
+    metric = _team_metric_or_404(metric_id)
 
     if not (current_user.is_admin or 
             (hasattr(current_user, 'role') and current_user.role == 'coach')):
@@ -979,7 +990,9 @@ def import_data():
                     # Check if player and metric exist
                     player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first()
                     metric = FitnessMetric.query.get(metric_id)
-                    
+                    if metric and metric.team_organization_id not in (None, team_id):
+                        metric = None
+
                     if not player or not metric:
                         records_skipped += 1
                         continue

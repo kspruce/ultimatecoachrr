@@ -77,3 +77,22 @@ def filter_query(query, model):
         
     # Filter by team organization
     return query.filter(model.team_organization_id == team_id)
+
+
+def team_player_ids(raw_ids):
+    """The ids in `raw_ids` that are players on the current team, in order and
+    without duplicates; anything else (another team's players, junk) is dropped."""
+    from app.models.player import Player
+    ids = []
+    for raw in raw_ids:
+        try:
+            pid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if pid not in ids:
+            ids.append(pid)
+    if not ids:
+        return []
+    valid = {pid for (pid,) in Player.query.with_entities(Player.id).filter(
+        Player.id.in_(ids), Player.team_organization_id == get_current_team_id())}
+    return [pid for pid in ids if pid in valid]

@@ -148,7 +148,8 @@ class SessionFilterForm(FlaskForm):
         from app.models.session import SessionPlan
         from app.utils.team_filter import get_current_team_id
         focus_areas = (db.session.query(SessionPlan.focus_area)
-                       .filter_by(team_organization_id=get_current_team_id()).distinct().all())
+                       .filter(SessionPlan.team_organization_id == get_current_team_id())
+                       .distinct().all())
         self.focus_area.choices = [('', 'All Focus Areas')] + \
                                 [(fa[0], fa[0]) for fa in focus_areas if fa[0]]
 

@@ -4,6 +4,7 @@ from app import db
 from app.models.point import Point, LineUp
 from app.models.event import Event
 from app.models.game import Game
+from app.models.player import Player
 from app.models.throws import Throw
 from app.utils.utils import admin_required, stat_taker_required
 from app.utils.point_flow import get_game_roster, next_point_to_analyse, sync_game_score
@@ -92,6 +93,9 @@ def record_events(point_id):
                 return jsonify({'error': 'player_id is required'}), 400
             else:
                 player_id = int(data['player_id'])
+                if not Player.query.filter_by(id=player_id,
+                                              team_organization_id=get_current_team_id()).first():
+                    return jsonify({'error': 'Player not found'}), 404
 
             # Create new event
             event = Event(

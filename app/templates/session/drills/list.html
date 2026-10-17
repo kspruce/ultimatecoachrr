@@ -77,9 +77,9 @@
                         <div class="col-md-3">
                             <select class="form-select" name="skill_level">
                                 <option value="">Any Skill Level</option>
-                                <option value="beginner">Beginner</option>
-                                <option value="intermediate">Intermediate</option>
-                                <option value="advanced">Advanced</option>
+                                {% for value, label in [('beginner', 'Beginner'), ('intermediate', 'Intermediate'), ('advanced', 'Advanced')] %}
+                                <option value="{{ value }}"{% if request.args.get('skill_level') == value %} selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -117,7 +117,7 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ drill.title }}</h5>
                     {% if drill.description %}
-                    <p class="card-text">{{ drill.description|truncate(100) }}</p>
+                    <p class="card-text">{{ (drill.description or "")|truncate(100) }}</p>
                     {% endif %}
                     
                     <div class="mb-2">

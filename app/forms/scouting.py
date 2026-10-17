@@ -19,14 +19,15 @@ class ScoutingReportForm(FlaskForm):
     
     def __init__(self, *args, **kwargs):
         super(ScoutingReportForm, self).__init__(*args, **kwargs)
-        # Populate tournament choices
+        # Populate tournament and game choices from the current team only
+        team_id = get_current_team_id()
         self.tournament_id.choices = [(0, 'None')] + [
-            (t.id, t.name) for t in Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
+            (t.id, t.name) for t in Tournament.query.filter_by(team_organization_id=team_id)
+            .order_by(Tournament.start_date.desc()).all()
         ]
-        # Populate game choices
         self.game_id.choices = [(0, 'None')] + [
             (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})") 
-            for g in Game.query.filter_by(team_organization_id=get_current_team_id()).order_by(Game.date.desc()).all()
+            for g in Game.query.filter_by(team_organization_id=team_id).order_by(Game.date.desc()).all()
         ]
 
 class OpponentPlayerForm(FlaskForm):
@@ -104,7 +105,8 @@ class ScoutingFilterForm(FlaskForm):
     
     def __init__(self, *args, **kwargs):
         super(ScoutingFilterForm, self).__init__(*args, **kwargs)
-        # Populate tournament choices
+        # Populate tournament choices from the current team only
         self.tournament_id.choices = [(0, 'All Tournaments')] + [
-            (t.id, t.name) for t in Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
+            (t.id, t.name) for t in Tournament.query.filter_by(team_organization_id=get_current_team_id())
+            .order_by(Tournament.start_date.desc()).all()
         ]
