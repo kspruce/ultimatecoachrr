@@ -183,7 +183,7 @@ def test_logged_in_pages_show_season_fields(app, team, season):
 
     client = app.test_client()
     with client.session_transaction() as s:
-        s['_user_id'] = str(user_id)
+        s['_user_id'] = user.get_id()
         s['_fresh'] = True
         s['current_team_id'] = team_id
 

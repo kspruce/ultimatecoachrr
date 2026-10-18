@@ -8,7 +8,7 @@ from app.models.event import Pull, Event
 from app.forms.point import PointForm
 from app.models.throws import Throw
 from app.models.stats import PlayerPointStats
-from app.utils.utils import admin_required
+from app.utils.utils import admin_required, stat_taker_required
 from app.utils.team_filter import get_current_team_id
 from app.utils.point_flow import (
     abba_ratio, determine_line_and_position, get_game_roster, line_type_for,
@@ -449,6 +449,7 @@ def edit_point(point_id):
 
 @bp.route('/delete/<int:point_id>', methods=['POST'])
 @login_required
+@stat_taker_required
 def delete_point(point_id):
 
     point = Point.query.filter_by(

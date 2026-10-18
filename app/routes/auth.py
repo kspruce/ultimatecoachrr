@@ -1,10 +1,11 @@
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
 from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
+import time
 
-from app import db, limiter, onboarding
+from app import csrf, db, limiter, onboarding
 from app.models.user import ROLE_ORDER, User
 from app.models.player import Player
 from app.models.team_organization import TeamOrganization, generate_join_code, normalize_join_code
@@ -29,6 +30,17 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('auth', __name__)
 
 MIN_PASSWORD_LENGTH = 8
+# The first passwords anyone guessing tries (8+ characters, lower case), plus
+# the obvious ones for this site
+COMMON_PASSWORDS = frozenset('''
+12345678 123456789 1234567890 0123456789 87654321 11111111 00000000 12341234
+password password1 password12 password123 passw0rd p@ssword p@ssw0rd qwertyuiop
+qwerty123 qwerty12 1q2w3e4r 1qaz2wsx zaq12wsx asdfghjk asdfghjkl iloveyou
+sunshine princess football baseball welcome1 welcome123 letmein1 trustno1
+superman starwars whatever abc12345 abcd1234 aa123456 changeme computer
+liverpool chelsea1 arsenal1 admin123 administrator
+ultimate frisbee ultimate1 frisbee1 ultimatefrisbee ultimatecoach
+'''.split())
 
 # Rate limits (per visitor IP) on pages that take passwords or create accounts
 LOGIN_LIMIT = '10 per minute;60 per hour'
@@ -143,6 +155,8 @@ def _password_errors(password, confirm):
     errors = []
     if len(password or '') < MIN_PASSWORD_LENGTH:
         errors.append(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.')
+    elif password.lower() in COMMON_PASSWORDS or len(set(password)) < 3:
+        errors.append('That password is too easy to guess. Try a few words together.')
     if password != confirm:
         errors.append('Passwords do not match.')
     return errors
@@ -208,12 +222,19 @@ def login():
                 flash('Invalid username or password', 'danger')
                 return redirect(url_for('auth.login'))
 
-            login_user(user, remember=form.remember_me.data)
-
             next_page = request.args.get('next')
-            if not next_page or urlparse(next_page).netloc != '':
+            # Only paths on this site (browsers read //x and /\x as other sites)
+            if (not next_page or not next_page.startswith('/') or next_page.startswith(('//', '/\\'))
+                    or urlparse(next_page).netloc):
                 next_page = url_for('main.index')
 
+            if user.two_factor_enabled:
+                # Password was right; the code from their app comes next
+                session['tfa_pending'] = {'user': user.get_id(), 'remember': bool(form.remember_me.data),
+                                          'next': next_page, 'at': time.time(), 'tries': 0}
+                return redirect(url_for('auth.two_factor'))
+
+            login_user(user, remember=form.remember_me.data)
             return redirect(next_page)
 
         return render_template('auth/login.html', title='Sign In', form=form)
@@ -234,9 +255,12 @@ def register():
                            team_signup_open=SiteSettings.get().open_team_registration)
 
 
-@bp.route('/logout')
+@bp.route('/logout', methods=['GET', 'POST'])
+@csrf.exempt  # a stale page must still log out; SameSite cookies stop other sites
 def logout():
-    logout_user()
+    # Only a POST logs out, so a link or image on another site can't
+    if request.method == 'POST':
+        logout_user()
     return redirect(url_for('main.index'))
 
 
@@ -632,10 +656,17 @@ def account():
             else:
                 current_user.set_password(password)
                 db.session.commit()
-                flash('Password changed.', 'success')
+                # Signs out other devices; keep this one logged in
+                login_user(current_user._get_current_object(),
+                           remember=current_app.config.get('REMEMBER_COOKIE_NAME', 'remember_token')
+                           in request.cookies)
+                flash('Password changed. Any other devices have been signed out.', 'success')
         return redirect(url_for('auth.account'))
 
+    from app.utils.two_factor import recovery_codes_left, required_for
     return render_template('auth/account.html', title='Account Settings',
+                           recovery_left=recovery_codes_left(current_user),
+                           tfa_required=required_for(current_user),
                            email_enabled=email_configured(),
                            has_real_email=is_real_email(current_user.email))
 
@@ -884,3 +915,130 @@ def _notify_admins_of_new_team(team, user, signup_invite):
                    f'Team admin: {user.username} ({user.email or "no email"})\n\n'
                    f'Manage teams: {url_for("team_organization.signups", _external=True)}\n')
 
+
+
+# ---------------------------------------
+# Two-step sign-in (superadmins)
+# ---------------------------------------
+
+TWO_FACTOR_SECONDS = 5 * 60
+TWO_FACTOR_TRIES = 5
+
+
+@bp.route('/two-factor', methods=['GET', 'POST'])
+@limiter.limit(LOGIN_LIMIT, methods=['POST'])
+def two_factor():
+    """Second step of logging in: a code from the authenticator app, or a
+    recovery code."""
+    from app.models.user import load_user
+    from app.utils import two_factor as tf
+    pending = session.get('tfa_pending')
+    user = load_user(pending['user']) if pending else None
+    if user is None or time.time() - pending['at'] > TWO_FACTOR_SECONDS:
+        session.pop('tfa_pending', None)
+        flash('Please log in again.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'POST':
+        code = request.form.get('code', '')
+        used_recovery = False
+        ok = tf.verify_code(user, code)
+        if not ok and tf.use_recovery_code(user, code):
+            ok = used_recovery = True
+        if ok:
+            db.session.commit()
+            session.pop('tfa_pending', None)
+            login_user(user, remember=pending['remember'])
+            if used_recovery:
+                flash(f'Recovery code used: {tf.recovery_codes_left(user)} left. '
+                      'If you lost your phone, set up your authenticator again from Account Settings.',
+                      'warning')
+            return redirect(pending['next'])
+        pending['tries'] += 1
+        session['tfa_pending'] = pending
+        logger.warning(f'Wrong two-step code for user {user.id} (try {pending["tries"]})')
+        if pending['tries'] >= TWO_FACTOR_TRIES:
+            session.pop('tfa_pending', None)
+            flash('Too many wrong codes. Log in again.', 'danger')
+            return redirect(url_for('auth.login'))
+        flash('That code didn\'t work. Check the time on your phone is right and try the newest code.',
+              'danger')
+    return render_template('auth/two_factor.html', title='Two-step sign-in', user=user)
+
+
+@bp.route('/two-factor/setup', methods=['GET', 'POST'])
+@login_required
+def two_factor_setup():
+    """Scan a QR code into an authenticator app and confirm with a code.
+    Replacing an existing one needs the password too."""
+    from app.utils import two_factor as tf
+    user = current_user._get_current_object()
+    if request.method == 'POST':
+        secret = session.get('tfa_setup_secret')
+        if not secret:
+            return redirect(url_for('auth.two_factor_setup'))
+        if user.two_factor_enabled and not user.check_password(request.form.get('password', '')):
+            flash('Your password was incorrect.', 'danger')
+        elif tf.matching_step(secret, request.form.get('code', '')) is None:
+            flash('That code didn\'t match. Type the 6-digit code your app shows now.', 'danger')
+        else:
+            codes = tf.enable(user, secret)
+            user.totp_last_step = tf.matching_step(secret, request.form.get('code', ''))
+            db.session.commit()
+            session.pop('tfa_setup_secret', None)
+            login_user(user)  # the old session no longer matches; keep this one
+            logger.info(f'Two-step sign-in set up for user {user.id}')
+            return render_template('auth/recovery_codes.html', title='Recovery codes', codes=codes)
+    else:
+        session['tfa_setup_secret'] = tf.new_secret()
+    secret = session['tfa_setup_secret']
+    uri = tf.provisioning_uri(user, secret)
+    return render_template('auth/two_factor_setup.html', title='Set up two-step sign-in',
+                           secret=secret, qr=tf.qr_data_uri(uri))
+
+
+@bp.route('/two-factor/recovery-codes', methods=['POST'])
+@login_required
+def new_recovery_codes():
+    """Replace the recovery codes (the old ones stop working)."""
+    from app.utils import two_factor as tf
+    if not current_user.two_factor_enabled:
+        return redirect(url_for('auth.account'))
+    if not current_user.check_password(request.form.get('password', '')):
+        flash('Your password was incorrect.', 'danger')
+        return redirect(url_for('auth.account'))
+    codes, current_user.totp_recovery_codes = tf.new_recovery_codes()
+    db.session.commit()
+    return render_template('auth/recovery_codes.html', title='Recovery codes', codes=codes)
+
+
+@bp.route('/two-factor/disable', methods=['POST'])
+@login_required
+def disable_two_factor():
+    """Turn it off again, while the site doesn't require it."""
+    from app.utils import two_factor as tf
+    user = current_user._get_current_object()
+    if tf.required_for(user):
+        flash('Two-step sign-in is required for superadmins on this site.', 'warning')
+    elif not user.check_password(request.form.get('password', '')):
+        flash('Your password was incorrect.', 'danger')
+    else:
+        tf.disable(user)
+        db.session.commit()
+        login_user(user)  # other devices are signed out; keep this one
+        flash('Two-step sign-in is off. Logging in needs just your password.', 'success')
+    return redirect(url_for('auth.account'))
+
+
+@bp.before_app_request
+def require_two_factor():
+    """When the site requires it, superadmins set up two-step sign-in
+    before anything else."""
+    from app.utils import two_factor as tf
+    if (not current_user.is_authenticated or current_user.two_factor_enabled
+            or not tf.required_for(current_user)):
+        return None
+    if request.endpoint in ('auth.two_factor_setup', 'auth.logout', 'static', 'main.csp_report'):
+        return None
+    flash('This site requires two-step sign-in for superadmins. Set it up to continue.', 'warning')
+    return redirect(url_for('auth.two_factor_setup'))

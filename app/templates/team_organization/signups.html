@@ -5,7 +5,34 @@
 
   <div class="mb-4">
     <h2 class="fw-bold mb-1">Team Sign-ups</h2>
-    <p class="text-muted mb-0">Control who can register a new team, and check email is working.</p>
+    <p class="text-muted mb-0">Control who can register a new team and how superadmins sign in, and check email is working.</p>
+  </div>
+
+  <!-- Two-step sign-in -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <h6 class="fw-bold mb-1">Two-step sign-in for superadmins</h6>
+          {% if settings.require_two_factor %}
+          <p class="mb-0"><span class="badge bg-success me-1">Required</span>
+            Superadmins log in with a code from an authenticator app as well as their password.</p>
+          {% else %}
+          <p class="mb-0"><span class="badge bg-secondary me-1">Optional</span>
+            Superadmins can turn it on in Account Settings. Require it before you share the site.</p>
+          {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('team_organization.set_two_factor_required') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if settings.require_two_factor %}
+          <button name="required" value="0" class="btn btn-outline-secondary btn-sm"
+                  onclick="return confirm('Make two-step sign-in optional for superadmins?')">Make optional</button>
+          {% else %}
+          <button name="required" value="1" class="btn btn-outline-dark btn-sm">Require it</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- Who can register -->

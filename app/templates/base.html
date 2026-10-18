@@ -253,6 +253,10 @@
           <li><a class="dropdown-item" href="{{ url_for('team.colour_settings') }}">
             <i class="bi bi-palette"></i> Colours &amp; Crest</a></li>
           {% endif %}
+          {% if current_user.is_admin %}
+          <li><a class="dropdown-item" href="{{ url_for('team.data_settings') }}">
+            <i class="bi bi-database"></i> Your Team's Data</a></li>
+          {% endif %}
 
           {% if not current_user.is_guest %}
           <li><a class="dropdown-item" href="{{ url_for('onboarding.welcome') }}">
@@ -304,8 +308,9 @@
           {% endif %}
 
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item uc-danger" href="{{ url_for('auth.logout') }}">
-            <i class="bi bi-box-arrow-right"></i> Log out</a></li>
+          <li><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+            <button type="submit" class="dropdown-item uc-danger">
+              <i class="bi bi-box-arrow-right"></i> Log out</button></form></li>
 
         </ul>
       </div>
@@ -357,6 +362,7 @@
 
 <footer class="footer mt-5 py-4 text-center">
     <span>Ultimate Coach &copy; 2026</span>
+    <span class="mx-2">&middot;</span><a href="{{ url_for('main.privacy') }}">Privacy</a>
 </footer>
 
 <!-- jQuery FIRST -->

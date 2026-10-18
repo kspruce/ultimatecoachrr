@@ -6,7 +6,7 @@ from app.models.game import Game
 from app.models.tournament import Tournament
 from app.models.event import Event
 from app.models.throws import Throw
-import json
+from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import TURNOVER_EVENTS, calculate_unadjusted_per, get_point_starting_possession, point_we_scored
@@ -255,11 +255,11 @@ def calculate_performance_trends(games):
         break_percentage.append((breaks / total_points * 100) if total_points > 0 else 0)
     
     return {
-        'dates': json.dumps(dates),
-        'labels': json.dumps(labels),
-        'o_line_efficiency': json.dumps(o_line_efficiency),
-        'd_line_efficiency': json.dumps(d_line_efficiency),
-        'break_percentage': json.dumps(break_percentage)
+        'dates': htmlsafe_json_dumps(dates),
+        'labels': htmlsafe_json_dumps(labels),
+        'o_line_efficiency': htmlsafe_json_dumps(o_line_efficiency),
+        'd_line_efficiency': htmlsafe_json_dumps(d_line_efficiency),
+        'break_percentage': htmlsafe_json_dumps(break_percentage)
     }
 
 def calculate_possession_based_team_metrics(games):

@@ -1079,8 +1079,8 @@
 <script>
 // Global visualization data
 const vizData = {
-    throwVectors: {{ throw_vectors|safe }},
-    throwawayLocations: {{ throwaway_locations|safe }},
+    throwVectors: {{ throw_vectors|tojson }},
+    throwawayLocations: {{ throwaway_locations|tojson }},
     perValue: {{ stats.per|round(2) }},
     // Add debug logging to check throw vector structure
     init: function() {

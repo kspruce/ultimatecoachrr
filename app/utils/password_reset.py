@@ -6,7 +6,6 @@ current password hash, so it stops working as soon as the password changes
 is signed into the token too: an hour for links sent by email, three days
 for links a coach hands out.
 """
-import hashlib
 
 from flask import current_app, url_for
 from itsdangerous import BadSignature, URLSafeTimedSerializer
@@ -24,7 +23,7 @@ def _serializer():
 
 
 def _fingerprint(user):
-    return hashlib.sha256((user.password_hash or 'no-password').encode()).hexdigest()[:16]
+    return user.password_fingerprint()
 
 
 def make_reset_token(user, valid_for=EMAIL_LINK_SECONDS):

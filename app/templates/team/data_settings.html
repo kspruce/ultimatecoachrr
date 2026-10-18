@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+  .ds-card { background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.3rem 1.5rem; margin-bottom: 1.25rem; }
+  .ds-card h3 { font-size: 1.2rem; margin: 0 0 .35rem; }
+  .ds-card p { color: var(--ink-2); font-size: .92rem; }
+  .ds-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .6rem; margin: 1rem 0 1.2rem; }
+  .ds-stats div { border: 1px solid var(--rule); border-radius: 10px; padding: .55rem .75rem; }
+  .ds-stats b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+  .ds-stats span { color: var(--ink-3); font-size: .78rem; }
+  .ds-danger { border-color: color-mix(in oklab, var(--bs-danger, #c0392b) 45%, var(--rule)); }
+  .ds-danger h3 { color: var(--bs-danger, #c0392b); }
+  .ds-danger ul { color: var(--ink-2); font-size: .9rem; padding-left: 1.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set labels = [('player', 'Players'), ('user', 'Member accounts'), ('game', 'Games'),
+                 ('event', 'Recorded plays'), ('session_plan', 'Sessions'), ('saved_drill', 'Drills'),
+                 ('play', 'Plays'), ('clip', 'Clips')] %}
+<div class="uc-settings">
+  {% include "team/_settings_nav.html" %}
+  <div style="max-width:720px">
+    <div class="uc-page-header">
+      <div>
+        <h1>Your data</h1>
+        <p>Everything {{ team.name }} keeps on Ultimate Coach belongs to your team. Download it any time, or delete it for good.</p>
+      </div>
+    </div>
+
+    <div class="ds-card">
+      <h3>Download your team's data</h3>
+      <p>A zip with every table your team uses, as spreadsheet files (CSV) and as JSON. Passwords and live invite links are left out.</p>
+      <div class="ds-stats">
+        {% for key, label in labels if counts.get(key) %}
+        <div><b>{{ counts[key] }}</b><span>{{ label }}</span></div>
+        {% endfor %}
+      </div>
+      <a href="{{ url_for('team.export_team_data') }}" class="btn btn-primary">
+        <i class="bi bi-download"></i> Download all data</a>
+    </div>
+
+    <div class="ds-card ds-danger">
+      <h3>Delete this team</h3>
+      <p>This permanently deletes, straight away:</p>
+      <ul>
+        <li>every player, game, stat, session, drill, play, clip and note</li>
+        <li>all {{ members }} member account{{ '' if members == 1 else 's' }}{% if not current_user.is_superadmin %}, including yours{% endif %}</li>
+      </ul>
+      <p>It can't be undone. Download your data first if you might want it.</p>
+      <form method="post" action="{{ url_for('team.delete_team') }}" class="mt-3"
+            onsubmit='return confirm({{ ("Delete " ~ team.name ~ " and all its data for good?")|tojson }})'>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label" for="confirm_name">Type the team name, <b>{{ team.name }}</b>, to confirm</label>
+          <input class="form-control" id="confirm_name" name="confirm_name" autocomplete="off" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="password">Your password</label>
+          <input class="form-control" type="password" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete team and all data</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

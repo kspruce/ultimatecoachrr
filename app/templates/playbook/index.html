@@ -240,7 +240,7 @@
                                     {% set embed_url = formation.ultiplay_embed.split('src="')[1].split('"')[0] %}
                                     <iframe class="iframe-direct-container" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
                                 {% else %}
-                                    <div class="embed-container">{{ formation.ultiplay_embed|safe }}</div>
+                                    <div class="embed-container">{{ formation.ultiplay_embed|embed_html }}</div>
                                 {% endif %}
                             </div>
                             {% endif %}
@@ -338,7 +338,7 @@
                                 {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
                                 <iframe class="iframe-direct-container mb-3" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
                             {% else %}
-                                <div class="embed-container">{{ play.ultiplay_embed|safe }}</div>
+                                <div class="embed-container">{{ play.ultiplay_embed|embed_html }}</div>
                             {% endif %}
                         {% endif %}
                         {% if play.image_url %}
@@ -431,7 +431,7 @@
                                 {% set embed_url = play.ultiplay_embed.split('src="')[1].split('"')[0] %}
                                 <iframe class="iframe-direct-container mb-3" src="{{ embed_url }}" frameborder="0" allowfullscreen></iframe>
                             {% else %}
-                                <div class="embed-container">{{ play.ultiplay_embed|safe }}</div>
+                                <div class="embed-container">{{ play.ultiplay_embed|embed_html }}</div>
                             {% endif %}
                         {% endif %}
                         {% if play.image_url %}

@@ -159,6 +159,7 @@ def generate_playbook_pdf(formations, plays, team_name, type_filter=None,
     report generation stages to the UI.
     """
     from playwright.sync_api import sync_playwright  # lazy: optional dependency
+    from app.utils.pdf import block_private_requests
 
     def report(pct, label):
         if progress:
@@ -182,6 +183,7 @@ def generate_playbook_pdf(formations, plays, team_name, type_filter=None,
         browser = p.chromium.launch(headless=True)
         try:
             context = browser.new_context()  # shared context = shared image cache
+            block_private_requests(context)
 
             def to_pdf(html):
                 page = context.new_page()

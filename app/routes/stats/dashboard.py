@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.player import Player
 from app.models.game import Game
-import json
+from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
 from app.routes.stats import bp
@@ -71,8 +71,8 @@ def index():
         d_line_men=d_line_men,
         o_line_efficiency=dict(o_line_efficiency),
         d_line_efficiency=dict(d_line_efficiency),
-        heatmap_data=json.dumps(process_heatmap_data(limit=1000)),
-        connection_data=json.dumps(generate_player_connections()),
+        heatmap_data=htmlsafe_json_dumps(process_heatmap_data(limit=1000)),
+        connection_data=htmlsafe_json_dumps(generate_player_connections()),
         team_avg_stats=calculate_team_avg_stats(player_stats),
         is_admin=current_user.is_admin,
         is_coach=current_user.is_coach,

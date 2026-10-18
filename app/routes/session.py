@@ -9,8 +9,10 @@ from app.models.drill import SavedDrill, DrillDiagram
 from app.models.player import Player
 from datetime import datetime, timedelta
 import json
+from jinja2.utils import htmlsafe_json_dumps
 import base64
 import hashlib
+import hmac
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
 from app.forms.session import (
@@ -1113,7 +1115,7 @@ def attendance_analytics():
         players=players,
         player_stats=player_stats,
         overall_attendance_rate=overall_attendance_rate,
-        trend_data=json.dumps(trend_data),
+        trend_data=htmlsafe_json_dumps(trend_data),
         selected_player=selected_player
     )
 
@@ -1216,7 +1218,7 @@ def player_attendance(player_id):
         absent_count=absent_count,
         excused_count=excused_count,
         attendance_rate=attendance_rate,
-        trend_data=json.dumps(trend_data),
+        trend_data=htmlsafe_json_dumps(trend_data),
         # Add tournament data to template context
         tournament_data=tournament_data,
         total_tournaments=total_tournaments,
@@ -1577,7 +1579,7 @@ def guest_view(session_id, share_token):
     session_plan = SessionPlan.query.filter_by(id=session_id).first_or_404()
     
     # Verify the share token matches
-    if not session_plan.share_token or session_plan.share_token != share_token:
+    if not session_plan.share_token or not hmac.compare_digest(session_plan.share_token, share_token):
         abort(404)  # Return 404 instead of 403 to hide existence
     
     # Check if token has expired (optional - if you added expiration)

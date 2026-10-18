@@ -5,6 +5,8 @@ import json
 import zipfile
 from datetime import date, time
 
+import pytest
+
 from app import db
 from app.models.session import SessionPlan
 from app.models.drill import DrillDiagram
@@ -110,3 +112,52 @@ def test_old_data_management_page_redirects_to_the_new_one(app, team):
                 '/admin/delete-export'):
         assert endpoints[url].startswith('data_management.'), url
     assert client.get('/admin/enhanced-data-management').status_code == 200
+
+
+def _download(client, export):
+    if export == 'json-zip':
+        r = client.get('/admin/export-json-zip')
+    else:
+        r = client.post('/admin/export-data', data={'export_format': 'json'})
+    assert r.status_code == 200 and r.mimetype == 'application/zip', r.status_code
+    return r.data
+
+
+@pytest.mark.parametrize('export', ['json-zip', 'export-data'])
+@pytest.mark.parametrize('restore', ['/admin/import-zip-file', '/admin/import-data'])
+def test_whole_site_backup_restores_every_row(app, export, restore):
+    """A superadmin downloads a backup, the data then changes (or is lost),
+    and restoring with "clear existing" brings back exactly what was saved,
+    and the site can still add new rows afterwards (Postgres id sequences)."""
+    from app.models.team_organization import TeamOrganization
+    from app.models.player import Player
+    from app.models.game import Game
+    from app.models.fitness import FitnessRecord
+    from tests import rich_data, stats_data
+
+    alpha, bravo = rich_data.build(app)
+    boss = stats_data.build_admin(db.session.get(TeamOrganization, alpha), 'boss')
+    client = stats_data.Client(app, boss.id, alpha)
+    backup = _download(client, export)
+    db.session.remove()
+    saved = rich_data.snapshot()  # what the backup holds
+
+    # Things go wrong after the backup
+    Player.query.filter_by(team_organization_id=bravo).update({'name': 'Overwritten'})
+    db.session.add(Game(opponent='Not in the backup', team_organization_id=alpha))
+    db.session.query(FitnessRecord).delete()
+    db.session.commit()
+
+    r = client.post(restore, data={'import_file': (io.BytesIO(backup), 'backup.zip'),
+                                   'clear_existing': 'on'},
+                    content_type='multipart/form-data')
+    assert r.status_code == 302
+    db.session.remove()
+    restored = rich_data.snapshot()
+    for table in saved:
+        assert restored[table] == saved[table], table
+    assert sum(len(rows) for rows in saved.values()) > 400
+
+    db.session.add_all([Player(name='Joined after restore', team_organization_id=alpha),
+                        SessionPlan(title='Planned after restore', team_organization_id=alpha)])
+    db.session.commit()

@@ -3,6 +3,7 @@ from app import db, login
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import hashlib
 
 # Role hierarchy (team-scoped). Captains and team admins share the top level:
 # both run everything on their own team. Only superadmins (is_superadmin)
@@ -42,6 +43,13 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     discord_id = db.Column(db.String(64), nullable=True, unique=True)
 
+    # Two-step sign-in (app/utils/two_factor.py): the authenticator app's
+    # secret, hashed one-time recovery codes (JSON list), and the last code
+    # used (so a code can't be used twice)
+    totp_secret = db.Column(db.String(64), nullable=True)
+    totp_recovery_codes = db.Column(db.Text, nullable=True)
+    totp_last_step = db.Column(db.Integer, nullable=True)
+
     # Single-team membership
     team_organization_id = db.Column(db.Integer, db.ForeignKey("team_organization.id"))
 
@@ -54,6 +62,25 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def password_fingerprint(self):
+        """Changes whenever the password does (and never reveals it)."""
+        return hashlib.sha256((self.password_hash or 'no-password').encode()).hexdigest()[:16]
+
+    def session_fingerprint(self):
+        """Changes with the password or the authenticator app."""
+        secret = (self.password_hash or 'no-password') + (self.totp_secret or '')
+        return hashlib.sha256(secret.encode()).hexdigest()[:16]
+
+    @property
+    def two_factor_enabled(self):
+        return bool(self.totp_secret)
+
+    def get_id(self):
+        # Logins and remember-me cookies carry this fingerprint, so changing
+        # or resetting a password, or setting up two-step sign-in again,
+        # signs out every other device
+        return f"{self.id}:{self.session_fingerprint()}"
 
     @property
     def player(self):
@@ -96,4 +123,10 @@ class User(UserMixin, db.Model):
 
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    user_id, _, fingerprint = str(id).partition(':')
+    if not user_id.isdigit():
+        return None
+    user = db.session.get(User, int(user_id))
+    if user is None or fingerprint != user.session_fingerprint():
+        return None
+    return user

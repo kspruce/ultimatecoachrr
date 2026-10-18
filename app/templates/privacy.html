@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+  .pp { max-width: 760px; margin: 0 auto 3rem; line-height: 1.6; }
+  .pp h1 { margin-bottom: .25rem; }
+  .pp .pp-updated { color: var(--ink-3); font-size: .9rem; margin-bottom: 2rem; }
+  .pp h2 { font-size: 1.25rem; margin: 2.2rem 0 .6rem; }
+  .pp table { width: 100%; border-collapse: collapse; font-size: .92rem; margin: .5rem 0 1rem; }
+  .pp th, .pp td { text-align: left; vertical-align: top; padding: .5rem .6rem; border-top: 1px solid var(--rule); }
+  .pp th { font-weight: 700; }
+  .pp .pp-summary { border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.25rem; background: var(--card); }
+  .pp .pp-summary ul { margin: 0; padding-left: 1.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set us = operator or 'The people who run Ultimate Coach' %}
+<article class="pp">
+  <h1>Privacy policy</h1>
+  <p class="pp-updated">Last updated 17 October 2026</p>
+
+  <div class="pp-summary">
+    <ul>
+      <li>Your team decides what goes into Ultimate Coach. We keep it so your team can use it, and nothing else.</li>
+      <li>We don't sell data, show adverts or use tracking or analytics cookies.</li>
+      <li>Only members of your team can see your team's data, and what they see depends on their role.</li>
+      <li>Your team admins can download all of the team's data, or delete it, at any time.</li>
+    </ul>
+  </div>
+
+  <h2>Who we are</h2>
+  <p>{{ us }} run{{ 's' if operator else '' }} Ultimate Coach, a website that helps ultimate frisbee teams plan
+    training, record stats and manage their squad.
+    {% if contact %}For anything about your personal data, email <a href="mailto:{{ contact }}">{{ contact }}</a>.{% endif %}</p>
+
+  <h2>Your team and us</h2>
+  <p>Each team on Ultimate Coach is run by its own admins (usually its captains or coaches). The team decides
+    who joins, what is recorded about its players and who can see it, so the team is responsible for that
+    information. We store it and keep it safe on the team's behalf, and only use it to run the service for that team.</p>
+  <p>We are responsible for the information needed to run the site itself: accounts, sign-in and security records.</p>
+
+  <h2>What we hold</h2>
+  <table>
+    <tr><th style="width:32%">Accounts</th>
+      <td>Username, email address (optional), role in the team, and a scrambled (hashed) copy of the password,
+        never the password itself. Superadmins also have a two-step sign-in secret and hashed recovery codes.</td></tr>
+    <tr><th>Player profiles</th>
+      <td>Name, shirt number, position, gender (used for mixed-division line ratios), and anything else the
+        team chooses to add: date of birth, height, weight, email, phone number, notes, goals and coach feedback.</td></tr>
+    <tr><th>Playing and training</th>
+      <td>Game stats (who was on each point, passes, scores, turnovers), attendance and availability for
+        sessions and tournaments, fitness test results and goals.</td></tr>
+    <tr><th>Team content</th>
+      <td>Session plans, drills, plays, season plans, links to video clips and their notes, and scouting reports
+        on other teams, which can include the names of opposing players.</td></tr>
+    <tr><th>Technical records</th>
+      <td>Server logs with IP addresses, browser details, pages requested and errors, used to keep the site
+        working and secure.</td></tr>
+  </table>
+
+  <h2>Why we use it</h2>
+  <ul>
+    <li><strong>To provide the service your team signed up for:</strong> showing your team its plans, stats and
+      squad, and sending emails you need, such as invitations and password resets.</li>
+    <li><strong>To keep it secure:</strong> rate limits on sign-in, security logs, and investigating misuse.</li>
+    <li><strong>To fix problems:</strong> error reports and logs.</li>
+  </ul>
+  <p>We rely on the legitimate interests of your team and of us in running a team management tool, and on
+    performing our agreement with your team. We don't use your data for marketing, adverts or profiling,
+    and we don't sell it.</p>
+
+  <h2>Young players</h2>
+  <p>Teams may include players under 18. Teams should only add a young player's details with the agreement of
+    a parent or guardian where that's needed, and only add what they need. Players under 13 should not have
+    their own account unless a parent or guardian has set it up or agreed to it.</p>
+
+  <h2>Who can see it</h2>
+  <ul>
+    <li><strong>Your team's members</strong>, depending on their role: players see less than coaches and admins,
+      and coaches choose what players can see in some areas, such as the season plan.</li>
+    <li><strong>Anyone with a share link</strong> a coach creates: a shared session plan (including its attendance
+      list), which the coach can turn off, or a shared clip and its notes, whose link stops working after the
+      time the coach chose (7 days unless they pick up to 90).</li>
+    <li><strong>Our site administrators</strong>, only to support teams, fix problems and keep the site secure.
+      Their accounts need two-step sign-in.</li>
+    <li><strong>Other teams never see your team's data.</strong></li>
+  </ul>
+
+  <h2>Services we use</h2>
+  <p>These companies process data for us to run the site, under their own security and data protection terms:</p>
+  <table>
+    <tr><th style="width:32%">Railway</th><td>Hosting: the servers and database the site runs on.</td></tr>
+    {% if email_service %}
+    <tr><th>{{ {'brevo': 'Brevo', 'resend': 'Resend', 'smtp': 'Our email provider'}[email_service] }}</th>
+      <td>Sending emails (invitations, password resets), so it receives the recipient's address and the message.</td></tr>
+    {% endif %}
+    {% if s3 %}<tr><th>Amazon Web Services</th><td>Storing uploaded files.</td></tr>{% endif %}
+    {% if sentry %}<tr><th>Sentry</th><td>Error reports, without names, emails or form contents.</td></tr>{% endif %}
+    {% if discord %}<tr><th>Discord</th><td>Only if your team connects its Discord server: event reminders and RSVPs.</td></tr>{% endif %}
+    <tr><th>Video sites</th>
+      <td>Clips and embedded videos and slides from YouTube, Veo, Vimeo and Google load from those sites when
+        you view them, under their own privacy policies.</td></tr>
+    <tr><th>Code and font libraries</th>
+      <td>Pages load scripts, styles and fonts from jsDelivr, cdnjs, DataTables, Quill, jQuery, D3 and Google
+        Fonts. Your browser connects to them directly, so they see your IP address.</td></tr>
+  </table>
+  <p>Some of these services may process data outside the UK and European Economic Area. Where they do, they
+    use the safeguards the law requires, such as standard contractual clauses.</p>
+
+  <h2>Cookies</h2>
+  <p>We only use cookies the site needs to work, so we don't ask for consent:</p>
+  <table>
+    <tr><th style="width:32%">session</th><td>Keeps you logged in and protects forms from forgery. Ends when you close your browser.</td></tr>
+    <tr><th>remember_token</th><td>Only if you tick "Remember me": keeps you logged in for 30 days.</td></tr>
+  </table>
+  <p>Embedded videos (YouTube, Veo, Vimeo, Google) may set their own cookies when you view them.</p>
+
+  <h2>How long we keep it</h2>
+  <ul>
+    <li>Your team's data is kept while the team uses Ultimate Coach.</li>
+    <li>Coaches and admins can delete players, accounts and anything else at any time, and team admins can
+      delete the whole team under Team settings &rarr; Your data. Deleting is immediate.</li>
+    <li>Database backups are kept for {{ backup_days }} days, so deleted data disappears from them within
+      {{ backup_days }} days.</li>
+    <li>Server logs are kept for a short time to fix problems and investigate misuse.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <p>You can ask to see the data held about you, have it corrected or deleted, get a copy to take elsewhere,
+    or object to or restrict how it's used. The quickest way is to ask your team's admins: they can change or
+    delete your details and download everything the team holds.
+    {% if contact %}You can also email <a href="mailto:{{ contact }}">{{ contact }}</a> and we'll reply within a month.{% endif %}</p>
+  <p>If you're unhappy with how your data is handled, you can complain to the data protection regulator, which
+    in the UK is the <a href="https://ico.org.uk/make-a-complaint/" rel="noopener">Information Commissioner's Office</a>.</p>
+
+  <h2>Keeping it safe</h2>
+  <p>The site only works over an encrypted connection, passwords are stored hashed, each team's data is kept
+    separate, administrator accounts need two-step sign-in, and the database is backed up regularly.</p>
+
+  <h2>Changes</h2>
+  <p>If we change this policy we'll update the date at the top, and tell team admins about important changes.</p>
+</article>
+{% endblock %}

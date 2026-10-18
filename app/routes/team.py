@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, current_app, send_file
+from flask_login import login_required, current_user, logout_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
 from app import db
@@ -399,6 +399,71 @@ def feature_settings():
         return redirect(url_for('team.feature_settings'))
 
     return render_template('team/feature_settings.html', team=team)
+
+
+def _own_team_or_403():
+    """The team a team admin (captain or admin) runs; superadmins can act on
+    the team they've switched to."""
+    if not current_user.is_admin:
+        abort(403)
+    return TeamOrganization.query.get_or_404(get_current_team_id())
+
+
+@bp.route('/settings/data')
+@login_required
+def data_settings():
+    """Download all the team's data, or delete the team."""
+    team = _own_team_or_403()
+    from app.utils.team_data import team_tables
+    counts = {name: len(rows) for name, rows in team_tables(team.id).items()}
+    return render_template('team/data_settings.html', team=team, counts=counts,
+                           members=User.query.filter_by(team_organization_id=team.id).count())
+
+
+@bp.route('/settings/data/export')
+@login_required
+def export_team_data():
+    import io
+    from slugify import slugify
+    from app.utils.team_data import team_export_zip
+    team = _own_team_or_403()
+    data = team_export_zip(team, current_user)
+    current_app.logger.info(f'Team data export: team {team.id} by user {current_user.id}')
+    return send_file(io.BytesIO(data), mimetype='application/zip', as_attachment=True,
+                     download_name=f'{slugify(team.name)}-data-{datetime.utcnow():%Y-%m-%d}.zip')
+
+
+@bp.route('/settings/data/delete', methods=['POST'])
+@login_required
+def delete_team():
+    """Permanently delete the team: every player, game, session and member
+    account. Needs the team's name typed out and the admin's password."""
+    from app.utils.email import send_email
+    from app.utils.team_data import delete_team_data
+    team = _own_team_or_403()
+    if request.form.get('confirm_name', '').strip() != team.name:
+        flash(f'Type the team name exactly ("{team.name}") to delete it.', 'danger')
+        return redirect(url_for('team.data_settings'))
+    if not current_user.check_password(request.form.get('password', '')):
+        flash('Your password was incorrect.', 'danger')
+        return redirect(url_for('team.data_settings'))
+
+    team_id, team_name, who = team.id, team.name, current_user.username
+    superadmin = current_user.is_superadmin
+    deleted = delete_team_data(team_id)
+    db.session.commit()
+    current_app.logger.warning(f'Team {team_id} "{team_name}" deleted by {who}: {deleted}')
+    for admin_email in current_app.config.get('ADMINS', []):
+        send_email(admin_email, f'Team deleted on Ultimate Coach: {team_name}',
+                   f'{who} deleted the team "{team_name}" and all its data.\n')
+    if superadmin:
+        from flask import session
+        session.pop('current_team_id', None)
+        flash(f'"{team_name}" and all its data have been deleted.', 'success')
+        return redirect(url_for('team_organization.index'))
+    logout_user()  # their account went with the team
+    flash(f'"{team_name}" and all its data, including your account, have been deleted.', 'success')
+    return redirect(url_for('main.index'))
 
 
 @bp.route('/settings/colours', methods=['GET', 'POST'])

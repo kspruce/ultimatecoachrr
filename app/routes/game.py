@@ -11,7 +11,7 @@ from app.models.point import Point, LineUp
 from app.models.player import Player
 from app.models.event import Event, Pull
 from app.models.gameday import GameDayPlayerStats
-from app.utils.utils import coach_required
+from app.utils.utils import coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
 from app.models.tournament_rsvp import TournamentRSVP
@@ -138,6 +138,7 @@ def detail(game_id):
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
+@stat_taker_required
 def add():
     form = GameForm(team_id=get_current_team_id())
     
@@ -393,6 +394,7 @@ def update_players(game_id):
 
 @bp.route('/add_multiple', methods=['GET', 'POST'])
 @login_required
+@stat_taker_required
 def add_multiple():
     tournament_id = request.args.get('tournament_id', type=int)
     tournament = None

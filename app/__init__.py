@@ -9,10 +9,11 @@ from flask_moment import Moment
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
-from markupsafe import Markup
+from markupsafe import Markup, escape
 import os
 import json
 import markdown
+import nh3
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -25,10 +26,46 @@ cache = Cache()
 # Limits are set per route (login, sign-up, password reset); nothing global
 limiter = Limiter(key_func=get_remote_address)
 
+# What the markdown and embed filters keep, on top of nh3's safe defaults
+MARKDOWN_ATTRIBUTES = {**nh3.ALLOWED_ATTRIBUTES,
+                       '*': {'class', 'id', 'title', 'width', 'height', 'align'}}
+EMBED_ATTRIBUTES = {
+    'iframe': {'src', 'width', 'height', 'style', 'title', 'allow', 'allowfullscreen',
+               'frameborder', 'scrolling', 'loading'},
+    'div': {'class', 'style'}, 'p': {'class', 'style'}, 'a': {'href', 'title', 'target'},
+}
+
+# Content-Security-Policy. The enforced part can't break a page: no plugins,
+# no <base> hijacking, forms only post here, only this site may frame us.
+CSP = "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+# The full policy is report-only for now: browsers report what it would block
+# to /csp-report (logged as warnings). Once the logs are quiet, merge it into
+# CSP above. Images and frames stay open to https: for pasted links and embeds.
+_CDNS = ('https://cdn.jsdelivr.net https://cdn.datatables.net https://cdn.quilljs.com '
+         'https://cdnjs.cloudflare.com https://code.jquery.com https://d3js.org')
+CSP_REPORT_ONLY = '; '.join([
+    "default-src 'self'",
+    f"script-src 'self' 'unsafe-inline' {_CDNS}",
+    f"style-src 'self' 'unsafe-inline' {_CDNS} https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    "frame-src https:",
+    f"connect-src 'self' {_CDNS}",
+    "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'",
+    "report-uri /csp-report",
+])
+
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    if app.config.get('SENTRY_DSN') and not app.testing:
+        import sentry_sdk
+        # No names, emails or form contents in error reports
+        sentry_sdk.init(dsn=app.config['SENTRY_DSN'], send_default_pii=False,
+                        traces_sample_rate=0)
 
     # Initialize extensions
     db.init_app(app)
@@ -85,9 +122,10 @@ def create_app(config_class=Config):
 
     @app.template_filter('nl2br')
     def nl2br_filter(s):
+        # Escape first: players write some of this text (their goals)
         if s is None:
             return ''
-        return s.replace('\n', '<br>')
+        return Markup('<br>'.join(escape(line) for line in str(s).split('\n')))
 
     @app.template_filter('tojsonfilter')
     def tojsonfilter(obj):
@@ -109,15 +147,40 @@ def create_app(config_class=Config):
                 'markdown.extensions.attr_list'
             ]
         )
-        return Markup(md_html)
+        # Markdown passes raw HTML through, so strip scripts, event
+        # handlers and javascript: links before it reaches the page
+        return Markup(nh3.clean(md_html, attributes=MARKDOWN_ATTRIBUTES))
+
+    @app.template_filter('embed_html')
+    def embed_html_filter(html):
+        """Pasted embed code (e.g. Ultiplay): keep only https iframes."""
+        if not html:
+            return ''
+        return Markup(nh3.clean(html, tags={'iframe', 'div', 'p', 'a'},
+                                attributes=EMBED_ATTRIBUTES, url_schemes={'https'}))
+
+    @app.after_request
+    def security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        # Pages may only be framed by this site (stops clickjacking)
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        if app.config.get('SESSION_COOKIE_SECURE'):
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
+        if 'Content-Security-Policy' not in response.headers:  # some routes set their own
+            response.headers['Content-Security-Policy'] = CSP
+            response.headers['Content-Security-Policy-Report-Only'] = CSP_REPORT_ONLY
+        return response
 
     # Error handlers
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
-        return jsonify({
-            'success': False,
-            'message': 'CSRF token missing or invalid'
-        }), 400
+        from flask import request, render_template
+        message = 'This page had expired. Go back, refresh the page and try again.'
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' \
+                or request.accept_mimetypes.best == 'application/json':
+            return jsonify({'success': False, 'message': message}), 400
+        return render_template('error.html', error_message=message), 400
 
     @app.errorhandler(429)
     def too_many_requests(e):

@@ -4,7 +4,7 @@ from app import db
 from app.models.player import Player
 from app.models.game import Game
 from app.models.point import Point, LineUp
-import json
+from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
 
 from app.routes.stats import bp
@@ -77,7 +77,7 @@ def game_stats(game_id):
         game=game,
         team_stats=team_stats,
         player_stats=player_stats,
-        heatmap_data=json.dumps(heatmap_data),
-        connections=json.dumps(connection_data),
+        heatmap_data=htmlsafe_json_dumps(heatmap_data),
+        connections=htmlsafe_json_dumps(connection_data),
         calculate_impact_score=calculate_impact_score,
     )
