@@ -30,7 +30,7 @@
     /* Main Editor Layout */
     .editor-main {
         display: grid;
-        grid-template-columns: 80px 1fr;
+        grid-template-columns: 116px 1fr;
         grid-template-rows: minmax(0, 1fr);
         min-height: 0;
         gap: 1rem;
@@ -53,9 +53,9 @@
     }
 
     .tool-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem 0.25rem;
         padding: 0.5rem 0;
         border-bottom: 1px solid #eee;
     }
@@ -158,8 +158,62 @@
         position: relative;
     }
 
+    .preview-arrow.solid { border-top-style: solid; }
+    .preview-arrow.dotted { border-top-style: dotted; }
+
     .editor-note {
         font-size: 0.85rem;
+    }
+
+    .line-options, .stage-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+    }
+
+    .line-options { margin-top: 0.5rem; }
+
+    .line-colour {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid #dee2e6;
+        padding: 0;
+    }
+
+    .line-colour.active { outline: 2px solid #0d6efd; outline-offset: 1px; }
+
+    .tool-hint {
+        min-height: 2.4em;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .stage-bar {
+        padding: 0.5rem 1rem;
+        border-top: 1px solid #dee2e6;
+        background: #f8f9fa;
+    }
+
+    .stage-tabs {
+        display: flex;
+        gap: 0.25rem;
+        overflow-x: auto;
+        flex: 1 1 200px;
+        min-width: 0;
+    }
+
+    .stage-tab { white-space: nowrap; }
+
+    .stage-notes {
+        padding: 0 1rem 0.5rem;
+        background: #f8f9fa;
+    }
+
+    .is-playing .toolbar, .is-playing .field-settings, .is-playing .stage-actions {
+        opacity: 0.5;
+        pointer-events: none;
     }
 
     @media (max-width: 767.98px) {
@@ -169,7 +223,7 @@
         #drill-title { width: 100% !important; }
         .editor-main { grid-template-columns: 1fr; grid-template-rows: auto auto; padding: 0.5rem; }
         .toolbar { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.25rem; }
-        .tool-group { flex-direction: row; border-bottom: none; padding: 0; }
+        .tool-group { display: flex; flex-direction: row; border-bottom: none; padding: 0; }
         .canvas-holder { height: 60vh; }
     }
 </style>
@@ -250,16 +304,28 @@
             <!-- Drawing -->
             <div class="tool-group">
                 <div class="tool-wrapper">
-                    <button class="tool-btn" data-tool="path" title="Cut: draw a freehand arrow (P)">
-                        <i class="bi bi-pen"></i>
+                    <button class="tool-btn" data-tool="cut" title="Cut: drag a straight arrow, or click points (L)">
+                        <div class="preview-arrow solid"></div>
                     </button>
                     <span class="tool-label">Cut</span>
                 </div>
                 <div class="tool-wrapper">
-                    <button class="tool-btn" data-tool="throw" title="Throw: drag a straight dashed arrow (R)">
+                    <button class="tool-btn" data-tool="throw" title="Throw: dashed arrow, straight or curved (R)">
                         <div class="preview-arrow"></div>
                     </button>
                     <span class="tool-label">Throw</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="move" title="Movement: dotted arrow, e.g. a defender (M)">
+                        <div class="preview-arrow dotted"></div>
+                    </button>
+                    <span class="tool-label">Move</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="path" title="Freehand arrow (P)">
+                        <i class="bi bi-pen"></i>
+                    </button>
+                    <span class="tool-label">Freehand</span>
                 </div>
                 <div class="tool-wrapper">
                     <button class="tool-btn" data-tool="text" title="Add Text (T)">
@@ -271,6 +337,18 @@
 
             <!-- Actions -->
             <div class="tool-group">
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-action="undo" title="Undo (Ctrl+Z)">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                    <span class="tool-label">Undo</span>
+                </div>
+                <div class="tool-wrapper">
+                    <button class="tool-btn" data-action="redo" title="Redo (Ctrl+Y)">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <span class="tool-label">Redo</span>
+                </div>
                 <div class="tool-wrapper">
                     <button class="tool-btn" data-action="delete" title="Delete Selected (Del)">
                         <i class="bi bi-trash"></i>
@@ -295,7 +373,7 @@
         <!-- Canvas Area -->
         <div class="canvas-area">
             <div class="field-settings">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div class="field-info">
                         <span class="badge bg-light text-dark me-2">
                             Field: <span id="field-size">70×40 yards</span>
@@ -304,20 +382,79 @@
                             Endzones: <span id="endzone-size">20 yards</span>
                         </span>
                     </div>
-                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" 
-                            data-bs-target="#fieldSettingsModal">
-                        <i class="bi bi-gear"></i> Field Settings
-                    </button>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="form-check form-switch mb-0" title="Snap to whole yards">
+                            <input class="form-check-input" type="checkbox" id="snap-grid">
+                            <label class="form-check-label small" for="snap-grid">Snap to grid</label>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                                data-bs-target="#fieldSettingsModal">
+                            <i class="bi bi-gear"></i> Field Settings
+                        </button>
+                    </div>
                 </div>
+                <div id="line-options" class="line-options invisible">
+                    <div id="line-style-group" class="btn-group btn-group-sm invisible" role="group" aria-label="Arrow style">
+                        <button type="button" class="btn btn-outline-secondary" data-line-style="cut">Cut</button>
+                        <button type="button" class="btn btn-outline-secondary" data-line-style="throw">Throw</button>
+                        <button type="button" class="btn btn-outline-secondary" data-line-style="move">Move</button>
+                    </div>
+                    <div class="d-flex gap-1" role="group" aria-label="Arrow colour">
+                        {% for colour, name in [('#212529', 'Black'), ('#ffffff', 'White'), ('#e03131', 'Red'), ('#1c7ed6', 'Blue'), ('#fab005', 'Yellow')] %}
+                        <button type="button" class="line-colour" data-colour="{{ colour }}" title="{{ name }}"
+                                aria-label="{{ name }}" style="background: {{ colour }}"></button>
+                        {% endfor %}
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="line-smooth">
+                        <label class="form-check-label small" for="line-smooth">Curved</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="line-arrow" checked>
+                        <label class="form-check-label small" for="line-arrow">Arrowhead</label>
+                    </div>
+                </div>
+                <div id="tool-hint" class="tool-hint mt-1"></div>
             </div>
             {% if other_diagrams %}
             <div class="alert alert-info editor-note m-2 mb-0 py-2">
                 This drill already has {{ other_diagrams|length }} imported diagram{{ 's' if other_diagrams|length != 1 }}.
-                They stay as they are; what you draw here is saved as an extra diagram.
+                They stay as they are; what you draw here is saved as extra diagrams (one per stage).
             </div>
             {% endif %}
             <div class="canvas-holder">
                 <canvas id="drill-canvas"></canvas>
+            </div>
+            <div class="stage-bar">
+                <button id="play-stages" type="button" class="btn btn-sm btn-success" title="Play the stages in order (Space)">
+                    <i class="bi bi-play-fill"></i> Play
+                </button>
+                <span id="stage-count" class="small text-muted"></span>
+                <div id="stage-tabs" class="stage-tabs"></div>
+                <div class="stage-actions d-flex gap-1">
+                    <button id="add-stage" type="button" class="btn btn-sm btn-primary"
+                            title="Add the next stage: players and the disc move to the ends of their arrows">
+                        <i class="bi bi-plus-lg"></i> Next stage
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false" title="Stage options">
+                            <i class="bi bi-layers"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><button class="dropdown-item" type="button" id="duplicate-stage"><i class="bi bi-copy"></i> Duplicate stage</button></li>
+                            <li><button class="dropdown-item" type="button" id="rename-stage"><i class="bi bi-pencil"></i> Rename stage</button></li>
+                            <li><button class="dropdown-item" type="button" id="stage-left"><i class="bi bi-arrow-left"></i> Move earlier</button></li>
+                            <li><button class="dropdown-item" type="button" id="stage-right"><i class="bi bi-arrow-right"></i> Move later</button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button class="dropdown-item text-danger" type="button" id="delete-stage"><i class="bi bi-trash"></i> Delete stage</button></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="stage-notes">
+                <input type="text" id="stage-notes" class="form-control form-control-sm" maxlength="255"
+                       placeholder="Notes for this stage (shown under its diagram)">
             </div>
         </div>
     </div>
@@ -473,9 +610,18 @@
                             <li><kbd>D</kbd> Defense Player</li>
                             <li><kbd>F</kbd> Disc</li>
                             <li><kbd>C</kbd> Cone</li>
-                            <li><kbd>P</kbd> Cut (freehand)</li>
-                            <li><kbd>R</kbd> Throw (straight)</li>
+                            <li><kbd>L</kbd> Cut</li>
+                            <li><kbd>R</kbd> Throw</li>
+                            <li><kbd>M</kbd> Movement (dotted)</li>
+                            <li><kbd>P</kbd> Freehand</li>
                             <li><kbd>T</kbd> Text</li>
+                        </ul>
+                        <h6>Arrows</h6>
+                        <ul class="list-unstyled">
+                            <li>Drag for a straight arrow</li>
+                            <li>Or click points, then double-click or <kbd>Enter</kbd></li>
+                            <li><kbd>Shift</kbd> Straight angles</li>
+                            <li>Drag a selected arrow's handles to reshape it</li>
                         </ul>
                     </div>
                     <div class="col-6">
@@ -484,8 +630,17 @@
                             <li><kbd>Delete</kbd> Delete Selected</li>
                             <li><kbd>Ctrl</kbd> + <kbd>S</kbd> Save Drill</li>
                             <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> Undo</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>Y</kbd> Redo</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd> Copy / paste</li>
+                            <li><kbd>Ctrl</kbd> + <kbd>D</kbd> Duplicate</li>
+                            <li>Arrow keys: nudge (<kbd>Shift</kbd> for 5 yards)</li>
                             <li><kbd>Esc</kbd> Back to Select</li>
                             <li>Double-click text to edit it</li>
+                        </ul>
+                        <h6>Stages</h6>
+                        <ul class="list-unstyled">
+                            <li><kbd>[</kbd> / <kbd>]</kbd> Previous / next stage</li>
+                            <li><kbd>Space</kbd> Play / stop</li>
                         </ul>
                     </div>
                 </div>
