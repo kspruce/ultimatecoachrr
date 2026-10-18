@@ -663,9 +663,10 @@ def account():
                 flash('Password changed. Any other devices have been signed out.', 'success')
         return redirect(url_for('auth.account'))
 
-    from app.utils.two_factor import recovery_codes_left
+    from app.utils.two_factor import recovery_codes_left, required_for
     return render_template('auth/account.html', title='Account Settings',
                            recovery_left=recovery_codes_left(current_user),
+                           tfa_required=required_for(current_user),
                            email_enabled=email_configured(),
                            has_real_email=is_real_email(current_user.email))
 
@@ -993,8 +994,7 @@ def two_factor_setup():
     secret = session['tfa_setup_secret']
     uri = tf.provisioning_uri(user, secret)
     return render_template('auth/two_factor_setup.html', title='Set up two-step sign-in',
-                           secret=secret, qr=tf.qr_data_uri(uri),
-                           required=tf.required_for(user) and not user.two_factor_enabled)
+                           secret=secret, qr=tf.qr_data_uri(uri))
 
 
 @bp.route('/two-factor/recovery-codes', methods=['POST'])
@@ -1012,15 +1012,33 @@ def new_recovery_codes():
     return render_template('auth/recovery_codes.html', title='Recovery codes', codes=codes)
 
 
+@bp.route('/two-factor/disable', methods=['POST'])
+@login_required
+def disable_two_factor():
+    """Turn it off again, while the site doesn't require it."""
+    from app.utils import two_factor as tf
+    user = current_user._get_current_object()
+    if tf.required_for(user):
+        flash('Two-step sign-in is required for superadmins on this site.', 'warning')
+    elif not user.check_password(request.form.get('password', '')):
+        flash('Your password was incorrect.', 'danger')
+    else:
+        tf.disable(user)
+        db.session.commit()
+        login_user(user)  # other devices are signed out; keep this one
+        flash('Two-step sign-in is off. Logging in needs just your password.', 'success')
+    return redirect(url_for('auth.account'))
+
+
 @bp.before_app_request
 def require_two_factor():
-    """Superadmins set up two-step sign-in before anything else."""
+    """When the site requires it, superadmins set up two-step sign-in
+    before anything else."""
     from app.utils import two_factor as tf
     if (not current_user.is_authenticated or current_user.two_factor_enabled
-            or not tf.required_for(current_user)
-            or not current_app.config.get('TWO_FACTOR_REQUIRED', True)):
+            or not tf.required_for(current_user)):
         return None
     if request.endpoint in ('auth.two_factor_setup', 'auth.logout', 'static', 'main.csp_report'):
         return None
-    flash('Superadmins need two-step sign-in. Set it up to continue.', 'warning')
+    flash('This site requires two-step sign-in for superadmins. Set it up to continue.', 'warning')
     return redirect(url_for('auth.two_factor_setup'))

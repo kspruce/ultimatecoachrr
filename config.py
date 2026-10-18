@@ -38,9 +38,6 @@ class Config:
     # a page left open at a tournament can still save
     WTF_CSRF_TIME_LIMIT = None
 
-    # Superadmins must use two-step sign-in (an authenticator app)
-    TWO_FACTOR_REQUIRED = os.environ.get('TWO_FACTOR_REQUIRED', '1') != '0'
-
     # Shown on the privacy policy (/privacy): who runs the site, how to reach
     # them about personal data, and how long database backups are kept
     SITE_OPERATOR = os.environ.get('SITE_OPERATOR')

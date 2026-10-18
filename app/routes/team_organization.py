@@ -154,6 +154,20 @@ def set_signup_open():
     return redirect(url_for('team_organization.signups'))
 
 
+@bp.route('/signups/two-factor', methods=['POST'])
+@login_required
+@superadmin_required
+def set_two_factor_required():
+    settings = SiteSettings.get()
+    settings.require_two_factor = request.form.get('required') == '1'
+    db.session.commit()
+    if settings.require_two_factor:
+        flash('Superadmins now need two-step sign-in.', 'success')
+    else:
+        flash('Two-step sign-in is optional for superadmins.', 'warning')
+    return redirect(url_for('team_organization.signups'))
+
+
 @bp.route('/signups/links', methods=['POST'])
 @login_required
 @superadmin_required

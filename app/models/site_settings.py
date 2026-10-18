@@ -12,6 +12,11 @@ class SiteSettings(db.Model):
     # True: anyone can register a team at /auth/register-team.
     open_team_registration = db.Column(db.Boolean, default=False, nullable=False)
 
+    # True: superadmins must use two-step sign-in (app/utils/two_factor.py).
+    # False: it's optional, set up or turned off from Account Settings.
+    require_two_factor = db.Column(db.Boolean, default=False, nullable=False,
+                                   server_default=db.false())
+
     @classmethod
     def get(cls):
         """The settings row, created with defaults the first time it's needed."""

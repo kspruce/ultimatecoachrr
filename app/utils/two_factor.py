@@ -109,4 +109,8 @@ def disable(user):
 
 
 def required_for(user):
-    return bool(getattr(user, 'is_superadmin', False))
+    """Superadmins, when the site switch (Team sign-ups page) is on."""
+    if not getattr(user, 'is_superadmin', False):
+        return False
+    from app.models.site_settings import SiteSettings
+    return SiteSettings.get().require_two_factor

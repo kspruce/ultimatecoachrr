@@ -61,7 +61,7 @@ Also covered by tests (`tests/test_security.py`, `tests/test_accounts.py`).
 |---|---|
 | Site backups fixed and tested | A test fills two teams, backs up through both export buttons, changes the data, restores through both restore buttons with "clear existing" and compares every row of every table, on SQLite and Postgres. It found four bugs, now fixed: the table order was backwards (on Postgres "clear existing" silently left newer data behind), link tables were doubled, the restoring superadmin's own account wasn't restored, and "Import data" didn't reset Postgres id counters (every new row then failed) |
 | Team admins: Team settings -> Your data | Download everything the team holds (CSV and JSON, no passwords, secrets or live invite links), or delete the team (team name + password; emails the site owner). `app/utils/team_data.py` decides which rows are a team's; tests check the other team is never included or touched |
-| Two-step sign-in for superadmins | Authenticator app codes, required for superadmins (`TWO_FACTOR_REQUIRED=0` turns that off), 10 hashed recovery codes, single-use codes, `flask reset-two-factor <username>` for a lost phone |
+| Two-step sign-in for superadmins | Authenticator app codes, 10 hashed recovery codes, single-use codes, `flask reset-two-factor <username>` for a lost phone. Optional for now (Account Settings); **switch on "Require it" under Manage Teams -> Team sign-ups before sharing the site** |
 | Privacy policy at /privacy | Linked from the footer and sign-up pages. Set `SITE_OPERATOR`, `PRIVACY_CONTACT_EMAIL` and `BACKUP_RETENTION_DAYS`; services are listed only when they're switched on |
 | "Remember me" lasts 30 days | Was Flask-Login's default of a year |
 

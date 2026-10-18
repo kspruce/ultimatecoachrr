@@ -138,8 +138,9 @@ def test_whole_site_backup_restores_every_row(app, export, restore):
     alpha, bravo = rich_data.build(app)
     boss = stats_data.build_admin(db.session.get(TeamOrganization, alpha), 'boss')
     client = stats_data.Client(app, boss.id, alpha)
-    saved = rich_data.snapshot()
     backup = _download(client, export)
+    db.session.remove()
+    saved = rich_data.snapshot()  # what the backup holds
 
     # Things go wrong after the backup
     Player.query.filter_by(team_organization_id=bravo).update({'name': 'Overwritten'})

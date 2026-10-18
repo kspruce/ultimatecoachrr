@@ -1,4 +1,5 @@
-"""Two-step sign-in (authenticator app codes), required for superadmins."""
+"""Two-step sign-in (authenticator app codes) for superadmins: optional, or
+required when the site switch is on (most tests here turn it on)."""
 import time
 
 import pyotp
@@ -12,7 +13,8 @@ from tests import stats_data
 
 @pytest.fixture
 def site(app):
-    app.config['TWO_FACTOR_REQUIRED'] = True
+    from app.models.site_settings import SiteSettings
+    SiteSettings.get().require_two_factor = True
     team = stats_data.build_team()
     boss = User(username='boss', email='boss@example.com', role='admin', is_superadmin=True,
                 team_organization_id=team.id)
@@ -188,3 +190,59 @@ def test_secrets_never_go_in_a_team_download(app, site):
     users = team_tables(site['team'])['user']
     assert all('totp_secret' not in u and 'totp_recovery_codes' not in u and 'password_hash' not in u
                for u in users)
+
+
+def require(on):
+    from app.models.site_settings import SiteSettings
+    SiteSettings.get().require_two_factor = on
+    db.session.commit()
+
+
+def test_its_optional_until_the_switch_is_on(app, site):
+    require(False)
+    client, _ = log_in(app)
+    assert client.get('/team/').status_code == 200  # not sent to setup
+    assert b'Turn on two-step sign-in' in client.get('/auth/account').data
+
+    client.post('/teams/signups/two-factor', data={'required': '1'})
+    from app.models.site_settings import SiteSettings
+    db.session.expire_all()
+    assert SiteSettings.get().require_two_factor
+    assert '/auth/two-factor/setup' in client.get('/team/').location
+
+
+def test_only_superadmins_flip_the_switch(app, site):
+    require(False)
+    coach, _ = log_in(app, 'coachy')
+    coach.post('/teams/signups/two-factor', data={'required': '1'})
+    from app.models.site_settings import SiteSettings
+    db.session.expire_all()
+    assert not SiteSettings.get().require_two_factor
+
+
+def test_turning_it_off_needs_the_password_and_the_switch_off(app, site):
+    totp, _ = turn_on(site['boss'])
+    client, _ = log_in(app)
+    client.post('/auth/two-factor', data={'code': totp.now()})
+
+    client.post('/auth/two-factor/disable', data={'password': 'right-password'})
+    db.session.expire_all()
+    assert db.session.get(User, site['boss']).two_factor_enabled  # required: refused
+
+    require(False)
+    client.post('/auth/two-factor/disable', data={'password': 'wrong'})
+    db.session.expire_all()
+    assert db.session.get(User, site['boss']).two_factor_enabled
+    client.post('/auth/two-factor/disable', data={'password': 'right-password'})
+    db.session.expire_all()
+    assert not db.session.get(User, site['boss']).two_factor_enabled
+    assert logged_in(client)
+    again, r = log_in(app)
+    assert '/auth/two-factor' not in r.location and logged_in(again)  # just the password now
+
+
+def test_once_set_up_the_code_is_asked_even_when_optional(app, site):
+    require(False)
+    totp, _ = turn_on(site['boss'])
+    client, r = log_in(app)
+    assert '/auth/two-factor' in r.location and not logged_in(client)

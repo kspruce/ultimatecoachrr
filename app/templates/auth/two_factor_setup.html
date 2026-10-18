@@ -14,8 +14,8 @@
     <div class="ac-icon"><i class="bi bi-shield-lock-fill"></i></div>
     <h1 class="ac-title">Set up two-step sign-in</h1>
     <p class="ac-sub">
-      {% if required %}Superadmins can see every team, so logging in needs a code from your phone as well as your password.
-      {% else %}This replaces the authenticator you set up before; the old one stops working.{% endif %}
+      {% if current_user.two_factor_enabled %}This replaces the authenticator you set up before; the old one stops working.
+      {% else %}Superadmins can see every team, so logging in will need a code from your phone as well as your password.{% endif %}
     </p>
 
     <ol class="tf-steps">
@@ -29,7 +29,7 @@
 
     <form method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% if not required and current_user.two_factor_enabled %}
+      {% if current_user.two_factor_enabled %}
       <div class="mb-3">
         <p class="ac-label">Your password</p>
         <input type="password" name="password" class="ac-input" required autocomplete="current-password">
