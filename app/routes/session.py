@@ -301,6 +301,7 @@ def drill_diagram_svg(diagram_id, filename):
 EDITOR_DIAGRAM_ORDER = 1000  # after any imported diagrams
 MAX_EDITOR_PNG = 5 * 1024 * 1024
 MAX_EDITOR_TEXT = 2 * 1024 * 1024
+MAX_EDITOR_STAGES = 20
 
 
 def _int_or_none(value):
@@ -324,39 +325,63 @@ def _apply_editor_fields(drill, data):
 
 
 def _save_editor_diagram(drill):
-    """Store the posted drawing (PNG, SVG and the editor's JSON) as the
-    drill's editor diagram. Returns an error message, or None."""
-    png = request.files.get('diagram')
+    """Store the posted drawing as the drill's editor diagrams: a PNG and an
+    SVG per stage, with the editor's JSON on the first. Returns an error
+    message, or None."""
+    pngs = request.files.getlist('diagram')
     editor = request.form.get('editor')
-    if not png or not editor:
+    if not pngs or not editor:
         return None  # details only
-    png_bytes = png.read(MAX_EDITOR_PNG + 1)
-    if len(png_bytes) > MAX_EDITOR_PNG or not png_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
-        return 'The diagram image is not a PNG or is too large.'
-    svg = request.form.get('svg') or None
-    if len(editor) > MAX_EDITOR_TEXT or (svg and len(svg) > MAX_EDITOR_TEXT):
+    if len(pngs) > MAX_EDITOR_STAGES:
+        return f'A drill can have up to {MAX_EDITOR_STAGES} stages.'
+    images = []
+    for png in pngs:
+        png_bytes = png.read(MAX_EDITOR_PNG + 1)
+        if len(png_bytes) > MAX_EDITOR_PNG or not png_bytes.startswith(b'\x89PNG\r\n\x1a\n'):
+            return 'The diagram image is not a PNG or is too large.'
+        images.append(png_bytes)
+    svgs = request.form.getlist('svg')
+    names = request.form.getlist('stage_name')
+    notes = request.form.getlist('stage_notes')
+    if len(editor) > MAX_EDITOR_TEXT or any(len(svg) > MAX_EDITOR_TEXT for svg in svgs):
         return 'The diagram is too large to save.'
     try:
         json.loads(editor)
     except ValueError:
         return 'The diagram data is not valid.'
 
-    diagram = drill.editor_diagram
-    if diagram is None:
-        diagram = DrillDiagram(order=EDITOR_DIAGRAM_ORDER, source='Drill editor',
-                               team_organization_id=drill.team_organization_id)
-        drill.diagrams.append(diagram)
-    diagram.image_data = base64.b64encode(png_bytes).decode('ascii')
-    diagram.image_mime = 'image/png'
-    diagram.image_hash = hashlib.sha256(png_bytes).hexdigest()
-    diagram.svg_data = svg
-    diagram.svg_hash = hashlib.sha256(svg.encode()).hexdigest() if svg else None
-    diagram.editor_json = editor
-    db.session.flush()  # the URLs need the id
-    diagram.image_url = url_for('session.drill_diagram_image', diagram_id=diagram.id,
-                                filename=f'{diagram.image_hash[:16]}.png')
-    diagram.svg_url = (url_for('session.drill_diagram_svg', diagram_id=diagram.id,
-                               filename=f'{diagram.svg_hash[:16]}.svg') if svg else None)
+    def item(values, i):
+        return (values[i].strip() or None) if i < len(values) else None
+
+    existing = drill.editor_diagrams
+    for old in existing[len(images):]:
+        drill.diagrams.remove(old)  # delete-orphan cascade removes the row
+    saved = []
+    for i, png_bytes in enumerate(images):
+        if i < len(existing):
+            diagram = existing[i]
+        else:
+            diagram = DrillDiagram(source='Drill editor', team_organization_id=drill.team_organization_id)
+            drill.diagrams.append(diagram)
+        svg = item(svgs, i)
+        diagram.order = EDITOR_DIAGRAM_ORDER + i
+        # A single drawing needs no "Stage 1" heading
+        diagram.step_label = (item(names, i) or f'Stage {i + 1}')[:100] if len(images) > 1 else None
+        diagram.caption = (item(notes, i) or '')[:255] or None
+        diagram.image_data = base64.b64encode(png_bytes).decode('ascii')
+        diagram.image_mime = 'image/png'
+        diagram.image_hash = hashlib.sha256(png_bytes).hexdigest()
+        diagram.svg_data = svg
+        diagram.svg_hash = hashlib.sha256(svg.encode()).hexdigest() if svg else None
+        diagram.editor_json = editor if i == 0 else json.dumps({'stage': i + 1})
+        saved.append(diagram)
+    db.session.flush()  # the URLs need the ids
+    for diagram in saved:
+        diagram.image_url = url_for('session.drill_diagram_image', diagram_id=diagram.id,
+                                    filename=f'{diagram.image_hash[:16]}.png')
+        diagram.svg_url = (url_for('session.drill_diagram_svg', diagram_id=diagram.id,
+                                   filename=f'{diagram.svg_hash[:16]}.svg')
+                           if diagram.svg_hash else None)
     return None
 
 

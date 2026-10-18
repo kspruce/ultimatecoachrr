@@ -127,3 +127,55 @@ def test_season_reimport_keeps_editor_diagrams(app, team, coach):
     assert drill.diagrams[0].caption == 'Changed'
     assert drill.editor_diagram is not None
     assert DrillDiagram.query.filter(DrillDiagram.editor_json.isnot(None)).count() == 1
+
+
+STAGED = {'version': 2, 'field': {'length': 70, 'width': 40, 'endzone': 20},
+          'stages': [{'name': 'Setup', 'notes': '', 'objects': []},
+                     {'name': 'First cut', 'notes': 'O1 cuts deep', 'objects': []},
+                     {'name': 'Throw', 'notes': '', 'objects': []}]}
+
+
+def staged_form(stages, colours=('red', 'green', 'blue'), state=STAGED):
+    form = editor_form(state=state)
+    form['diagram'] = [(io.BytesIO(png_bytes(c)), f'stage-{i + 1}.png') for i, c in enumerate(colours)]
+    form['svg'] = ['<svg xmlns="http://www.w3.org/2000/svg"></svg>'] * len(colours)
+    form['stage_name'] = [s['name'] for s in stages]
+    form['stage_notes'] = [s['notes'] for s in stages]
+    return form
+
+
+def test_stages_save_as_one_diagram_each(app, team, coach):
+    r = coach.post('/sessions/api/drills', data=staged_form(STAGED['stages']),
+                   content_type='multipart/form-data')
+    assert r.status_code == 201, r.get_data(as_text=True)
+    drill_id = r.get_json()['drill_id']
+    drill = db.session.get(SavedDrill, drill_id)
+    stages = drill.editor_diagrams
+    assert [d.step_label for d in stages] == ['Setup', 'First cut', 'Throw']
+    assert [d.caption for d in stages] == [None, 'O1 cuts deep', None]
+    assert json.loads(drill.editor_diagram.editor_json) == STAGED
+    assert [coach.get(d.image_url).data for d in stages] == [png_bytes(c) for c in ('red', 'green', 'blue')]
+    detail = coach.get(f'/sessions/drills/{drill_id}').get_data(as_text=True)
+    assert 'First cut' in detail and 'O1 cuts deep' in detail
+
+    # Saving fewer stages removes the extra ones; one stage has no heading
+    one = {**STAGED, 'stages': STAGED['stages'][:1]}
+    r = coach.put(f'/sessions/api/drills/{drill_id}', data=staged_form(one['stages'], ('blue',), one),
+                  content_type='multipart/form-data')
+    assert r.status_code == 200, r.get_data(as_text=True)
+    db.session.expire_all()
+    drill = db.session.get(SavedDrill, drill_id)
+    assert len(drill.diagrams) == 1 and drill.editor_diagram.step_label is None
+    assert json.loads(drill.editor_diagram.editor_json) == one
+    assert coach.get(drill.editor_diagram.image_url).data == png_bytes('blue')
+
+    page = coach.get(f'/sessions/drills/editor/{drill_id}').get_data(as_text=True)
+    assert '"stages"' in page and 'id="stage-tabs"' in page
+
+
+def test_too_many_stages(app, team, coach):
+    stages = [{'name': f'S{i}', 'notes': ''} for i in range(21)]
+    r = coach.post('/sessions/api/drills', data=staged_form(stages, ['red'] * 21),
+                   content_type='multipart/form-data')
+    assert r.status_code == 400
+    assert SavedDrill.query.count() == 0
