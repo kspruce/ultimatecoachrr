@@ -206,12 +206,24 @@
 
     .stage-tab { white-space: nowrap; }
 
+    .stage-bar-tabs { border-top: 0; padding-top: 0; }
+
+    .stage-scrubber { flex: 1 1 160px; min-width: 120px; }
+
+    .preview-area {
+        width: 24px;
+        height: 16px;
+        border-radius: 3px;
+        background: rgba(253, 126, 20, 0.3);
+        border: 1.5px solid rgba(253, 126, 20, 0.9);
+    }
+
     .stage-notes {
         padding: 0 1rem 0.5rem;
         background: #f8f9fa;
     }
 
-    .is-playing .toolbar, .is-playing .field-settings, .is-playing .stage-actions {
+    .is-playing .toolbar, .is-playing .field-settings, .is-playing .stage-actions, .is-playing .stage-notes {
         opacity: 0.5;
         pointer-events: none;
     }
@@ -328,6 +340,12 @@
                     <span class="tool-label">Freehand</span>
                 </div>
                 <div class="tool-wrapper">
+                    <button class="tool-btn" data-tool="area" title="Shaded area (A)">
+                        <div class="preview-area"></div>
+                    </button>
+                    <span class="tool-label">Area</span>
+                </div>
+                <div class="tool-wrapper">
                     <button class="tool-btn" data-tool="text" title="Add Text (T)">
                         <i class="bi bi-fonts"></i>
                     </button>
@@ -374,47 +392,93 @@
         <div class="canvas-area">
             <div class="field-settings">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div class="field-info">
-                        <span class="badge bg-light text-dark me-2">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span class="badge bg-light text-dark">
                             Field: <span id="field-size">70×40 yards</span>
                         </span>
                         <span class="badge bg-light text-dark">
                             Endzones: <span id="endzone-size">20 yards</span>
                         </span>
+                        <select id="field-view" class="form-select form-select-sm w-auto" aria-label="Show">
+                            <option value="full">Whole field</option>
+                            <option value="half">Attacking half</option>
+                            <option value="endzone">Endzone</option>
+                        </select>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
+                            <button type="button" class="btn btn-outline-secondary" id="zoom-out" title="Zoom out (-)"><i class="bi bi-zoom-out"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="zoom-fit" title="Fit to screen (0)"><i class="bi bi-arrows-fullscreen"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" id="zoom-in" title="Zoom in (+)"><i class="bi bi-zoom-in"></i></button>
+                        </div>
                     </div>
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-people"></i> Set up
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Formations (attacking right)</h6></li>
+                                <li><button class="dropdown-item" type="button" data-formation="vertical">Vertical stack</button></li>
+                                <li><button class="dropdown-item" type="button" data-formation="horizontal">Horizontal stack</button></li>
+                                <li><button class="dropdown-item" type="button" data-formation="zone">Zone (against a cup)</button></li>
+                                <li><button class="dropdown-item" type="button" data-formation="endzone">Endzone stack</button></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><button class="dropdown-item" type="button" id="match-defenders">Match defenders (uses the force)</button></li>
+                            </ul>
+                        </div>
                         <div class="form-check form-switch mb-0" title="Snap to whole yards">
                             <input class="form-check-input" type="checkbox" id="snap-grid">
-                            <label class="form-check-label small" for="snap-grid">Snap to grid</label>
+                            <label class="form-check-label small" for="snap-grid">Snap</label>
                         </div>
                         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
                                 data-bs-target="#fieldSettingsModal">
-                            <i class="bi bi-gear"></i> Field Settings
+                            <i class="bi bi-gear"></i> Field
                         </button>
                     </div>
                 </div>
                 <div id="line-options" class="line-options invisible">
-                    <div id="line-style-group" class="btn-group btn-group-sm invisible" role="group" aria-label="Arrow style">
+                    <div id="line-style-group" class="btn-group btn-group-sm d-none" role="group" aria-label="Arrow style">
                         <button type="button" class="btn btn-outline-secondary" data-line-style="cut">Cut</button>
                         <button type="button" class="btn btn-outline-secondary" data-line-style="throw">Throw</button>
                         <button type="button" class="btn btn-outline-secondary" data-line-style="move">Move</button>
                     </div>
-                    <div class="d-flex gap-1" role="group" aria-label="Arrow colour">
+                    <div id="area-shape-group" class="btn-group btn-group-sm d-none" role="group" aria-label="Area shape">
+                        <button type="button" class="btn btn-outline-secondary" data-area-shape="rect">Box</button>
+                        <button type="button" class="btn btn-outline-secondary" data-area-shape="ellipse">Oval</button>
+                    </div>
+                    <div class="d-flex gap-1" role="group" aria-label="Colour">
                         {% for colour, name in [('#212529', 'Black'), ('#ffffff', 'White'), ('#e03131', 'Red'), ('#1c7ed6', 'Blue'), ('#fab005', 'Yellow')] %}
                         <button type="button" class="line-colour" data-colour="{{ colour }}" title="{{ name }}"
                                 aria-label="{{ name }}" style="background: {{ colour }}"></button>
                         {% endfor %}
                     </div>
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="line-smooth">
-                        <label class="form-check-label small" for="line-smooth">Curved</label>
+                    <div id="line-shape-options" class="d-flex gap-3">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="line-smooth">
+                            <label class="form-check-label small" for="line-smooth">Curved</label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="line-arrow" checked>
+                            <label class="form-check-label small" for="line-arrow">Arrowhead</label>
+                        </div>
                     </div>
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="line-arrow" checked>
-                        <label class="form-check-label small" for="line-arrow">Arrowhead</label>
+                    <div id="line-delay-group" class="d-flex d-none align-items-center gap-1"
+                         title="When this arrow starts moving in the animation">
+                        <label class="small text-muted" for="line-delay">Starts</label>
+                        <select id="line-delay" class="form-select form-select-sm w-auto">
+                            <option value="0">at the start</option>
+                            <option value="0.25">¼ through</option>
+                            <option value="0.5">halfway</option>
+                            <option value="0.75">¾ through</option>
+                        </select>
                     </div>
                 </div>
-                <div id="tool-hint" class="tool-hint mt-1"></div>
+                <div class="d-flex align-items-start gap-2 mt-1">
+                    <button type="button" id="finish-arrow" class="btn btn-sm btn-success d-none">
+                        <i class="bi bi-check-lg"></i> Finish arrow
+                    </button>
+                    <div id="tool-hint" class="tool-hint"></div>
+                </div>
             </div>
             {% if other_diagrams %}
             <div class="alert alert-info editor-note m-2 mb-0 py-2">
@@ -429,9 +493,25 @@
                 <button id="play-stages" type="button" class="btn btn-sm btn-success" title="Play the stages in order (Space)">
                     <i class="bi bi-play-fill"></i> Play
                 </button>
+                <input type="range" id="stage-scrubber" class="form-range stage-scrubber" min="0" max="1000" step="1" value="0"
+                       aria-label="Animation position">
+                <select id="play-speed" class="form-select form-select-sm w-auto" aria-label="Speed" title="Speed">
+                    <option value="0.5">½×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="2">2×</option>
+                </select>
+                <button id="exit-playback" type="button" class="btn btn-sm btn-outline-primary d-none" title="Back to editing (Esc)">
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+            </div>
+            <div class="stage-bar stage-bar-tabs">
                 <span id="stage-count" class="small text-muted"></span>
                 <div id="stage-tabs" class="stage-tabs"></div>
-                <div class="stage-actions d-flex gap-1">
+                <div class="stage-actions d-flex align-items-center gap-2">
+                    <div class="form-check mb-0" title="Show where the players were in the last stage">
+                        <input class="form-check-input" type="checkbox" id="show-ghosts">
+                        <label class="form-check-label small" for="show-ghosts">Last stage</label>
+                    </div>
                     <button id="add-stage" type="button" class="btn btn-sm btn-primary"
                             title="Add the next stage: players and the disc move to the ends of their arrows">
                         <i class="bi bi-plus-lg"></i> Next stage
@@ -446,6 +526,8 @@
                             <li><button class="dropdown-item" type="button" id="rename-stage"><i class="bi bi-pencil"></i> Rename stage</button></li>
                             <li><button class="dropdown-item" type="button" id="stage-left"><i class="bi bi-arrow-left"></i> Move earlier</button></li>
                             <li><button class="dropdown-item" type="button" id="stage-right"><i class="bi bi-arrow-right"></i> Move later</button></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button class="dropdown-item" type="button" id="download-video"><i class="bi bi-camera-video"></i> Download video</button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item text-danger" type="button" id="delete-stage"><i class="bi bi-trash"></i> Delete stage</button></li>
                         </ul>
@@ -489,6 +571,28 @@
                         <span class="input-group-text">yards</span>
                     </div>
                     <div class="form-text">Standard endzone is 20 yards deep</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="field-force">Force</label>
+                    <select id="field-force" class="form-select">
+                        <option value="none">Not shown</option>
+                        <option value="up">Towards the top sideline</option>
+                        <option value="down">Towards the bottom sideline</option>
+                        <option value="middle">Middle</option>
+                        <option value="straight">Straight up</option>
+                    </select>
+                    <div class="form-text">Shown on the field, and used when matching defenders.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Team colours</label>
+                    <div class="d-flex gap-3">
+                        <label class="d-flex align-items-center gap-2 small">
+                            <input type="color" class="form-control form-control-color" id="colour-offense" value="#e03131"> Offence
+                        </label>
+                        <label class="d-flex align-items-center gap-2 small">
+                            <input type="color" class="form-control form-control-color" id="colour-defense" value="#1c7ed6"> Defence
+                        </label>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <div class="form-check">
@@ -614,6 +718,7 @@
                             <li><kbd>R</kbd> Throw</li>
                             <li><kbd>M</kbd> Movement (dotted)</li>
                             <li><kbd>P</kbd> Freehand</li>
+                            <li><kbd>A</kbd> Shaded area</li>
                             <li><kbd>T</kbd> Text</li>
                         </ul>
                         <h6>Arrows</h6>
@@ -622,6 +727,13 @@
                             <li>Or click points, then double-click or <kbd>Enter</kbd></li>
                             <li><kbd>Shift</kbd> Straight angles</li>
                             <li>Drag a selected arrow's handles to reshape it</li>
+                            <li>Arrows drawn from a player move with them</li>
+                        </ul>
+                        <h6>View</h6>
+                        <ul class="list-unstyled">
+                            <li>Scroll, or <kbd>+</kbd> / <kbd>-</kbd>: zoom</li>
+                            <li><kbd>0</kbd> Fit to screen</li>
+                            <li>Middle-drag or <kbd>Alt</kbd>-drag: pan</li>
                         </ul>
                     </div>
                     <div class="col-6">
@@ -640,7 +752,8 @@
                         <h6>Stages</h6>
                         <ul class="list-unstyled">
                             <li><kbd>[</kbd> / <kbd>]</kbd> Previous / next stage</li>
-                            <li><kbd>Space</kbd> Play / stop</li>
+                            <li><kbd>Space</kbd> Play / pause</li>
+                            <li><kbd>Esc</kbd> Back to editing</li>
                         </ul>
                     </div>
                 </div>
@@ -660,5 +773,6 @@
 {% block scripts %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+<script src="{{ url_for('static', filename='js/drill_diagram.js') }}"></script>
 <script src="{{ url_for('static', filename='js/drill_editor.js') }}"></script>
 {% endblock %}
