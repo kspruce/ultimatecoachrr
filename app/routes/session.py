@@ -256,7 +256,15 @@ def drill_detail(drill_id):
     
     session_id = session_component.session_id if session_component else None
 
-    return render_template('session/drills/detail.html', drill=drill, session_id=session_id)
+    # Drawn in stages: the page plays them as an animation
+    animation = None
+    if drill.editor_diagram:
+        state = json.loads(drill.editor_diagram.editor_json)
+        if len(state.get('stages') or []) > 1:
+            animation = state
+
+    return render_template('session/drills/detail.html', drill=drill, session_id=session_id,
+                           animation=animation)
 
 
 # Drill diagram images are stored in the database (see DrillDiagram). These

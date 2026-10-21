@@ -1,36 +1,31 @@
 // Drill diagram editor (templates/session/drills/editor.html).
 //
-// Everything is drawn in field units: PX_PER_YARD logical pixels per yard,
-// with the canvas zoomed to fit the screen. A drill has one or more stages
-// (like the frames of an animation); only the current stage is on the
-// canvas, the others are kept as plain objects. Saving posts the drill
-// details, a PNG and an SVG of every stage, and the drawing itself (so it can
-// be edited again) to the session blueprint's /api/drills routes.
+// Drawing, arrows, stage movement and playback come from drill_diagram.js
+// (DrillDiagram). Everything is drawn in field units, with the canvas zoomed
+// to fit the screen. A drill has one or more stages (like the frames of an
+// animation); only the current stage is on the canvas, the others are kept
+// as plain objects. Saving posts the drill details, a PNG and an SVG of
+// every stage, and the drawing itself (so it can be edited again) to the
+// session blueprint's /api/drills routes.
 document.addEventListener('DOMContentLoaded', function () {
-    const PX_PER_YARD = 10;
-    const COLOURS = {offense: '#e03131', defense: '#1c7ed6', disc: '#ffffff',
-                     cone: '#fd7e14', line: '#212529', field: '#5a9e4b'};
+    const DD = window.DrillDiagram;
+    const {PX_PER_YARD, COLOURS, MOVERS, EXTRA_PROPS, mid} = DD;
+    const YD = PX_PER_YARD;
     const PLACE_TOOLS = ['player-o', 'player-d', 'disc', 'cone', 'text'];
     const LINE_TOOLS = {cut: 'cut', throw: 'throw', move: 'move'};  // tool -> line style
     const TOOL_KEYS = {v: 'select', o: 'player-o', d: 'player-d', f: 'disc', c: 'cone',
-                       l: 'cut', r: 'throw', m: 'move', p: 'path', t: 'text'};
-    const LINE_STYLES = {
-        cut: {dash: null, width: 3},
-        throw: {dash: [8, 6], width: 2.5},
-        move: {dash: [2, 5], width: 2.5},
-    };
+                       l: 'cut', r: 'throw', m: 'move', p: 'path', a: 'area', t: 'text'};
     const TOOL_HINTS = {
-        select: 'Drag to move. Select an arrow to drag its points; double-click a point to remove it.',
-        cut: 'Drag for a straight arrow, or click to add points and double-click (or Enter) to finish. Hold Shift for straight angles.',
-        throw: 'Drag from the disc for a straight throw, or click points for a longer one. Tick Curved, then drag the middle handle to bend it.',
+        select: 'Drag to move; arrows drawn from a player follow them. Select an arrow to drag its points; double-click a point to remove it. Scroll to zoom, middle-drag or Alt-drag to pan.',
+        cut: 'Start on a player and drag for a straight arrow, or click points and double-click (or Enter) to finish. Hold Shift for straight angles.',
+        throw: 'Start on the disc and drag, or click points for a longer throw. Tick Curved, then drag the middle handle to bend it.',
         move: 'Dotted arrow for a defender or a jog. Drag, or click points and double-click to finish.',
         path: 'Draw freehand; an arrowhead is added at the end.',
+        area: 'Drag to shade an area, such as a lane or the space a defender covers.',
     };
-    const MOVERS = ['player-o', 'player-d', 'disc'];
-    const EXTRA_PROPS = ['herdType', 'herdLabel', 'herdId'];
+    const DELAYS = [0, 0.25, 0.5, 0.75];
     const MAX_STAGES = 20;
-    const STAGE_MS = 1400;   // one stage's movement when playing
-    const HOLD_MS = 500;
+    const NON_USER = ['field', 'ghost'];
 
     const dataEl = document.getElementById('drill-data');
     const createUrl = dataEl.dataset.createUrl;
@@ -38,238 +33,175 @@ document.addEventListener('DOMContentLoaded', function () {
     let updateUrl = dataEl.dataset.updateUrl || null;
     const holder = document.querySelector('.canvas-holder');
 
-    let field = {length: 70, width: 40, endzone: 20, grid: false, markers: true};
+    let field = DD.withDefaults(null);
     let stages = [{name: 'Stage 1', notes: '', objects: []}];
     let current = 0;
     let currentTool = 'select';
-    let lineOptions = {colour: COLOURS.line, smooth: false, arrow: true};
+    let lineOptions = {colour: COLOURS.line, smooth: false, arrow: true, shape: 'rect'};
     let snapToGrid = false;
+    let showGhosts = false;
     let dirty = false;
     let loading = false;
-    let playing = null;
+    let playback = false;   // the canvas is showing the animation, not the stage being edited
     let history = [];
     let future = [];
     let clipboard = null;
-    let draft = null;  // the arrow being drawn: {points, preview, dragged}
+    let draft = null;       // the arrow being drawn: {points, from, preview, dragged}
+    let areaDraft = null;   // the area being drawn: {start, shape}
+    let panning = null;
+    let baseZoom = 1;
 
-    // ---- arrows -------------------------------------------------------------
+    // ---- canvas -------------------------------------------------------------
 
-    // An arrow is a polyline (or a smooth curve through its points) with an
-    // optional arrowhead. Points are kept relative to the object's centre;
-    // dragging its handles moves them.
-
-    function mid(a, b) {
-        return {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
-    }
-
-    // One segment per pair of points, from points[0]: straight, or (when
-    // smooth) a curve through every point (Catmull-Rom, as cubic Béziers).
-    function lineSegments(points, smooth) {
-        const segs = [];
-        for (let i = 1; i < points.length; i++) {
-            if (!smooth || points.length < 3) {
-                segs.push({to: points[i]});
-                continue;
-            }
-            const p0 = points[i - 2] || points[i - 1], p1 = points[i - 1];
-            const p2 = points[i], p3 = points[i + 1] || points[i];
-            segs.push({c1: {x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6},
-                       c2: {x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6},
-                       to: p2});
-        }
-        return segs;
-    }
-
-    function segmentPoint(from, seg, t) {
-        if (!seg.c1) return {x: from.x + (seg.to.x - from.x) * t, y: from.y + (seg.to.y - from.y) * t};
-        const u = 1 - t;
-        const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
-        return {x: a * from.x + b * seg.c1.x + c * seg.c2.x + d * seg.to.x,
-                y: a * from.y + b * seg.c1.y + c * seg.c2.y + d * seg.to.y};
-    }
-
-    // The middle of the segment from points[i], on the line itself
-    function segmentMiddle(points, smooth, i) {
-        return segmentPoint(points[i], lineSegments(points, smooth)[i], 0.5);
-    }
-
-    function endDirection(points, segs) {
-        const last = segs[segs.length - 1];
-        let from = segs.length > 1 ? segs[segs.length - 2].to : points[0];
-        if (last.c2 && Math.hypot(last.to.x - last.c2.x, last.to.y - last.c2.y) > 0.5) from = last.c2;
-        const dx = last.to.x - from.x, dy = last.to.y - from.y;
-        const len = Math.hypot(dx, dy) || 1;
-        return {x: dx / len, y: dy / len};
-    }
-
-    // Shorten the last segment so the shaft stops inside the arrowhead.
-    function shaftSegments(points, smooth, arrow) {
-        const segs = lineSegments(points, smooth);
-        if (!arrow || !segs.length) return {segs, dir: segs.length ? endDirection(points, segs) : null};
-        const dir = endDirection(points, segs);
-        const last = segs[segs.length - 1];
-        const shortened = segs.slice(0, -1);
-        shortened.push({...last, to: {x: last.to.x - dir.x * 8, y: last.to.y - dir.y * 8}});
-        return {segs: shortened, dir};
-    }
-
-    function headPoints(tip, dir, size) {
-        const back = {x: tip.x - dir.x * size * 1.2, y: tip.y - dir.y * size * 1.2};
-        const side = {x: -dir.y * size * 0.55, y: dir.x * size * 0.55};
-        return [tip, {x: back.x + side.x, y: back.y + side.y}, {x: back.x - side.x, y: back.y - side.y}];
-    }
-
-    // Points along the arrow, for animating a player along it.
-    function samplePoints(points, smooth) {
-        const out = [points[0]];
-        let prev = points[0];
-        lineSegments(points, smooth).forEach(seg => {
-            if (!seg.c1) {
-                out.push(seg.to);
-            } else {
-                for (let k = 1; k <= 10; k++) out.push(segmentPoint(prev, seg, k / 10));
-            }
-            prev = seg.to;
-        });
-        return out;
-    }
-
-    const fmt = n => Math.round(n * 100) / 100;
-
-    const HerdLine = fabric.util.createClass(fabric.Object, {
-        type: 'herdLine',
-
-        initialize: function (options) {
-            options = options || {};
-            this.callSuper('initialize', options);
-            this.set({
-                points: (options.points || []).map(p => ({x: p.x, y: p.y})),
-                lineStyle: options.lineStyle || 'cut',
-                lineColour: options.lineColour || COLOURS.line,
-                smooth: !!options.smooth,
-                arrow: options.arrow !== false,
-                originX: 'center', originY: 'center',
-                fill: '', stroke: null,
-                perPixelTargetFind: true,
-                hasBorders: false,
-                objectCaching: false,
-                herdType: 'line',
-            });
-            this._updateSize();
-            this.setControls();
-        },
-
-        // Points are centred, so the box is twice the furthest reach (curves
-        // can bulge past their points)
-        _updateSize: function () {
-            const reach = this.points.length > 1 ? samplePoints(this.points, this.smooth) : this.points;
-            const xs = reach.map(p => Math.abs(p.x));
-            const ys = reach.map(p => Math.abs(p.y));
-            this.width = 2 * Math.max(0, ...xs) + 20;
-            this.height = 2 * Math.max(0, ...ys) + 20;
-        },
-
-        absolutePoints: function () {
-            const m = this.calcTransformMatrix();
-            return this.points.map(p => fabric.util.transformPoint(new fabric.Point(p.x, p.y), m));
-        },
-
-        // Re-centre on the given canvas points (also drops any scale/rotation)
-        setAbsolutePoints: function (abs) {
-            const xs = abs.map(p => p.x), ys = abs.map(p => p.y);
-            const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-            const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-            this.set({points: abs.map(p => ({x: fmt(p.x - cx), y: fmt(p.y - cy)})),
-                      left: cx, top: cy, angle: 0, scaleX: 1, scaleY: 1,
-                      flipX: false, flipY: false, skewX: 0, skewY: 0});
-            this._updateSize();
-            this.setCoords();
-        },
-
-        setControls: function () {
-            const controls = {};
-            const n = this.points.length;
-            this.points.forEach((p, i) => {
-                controls['p' + i] = new fabric.Control({
-                    pointIndex: i, positionHandler: linePointPosition, actionHandler: movePoint,
-                    actionName: 'modifyLine', render: renderPointControl, cursorStyle: 'move',
-                });
-                if (i < n - 1) {
-                    controls['m' + i] = new fabric.Control({
-                        pointIndex: i, midpoint: true, positionHandler: linePointPosition,
-                        actionHandler: insertPoint, actionName: 'modifyLine',
-                        render: renderMidControl, cursorStyle: 'copy',
-                    });
-                }
-            });
-            this.controls = controls;
-        },
-
-        _render: function (ctx) {
-            if (this.points.length < 2) return;
-            const style = LINE_STYLES[this.lineStyle] || LINE_STYLES.cut;
-            const {segs, dir} = shaftSegments(this.points, this.smooth, this.arrow);
-            ctx.save();
-            ctx.lineWidth = style.width;
-            ctx.strokeStyle = this.lineColour;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.setLineDash(style.dash || []);
-            ctx.beginPath();
-            ctx.moveTo(this.points[0].x, this.points[0].y);
-            segs.forEach(s => s.c1 ? ctx.bezierCurveTo(s.c1.x, s.c1.y, s.c2.x, s.c2.y, s.to.x, s.to.y)
-                                   : ctx.lineTo(s.to.x, s.to.y));
-            ctx.stroke();
-            if (this.arrow) {
-                const head = headPoints(this.points[this.points.length - 1], dir, 9);
-                ctx.setLineDash([]);
-                ctx.fillStyle = this.lineColour;
-                ctx.beginPath();
-                ctx.moveTo(head[0].x, head[0].y);
-                ctx.lineTo(head[1].x, head[1].y);
-                ctx.lineTo(head[2].x, head[2].y);
-                ctx.closePath();
-                ctx.fill();
-            }
-            ctx.restore();
-        },
-
-        _toSVG: function () {
-            if (this.points.length < 2) return [];
-            const style = LINE_STYLES[this.lineStyle] || LINE_STYLES.cut;
-            const {segs, dir} = shaftSegments(this.points, this.smooth, this.arrow);
-            let d = `M ${fmt(this.points[0].x)} ${fmt(this.points[0].y)}`;
-            segs.forEach(s => {
-                d += s.c1 ? ` C ${fmt(s.c1.x)} ${fmt(s.c1.y)} ${fmt(s.c2.x)} ${fmt(s.c2.y)} ${fmt(s.to.x)} ${fmt(s.to.y)}`
-                          : ` L ${fmt(s.to.x)} ${fmt(s.to.y)}`;
-            });
-            const dash = style.dash ? ` stroke-dasharray="${style.dash.join(' ')}"` : '';
-            const markup = [`<path d="${d}" fill="none" stroke="${this.lineColour}" stroke-width="${style.width}"` +
-                            ` stroke-linecap="round" stroke-linejoin="round"${dash} />\n`];
-            if (this.arrow) {
-                const head = headPoints(this.points[this.points.length - 1], dir, 9);
-                markup.push(`<polygon points="${head.map(p => fmt(p.x) + ',' + fmt(p.y)).join(' ')}"` +
-                            ` fill="${this.lineColour}" />\n`);
-            }
-            return markup;
-        },
-
-        toSVG: function (reviver) {
-            return this._createBaseSVGMarkup(this._toSVG(), {reviver: reviver, noStyle: true});
-        },
-
-        toObject: function (props) {
-            return this.callSuper('toObject',
-                ['points', 'lineStyle', 'lineColour', 'smooth', 'arrow'].concat(props || []));
-        },
+    const canvas = new fabric.Canvas('drill-canvas', {
+        backgroundColor: '#ffffff',
+        selection: true,
+        preserveObjectStacking: true,
+        targetFindTolerance: 6,
+        fireMiddleClick: true,
     });
-    HerdLine.fromObject = function (object, callback) {
-        callback && callback(new HerdLine(object));
-    };
-    fabric.HerdLine = HerdLine;
+    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = COLOURS.line;
+    canvas.freeDrawingBrush.width = 3;
+
+    const isUser = o => o.herdType && !NON_USER.includes(o.herdType);
+
+    function userObjects() {
+        return canvas.getObjects().filter(o => isUser(o) && o !== (draft && draft.preview) &&
+                                               o !== (areaDraft && areaDraft.obj));
+    }
+
+    function drawField() {
+        canvas.getObjects().filter(o => o.herdType === 'field').forEach(o => canvas.remove(o));
+        DD.fieldParts(field).forEach((p, i) => canvas.insertAt(p, i));
+        document.getElementById('field-size').textContent = `${field.length}×${field.width} yards`;
+        document.getElementById('endzone-size').textContent = `${field.endzone} yards`;
+        document.getElementById('field-view').value = field.view;
+        fitToScreen();
+    }
+
+    // Layers, bottom up: field, ghosts of the last stage, areas, arrows, the rest
+    function layerIndex(kind) {
+        const below = {ghost: ['field'], area: ['field', 'ghost'], line: ['field', 'ghost', 'area']}[kind];
+        return canvas.getObjects().filter(o => below.includes(o.herdType)).length;
+    }
+
+    function fitToScreen() {
+        const view = DD.viewRect(field);
+        const cw = holder.clientWidth;
+        const ch = holder.clientHeight || cw * view.h / view.w;
+        baseZoom = Math.min(cw / view.w, ch / view.h);
+        canvas.setDimensions({width: cw, height: ch});
+        // Part of the field: keep its far end on the right, so any spare
+        // width shows more field rather than blank space
+        const left = view.x ? cw - (view.x + view.w) * baseZoom
+                            : (cw - view.w * baseZoom) / 2;
+        canvas.setViewportTransform([baseZoom, 0, 0, baseZoom,
+            left, (ch - view.h * baseZoom) / 2 - view.y * baseZoom]);
+        canvas.getObjects().forEach(o => o.setCoords());
+        canvas.requestRenderAll();
+    }
+
+    function zoomBy(factor, point) {
+        const zoom = Math.min(baseZoom * 8, Math.max(baseZoom * 0.6, canvas.getZoom() * factor));
+        const at = point || {x: canvas.getWidth() / 2, y: canvas.getHeight() / 2};
+        canvas.zoomToPoint(new fabric.Point(at.x, at.y), zoom);
+        canvas.getObjects().forEach(o => o.setCoords());
+        canvas.requestRenderAll();
+    }
+
+    canvas.on('mouse:wheel', function (opt) {
+        zoomBy(Math.pow(0.999, opt.e.deltaY), {x: opt.e.offsetX, y: opt.e.offsetY});
+        opt.e.preventDefault();
+        opt.e.stopPropagation();
+    });
+
+    // ---- objects ------------------------------------------------------------
+
+    function newId() {
+        return Math.random().toString(36).slice(2, 10);
+    }
+
+    function nextLabel(type, prefix) {
+        const used = new Set(canvas.getObjects().filter(o => o.herdType === type).map(o => o.herdLabel));
+        let n = 1;
+        while (used.has(prefix + n)) n++;
+        return prefix + n;
+    }
+
+    function makePlayer(type, x, y, label) {
+        const offense = type === 'player-o';
+        const fill = offense ? field.colours.offense : field.colours.defense;
+        label = label || nextLabel(type, offense ? 'O' : 'D');
+        const circle = new fabric.Circle({radius: 12, fill, stroke: '#ffffff', strokeWidth: 2,
+            originX: 'center', originY: 'center'});
+        const text = new fabric.Text(label, {fontSize: 11, fontWeight: 'bold', fill: DD.textOn(fill),
+            fontFamily: 'Arial', originX: 'center', originY: 'center'});
+        return new fabric.Group([circle, text], {left: x, top: y, originX: 'center',
+            originY: 'center', herdType: type, herdLabel: label});
+    }
+
+    function makeObject(tool, x, y, label) {
+        let obj = null;
+        if (tool === 'player-o' || tool === 'player-d') obj = makePlayer(tool, x, y, label);
+        if (tool === 'disc') {
+            obj = new fabric.Circle({left: x, top: y, radius: 7, fill: COLOURS.disc, stroke: '#000',
+                strokeWidth: 2, originX: 'center', originY: 'center', herdType: 'disc'});
+        }
+        if (tool === 'cone') {
+            obj = new fabric.Triangle({left: x, top: y, width: 14, height: 14, fill: COLOURS.cone,
+                stroke: '#7a3e00', strokeWidth: 1, originX: 'center', originY: 'center', herdType: 'cone'});
+        }
+        if (tool === 'text') {
+            obj = new fabric.IText('Text', {left: x, top: y, fontSize: 16, fill: '#ffffff',
+                fontFamily: 'Arial', fontWeight: 'bold', originX: 'center', originY: 'center',
+                herdType: 'text', shadow: 'rgba(0,0,0,0.6) 1px 1px 2px'});
+        }
+        if (obj) obj.set('herdId', newId());
+        return obj;
+    }
+
+    function makeLine(points, style, from) {
+        const line = new DD.HerdLine({points: [], lineStyle: style, lineColour: lineOptions.colour,
+                                      smooth: lineOptions.smooth, arrow: lineOptions.arrow,
+                                      herdFrom: from || '', delay: style === 'throw' ? 0.5 : 0,
+                                      herdId: newId()});
+        line.setAbsolutePoints(points);
+        line.setControls();
+        return line;
+    }
+
+    // Arrows go under the players, so they come out from beneath them
+    function addLine(line) {
+        canvas.insertAt(line, layerIndex('line'));
+    }
+
+    function arrowHead(x, y, angleRad, colour) {
+        return new fabric.Triangle({left: x, top: y, width: 12, height: 14, fill: colour,
+            originX: 'center', originY: 'center', angle: angleRad * 180 / Math.PI + 90});
+    }
+
+    function rgba(hex, alpha) {
+        const h = hex.replace('#', '');
+        const [r, g, b] = [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16));
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function areaStyle(colour) {
+        return {fill: rgba(colour, 0.25), stroke: rgba(colour, 0.8), herdColour: colour};
+    }
+
+    function makeArea(shape, x, y, w, h, colour) {
+        const common = {left: x, top: y, strokeWidth: 1.5, strokeUniform: true, herdType: 'area',
+                        herdId: newId(), ...areaStyle(colour)};
+        return shape === 'ellipse' ? new fabric.Ellipse({...common, rx: w / 2, ry: h / 2})
+                                   : new fabric.Rect({...common, width: w, height: h, rx: 4, ry: 4});
+    }
+
+    // ---- point handles ------------------------------------------------------
 
     function linePointPosition(dim, finalMatrix, obj) {
-        const p = this.midpoint ? segmentMiddle(obj.points, obj.smooth, this.pointIndex)
+        const p = this.midpoint ? DD.segmentMiddle(obj.points, obj.smooth, this.pointIndex)
                                 : obj.points[this.pointIndex];
         const m = fabric.util.multiplyTransformMatrices(obj.canvas.viewportTransform,
                                                         obj.calcTransformMatrix());
@@ -300,10 +232,20 @@ document.addEventListener('DOMContentLoaded', function () {
         ctx.restore();
     }
 
+    // Which player or disc an arrow starting on `target` belongs to: a throw
+    // belongs to the disc, anything else to a player
+    function ownerFor(style, target) {
+        if (!target || !target.id) return '';
+        return (style === 'throw') === (target.type === 'disc') ? target.id : '';
+    }
+
     function dragPointTo(line, index, x, y, e) {
         const abs = line.absolutePoints();
         const neighbour = abs[index - 1] || abs[index + 1];
-        abs[index] = snapPoint({x, y}, e && e.shiftKey ? neighbour : null, line);
+        const p = snapPoint({x, y}, e && e.shiftKey ? neighbour : null, line,
+                            line.lineStyle === 'throw' ? 'disc' : null);
+        abs[index] = {x: p.x, y: p.y};
+        if (index === 0) line.herdFrom = ownerFor(line.lineStyle, p);
         line.setAbsolutePoints(abs);
         return true;
     }
@@ -319,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (transform.herdIndex === undefined) {
             const i = line.controls[transform.corner].pointIndex;
             const abs = line.absolutePoints();
-            abs.splice(i + 1, 0, segmentMiddle(abs, line.smooth, i));
+            abs.splice(i + 1, 0, DD.segmentMiddle(abs, line.smooth, i));
             line.setAbsolutePoints(abs);
             line.setControls();
             transform.herdIndex = i + 1;
@@ -327,157 +269,68 @@ document.addEventListener('DOMContentLoaded', function () {
         return dragPointTo(line, transform.herdIndex, x, y, e);
     }
 
-    // ---- canvas, field ------------------------------------------------------
-
-    const canvas = new fabric.Canvas('drill-canvas', {
-        backgroundColor: '#ffffff',
-        selection: true,
-        preserveObjectStacking: true,
-        targetFindTolerance: 6,
-    });
-    canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-    canvas.freeDrawingBrush.color = COLOURS.line;
-    canvas.freeDrawingBrush.width = 3;
-
-    function logicalSize() {
-        return {w: (field.length + 2 * field.endzone) * PX_PER_YARD,
-                h: field.width * PX_PER_YARD};
-    }
-
-    function fieldObject(obj) {
-        obj.set({selectable: false, evented: false, herdType: 'field'});
-        return obj;
-    }
-
-    function fieldParts() {
-        const {w, h} = logicalSize();
-        const y = PX_PER_YARD;
-        const ez = field.endzone * y;
-        const parts = [fieldObject(new fabric.Rect({left: 0, top: 0, width: w, height: h,
-                                                     fill: COLOURS.field, strokeWidth: 0}))];
-        if (field.grid) {
-            for (let x = 5 * y; x < w; x += 5 * y) {
-                parts.push(fieldObject(new fabric.Line([x, 0, x, h],
-                    {stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1})));
-            }
-            for (let gy = 5 * y; gy < h; gy += 5 * y) {
-                parts.push(fieldObject(new fabric.Line([0, gy, w, gy],
-                    {stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1})));
-            }
-        }
-        const line = {stroke: '#ffffff', strokeWidth: 2};
-        parts.push(fieldObject(new fabric.Rect({left: 1, top: 1, width: w - 2, height: h - 2,
-                                                 fill: '', ...line})));
-        parts.push(fieldObject(new fabric.Line([ez, 0, ez, h], line)));
-        parts.push(fieldObject(new fabric.Line([w - ez, 0, w - ez, h], line)));
-        // Brick marks, 20 yards out from each endzone line
-        [ez + 20 * y, w - ez - 20 * y].forEach(bx => {
-            if (bx > ez && bx < w - ez) {
-                parts.push(fieldObject(new fabric.Text('×', {left: bx, top: h / 2, fontSize: 18,
-                    fill: '#ffffff', originX: 'center', originY: 'center'})));
+    DD.lineControls = function (line) {
+        const controls = {};
+        const n = line.points.length;
+        line.points.forEach((p, i) => {
+            controls['p' + i] = new fabric.Control({
+                pointIndex: i, positionHandler: linePointPosition, actionHandler: movePoint,
+                actionName: 'modifyLine', render: renderPointControl, cursorStyle: 'move',
+            });
+            if (i < n - 1) {
+                controls['m' + i] = new fabric.Control({
+                    pointIndex: i, midpoint: true, positionHandler: linePointPosition,
+                    actionHandler: insertPoint, actionName: 'modifyLine',
+                    render: renderMidControl, cursorStyle: 'copy',
+                });
             }
         });
-        if (field.markers) {
-            for (let yd = 10; yd < field.length; yd += 10) {
-                parts.push(fieldObject(new fabric.Text(String(yd), {left: ez + yd * y, top: 4,
-                    fontSize: 11, fill: 'rgba(255,255,255,0.8)', originX: 'center'})));
-            }
-        }
-        return parts;
+        return controls;
+    };
+
+    // ---- arrows follow their players ----------------------------------------
+
+    function centreOf(o) {
+        const c = o.getCenterPoint();
+        return o.group ? fabric.util.transformPoint(c, o.group.calcTransformMatrix()) : c;
     }
 
-    function drawField() {
-        canvas.getObjects().filter(o => o.herdType === 'field').forEach(o => canvas.remove(o));
-        fieldParts().forEach((p, i) => canvas.insertAt(p, i));
-        document.getElementById('field-size').textContent = `${field.length}×${field.width} yards`;
-        document.getElementById('endzone-size').textContent = `${field.endzone} yards`;
-        fitToScreen();
+    function moverById(id) {
+        return id ? canvas.getObjects().find(o => o.herdId === id && MOVERS.includes(o.herdType)) : null;
     }
 
-    function fieldCount() {
-        return canvas.getObjects().filter(o => o.herdType === 'field').length;
+    // Keep each arrow's start on the player or disc it belongs to
+    function followOwners() {
+        canvas.getObjects().forEach(line => {
+            if (line.type !== 'herdLine' || !line.herdFrom || line.group || line === (draft && draft.preview)) return;
+            const owner = moverById(line.herdFrom);
+            if (!owner) return;
+            const c = centreOf(owner);
+            const abs = line.absolutePoints();
+            if (Math.hypot(abs[0].x - c.x, abs[0].y - c.y) < 0.5) return;
+            abs[0] = {x: c.x, y: c.y};
+            line.setAbsolutePoints(abs);
+        });
     }
 
-    function fitToScreen() {
-        const {w, h} = logicalSize();
-        const cw = holder.clientWidth;
-        const ch = holder.clientHeight || cw * h / w;
-        const zoom = Math.min(cw / w, ch / h);
-        canvas.setDimensions({width: cw, height: ch});
-        canvas.setViewportTransform([zoom, 0, 0, zoom, (cw - w * zoom) / 2, (ch - h * zoom) / 2]);
-        canvas.getObjects().forEach(o => o.setCoords());
-        canvas.requestRenderAll();
-    }
-
-    // ---- objects ------------------------------------------------------------
-
-    function newId() {
-        return Math.random().toString(36).slice(2, 10);
-    }
-
-    function nextLabel(type, prefix) {
-        const used = new Set(canvas.getObjects().filter(o => o.herdType === type).map(o => o.herdLabel));
-        let n = 1;
-        while (used.has(prefix + n)) n++;
-        return prefix + n;
-    }
-
-    function makePlayer(type, x, y) {
-        const offense = type === 'player-o';
-        const label = nextLabel(type, offense ? 'O' : 'D');
-        const circle = new fabric.Circle({radius: 12, fill: offense ? COLOURS.offense : COLOURS.defense,
-            stroke: '#ffffff', strokeWidth: 2, originX: 'center', originY: 'center'});
-        const text = new fabric.Text(label, {fontSize: 11, fontWeight: 'bold', fill: '#ffffff',
-            fontFamily: 'Arial', originX: 'center', originY: 'center'});
-        return new fabric.Group([circle, text], {left: x, top: y, originX: 'center',
-            originY: 'center', herdType: type, herdLabel: label});
-    }
-
-    function makeObject(tool, x, y) {
-        let obj = null;
-        if (tool === 'player-o' || tool === 'player-d') obj = makePlayer(tool, x, y);
-        if (tool === 'disc') {
-            obj = new fabric.Circle({left: x, top: y, radius: 7, fill: COLOURS.disc, stroke: '#000',
-                strokeWidth: 2, originX: 'center', originY: 'center', herdType: 'disc'});
-        }
-        if (tool === 'cone') {
-            obj = new fabric.Triangle({left: x, top: y, width: 14, height: 14, fill: COLOURS.cone,
-                stroke: '#7a3e00', strokeWidth: 1, originX: 'center', originY: 'center', herdType: 'cone'});
-        }
-        if (tool === 'text') {
-            obj = new fabric.IText('Text', {left: x, top: y, fontSize: 16, fill: '#ffffff',
-                fontFamily: 'Arial', fontWeight: 'bold', originX: 'center', originY: 'center',
-                herdType: 'text', shadow: 'rgba(0,0,0,0.6) 1px 1px 2px'});
-        }
-        if (obj) obj.set('herdId', newId());
-        return obj;
-    }
-
-    function makeLine(points, style) {
-        const line = new HerdLine({points: [], lineStyle: style, lineColour: lineOptions.colour,
-                                   smooth: lineOptions.smooth, arrow: lineOptions.arrow,
-                                   herdId: newId()});
-        line.setAbsolutePoints(points);
-        line.setControls();
-        return line;
-    }
-
-    // Arrows go under the players, so they come out from beneath them
-    function addLine(line) {
-        canvas.insertAt(line, fieldCount());
-    }
-
-    function arrowHead(x, y, angleRad, colour) {
-        return new fabric.Triangle({left: x, top: y, width: 12, height: 14, fill: colour,
-            originX: 'center', originY: 'center', angle: angleRad * 180 / Math.PI + 90});
+    // After an arrow is moved: it belongs to whatever it now starts on
+    function relinkLine(line) {
+        const start = line.absolutePoints()[0];
+        let best = null, bestD = 1.2 * YD;
+        canvas.getObjects().forEach(o => {
+            if (!MOVERS.includes(o.herdType) || o.group) return;
+            const c = o.getCenterPoint();
+            const d = Math.hypot(c.x - start.x, c.y - start.y);
+            if (d < bestD) { best = o; bestD = d; }
+        });
+        line.herdFrom = ownerFor(line.lineStyle, best && {id: best.herdId, type: best.herdType});
     }
 
     // ---- snapping -----------------------------------------------------------
 
     function snapGrid(p) {
         if (!snapToGrid) return p;
-        return {x: Math.round(p.x / PX_PER_YARD) * PX_PER_YARD,
-                y: Math.round(p.y / PX_PER_YARD) * PX_PER_YARD};
+        return {x: Math.round(p.x / YD) * YD, y: Math.round(p.y / YD) * YD};
     }
 
     // Lock the angle from `from` to the nearest 15 degrees
@@ -494,18 +347,20 @@ document.addEventListener('DOMContentLoaded', function () {
     function snapTargets(except) {
         const targets = [];
         canvas.getObjects().forEach(o => {
-            if (o === except || o.herdType === 'field' || o === (draft && draft.preview)) return;
+            if (o === except || !isUser(o) || o === (draft && draft.preview)) return;
             if (o.type === 'herdLine') {
                 const abs = o.absolutePoints();
                 targets.push({p: abs[0]}, {p: abs[abs.length - 1]});
             } else if (MOVERS.includes(o.herdType) || o.herdType === 'cone') {
-                const c = o.getCenterPoint();
-                targets.push({p: {x: c.x, y: c.y}, type: o.herdType});
+                const c = centreOf(o);
+                targets.push({p: {x: c.x, y: c.y}, type: o.herdType,
+                              id: MOVERS.includes(o.herdType) ? o.herdId : null});
             }
         });
         return targets;
     }
 
+    // Returns {x, y}, plus the id and type of the player or disc it snapped to
     function snapPoint(p, angleFrom, except, prefer) {
         if (angleFrom) return snapAngle(p, angleFrom);
         const radius = 12 / canvas.getZoom();
@@ -513,9 +368,9 @@ document.addEventListener('DOMContentLoaded', function () {
         snapTargets(except).forEach(t => {
             let d = Math.hypot(t.p.x - p.x, t.p.y - p.y);
             if (prefer && t.type === prefer) d -= radius / 2;
-            if (d < bestD) { best = t.p; bestD = d; }
+            if (d < bestD) { best = t; bestD = d; }
         });
-        return best ? {x: best.x, y: best.y} : snapGrid(p);
+        return best ? {x: best.p.x, y: best.p.y, id: best.id, type: best.type} : snapGrid(p);
     }
 
     // ---- tools --------------------------------------------------------------
@@ -525,6 +380,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function setTool(tool) {
+        if (playback) exitPlayback();
         finishDraft();
         currentTool = tool;
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn =>
@@ -534,6 +390,8 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.skipTargetFind = tool !== 'select';
         canvas.defaultCursor = tool === 'select' ? 'default' : 'crosshair';
         if (tool !== 'select') canvas.discardActiveObject();
+        // Black shading looks muddy on the grass
+        if (tool === 'area' && lineOptions.colour === COLOURS.line) lineOptions.colour = '#fab005';
         updateLineOptions();
         document.getElementById('tool-hint').textContent = TOOL_HINTS[tool] || '';
         canvas.requestRenderAll();
@@ -554,10 +412,15 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.requestRenderAll();
     }
 
+    function setDrafting(on) {
+        document.getElementById('finish-arrow').classList.toggle('d-none', !on);
+    }
+
     function finishDraft() {
         if (!draft) return;
         const d = draft;
         draft = null;
+        setDrafting(false);
         if (d.preview) {
             loading = true;
             canvas.remove(d.preview);
@@ -565,14 +428,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         // Drop repeated points (e.g. from the clicks of a double-click)
         const pts = d.points.filter((p, i, all) => i === 0 ||
-            Math.hypot(p.x - all[i - 1].x, p.y - all[i - 1].y) > 3);
+            Math.hypot(p.x - all[i - 1].x, p.y - all[i - 1].y) > 3).map(p => ({x: p.x, y: p.y}));
         const first = pts[0], last = pts[pts.length - 1];
         if (pts.length < 2 || Math.hypot(last.x - first.x, last.y - first.y) < 8) {
             canvas.requestRenderAll();
             return;
         }
         if (lineOptions.smooth && pts.length === 2) pts.splice(1, 0, mid(pts[0], pts[1]));
-        addLine(makeLine(pts, LINE_TOOLS[d.tool]));
+        const style = LINE_TOOLS[d.tool];
+        addLine(makeLine(pts, style, ownerFor(style, d.points[0])));
         canvas.requestRenderAll();
     }
 
@@ -583,12 +447,22 @@ document.addEventListener('DOMContentLoaded', function () {
         return snapPoint({x: p.x, y: p.y}, opt.e.shiftKey ? prev : null, null, prefer);
     }
 
+    function startPan(opt) {
+        panning = {x: opt.e.clientX, y: opt.e.clientY, selection: canvas.selection};
+        canvas.selection = false;
+        canvas.setCursor('grabbing');
+    }
+
     canvas.on('mouse:down', function (opt) {
-        if (playing) return;
+        if (opt.e.button === 1 || (opt.e.altKey && !opt.target && !canvas.isDrawingMode)) {
+            startPan(opt);
+            return;
+        }
+        if (playback) return;
         const p = canvas.getPointer(opt.e);
         if (PLACE_TOOLS.includes(currentTool)) {
             // Keep new things on the field
-            const {w, h} = logicalSize();
+            const {w, h} = DD.logicalSize(field);
             const s = snapGrid(p);
             const x = Math.min(w - 8, Math.max(8, s.x));
             const y = Math.min(h - 8, Math.max(8, s.y));
@@ -600,10 +474,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 obj.enterEditing();
                 obj.selectAll();
             }
+        } else if (currentTool === 'area') {
+            const start = snapGrid(p);
+            loading = true;
+            const obj = makeArea(lineOptions.shape, start.x, start.y, 1, 1, lineOptions.colour);
+            obj.set({selectable: false, evented: false});
+            canvas.insertAt(obj, layerIndex('area'));
+            loading = false;
+            areaDraft = {start, obj};
         } else if (isLineTool(currentTool)) {
             const point = linePointer(opt);
             if (!draft) {
                 draft = {tool: currentTool, points: [point], down: point, dragged: false};
+                setDrafting(true);
             } else {
                 const last = draft.points[draft.points.length - 1];
                 // Clicking the last point again finishes the arrow
@@ -619,7 +502,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    function areaBox(start, p) {
+        const end = snapGrid(p);
+        return {x: Math.min(start.x, end.x), y: Math.min(start.y, end.y),
+                w: Math.abs(end.x - start.x), h: Math.abs(end.y - start.y)};
+    }
+
     canvas.on('mouse:move', function (opt) {
+        if (panning) {
+            canvas.relativePan(new fabric.Point(opt.e.clientX - panning.x, opt.e.clientY - panning.y));
+            panning.x = opt.e.clientX;
+            panning.y = opt.e.clientY;
+            return;
+        }
+        if (areaDraft) {
+            const b = areaBox(areaDraft.start, canvas.getPointer(opt.e));
+            const o = areaDraft.obj;
+            o.set({left: b.x, top: b.y});
+            o.type === 'ellipse' ? o.set({rx: b.w / 2, ry: b.h / 2}) : o.set({width: b.w, height: b.h});
+            canvas.requestRenderAll();
+            return;
+        }
         if (!draft) return;
         const point = linePointer(opt);
         if (draft.pressed && Math.hypot(point.x - draft.down.x, point.y - draft.down.y) > 6) {
@@ -629,6 +532,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     canvas.on('mouse:up', function (opt) {
+        if (panning) {
+            canvas.selection = panning.selection;
+            panning = null;
+            canvas.getObjects().forEach(o => o.setCoords());
+            canvas.setCursor(canvas.defaultCursor);
+            return;
+        }
+        if (areaDraft) {
+            const d = areaDraft;
+            areaDraft = null;
+            const b = areaBox(d.start, canvas.getPointer(opt.e));
+            loading = true;
+            canvas.remove(d.obj);
+            loading = false;
+            if (b.w > YD && b.h > YD) {
+                canvas.insertAt(makeArea(lineOptions.shape, b.x, b.y, b.w, b.h, lineOptions.colour),
+                                layerIndex('area'));
+            }
+            canvas.requestRenderAll();
+            return;
+        }
         if (!draft || !draft.pressed) return;
         draft.pressed = false;
         // A press-drag-release draws a straight arrow in one go
@@ -657,6 +581,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     canvas.on('mouse:dblclick', function (opt) {
+        if (playback) return;
         if (draft) {
             finishDraft();
             return;
@@ -672,6 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 abs.splice(i, 1);
                 target.setAbsolutePoints(abs);
                 target.setControls();
+                if (i === 0) relinkLine(target);
                 canvas.requestRenderAll();
                 changed();
             }
@@ -690,51 +616,172 @@ document.addEventListener('DOMContentLoaded', function () {
 
     canvas.on('object:moving', function (e) {
         const o = e.target;
-        if (!snapToGrid || o.type === 'herdLine' || o.type === 'activeSelection') return;
-        const c = snapGrid(o.getCenterPoint());
-        o.setPositionByOrigin(new fabric.Point(c.x, c.y), 'center', 'center');
+        if (snapToGrid && o.type !== 'herdLine' && o.type !== 'activeSelection' && o.herdType !== 'area') {
+            const c = snapGrid(o.getCenterPoint());
+            o.setPositionByOrigin(new fabric.Point(c.x, c.y), 'center', 'center');
+        }
+        if (o.type !== 'herdLine') followOwners();
     });
 
     function deleteSelected() {
         const active = canvas.getActiveObjects();
         if (!active.length) return;
         canvas.discardActiveObject();
+        loading = true;
         active.forEach(o => canvas.remove(o));
+        loading = false;
         canvas.requestRenderAll();
+        changed();
     }
 
     function clearDrawing() {
         if (!userObjects().length || !confirm('Remove everything from this stage?')) return;
+        loading = true;
         userObjects().forEach(o => canvas.remove(o));
+        loading = false;
+        changed();
     }
 
-    // ---- line options -------------------------------------------------------
+    // ---- set up: formations, defenders --------------------------------------
+
+    // Positions in yards, attacking the right-hand endzone. Each is
+    // [type, x, y, label]; the first player has the disc.
+    const FORMATIONS = {
+        vertical: (f, xd, cy) => [
+            ['player-o', xd, cy, 'H1'], ['player-o', xd - 4, cy + 7, 'H2'],
+            ...[0, 1, 2, 3, 4].map(k => ['player-o', xd + 10 + 4 * k, cy, 'C' + (k + 1)]),
+        ],
+        horizontal: (f, xd, cy) => [
+            ['player-o', xd, cy, 'H1'], ['player-o', xd - 2, cy - 12, 'H2'], ['player-o', xd - 2, cy + 12, 'H3'],
+            ...[-15, -5, 5, 15].map((dy, k) => ['player-o', xd + 15, cy + dy, 'C' + (k + 1)]),
+        ],
+        zone: (f, xd, cy) => [
+            ['player-o', xd, cy, 'H1'], ['player-o', xd - 3, cy - 9, 'H2'], ['player-o', xd - 3, cy + 9, 'H3'],
+            ['player-o', xd + 9, cy - 5, 'P1'], ['player-o', xd + 9, cy + 5, 'P2'],
+            ['player-o', xd + 22, cy - 13, 'W1'], ['player-o', xd + 22, cy + 13, 'W2'],
+            ['player-d', xd + 1.5, cy + 1.5, 'M'], ['player-d', xd + 3, cy - 3.5, 'C1'],
+            ['player-d', xd + 3.5, cy + 4.5, 'C2'], ['player-d', xd + 13, cy - 12, 'W1'],
+            ['player-d', xd + 13, cy + 12, 'W2'], ['player-d', xd + 14, cy, 'MM'],
+            ['player-d', xd + 28, cy, 'DD'],
+        ],
+        endzone: (f, xd, cy) => {
+            const goal = f.endzone + f.length;
+            return [
+                ['player-o', goal - 6, cy - 8, 'H1'], ['player-o', goal - 9, cy + 2, 'H2'],
+                ['player-o', goal - 5, cy + 12, 'H3'],
+                ...[0, 1, 2, 3].map(k => ['player-o', goal + 2 + 4 * k, cy, 'C' + (k + 1)]),
+            ];
+        },
+    };
+
+    function applyFormation(name) {
+        const existing = userObjects().filter(o => MOVERS.includes(o.herdType) || o.type === 'herdLine');
+        if (existing.length && !confirm('Replace the players, disc and arrows on this stage?')) return;
+        exitPlaybackIfNeeded();
+        const total = field.length + 2 * field.endzone;
+        const xd = Math.max(field.endzone + 5, field.endzone + field.length - 35);
+        const clampX = x => Math.min(total - 1, Math.max(1, x)) * YD;
+        const clampY = y => Math.min(field.width - 1, Math.max(1, y)) * YD;
+        const spots = FORMATIONS[name](field, xd, field.width / 2);
+        canvas.discardActiveObject();
+        loading = true;
+        existing.forEach(o => canvas.remove(o));
+        spots.forEach(([type, x, y, label]) => canvas.add(makeObject(type, clampX(x), clampY(y), label)));
+        const [, x, y] = spots[0];
+        canvas.add(makeObject('disc', clampX(x) + YD, clampY(y) - YD));
+        loading = false;
+        canvas.requestRenderAll();
+        changed();
+        if (name !== 'zone' && confirm('Add a defender on each player?')) matchDefenders();
+    }
+
+    // Put a defender on each offensive player that hasn't got one, on the
+    // break side (away from the force) and a step towards the endzone they
+    // attack; the player with the disc gets a mark.
+    function matchDefenders() {
+        exitPlaybackIfNeeded();
+        const objects = canvas.getObjects();
+        const offence = objects.filter(o => o.herdType === 'player-o');
+        const defence = objects.filter(o => o.herdType === 'player-d').map(centreOf);
+        const disc = objects.find(o => o.herdType === 'disc');
+        const discAt = disc && centreOf(disc);
+        let thrower = null;
+        if (discAt) {
+            let bestD = 3 * YD;
+            offence.forEach(o => {
+                const c = centreOf(o);
+                const d = Math.hypot(c.x - discAt.x, c.y - discAt.y);
+                if (d < bestD) { thrower = o; bestD = d; }
+            });
+        }
+        const h = field.width * YD;
+        let added = 0;
+        loading = true;
+        offence.forEach(o => {
+            const c = centreOf(o);
+            if (defence.some(d => Math.hypot(d.x - c.x, d.y - c.y) < 3 * YD)) return;
+            let side = 0;   // -1: towards the top sideline, 1: towards the bottom
+            if (field.force === 'down') side = -1;
+            if (field.force === 'up') side = 1;
+            if (field.force === 'middle') side = c.y < h / 2 ? -1 : 1;
+            // Beside them (not on top of them): the mark goes downfield of the
+            // thrower when there's no force
+            const mark = o === thrower;
+            const x = c.x + (mark && !side ? 2 : 0.8) * YD;
+            const y = c.y + (mark && !side ? 0 : (side || -1) * 2) * YD;
+            canvas.add(makeObject('player-d', x, y));
+            added++;
+        });
+        loading = false;
+        canvas.requestRenderAll();
+        if (added) changed();
+        else showNotification('Every offensive player already has a defender.', 'info');
+    }
+
+    // ---- line and area options ----------------------------------------------
 
     function selectedLines() {
         return canvas.getActiveObjects().filter(o => o.type === 'herdLine');
     }
 
+    function selectedAreas() {
+        return canvas.getActiveObjects().filter(o => o.herdType === 'area');
+    }
+
+    function toggleShown(id, shown) {
+        document.getElementById(id).classList.toggle('d-none', !shown);
+    }
+
     function updateLineOptions() {
         const lines = selectedLines();
-        const show = isLineTool(currentTool) || currentTool === 'path' || lines.length > 0;
-        document.getElementById('line-options').classList.toggle('invisible', !show);
-        const source = lines[0] ? {colour: lines[0].lineColour, smooth: lines[0].smooth,
-                                   arrow: lines[0].arrow} : lineOptions;
+        const areas = selectedAreas();
+        const forLines = isLineTool(currentTool) || currentTool === 'path' || lines.length > 0;
+        const forAreas = currentTool === 'area' || areas.length > 0;
+        document.getElementById('line-options').classList.toggle('invisible', !forLines && !forAreas);
+        const colour = lines[0] ? lines[0].lineColour : areas[0] ? areas[0].herdColour : lineOptions.colour;
         document.querySelectorAll('.line-colour').forEach(btn =>
-            btn.classList.toggle('active', btn.dataset.colour === source.colour));
+            btn.classList.toggle('active', btn.dataset.colour === colour));
+        const source = lines[0] || lineOptions;
         document.getElementById('line-smooth').checked = source.smooth;
         document.getElementById('line-arrow').checked = source.arrow;
-        const styleGroup = document.getElementById('line-style-group');
-        styleGroup.classList.toggle('invisible', !lines.length);
+        toggleShown('line-shape-options', forLines);
+        toggleShown('area-shape-group', forAreas && !lines.length);
+        toggleShown('line-style-group', lines.length > 0);
+        toggleShown('line-delay-group', lines.length > 0);
         if (lines.length) {
-            styleGroup.querySelectorAll('[data-line-style]').forEach(btn =>
+            document.querySelectorAll('[data-line-style]').forEach(btn =>
                 btn.classList.toggle('active', btn.dataset.lineStyle === lines[0].lineStyle));
+            const delay = DELAYS.reduce((a, b) => Math.abs(b - lines[0].delay) < Math.abs(a - lines[0].delay) ? b : a);
+            document.getElementById('line-delay').value = String(delay);
         }
+        const shape = areas[0] ? (areas[0].type === 'ellipse' ? 'ellipse' : 'rect') : lineOptions.shape;
+        document.querySelectorAll('[data-area-shape]').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.areaShape === shape));
     }
 
     function applyToLines(props) {
         const lines = selectedLines();
-        if (!lines.length) return;
+        if (!lines.length) return false;
         lines.forEach(l => {
             if (props.smooth && !l.smooth && l.points.length === 2) {
                 const abs = l.absolutePoints();
@@ -747,27 +794,59 @@ document.addEventListener('DOMContentLoaded', function () {
             l.setCoords();
         });
         canvas.requestRenderAll();
-        changed();
+        return true;
     }
 
     document.querySelectorAll('.line-colour').forEach(btn => btn.addEventListener('click', () => {
-        lineOptions.colour = btn.dataset.colour;
-        canvas.freeDrawingBrush.color = lineOptions.colour;
-        applyToLines({lineColour: btn.dataset.colour});
+        const colour = btn.dataset.colour;
+        lineOptions.colour = colour;
+        canvas.freeDrawingBrush.color = colour;
+        const lines = applyToLines({lineColour: colour});
+        const areas = selectedAreas();
+        areas.forEach(a => a.set(areaStyle(colour)));
+        canvas.requestRenderAll();
+        if (lines || areas.length) changed();
         updateLineOptions();
     }));
     document.getElementById('line-smooth').addEventListener('change', e => {
         lineOptions.smooth = e.target.checked;
-        applyToLines({smooth: e.target.checked});
+        if (applyToLines({smooth: e.target.checked})) changed();
     });
     document.getElementById('line-arrow').addEventListener('change', e => {
         lineOptions.arrow = e.target.checked;
-        applyToLines({arrow: e.target.checked});
+        if (applyToLines({arrow: e.target.checked})) changed();
+    });
+    document.getElementById('line-delay').addEventListener('change', e => {
+        if (applyToLines({delay: parseFloat(e.target.value)})) changed();
     });
     document.querySelectorAll('[data-line-style]').forEach(btn => btn.addEventListener('click', () => {
-        applyToLines({lineStyle: btn.dataset.lineStyle});
+        if (applyToLines({lineStyle: btn.dataset.lineStyle})) {
+            selectedLines().forEach(relinkLine);
+            changed();
+        }
         updateLineOptions();
     }));
+    // Changing a selected area's shape swaps it for the other kind
+    document.querySelectorAll('[data-area-shape]').forEach(btn => btn.addEventListener('click', () => {
+        lineOptions.shape = btn.dataset.areaShape;
+        const areas = selectedAreas();
+        if (areas.length) {
+            canvas.discardActiveObject();
+            loading = true;
+            areas.forEach(a => {
+                const b = a.getBoundingRect(true, true);
+                const index = canvas.getObjects().indexOf(a);
+                canvas.remove(a);
+                const swapped = makeArea(lineOptions.shape, b.left, b.top, b.width, b.height, a.herdColour);
+                swapped.set('herdId', a.herdId);
+                canvas.insertAt(swapped, index);
+            });
+            loading = false;
+            changed();
+        }
+        updateLineOptions();
+    }));
+    document.getElementById('finish-arrow').addEventListener('click', finishDraft);
     document.getElementById('snap-grid').addEventListener('change', e => { snapToGrid = e.target.checked; });
 
     canvas.on('selection:created', updateLineOptions);
@@ -776,20 +855,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ---- state, stages, undo ------------------------------------------------
 
-    function userObjects() {
-        return canvas.getObjects().filter(o => o.herdType && o.herdType !== 'field' &&
-                                               o !== (draft && draft.preview));
-    }
-
     // Serialise as plain data, as each object would be outside any
     // multi-selection
     function serialiseObject(o) {
         return JSON.parse(JSON.stringify(canvas._toObject(o, 'toObject', EXTRA_PROPS)));
     }
 
-    // (Not while a stage is still being put on the canvas)
+    // (Not while a stage is still being put on the canvas, or playing)
     function commitStage() {
-        if (loading) return;
+        if (loading || playback) return;
         stages[current].objects = userObjects().map(serialiseObject);
     }
 
@@ -799,18 +873,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 stages: stages.map(s => ({name: s.name, notes: s.notes, objects: s.objects}))};
     }
 
-    function enliven(objects) {
-        return new Promise(resolve => fabric.util.enlivenObjects(objects || [], resolve));
-    }
-
     function showObjects(objects) {
         loading = true;
         canvas.discardActiveObject();
-        userObjects().forEach(o => canvas.remove(o));
-        return enliven(objects).then(enlivened => {
+        canvas.getObjects().filter(o => o.herdType && o.herdType !== 'field').forEach(o => canvas.remove(o));
+        return DD.enliven(objects).then(enlivened => {
             enlivened.forEach(o => canvas.add(o));
+            return addGhosts();
+        }).then(() => {
             loading = false;
             canvas.requestRenderAll();
+        });
+    }
+
+    // Faded copies of the last stage's players and disc
+    async function addGhosts() {
+        canvas.getObjects().filter(o => o.herdType === 'ghost').forEach(o => canvas.remove(o));
+        if (!showGhosts || current === 0 || playback) return;
+        const previous = stages[current - 1].objects.filter(o => MOVERS.includes(o.herdType));
+        const ghosts = await DD.enliven(previous);
+        ghosts.forEach(g => {
+            g.set({opacity: 0.3, selectable: false, evented: false, herdType: 'ghost'});
+            canvas.insertAt(g, layerIndex('ghost'));
         });
     }
 
@@ -819,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function changed() {
-        if (loading) return;
+        if (loading || playback) return;
         dirty = true;
         commitStage();
         history.push(snapshot());
@@ -848,23 +932,36 @@ document.addEventListener('DOMContentLoaded', function () {
         restore(snap);
     }
 
-    // Only finished drawing objects count (not the field, or an arrow while
-    // it is being drawn)
-    const isDrawing = o => o.herdType && o.herdType !== 'field';
-    canvas.on('object:added', e => { if (isDrawing(e.target)) changed(); });
-    canvas.on('object:removed', e => { if (isDrawing(e.target)) changed(); });
+    // Only finished drawing objects count (not the field, ghosts, or an arrow
+    // while it is being drawn)
+    canvas.on('object:added', e => { if (isUser(e.target)) changed(); });
+    canvas.on('object:removed', e => { if (isUser(e.target)) changed(); });
     canvas.on('object:modified', function (e) {
         const o = e.target;
         if (o && o.type === 'herdLine') {
             o.setAbsolutePoints(o.absolutePoints());  // bake in any move
             o.setControls();
+            if (!e.transform || e.transform.action === 'drag') relinkLine(o);
+        } else if (o && o.type === 'activeSelection') {
+            // Arrows moved without their player no longer belong to them
+            o.getObjects().forEach(line => {
+                if (line.type !== 'herdLine') return;
+                const owner = moverById(line.herdFrom);
+                if (!owner || owner.group !== o) line.herdFrom = '';
+            });
         }
+        followOwners();
+        canvas.requestRenderAll();
         changed();
     });
     canvas.on('text:editing:exited', changed);
 
     function switchStage(index) {
-        if (index === current || index < 0 || index >= stages.length || playing || loading) return;
+        if (playback) {
+            exitPlayback(index);
+            return;
+        }
+        if (index === current || index < 0 || index >= stages.length || loading) return;
         finishDraft();
         commitStage();
         current = index;
@@ -872,74 +969,8 @@ document.addEventListener('DOMContentLoaded', function () {
         showObjects(stages[current].objects);
     }
 
-    // Where each arrow takes a player or disc: an arrow that starts on a
-    // player (or, for a throw, on the disc) moves it to the arrow's end.
-    // Arrows that start where another one ends carry on from there.
-    function serialisedLinePoints(o) {
-        const m = fabric.util.composeMatrix({translateX: o.left, translateY: o.top, angle: o.angle || 0,
-            scaleX: o.scaleX || 1, scaleY: o.scaleY || 1, flipX: !!o.flipX, flipY: !!o.flipY});
-        return o.points.map(p => fabric.util.transformPoint(new fabric.Point(p.x, p.y), m));
-    }
-
-    function centred(o) {
-        return o.originX === 'center' && o.originY === 'center';
-    }
-
-    function movements(objects) {
-        const pos = {};
-        const paths = {};
-        objects.forEach(o => {
-            if (MOVERS.includes(o.herdType) && o.herdId && centred(o)) pos[o.herdId] = {x: o.left, y: o.top, type: o.herdType};
-        });
-        let lines = objects.filter(o => o.type === 'herdLine' && o.points && o.points.length > 1)
-            .map(o => ({style: o.lineStyle, pts: samplePoints(serialisedLinePoints(o), o.smooth)}));
-        const reach = 2.5 * PX_PER_YARD;
-        let progress = true;
-        while (lines.length && progress) {
-            progress = false;
-            lines = lines.filter(line => {
-                const start = line.pts[0];
-                let best = null, bestD = reach;
-                Object.entries(pos).forEach(([id, p]) => {
-                    const wanted = line.style === 'throw' ? p.type === 'disc' : p.type !== 'disc';
-                    const d = Math.hypot(p.x - start.x, p.y - start.y);
-                    if (wanted && d < bestD) { best = id; bestD = d; }
-                });
-                if (!best) return true;
-                const end = line.pts[line.pts.length - 1];
-                paths[best] = (paths[best] || [{x: pos[best].x, y: pos[best].y}]).concat(line.pts);
-                pos[best] = {...pos[best], x: end.x, y: end.y};
-                progress = true;
-                return false;
-            });
-        }
-        return paths;
-    }
-
-    function nextStageObjects(objects) {
-        const paths = movements(objects);
-        const next = objects.filter(o => o.type !== 'herdLine' && o.herdType !== 'cut' && o.herdType !== 'throw')
-            .map(o => {
-                const copy = JSON.parse(JSON.stringify(o));
-                const path = paths[o.herdId];
-                if (path) {
-                    copy.left = path[path.length - 1].x;
-                    copy.top = path[path.length - 1].y;
-                }
-                return copy;
-            });
-        // A disc caught by a player sits at their shoulder, not over their label
-        const players = next.filter(o => o.herdType && o.herdType.startsWith('player'));
-        next.filter(o => o.herdType === 'disc' && paths[o.herdId]).forEach(disc => {
-            if (players.some(p => Math.hypot(p.left - disc.left, p.top - disc.top) < 6)) {
-                disc.left += 10;
-                disc.top -= 10;
-            }
-        });
-        return next;
-    }
-
     function addStage(copyExactly) {
+        exitPlaybackIfNeeded();
         if (stages.length >= MAX_STAGES) {
             showNotification(`A drill can have up to ${MAX_STAGES} stages.`, 'warning');
             return;
@@ -950,7 +981,7 @@ document.addEventListener('DOMContentLoaded', function () {
         stages.splice(current + 1, 0, {
             name: `Stage ${stages.length + 1}`,
             notes: '',
-            objects: copyExactly ? JSON.parse(JSON.stringify(objects)) : nextStageObjects(objects),
+            objects: copyExactly ? JSON.parse(JSON.stringify(objects)) : DD.nextStageObjects(objects),
         });
         current += 1;
         renderStageBar();
@@ -958,6 +989,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function deleteStage() {
+        exitPlaybackIfNeeded();
         if (stages.length < 2) {
             showNotification('A drill needs at least one stage. Use Clear to empty it.', 'warning');
             return;
@@ -978,6 +1010,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function moveStage(delta) {
+        exitPlaybackIfNeeded();
         const to = current + delta;
         if (to < 0 || to >= stages.length) return;
         commitStage();
@@ -985,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', function () {
         stages.splice(to, 0, stage);
         current = to;
         renderStageBar();
-        changed();
+        showObjects(stages[current].objects).then(changed);
     }
 
     function renderStageBar() {
@@ -994,16 +1027,30 @@ document.addEventListener('DOMContentLoaded', function () {
         stages.forEach((stage, i) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'btn btn-sm stage-tab ' + (i === current ? 'btn-primary' : 'btn-outline-secondary');
+            btn.className = 'btn btn-sm stage-tab btn-outline-secondary';
             btn.textContent = stage.name;
             btn.title = 'Double-click to rename';
             btn.addEventListener('click', () => switchStage(i));
             btn.addEventListener('dblclick', () => { switchStage(i); renameStage(); });
             tabs.appendChild(btn);
         });
+        highlightStage(current);
         document.getElementById('stage-notes').value = stages[current].notes || '';
-        document.getElementById('stage-count').textContent = `${current + 1} / ${stages.length}`;
-        document.getElementById('play-stages').disabled = stages.length < 2 && !playing;
+        const scrubber = document.getElementById('stage-scrubber');
+        scrubber.max = String(Math.max(1, stages.length - 1) * 1000);
+        if (!playback) scrubber.value = String(current * 1000);
+        const single = stages.length < 2;
+        document.getElementById('play-stages').disabled = single;
+        scrubber.disabled = single;
+        document.getElementById('download-video').disabled = single;
+    }
+
+    function highlightStage(index) {
+        document.querySelectorAll('#stage-tabs .stage-tab').forEach((btn, i) => {
+            btn.classList.toggle('btn-primary', i === index);
+            btn.classList.toggle('btn-outline-secondary', i !== index);
+        });
+        document.getElementById('stage-count').textContent = `${index + 1} / ${stages.length}`;
     }
 
     document.getElementById('stage-notes').addEventListener('change', e => {
@@ -1011,133 +1058,160 @@ document.addEventListener('DOMContentLoaded', function () {
         changed();
     });
 
+    document.getElementById('show-ghosts').addEventListener('change', e => {
+        showGhosts = e.target.checked;
+        loading = true;
+        addGhosts().then(() => {
+            loading = false;
+            canvas.requestRenderAll();
+        });
+    });
+
     // ---- playback -----------------------------------------------------------
 
-    function pointAlong(path, t) {
-        if (path.length === 1) return path[0];
-        const lengths = [0];
-        for (let i = 1; i < path.length; i++) {
-            lengths.push(lengths[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y));
-        }
-        const total = lengths[lengths.length - 1];
-        if (!total) return path[path.length - 1];
-        const target = t * total;
-        let i = 1;
-        while (i < lengths.length - 1 && lengths[i] < target) i++;
-        const seg = lengths[i] - lengths[i - 1] || 1;
-        const f = (target - lengths[i - 1]) / seg;
-        return {x: path[i - 1].x + (path[i].x - path[i - 1].x) * f,
-                y: path[i - 1].y + (path[i].y - path[i - 1].y) * f};
+    // While playing (or scrubbing), the canvas shows the animation; editing
+    // comes back on the stage you choose (or the one you were on).
+    const player = DD.createPlayer(canvas, () => stages, {
+        onUpdate: function (position, playing) {
+            const scrubber = document.getElementById('stage-scrubber');
+            scrubber.value = String(Math.round(position * 1000));
+            highlightStage(Math.min(Math.floor(position + 0.001), stages.length - 1));
+            const btn = document.getElementById('play-stages');
+            btn.innerHTML = playing ? '<i class="bi bi-pause-fill"></i> Pause' : '<i class="bi bi-play-fill"></i> Play';
+            btn.classList.toggle('btn-success', !playing);
+            btn.classList.toggle('btn-warning', playing);
+        },
+    });
+    let playbackFrom = 0;
+
+    function enterPlayback() {
+        if (playback) return;
+        finishDraft();
+        if (currentTool !== 'select') setTool('select');
+        canvas.discardActiveObject();
+        commitStage();
+        playbackFrom = current;
+        playback = true;
+        player.reset();
+        canvas.skipTargetFind = true;
+        canvas.selection = false;
+        document.querySelector('.editor-main').classList.add('is-playing');
+        toggleShown('exit-playback', true);
     }
 
-    const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-    // Move the stage's players along their arrows to where they stand in the
-    // next stage
-    function animateStage(from, to, run) {
-        const paths = movements(from.objects);
-        const target = {};
-        to.objects.forEach(o => { if (o.herdId && centred(o)) target[o.herdId] = {x: o.left, y: o.top}; });
-        const tracks = [];
-        userObjects().forEach(o => {
-            if (o.type === 'herdLine' || o.herdType === 'cut' || o.herdType === 'throw') {
-                tracks.push({obj: o, fade: true});
-                return;
-            }
-            const end = target[o.herdId];
-            if (!end) {
-                tracks.push({obj: o, fade: true});
-                return;
-            }
-            const c = o.getCenterPoint();
-            let path = paths[o.herdId] ? paths[o.herdId].slice() : [{x: c.x, y: c.y}];
-            const last = path[path.length - 1];
-            if (Math.hypot(last.x - end.x, last.y - end.y) > 1) path.push(end);
-            if (path.length > 1) tracks.push({obj: o, path});
-        });
-        return new Promise(resolve => {
-            const start = performance.now();
-            function frame(now) {
-                if (run.stopped) return resolve();
-                const t = Math.min(1, (now - start) / STAGE_MS);
-                const e = ease(t);
-                tracks.forEach(track => {
-                    if (track.fade) {
-                        track.obj.set('opacity', 1 - e);
-                    } else {
-                        const p = pointAlong(track.path, e);
-                        track.obj.setPositionByOrigin(new fabric.Point(p.x, p.y), 'center', 'center');
-                    }
-                });
-                canvas.requestRenderAll();
-                if (t < 1) requestAnimationFrame(frame);
-                else resolve();
-            }
-            requestAnimationFrame(frame);
-        });
-    }
-
-    function setPlaying(run) {
-        playing = run;
-        const btn = document.getElementById('play-stages');
-        btn.innerHTML = run ? '<i class="bi bi-stop-fill"></i> Stop' : '<i class="bi bi-play-fill"></i> Play';
-        btn.classList.toggle('btn-success', !run);
-        btn.classList.toggle('btn-danger', !!run);
-        document.querySelector('.editor-main').classList.toggle('is-playing', !!run);
-        canvas.skipTargetFind = !!run || currentTool !== 'select';
-        canvas.selection = !run && currentTool === 'select';
+    function exitPlayback(index) {
+        if (!playback) return;
+        player.pause();
+        playback = false;
+        current = index === undefined ? Math.min(Math.round(player.position), stages.length - 1) : index;
+        document.querySelector('.editor-main').classList.remove('is-playing');
+        toggleShown('exit-playback', false);
+        canvas.skipTargetFind = currentTool !== 'select';
+        canvas.selection = currentTool === 'select';
         renderStageBar();
+        showObjects(stages[current].objects);
     }
 
-    async function play() {
-        if (playing) {
-            playing.stopped = true;
+    function exitPlaybackIfNeeded() {
+        if (playback) exitPlayback();
+    }
+
+    async function togglePlay() {
+        if (player.playing) {
+            player.pause();
             return;
         }
-        finishDraft();
-        setTool('select');
-        commitStage();
-        const run = {stopped: false};
-        const returnTo = current;
-        const first = current === stages.length - 1 ? 0 : current;
-        setPlaying(run);
-        for (let i = first; i < stages.length && !run.stopped; i++) {
-            current = i;
-            renderStageBar();
-            await showObjects(stages[i].objects);
-            await wait(i === first ? HOLD_MS : HOLD_MS / 2);
-            if (i + 1 < stages.length && !run.stopped) await animateStage(stages[i], stages[i + 1], run);
-        }
-        if (!run.stopped) await wait(HOLD_MS * 2);
-        current = run.stopped ? current : returnTo;
-        setPlaying(null);
-        renderStageBar();
-        await showObjects(stages[current].objects);
+        const fresh = !playback;
+        enterPlayback();
+        if (fresh) await player.seek(current === stages.length - 1 ? 0 : current);
+        const finished = await player.play().then(() => player.position >= stages.length - 1);
+        // Played to the end: back to editing where you started
+        if (finished && playback && !player.playing) exitPlayback(playbackFrom);
     }
+
+    document.getElementById('play-stages').addEventListener('click', togglePlay);
+    document.getElementById('exit-playback').addEventListener('click', () => exitPlayback());
+    document.getElementById('stage-scrubber').addEventListener('input', e => {
+        const position = parseInt(e.target.value, 10) / 1000;
+        enterPlayback();
+        player.pause();
+        player.seek(position);
+    });
+    document.getElementById('play-speed').addEventListener('change', e => {
+        player.speed = parseFloat(e.target.value) || 1;
+    });
+
+    // ---- video --------------------------------------------------------------
+
+    async function downloadVideo() {
+        if (stages.length < 2) return;
+        exitPlaybackIfNeeded();
+        finishDraft();
+        commitStage();
+        if (!DD.videoType()) {
+            showNotification('This browser cannot record video. Try Chrome, Edge or Safari.', 'warning');
+            return;
+        }
+        const modal = videoModal();
+        const status = modal.querySelector('.video-status');
+        const result = modal.querySelector('.video-result');
+        result.innerHTML = '';
+        status.textContent = 'Recording… the video plays in real time.';
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+        try {
+            const speed = parseFloat(document.getElementById('play-speed').value) || 1;
+            const {blob, extension} = await DD.recordVideo(field, stages, {
+                speed,
+                onUpdate: position => {
+                    status.textContent = `Recording… stage ${Math.min(Math.floor(position) + 1, stages.length)} of ${stages.length}`;
+                },
+            });
+            const url = URL.createObjectURL(blob);
+            const name = (val('drill-title').trim() || 'drill').replace(/[^\w-]+/g, '_') + '.' + extension;
+            status.textContent = 'Done.';
+            const video = document.createElement('video');
+            video.src = url;
+            video.controls = true;
+            video.className = 'w-100 border rounded mb-2';
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = name;
+            link.className = 'btn btn-primary';
+            link.innerHTML = '<i class="bi bi-download"></i> Download ' + extension.toUpperCase();
+            result.append(video, link);
+        } catch (err) {
+            status.textContent = 'Could not record the video: ' + err.message;
+        }
+    }
+
+    function videoModal() {
+        let modal = document.getElementById('videoModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'videoModal';
+            modal.tabIndex = -1;
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
+                  <div class="modal-header"><h5 class="modal-title">Animation video</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                  <div class="modal-body"><p class="video-status mb-2"></p><div class="video-result"></div></div>
+                </div></div>`;
+            document.body.appendChild(modal);
+        }
+        return modal;
+    }
+
+    document.getElementById('download-video').addEventListener('click', downloadVideo);
 
     // ---- export, save -------------------------------------------------------
 
-    // Render each stage at field size (not screen size) for the PNG and SVG
-    async function exportStage(objects) {
-        const {w, h} = logicalSize();
-        const el = document.createElement('canvas');
-        const sc = new fabric.StaticCanvas(el, {width: w, height: h, backgroundColor: '#ffffff',
-                                               renderOnAddRemove: false});
-        fieldParts().forEach(p => sc.add(p));
-        (await enliven(objects)).forEach(o => sc.add(o));
-        sc.renderAll();
-        const png = sc.toDataURL({format: 'png', multiplier: 2});
-        const svg = sc.toSVG({width: w, height: h, viewBox: {x: 0, y: 0, width: w, height: h}});
-        sc.dispose();
-        return {png, svg};
-    }
-
     async function exportAll() {
+        exitPlaybackIfNeeded();
         finishDraft();
         commitStage();
         const out = [];
-        for (const stage of stages) out.push(await exportStage(stage.objects));
+        for (const stage of stages) out.push(await DD.exportStage(field, stage.objects));
         return out;
     }
 
@@ -1171,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let saving = false;
     async function saveDrill() {
-        if (saving || playing) return;
+        if (saving) return;
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (!csrfToken) {
             showNotification('Security token not found. Please refresh the page.', 'danger');
@@ -1283,26 +1357,32 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Pasted things keep their identity (so they animate) unless they're
-    // already in this stage
+    // already in this stage. One paste is one undo step.
     async function paste() {
         if (!clipboard) return;
         const here = new Set(userObjects().map(o => o.herdId));
-        const offset = here.size ? 2 * PX_PER_YARD : 0;
-        const enlivened = await enliven(clipboard.map(o => ({...o})));
+        const offset = here.size ? 2 * YD : 0;
+        const enlivened = await DD.enliven(clipboard);
         canvas.discardActiveObject();
+        loading = true;
         enlivened.forEach(o => {
             if (here.has(o.herdId)) {
                 o.set({herdId: newId(), left: o.left + offset, top: o.top + offset});
             }
-            o.type === 'herdLine' ? addLine(o) : canvas.add(o);
+            if (o.type === 'herdLine') addLine(o);
+            else if (o.herdType === 'area') canvas.insertAt(o, layerIndex('area'));
+            else canvas.add(o);
             o.setCoords();
         });
+        enlivened.filter(o => o.type === 'herdLine').forEach(relinkLine);
+        loading = false;
         if (enlivened.length > 1) {
             canvas.setActiveObject(new fabric.ActiveSelection(enlivened, {canvas}));
         } else if (enlivened.length) {
             canvas.setActiveObject(enlivened[0]);
         }
         canvas.requestRenderAll();
+        changed();
     }
 
     function nudge(dx, dy) {
@@ -1313,6 +1393,56 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.requestRenderAll();
         canvas.fire('object:modified', {target: active});
     }
+
+    // ---- field settings -----------------------------------------------------
+
+    function clampInput(id, min, max, fallback) {
+        const n = parseInt(val(id), 10);
+        return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+    }
+
+    function fillFieldSettings() {
+        document.getElementById('field-length').value = field.length;
+        document.getElementById('field-width').value = field.width;
+        document.getElementById('endzone-depth').value = field.endzone;
+        document.getElementById('show-grid').checked = field.grid;
+        document.getElementById('show-yard-markers').checked = field.markers;
+        document.getElementById('field-force').value = field.force;
+        document.getElementById('colour-offense').value = field.colours.offense;
+        document.getElementById('colour-defense').value = field.colours.defense;
+    }
+
+    document.getElementById('apply-field-settings').addEventListener('click', function () {
+        exitPlaybackIfNeeded();
+        commitStage();
+        const colours = {offense: val('colour-offense') || COLOURS.offense,
+                         defense: val('colour-defense') || COLOURS.defense};
+        const recolour = colours.offense !== field.colours.offense || colours.defense !== field.colours.defense;
+        field = {
+            ...field,
+            length: clampInput('field-length', 40, 120, field.length),
+            width: clampInput('field-width', 20, 60, field.width),
+            endzone: clampInput('endzone-depth', 10, 40, field.endzone),
+            grid: document.getElementById('show-grid').checked,
+            markers: document.getElementById('show-yard-markers').checked,
+            force: val('field-force') || 'none',
+            colours,
+        };
+        fillFieldSettings();
+        drawField();
+        if (recolour) {
+            stages.forEach(s => DD.recolourPlayers(s.objects, field));
+            showObjects(stages[current].objects).then(changed);
+        }
+        dirty = true;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('fieldSettingsModal')).hide();
+    });
+
+    document.getElementById('field-view').addEventListener('change', e => {
+        field = {...field, view: e.target.value};
+        drawField();
+        dirty = true;
+    });
 
     // ---- wiring -------------------------------------------------------------
 
@@ -1331,44 +1461,23 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('delete-stage').addEventListener('click', deleteStage);
     document.getElementById('stage-left').addEventListener('click', () => moveStage(-1));
     document.getElementById('stage-right').addEventListener('click', () => moveStage(1));
-    document.getElementById('play-stages').addEventListener('click', play);
+    document.getElementById('zoom-in').addEventListener('click', () => zoomBy(1.25));
+    document.getElementById('zoom-out').addEventListener('click', () => zoomBy(0.8));
+    document.getElementById('zoom-fit').addEventListener('click', fitToScreen);
+    document.querySelectorAll('[data-formation]').forEach(btn =>
+        btn.addEventListener('click', () => applyFormation(btn.dataset.formation)));
+    document.getElementById('match-defenders').addEventListener('click', matchDefenders);
 
     document.getElementById('save-properties').addEventListener('click', function () {
         dirty = true;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('drillPropertiesModal')).hide();
     });
 
-    function clampInput(id, min, max, fallback) {
-        const n = parseInt(val(id), 10);
-        return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
-    }
-
-    function fillFieldSettings() {
-        document.getElementById('field-length').value = field.length;
-        document.getElementById('field-width').value = field.width;
-        document.getElementById('endzone-depth').value = field.endzone;
-        document.getElementById('show-grid').checked = field.grid;
-        document.getElementById('show-yard-markers').checked = field.markers;
-    }
-
-    document.getElementById('apply-field-settings').addEventListener('click', function () {
-        field = {
-            length: clampInput('field-length', 40, 120, field.length),
-            width: clampInput('field-width', 20, 60, field.width),
-            endzone: clampInput('endzone-depth', 10, 40, field.endzone),
-            grid: document.getElementById('show-grid').checked,
-            markers: document.getElementById('show-yard-markers').checked,
-        };
-        fillFieldSettings();
-        drawField();
-        dirty = true;
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('fieldSettingsModal')).hide();
-    });
-
     document.addEventListener('keydown', function (e) {
         const active = canvas.getActiveObject();
-        const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) ||
-            (active && active.isEditing);
+        const el = document.activeElement;
+        const typing = ['TEXTAREA', 'SELECT'].includes(el.tagName) || (active && active.isEditing) ||
+            (el.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button', 'color'].includes(el.type));
         const mod = e.ctrlKey || e.metaKey;
         const key = e.key.toLowerCase();
         if (mod && key === 's') {
@@ -1377,10 +1486,12 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         if (typing) return;
-        if (playing) {
-            if (e.key === ' ' || e.key === 'Escape') {
+        if (playback) {
+            if (e.key === ' ') {
                 e.preventDefault();
-                play();  // stops it
+                togglePlay();
+            } else if (e.key === 'Escape') {
+                exitPlayback();
             }
             return;
         }
@@ -1409,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', function () {
             else setTool('select');
         } else if (e.key.startsWith('Arrow') && active) {
             e.preventDefault();
-            const step = (e.shiftKey ? 5 : 1) * PX_PER_YARD;
+            const step = (e.shiftKey ? 5 : 1) * YD;
             nudge({ArrowLeft: -step, ArrowRight: step}[e.key] || 0,
                   {ArrowUp: -step, ArrowDown: step}[e.key] || 0);
         } else if (e.key === 'PageDown' || e.key === ']') {
@@ -1418,13 +1529,19 @@ document.addEventListener('DOMContentLoaded', function () {
             switchStage(current - 1);
         } else if (e.key === ' ' && stages.length > 1) {
             e.preventDefault();
-            play();
+            togglePlay();
+        } else if (key === '=' || key === '+') {
+            zoomBy(1.25);
+        } else if (key === '-') {
+            zoomBy(0.8);
+        } else if (key === '0') {
+            fitToScreen();
         } else if (!mod && !e.altKey && TOOL_KEYS[key]) {
             setTool(TOOL_KEYS[key]);
         }
     });
 
-    // Refit whenever the space for the field changes (window, option rows)
+    // Refit whenever the space for the field changes
     if (window.ResizeObserver) new ResizeObserver(fitToScreen).observe(holder);
     else window.addEventListener('resize', fitToScreen);
     window.addEventListener('beforeunload', function (e) {
@@ -1436,20 +1553,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ---- start --------------------------------------------------------------
 
-    // Version 1 drawings had a single list of objects
-    function loadState(saved) {
-        if (!saved) return;
-        if (saved.field) field = {...field, ...saved.field};
-        if (Array.isArray(saved.stages) && saved.stages.length) {
-            stages = saved.stages.map((s, i) => ({name: s.name || `Stage ${i + 1}`, notes: s.notes || '',
-                                                  objects: s.objects || []}));
-        } else {
-            stages = [{name: 'Stage 1', notes: '', objects: saved.objects || []}];
-        }
-        stages.forEach(s => s.objects.forEach(o => { if (!o.herdId) o.herdId = newId(); }));
-    }
-
-    loadState(JSON.parse(document.getElementById('editor-state').textContent || 'null'));
+    const saved = DD.normaliseState(JSON.parse(document.getElementById('editor-state').textContent || 'null'), newId);
+    field = saved.field;
+    stages = saved.stages;
     fillFieldSettings();
     drawField();
     setTool('select');

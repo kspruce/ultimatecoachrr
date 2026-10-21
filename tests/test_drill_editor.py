@@ -179,3 +179,19 @@ def test_too_many_stages(app, team, coach):
                    content_type='multipart/form-data')
     assert r.status_code == 400
     assert SavedDrill.query.count() == 0
+
+
+def test_drill_page_plays_staged_drawings(app, team, coach):
+    r = coach.post('/sessions/api/drills', data=staged_form(STAGED['stages']),
+                   content_type='multipart/form-data')
+    drill_id = r.get_json()['drill_id']
+    page = coach.get(f'/sessions/drills/{drill_id}').get_data(as_text=True)
+    assert 'id="drill-animation"' in page and 'drill_viewer.js' in page
+    assert page.count('drill_viewer.js') == 1
+
+    # A single stage has nothing to play
+    one = {**STAGED, 'stages': STAGED['stages'][:1]}
+    coach.put(f'/sessions/api/drills/{drill_id}', data=staged_form(one['stages'], ('blue',), one),
+              content_type='multipart/form-data')
+    page = coach.get(f'/sessions/drills/{drill_id}').get_data(as_text=True)
+    assert 'drill-animation' not in page and 'drill_viewer.js' not in page
