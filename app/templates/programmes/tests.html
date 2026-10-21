@@ -1,0 +1,83 @@
+{% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
+{% block pg_content %}
+{% set editing = version and version.is_draft %}
+<div class="uc-page-header"><div>
+  <div class="pg-label">{% if editing %}Draft v{{ version.number }}{% elif version %}Published v{{ version.number }} (read only){% endif %}</div>
+  <h1>Performance tests</h1>
+  <p>The tests this programme uses: any timed, distance or other numeric test. Then say when they happen (baseline, retests). A programme doesn't need tests at all.</p></div>
+  {% if not editing %}{{ post_button(url_for('programmes.start_draft', programme_id=programme.id), 'Start a new draft to edit', 'btn btn-primary') }}{% endif %}
+</div>
+
+{% macro test_form(t) %}
+<form method="post" class="row g-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="save-test">
+  {% if t %}<input type="hidden" name="test_id" value="{{ t.id }}">{% endif %}
+  {% set sfx = t.id if t else 'new' %}
+  <div class="col-md-4"><label class="form-label small" for="tn-{{ sfx }}">Name</label><input class="form-control form-control-sm" id="tn-{{ sfx }}" name="name" maxlength="100" value="{{ t.name if t else '' }}" required></div>
+  <div class="col-md-2"><label class="form-label small" for="tu-{{ sfx }}">Unit</label><input class="form-control form-control-sm" id="tu-{{ sfx }}" name="unit" maxlength="20" value="{{ t.unit if t else '' }}" placeholder="s, m, reps" required></div>
+  <div class="col-md-2"><label class="form-label small" for="tm-{{ sfx }}">Measures</label>
+    <select class="form-select form-select-sm" id="tm-{{ sfx }}" name="measurement">{% for k, l in measurements %}<option value="{{ k }}" {{ 'selected' if t and t.measurement == k }}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><label class="form-label small" for="tb-{{ sfx }}">Better is</label>
+    <select class="form-select form-select-sm" id="tb-{{ sfx }}" name="better"><option value="lower">Lower</option><option value="higher" {{ 'selected' if t and t.higher_is_better }}>Higher</option></select></div>
+  <div class="col-md-2"><label class="form-label small" for="ta-{{ sfx }}">Attempts</label><input type="number" min="1" max="20" class="form-control form-control-sm" id="ta-{{ sfx }}" name="attempts" value="{{ t.attempts if t else 1 }}"></div>
+  <div class="col-md-3"><label class="form-label small" for="tg-{{ sfx }}">Result is the</label>
+    <select class="form-select form-select-sm" id="tg-{{ sfx }}" name="aggregation">{% for k, l in aggregations %}<option value="{{ k }}" {{ 'selected' if t and t.aggregation == k }}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><label class="form-label small" for="tmin-{{ sfx }}">Lowest allowed</label><input class="form-control form-control-sm" id="tmin-{{ sfx }}" name="min_value" inputmode="decimal" value="{{ t.min_value if t and t.min_value is not none else '' }}"></div>
+  <div class="col-md-2"><label class="form-label small" for="tmax-{{ sfx }}">Highest allowed</label><input class="form-control form-control-sm" id="tmax-{{ sfx }}" name="max_value" inputmode="decimal" value="{{ t.max_value if t and t.max_value is not none else '' }}"></div>
+  <div class="col-md-5"><label class="form-label small" for="td-{{ sfx }}">Description</label><input class="form-control form-control-sm" id="td-{{ sfx }}" name="description" value="{{ (t.description or '') if t else '' }}"></div>
+  <div class="col-12"><label class="form-label small" for="ti-{{ sfx }}">How to run it (instructions and conditions)</label><textarea class="form-control form-control-sm" id="ti-{{ sfx }}" name="instructions" rows="2">{{ (t.instructions or '') if t else '' }}</textarea></div>
+  <div class="col-12"><button class="btn btn-sm btn-primary">{{ 'Save test' if t else 'Add test' }}</button></div>
+</form>
+{% endmacro %}
+
+<div class="pg-card">
+  <h2>Tests</h2>
+  {% for t in version.tests if version %}
+  <div class="pg-session">
+    <div class="d-flex justify-content-between gap-2 flex-wrap">
+      <div><span class="fw-semibold">{{ t.name }}</span> <span class="small pg-muted">{{ t.unit }} · {{ 'higher' if t.higher_is_better else 'lower' }} is better · {{ t.attempts }} attempt{{ 's' if t.attempts != 1 }}, {{ dict(aggregations)[t.aggregation]|lower }}{% if t.min_value is not none or t.max_value is not none %} · allowed {{ t.min_value if t.min_value is not none else '…' }}–{{ t.max_value if t.max_value is not none else '…' }}{% endif %}</span>
+        {% if t.instructions %}<div class="small pg-pre">{{ t.instructions }}</div>{% endif %}</div>
+      {% if editing %}{{ post_button(url_for('programmes.tests', programme_id=programme.id), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this test?', fields={'action': 'delete-test', 'test_id': t.id}, title='Delete test') }}{% endif %}
+    </div>
+    {% if editing %}<details class="mt-2"><summary class="small">Edit</summary><div class="mt-2">{{ test_form(t) }}</div></details>{% endif %}
+  </div>
+  {% else %}<p class="pg-muted">No tests. That's fine if this programme doesn't test anything.</p>{% endfor %}
+  {% if editing %}<hr><h3 class="h6">Add a test</h3>{{ test_form(none) }}{% endif %}
+</div>
+
+<div class="pg-card">
+  <h2>Testing days and milestones</h2>
+  {% for ms in version.milestones if version %}
+  <div class="pg-session d-flex justify-content-between gap-2 flex-wrap">
+    <div><span class="fw-semibold">{{ ms.name }}</span> <span class="pg-badge">{{ ms.kind }}</span>
+      <div class="small pg-muted">{% if ms.week %}{{ ms.week.track.name }}, week {{ ms.week.number }}{% else %}No week set{% endif %}
+        {% if ms.is_test %} · {% if ms.test_keys %}{{ version.tests|selectattr('key', 'in', ms.test_keys)|map(attribute='name')|join(', ') }}{% else %}all tests{% endif %}{% endif %}</div>
+      {% if ms.notes %}<div class="small pg-pre">{{ ms.notes }}</div>{% endif %}</div>
+    {% if editing %}{{ post_button(url_for('programmes.tests', programme_id=programme.id), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this milestone?', fields={'action': 'delete-milestone', 'milestone_id': ms.id}, title='Delete milestone') }}{% endif %}
+  </div>
+  {% else %}<p class="pg-muted">None yet.</p>{% endfor %}
+  {% if editing %}
+  <hr><h3 class="h6">Add a milestone</h3>
+  <form method="post" class="row g-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="save-milestone">
+    <div class="col-md-4"><label class="form-label small" for="ms-name">Name</label><input class="form-control form-control-sm" id="ms-name" name="name" maxlength="100" placeholder="e.g. Baseline testing" required></div>
+    <div class="col-md-3"><label class="form-label small" for="ms-kind">Kind</label>
+      <select class="form-select form-select-sm" id="ms-kind" name="kind"><option value="baseline">Baseline tests</option><option value="retest">Retest</option><option value="milestone">Other milestone</option></select></div>
+    <div class="col-md-5"><label class="form-label small" for="ms-week">Week</label>
+      <select class="form-select form-select-sm" id="ms-week" name="week_id"><option value="">—</option>
+        {% for track in version.tracks %}<optgroup label="{{ track.name }}">{% for w in track.weeks %}<option value="{{ w.id }}">Week {{ w.number }}{% if w.title %}: {{ w.title }}{% endif %}</option>{% endfor %}</optgroup>{% endfor %}
+      </select></div>
+    {% if version.tests %}
+    <div class="col-12"><span class="form-label small d-block">Tests (none ticked = all)</span>
+      {% for t in version.tests %}<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="test_keys" value="{{ t.key }}" id="mk-{{ t.id }}"><label class="form-check-label small" for="mk-{{ t.id }}">{{ t.name }}</label></div>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="col-12"><label class="form-label small" for="ms-notes">Notes</label><input class="form-control form-control-sm" id="ms-notes" name="notes"></div>
+    <div class="col-12"><button class="btn btn-sm btn-primary">Add milestone</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

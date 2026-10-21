@@ -1,0 +1,43 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+{% set fields = session.log_fields or [] %}
+{% set eid = enrolment.id if coach_view else none %}
+<div class="uc-page-header"><div>
+  <div class="pg-label">{{ session.week.track.name }} · week {{ session.week.number }}{% if coach_view %} · {{ enrolment.player.name }}{% endif %}</div>
+  <h1>Log: {{ session.title }}</h1></div></div>
+<form method="post" class="pg-card" style="max-width:640px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if eid %}<input type="hidden" name="enrolment" value="{{ eid }}">{% endif %}
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label" for="status">How did it go?</label>
+      <select class="form-select" id="status" name="status">
+        <option value="completed">Done</option>
+        <option value="partial" {{ 'selected' if log and log.status == 'partial' }}>Partly done</option>
+        <option value="skipped" {{ 'selected' if log and log.status == 'skipped' }}>Skipped</option>
+      </select></div>
+    <div class="col-md-6"><label class="form-label" for="completed_on">Date</label>
+      <input type="date" class="form-control" id="completed_on" name="completed_on" value="{{ (log.completed_on if log and log.completed_on else today_date).isoformat() }}"></div>
+    {% for f in fields %}
+    <div class="col-md-6"><label class="form-label" for="{{ f }}">{{ field_labels[f] }}</label>
+      <input class="form-control" id="{{ f }}" name="{{ f }}" inputmode="decimal" value="{{ log[f] if log and log[f] is not none else '' }}"></div>
+    {% endfor %}
+    {% for f in session.custom_fields or [] %}
+    <div class="col-md-6"><label class="form-label" for="custom_{{ f.key }}">{{ f.label }}{% if f.unit %} ({{ f.unit }}){% endif %}</label>
+      <input class="form-control" id="custom_{{ f.key }}" name="custom_{{ f.key }}" inputmode="decimal" value="{{ log.values.get(f.key, '') if log and log.values else '' }}"></div>
+    {% endfor %}
+    <div class="col-12"><label class="form-label" for="notes">Notes</label><textarea class="form-control" id="notes" name="notes" rows="3">{{ (log.notes or '') if log else '' }}</textarea></div>
+  </div>
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary">Save</button>
+    <a class="btn btn-link" href="{{ url_for('programmes.player_detail', programme_id=programme.id, enrolment_id=enrolment.id) if coach_view else url_for('programmes.me', programme_id=programme.id) }}">Cancel</a>
+  </div>
+</form>
+{% if log %}
+<form method="post" style="max-width:640px" onsubmit="return confirm('Remove this log?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if eid %}<input type="hidden" name="enrolment" value="{{ eid }}">{% endif %}
+  <input type="hidden" name="action" value="delete">
+  <button class="btn btn-sm btn-outline-danger">Remove this log</button>
+</form>
+{% endif %}
+{% endblock %}

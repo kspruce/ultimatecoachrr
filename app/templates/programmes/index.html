@@ -1,0 +1,78 @@
+{% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
+{% block pg_content %}
+<div class="uc-page-header">
+  <div>
+    <h1>Training programmes</h1>
+    <p>{% if current_user.is_coach %}Build your club's own programmes and templates: tracks, weeks, sessions, exercises and tests. Publish them, add players and follow progress.{% else %}The programmes your coaches have put you on.{% endif %}</p>
+  </div>
+  {% if current_user.is_coach %}
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-primary" href="{{ url_for('programmes.new') }}"><i class="bi bi-plus-lg"></i> New programme</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('programmes.import_programme') }}"><i class="bi bi-upload"></i> Import spreadsheet</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if enrolments %}
+<div class="pg-card">
+  <h2>My programmes</h2>
+  <ul class="list-unstyled m-0">
+    {% for e in enrolments %}
+    <li class="mb-1"><a href="{{ url_for('programmes.me', programme_id=e.programme_id) }}">{{ e.programme.name }}</a>
+      {% if e.status != 'active' %}<span class="pg-badge">{{ e.status }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% elif not current_user.is_coach %}
+<div class="pg-card"><p class="m-0 pg-muted">You're not on a programme yet. Your coaches add players once a programme is published.</p></div>
+{% endif %}
+
+{% if current_user.is_coach %}
+{% macro programme_list(rows, empty) %}
+{% if rows %}
+<div class="table-responsive"><table class="table align-middle mb-0">
+  <thead><tr><th>Name</th><th>Status</th><th>Starts</th><th>Players</th><th></th></tr></thead>
+  <tbody>
+  {% for p in rows %}
+  <tr>
+    <td><a href="{{ url_for('programmes.show', programme_id=p.id) }}" class="fw-semibold">{{ p.name }}</a>
+      {% if p.is_shared %}<span class="pg-badge pg-ok" title="Other clubs can copy the published version">shared</span>{% endif %}
+      {% if p.source_kind %}<div class="small pg-muted">{% if p.source_kind == 'import' %}Imported from {{ p.import_filename or 'a spreadsheet' }}{% else %}From {{ p.source_name }}{% if p.source_team %} ({{ p.source_team }}){% endif %}{% if p.source_version %} v{{ p.source_version }}{% endif %}{% endif %}</div>{% endif %}
+    </td>
+    <td>{% if p.published %}<span class="pg-badge pg-ok">v{{ p.published.number }} live</span>{% endif %}
+        {% if p.draft %}<span class="pg-badge pg-warn">draft v{{ p.draft.number }}</span>{% endif %}</td>
+    <td>{{ p.start_date.strftime('%-d %b %Y') if p.start_date and p.schedule_mode == 'calendar' else ('Each player\'s own start' if p.schedule_mode == 'relative' else '—') }}</td>
+    <td>{{ p.enrolments|rejectattr('status', 'equalto', 'withdrawn')|list|length if not p.is_template else '—' }}</td>
+    <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.build', programme_id=p.id) }}">Build</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}<p class="pg-muted m-0">{{ empty }}</p>{% endif %}
+{% endmacro %}
+
+<div class="pg-card"><h2>Programmes</h2>{{ programme_list(programmes, 'No programmes yet. Create one, import a spreadsheet, or copy a template.') }}</div>
+<div class="pg-card"><h2>Templates</h2><p class="small pg-muted">Reusable starting points with no players. Copy one into a programme with a start date for a new season.</p>{{ programme_list(templates, 'No templates yet.') }}</div>
+
+<div class="pg-card">
+  <h2>Shared by other clubs</h2>
+  {% if shared %}
+  <p class="small pg-muted">Published templates other clubs have chosen to share. Copying makes your own independent programme; their players and records are never shared.</p>
+  <ul class="list-unstyled m-0">
+    {% for p in shared %}
+    <li class="mb-2 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+      <span><a href="{{ url_for('programmes.shared', programme_id=p.id) }}" class="fw-semibold">{{ p.name }}</a>
+        <span class="small pg-muted">by {{ p.team.name }} · v{{ p.published.number }}</span></span>
+      {{ post_button(url_for('programmes.copy_shared', programme_id=p.id), '<i class="bi bi-copy"></i> Copy to my club', 'btn btn-sm btn-outline-primary') }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="pg-muted m-0">Nothing shared yet.</p>{% endif %}
+</div>
+
+{% if archived %}
+<div class="pg-card"><h2>Archived</h2>{{ programme_list(archived, '') }}</div>
+{% endif %}
+{% endif %}
+{% endblock %}

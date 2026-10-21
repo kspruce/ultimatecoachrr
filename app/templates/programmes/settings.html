@@ -1,0 +1,52 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+<div class="uc-page-header"><div><h1>Settings</h1><p>Name, schedule, pauses, sharing and what the dashboard tracks. These apply to every version.</p></div></div>
+<form method="post" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="pg-card">
+    <div class="mb-3"><label class="form-label" for="name">Name</label>
+      <input class="form-control" id="name" name="name" maxlength="200" required value="{{ programme.name }}"></div>
+    <div class="mb-3"><label class="form-label" for="description">Description (players see this)</label>
+      <textarea class="form-control" id="description" name="description" rows="3">{{ programme.description or '' }}</textarea></div>
+    <div class="mb-0"><label class="form-label" for="coach_notes">Coach notes (coaches only; never shared or copied)</label>
+      <textarea class="form-control" id="coach_notes" name="coach_notes" rows="3">{{ programme.coach_notes or '' }}</textarea></div>
+  </div>
+  <div class="pg-card">
+    <h2>Schedule</h2>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><label class="form-label" for="schedule_mode">Weeks are counted from</label>
+        <select class="form-select" id="schedule_mode" name="schedule_mode">
+          <option value="calendar">The programme start date (everyone on the same week)</option>
+          <option value="relative" {{ 'selected' if programme.schedule_mode == 'relative' }}>Each player's own start date</option>
+        </select></div>
+      <div class="col-md-6"><label class="form-label" for="start_date">Start date</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ programme.start_date.isoformat() if programme.start_date else '' }}"></div>
+    </div>
+    <h3 class="h6">Pauses</h3>
+    <p class="small pg-muted">A pause pushes every week from its start date back by its length (e.g. two weeks over Christmas). Players can also have their own pauses.</p>
+    {% for p in (programme.pauses or []) + [{}, {}] %}
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><input type="date" class="form-control form-control-sm" name="pause_from" value="{{ p.get('from', '') }}" aria-label="Pause starts"></div>
+      <div class="col-md-2"><input type="number" min="1" max="52" class="form-control form-control-sm" name="pause_weeks" value="{{ p.get('weeks', '') }}" placeholder="weeks" aria-label="Weeks"></div>
+      <div class="col-md-6"><input class="form-control form-control-sm" name="pause_note" value="{{ p.get('note', '') }}" placeholder="Note (optional)" aria-label="Note"></div>
+    </div>
+    {% endfor %}
+    <p class="small pg-muted mb-0">Clear a row to remove that pause.</p>
+  </div>
+  <div class="pg-card">
+    <h2>Tracking</h2>
+    <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" role="switch" id="workload_enabled" name="workload_enabled" {{ 'checked' if programme.workload_enabled }}>
+      <label class="form-check-label" for="workload_enabled">Show workload (session effort × minutes) on the dashboard</label></div>
+    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="recovery_enabled" name="recovery_enabled" {{ 'checked' if programme.recovery_enabled }}>
+      <label class="form-check-label" for="recovery_enabled">Show recovery (soreness and sleep) on the dashboard</label></div>
+    <p class="small pg-muted mt-2 mb-0">Which numbers players are asked for is set on each session.</p>
+  </div>
+  <div class="pg-card">
+    <h2>Sharing</h2>
+    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="is_shared" name="is_shared" {{ 'checked' if programme.is_shared }} {{ 'disabled' if not programme.published }}>
+      <label class="form-check-label" for="is_shared">Share the published version as a template other clubs can copy</label></div>
+    <p class="small pg-muted mt-2 mb-0">Other clubs see only the published sessions, exercises and tests. Never your players, their logs or results, or the coach notes.{% if not programme.published %} Publish first to share.{% endif %}</p>
+  </div>
+  <button class="btn btn-primary">Save settings</button>
+</form>
+{% endblock %}

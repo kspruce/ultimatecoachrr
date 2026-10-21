@@ -1,0 +1,76 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+<div class="uc-page-header"><div><h1>Dashboard</h1>
+  <p>Worked out from this programme's own sessions and tests. "Not logged" means a week ended with nothing recorded; it's never counted as skipped.</p></div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('programmes.export', programme_id=programme.id, kind='report') }}"><i class="bi bi-download"></i> Report (CSV)</a>
+</div>
+
+{% if not d.version %}
+<div class="pg-card"><p class="m-0">Publish the programme and add players to see progress here.</p></div>
+{% else %}
+<div class="pg-stats">
+  <div class="pg-stat"><div class="pg-label">Players</div><div class="pg-value">{{ d.enrolled }}</div><div class="small pg-muted">{{ d.active }} active</div></div>
+  <div class="pg-stat"><div class="pg-label">Completion</div><div class="pg-value">{{ '%d%%' % d.completion if d.completion is not none else '—' }}</div>
+    <div class="small pg-muted">{% if d.due %}{{ d.done }} of {{ d.due }} required sessions due{% else %}nothing due yet{% endif %}</div></div>
+  <div class="pg-stat"><div class="pg-label">Not logged</div><div class="pg-value">{{ d.missing }}</div></div>
+  <div class="pg-stat"><div class="pg-label">Skipped</div><div class="pg-value">{{ d.skipped }}</div></div>
+  {% if d.version.tests %}<div class="pg-stat"><div class="pg-label">Test results due</div><div class="pg-value">{{ d.missing_tests }}</div></div>{% endif %}
+  {% for t in d.tracks %}
+  <div class="pg-stat"><div class="pg-label">{{ t.track.name }}</div>
+    <div class="pg-value">{{ 'Week %d' % t.week.number if t.week else '—' }}</div>
+    <div class="small pg-muted">{% if programme.schedule_mode == 'relative' %}each player's own week{% elif t.week %}of {{ t.track.weeks|length }}{% else %}not running this week{% endif %}</div></div>
+  {% endfor %}
+  {% if d.end_date and programme.schedule_mode == 'calendar' %}<div class="pg-stat"><div class="pg-label">Ends</div><div>{{ d.end_date.strftime('%-d %b %Y') }}</div></div>{% endif %}
+</div>
+
+{% if d.tests %}
+<div class="pg-card">
+  <h2>Performance changes</h2>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>Test</th><th>Players tested</th><th>With a before and after</th><th>Improved</th><th>Average change</th></tr></thead><tbody>
+    {% for t in d.tests %}
+    <tr><td class="fw-semibold">{{ t.test.name }} <span class="small pg-muted">({{ t.test.unit }}, {{ 'higher' if t.test.higher_is_better else 'lower' }} is better)</span></td>
+      <td>{{ t.tested }}</td><td>{{ t.compared }}</td><td>{{ t.improved if t.compared else '—' }}</td>
+      <td>{% if t.mean_change is not none %}<span class="pg-badge {{ 'pg-ok' if t.mean_change > 0 else ('pg-bad' if t.mean_change < 0 else '') }}">{{ '%+g'|format((t.mean_change if t.test.higher_is_better else -t.mean_change)|round(3)) }} {{ t.test.unit }}</span>{% else %}—{% endif %}</td></tr>
+    {% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
+
+{% if d.follow_up %}
+<div class="pg-card">
+  <h2>Players to follow up</h2>
+  <ul class="mb-0">{% for r in d.follow_up %}<li><a href="{{ url_for('programmes.player_detail', programme_id=programme.id, enrolment_id=r.enrolment.id) }}">{{ r.enrolment.player.name }}</a>: {{ r.follow_up|join('; ') }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="pg-card">
+  <h2>Players</h2>
+  {% if d.rows %}
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Player</th><th>Completed</th><th>Not logged</th><th>Skipped</th><th>Optional</th><th>Last log</th>
+      {% if d.show_workload %}<th title="Session effort × minutes">Load 7d / 28d</th><th>Avg RPE (14d)</th>{% endif %}
+      {% if d.show_recovery %}<th>Soreness (14d)</th><th>Sleep (14d)</th>{% endif %}
+      {% for t in d.tests %}<th>{{ t.test.name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for r in d.rows %}{% set p = r.p %}
+    <tr>
+      <td><a href="{{ url_for('programmes.player_detail', programme_id=programme.id, enrolment_id=r.enrolment.id) }}">{{ r.enrolment.player.name }}</a>
+        {% if r.enrolment.status != 'active' %}<span class="pg-badge">{{ r.enrolment.status }}</span>{% endif %}
+        {% if r.enrolment.version_id != d.version.id %}<span class="pg-badge" title="On an earlier version">v{{ r.enrolment.version.number }}</span>{% endif %}</td>
+      <td>{% if p.completion is not none %}{{ p.completion }}% <span class="small pg-muted">({{ p.done }}/{{ p.due }})</span>{% else %}<span class="pg-muted">nothing due</span>{% endif %}</td>
+      <td>{{ p.missing|length }}</td><td>{{ p.skipped }}</td><td>{{ p.optional_done }}</td>
+      <td>{{ p.last_logged.strftime('%-d %b') if p.last_logged else '—' }}</td>
+      {% if d.show_workload %}<td>{{ p.workload_7 if p.workload_7 is not none else '—' }} / {{ p.workload_28 if p.workload_28 is not none else '—' }}</td><td>{{ p.rpe if p.rpe is not none else '—' }}</td>{% endif %}
+      {% if d.show_recovery %}<td>{{ p.soreness if p.soreness is not none else '—' }}</td><td>{{ p.sleep if p.sleep is not none else '—' }}</td>{% endif %}
+      {% for t in d.tests %}{% set s = p.tests.get(t.test.key) %}
+      <td class="small">{% if s and s.results %}{{ '%g'|format((s.latest or s.first).value|round(3)) }}{% if s.change is not none %} <span class="pg-badge {{ 'pg-ok' if s.change > 0 else ('pg-bad' if s.change < 0 else '') }}">{{ '%+g'|format((s.change if t.test.higher_is_better else -s.change)|round(3)) }}</span>{% endif %}{% else %}—{% endif %}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody></table></div>
+  <p class="small pg-muted mt-2 mb-0">— means no data, not zero. Workload shows only once players log effort and minutes.</p>
+  {% else %}<p class="pg-muted m-0">No players yet. <a href="{{ url_for('programmes.players', programme_id=programme.id) }}">Add players</a>.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

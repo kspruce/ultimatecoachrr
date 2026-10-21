@@ -1,0 +1,76 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+{% set week = session.week %}
+<div class="uc-page-header"><div>
+  <div class="pg-label">{{ week.track.name }} · week {{ week.number }} · draft v{{ week.track.version.number }}</div>
+  <h1>{{ session.title }}</h1>
+  <p>Fill in only what this session needs: a throwing session might have durations and instructions but no distances or effort targets.</p></div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('programmes.edit_week', programme_id=programme.id, week_id=week.id) }}"><i class="bi bi-arrow-left"></i> Back to week {{ week.number }}</a>
+</div>
+
+{% macro exercise_row(ex, i) %}
+<div class="pg-card mb-2 p-3">
+  <input type="hidden" name="ex_id" value="{{ ex.id if ex else 'new' }}">
+  <div class="row g-2">
+    <div class="col-3 col-md-1"><label class="form-label small" for="ex-order-{{ i }}">Order</label><input class="form-control form-control-sm" id="ex-order-{{ i }}" name="ex_order" value="{{ ex.position + 1 if ex else '' }}" inputmode="numeric"></div>
+    <div class="col-3 col-md-1"><label class="form-label small" for="ex-block-{{ i }}">Block</label><input class="form-control form-control-sm" id="ex-block-{{ i }}" name="ex_block" maxlength="20" value="{{ (ex.block or '') if ex else '' }}" placeholder="A1"></div>
+    <div class="col-6 col-md-4"><label class="form-label small" for="ex-name-{{ i }}">{{ 'Exercise' if ex else 'New exercise' }}</label><input class="form-control form-control-sm" id="ex-name-{{ i }}" name="ex_name" maxlength="200" value="{{ ex.name if ex else '' }}"></div>
+    <div class="col-4 col-md-1"><label class="form-label small" for="ex-sets-{{ i }}">Sets</label><input class="form-control form-control-sm" id="ex-sets-{{ i }}" name="ex_sets" maxlength="30" value="{{ (ex.sets or '') if ex else '' }}"></div>
+    <div class="col-4 col-md-2"><label class="form-label small" for="ex-reps-{{ i }}">Reps</label><input class="form-control form-control-sm" id="ex-reps-{{ i }}" name="ex_reps" maxlength="50" value="{{ (ex.reps or '') if ex else '' }}"></div>
+    <div class="col-4 col-md-1"><label class="form-label small" for="ex-dist-{{ i }}">Dist (m)</label><input class="form-control form-control-sm" id="ex-dist-{{ i }}" name="ex_distance_m" value="{{ (ex.distance_m|round(1) if ex.distance_m is not none else '') if ex else '' }}" inputmode="decimal"></div>
+    <div class="col-4 col-md-2"><label class="form-label small" for="ex-dur-{{ i }}">Duration (s)</label><input class="form-control form-control-sm" id="ex-dur-{{ i }}" name="ex_duration_seconds" value="{{ ex.duration_seconds if ex and ex.duration_seconds is not none else '' }}" inputmode="numeric"></div>
+    <div class="col-4 col-md-3"><label class="form-label small" for="ex-rest-{{ i }}">Rest</label><input class="form-control form-control-sm" id="ex-rest-{{ i }}" name="ex_rest" maxlength="100" value="{{ (ex.rest or '') if ex else '' }}"></div>
+    <div class="col-4 col-md-3"><label class="form-label small" for="ex-int-{{ i }}">Intensity / RPE</label><input class="form-control form-control-sm" id="ex-int-{{ i }}" name="ex_intensity" maxlength="100" value="{{ (ex.intensity or '') if ex else '' }}"></div>
+    <div class="col-4 col-md-2"><label class="form-label small" for="ex-tempo-{{ i }}">Tempo</label><input class="form-control form-control-sm" id="ex-tempo-{{ i }}" name="ex_tempo" maxlength="30" value="{{ (ex.tempo or '') if ex else '' }}"></div>
+    <div class="col-12 col-md-4"><label class="form-label small" for="ex-video-{{ i }}">Video link</label><input class="form-control form-control-sm" id="ex-video-{{ i }}" name="ex_video_url" maxlength="500" value="{{ (ex.video_url or '') if ex else '' }}"></div>
+    <div class="col-12"><label class="form-label small" for="ex-inst-{{ i }}">Instructions and cues</label><textarea class="form-control form-control-sm" id="ex-inst-{{ i }}" name="ex_instructions" rows="2">{{ (ex.instructions or '') if ex else '' }}</textarea></div>
+    {% if ex %}<div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="ex_remove" value="{{ ex.id }}" id="ex-rm-{{ i }}"><label class="form-check-label small" for="ex-rm-{{ i }}">Remove this exercise</label></div></div>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="pg-card">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label" for="title">Title</label><input class="form-control" id="title" name="title" maxlength="200" value="{{ session.title }}" required></div>
+      <div class="col-md-3"><label class="form-label" for="session_type">Type</label>
+        <select class="form-select" id="session_type" name="session_type">{% for k, label in session_types %}<option value="{{ k }}" {{ 'selected' if session.session_type == k }}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label" for="custom_type">Custom type name</label><input class="form-control" id="custom_type" name="custom_type" maxlength="50" value="{{ session.custom_type or '' }}" placeholder="e.g. Plyometrics"></div>
+      <div class="col-md-4"><label class="form-label" for="requirement">Players must</label>
+        <select class="form-select" id="requirement" name="requirement">{% for k, label in requirements %}<option value="{{ k }}" {{ 'selected' if session.requirement == k }}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label" for="alternative_group">Alternative group</label><input class="form-control" id="alternative_group" name="alternative_group" maxlength="50" value="{{ session.alternative_group or '' }}" placeholder="e.g. hills">
+        <div class="form-text">Alternatives in the same group: doing any one counts.</div></div>
+      <div class="col-md-4"><label class="form-label" for="duration_minutes">Duration (min)</label><input type="number" min="0" max="1440" class="form-control" id="duration_minutes" name="duration_minutes" value="{{ session.duration_minutes if session.duration_minutes is not none else '' }}"></div>
+      <div class="col-12"><label class="form-label" for="focus">Focus and instructions</label><textarea class="form-control" id="focus" name="focus" rows="3">{{ session.focus or '' }}</textarea></div>
+      <div class="col-md-6"><label class="form-label" for="warmup">Warm-up</label><textarea class="form-control" id="warmup" name="warmup" rows="2">{{ session.warmup or '' }}</textarea></div>
+      <div class="col-md-6"><label class="form-label" for="cooldown">Cool-down</label><textarea class="form-control" id="cooldown" name="cooldown" rows="2">{{ session.cooldown or '' }}</textarea></div>
+      <div class="col-12"><label class="form-label" for="coaching_cues">Coaching cues</label><textarea class="form-control" id="coaching_cues" name="coaching_cues" rows="2">{{ session.coaching_cues or '' }}</textarea></div>
+      <div class="col-md-6"><label class="form-label" for="video_url">Video link</label><input class="form-control" id="video_url" name="video_url" maxlength="500" value="{{ session.video_url or '' }}" placeholder="https://"></div>
+      <div class="col-md-6"><label class="form-label" for="attachment_url">Attachment link (slides, PDF, sheet)</label><input class="form-control" id="attachment_url" name="attachment_url" maxlength="500" value="{{ session.attachment_url or '' }}" placeholder="https://"></div>
+    </div>
+  </div>
+
+  <div class="pg-card">
+    <h2>What players log</h2>
+    <div class="d-flex flex-wrap gap-3 mb-2">
+      {% for k, label in log_fields %}
+      <div class="form-check"><input class="form-check-input" type="checkbox" name="log_fields" value="{{ k }}" id="lf-{{ k }}" {{ 'checked' if session.log_fields and k in session.log_fields }}><label class="form-check-label" for="lf-{{ k }}">{{ label }}</label></div>
+      {% endfor %}
+    </div>
+    <label class="form-label small" for="custom_fields">Your own numbers (comma separated, unit in brackets)</label>
+    <input class="form-control" id="custom_fields" name="custom_fields" value="{% for f in session.custom_fields or [] %}{{ f.label }}{% if f.unit %} ({{ f.unit }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}" placeholder="e.g. Throws on target, Max distance (m)">
+    <div class="form-text">Players can always add a note and mark the session completed, partly done or skipped.</div>
+  </div>
+
+  <h2 class="h5 mt-4">Exercises</h2>
+  {% for ex in session.exercises %}{{ exercise_row(ex, loop.index) }}{% endfor %}
+  {% for i in range(2) %}{{ exercise_row(none, 1000 + i) }}{% endfor %}
+  <p class="small pg-muted">Fill in a blank row to add an exercise (save to get more blank rows). Change the order numbers to reorder.</p>
+
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-primary" name="then" value="stay">Save session</button>
+    <button class="btn btn-outline-primary" name="then" value="week">Save and back to the week</button>
+  </div>
+</form>
+{% endblock %}
