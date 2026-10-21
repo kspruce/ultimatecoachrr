@@ -1,0 +1,87 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+<div class="uc-page-header"><div><h1>Import a programme</h1>
+  <p>Bring an existing plan in from a spreadsheet using the documented format. Nothing is created until you've checked the preview and fixed any errors.</p></div></div>
+
+<div class="pg-card">
+  <h2>The format</h2>
+  <p class="mb-2">One row per exercise (or per session, or per rest week), with the track, week and session it belongs to. Blank track, week or session cells carry on from the row above. Tests go in a second sheet or file. Full details: <code>docs/PROGRAMME_IMPORT.md</code>.</p>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.import_template', kind='programme') }}"><i class="bi bi-download"></i> Programme template (CSV)</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.import_template', kind='tests') }}"><i class="bi bi-download"></i> Tests template (CSV)</a>
+</div>
+
+{% if not parsed %}
+<form method="post" enctype="multipart/form-data" class="pg-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>1. Upload</h2>
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label" for="file">Programme: .xlsx (sheets "programme" and "tests") or .csv</label><input type="file" class="form-control" id="file" name="file" accept=".csv,.xlsx"></div>
+    <div class="col-md-6"><label class="form-label" for="tests_file">Tests (.csv, optional)</label><input type="file" class="form-control" id="tests_file" name="tests_file" accept=".csv"></div>
+  </div>
+  <details class="mt-3"><summary>Or paste CSV</summary>
+    <div class="row g-3 mt-1">
+      <div class="col-md-8"><textarea class="form-control font-monospace small" name="programme_csv" rows="8" aria-label="Programme CSV"></textarea></div>
+      <div class="col-md-4"><textarea class="form-control font-monospace small" name="tests_csv" rows="8" aria-label="Tests CSV"></textarea></div>
+    </div>
+  </details>
+  <button class="btn btn-primary mt-3">Check it</button>
+</form>
+{% else %}
+{% set c = parsed.counts %}
+<div class="pg-card">
+  <h2>2. Check</h2>
+  {% if duplicate %}
+  <p class="mb-2"><span class="pg-badge pg-bad">already imported</span> This exact content was imported as <a href="{{ url_for('programmes.show', programme_id=duplicate.id) }}">{{ duplicate.name }}</a>. Duplicate that programme instead, or change the sheet.</p>
+  {% endif %}
+  <p>{{ c.tracks }} track{{ 's' if c.tracks != 1 }}, {{ c.weeks }} weeks, {{ c.sessions }} sessions, {{ c.exercises }} exercises, {{ c.tests }} tests, {{ c.milestones }} testing days.</p>
+  {% if parsed.errors %}
+  <p class="fw-semibold mb-1">{{ parsed.errors|length }} error{{ 's' if parsed.errors|length != 1 }} to fix (row numbers are spreadsheet rows; the header is row 1):</p>
+  <ul>{% for row, msg in parsed.errors %}<li>Row {{ row }}: {{ msg }}</li>{% endfor %}</ul>
+  {% else %}<p><span class="pg-badge pg-ok">No errors</span></p>{% endif %}
+  {% if parsed.warnings %}
+  <p class="fw-semibold mb-1">Warnings (not imported or kept as noted):</p>
+  <ul class="pg-muted">{% for row, msg in parsed.warnings %}<li>Row {{ row }}: {{ msg }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <h3 class="h6 mt-3">How it maps</h3>
+  {% for t in parsed.tracks %}
+  <details class="mb-2" {{ 'open' if loop.first }}><summary><span class="fw-semibold">{{ t.name }}</span> <span class="small pg-muted">weeks {{ t.first_week }}–{{ t.weeks[-1].number }}{% if t.offset %}, starts {{ t.offset }} week(s) in{% endif %}</span></summary>
+    <table class="table table-sm mt-1"><thead><tr><th>Week</th><th>Title</th><th>Sessions</th></tr></thead><tbody>
+    {% for w in t.weeks %}<tr><td>{{ w.number }}{% if w.kind != 'training' %} <span class="pg-badge">{{ w.kind }}</span>{% endif %}</td><td>{{ w.title or '' }}</td>
+      <td class="small">{% for s in w.sessions %}{{ s.title }} ({{ s.session_type if s.session_type != 'custom' else (s.custom_type or 'custom') }}{% if s.requirement != 'required' %}, {{ s.requirement }}{% endif %}; {{ s.exercises|length }} ex){{ '; ' if not loop.last }}{% endfor %}</td></tr>{% endfor %}
+    </tbody></table>
+  </details>
+  {% endfor %}
+  {% if parsed.tests %}
+  <p class="small mb-1"><span class="fw-semibold">Tests:</span> {% for t in parsed.tests %}{{ t.name }} ({{ t.unit }}){{ ', ' if not loop.last }}{% endfor %}</p>
+  <p class="small"><span class="fw-semibold">Testing days:</span> {% for m in parsed.milestones %}{{ m.name }}: {{ m.tests|join(', ') }}{{ '; ' if not loop.last }}{% else %}none{% endfor %}</p>
+  {% endif %}
+</div>
+
+<form method="post" class="pg-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="filename" value="{{ form.get('filename', '') }}">
+  <h2>3. {{ 'Fix and check again' if parsed.errors or duplicate else 'Import' }}</h2>
+  <p class="small pg-muted">Correct the rows here, or fix your spreadsheet and <a href="{{ url_for('programmes.import_programme') }}">upload it again</a>.</p>
+  <div class="row g-3 mb-3">
+    <div class="col-md-8"><label class="form-label small" for="programme_csv">Programme (CSV)</label><textarea class="form-control font-monospace small" id="programme_csv" name="programme_csv" rows="10">{{ form.get('programme_csv', '') }}</textarea></div>
+    <div class="col-md-4"><label class="form-label small" for="tests_csv">Tests (CSV)</label><textarea class="form-control font-monospace small" id="tests_csv" name="tests_csv" rows="10">{{ form.get('tests_csv', '') }}</textarea></div>
+  </div>
+  {% if not parsed.errors and not duplicate %}
+  <div class="row g-3 mb-3">
+    <div class="col-md-6"><label class="form-label" for="name">Programme name</label><input class="form-control" id="name" name="name" maxlength="200" value="{{ form.get('name', '') }}" required></div>
+    <div class="col-md-6"><label class="form-label" for="kind">Kind</label>
+      <select class="form-select" id="kind" name="kind"><option value="programme">Programme</option><option value="template" {{ 'selected' if form.get('kind') == 'template' }}>Template</option></select></div>
+    <div class="col-md-6"><label class="form-label" for="schedule_mode">Weeks are counted from</label>
+      <select class="form-select" id="schedule_mode" name="schedule_mode"><option value="calendar">The programme start date</option><option value="relative" {{ 'selected' if form.get('schedule_mode') == 'relative' }}>Each player's own start</option></select></div>
+    <div class="col-md-6"><label class="form-label" for="start_date">Start date</label><input type="date" class="form-control" id="start_date" name="start_date" value="{{ form.get('start_date', '') }}"></div>
+    <div class="col-12"><label class="form-label" for="description">Description</label><textarea class="form-control" id="description" name="description" rows="2">{{ form.get('description', '') }}</textarea></div>
+  </div>
+  <button class="btn btn-outline-secondary" name="recheck" value="1">Check again</button>
+  <button class="btn btn-primary" name="confirm" value="1">Import as a draft</button>
+  {% else %}
+  <button class="btn btn-primary" name="recheck" value="1">Check again</button>
+  {% endif %}
+</form>
+{% endif %}
+{% endblock %}

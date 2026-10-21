@@ -1,0 +1,79 @@
+{% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
+{% block pg_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="pg-label">{{ 'Template' if programme.is_template else 'Programme' }}{% if programme.archived %} · archived{% endif %}</div>
+    <h1>{{ programme.name }}</h1>
+    {% if programme.description %}<p class="pg-pre">{{ programme.description }}</p>{% endif %}
+  </div>
+</div>
+
+<div class="pg-stats">
+  <div class="pg-stat"><div class="pg-label">Live version</div><div class="pg-value">{{ 'v%d' % programme.published.number if programme.published else '—' }}</div>
+    {% if programme.published %}<div class="small pg-muted">published {{ programme.published.published_at.strftime('%-d %b %Y') }}</div>{% else %}<div class="small pg-muted">not published yet</div>{% endif %}</div>
+  <div class="pg-stat"><div class="pg-label">Draft</div><div class="pg-value">{{ 'v%d' % programme.draft.number if programme.draft else '—' }}</div></div>
+  <div class="pg-stat"><div class="pg-label">Tracks</div><div class="pg-value">{{ version.tracks|length if version else 0 }}</div>
+    <div class="small pg-muted">{{ total_weeks }} week{{ 's' if total_weeks != 1 }} in all</div></div>
+  <div class="pg-stat"><div class="pg-label">Schedule</div>
+    <div>{% if programme.schedule_mode == 'relative' %}From each player's start{% elif programme.start_date %}{{ programme.start_date.strftime('%-d %b %Y') }}{% if end %} – {{ end.strftime('%-d %b %Y') }}{% endif %}{% else %}No start date{% endif %}</div>
+    {% if programme.pauses %}<div class="small pg-muted">{{ programme.pauses|length }} pause(s)</div>{% endif %}</div>
+  {% if not programme.is_template %}
+  <div class="pg-stat"><div class="pg-label">Players</div><div class="pg-value">{{ programme.enrolments|rejectattr('status', 'equalto', 'withdrawn')|list|length }}</div></div>
+  {% endif %}
+</div>
+
+{% if version %}
+<div class="pg-card">
+  <h2>Tracks</h2>
+  {% for t in version.tracks %}
+  <div class="mb-2"><span class="fw-semibold">{{ t.name }}</span> <span class="pg-muted small">weeks {{ t.first_week_number }}–{{ t.first_week_number + t.weeks|length - 1 }}{% if t.start_offset_weeks %}, starts {{ t.start_offset_weeks }} week(s) in{% endif %}</span></div>
+  {% else %}<p class="pg-muted m-0">No tracks yet.</p>{% endfor %}
+</div>
+{% endif %}
+
+{% if programme.source_kind %}
+<div class="pg-card"><h2>Source</h2>
+  <p class="m-0">{% if programme.source_kind == 'import' %}Imported from <strong>{{ programme.import_filename or 'a spreadsheet' }}</strong>.{% else %}Copied from <strong>{{ programme.source_name }}</strong>{% if programme.source_team %} by {{ programme.source_team }}{% endif %}{% if programme.source_version %}, version {{ programme.source_version }}{% endif %}{% if programme.source_author and programme.source_author != programme.source_team %} (originally {{ programme.source_author }}){% endif %}. Changes here don't affect the original.{% endif %}</p>
+</div>
+{% endif %}
+
+<div class="pg-card">
+  <h2>Versions</h2>
+  <table class="table table-sm mb-0"><thead><tr><th>Version</th><th>Status</th><th>Published</th><th>Change note</th></tr></thead><tbody>
+  {% for v in programme.versions|reverse %}
+  <tr><td>v{{ v.number }}</td><td>{{ v.status }}</td><td>{{ v.published_at.strftime('%-d %b %Y %H:%M') if v.published_at else '' }}</td><td>{{ v.change_note or '' }}</td></tr>
+  {% endfor %}
+  </tbody></table>
+  <p class="small pg-muted mt-2 mb-0">Published versions never change. Edits go into a draft; when it's published, players' logs stay attached to the sessions they logged.</p>
+</div>
+
+<div class="pg-card">
+  <h2>Actions</h2>
+  <div class="d-flex flex-wrap gap-2 align-items-end">
+    <a class="btn btn-primary" href="{{ url_for('programmes.build', programme_id=programme.id) }}"><i class="bi bi-hammer"></i> Build</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('programmes.export', programme_id=programme.id, kind='programme') }}"><i class="bi bi-download"></i> Export programme (CSV)</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('programmes.export', programme_id=programme.id, kind='tests') }}"><i class="bi bi-download"></i> Export tests (CSV)</a>
+    {% if not programme.is_template %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('programmes.export', programme_id=programme.id, kind='report') }}"><i class="bi bi-file-earmark-spreadsheet"></i> Progress report (CSV)</a>
+    {% endif %}
+  </div>
+  <hr>
+  <form method="post" action="{{ url_for('programmes.duplicate', programme_id=programme.id) }}" class="row g-2 align-items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-md-4"><label class="form-label small" for="dup-name">Copy as</label>
+      <input class="form-control form-control-sm" id="dup-name" name="name" value="{{ programme.name }} (copy)"></div>
+    <div class="col-md-3"><label class="form-label small" for="dup-kind">Kind</label>
+      <select class="form-select form-select-sm" id="dup-kind" name="kind">
+        <option value="programme">Programme</option><option value="template" {{ 'selected' if programme.is_template }}>Template</option></select></div>
+    <div class="col-md-3"><label class="form-label small" for="dup-start">Start date</label>
+      <input type="date" class="form-control form-control-sm" id="dup-start" name="start_date"></div>
+    <div class="col-md-2"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-copy"></i> Duplicate</button></div>
+  </form>
+  <hr>
+  <div class="d-flex gap-2 flex-wrap">
+    {{ post_button(url_for('programmes.archive', programme_id=programme.id), 'Restore' if programme.archived else 'Archive') }}
+    {{ post_button(url_for('programmes.delete', programme_id=programme.id), 'Delete', 'btn btn-sm btn-outline-danger', confirm='Delete this programme and all its versions?') }}
+  </div>
+</div>
+{% endblock %}

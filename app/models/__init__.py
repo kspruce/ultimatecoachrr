@@ -67,6 +67,12 @@ from app.models.off_season import (
     UserSchedulePreference
 )
 
+# Training programmes (any club's off-season plans, built on the website)
+from app.models.programme import (
+    Programme, ProgrammeVersion, ProgrammeTrack, ProgrammeWeek, ProgrammeSession, ProgrammeExercise,
+    PerformanceTest, ProgrammeMilestone, ProgrammeEnrolment, SessionLog, TestResult,
+)
+
 # Getting-started guide
 from app.models.onboarding import UserOnboarding
 
@@ -109,6 +115,10 @@ __all__ = [
     'TrackWorkoutWeek', 'OffSeasonPhase', 'PhaseMetric', 'PhaseSchedule',
     'ScheduleSession', 'WorkoutPlan', 'UserSessionCompletion', 'SMARTGoal',
     'UserSchedulePreference',
+    # Training programmes
+    'Programme', 'ProgrammeVersion', 'ProgrammeTrack', 'ProgrammeWeek', 'ProgrammeSession',
+    'ProgrammeExercise', 'PerformanceTest', 'ProgrammeMilestone', 'ProgrammeEnrolment', 'SessionLog',
+    'TestResult',
     # Getting-started guide
     'UserOnboarding',
 ]

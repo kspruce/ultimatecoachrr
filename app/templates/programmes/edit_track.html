@@ -1,0 +1,21 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+<div class="uc-page-header"><div><div class="pg-label">Draft v{{ track.version.number }}</div><h1>Edit track</h1></div></div>
+<form method="post" class="pg-card" style="max-width:760px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3"><label class="form-label" for="name">Name</label><input class="form-control" id="name" name="name" maxlength="100" value="{{ track.name }}" required></div>
+  <div class="mb-3"><label class="form-label" for="description">Description</label><textarea class="form-control" id="description" name="description" rows="3">{{ track.description or '' }}</textarea></div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4"><label class="form-label" for="first_week_number">First week is numbered</label>
+      <input type="number" class="form-control" id="first_week_number" name="first_week_number" min="0" max="100" value="{{ track.first_week_number }}">
+      <div class="form-text">1 for Week 1, 2, ...; 0 for Week 0, 1, ...</div></div>
+    <div class="col-md-4"><label class="form-label" for="start_offset_weeks">Starts after (weeks)</label>
+      <input type="number" class="form-control" id="start_offset_weeks" name="start_offset_weeks" min="0" max="104" value="{{ track.start_offset_weeks }}">
+      <div class="form-text">0 starts with the programme.</div></div>
+    <div class="col-md-4"><label class="form-label" for="colour">Colour</label>
+      <input type="color" class="form-control form-control-color" id="colour" name="colour" value="{{ track.colour or '#2f6f4f' }}"></div>
+  </div>
+  <button class="btn btn-primary">Save track</button>
+  <a class="btn btn-link" href="{{ url_for('programmes.build', programme_id=programme.id) }}">Back</a>
+</form>
+{% endblock %}

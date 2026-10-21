@@ -1,0 +1,8 @@
+{# Small helpers for the programme pages #}
+{% macro post_button(url, label, cls='btn btn-sm btn-outline-secondary', confirm=None, fields={}, title=None) -%}
+<form method="post" action="{{ url }}" {% if confirm %}onsubmit="return confirm({{ confirm|tojson|forceescape }})"{% endif %}>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button class="{{ cls }}" type="submit" {% if title %}title="{{ title }}" aria-label="{{ title }}"{% endif %}>{{ label|safe }}</button>
+</form>
+{%- endmacro %}

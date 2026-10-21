@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{# Every programme page: stylesheet and, for coaches, the programme's sub-nav. #}
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/programmes.css') }}">
+{% endblock %}
+
+
+
+{% block content %}
+{% set pg_ep = request.endpoint or '' %}
+{% if programme is defined and programme and current_user.is_coach and current_team and programme.team_organization_id == current_team.id %}
+<nav class="pg-subnav" aria-label="Programme">
+  <a href="{{ url_for('programmes.index') }}"><i class="bi bi-arrow-left"></i> All</a>
+  <a href="{{ url_for('programmes.show', programme_id=programme.id) }}" class="{{ 'active' if pg_ep == 'programmes.show' }}"><i class="bi bi-info-circle"></i> {{ programme.name|truncate(30) }}</a>
+  <a href="{{ url_for('programmes.build', programme_id=programme.id) }}" class="{{ 'active' if pg_ep in ('programmes.build', 'programmes.edit_week', 'programmes.edit_session', 'programmes.edit_track') }}"><i class="bi bi-hammer"></i> Build</a>
+  <a href="{{ url_for('programmes.tests', programme_id=programme.id) }}" class="{{ 'active' if pg_ep == 'programmes.tests' }}"><i class="bi bi-stopwatch"></i> Tests</a>
+  <a href="{{ url_for('programmes.preview', programme_id=programme.id) }}" class="{{ 'active' if pg_ep == 'programmes.preview' }}"><i class="bi bi-eye"></i> Preview</a>
+  {% if programme.draft %}
+  <a href="{{ url_for('programmes.publish', programme_id=programme.id) }}" class="{{ 'active' if pg_ep == 'programmes.publish' }}"><i class="bi bi-send-check"></i> Publish</a>
+  {% endif %}
+  {% if not programme.is_template %}
+  <a href="{{ url_for('programmes.players', programme_id=programme.id) }}" class="{{ 'active' if pg_ep in ('programmes.players', 'programmes.player_detail') }}"><i class="bi bi-people"></i> Players</a>
+  <a href="{{ url_for('programmes.dashboard', programme_id=programme.id) }}" class="{{ 'active' if pg_ep == 'programmes.dashboard' }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+  {% endif %}
+  <a href="{{ url_for('programmes.settings', programme_id=programme.id) }}" class="{{ 'active' if pg_ep == 'programmes.settings' }}"><i class="bi bi-gear"></i> Settings</a>
+</nav>
+{% endif %}
+{% block pg_content %}{% endblock %}
+{% endblock %}

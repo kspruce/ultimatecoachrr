@@ -1,0 +1,4 @@
+test,unit,measurement,attempts,aggregation,better,min,max,description,instructions,milestone_track,baseline_week,retest_weeks
+10 m sprint,s,time,3,best,lower,1,4,Acceleration,Standing start behind the line; hand timing from first movement. Same surface and shoes each time.,Sprint & Agility,1,10
+30 m sprint,s,time,3,best,lower,3,8,Acceleration to top speed,Standing start; full recovery between attempts.,Sprint & Agility,1,10
+5-10-5 pro-agility,s,time,3,best,lower,3,9,Change of direction,"Start at the middle cone, alternate the first direction each attempt.",Sprint & Agility,1,10

@@ -1,0 +1,54 @@
+{% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
+{% block pg_content %}
+<div class="uc-page-header"><div>
+  <div class="pg-label">{{ week.track.name }} · draft v{{ week.track.version.number }}</div>
+  <h1>Week {{ week.number }}{% if week.title %}: {{ week.title }}{% endif %}</h1></div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('programmes.build', programme_id=programme.id) }}#track-{{ week.track_id }}"><i class="bi bi-arrow-left"></i> Back to the plan</a>
+</div>
+
+<div class="row g-3">
+<div class="col-lg-5">
+<form method="post" class="pg-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>The week</h2>
+  <div class="mb-3"><label class="form-label" for="title">Title</label><input class="form-control" id="title" name="title" maxlength="200" value="{{ week.title or '' }}"></div>
+  <div class="mb-3"><label class="form-label" for="kind">Kind</label>
+    <select class="form-select" id="kind" name="kind">{% for k, label in week_kinds %}<option value="{{ k }}" {{ 'selected' if week.kind == k }}>{{ label }}</option>{% endfor %}</select>
+    <div class="form-text">Rest weeks have nothing to log and never count as missed.</div></div>
+  <div class="mb-3"><label class="form-label" for="objective">Objective</label><textarea class="form-control" id="objective" name="objective" rows="3">{{ week.objective or '' }}</textarea></div>
+  <div class="mb-3"><label class="form-label" for="supporting_skills">Supporting skills / key cues</label><textarea class="form-control" id="supporting_skills" name="supporting_skills" rows="3">{{ week.supporting_skills or '' }}</textarea></div>
+  <div class="mb-3"><label class="form-label" for="notes">Notes</label><textarea class="form-control" id="notes" name="notes" rows="2">{{ week.notes or '' }}</textarea></div>
+  <button class="btn btn-primary">Save week</button>
+</form>
+</div>
+<div class="col-lg-7">
+<div class="pg-card">
+  <h2>Sessions</h2>
+  {% for s in week.sessions %}
+  <div class="pg-session d-flex justify-content-between gap-2 flex-wrap">
+    <div>
+      <a class="fw-semibold" href="{{ url_for('programmes.edit_session', programme_id=programme.id, session_id=s.id) }}">{{ s.title }}</a>
+      <span class="pg-badge">{{ s.type_label }}</span>
+      {% if s.requirement == 'optional' %}<span class="pg-badge">optional</span>{% elif s.requirement == 'alternative' %}<span class="pg-badge pg-warn">alternative: {{ s.alternative_group }}</span>{% endif %}
+      <div class="small pg-muted">{{ s.exercises|length }} exercise{{ 's' if s.exercises|length != 1 }}{% if s.duration_minutes %} · {{ s.duration_minutes }} min{% endif %}</div>
+    </div>
+    <div class="pg-actions">
+      {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='up'), '<i class="bi bi-arrow-up"></i>', title='Move up') }}
+      {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='down'), '<i class="bi bi-arrow-down"></i>', title='Move down') }}
+      {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='duplicate'), '<i class="bi bi-copy"></i>', title='Duplicate session') }}
+      {{ post_button(url_for('programmes.session_action', programme_id=programme.id, session_id=s.id, action='delete'), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this session?', title='Delete session') }}
+    </div>
+  </div>
+  {% else %}<p class="pg-muted">No sessions yet.</p>{% endfor %}
+  <form method="post" action="{{ url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='add-session') }}" class="row g-2 align-items-end mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="col-md-6"><label class="form-label small" for="s-title">New session</label><input class="form-control" id="s-title" name="title" maxlength="200" placeholder="e.g. Acceleration drills"></div>
+    <div class="col-md-4"><label class="form-label small" for="s-type">Type</label>
+      <select class="form-select" id="s-type" name="session_type">{% for k, label in session_types %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100">Add</button></div>
+  </form>
+</div>
+</div>
+</div>
+{% endblock %}

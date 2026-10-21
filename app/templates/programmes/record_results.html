@@ -1,0 +1,36 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+{% set eid = enrolment.id if coach_view else none %}
+<div class="uc-page-header"><div>
+  <div class="pg-label">{{ programme.name }}{% if coach_view %} · {{ enrolment.player.name }}{% endif %}</div>
+  <h1>Record test results</h1>
+  <p>Enter each attempt; the result is worked out from them as each test says. Leave a test blank to skip it.</p></div></div>
+<form method="post" class="pg-card" style="max-width:860px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if eid %}<input type="hidden" name="enrolment" value="{{ eid }}">{% endif %}
+  <div class="row g-3 mb-3">
+    <div class="col-md-6"><label class="form-label" for="milestone_id">Testing day</label>
+      <select class="form-select" id="milestone_id" name="milestone_id">
+        <option value="">Not part of a testing day</option>
+        {% for ms in version.milestones if ms.is_test %}<option value="{{ ms.id }}" {{ 'selected' if form.get('milestone_id') == ms.id|string }}>{{ ms.name }}{% if ms.week %} ({{ ms.week.track.name }} week {{ ms.week.number }}){% endif %}</option>{% endfor %}
+      </select>
+      <div class="form-text">Entering a testing day again replaces those results.</div></div>
+    <div class="col-md-6"><label class="form-label" for="recorded_on">Date</label>
+      <input type="date" class="form-control" id="recorded_on" name="recorded_on" value="{{ form.get('recorded_on') or today_date.isoformat() }}"></div>
+  </div>
+  {% for t in version.tests %}
+  <fieldset class="pg-session">
+    <legend class="h6 mb-1">{{ t.name }} <span class="small pg-muted">({{ t.unit }}, {{ 'higher' if t.higher_is_better else 'lower' }} is better)</span></legend>
+    {% if t.instructions %}<div class="small pg-pre pg-muted mb-1">{{ t.instructions }}</div>{% endif %}
+    {% set prev = form.getlist('attempt_%d' % t.id) if form and form.getlist is defined else [] %}
+    <div class="row g-2">
+      {% for i in range(t.attempts) %}
+      <div class="col-4 col-md-2"><input class="form-control form-control-sm" name="attempt_{{ t.id }}" inputmode="decimal" aria-label="{{ t.name }} attempt {{ i + 1 }}" placeholder="Attempt {{ i + 1 }}" value="{{ prev[i] if prev|length > i else '' }}"></div>
+      {% endfor %}
+      <div class="col-12 col-md-4"><input class="form-control form-control-sm" name="notes_{{ t.id }}" aria-label="{{ t.name }} notes" placeholder="Notes (conditions, surface...)"></div>
+    </div>
+  </fieldset>
+  {% endfor %}
+  <button class="btn btn-primary mt-3">Save results</button>
+</form>
+{% endblock %}

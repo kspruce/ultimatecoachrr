@@ -261,6 +261,9 @@ def create_app(config_class=Config):
     from app.routes.off_season import bp as off_season_bp
     app.register_blueprint(off_season_bp)
 
+    from app.routes.programmes import bp as programmes_bp
+    app.register_blueprint(programmes_bp)
+
     # Coach feedback blueprint
     from app.routes.feedback import bp as feedback_bp
     app.register_blueprint(feedback_bp)

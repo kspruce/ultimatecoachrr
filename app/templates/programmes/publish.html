@@ -1,0 +1,34 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+<div class="uc-page-header"><div><h1>Publish version {{ draft.number }}</h1>
+  <p>Publishing freezes this version. Sessions players already logged keep their logs and stay in their history; nothing they recorded is changed.</p></div></div>
+
+<div class="pg-card">
+  <h2>Checks</h2>
+  {% if errors %}
+  <p class="fw-semibold">Fix these first:</p>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  <a class="btn btn-outline-primary" href="{{ url_for('programmes.build', programme_id=programme.id) }}">Back to the builder</a>
+  {% else %}
+  <p class="mb-2"><span class="pg-badge pg-ok">Ready</span> No problems that block publishing.</p>
+  {% endif %}
+  {% if warnings %}<p class="fw-semibold mb-1 mt-3">Worth a look (won't block publishing):</p><ul class="pg-muted mb-0">{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+</div>
+
+{% if not errors %}
+<form method="post" class="pg-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3"><label class="form-label" for="change_note">What changed (optional)</label>
+    <input class="form-control" id="change_note" name="change_note" maxlength="2000" placeholder="e.g. Week 6 sprint volume reduced"></div>
+  {% if active %}
+  <p class="fw-semibold mb-1">{{ active|length }} player{{ 's' if active|length != 1 }} on an earlier version</p>
+  <div class="form-check"><input class="form-check-input" type="radio" name="players" value="move" id="pl-move" checked>
+    <label class="form-check-label" for="pl-move">Move them to version {{ draft.number }}. Their past logs stay as they are; sessions still in the new version keep counting as done.</label></div>
+  <div class="form-check mb-3"><input class="form-check-input" type="radio" name="players" value="stay" id="pl-stay">
+    <label class="form-check-label" for="pl-stay">Keep them on their current version (move them later from Players). New players get version {{ draft.number }}.</label></div>
+  {% endif %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('programmes.preview', programme_id=programme.id) }}">Preview first</a>
+  <button class="btn btn-primary">Publish version {{ draft.number }}</button>
+</form>
+{% endif %}
+{% endblock %}

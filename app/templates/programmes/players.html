@@ -1,0 +1,64 @@
+{% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
+{% block pg_content %}
+<div class="uc-page-header"><div><h1>Players</h1>
+  <p>Who is on this programme, from which week, and on which version.</p></div></div>
+
+{% if not programme.published %}
+<div class="pg-card"><p class="m-0">Publish the programme before adding players. <a href="{{ url_for('programmes.build', programme_id=programme.id) }}">Go to the builder</a></p></div>
+{% else %}
+<form method="post" class="pg-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="action" value="enrol">
+  <h2>Add players</h2>
+  {% if available %}
+  <div class="row row-cols-2 row-cols-md-4 g-1 mb-3">
+    {% for p in available %}<div class="col"><div class="form-check"><input class="form-check-input" type="checkbox" name="player_ids" value="{{ p.id }}" id="pl-{{ p.id }}"><label class="form-check-label" for="pl-{{ p.id }}">{{ p.name }}</label></div></div>{% endfor %}
+  </div>
+  <div class="row g-2 align-items-end">
+    {% if programme.schedule_mode == 'calendar' %}
+    <div class="col-md-4"><label class="form-label small" for="offset">Start them at programme week (0 = the first)</label>
+      <input type="number" min="0" max="104" class="form-control" id="offset" name="start_offset_weeks" value="{{ default_offset }}">
+      <div class="form-text">Weeks before this aren't expected of them. Defaults to the current week for late joiners.</div></div>
+    {% else %}
+    <div class="col-md-4"><label class="form-label small" for="start_date">Their week 1 starts</label>
+      <input type="date" class="form-control" id="start_date" name="start_date">
+      <div class="form-text">Blank means today.</div></div>
+    {% endif %}
+    <div class="col-md-2"><button class="btn btn-primary w-100">Add</button></div>
+  </div>
+  {% else %}<p class="pg-muted m-0">Every active player on the team is already on this programme.</p>{% endif %}
+</form>
+
+<div class="pg-card">
+  <h2>On the programme</h2>
+  {% for e in enrolments %}
+  <div class="pg-session">
+    <div class="d-flex justify-content-between gap-2 flex-wrap">
+      <div><a class="fw-semibold" href="{{ url_for('programmes.player_detail', programme_id=programme.id, enrolment_id=e.id) }}">{{ e.player.name }}</a>
+        <span class="pg-badge {{ 'pg-ok' if e.status == 'active' else '' }}">{{ e.status }}</span>
+        <span class="small pg-muted">v{{ e.version.number }}{% if programme.published and e.version_id != programme.published.id %} (live is v{{ programme.published.number }}){% endif %}
+          · {{ e.logs|length }} log{{ 's' if e.logs|length != 1 }}</span></div>
+      {{ post_button(url_for('programmes.players', programme_id=programme.id), 'Remove', 'btn btn-sm btn-outline-danger', confirm='Take this player off the programme? Players with logs are withdrawn, keeping their history.', fields={'action': 'remove', 'enrolment_id': e.id}) }}
+    </div>
+    <details class="mt-1"><summary class="small">Change</summary>
+      <form method="post" class="row g-2 align-items-end mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="update"><input type="hidden" name="enrolment_id" value="{{ e.id }}">
+        <div class="col-md-3"><label class="form-label small" for="st-{{ e.id }}">Status</label>
+          <select class="form-select form-select-sm" id="st-{{ e.id }}" name="status">{% for s in ['active', 'paused', 'finished', 'withdrawn'] %}<option {{ 'selected' if e.status == s }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small" for="of-{{ e.id }}">Starts at programme week</label>
+          <input type="number" min="0" max="104" class="form-control form-control-sm" id="of-{{ e.id }}" name="start_offset_weeks" value="{{ e.start_offset_weeks }}"></div>
+        <div class="col-md-3"><label class="form-label small" for="sd-{{ e.id }}">Own start date</label>
+          <input type="date" class="form-control form-control-sm" id="sd-{{ e.id }}" name="start_date" value="{{ e.start_date.isoformat() if e.start_date else '' }}"></div>
+        {% if programme.published and e.version_id != programme.published.id %}
+        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="move_to_current" value="1" id="mv-{{ e.id }}"><label class="form-check-label small" for="mv-{{ e.id }}">Move to v{{ programme.published.number }}</label></div></div>
+        {% endif %}
+        <div class="col-12"><button class="btn btn-sm btn-primary">Save</button></div>
+      </form>
+    </details>
+  </div>
+  {% else %}<p class="pg-muted m-0">Nobody yet.</p>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

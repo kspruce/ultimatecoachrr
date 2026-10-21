@@ -1,0 +1,91 @@
+{% extends "programmes/_layout.html" %}
+{% from "programmes/_macros.html" import post_button %}
+{% block pg_content %}
+{% set editing = version and version.is_draft %}
+<div class="uc-page-header">
+  <div>
+    <div class="pg-label">{% if editing %}Editing draft v{{ version.number }}{% elif version %}Published v{{ version.number }} (read only){% endif %}</div>
+    <h1>Build: {{ programme.name }}</h1>
+    <p>Tracks run side by side, each with its own length and week numbers. Open a week to add sessions; open a session to add exercises.</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if not editing %}
+    {{ post_button(url_for('programmes.start_draft', programme_id=programme.id), '<i class="bi bi-pencil"></i> Start a new draft', 'btn btn-primary') }}
+    {% else %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('programmes.preview', programme_id=programme.id) }}"><i class="bi bi-eye"></i> Preview as a player</a>
+    <a class="btn btn-primary" href="{{ url_for('programmes.publish', programme_id=programme.id) }}"><i class="bi bi-send-check"></i> Check and publish</a>
+    {% if programme.published %}{{ post_button(url_for('programmes.discard_draft', programme_id=programme.id), 'Discard draft', 'btn btn-outline-danger', confirm='Throw away the changes in this draft?') }}{% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if editing and (errors or warnings) %}
+<div class="pg-card">
+  {% if errors %}<p class="fw-semibold mb-1">To fix before publishing</p><ul class="mb-2">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  {% if warnings %}<p class="fw-semibold mb-1">Worth a look</p><ul class="mb-0 pg-muted">{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}
+
+{% if version %}
+{% for track in version.tracks %}
+<section class="pg-card pg-track" id="track-{{ track.id }}" style="--track: {{ track.colour or 'var(--club)' }}">
+  <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+    <div>
+      <h2 class="mb-0">{{ track.name }}</h2>
+      <div class="small pg-muted">{{ track.weeks|length }} week{{ 's' if track.weeks|length != 1 }}, numbered from {{ track.first_week_number }}{% if track.start_offset_weeks %} · starts {{ track.start_offset_weeks }} week(s) after the programme{% endif %}</div>
+      {% if track.description %}<div class="small pg-pre mt-1">{{ track.description }}</div>{% endif %}
+    </div>
+    {% if editing %}
+    <div class="pg-actions">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('programmes.edit_track', programme_id=programme.id, track_id=track.id) }}">Edit track</a>
+      {{ post_button(url_for('programmes.track_action', programme_id=programme.id, track_id=track.id, action='up'), '<i class="bi bi-arrow-up"></i>', title='Move track up') }}
+      {{ post_button(url_for('programmes.track_action', programme_id=programme.id, track_id=track.id, action='down'), '<i class="bi bi-arrow-down"></i>', title='Move track down') }}
+      {{ post_button(url_for('programmes.track_action', programme_id=programme.id, track_id=track.id, action='delete'), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this track and all its weeks?', title='Delete track') }}
+    </div>
+    {% endif %}
+  </div>
+  <div class="pg-weeks">
+    {% for week in track.weeks %}
+    <div class="pg-week {{ 'pg-rest' if week.is_rest }}">
+      <div class="pg-week-no">Week {{ week.number }}</div>
+      <div class="flex-grow-1">
+        <div class="fw-semibold">{{ week.title or ('Rest week' if week.is_rest else 'Untitled week') }}
+          {% if week.kind != 'training' %}<span class="pg-badge">{{ week.kind }}</span>{% endif %}</div>
+        {% if week.sessions %}<div class="small pg-muted">{% for s in week.sessions %}{{ s.title }}{% if s.requirement != 'required' %} ({{ s.requirement }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}</div>
+        {% elif not week.is_rest %}<div class="small pg-muted">No sessions yet</div>{% endif %}
+      </div>
+      <div class="pg-actions">
+        {% if editing %}
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('programmes.edit_week', programme_id=programme.id, week_id=week.id) }}">Open</a>
+        {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='up'), '<i class="bi bi-arrow-up"></i>', title='Move week earlier') }}
+        {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='down'), '<i class="bi bi-arrow-down"></i>', title='Move week later') }}
+        {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='duplicate'), '<i class="bi bi-copy"></i>', title='Duplicate week') }}
+        {{ post_button(url_for('programmes.week_action', programme_id=programme.id, week_id=week.id, action='delete'), '<i class="bi bi-trash"></i>', 'btn btn-sm btn-outline-danger', confirm='Delete this week and its sessions?', title='Delete week') }}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if editing %}
+  <div class="mt-2">{{ post_button(url_for('programmes.track_action', programme_id=programme.id, track_id=track.id, action='add-week'), '<i class="bi bi-plus"></i> Add a week') }}</div>
+  {% endif %}
+</section>
+{% else %}
+<div class="pg-card"><p class="m-0 pg-muted">No tracks yet.</p></div>
+{% endfor %}
+
+{% if editing %}
+<form method="post" action="{{ url_for('programmes.add_track', programme_id=programme.id) }}" class="pg-card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>Add a track</h2>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label small" for="t-name">Name</label><input class="form-control" id="t-name" name="name" maxlength="100" placeholder="e.g. Conditioning"></div>
+    <div class="col-md-2"><label class="form-label small" for="t-weeks">Weeks</label><input type="number" class="form-control" id="t-weeks" name="weeks" min="0" max="104" value="4"></div>
+    <div class="col-md-2"><label class="form-label small" for="t-first">First week number</label><input type="number" class="form-control" id="t-first" name="first_week_number" min="0" max="100" value="1"></div>
+    <div class="col-md-2"><label class="form-label small" for="t-off">Starts after (weeks)</label><input type="number" class="form-control" id="t-off" name="start_offset_weeks" min="0" max="104" value="0"></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100"><i class="bi bi-plus-lg"></i> Add track</button></div>
+  </div>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

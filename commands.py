@@ -203,6 +203,57 @@ def import_season_plan_command(folder, team_slug, season, dry_run, replace, buil
         click.echo('The Season plan feature is off for this team: switch it on in Team settings > Features.')
 
 
+@click.command('import-programme')
+@click.argument('folder', type=click.Path(exists=True, file_okay=False))
+@click.option('--team', 'team_slug', required=True, help='Slug of the team to import into')
+@click.option('--name', required=True, help='Name of the new programme')
+@click.option('--start', 'start_date', help='Start date (YYYY-MM-DD) for a calendar programme')
+@click.option('--template', 'as_template', is_flag=True, help='Import as a reusable template')
+@click.option('--dry-run', is_flag=True, help='Check and report, but write nothing')
+@with_appcontext
+def import_programme_command(folder, team_slug, name, start_date, as_template, dry_run):
+    """Import a training programme from programme.csv (and tests.csv, if
+    present) in FOLDER, the same format as Programmes > Import on the site
+    (docs/PROGRAMME_IMPORT.md). It arrives as a draft for a coach to check
+    and publish. The same files are never imported twice into one team."""
+    from datetime import date
+    from app.models.team_organization import TeamOrganization
+    from app.utils import programme_import as pimport
+
+    team = TeamOrganization.query.filter_by(slug=team_slug).first()
+    if team is None:
+        raise click.ClickException(f'No team with slug {team_slug!r}')
+    with open(os.path.join(folder, 'programme.csv'), encoding='utf-8-sig') as f:
+        programme_rows = pimport.rows_from_csv(f.read())
+    tests_path = os.path.join(folder, 'tests.csv')
+    test_rows = []
+    if os.path.exists(tests_path):
+        with open(tests_path, encoding='utf-8-sig') as f:
+            test_rows = pimport.rows_from_csv(f.read())
+    parsed = pimport.parse(programme_rows, test_rows)
+    for row, msg in parsed['warnings']:
+        click.echo(f'  warning, row {row}: {msg}')
+    if parsed['errors']:
+        for row, msg in parsed['errors']:
+            click.echo(f'  error, row {row}: {msg}', err=True)
+        raise SystemExit(1)
+    click.echo(', '.join(f'{v} {k}' for k, v in parsed['counts'].items()))
+    digest = pimport.content_hash(programme_rows, test_rows)
+    existing = pimport.find_duplicate(team.id, digest)
+    if existing:
+        raise click.ClickException(f'Already imported into {team.name} as "{existing.name}" (id {existing.id}).')
+    if dry_run:
+        click.echo('Dry run: nothing written.')
+        return
+    programme = pimport.build(parsed, team.id, None, name=name,
+                              start_date=date.fromisoformat(start_date) if start_date else None,
+                              kind='template' if as_template else 'programme',
+                              filename=os.path.basename(os.path.normpath(folder)), digest=digest)
+    db.session.commit()
+    click.echo(f'Imported "{programme.name}" into {team.name} as a draft (id {programme.id}). '
+               'A coach can check it under Training > Programmes and publish it.')
+
+
 @click.command('reset-two-factor')
 @click.argument('username')
 @with_appcontext
@@ -223,6 +274,7 @@ def register_commands(app):
     app.cli.add_command(export_data)
     app.cli.add_command(import_season_command)
     app.cli.add_command(import_season_plan_command)
+    app.cli.add_command(import_programme_command)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
     app.cli.add_command(reset_two_factor)

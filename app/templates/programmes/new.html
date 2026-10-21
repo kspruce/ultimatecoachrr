@@ -1,0 +1,33 @@
+{% extends "programmes/_layout.html" %}
+{% block pg_content %}
+<div class="uc-page-header"><div><h1>New programme</h1>
+  <p>Start with a name and, if you like, a first track. You can add more tracks, weeks and sessions next. To start from an existing plan, <a href="{{ url_for('programmes.import_programme') }}">import a spreadsheet</a> or copy a template.</p></div></div>
+<form method="post" class="pg-card" style="max-width:760px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3"><label class="form-label" for="name">Name</label>
+    <input class="form-control" id="name" name="name" maxlength="200" required value="{{ form.get('name', '') }}"></div>
+  <div class="mb-3"><label class="form-label" for="description">Description</label>
+    <textarea class="form-control" id="description" name="description" rows="3">{{ form.get('description', '') }}</textarea></div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4"><label class="form-label" for="kind">Kind</label>
+      <select class="form-select" id="kind" name="kind">
+        <option value="programme">Programme (runs with players)</option>
+        <option value="template" {{ 'selected' if form.get('kind') == 'template' }}>Template (reusable, no players)</option>
+      </select></div>
+    <div class="col-md-4"><label class="form-label" for="schedule_mode">Weeks are counted from</label>
+      <select class="form-select" id="schedule_mode" name="schedule_mode">
+        <option value="calendar">The programme start date</option>
+        <option value="relative" {{ 'selected' if form.get('schedule_mode') == 'relative' }}>Each player's own start</option>
+      </select></div>
+    <div class="col-md-4"><label class="form-label" for="start_date">Start date</label>
+      <input type="date" class="form-control" id="start_date" name="start_date" value="{{ form.get('start_date', '') }}"></div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-8"><label class="form-label" for="track_name">First track (optional)</label>
+      <input class="form-control" id="track_name" name="track_name" maxlength="100" placeholder="e.g. Speed and agility" value="{{ form.get('track_name', '') }}"></div>
+    <div class="col-md-4"><label class="form-label" for="weeks">Weeks in it</label>
+      <input type="number" min="0" max="104" class="form-control" id="weeks" name="weeks" value="{{ form.get('weeks', '') }}"></div>
+  </div>
+  <button class="btn btn-primary">Create</button>
+</form>
+{% endblock %}
