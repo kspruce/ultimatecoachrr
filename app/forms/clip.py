@@ -218,3 +218,9 @@ class ClipFilterForm(FlaskForm):
         self.game_id.choices = game_choices(team_id, 'All Games')
         self.tags.choices = tag_choices(team_id, prefix_category=True)
         self.player_id.choices = [(0, 'All Players')] + player_choices(team_id)
+
+
+class PlaylistForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired(), Length(max=120)])
+    description = TextAreaField('What is it for?', validators=[Optional()])
+    submit = SubmitField('Save Playlist')

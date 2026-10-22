@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+  .pl-track { cursor: pointer; }
+  .pl-track.active { background: color-mix(in srgb, var(--uc-blue, #2563eb) 12%, transparent); font-weight: 600; }
+  .pl-veo, .pl-done { aspect-ratio: 16 / 9; display: flex; flex-direction: column; align-items: center;
+                      justify-content: center; gap: .5rem; text-align: center; padding: 1rem;
+                      background: var(--uc-gray-100, #f3f4f6); border-radius: .5rem; }
+  .pl-player-wrap { aspect-ratio: 16 / 9; background: #000; border-radius: .5rem; overflow: hidden; }
+  .pl-player-wrap iframe, .pl-player-wrap > div { width: 100%; height: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>{{ playlist.title }}</h2>
+      <p>{{ items|length }} clip{{ '' if items|length == 1 else 's' }}{% if total %} · {{ total | clip_time }}{% endif %}{% if playlist.description %} · {{ playlist.description }}{% endif %}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if current_user.is_admin or current_user.is_coach %}
+      <a href="{{ url_for('clip.edit_playlist', playlist_id=playlist.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+      {% endif %}
+      <a href="{{ url_for('clip.playlists') }}" class="btn btn-outline-secondary btn-sm">All Playlists</a>
+    </div>
+  </div>
+
+  {% if tracks %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="pl-player-wrap" id="pl-player-wrap"><div id="pl-player"></div></div>
+      <div class="pl-veo d-none" id="pl-veo">
+        <i class="bi bi-box-arrow-up-right" style="font-size:1.5rem"></i>
+        <span id="pl-veo-text">This clip is on Veo.</span>
+        <a id="pl-veo-link" href="#" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Watch on Veo</a>
+      </div>
+      <div class="pl-done d-none" id="pl-done">
+        <i class="bi bi-check-circle" style="font-size:1.5rem"></i>
+        <span>That's the whole playlist.</span>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="pl-restart">Watch again from the start</button>
+      </div>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="pl-prev"><i class="bi bi-skip-backward-fill me-1"></i>Previous</button>
+        <button type="button" class="btn btn-primary btn-sm" id="pl-next">Next<i class="bi bi-skip-forward-fill ms-1"></i></button>
+        <div class="form-check form-switch ms-sm-2 mb-0">
+          <input class="form-check-input" type="checkbox" id="pl-autoplay" checked>
+          <label class="form-check-label small" for="pl-autoplay">Play the next clip automatically</label>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <h5 class="mb-1"><span id="pl-position"></span> <span id="pl-title"></span></h5>
+        <p class="mb-1" id="pl-note" style="white-space:pre-line"></p>
+        <a id="pl-clip-link" href="#" class="small">Open this clip and its annotations</a>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <ol class="list-group list-group-numbered" id="pl-tracks">
+        {% for track in tracks %}
+        <li class="list-group-item pl-track" data-index="{{ loop.index0 }}" tabindex="0" role="button">
+          {{ track.title }}
+          {% if track.end and track.start is not none %}<span class="text-muted small">· {{ (track.end - track.start) | clip_time }}</span>{% endif %}
+          {% if track.hidden %}<span class="badge bg-secondary ms-1">Hidden from players</span>{% endif %}
+          {% if track.note %}<div class="small text-muted">{{ track.note }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">
+    This playlist has no clips yet.
+    {% if current_user.is_admin or current_user.is_coach %}
+    <a href="{{ url_for('clip.edit_playlist', playlist_id=playlist.id) }}">Add some</a>.
+    {% endif %}
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if tracks %}
+<script>
+window.PLAYLIST = { tracks: {{ tracks | tojson }}, startIndex: {{ start_index }} };
+</script>
+<script src="{{ url_for('static', filename='js/playlist_player.js') }}"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+{% endif %}
+{% endblock %}

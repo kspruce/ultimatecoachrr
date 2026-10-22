@@ -575,6 +575,35 @@
                 <i class="bi bi-x-circle me-1"></i>Revoke links
               </button>
             </form>
+            {% if current_user.is_admin or current_user.is_coach %}
+            <div class="dropdown d-inline">
+              <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button"
+                      data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-collection-play me-1"></i>Add to playlist
+              </button>
+              <ul class="dropdown-menu">
+                {% for playlist in playlists %}
+                <li>
+                  {% if clip.id in playlist.items | map(attribute='clip_id') | list %}
+                  <a class="dropdown-item disabled" aria-disabled="true">
+                    <i class="bi bi-check2 me-1"></i>{{ playlist.title }}
+                  </a>
+                  {% else %}
+                  <form method="post" action="{{ url_for('clip.add_to_playlist', playlist_id=playlist.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="clip_id" value="{{ clip.id }}">
+                    <input type="hidden" name="back" value="clip">
+                    <button type="submit" class="dropdown-item">{{ playlist.title }}</button>
+                  </form>
+                  {% endif %}
+                </li>
+                {% endfor %}
+                {% if playlists %}<li><hr class="dropdown-divider"></li>{% endif %}
+                <li><a class="dropdown-item" href="{{ url_for('clip.new_playlist', clip_id=clip.id) }}">
+                  <i class="bi bi-plus-lg me-1"></i>New playlist with this clip</a></li>
+              </ul>
+            </div>
+            {% endif %}
             <a href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}"
                class="btn btn-outline-secondary btn-sm">
               <i class="bi bi-download me-1"></i>Export

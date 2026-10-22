@@ -312,6 +312,9 @@
       <p>Video analysis and highlights</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('clip.playlists') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-collection-play me-1"></i>Playlists
+      </a>
       {% if current_user.is_admin %}
       <a href="{{ url_for('clip.add_clip') }}" class="btn btn-primary btn-sm">
         <i class="bi bi-plus-lg me-1"></i>Add Clip

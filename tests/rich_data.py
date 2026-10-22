@@ -8,6 +8,7 @@ from datetime import date, datetime
 
 from app import db
 from app.models.clip import Clip, ClipTag
+from app.models.clip_playlist import ClipPlaylist, ClipPlaylistItem
 from app.models.feedback import PlayerFeedback
 from app.models.fitness import FitnessMetric, FitnessRecord, FitnessGoal
 from app.models.playbook import Formation, Play, PlayTag
@@ -70,6 +71,8 @@ def build_team(app, name, slug):
     db.session.flush()
     db.session.add(OpponentPlayer(scouting_report_id=report.id, name='Their handler',
                                   team_organization_id=team_id))
+    db.session.add(ClipPlaylist(title=f'{slug} film session', team_organization_id=team_id, items=[
+        ClipPlaylistItem(clip_id=clip.id, position=0, note='Watch the mark', team_organization_id=team_id)]))
     metric = FitnessMetric(name=f'{slug} 40m sprint', unit='s', team_organization_id=team_id)
     section = TheorySection(name=f'{slug} cutting', slug=f'{slug}-cutting',
                             team_organization_id=team_id)

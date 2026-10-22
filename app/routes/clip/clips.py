@@ -10,6 +10,7 @@ from app import db
 from app.forms.clip import ClipFilterForm, ClipForm
 from app.models import Clip, ClipAnnotation, ClipTag
 from app.models.clip import ClipPointSegment
+from app.models.clip_playlist import ClipPlaylist
 from app.models.game import Game
 from app.models.player import Player
 from app.models.point import Point
@@ -308,8 +309,14 @@ def view_clip(clip_id):
                   .order_by(User.username)
                   .all())
 
+    playlists = []
+    if sees_hidden_clips():
+        playlists = (ClipPlaylist.query.filter_by(team_organization_id=team_id)
+                     .order_by(ClipPlaylist.updated_at.desc()).all())
+
     return render_template('clip/view_clip.html',
                          clip=clip,
+                         playlists=playlists,
                          annotations=annotations,
                          annotation_creators=annotation_creators,
                          ann_form=ann_form,

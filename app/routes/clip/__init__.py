@@ -6,4 +6,4 @@ from app.utils.clip_video import format_timestamp
 bp = Blueprint('clip', __name__, url_prefix='/clips')
 bp.add_app_template_filter(format_timestamp, 'clip_time')
 
-from app.routes.clip import annotations, clips, sharing, tags  # noqa: E402,F401
+from app.routes.clip import annotations, clips, playlists, sharing, tags  # noqa: E402,F401
