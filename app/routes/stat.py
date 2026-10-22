@@ -8,36 +8,11 @@ from app.models.player import Player
 from app.models.throws import Throw
 from app.utils.utils import admin_required, stat_taker_required
 from app.utils.point_flow import get_game_roster, next_point_to_analyse, sync_game_score
+from app.stats.throwing import is_break_throw
 import math
 
 bp = Blueprint('stat', __name__, url_prefix='/stats')
 
-
-def is_break_throw(x_start, y_start, x_end, y_end, force_direction=None):
-    """
-    Determine if a throw is a break throw based on field position.
-    
-    A simple heuristic:
-    1. If force_direction is known, use that
-    2. Otherwise, detect if throw crosses the middle of the field (y=18.5)
-    """
-    if force_direction:
-        # If we know the force direction, use that logic
-        if force_direction == 'forehand':
-            # Forehand force means defense is forcing to the right from thrower's perspective
-            # Break throw would go to the left (negative dx)
-            return (x_end - x_start) < 0
-        elif force_direction == 'backhand':
-            # Backhand force means defense is forcing to the left
-            # Break throw would go to the right (positive dx)
-            return (x_end - x_start) > 0
-    else:
-        # If force direction is unknown, use field position heuristic
-        # Check if throw crosses the middle of the field (assuming middle is at y=18.5m)
-        if (y_start < 18.5 and y_end > 18.5) or (y_start > 18.5 and y_end < 18.5):
-            return True
-    
-    return False
 
 @bp.route('/record/<int:point_id>', methods=['GET', 'POST'])
 @login_required
@@ -161,7 +136,8 @@ def record_events(point_id):
                             assist_event.field_position_x,
                             assist_event.field_position_y,
                             event.field_position_x,
-                            event.field_position_y
+                            event.field_position_y,
+                            point.force_direction
                         ),
                         team_organization_id=get_current_team_id()
                     )
@@ -190,7 +166,8 @@ def record_events(point_id):
                                 hockey_assist_event.field_position_x,
                                 hockey_assist_event.field_position_y,
                                 assist_event.field_position_x,
-                                assist_event.field_position_y
+                                assist_event.field_position_y,
+                                point.force_direction
                             ),
                             team_organization_id=get_current_team_id()  # Add team ID
                         )
@@ -230,7 +207,8 @@ def record_events(point_id):
                         previous_event.field_position_x,
                         previous_event.field_position_y,
                         event.field_position_x,
-                        event.field_position_y
+                        event.field_position_y,
+                        point.force_direction
                     ),
                     team_organization_id=get_current_team_id()  # Add team ID
                 )
@@ -254,7 +232,8 @@ def record_events(point_id):
                         previous_event.field_position_x,
                         previous_event.field_position_y,
                         event.field_position_x,
-                        event.field_position_y
+                        event.field_position_y,
+                        point.force_direction
                     ),
                     team_organization_id=get_current_team_id()
                 )
@@ -590,7 +569,8 @@ def create_throw_from_events(previous_event, current_event):
             previous_event.field_position_x,
             previous_event.field_position_y,
             current_event.field_position_x,
-            current_event.field_position_y
+            current_event.field_position_y,
+            current_event.point.force_direction if current_event.point else None
         ),
         team_organization_id=get_current_team_id()  # Add team ID
     )
@@ -615,18 +595,20 @@ def create_throw_from_events(previous_event, current_event):
 @login_required
 @admin_required
 def mark_break_throws():
-    """Mark break throws on this team's throws that were recorded without it."""
+    """Re-mark open/break on this team's throws from each point's force."""
     throws = Throw.query.filter(
-        Throw.break_throw.is_(None),
         Throw.team_organization_id == get_current_team_id()
     ).all()
-    count = 0
+    breaks = unknown = 0
     for throw in throws:
-        if None not in (throw.x_start, throw.y_start, throw.x_end, throw.y_end):
-            throw.break_throw = is_break_throw(throw.x_start, throw.y_start, throw.x_end, throw.y_end)
-            count += bool(throw.break_throw)
+        force = throw.point.force_direction if throw.point else None
+        throw.break_throw = is_break_throw(throw.x_start, throw.y_start,
+                                           throw.x_end, throw.y_end, force)
+        breaks += throw.break_throw is True
+        unknown += throw.break_throw is None
     db.session.commit()
-    flash(f'Checked {len(throws)} throws; marked {count} as break throws.', 'success')
+    flash(f'Checked {len(throws)} throws: {breaks} break throws, '
+          f'{unknown} without a known force.', 'success')
     return redirect(url_for('data_management.data_management'))
 
 
@@ -800,8 +782,11 @@ def record_cutting_skill(point_id):
         player_id = int(data.get('player_id'))
         cutting_type = data.get('cutting_type')
         outcome = data.get('outcome')
-        field_position_x = float(data.get('field_position_x', 0))
-        field_position_y = float(data.get('field_position_y', 0))
+        # One-tap "open, not thrown to" records have no position
+        field_position_x = data.get('field_position_x')
+        field_position_y = data.get('field_position_y')
+        field_position_x = float(field_position_x) if field_position_x is not None else None
+        field_position_y = float(field_position_y) if field_position_y is not None else None
         
         # Validate player belongs to the team
         from app.models.player import Player

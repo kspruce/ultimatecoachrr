@@ -177,6 +177,27 @@
     }
     
     /* Undo button */
+    .looked-off-strip {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+        margin: 8px auto 0; padding: 6px 8px; max-width: 1200px;
+        border: 1px dashed var(--rule-strong); border-radius: 8px;
+    }
+    .looked-off-label { font-size: .85rem; font-weight: 600; color: var(--ink-2); margin-right: 4px; }
+    .looked-off-chip { display: inline-flex; }
+    .looked-off-chip button {
+        border: 1px solid var(--rule-strong); background: var(--paper, transparent); color: var(--ink);
+        padding: 6px 10px; font-size: .9rem; min-height: 40px;
+    }
+    .looked-off-add { border-radius: 20px; }
+    .looked-off-chip.has-count .looked-off-add { border-radius: 20px 0 0 20px; border-color: var(--warn); }
+    .looked-off-remove { border-radius: 0 20px 20px 0; border-left: 0 !important; border-color: var(--warn) !important; }
+    .looked-off-count {
+        display: inline-block; min-width: 1.4em; margin-left: 4px; padding: 0 4px; border-radius: 10px;
+        background: var(--rule); font-weight: 700; font-size: .8rem;
+    }
+    .looked-off-chip.has-count .looked-off-count { background: var(--warn); color: #fff; }
+    .looked-off-chip.flash .looked-off-add { background: var(--warn-soft); }
+
     .undo-button {
         position: fixed;
         bottom: 20px;
@@ -287,6 +308,23 @@
         <div class="endzone endzone-left"><span class="endzone-label"></span></div>
         <div class="center-line"></div>
         <div class="endzone endzone-right"><span class="endzone-label"></span></div>
+    </div>
+
+    <!-- One tap per player who got open and wasn't thrown to. Catches
+         already record the cuts that worked, so this is all cutting needs. -->
+    <div class="looked-off-strip" id="looked-off-strip">
+        <span class="looked-off-label" title="Tap a player each time they get open and aren't thrown to. Use − to take one back.">
+            Open, not thrown to:
+        </span>
+        {% for lineup in point.lineups %}
+        <span class="looked-off-chip" data-player-id="{{ lineup.player.id }}">
+            <button type="button" class="looked-off-add" data-player-id="{{ lineup.player.id }}">
+                #{{ lineup.player.jersey_number }} {{ lineup.player.name.split(' ')[0] }}
+                <span class="looked-off-count">0</span>
+            </button>
+            <button type="button" class="looked-off-remove" data-player-id="{{ lineup.player.id }}" aria-label="Take one back" hidden>−</button>
+        </span>
+        {% endfor %}
     </div>
 
     <!-- Tables container with both tables side by side -->
@@ -574,7 +612,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', checkFieldDimensions);
 
     // Define event types - UPDATED with correct event types
-    const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop'];
+    const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop', 'stall'];
     const DEFENSIVE_EVENTS = ['shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'];
     
     // Define cutting skill outcomes - UPDATED with correct outcomes
@@ -725,7 +763,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentMode = currentMode === 'events' ? 'cutting' : 'events';
         
         // Update button text
-        modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'}`;
+        modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Detailed Cut Log'}`;
         
         // Update button styling based on mode
         if (currentMode === 'events') {
@@ -1334,6 +1372,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add cutting skill marker to the field - FIXED to handle potential missing data
     function addCuttingSkillMarker(cuttingSkill) {
+        if (cuttingSkill && cuttingSkill.cutting_type === 'unspecified') return;  // one-tap, no position
         if (!cuttingSkill || typeof cuttingSkill.field_position_x === 'undefined' || typeof cuttingSkill.field_position_y === 'undefined') {
             console.error('Invalid cutting skill data for marker:', cuttingSkill);
             return;
@@ -1452,7 +1491,8 @@ document.addEventListener('DOMContentLoaded', function() {
             row.appendChild(playerCell);
             
             const typeCell = document.createElement('td');
-            typeCell.textContent = skill.cutting_type.replace('_', ' ').toUpperCase();
+            typeCell.textContent = skill.cutting_type === 'unspecified'
+                ? '—' : skill.cutting_type.replace('_', ' ').toUpperCase();
             row.appendChild(typeCell);
             
             const outcomeCell = document.createElement('td');
@@ -1568,6 +1608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         gameState.cuttingSkills.pop();
                         updateCuttingSkillsTable();
+                        if (window.refreshAllLookedOff) window.refreshAllLookedOff();
                     }
                     
                     // Hide undo button if no more events/skills
@@ -1702,10 +1743,73 @@ document.addEventListener('DOMContentLoaded', function() {
     modeToggle.setAttribute('title', 'Toggle Mode (M)');
     undoButton.setAttribute('title', 'Undo (U)');
 
+    // "Open, not thrown to": one tap records it, − removes that player's last one.
+    function lookedOffIds(playerId) {
+        return gameState.cuttingSkills
+            .filter(c => String(c.player) === String(playerId) && c.cutting_type === 'unspecified')
+            .map(c => c.id);
+    }
+    function refreshLookedOff(playerId, flash) {
+        const chip = document.querySelector(`.looked-off-chip[data-player-id="${playerId}"]`);
+        if (!chip) return;
+        const n = lookedOffIds(playerId).length;
+        chip.querySelector('.looked-off-count').textContent = n;
+        chip.classList.toggle('has-count', n > 0);
+        chip.querySelector('.looked-off-remove').hidden = n === 0;
+        if (flash) {
+            chip.classList.add('flash');
+            setTimeout(() => chip.classList.remove('flash'), 250);
+        }
+    }
+    function postJSON(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(body)
+        }).then(r => r.json().then(data => {
+            if (!r.ok) throw new Error(data.error || `Server returned ${r.status}`);
+            return data;
+        }));
+    }
+    document.querySelectorAll('.looked-off-add').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const playerId = this.dataset.playerId;
+            postJSON(`/stats/record_cutting_skill/{{ point.id }}`, {
+                player_id: parseInt(playerId, 10), cutting_type: 'unspecified', outcome: 'open_looked_off'
+            }).then(data => {
+                updateCuttingSkillsState({
+                    id: data.cutting_skill_id, player_id: playerId, cutting_type: 'unspecified',
+                    outcome: 'open_looked_off', field_position_x: null, field_position_y: null
+                });
+                updateCuttingSkillsTable();
+                refreshLookedOff(playerId, true);
+            }).catch(err => notify(`Couldn't record that: ${err.message}`));
+        });
+    });
+    document.querySelectorAll('.looked-off-remove').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const playerId = this.dataset.playerId;
+            const ids = lookedOffIds(playerId);
+            if (!ids.length) return;
+            const id = ids[ids.length - 1];
+            postJSON(`/stats/undo_cutting_skill/{{ point.id }}`, { cutting_skill_id: id }).then(() => {
+                gameState.cuttingSkills = gameState.cuttingSkills.filter(c => c.id !== id);
+                updateCuttingSkillsTable();
+                refreshLookedOff(playerId, false);
+            }).catch(err => notify(`Couldn't undo that: ${err.message}`));
+        });
+    });
+
     // Reopening a point: show what's already been recorded.
     const existing = {{ existing | tojson }};
     existing.events.forEach(e => { addEventMarker(e); updateEventsState(e); });
     existing.cutting_skills.forEach(c => { addCuttingSkillMarker(c); updateCuttingSkillsState(c); });
+    window.refreshAllLookedOff = () =>
+        document.querySelectorAll('.looked-off-chip').forEach(chip => refreshLookedOff(chip.dataset.playerId, false));
+    window.refreshAllLookedOff();
     if (existing.events.length || existing.cutting_skills.length) {
         updateEventsTable();
         updateCuttingSkillsTable();

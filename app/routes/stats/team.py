@@ -13,6 +13,7 @@ from app.stats.formulas import calculate_optimized_line_efficiency
 from app.stats.players import get_players_base_stats
 from app.stats.team import calculate_additional_team_metrics, calculate_performance_trends, calculate_possession_based_team_metrics, calculate_team_summary, get_previous_period_games
 from app.stats.loaders import preload_game_points
+from app.stats import turnovers
 
 
 @bp.route('/team')
@@ -133,6 +134,27 @@ def team_stats():
     # Calculate performance trends
     performance_trends = calculate_performance_trends(games)
     
+    # Where the turnovers come from, what they cost, who's most secure,
+    # and what to practise
+    all_games = Game.query.filter_by(team_organization_id=get_current_team_id()).all()
+    throwing = turnovers.ThrowingData(all_games)
+    game_ids = {g.id for g in games}
+    periods = turnovers.period_ids(all_games, tournament_id)
+    ball_security = {
+        'handling': turnovers.handling_summary(throwing, None, game_ids),
+        'breakdown': turnovers.breakdown(throwing, None, game_ids),
+        'zones': turnovers.zone_grid(throwing, None, game_ids),
+        'cost': turnovers.turnover_cost(throwing, game_ids),
+        'leaderboard': turnovers.turnover_leaderboard(throwing, players, game_ids),
+        'practice': turnovers.practice_focus(
+            throwing, periods['current'] if periods else game_ids, periods['baseline'] if periods else None),
+        'practice_period': periods,
+        'min_touches': turnovers.MIN_TOUCHES,
+        'min_attempts': turnovers.MIN_ATTEMPTS,
+    }
+    # Trend over the games in the filter only
+    ball_security['trends'] = turnovers.game_trends(throwing, None, game_ids)
+
     # Get filter options
     tournaments = Tournament.query.filter_by(
         team_organization_id=get_current_team_id()
@@ -159,5 +181,6 @@ def team_stats():
         d_line_men=d_line_men,
         o_line_efficiency=dict(o_line_efficiency),
         d_line_efficiency=dict(d_line_efficiency),
-        performance_trends=performance_trends
+        performance_trends=performance_trends,
+        ball_security=ball_security,
     )

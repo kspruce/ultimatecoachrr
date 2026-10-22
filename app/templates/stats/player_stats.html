@@ -1,13 +1,13 @@
 {% extends "base.html" %}
+{% import "stats/_turnover_macros.html" as tm %}
 
-{% block head %}
+{# base.html has no "head" block: this was never rendered, so none of
+   these styles or scripts loaded. #}
+{% block styles %}
 {{ super() }}
-<!-- Load D3.js from CDN -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
-<!-- 07-2025 -- Add Chart.js and Radar plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
 
 <style>
     .stat-card {
@@ -198,6 +198,7 @@
 {% endblock %}
 
 {% block content %}
+{{ tm.styles() }}
 <div class="container py-4">
     {% if current_user.is_admin or current_user.is_coach or (current_user.player and current_user.player.id == player.id) %}
     <div class="uc-page-header mb-4">
@@ -296,6 +297,119 @@
     <div class="tab-content" id="playerStatsTabContent">
         <!-- Overview Tab -->
         <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                <!-- What to work on: weakest areas vs the team, with ball security -->
+                {% set imp = improvement %}
+                {% set h = imp.handling %}
+                {% set th = imp.team_handling %}
+                <div class="row mb-4">
+                    <div class="col-lg-7 mb-3 mb-lg-0">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Focus Areas
+                                    <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                                       title="Where your completion is furthest below the team's on the same kind of throw, ranked by how many extra turnovers it cost. Only areas with {{ imp.focus.min_attempts }}+ throws are shown."></i>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                {% if imp.repeat %}
+                                <div class="alert alert-warning py-2">
+                                    <i class="bi bi-arrow-repeat me-1"></i>
+                                    <strong>{{ imp.repeat.text }}</strong> has been your top focus area at
+                                    {{ imp.repeat.tournaments|join(', ') }}. It's worth a dedicated plan with your coach.
+                                </div>
+                                {% endif %}
+                                {% for item in imp.focus.weak %}
+                                <div class="focus-item">
+                                    <div class="focus-title">{{ loop.index }}. {{ item.text }}</div>
+                                    <div class="small">
+                                        {% if item.dimension == 'stalls' %}
+                                        Stalled {{ item.turnovers }} times in {{ item.attempts }} touches.
+                                        {% elif item.dimension == 'catching' %}
+                                        {{ tm.pct(item.completion_rate) }} caught vs team {{ tm.pct(item.team_completion_rate) }}
+                                        · {{ item.turnovers }} drops in {{ item.attempts }} catch chances
+                                        {% else %}
+                                        {{ tm.pct(item.completion_rate) }} complete vs team {{ tm.pct(item.team_completion_rate) }}
+                                        · {{ item.turnovers }} lost of {{ item.attempts }} throws
+                                        · about {{ "%.0f"|format(item.extra_turnovers) }} more turnover{{ '' if item.extra_turnovers|round|int == 1 else 's' }} than the team rate
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <p class="text-muted mb-2">
+                                    {% if imp.focus.throws < imp.focus.min_attempts %}
+                                    Not enough throws recorded yet ({{ imp.focus.throws }}) to spot a pattern.
+                                    {% else %}
+                                    No area stands out as below the team. Nice work.
+                                    {% endif %}
+                                </p>
+                                {% endfor %}
+                                {% if imp.focus.strong %}
+                                <h6 class="text-muted text-uppercase small mt-3">Strengths</h6>
+                                {% for item in imp.focus.strong %}
+                                <div class="focus-item strength">
+                                    <div class="focus-title">{{ item.text }}</div>
+                                    <div class="small">{{ tm.pct(item.completion_rate) }} complete vs team {{ tm.pct(item.team_completion_rate) }} on {{ item.attempts }} throws</div>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="card h-100">
+                            <div class="card-header"><h5 class="mb-0">Ball Security</h5></div>
+                            <div class="card-body">
+                                <table class="table table-sm mb-0">
+                                    <thead><tr><th></th><th class="text-end">You</th><th class="text-end">Team</th></tr></thead>
+                                    <tbody>
+                                        <tr>
+                                            <th>Turnovers per 10 touches
+                                                <i class="bi bi-info-circle small" data-bs-toggle="tooltip"
+                                                   title="Throwaways, drops and stalls, per 10 times the disc came to you (each throw, stall, goal caught or drop is a touch)."></i>
+                                            </th>
+                                            <td class="text-end fw-bold">{{ "%.1f"|format(h.turnovers_per_10) if h.turnovers_per_10 is not none else '–' }}</td>
+                                            <td class="text-end text-muted">{{ "%.1f"|format(th.turnovers_per_10) if th.turnovers_per_10 is not none else '–' }}</td>
+                                        </tr>
+                                        <tr><th>Completion</th>
+                                            <td class="text-end {{ tm.vs_team_class(h.completion_rate, th.completion_rate, h.throws >= imp.focus.min_attempts) }}">{{ tm.pct(h.completion_rate) }}</td>
+                                            <td class="text-end text-muted">{{ tm.pct(th.completion_rate) }}</td></tr>
+                                        <tr><th>Huck completion</th>
+                                            <td class="text-end {{ tm.vs_team_class(h.huck_completion_rate, th.huck_completion_rate, h.huck_attempts >= imp.focus.min_attempts) }}">{{ tm.pct(h.huck_completion_rate) }} <small class="text-muted">({{ h.huck_attempts }})</small></td>
+                                            <td class="text-end text-muted">{{ tm.pct(th.huck_completion_rate) }}</td></tr>
+                                        <tr><th>Break-side completion</th>
+                                            <td class="text-end {{ tm.vs_team_class(h.break_completion_rate, th.break_completion_rate, h.break_attempts >= imp.focus.min_attempts) }}">{{ tm.pct(h.break_completion_rate) }} <small class="text-muted">({{ h.break_attempts }})</small></td>
+                                            <td class="text-end text-muted">{{ tm.pct(th.break_completion_rate) }}</td></tr>
+                                        <tr><th>Drop rate</th>
+                                            <td class="text-end">{{ tm.pct(h.drop_rate) }} <small class="text-muted">({{ h.drops }}/{{ h.receptions }})</small></td>
+                                            <td class="text-end text-muted">{{ tm.pct(th.drop_rate) }}</td></tr>
+                                        <tr><th>Turnovers</th>
+                                            <td class="text-end" colspan="2">Throwaways {{ h.throwaways }} · Drops {{ h.drops }} · Stalls {{ h.stalls }}</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header"><h5 class="mb-0">Turnover Map</h5></div>
+                            <div class="card-body">
+                                {% if imp.log %}
+                                {{ tm.turnover_map(imp.log, 'player-tomap') }}
+                                <details class="mt-3">
+                                    <summary>Every turnover ({{ imp.log|length }}): watch them back</summary>
+                                    <div class="mt-2">{{ tm.turnover_log_table(imp.log) }}</div>
+                                    <p class="small text-muted mt-2 mb-0">Video links appear when the game has a YouTube link and the point has a video timestamp.</p>
+                                </details>
+                                {% else %}
+                                <p class="text-muted mb-0">No turnovers recorded in these games.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             <!-- PER and Summary Stats -->
             <div class="row mb-4">
                 <!-- PER Display -->
@@ -433,51 +547,6 @@
                     </div>                                        
                 </div>
                 
-                <!-- NEW: Turnover Analysis Card -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card stat-card h-100">
-                            <div class="card-header">
-                                <h5 class="mb-0">Turnover Analysis</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <h6 class="text-muted text-uppercase">Most Common Throwaway Location</h6>
-                                                <p class="h4 fw-bold text-danger">{{ most_common_throwaway_location }}</p>
-                                                <small class="text-muted">Based on {{ stats.throwaways }} throwaways</small>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <h6 class="text-muted text-uppercase">Most Common Throwaway Direction</h6>
-                                                <p class="h4 fw-bold text-danger">{{ throwaway_direction_data.field_relative }}</p>
-                                                <small class="text-muted">
-                                                    {{ throwaway_direction_data.count }} of {{ throwaway_direction_data.total }} throwaways 
-                                                    ({{ throwaway_direction_data.percentage|round(1) }}%)
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <div class="row mt-3">
-                                            <div class="col-12">
-                                                <div id="throwaway-direction-chart" style="height: 200px; width: 100%;"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="text-muted text-uppercase mb-2">Field Zone Analysis</h6>
-                                        <div id="field-diagram-container" style="position: relative; height: 250px; width: 100%;">
-                                            <canvas id="field-diagram" style="width: 100%; height: 100%;"></canvas>
-                                        </div>
-                                        <div class="text-center mt-2">
-                                            <small class="text-muted">The highlighted area shows the most common throwaway location</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>             
             </div>
         </div>
         
@@ -574,7 +643,7 @@
                                         </tr>
                                         <tr>
                                             <th>Forced Turnovers</th>
-                                            <td>{{ stats.blocks + stats.stalls }}</td>
+                                            <td>{{ stats.blocks + stats.forced_turnovers }}</td>
                                         </tr>
                                         <tr>
                                             <th>D-Line Points</th>
@@ -627,16 +696,24 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="direction-legend mt-2">
-                                        <h6>Throw Direction Distribution</h6>
+                                        <h6>Which way you throw</h6>
+                                        {% set d = improvement.directions %}
+                                        <table class="table table-sm mb-2">
+                                            <thead><tr><th></th><th class="text-end">Share</th><th class="text-end">Complete</th></tr></thead>
+                                            <tbody>
+                                                <tr><th>Right <small class="text-muted fw-normal">(forehand side)</small></th>
+                                                    <td class="text-end">{{ tm.pct(d.right.share) }}</td><td class="text-end">{{ tm.pct(d.right.completion_rate) }}</td></tr>
+                                                <tr><th>Left <small class="text-muted fw-normal">(backhand side)</small></th>
+                                                    <td class="text-end">{{ tm.pct(d.left.share) }}</td><td class="text-end">{{ tm.pct(d.left.completion_rate) }}</td></tr>
+                                                <tr><th>Forwards</th>
+                                                    <td class="text-end">{{ tm.pct(d.forward.share) }}</td><td class="text-end">{{ tm.pct(d.forward.completion_rate) }}</td></tr>
+                                                <tr><th>Backwards / flat</th>
+                                                    <td class="text-end">{{ tm.pct(d.back.share) }}</td><td class="text-end">{{ tm.pct(d.back.completion_rate) }}</td></tr>
+                                            </tbody>
+                                        </table>
                                         <small class="text-muted">
-                                            <p>This chart shows the distribution of throw directions relative to the field orientation.</p>
-                                            <ul class="mb-0 ps-3">
-                                                <li><strong>FORWARD</strong>: Directly upfield (East)</li>
-                                                <li><strong>RIGHT</strong>: Across field to the right (North)</li>
-                                                <li><strong>BACK</strong>: Directly downfield (West)</li>
-                                                <li><strong>LEFT</strong>: Across field to the left (South)</li>
-                                                <li>The chart is divided into 16 directions for detailed analysis</li>
-                                            </ul>
+                                            <p class="mb-1">The radar shows where your throws go, with upfield at the top and the attacking direction always upfield.</p>
+                                            <p class="mb-0">Right and left are the thrower's own, facing upfield. For a right-hander, right is the forehand side and left is the backhand side; swap them for a left-hander. Hover over a segment to see its completion rate.</p>
                                         </small>
                                     </div>
                                 </div>
@@ -665,35 +742,37 @@
                 </div>
             </div>
 
-            <!-- Add this to the Throws Tab section -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0">Throw Success Rate by Field Zone</h5>
+                            <h5 class="mb-0">Completion by Throw and Situation</h5>
                         </div>
                         <div class="card-body">
-                            <div class="field-container" id="throw-success-field" style="height: 400px; position: relative;">
-                                <div class="endzone endzone-left"></div>
-                                <div class="endzone endzone-right"></div>
-                                <canvas id="throw-success-canvas" style="width: 100%; height: 100%;"></canvas>
-                            </div>
-                            <div class="text-center mt-2">
-                                <div class="d-flex justify-content-center align-items-center">
-                                    <div class="d-flex align-items-center me-4">
-                                        <div style="width: 20px; height: 20px; background-color: color-mix(in srgb, var(--ok) 70%, transparent); margin-right: 5px;"></div>
-                                        <span>High Success (90%+)</span>
-                                    </div>
-                                    <div class="d-flex align-items-center me-4">
-                                        <div style="width: 20px; height: 20px; background-color: color-mix(in srgb, var(--warn) 70%, transparent); margin-right: 5px;"></div>
-                                        <span>Medium Success (70-90%)</span>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <div style="width: 20px; height: 20px; background-color: color-mix(in srgb, var(--bad) 70%, transparent); margin-right: 5px;"></div>
-                                        <span>Low Success (<70%)</span>
-                                    </div>
-                                </div>
-                            </div>
+                            {% if improvement.breakdown %}
+                            {{ tm.breakdown_tables(improvement.breakdown) }}
+                            {{ tm.legend(improvement.focus.min_attempts) }}
+                            <p class="small text-muted mt-2 mb-0">
+                                Open/break is read from each point's force, so points recorded without a force aren't counted there.
+                                Hucks are throws of 20 m+ that gain at least 15 m; dumps &amp; swings gain under 2 m.
+                            </p>
+                            {% else %}
+                            <p class="text-muted mb-0">No throws recorded in these games.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Completion by Field Zone</h5>
+                        </div>
+                        <div class="card-body">
+                            {{ tm.zone_grid(improvement.zones) }}
+                            {{ tm.legend(5, 'cells') }}
                         </div>
                     </div>
                 </div>
@@ -731,102 +810,82 @@
                             <div class="tab-content mt-3" id="cuttingSkillsTabContent">
                                 <!-- Summary Tab -->
                                 <div class="tab-pane fade show active" id="cutting-summary" role="tabpanel" aria-labelledby="cutting-summary-tab">
+                                    {% set cp = cut_profile %}
+                                    <p class="small text-muted">
+                                        Cuts that got the disc come straight from the recorded catches: a catch that gained 15 m+
+                                        is a deep cut, a shorter gain an under, and open or break comes from the point's force.
+                                        Dumps and swings aren't counted as cuts. The one thing the stat-taker taps is
+                                        "Open, not thrown to".
+                                    </p>
+                                    <div class="row g-3 mb-3 text-center">
+                                        <div class="col-6 col-md-3">
+                                            <div class="cutting-stat-value">{{ cp.receptions }}</div>
+                                            <div class="cutting-stat-label">Cuts thrown to</div>
+                                            <div class="small text-muted">{{ "%.2f"|format(cp.per_point) if cp.per_point is not none else '–' }} per point · team {{ "%.2f"|format(cp.team.per_point) if cp.team.per_point is not none else '–' }}</div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="cutting-stat-value">{{ cp.open_looked_off }}</div>
+                                            <div class="cutting-stat-label">Open, not thrown to</div>
+                                            <div class="small text-muted">on {{ cp.tracked_points }} tracked point{{ '' if cp.tracked_points == 1 else 's' }}</div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="cutting-stat-value">{{ tm.pct(cp.used_rate) }}</div>
+                                            <div class="cutting-stat-label">Used when open
+                                                <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                                                   title="On points where someone tracked open cuts: catches ÷ (catches + times open and not thrown to). Low means you're getting open but the handlers aren't using you. Work on timing and where you cut, not just effort."></i>
+                                            </div>
+                                            <div class="small text-muted">team {{ tm.pct(cp.team.used_rate) }}</div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="cutting-stat-value">{{ tm.pct(cp.deep_share) }}</div>
+                                            <div class="cutting-stat-label">Deep share</div>
+                                            <div class="small text-muted">team {{ tm.pct(cp.team.deep_share) }} · break side {{ tm.pct(cp.break_share) }}</div>
+                                        </div>
+                                    </div>
+                                    {% if not cp.tracked_points %}
+                                    <div class="alert alert-info py-2 small">
+                                        No "open, not thrown to" taps recorded for {{ player.name }} yet. On the recording screen,
+                                        tap their name in the <em>Open, not thrown to</em> strip to see how often they're used when open.
+                                    </div>
+                                    {% endif %}
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="card">
-                                                <div class="card-header">
-                                                    <h6 class="mb-0">Cutting Success Rate</h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <canvas id="cuttingSuccessChart" height="250"></canvas>
-                                                </div>
+                                                <div class="card-header"><h6 class="mb-0">Thrown to vs open and looked off</h6></div>
+                                                <div class="card-body"><canvas id="cuttingSuccessChart" height="250"></canvas></div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="card">
-                                                <div class="card-header">
-                                                    <h6 class="mb-0">Cutting Type Distribution</h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <canvas id="cuttingTypeChart" height="250"></canvas>
-                                                </div>
+                                                <div class="card-header"><h6 class="mb-0">Cuts thrown to, by type</h6></div>
+                                                <div class="card-body"><canvas id="cuttingTypeChart" height="250"></canvas></div>
                                             </div>
                                         </div>
                                     </div>
-                                    
                                     <div class="row mt-4">
                                         <div class="col-md-12">
                                             <div class="card">
-                                                <div class="card-header">
-                                                    <h6 class="mb-0">Cutting Skills Summary</h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="row">
-                                                        <div class="col-md-3">
-                                                            <div class="stat-card text-center">
-                                                                <h3 id="totalCuts">{{ cutting_stats.total_cuts|default(0) }}</h3>
-                                                                <div class="text-muted">Total Cuts</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <div class="stat-card text-center">
-                                                                <h3 id="successRate">{{ cutting_stats.success_rate|default(0)|round(1) }}%</h3>
-                                                                <div class="text-muted">Success Rate</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <div class="stat-card text-center">
-                                                                <h3 id="openRate">{{ cutting_stats.open_rate|default(0)|round(1) }}%</h3>
-                                                                <div class="text-muted">Open Rate</div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <div class="stat-card text-center">
-                                                                <h3 id="preferredCut">{{ cutting_stats.preferred_cut|default('N/A') }}</h3>
-                                                                <div class="text-muted">Preferred Cut</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row mt-4">
-                                        <div class="col-md-12">
-                                            <div class="card">
-                                                <div class="card-header">
-                                                    <h6 class="mb-0">Cutting Quadrants Analysis</h6>
-                                                </div>
+                                                <div class="card-header"><h6 class="mb-0">Cutting Quadrants</h6></div>
                                                 <div class="card-body">
                                                     <div class="cutting-grid">
+                                                        {% for key in ['open_deep', 'break_deep', 'open_under', 'break_under'] %}
+                                                        {% set q = cp.by_type[key] %}
                                                         <div class="cutting-quadrant">
-                                                            <h4>Open Deep</h4>
-                                                            <div class="success-rate">{{ cutting_stats.by_type.open_deep.success_rate|default(0)|round(1) }}%</div>
-                                                            <div class="attempts">{{ cutting_stats.by_type.open_deep.total|default(0) }} attempts</div>
+                                                            <h4>{{ q.label }}</h4>
+                                                            <div class="success-rate">{{ q.thrown_to }}</div>
+                                                            <div class="attempts">thrown to{% if q.looked_off %} · {{ q.looked_off }} open &amp; looked off ({{ tm.pct(q.success_rate) }} used){% endif %}</div>
                                                         </div>
-                                                        <div class="cutting-quadrant">
-                                                            <h4>Break Deep</h4>
-                                                            <div class="success-rate">{{ cutting_stats.by_type.break_deep.success_rate|default(0)|round(1) }}%</div>
-                                                            <div class="attempts">{{ cutting_stats.by_type.break_deep.total|default(0) }} attempts</div>
-                                                        </div>
-                                                        <div class="cutting-quadrant">
-                                                            <h4>Open Under</h4>
-                                                            <div class="success-rate">{{ cutting_stats.by_type.open_under.success_rate|default(0)|round(1) }}%</div>
-                                                            <div class="attempts">{{ cutting_stats.by_type.open_under.total|default(0) }} attempts</div>
-                                                        </div>
-                                                        <div class="cutting-quadrant">
-                                                            <h4>Break Under</h4>
-                                                            <div class="success-rate">{{ cutting_stats.by_type.break_under.success_rate|default(0)|round(1) }}%</div>
-                                                            <div class="attempts">{{ cutting_stats.by_type.break_under.total|default(0) }} attempts</div>
-                                                        </div>
+                                                        {% endfor %}
                                                     </div>
+                                                    {% if cp.unknown_side %}
+                                                    <p class="small text-muted mb-0">{{ cp.unknown_side }} more cut{{ '' if cp.unknown_side == 1 else 's' }} thrown to on points with no force recorded, so open or break isn't known.</p>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Heatmap Tab -->
                                 <div class="tab-pane fade" id="cutting-heatmap" role="tabpanel" aria-labelledby="cutting-heatmap-tab">
                                     <div class="row">
@@ -972,7 +1031,57 @@
         
         <!-- Game History Tab -->
         <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
-            <!-- Game History Content -->
+            {% if improvement.comparison and improvement.comparison.rows %}
+            {% set cmp = improvement.comparison %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">{{ cmp.current_label }} vs your {{ cmp.baseline_label }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead><tr><th></th><th class="text-end">Before</th><th class="text-end">{{ cmp.current_label }}</th><th class="text-end">Change</th></tr></thead>
+                                <tbody>
+                                {% for row in cmp.rows %}
+                                <tr>
+                                    <th>{{ row.label }}</th>
+                                    <td class="text-end">{{ "%.1f"|format(row.baseline) }} <small class="text-muted">(n={{ row.baseline_n }})</small></td>
+                                    <td class="text-end">{{ "%.1f"|format(row.current) }} <small class="text-muted">(n={{ row.current_n }})</small></td>
+                                    <td class="text-end verdict-{{ row.verdict }}">
+                                        {% if row.verdict == 'better' %}<i class="bi bi-arrow-up-circle-fill"></i> better
+                                        {% elif row.verdict == 'worse' %}<i class="bi bi-arrow-down-circle-fill"></i> worse
+                                        {% else %}about the same{% endif %}
+                                        <small class="text-muted">({{ "%+.1f"|format(row.delta) }})</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Ball Security Trend
+                                <small class="text-muted fw-normal">· lines are {{ improvement.trends.window }}-game rolling averages</small>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container trend-chart-container">
+                                <canvas id="ballSecurityTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Performance Trend Chart -->
             <div class="row mb-4">
                 <div class="col-12">
@@ -1249,6 +1358,48 @@ function initializePerformanceTrendChart() {
     return trendChart;
 }
 
+// Turnovers per 10 touches (left axis) and completion rates (right axis)
+// per game, with rolling averages so one bad game doesn't hide the trend.
+function initializeBallSecurityTrendChart() {
+    const ctx = document.getElementById('ballSecurityTrendChart');
+    if (!ctx) return;
+    const t = {{ improvement.trends|tojson }};
+    if (!t.labels.length) {
+        ctx.parentElement.innerHTML = '<div class="alert alert-info text-center my-3">No throws recorded yet.</div>';
+        return;
+    }
+    const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const bad = css('--bad') || '#B8432F', ok = css('--ok') || '#3D7A4E', warn = css('--warn') || '#B9821F';
+    const series = (label, data, color, axis, rolling) => ({
+        label, data, yAxisID: axis, borderColor: color, backgroundColor: color,
+        borderWidth: rolling ? 2.5 : 0, pointRadius: rolling ? 0 : 4, showLine: rolling,
+        tension: 0.3, spanGaps: true,
+    });
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: t.labels,
+            datasets: [
+                series('Turnovers / 10 touches (game)', t.turnovers_per_10, bad, 'y', false),
+                series('Turnovers / 10 touches (rolling)', t.turnovers_per_10_rolling, bad, 'y', true),
+                series('Completion % (rolling)', t.completion_rate_rolling, ok, 'pct', true),
+                series('Huck completion % (rolling)', t.huck_completion_rate_rolling, warn, 'pct', true),
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { ticks: { maxRotation: 45, minRotation: 30, font: { size: 11 } } },
+                y: { beginAtZero: true, suggestedMax: 2, position: 'left', title: { display: true, text: 'TOs / 10' } },
+                pct: { min: 0, max: 100, position: 'right', grid: { drawOnChartArea: false },
+                       title: { display: true, text: '%' } },
+            },
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+        },
+    });
+}
+
 // Radar chart initialization
 function initializeRadarCharts() {
     console.log('Initializing radar charts');
@@ -1438,13 +1589,54 @@ function initializeRadarCharts() {
 
 
 // Cutting Skills Visualization
+// Cuts thrown to (from catches) vs open and looked off (tapped), by cut type
+function initializeCutProfileCharts(profile, order, labels) {
+    const colors = ['75, 192, 192', '54, 162, 235', '153, 102, 255', '255, 159, 64'];
+    const successCtx = document.getElementById('cuttingSuccessChart');
+    if (successCtx) {
+        new Chart(successCtx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Thrown to', data: order.map(k => profile[k].thrown_to),
+                      backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                    { label: 'Open, looked off', data: order.map(k => profile[k].looked_off),
+                      backgroundColor: 'rgba(255, 159, 64, 0.7)' },
+                ],
+            },
+            options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } },
+        });
+    }
+    const typeCtx = document.getElementById('cuttingTypeChart');
+    if (typeCtx) {
+        new Chart(typeCtx, {
+            type: 'pie',
+            data: {
+                labels,
+                datasets: [{
+                    data: order.map(k => profile[k].thrown_to),
+                    backgroundColor: colors.map(c => `rgba(${c}, 0.6)`),
+                    borderColor: colors.map(c => `rgba(${c}, 1)`),
+                    borderWidth: 1,
+                }],
+            },
+            options: { responsive: true, plugins: { legend: { position: 'right' } } },
+        });
+    }
+}
+
 function initializeCuttingSkillsVisualizations() {
     // Check if we have cutting data
     const cuttingData = {{ cutting_data|tojson|safe if cutting_data else '[]' }};
     
+    const cutProfile = {{ cut_profile.by_type|tojson }};
+    const cutOrder = ['open_deep', 'open_under', 'break_deep', 'break_under'];
+    initializeCutProfileCharts(cutProfile, cutOrder, cutOrder.map(k => cutProfile[k].label));
+
     if (!cuttingData || cuttingData.length === 0) {
-        // If no data, display a message in each tab
-        document.querySelectorAll('#cutting-summary, #cutting-heatmap, #cutting-details').forEach(el => {
+        // If no data, display a message in the heatmap and details tabs
+        document.querySelectorAll('#cutting-heatmap, #cutting-details').forEach(el => {
             if (el) {
                 el.innerHTML = '<div class="alert alert-info">No cutting skills data available for this player.</div>';
             }
@@ -1452,112 +1644,6 @@ function initializeCuttingSkillsVisualizations() {
         return;
     }
     
-    // Initialize Success Rate Chart
-    const successCtx = document.getElementById('cuttingSuccessChart');
-    if (successCtx) {
-        new Chart(successCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Open Deep', 'Open Under', 'Break Deep', 'Break Under'],
-                datasets: [{
-                    label: 'Success Rate (%)',
-                    data: [
-                        {{ cutting_stats.by_type.open_deep.success_rate|default(0)|round(1) }},
-                        {{ cutting_stats.by_type.open_under.success_rate|default(0)|round(1) }},
-                        {{ cutting_stats.by_type.break_deep.success_rate|default(0)|round(1) }},
-                        {{ cutting_stats.by_type.break_under.success_rate|default(0)|round(1) }}
-                    ],
-                    backgroundColor: [
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(153, 102, 255, 0.6)',
-                        'rgba(255, 159, 64, 0.6)'
-                    ],
-                    borderColor: [
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: 'Success Rate (%)'
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Initialize Cutting Type Distribution Chart
-    const typeCtx = document.getElementById('cuttingTypeChart');
-    if (typeCtx) {
-        new Chart(typeCtx, {
-            type: 'pie',
-            data: {
-                labels: ['Open Deep', 'Open Under', 'Break Deep', 'Break Under'],
-                datasets: [{
-                    data: [
-                        {{ cutting_stats.by_type.open_deep.total|default(0) }},
-                        {{ cutting_stats.by_type.open_under.total|default(0) }},
-                        {{ cutting_stats.by_type.break_deep.total|default(0) }},
-                        {{ cutting_stats.by_type.break_under.total|default(0) }}
-                    ],
-                    backgroundColor: [
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(153, 102, 255, 0.6)',
-                        'rgba(255, 159, 64, 0.6)'
-                    ],
-                    borderColor: [
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = Math.round((value / total) * 100);
-                                return `${label}: ${value} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Initialize Cutting Heatmap
     if (document.getElementById('cutting-field-heatmap')) {
         const heatmapContainer = document.getElementById('cutting-heatmap-container');
         const heatmapInstance = h337.create({
@@ -1585,7 +1671,7 @@ function initializeCuttingSkillsVisualizations() {
             // Filter by outcome
             if (filter !== 'all') {
                 filteredData = filteredData.filter(point => {
-                    const isSuccessful = point.outcome === 'open_thrown_to' || point.outcome === 'guarded_thrown_to';
+                    const isSuccessful = ['thrown_to', 'open_thrown_to', 'guarded_thrown_to'].includes(point.outcome);
                     return filter === 'successful' ? isSuccessful : !isSuccessful;
                 });
             }
@@ -1702,23 +1788,25 @@ function createThrowDirectionRadar() {
         ];
         
         // Create a mapping from compass directions to field directions
+        // Chart.js draws clockwise from the top, so with Forward (E) at the
+        // top the thrower's right (N, +y) is on the right of the chart.
         const directionMapping = {
-            'N': 'Left',    // North is right
-            'NNE': 'Forward-Very Left',
-            'NE': 'Forward-Left',
-            'ENE': 'Forward-Slight Left',
-            'E': 'Forward',      // East is forward
-            'ESE': 'Forward-Slight Right',
-            'SE': 'Forward-Right',
-            'SSE': 'Forward-Very Right',
-            'S': 'Right',       // South is left
-            'SSW': 'Back-Slight Right',
-            'SW': 'Back-Right',
-            'WSW': 'Back-Very Right',
-            'W': 'Back',       // West is back
-            'WNW': 'Back-Slight Left',
-            'NW': 'Back-Left',
-            'NNW': 'Back-Very Left'
+            'E': 'Forward',
+            'ENE': 'Forward-Slight Right',
+            'NE': 'Forward-Right',
+            'NNE': 'Forward-Very Right',
+            'N': 'Right',
+            'NNW': 'Back-Very Right',
+            'NW': 'Back-Right',
+            'WNW': 'Back-Slight Right',
+            'W': 'Back',
+            'WSW': 'Back-Slight Left',
+            'SW': 'Back-Left',
+            'SSW': 'Back-Very Left',
+            'S': 'Left',
+            'SSE': 'Forward-Very Left',
+            'SE': 'Forward-Left',
+            'ESE': 'Forward-Slight Left'
         };
 
 
@@ -1925,8 +2013,8 @@ function createThrowDirectionRadar() {
                                 const dataset = context.dataset;
                                 const dataIndex = context.dataIndex;
                     
-                                // Get the actual direction (N, NNE, etc.)
-                                const actualDirection = chart.data.labels[dataIndex];  // Corrected
+                                const fieldDirection = chart.data.labels[dataIndex];
+                                const actualDirection = allDirections[dataIndex];  // E, ENE...
                     
                                 // Get the percentage for the current segment
                                 const percentage = dataset.data[dataIndex].toFixed(1);
@@ -1937,7 +2025,7 @@ function createThrowDirectionRadar() {
                                 const completionRate = (count > 0) ? ((completions / count) * 100).toFixed(1) : 0;
                     
                                 return [
-                                    `Direction: ${actualDirection}`, // Show actual direction
+                                    `Direction: ${fieldDirection}`,
                                     `${percentage}% of all throws (${count} throws)`,
                                     `Completion rate: ${completionRate}% (${completions}/${count})`
                                 ];
@@ -1948,454 +2036,40 @@ function createThrowDirectionRadar() {
                 },
                 scales: {
                     r: {
+                        // Each segment is 22.5 degrees wide: start half a
+                        // segment early so Forward is centred on the top
+                        // (labels sit at segment centres, below).
+                        startAngle: -11.25,
                         beginAtZero: true,
                         max: Math.ceil(Math.max(...Object.values(throwPercentages)) / 5) * 5, // Round up to nearest 5%
                         ticks: {
                             stepSize: 5
                         },
                         pointLabels: {
+                            display: true,
+                            centerPointLabels: true,
                             font: {
                                 size: 10,
                                 weight: 'bold'
                             },
                             callback: function(label) {
                                 // Simplify labels for better display
-                                if (label === 'Forward' || label === 'Back' || 
-                                    label === 'Left' || label === 'Right') {
+                                if (label === 'Right') return 'RIGHT (FH side)';
+                                if (label === 'Left') return 'LEFT (BH side)';
+                                if (label === 'Forward' || label === 'Back') {
                                     return label.toUpperCase();
                                 }
-                                // For other labels, just show the first letter of each part
-                                return label.split(' ')[0];
+                                return label;
                             }
                         }
                     }
-                },
-                startAngle: 0
+                }
             } 
         });
         
         console.log('Throw direction chart created successfully');
     } catch (error) {
         console.error('Error creating throw direction chart:', error);
-    }
-}
-
-// Throw Success Rate by Field Zone Visualization
-function createThrowSuccessZoneVisualization() {
-    const canvas = document.getElementById('throw-success-canvas');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    
-    // Set canvas resolution to match display size
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    
-    // Define field dimensions
-    const fieldWidth = width;
-    const fieldHeight = height;
-    const fieldColor = '#4CAF50';  // Green
-    const lineColor = '#FFFFFF';   // White
-    const textColor = '#000000';   // Black
-    
-    // Define field zones (5x3 grid)
-    const xZones = 5;
-    const yZones = 3;
-    const zoneWidth = fieldWidth / xZones;
-    const zoneHeight = fieldHeight / yZones;
-    
-    // Calculate throw success rates by zone from throw vectors
-    const zoneStats = calculateZoneStats(vizData.throwVectors, xZones, yZones);
-    
-    // Draw field background
-    ctx.fillStyle = fieldColor;
-    ctx.fillRect(0, 0, fieldWidth, fieldHeight);
-    
-    // Draw endzones
-    ctx.fillStyle = '#388E3C';  // Darker green
-    ctx.fillRect(0, 0, fieldWidth / xZones, fieldHeight);  // Own endzone
-    ctx.fillRect(fieldWidth - fieldWidth / xZones, 0, fieldWidth / xZones, fieldHeight);  // Opponent endzone
-    
-    // Draw zone grid
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 3]);  // Dashed line
-    
-    // Draw vertical lines
-    for (let i = 1; i < xZones; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * zoneWidth, 0);
-        ctx.lineTo(i * zoneWidth, fieldHeight);
-        ctx.stroke();
-    }
-    
-    // Draw horizontal lines
-    for (let i = 1; i < yZones; i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, i * zoneHeight);
-        ctx.lineTo(fieldWidth, i * zoneHeight);
-        ctx.stroke();
-    }
-    
-    // Draw field outline
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);  // Solid line
-    ctx.strokeRect(0, 0, fieldWidth, fieldHeight);
-    
-    // Color zones based on success rate
-    for (let x = 0; x < xZones; x++) {
-        for (let y = 0; y < yZones; y++) {
-            const zoneKey = `${x}-${y}`;
-            const zoneData = zoneStats[zoneKey];
-            
-            if (zoneData && zoneData.total > 0) {
-                const successRate = (zoneData.completions / zoneData.total) * 100;
-                
-                // Determine color based on success rate
-                let color;
-                if (successRate >= 90) {
-                    color = 'rgba(40, 167, 69, 0.7)';  // Green for high success
-                } else if (successRate >= 70) {
-                    color = 'rgba(255, 193, 7, 0.7)';  // Yellow for medium success
-                } else {
-                    color = 'rgba(220, 53, 69, 0.7)';  // Red for low success
-                }
-                
-                // Fill zone with color
-                ctx.fillStyle = color;
-                ctx.fillRect(x * zoneWidth, y * zoneHeight, zoneWidth, zoneHeight);
-                
-                // Add text showing success rate and throw count
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(
-                    `${successRate.toFixed(0)}%`,
-                    x * zoneWidth + zoneWidth / 2,
-                    y * zoneHeight + zoneHeight / 2 - 10
-                );
-                ctx.fillText(
-                    `(${zoneData.completions}/${zoneData.total})`,
-                    x * zoneWidth + zoneWidth / 2,
-                    y * zoneHeight + zoneHeight / 2 + 10
-                );
-            }
-        }
-    }
-}
-
-// Helper function to calculate zone statistics
-function calculateZoneStats(throwVectors, xZones, yZones) {
-    const zoneStats = {};
-    
-    // Initialize all zones
-    for (let x = 0; x < xZones; x++) {
-        for (let y = 0; y < yZones; y++) {
-            zoneStats[`${x}-${y}`] = { total: 0, completions: 0 };
-        }
-    }
-    
-    // Process throw vectors
-    throwVectors.forEach(vector => {
-        if (!vector.start_x || !vector.start_y) return;
-        
-        // Normalize coordinates to 0-1 range
-        // Assuming field coordinates are in the range 0-100 for x and 0-37 for y
-        const normX = Math.min(Math.max(vector.start_x / 100, 0), 0.99);
-        const normY = Math.min(Math.max(vector.start_y / 37, 0), 0.99);
-        
-        // Calculate zone indices
-        const xZone = Math.floor(normX * xZones);
-        const yZone = Math.floor(normY * yZones);
-        
-        // Update zone stats
-        const zoneKey = `${xZone}-${yZone}`;
-        zoneStats[zoneKey].total++;
-        
-        // Check if throw was completed
-        const isCompletion = vector.type !== 'throwaway';
-        if (isCompletion) {
-            zoneStats[zoneKey].completions++;
-        }
-    });
-    
-    return zoneStats;
-}
-
-function drawFieldDiagram() {
-    const canvas = document.getElementById('field-diagram');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
-    
-    // Set canvas resolution to match display size
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    
-    // Define field dimensions and zones
-    const fieldWidth = width;
-    const fieldHeight = height;
-    const fieldColor = '#4CAF50';  // Green
-    const lineColor = '#FFFFFF';   // White
-    const textColor = '#000000';   // Black
-    const highlightColor = 'rgba(220, 53, 69, 0.5)';  // Semi-transparent red
-    
-    // Define zones (same as in calculate_most_common_throwaway_location)
-    const xZones = [
-        { start: 0, end: 0.2, name: "Own Endzone" },
-        { start: 0.2, end: 0.4, name: "Defensive Third" },
-        { start: 0.4, end: 0.6, name: "Midfield" },
-        { start: 0.6, end: 0.8, name: "Attacking Third" },
-        { start: 0.8, end: 1.0, name: "Opponent Endzone" }
-    ];
-    
-    const yZones = [
-        { start: 0, end: 0.33, name: "Left Sideline" },
-        { start: 0.33, end: 0.67, name: "Center of Field" },
-        { start: 0.67, end: 1.0, name: "Right Sideline" }
-    ];
-    
-    // Draw field background
-    ctx.fillStyle = fieldColor;
-    ctx.fillRect(0, 0, fieldWidth, fieldHeight);
-    
-    // Draw endzones
-    ctx.fillStyle = '#388E3C';  // Darker green
-    ctx.fillRect(0, 0, fieldWidth * 0.2, fieldHeight);  // Own endzone
-    ctx.fillRect(fieldWidth * 0.8, 0, fieldWidth * 0.2, fieldHeight);  // Opponent endzone
-    
-    // Draw vertical zone lines
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 3]);  // Dashed line
-    
-    xZones.forEach(zone => {
-        if (zone.start > 0 && zone.start < 1) {
-            ctx.beginPath();
-            ctx.moveTo(fieldWidth * zone.start, 0);
-            ctx.lineTo(fieldWidth * zone.start, fieldHeight);
-            ctx.stroke();
-        }
-    });
-    
-    // Draw horizontal zone lines
-    yZones.forEach(zone => {
-        if (zone.start > 0 && zone.start < 1) {
-            ctx.beginPath();
-            ctx.moveTo(0, fieldHeight * zone.start);
-            ctx.lineTo(fieldWidth, fieldHeight * zone.start);
-            ctx.stroke();
-        }
-    });
-    
-    // Draw field outline
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([]);  // Solid line
-    ctx.strokeRect(0, 0, fieldWidth, fieldHeight);
-    
-    // Draw midfield line
-    ctx.beginPath();
-    ctx.moveTo(fieldWidth * 0.5, 0);
-    ctx.lineTo(fieldWidth * 0.5, fieldHeight);
-    ctx.stroke();
-    
-    // Draw endzone lines
-    ctx.beginPath();
-    ctx.moveTo(fieldWidth * 0.2, 0);
-    ctx.lineTo(fieldWidth * 0.2, fieldHeight);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(fieldWidth * 0.8, 0);
-    ctx.lineTo(fieldWidth * 0.8, fieldHeight);
-    ctx.stroke();
-    
-    // Add zone labels
-    ctx.font = '10px Arial';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // X zone labels
-    xZones.forEach(zone => {
-        const centerX = fieldWidth * (zone.start + zone.end) / 2;
-        ctx.fillText(zone.name, centerX, fieldHeight - 10);
-    });
-    
-    // Y zone labels (rotated)
-    ctx.save();
-    ctx.translate(10, fieldHeight / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Left Sideline", 0, -fieldWidth * 0.17);
-    ctx.fillText("Center", 0, 0);
-    ctx.fillText("Right Sideline", 0, fieldWidth * 0.17);
-    ctx.restore();
-    
-    // Parse the most common throwaway location
-    const mostCommonLocation = "{{ most_common_throwaway_location }}";
-    
-    // Parse the location string to get the zones
-    if (mostCommonLocation && mostCommonLocation !== "N/A") {
-        const parts = mostCommonLocation.split(", ");
-        if (parts.length === 2) {
-            const [yZoneName, xZoneName] = parts;
-            
-            // Find the corresponding zones
-            const xZone = xZones.find(zone => zone.name === xZoneName);
-            const yZone = yZones.find(zone => zone.name === yZoneName);
-            
-            if (xZone && yZone) {
-                // Highlight the zone
-                ctx.fillStyle = highlightColor;
-                ctx.fillRect(
-                    fieldWidth * xZone.start,
-                    fieldHeight * yZone.start,
-                    fieldWidth * (xZone.end - xZone.start),
-                    fieldHeight * (yZone.end - yZone.start)
-                );
-                
-                // Add a label in the highlighted zone
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 12px Arial';
-                ctx.fillText(
-                    "Most Common",
-                    fieldWidth * (xZone.start + xZone.end) / 2,
-                    fieldHeight * (yZone.start + yZone.end) / 2 - 10
-                );
-                ctx.fillText(
-                    "Throwaway Zone",
-                    fieldWidth * (xZone.start + xZone.end) / 2,
-                    fieldHeight * (yZone.start + yZone.end) / 2 + 10
-                );
-            }
-        }
-    }
-}
-
-function createThrowawayDirectionChart() {
-    const chartContainer = document.getElementById('throwaway-direction-chart');
-    if (!chartContainer) return;
-    
-    // Get direction data from template
-    const directionData = {{ throwaway_direction_data.direction_data|tojson|safe }};
-    if (!directionData || Object.keys(directionData).length === 0) {
-        chartContainer.innerHTML = '<div class="text-center text-muted pt-5">No throwaway direction data available</div>';
-        return;
-    }
-    
-    // Define field directions in order (clockwise from East)
-    const directions = [
-        'E', 'ENE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'WNW',
-        'W', 'WSW', 'SW', 'SSW', 'S', 'SSE', 'SE', 'ESE'
-    ];
-    
-    // Field-friendly labels
-    const fieldLabels = {
-        'E': 'Upfield',
-        'N': 'Right',
-        'W': 'Downfield',
-        'S': 'Left'
-    };
-    
-    // Create the chart
-    const ctx = document.createElement('canvas');
-    ctx.height = 200;
-    chartContainer.appendChild(ctx);
-    
-    try {
-        new Chart(ctx, {
-            type: 'polarArea',
-            data: {
-                labels: directions.map(d => fieldLabels[d] || ''),
-                datasets: [{
-                    data: directions.map(d => directionData[d] || 0),
-                    backgroundColor: directions.map(d => {
-                        // Highlight the most common direction
-                        const value = directionData[d] || 0;
-                        const max = Math.max(...Object.values(directionData));
-                        
-                        if (value === max && value > 0) {
-                            return 'rgba(220, 53, 69, 0.8)'; // Bootstrap danger color
-                        } else {
-                            return 'rgba(108, 117, 125, 0.5)'; // Bootstrap secondary color
-                        }
-                    })
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const direction = directions[context.dataIndex];
-                                const count = directionData[direction] || 0;
-                                const total = Object.values(directionData).reduce((a, b) => a + b, 0);
-                                const percentage = ((count / total) * 100).toFixed(1);
-                                
-                                // Get field-relative direction
-                                const fieldDirectionMapping = {
-                                    'E': "Directly Upfield",
-                                    'ENE': "Slightly Right Upfield",
-                                    'NE': "Upfield Right",
-                                    'NNE': "Far Right Upfield",
-                                    'N': "Directly Right",
-                                    'NNW': "Far Right Downfield",
-                                    'NW': "Downfield Right",
-                                    'WNW': "Slightly Right Downfield",
-                                    'W': "Directly Downfield",
-                                    'WSW': "Slightly Left Downfield",
-                                    'SW': "Downfield Left",
-                                    'SSW': "Far Left Downfield",
-                                    'S': "Directly Left",
-                                    'SSE': "Far Left Upfield",
-                                    'SE': "Upfield Left",
-                                    'ESE': "Slightly Left Upfield"
-                                };
-                                
-                                return `${fieldDirectionMapping[direction]}: ${count} (${percentage}%)`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    r: {
-                        ticks: {
-                            display: false
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        pointLabels: {
-                            display: true,
-                            font: {
-                                size: 10
-                            },
-                            callback: function(label, index) {
-                                // Only show the main compass points
-                                return ['Upfield', '', '', '', 'Right', '', '', '', 'Downfield', '', '', '', 'Left', '', '', ''][index];
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    } catch (error) {
-        console.error('Error creating throwaway direction chart:', error);
-        chartContainer.innerHTML = '<div class="text-center text-muted pt-5">Error creating chart</div>';
     }
 }
 
@@ -2897,7 +2571,7 @@ function generatePrintableReport() {
                     </tr>
                     <tr>
                         <th>Forced Turnovers</th>
-                        <td>{{ stats.blocks + stats.stalls }}</td>
+                        <td>{{ stats.blocks + stats.forced_turnovers }}</td>
                         <th>D-Line Points</th>
                         <td>{{ stats.d_line_points_played }}</td>
                     </tr>
@@ -2986,9 +2660,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize radar charts for the Overview tab (which is visible by default)
         initializeRadarCharts();
         
-        // Initialize throwaway direction chart and field diagram
-        createThrowawayDirectionChart();
-        drawFieldDiagram();
 
         // --- Lazy Loading for Charts in Tabs ---
         // This ensures charts are only rendered when their tab is visible, which is more efficient.
@@ -3006,9 +2677,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!Chart.getChart('throwDirectionRadar')) {
                     createThrowDirectionRadar();
                 }
-                
-                // Check if Field Zone chart has been initialized
-                createThrowSuccessZoneVisualization();
             });
         }
 
@@ -3016,8 +2684,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const historyTab = document.getElementById('history-tab');
         if (historyTab) {
             historyTab.addEventListener('shown.bs.tab', function() {
-                if (!window.performanceTrendChart) {
-                    window.performanceTrendChart = initializePerformanceTrendChart();
+                // Not window.performanceTrendChart: that name is the canvas
+                // itself (elements with an id are globals), so it was never empty.
+                if (!Chart.getChart('performanceTrendChart')) {
+                    initializePerformanceTrendChart();
+                }
+                if (!Chart.getChart('ballSecurityTrendChart')) {
+                    initializeBallSecurityTrendChart();
                 }
             });
         }

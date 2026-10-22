@@ -31,7 +31,9 @@ class CuttingSkill(db.Model):
                            backref=db.backref('cutting_skills', lazy='dynamic'))
     
     # Define valid cutting types and outcomes
-    VALID_CUTTING_TYPES = ['open_deep', 'open_under', 'break_deep', 'break_under']
+    DETAILED_CUTTING_TYPES = ['open_deep', 'open_under', 'break_deep', 'break_under']
+    # 'unspecified': logged with the one-tap "open, not thrown to" button
+    VALID_CUTTING_TYPES = DETAILED_CUTTING_TYPES + ['unspecified']
     VALID_OUTCOMES = ['open_looked_off', 'guarded_looked_off', 'open_thrown_to', 'guarded_thrown_to']
     
     @validates('cutting_type')

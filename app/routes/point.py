@@ -7,6 +7,7 @@ from app.models.player import Player
 from app.models.event import Pull, Event
 from app.forms.point import PointForm
 from app.models.throws import Throw
+from app.stats.throwing import is_break_throw
 from app.models.stats import PlayerPointStats
 from app.utils.utils import admin_required, stat_taker_required
 from app.utils.team_filter import get_current_team_id
@@ -411,7 +412,12 @@ def edit_point(point_id):
             point.point_outcome = form.point_outcome.data or None
             point.duration = form.duration.data
             point.timestamp_in_video = form.timestamp_in_video.data
-            point.force_direction = form.force_direction.data
+            if point.force_direction != form.force_direction.data:
+                point.force_direction = form.force_direction.data
+                # Open/break depends on the force, so re-mark this point's throws.
+                for throw in point.throws:
+                    throw.break_throw = is_break_throw(throw.x_start, throw.y_start, throw.x_end,
+                                                       throw.y_end, point.force_direction)
             point.gender_ratio = gender_ratio
             point.majority_gender = majority
 

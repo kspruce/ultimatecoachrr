@@ -1,6 +1,8 @@
 {% extends "base.html" %}
+{% import "stats/_turnover_macros.html" as tm %}
 
 {% block styles %}
+{{ tm.styles() }}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
 <style>
     .stat-card {
@@ -481,6 +483,129 @@
     {% endif %}
 
 
+    {% set bs = ball_security %}
+    <div class="row mb-4">
+        <div class="col-lg-5 mb-3 mb-lg-0">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Practice Focus{% if bs.practice_period %} <small class="text-muted fw-normal">· {{ bs.practice_period.current_label }}</small>{% endif %}
+                        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip"
+                           title="{% if bs.practice_period %}Throws whose completion slipped most in {{ bs.practice_period.current_label }} compared with earlier games.{% else %}Throws that cause more than their share of the turnovers.{% endif %} If nothing slipped, it falls back to the turnover share."></i>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for item in bs.practice %}
+                    <div class="focus-item">
+                        <div class="focus-title">{{ loop.index }}. {{ item.text }}</div>
+                        <div class="small">{{ item.detail }} · {{ item.attempts }} throws</div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Nothing stands out: no throw type causes much more than its share of the turnovers.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">What Turnovers Cost
+                        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip"
+                           title="After each of our turnovers, did they score before we got it back? Split by where they picked it up."></i>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>{{ tm.pct(bs.cost.conceded_rate) }}</strong> of our {{ bs.cost.turnovers }} turnovers
+                        turned into a goal for them.
+                    </p>
+                    <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>They picked it up in</th><th class="text-end">Turnovers</th><th class="text-end">They scored</th></tr></thead>
+                        <tbody>
+                            {% for row in bs.cost.rows %}
+                            <tr class="{{ '' if row.turnovers >= 3 else 'to-small-n' }}">
+                                <td>{{ row.label }}</td>
+                                <td class="text-end">{{ row.turnovers }}</td>
+                                <td class="text-end {{ 'to-bad' if row.turnovers >= 3 and row.conceded_rate is not none and bs.cost.conceded_rate is not none and row.conceded_rate - bs.cost.conceded_rate >= 10 else '' }}">{{ tm.pct(row.conceded_rate) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    <p class="small text-muted mt-2 mb-0">"Own" is the end we're defending; positions are saved attacking left → right.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0">Where Turnovers Come From</h5></div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        Team completion <strong>{{ tm.pct(bs.handling.completion_rate) }}</strong>
+                        · <strong>{{ "%.1f"|format(bs.handling.turnovers_per_10) if bs.handling.turnovers_per_10 is not none else '–' }}</strong> turnovers per 10 touches
+                        · hucks {{ tm.pct(bs.handling.huck_completion_rate) }} ({{ bs.handling.huck_attempts }})
+                        · break side {{ tm.pct(bs.handling.break_completion_rate) }} ({{ bs.handling.break_attempts }})
+                    </p>
+                    {{ tm.breakdown_tables(bs.breakdown, who='Team') }}
+                    <h6 class="text-muted text-uppercase small mt-2 mb-1">Completion by where it was thrown from</h6>
+                    {{ tm.zone_grid(bs.zones, compare=False) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-3 mb-lg-0">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Ball Security by Player
+                        <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip"
+                           title="Turnovers (throwaways, drops, stalls) per 10 touches, so busy handlers aren't penalised for touching it more. Players with {{ bs.min_touches }}+ touches."></i>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if bs.leaderboard %}
+                    <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Player</th><th class="text-end">Touches</th><th class="text-end">TOs</th><th class="text-end">Per 10</th><th class="text-end">Comp.</th></tr></thead>
+                        <tbody>
+                            {% for row in bs.leaderboard %}
+                            <tr>
+                                <td><a href="{{ url_for('stats_dashboard.player_stats', player_id=row.player.id) }}">{{ row.player.name }}</a></td>
+                                <td class="text-end">{{ row.touches }}</td>
+                                <td class="text-end">{{ row.turnovers }}</td>
+                                <td class="text-end fw-bold {{ 'to-bad' if bs.handling.turnovers_per_10 and row.turnovers_per_10 >= bs.handling.turnovers_per_10 * 1.5 else ('to-ok' if bs.handling.turnovers_per_10 and row.turnovers_per_10 <= bs.handling.turnovers_per_10 * 0.5 else '') }}">{{ "%.1f"|format(row.turnovers_per_10) }}</td>
+                                <td class="text-end">{{ tm.pct(row.completion_rate) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No one has {{ bs.min_touches }}+ touches in these games yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Ball Security Trend
+                        <small class="text-muted fw-normal">· {{ bs.trends.window }}-game rolling</small>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 320px;">
+                        <canvas id="teamBallSecurityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add before the player statistics table in team_stats.html -->
     <div class="row mb-4">
         <div class="col-12">
@@ -509,6 +634,48 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Team turnovers per 10 touches and completion rates, per game (rolling)
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('teamBallSecurityChart');
+    if (!ctx || typeof Chart === 'undefined') return;
+    const t = {{ ball_security.trends|tojson }};
+    if (!t.labels.length) {
+        ctx.parentElement.innerHTML = '<div class="alert alert-info text-center my-3">No throws recorded yet.</div>';
+        return;
+    }
+    const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const line = (label, data, color, axis, rolling = true) => ({
+        label, data, yAxisID: axis, borderColor: color, backgroundColor: color,
+        borderWidth: rolling ? 2.5 : 0, pointRadius: rolling ? 0 : 4, showLine: rolling,
+        tension: 0.3, spanGaps: true,
+    });
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: t.labels,
+            datasets: [
+                line('Turnovers / 10 touches (game)', t.turnovers_per_10, css('--bad'), 'y', false),
+                line('Turnovers / 10 touches', t.turnovers_per_10_rolling, css('--bad'), 'y'),
+                line('Completion %', t.completion_rate_rolling, css('--ok'), 'pct'),
+                line('Huck completion %', t.huck_completion_rate_rolling, css('--warn'), 'pct'),
+                line('Break-side share %', t.break_share_rolling, css('--ink-3'), 'pct'),
+                { label: 'Hucks per game', data: t.hucks, type: 'bar', yAxisID: 'y',
+                  backgroundColor: 'rgba(150, 139, 132, 0.25)', hidden: true },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { ticks: { maxRotation: 45, minRotation: 30, font: { size: 10 } } },
+                y: { beginAtZero: true, suggestedMax: 2, position: 'left', title: { display: true, text: 'TOs / 10 · hucks' } },
+                pct: { min: 0, max: 100, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '%' } },
+            },
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+        },
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
