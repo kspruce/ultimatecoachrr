@@ -462,6 +462,67 @@ def enrolment_progress(enrolment, today=None):
     return p
 
 
+def this_week(programme, version, enrolment=None, progress=None, today=None):
+    """What's on now, for the top of the player page: each track's week that
+    contains today and the session to do next.
+
+    When no week contains today (before the start, or a pause) it is the next
+    weeks to start, with `starts` set; after the end `finished` is set and
+    there are no weeks. A relative programme with no start date yet shows each
+    track's first week."""
+    today = today or date.today()
+    out = {'weeks': [], 'next': None, 'starts': None, 'finished': False, 'required': 0, 'done': 0}
+    if anchor(programme, enrolment) is None:
+        out['weeks'] = [(t, t.weeks[0], None) for t in version.tracks if t.weeks]
+    else:
+        dated = [(t, w, week_start(programme, t, w, enrolment)) for t in version.tracks for w in t.weeks]
+        out['weeks'] = [(t, w, s) for t, w, s in dated if s <= today < s + timedelta(days=7)]
+        if not out['weeks']:
+            future = [s for _, _, s in dated if s > today]
+            if future:
+                out['starts'] = min(future)
+                out['weeks'] = [(t, w, s) for t, w, s in dated if s == out['starts']]
+            else:
+                out['finished'] = bool(dated)
+    units = progress['units'] if progress else {}
+    seen = set()
+    candidates = []
+    for _, week, _ in out['weeks']:
+        if week.is_rest:
+            continue
+        for s in week.sessions:
+            status = units.get(s.completion_unit)
+            if s.completion_unit not in seen and s.requirement != 'optional':
+                seen.add(s.completion_unit)
+                out['required'] += 1
+                out['done'] += status in ('done', 'skipped')
+            if status not in ('done', 'skipped', 'not_expected'):
+                candidates.append(s)
+    out['next'] = next((s for s in candidates if s.requirement != 'optional'), None) or \
+        next(iter(candidates), None)
+    first = out['weeks'][0][2] if out['weeks'] else None
+    out['week_of'] = (first, first + timedelta(days=6)) if first else None
+    return out
+
+
+def players_week(player, today=None):
+    """[(enrolment, this_week)] for a player's live programmes, for the
+    homepage card."""
+    if player is None:
+        return []
+    enrolments = (ProgrammeEnrolment.query.join(Programme)
+                  .filter(ProgrammeEnrolment.player_id == player.id,
+                          ProgrammeEnrolment.team_organization_id == player.team_organization_id,
+                          ProgrammeEnrolment.status == 'active', Programme.archived.is_(False))
+                  .all())
+    out = []
+    for e in enrolments:
+        now = this_week(e.programme, e.version, e, enrolment_progress(e, today), today)
+        if not now['finished']:
+            out.append((e, now))
+    return out
+
+
 def _sum_or_none(values):
     values = [v for v in values if v is not None]
     return sum(values) if values else None

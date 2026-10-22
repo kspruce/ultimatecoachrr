@@ -554,6 +554,47 @@ def test_missing_is_not_skipped_and_alternatives_count_once(app, clubs):
     assert d['follow_up'] and 'completion 33%' in d['follow_up'][0]['follow_up']
 
 
+def test_this_week_shows_what_is_up_next(app, clubs):
+    """The top of the player page: this week's sessions across tracks and
+    the next one to do, required before optional."""
+    start = date(2026, 1, 5)
+    programme = make_programme(clubs['herd'], start, [
+        ('Gym', [[('Stretch', 'optional', None), ('Squats', 'required', None)],
+                 [('Lunges', 'required', None)], 'rest'], 1, 0),
+        ('Throwing', [[('Clock drill', 'required', None)]] * 3, 1, 1),
+    ])
+    version = programme.published
+    gym, throwing = version.tracks
+    player = db.session.get(Player, clubs['herd_player'])
+    enrolment, _ = svc.enrol(programme, player, start_offset_weeks=0)
+    db.session.commit()
+
+    # Before the start: the first weeks, and when they start
+    now = svc.this_week(programme, version, enrolment, svc.enrolment_progress(enrolment, date(2026, 1, 1)),
+                        date(2026, 1, 1))
+    assert now['starts'] == start and [w for _, w, _ in now['weeks']] == [gym.weeks[0]]
+    assert now['next'].title == 'Squats'
+
+    # Week 2: gym week 2 and throwing week 1 are both on
+    today = date(2026, 1, 14)
+    now = svc.this_week(programme, version, enrolment, svc.enrolment_progress(enrolment, today), today)
+    assert now['starts'] is None and now['week_of'] == (date(2026, 1, 12), date(2026, 1, 18))
+    assert [w for _, w, _ in now['weeks']] == [gym.weeks[1], throwing.weeks[0]]
+    assert (now['next'].title, now['done'], now['required']) == ('Lunges', 0, 2)
+    lunges = gym.weeks[1].sessions[0]
+    db.session.add(SessionLog(enrolment=enrolment, session=lunges, session_key=lunges.key, status='completed',
+                              completed_on=today, team_organization_id=clubs['herd']))
+    db.session.commit()
+    now = svc.this_week(programme, version, enrolment, svc.enrolment_progress(enrolment, today), today)
+    assert (now['next'].title, now['done']) == ('Clock drill', 1)
+
+    # The player's homepage card and the page itself
+    assert [n['next'].title for _, n in svc.players_week(player, today)] == ['Clock drill']
+    assert svc.this_week(programme, version, enrolment, None, date(2026, 3, 1))['finished']
+    page = ok(client(app, clubs, 'herd_player').get(f'/programmes/{programme.id}/me'))
+    assert 'id="this-week"' in page and 'Programme finished' in page  # it ended in March
+
+
 def test_validation_blocks_broken_programmes(app, clubs):
     programme = Programme(team_organization_id=clubs['herd'], name='Broken', schedule_mode='calendar')
     db.session.add(programme)
@@ -818,6 +859,11 @@ def test_every_page_renders_for_a_full_programme(app, clubs):
     me = ok(p.get(f'/programmes/{pid}/me'))
     assert 'Hill sprints' in me and 'Deadmill sprints' in me and 'this week' in me and 'Record results' in me
     assert '1.85 s' in me and '1.8 s' in me
+    # This week comes first, with the next session to do; the homepage links to it
+    assert me.index('id="this-week"') < me.index('id="all-weeks"') and 'Up next' in me
+    ok(p.get('/welcome/'))  # first visit shows the welcome
+    home = ok(p.get('/'))
+    assert 'Up next:' in home and f'/programmes/{pid}/me#this-week' in home
     ok(p.get(f'/programmes/{pid}/log/{sid}'))
     ok(p.get(f'/programmes/{pid}/results'))
     # A player on exactly one programme goes straight to it; the nav shows it

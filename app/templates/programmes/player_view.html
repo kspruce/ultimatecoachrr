@@ -1,75 +1,16 @@
 {% extends "programmes/_layout.html" %}
 {# One page for: a player's own programme (enrolment set), a coach looking at
    a player (coach_view), a coach's preview of the draft (preview), and another
-   club's view of a shared template (shared_view: published content only). #}
+   club's view of a shared template (shared_view: published content only).
+   "This week" comes first so a player on a phone sees what to do next without
+   scrolling; the whole programme is underneath, folded away. #}
 {% block pg_content %}
 {% set coach_view = coach_view|default(false) %}
+{% set now = now|default(none) %}
 {% set can_log = enrolment and enrolment.status != 'withdrawn' and not current_user.is_guest %}
 {% set eid = enrolment.id if coach_view else none %}
 
-<div class="uc-page-header">
-  <div>
-    <div class="pg-label">
-      {% if preview %}Preview of {{ 'the draft' if version.is_draft else 'version ' ~ version.number }} as players see it
-      {% elif shared_view %}Shared template by {{ programme.team.name }} · v{{ version.number }}
-      {% elif coach_view %}{{ enrolment.player.name }} · v{{ version.number }}{% if enrolment.status != 'active' %} · {{ enrolment.status }}{% endif %}
-      {% else %}Your programme{% if enrolment.status != 'active' %} · {{ enrolment.status }}{% endif %}{% endif %}
-    </div>
-    <h1>{{ programme.name }}</h1>
-    {% if programme.description %}<p class="pg-pre">{{ programme.description }}</p>{% endif %}
-  </div>
-  {% if shared_view %}
-  <form method="post" action="{{ url_for('programmes.copy_shared', programme_id=programme.id) }}" class="d-flex gap-2 align-items-end flex-wrap">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div><label class="form-label small" for="cp-name">Name in your club</label><input class="form-control form-control-sm" id="cp-name" name="name" value="{{ programme.name }}"></div>
-    <div><label class="form-label small" for="cp-start">Start date</label><input type="date" class="form-control form-control-sm" id="cp-start" name="start_date"></div>
-    <button class="btn btn-primary btn-sm"><i class="bi bi-copy"></i> Copy to my club</button>
-  </form>
-  {% endif %}
-</div>
-
-{% if progress %}
-<div class="pg-stats">
-  <div class="pg-stat"><div class="pg-label">Completed</div>
-    <div class="pg-value">{{ '%d%%' % progress.completion if progress.completion is not none else '—' }}</div>
-    <div class="small pg-muted">{% if progress.due %}{{ progress.done }} of {{ progress.due }} required sessions so far{% else %}nothing due yet{% endif %}</div></div>
-  <div class="pg-stat"><div class="pg-label">Not logged</div><div class="pg-value">{{ progress.missing|length }}</div><div class="small pg-muted">from weeks that have ended</div></div>
-  <div class="pg-stat"><div class="pg-label">Skipped</div><div class="pg-value">{{ progress.skipped }}</div></div>
-  <div class="pg-stat"><div class="pg-label">Optional done</div><div class="pg-value">{{ progress.optional_done }}</div></div>
-  {% for t in progress.tracks %}
-  <div class="pg-stat"><div class="pg-label">{{ t.track.name }}</div>
-    <div class="pg-value">{% if t.week %}Week {{ t.week.number }}{% else %}—{% endif %}</div>
-    <div class="small pg-muted">{% if t.week %}of {{ t.track.first_week_number }}–{{ t.track.first_week_number + t.of - 1 }}{% else %}not running this week{% endif %}</div></div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{% if version.tests %}
-<div class="pg-card">
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><h2 class="mb-0">Tests</h2>
-    {% if can_log %}<a class="btn btn-sm btn-primary" href="{{ url_for('programmes.record_results', programme_id=programme.id, enrolment=eid) }}"><i class="bi bi-stopwatch"></i> Record results</a>{% endif %}</div>
-  {% if progress and progress.missing_tests %}
-  <p class="mt-2 mb-0"><span class="pg-badge pg-warn">due</span> {% for ms, t in progress.missing_tests %}{{ t.name }} ({{ ms.name }}){{ ', ' if not loop.last }}{% endfor %}</p>
-  {% endif %}
-  <div class="table-responsive mt-2"><table class="table table-sm mb-0">
-    <thead><tr><th>Test</th><th>How</th>{% if progress %}<th>First</th><th>Latest</th><th>Change</th>{% endif %}</tr></thead><tbody>
-    {% for t in version.tests %}
-    {% set s = progress.tests.get(t.key) if progress else none %}
-    <tr><td class="fw-semibold">{{ t.name }}</td>
-      <td class="small">{{ t.attempts }} attempt{{ 's' if t.attempts != 1 }}, {{ 'higher' if t.higher_is_better else 'lower' }} is better{% if t.instructions %}<div class="pg-pre pg-muted">{{ t.instructions }}</div>{% endif %}</td>
-      {% if progress %}
-      <td>{{ '%g %s'|format(s.first.value|round(3), t.unit) if s.first else '—' }}</td>
-      <td>{{ '%g %s'|format(s.latest.value|round(3), t.unit) if s.latest else '—' }}</td>
-      <td>{% if s.change is not none %}<span class="pg-badge {{ 'pg-ok' if s.change > 0 else ('pg-bad' if s.change < 0 else '') }}">{{ '%+g'|format((s.change if t.higher_is_better else -s.change)|round(3)) }} {{ t.unit }}</span>{% else %}—{% endif %}</td>
-      {% endif %}
-    </tr>
-    {% endfor %}
-  </tbody></table></div>
-  {% if version.milestones %}
-  <p class="small pg-muted mt-2 mb-0">{% for ms in version.milestones %}{{ ms.name }}{% if ms.week %}: {{ ms.week.track.name }} week {{ ms.week.number }}{% endif %}{{ ' · ' if not loop.last }}{% endfor %}</p>
-  {% endif %}
-</div>
-{% endif %}
+{% macro status_of(s) %}{{ progress.units.get(s.completion_unit) if progress else '' }}{% endmacro %}
 
 {% macro status_badge(s) %}
 {% if progress %}
@@ -85,50 +26,229 @@
 
 {% macro duration(sec) %}{% if sec is not none %}{% if sec >= 60 and sec % 60 == 0 %}{{ sec // 60 }} min{% else %}{{ sec }} s{% endif %}{% endif %}{% endmacro %}
 
-{% macro session_block(s, can_log, eid) %}
-<div class="pg-session">
-  <div class="d-flex justify-content-between gap-2 flex-wrap">
-    <div><span class="fw-semibold">{{ s.title }}</span> <span class="pg-badge">{{ s.type_label }}</span>
-      {% if s.requirement == 'optional' %}<span class="pg-badge">optional</span>{% elif s.requirement == 'alternative' %}<span class="pg-badge pg-warn">or: pick one ({{ s.alternative_group }})</span>{% endif %}
-      {% if s.duration_minutes %}<span class="small pg-muted">{{ s.duration_minutes }} min</span>{% endif %}
-      {{ status_badge(s) }}</div>
-    {% if can_log %}
-    {% set lg = logs.get(s.key) %}
-    <a class="btn btn-sm {{ 'btn-outline-secondary' if lg else 'btn-primary' }}" href="{{ url_for('programmes.log_session', programme_id=programme.id, session_id=s.id, enrolment=eid) }}">{{ 'Edit log' if lg else 'Log it' }}</a>
-    {% endif %}
-  </div>
+{# "5 × 10 m · rest 2 min · 80%": one line per exercise that fits a phone #}
+{% macro prescription(ex) -%}
+{%- set dist = '%g m'|format(ex.distance_m) if ex.distance_m is not none else '' -%}
+{%- set time = duration(ex.duration_seconds)|trim -%}
+{%- set amounts = [ex.reps or '', dist, time]|select|list -%}
+{%- set parts = [] -%}
+{%- if ex.sets and amounts %}{% set _ = parts.append(ex.sets ~ ' × ' ~ amounts|join(', ')) %}
+{%- elif ex.sets %}{% set _ = parts.append(ex.sets ~ ' sets') %}
+{%- elif amounts %}{% set _ = parts.append(amounts|join(', ')) %}{% endif -%}
+{%- if ex.intensity %}{% set _ = parts.append(ex.intensity) %}{% endif -%}
+{%- if ex.tempo %}{% set _ = parts.append('tempo ' ~ ex.tempo) %}{% endif -%}
+{%- if ex.rest %}{% set _ = parts.append('rest ' ~ ex.rest) %}{% endif -%}
+{{ parts|join(' · ') }}
+{%- endmacro %}
+
+{% macro log_button(s, cls='') %}
+{% if can_log %}
+{% set lg = logs.get(s.key) %}
+<a class="btn {{ 'btn-outline-secondary' if lg else 'btn-primary' }} {{ cls }}" href="{{ url_for('programmes.log_session', programme_id=programme.id, session_id=s.id, enrolment=eid) }}">{% if lg %}<i class="bi bi-pencil"></i> Edit log{% else %}<i class="bi bi-check2-circle"></i> Log it{% endif %}</a>
+{% endif %}
+{% endmacro %}
+
+{% macro session_tags(s) %}
+<span class="pg-badge">{{ s.type_label }}</span>
+{% if s.requirement == 'optional' %}<span class="pg-badge">optional</span>{% elif s.requirement == 'alternative' %}<span class="pg-badge pg-warn">or: pick one ({{ s.alternative_group }})</span>{% endif %}
+{% if s.duration_minutes %}<span class="small pg-muted">{{ s.duration_minutes }} min</span>{% endif %}
+{% endmacro %}
+
+{# What to actually do: focus, warm-up, exercises, cues, cool-down, links #}
+{% macro session_body(s) %}
   {% if s.focus %}<div class="pg-pre small mt-1">{{ s.focus }}</div>{% endif %}
-  {% if s.warmup %}<div class="small mt-1"><span class="pg-label">Warm-up</span><div class="pg-pre">{{ s.warmup }}</div></div>{% endif %}
+  {% if s.warmup %}<div class="small mt-2"><span class="pg-label">Warm-up</span><div class="pg-pre">{{ s.warmup }}</div></div>{% endif %}
   {% if s.exercises %}
-  {% set cols = [] %}
-  {% for c in ['sets', 'reps', 'distance_m', 'duration_seconds', 'rest', 'intensity', 'tempo'] %}{% if s.exercises|selectattr(c)|list %}{% set _ = cols.append(c) %}{% endif %}{% endfor %}
-  <div class="table-responsive mt-1"><table class="table table-sm mb-1">
-    <thead><tr><th></th><th>Exercise</th>{% for c in cols %}<th>{{ {'sets': 'Sets', 'reps': 'Reps', 'distance_m': 'Distance', 'duration_seconds': 'Time', 'rest': 'Rest', 'intensity': 'Intensity', 'tempo': 'Tempo'}[c] }}</th>{% endfor %}</tr></thead>
-    <tbody>
+  <ol class="pg-ex-list">
     {% for ex in s.exercises %}
-    <tr><td class="pg-muted small">{{ ex.block or '' }}</td>
-      <td><span class="fw-semibold">{{ ex.name }}</span>{% if ex.video_url %} <a href="{{ ex.video_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-play-circle"></i></a>{% endif %}
-        {% if ex.instructions %}<div class="small pg-pre pg-muted">{{ ex.instructions }}</div>{% endif %}</td>
-      {% for c in cols %}<td class="small">{% if c == 'distance_m' %}{{ '%g m'|format(ex.distance_m) if ex.distance_m is not none else '' }}{% elif c == 'duration_seconds' %}{{ duration(ex.duration_seconds) }}{% else %}{{ ex[c] or '' }}{% endif %}</td>{% endfor %}
-    </tr>
+    <li>
+      <div class="pg-ex-head">
+        {% if ex.block %}<span class="pg-ex-block">{{ ex.block }}</span>{% endif %}
+        <span class="fw-semibold">{{ ex.name }}</span>
+        {% if ex.video_url %}<a href="{{ ex.video_url }}" target="_blank" rel="noopener noreferrer" aria-label="Video: {{ ex.name }}"><i class="bi bi-play-circle"></i></a>{% endif %}
+      </div>
+      {% set rx = prescription(ex) %}{% if rx %}<div class="pg-ex-rx">{{ rx }}</div>{% endif %}
+      {% if ex.instructions %}<div class="small pg-pre pg-muted">{{ ex.instructions }}</div>{% endif %}
+    </li>
     {% endfor %}
-    </tbody></table></div>
+  </ol>
   {% endif %}
-  {% if s.coaching_cues %}<div class="small"><span class="pg-label">Coaching cues</span><div class="pg-pre">{{ s.coaching_cues }}</div></div>{% endif %}
-  {% if s.cooldown %}<div class="small mt-1"><span class="pg-label">Cool-down</span><div class="pg-pre">{{ s.cooldown }}</div></div>{% endif %}
-  {% if s.video_url or s.attachment_url %}<div class="small mt-1">
+  {% if s.coaching_cues %}<div class="small mt-2"><span class="pg-label">Coaching cues</span><div class="pg-pre">{{ s.coaching_cues }}</div></div>{% endif %}
+  {% if s.cooldown %}<div class="small mt-2"><span class="pg-label">Cool-down</span><div class="pg-pre">{{ s.cooldown }}</div></div>{% endif %}
+  {% if s.video_url or s.attachment_url %}<div class="small mt-2">
     {% if s.video_url %}<a href="{{ s.video_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-play-btn"></i> Video</a>{% endif %}
     {% if s.attachment_url %}<a class="ms-2" href="{{ s.attachment_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-paperclip"></i> Attachment</a>{% endif %}</div>{% endif %}
+{% endmacro %}
+
+{% macro session_block(s) %}
+<div class="pg-session">
+  <div class="d-flex justify-content-between gap-2 flex-wrap align-items-start">
+    <div><span class="fw-semibold">{{ s.title }}</span> {{ session_tags(s) }} {{ status_badge(s) }}</div>
+    {{ log_button(s, 'btn-sm') }}
+  </div>
+  {{ session_body(s) }}
 </div>
 {% endmacro %}
 
+<div class="uc-page-header pg-head">
+  <div>
+    <div class="pg-label">
+      {% if preview %}Preview of {{ 'the draft' if version.is_draft else 'version ' ~ version.number }} as players see it
+      {% elif shared_view %}Shared template by {{ programme.team.name }} · v{{ version.number }}
+      {% elif coach_view %}{{ enrolment.player.name }} · v{{ version.number }}{% if enrolment.status != 'active' %} · {{ enrolment.status }}{% endif %}
+      {% else %}Your programme{% if enrolment.status != 'active' %} · {{ enrolment.status }}{% endif %}{% endif %}
+    </div>
+    <h1>{{ programme.name }}</h1>
+  </div>
+  {% if shared_view %}
+  <form method="post" action="{{ url_for('programmes.copy_shared', programme_id=programme.id) }}" class="d-flex gap-2 align-items-end flex-wrap">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div><label class="form-label small" for="cp-name">Name in your club</label><input class="form-control form-control-sm" id="cp-name" name="name" value="{{ programme.name }}"></div>
+    <div><label class="form-label small" for="cp-start">Start date</label><input type="date" class="form-control form-control-sm" id="cp-start" name="start_date"></div>
+    <button class="btn btn-primary btn-sm"><i class="bi bi-copy"></i> Copy to my club</button>
+  </form>
+  {% endif %}
+</div>
+
+{# ══════════ THIS WEEK ══════════ #}
+{% if now %}
+<section class="pg-card pg-now" id="this-week">
+  <div class="pg-now-head">
+    <div>
+      <h2 class="mb-0">{% if now.finished %}Programme finished{% elif now.starts %}Coming up{% elif now.week_of %}This week{% else %}Week 1{% endif %}</h2>
+      <div class="small pg-muted">
+        {% if now.finished %}Every week of this programme is done.
+        {% elif now.starts %}Starts {{ now.starts.strftime('%a %-d %b') }}
+        {% elif now.week_of %}{{ now.week_of[0].strftime('%-d %b') }} – {{ now.week_of[1].strftime('%-d %b') }}
+        {% else %}Weeks start from each player's own start date{% endif %}
+      </div>
+    </div>
+    {% if progress and now.required and not now.starts %}
+    <div class="pg-now-count" aria-label="{{ now.done }} of {{ now.required }} sessions done this week"><b>{{ now.done }}</b>/{{ now.required }}<span>done</span></div>
+    {% endif %}
+  </div>
+  {% if progress and now.required and not now.starts %}
+  <div class="pg-meter" role="presentation"><span style="width: {{ (100 * now.done / now.required)|round|int }}%"></span></div>
+  {% endif %}
+
+  {% if now.next %}
+  {% set s = now.next %}
+  <div class="pg-next" style="--track: {{ s.week.track.colour or 'var(--club)' }}">
+    <div class="pg-label">Up next · {{ s.week.track.name }}</div>
+    <div class="pg-next-title">{{ s.title }}</div>
+    <div class="mb-2">{{ session_tags(s) }}</div>
+    {{ log_button(s, 'pg-tap') }}
+    <details class="pg-next-detail" {{ 'open' if not can_log }}>
+      <summary>What to do</summary>
+      {{ session_body(s) }}
+    </details>
+  </div>
+  {% elif now.weeks and progress and now.required and now.done >= now.required and not now.starts %}
+  <div class="pg-next pg-next-done"><i class="bi bi-trophy"></i> All done for this week. Nice work.</div>
+  {% endif %}
+
+  {% for track, week, start in now.weeks %}
+  <div class="pg-now-track" style="--track: {{ track.colour or 'var(--club)' }}">
+    <div class="pg-now-track-h">
+      <span class="pg-label">{{ track.name }}</span>
+      <span class="small pg-muted">Week {{ week.number }}{% if week.title %}: {{ week.title }}{% endif %}</span>
+    </div>
+    {% for s in week.sessions %}
+    {% set st = status_of(s)|trim %}
+    <details class="pg-do pg-do-{{ st or 'todo' }}" id="session-{{ s.id }}">
+      <summary>
+        <span class="pg-do-mark" aria-hidden="true"><i class="bi {{ {'done': 'bi-check-circle-fill', 'skipped': 'bi-dash-circle', 'missing': 'bi-exclamation-circle'}.get(st, 'bi-circle') }}"></i></span>
+        <span class="pg-do-main">
+          <span class="pg-do-title">{{ s.title }}</span>
+          <span class="pg-do-meta">{{ s.type_label }}{% if s.duration_minutes %} · {{ s.duration_minutes }} min{% endif %}{% if s.requirement == 'optional' %} · optional{% elif s.requirement == 'alternative' %} · pick one ({{ s.alternative_group }}){% endif %}{% if st == 'done' %} · done{% elif st == 'skipped' %} · skipped{% endif %}</span>
+        </span>
+        <i class="bi bi-chevron-down pg-do-chev" aria-hidden="true"></i>
+      </summary>
+      <div class="pg-do-body">
+        {{ log_button(s, 'pg-tap mb-2') }}
+        {{ session_body(s) }}
+      </div>
+    </details>
+    {% else %}
+    <p class="small pg-muted m-0 py-2">{% if week.is_rest %}Rest week.{% else %}Nothing set this week.{% endif %}</p>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% set now_week_ids = [] %}{% for _, w, _ in now.weeks %}{% set _ = now_week_ids.append(w.id) %}{% endfor %}
+  {% set test_now = version.milestones|selectattr('week_id', 'in', now_week_ids)|selectattr('is_test')|list %}
+  {% if test_now or (progress and progress.missing_tests) %}
+  <div class="pg-now-tests">
+    <div><i class="bi bi-stopwatch"></i>
+      {% if test_now %}Test week: {{ test_now|map(attribute='name')|join(', ') }}.{% endif %}
+      {% if progress and progress.missing_tests %}{{ progress.missing_tests|length }} test result{{ 's' if progress.missing_tests|length != 1 }} still to record.{% endif %}</div>
+    {% if can_log %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('programmes.record_results', programme_id=programme.id, enrolment=eid) }}">Record results</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if progress %}
+<div class="pg-stats">
+  <div class="pg-stat"><div class="pg-label">Completed</div>
+    <div class="pg-value">{{ '%d%%' % progress.completion if progress.completion is not none else '—' }}</div>
+    <div class="small pg-muted">{% if progress.due %}{{ progress.done }} of {{ progress.due }} required sessions so far{% else %}nothing due yet{% endif %}</div></div>
+  <div class="pg-stat"><div class="pg-label">Not logged</div><div class="pg-value">{{ progress.missing|length }}</div><div class="small pg-muted">from weeks that have ended</div></div>
+  <div class="pg-stat"><div class="pg-label">Skipped</div><div class="pg-value">{{ progress.skipped }}</div></div>
+  <div class="pg-stat"><div class="pg-label">Optional done</div><div class="pg-value">{{ progress.optional_done }}</div></div>
+</div>
+{% endif %}
+
+{% if version.tests %}
+<div class="pg-card">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2"><h2 class="mb-0">Tests</h2>
+    {% if can_log %}<a class="btn btn-sm btn-primary" href="{{ url_for('programmes.record_results', programme_id=programme.id, enrolment=eid) }}"><i class="bi bi-stopwatch"></i> Record results</a>{% endif %}</div>
+  {% if progress and progress.missing_tests %}
+  <p class="mt-2 mb-0"><span class="pg-badge pg-warn">due</span> {% for ms, t in progress.missing_tests %}{{ t.name }} ({{ ms.name }}){{ ', ' if not loop.last }}{% endfor %}</p>
+  {% endif %}
+  <ul class="pg-test-list">
+    {% for t in version.tests %}
+    {% set s = progress.tests.get(t.key) if progress else none %}
+    <li>
+      <div class="d-flex justify-content-between gap-2 flex-wrap">
+        <span class="fw-semibold">{{ t.name }}</span>
+        {% if progress %}
+        <span class="small">
+          {{ '%g %s'|format(s.first.value|round(3), t.unit) if s.first else '—' }}
+          {% if s.latest %}<i class="bi bi-arrow-right pg-muted"></i> {{ '%g %s'|format(s.latest.value|round(3), t.unit) }}{% endif %}
+          {% if s.change is not none %}<span class="pg-badge {{ 'pg-ok' if s.change > 0 else ('pg-bad' if s.change < 0 else '') }}">{{ '%+g'|format((s.change if t.higher_is_better else -s.change)|round(3)) }} {{ t.unit }}</span>{% endif %}
+        </span>
+        {% endif %}
+      </div>
+      <div class="small pg-muted">{{ t.attempts }} attempt{{ 's' if t.attempts != 1 }}, {{ 'higher' if t.higher_is_better else 'lower' }} is better</div>
+      {% if t.instructions %}<details class="small"><summary class="pg-muted">How to test</summary><div class="pg-pre">{{ t.instructions }}</div></details>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if version.milestones %}
+  <p class="small pg-muted mt-2 mb-0">{% for ms in version.milestones %}{{ ms.name }}{% if ms.week %}: {{ ms.week.track.name }} week {{ ms.week.number }}{% endif %}{{ ' · ' if not loop.last }}{% endfor %}</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ══════════ WHOLE PROGRAMME ══════════ #}
+<h2 class="pg-section-h" id="all-weeks">{{ 'All weeks' if now else 'Programme' }}</h2>
+{% if programme.description %}<p class="pg-pre">{{ programme.description }}</p>{% endif %}
+{% if weeks|length > 1 %}
+<nav class="pg-jump" aria-label="Tracks">
+  {% for track, track_weeks in weeks %}
+  {% set cur = (progress.tracks|selectattr('track', 'equalto', track)|first).week if progress else none %}
+  <a href="#track-{{ track.id }}" style="--track: {{ track.colour or 'var(--club)' }}">{{ track.name }}{% if cur %} <span class="pg-muted">· wk {{ cur.number }}</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
 {% for track, track_weeks in weeks %}
-<section class="pg-card pg-track" style="--track: {{ track.colour or 'var(--club)' }}">
+<section class="pg-card pg-track" id="track-{{ track.id }}" style="--track: {{ track.colour or 'var(--club)' }}">
   <h2>{{ track.name }}</h2>
   {% if track.description %}<p class="pg-pre small">{{ track.description }}</p>{% endif %}
-  {% set has_current = track_weeks|selectattr(2)|list %}
   {% for week, start, current in track_weeks %}
-  <details class="pg-week d-block mb-2 {{ 'pg-current' if current }} {{ 'pg-rest' if week.is_rest }}" {{ 'open' if current or (not has_current and loop.first) }}>
+  <details class="pg-week d-block mb-2 {{ 'pg-current' if current }} {{ 'pg-rest' if week.is_rest }}" {{ 'open' if not now and loop.first }}>
     <summary><span class="fw-semibold">Week {{ week.number }}{% if week.title %}: {{ week.title }}{% endif %}</span>
       {% if week.kind != 'training' %}<span class="pg-badge">{{ week.kind }}</span>{% endif %}
       {% if start %}<span class="small pg-muted">· w/c {{ start.strftime('%-d %b') }}</span>{% endif %}
@@ -137,7 +257,7 @@
       {% if week.objective %}<p class="mb-1 pg-pre"><span class="pg-label">Objective</span><br>{{ week.objective }}</p>{% endif %}
       {% if week.supporting_skills %}<p class="mb-1 pg-pre small"><span class="pg-label">Key skills and cues</span><br>{{ week.supporting_skills }}</p>{% endif %}
       {% if week.notes %}<p class="mb-1 pg-pre small">{{ week.notes }}</p>{% endif %}
-      {% for s in week.sessions %}{{ session_block(s, can_log, eid) }}{% else %}{% if week.is_rest %}<p class="pg-muted small m-0">Rest week.</p>{% endif %}{% endfor %}
+      {% for s in week.sessions %}{{ session_block(s) }}{% else %}{% if week.is_rest %}<p class="pg-muted small m-0">Rest week.</p>{% endif %}{% endfor %}
     </div>
   </details>
   {% endfor %}

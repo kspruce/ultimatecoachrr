@@ -370,6 +370,7 @@ def index():
 
     checklist = None
     roster_signup = None
+    my_training = []
     if current_user.is_authenticated and not current_user.is_guest:
         from app.models.team_organization import TeamOrganization
         current_team_id = get_current_team_id()
@@ -380,6 +381,13 @@ def index():
                 checklist = None
             if current_user.is_coach:
                 roster_signup = onboarding.roster_signup(team.id)
+            player = getattr(current_user, 'player', None)
+            if player is not None and player.team_organization_id == team.id:
+                try:
+                    from app.utils.programmes import players_week
+                    my_training = players_week(player)
+                except Exception:
+                    logger.exception('Could not work out this week\'s programme sessions')
 
     return render_template('index.html',
                          title='Home',
@@ -391,6 +399,7 @@ def index():
                          next_tournament=next_tournament,
                          checklist=checklist,
                          roster_signup=roster_signup,
+                         my_training=my_training,
                          **extras)
 
 
