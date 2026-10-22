@@ -25,7 +25,19 @@
         <li>Do all four in one session, about an hour, in this order: broad jump, 10 m sprint, pro agility, then the Yo-Yo last because it empties the tank.</li>
         <li>Warm up properly first: 10 minutes of jogging, dynamic stretches and a few build-up sprints.</li>
         <li>Same surface, same shoes and the same timing method each time, so results are comparable.</li>
+        <li>Players log their own results afterwards on their fitness page.</li>
       </ul>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="mb-2"><i class="bi bi-arrow-up-right-circle me-2" style="color:var(--club-ink)"></i>Getting better</h5>
+      <p class="mb-0" style="color:var(--ink-2)">
+        Each test below has strength, agility or plyometric work, field sessions and conditioning that move it.
+        You don't need all of it: two gym sessions and one conditioning session a week alongside club training
+        will improve all four. Do sprint and jump work early in a session while you're fresh, and conditioning last.
+      </p>
     </div>
   </div>
 
@@ -40,20 +52,24 @@
       </p>
       <p>{{ t.why }}</p>
 
-      <div class="row g-4">
-        <div class="col-md-6">
-          <h6 class="text-uppercase fit-muted" style="letter-spacing:.05em">How to run it</h6>
-          <p class="mb-2" style="font-size:.9rem"><strong>You need:</strong> {{ t.kit }}</p>
-          <ol class="mb-0" style="font-size:.9rem;padding-left:1.2rem">
-            {% for step in t.how %}<li class="mb-1">{{ step }}</li>{% endfor %}
-          </ol>
+      <h6 class="text-uppercase fit-muted" style="letter-spacing:.05em">How to run it</h6>
+      <p class="mb-2" style="font-size:.9rem"><strong>You need:</strong> {{ t.kit }}</p>
+      <ol class="mb-4" style="font-size:.9rem;padding-left:1.2rem">
+        {% for step in t.how %}<li class="mb-1">{{ step }}</li>{% endfor %}
+      </ol>
+
+      <h6 class="text-uppercase fit-muted" style="letter-spacing:.05em">How to improve</h6>
+      <div class="row g-3">
+        {% for heading, tips in t.improve %}
+        <div class="col-md-4">
+          <div class="h-100 p-3" style="background:var(--sunken);border-radius:var(--radius-sm)">
+            <div class="fit-tile-name mb-1" style="font-size:.9rem">{{ heading }}</div>
+            <ul class="mb-0" style="font-size:.85rem;padding-left:1.1rem">
+              {% for tip in tips %}<li class="mb-1">{{ tip }}</li>{% endfor %}
+            </ul>
+          </div>
         </div>
-        <div class="col-md-6">
-          <h6 class="text-uppercase fit-muted" style="letter-spacing:.05em">How to improve</h6>
-          <ul class="mb-0" style="font-size:.9rem;padding-left:1.2rem">
-            {% for tip in t.improve %}<li class="mb-1">{{ tip }}</li>{% endfor %}
-          </ul>
-        </div>
+        {% endfor %}
       </div>
     </div>
   </div>

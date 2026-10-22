@@ -26,10 +26,20 @@ STANDARD_TESTS = [
             'Three runs with 2 to 3 minutes walking rest between them. Record the best.',
         ],
         'improve': [
-            'Short sprints of 10 to 20 m with full rest: 6 to 8 reps, twice a week. Quality over volume.',
-            'Hill sprints or sled pushes of 10 to 15 m to drive a powerful forward lean.',
-            'Start from different positions (side-on, backpedalling, lying down) to practise reacting.',
-            'Get stronger through the legs: split squats, trap bar deadlifts and step-ups.',
+            ('Strength', [
+                'Twice a week: trap bar deadlift 3 × 5, rear-foot-elevated split squat 3 × 6 each leg, '
+                'hip thrust 3 × 8, calf raises 3 × 12.',
+            ]),
+            ('Power and plyometrics', [
+                'Broad jumps 4 × 3 and bounding 3 × 20 m, with full rest so every rep is fast.',
+                'Wall drives and A-skips 3 × 20 s to groove a strong forward lean.',
+            ]),
+            ('Field session', [
+                'Acceleration block at the start of training, while fresh: 2 sets of 4 × 10 to 20 m '
+                'from different starts (split stance, side-on, from a jog, reacting to a call). '
+                '90 s between reps, 3 minutes between sets.',
+                'Finish with 3 × 15 m hill or sled sprints.',
+            ]),
         ],
     },
     {
@@ -49,10 +59,20 @@ STANDARD_TESTS = [
             'Two runs each way with full rest. Record the best time.',
         ],
         'improve': [
-            'Deceleration drills: sprint 10 m and stop dead within three steps, staying low.',
-            'Cone drills with sharp 90° and 180° cuts, planting on the outside foot.',
-            'Lateral bounds and skater jumps to build side-to-side power.',
-            'Strong hamstrings and groin protect you when cutting: Nordics and Copenhagen planks.',
+            ('Strength', [
+                'Twice a week: Nordic curls 3 × 5, Copenhagen plank 3 × 20 s each side, '
+                'lateral lunge 3 × 8 each side, single-leg Romanian deadlift 3 × 8. '
+                'Strong hamstrings and groin also protect you when cutting.',
+            ]),
+            ('Agility and footwork', [
+                'Deceleration: sprint 5, 10 or 15 m and stop dead within three steps, hips low. 2 × 4.',
+                '5-10-5 and L-drill reps: 6 to 8 at full effort with full rest, planting on the outside foot.',
+                'Lateral bounds and skater jumps 3 × 6 each side.',
+            ]),
+            ('Field session', [
+                'Cutting session with a thrower: under-and-deep and in-out cuts, focusing on a sharp plant and first step.',
+                'Mirror drill and 1v1 marking reps in pairs: 6 × 10 s, the defender reacting to the attacker.',
+            ]),
         ],
     },
     {
@@ -73,10 +93,18 @@ STANDARD_TESTS = [
             'Three jumps. Record the best.',
         ],
         'improve': [
-            'Broad jumps and box jumps: 3 to 5 sets of 3 to 5 full-effort jumps with full rest.',
-            'Heavy-ish strength work twice a week: squats, deadlifts and hip thrusts.',
-            'Kettlebell swings to train a fast, powerful hip drive.',
-            'Practise landings: stick every jump softly with knees in line with your toes.',
+            ('Strength', [
+                'Twice a week: back or front squat 4 × 5, Romanian deadlift 3 × 8, '
+                'hip thrust 3 × 8, kettlebell swings 3 × 12.',
+            ]),
+            ('Power and plyometrics', [
+                'Box jumps 4 × 4 and broad jumps 4 × 3, sticking every landing with knees in line with toes.',
+                'Single-leg hops 3 × 5 each leg. Add depth drops 3 × 5 once you have a solid strength base.',
+            ]),
+            ('Field session', [
+                'Skying drills: pairs jump for floaty hucks at the highest point, 3 sets of 5 contested jumps.',
+                'Layout practice on soft grass or crash mats once jumps feel powerful.',
+            ]),
         ],
     },
     {
@@ -98,10 +126,21 @@ STANDARD_TESTS = [
             'Record the total distance covered (every shuttle is 40 m).',
         ],
         'improve': [
-            'Intervals that look like points: 15 s hard, 15 s easy for 8 to 10 minutes.',
-            'Shuttle repeats: 6 to 10 × 40 m with 20 s rest, building up the sets over a few weeks.',
-            'One longer, steady run or cycle a week to build an aerobic base that speeds up recovery.',
-            'Sleep, eat and drink well before tournaments. Fitness is wasted if you turn up tired.',
+            ('Conditioning programme', [
+                'Six weeks, twice a week, after a good warm-up:',
+                'Weeks 1 and 2: 15 s hard, 15 s easy for 10 minutes. 2 sets with 3 minutes rest.',
+                'Weeks 3 and 4: 40 m shuttle sprints (20 out, 20 back) with 20 s rest. 3 sets of 6 to 8.',
+                'Weeks 5 and 6: 4 × 4 minutes hard (breathing heavily, can only say a few words) with 3 minutes easy jogging.',
+                'Plus one easy 30 to 40 minute run, bike or swim a week to build the aerobic base that speeds up recovery.',
+            ]),
+            ('Field session', [
+                'Small-sided games: 3v3 or 4v4 on half a pitch, 3-minute points with 1 minute rest.',
+                'Point simulation: 60 to 90 s of cut, sprint and jog patterns, 60 s rest, 8 reps.',
+            ]),
+            ('Strength', [
+                'One session a week of single-leg work and calf raises keeps your legs robust for the running.',
+                'Sleep, eat and drink well before tournaments. Fitness is wasted if you turn up tired.',
+            ]),
         ],
     },
 ]
