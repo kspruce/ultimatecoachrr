@@ -177,6 +177,8 @@
     }
     
     /* Undo button */
+    .action-button-cut { border-style: dashed; }
+
     .looked-off-strip {
         display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
         margin: 8px auto 0; padding: 6px 8px; max-width: 1200px;
@@ -239,16 +241,6 @@
         height: 3rem;
     }
 
-    /* Mode toggle button */
-    #mode-toggle {
-        padding: 0.375rem 0.75rem;
-        border-radius: 8px;
-        background: var(--uc-sky);
-        color: white;
-        border: none;
-        cursor: pointer;
-    }
-
     /* Custom button style for cutting mode */
     .btn-purple {
         background-color: var(--uc-purple);
@@ -292,7 +284,6 @@
                     Attacking →
                 </button>
                 <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
-                <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
                 <button id="finish-point" class="btn btn-success me-2">End Point</button>
                 <button id="help-button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal">
                     <i class="bi bi-question-circle"></i> Help
@@ -316,13 +307,13 @@
         <span class="looked-off-label" title="Tap a player each time they get open and aren't thrown to. Use − to take one back.">
             Open, not thrown to:
         </span>
-        {% for lineup in point.lineups %}
-        <span class="looked-off-chip" data-player-id="{{ lineup.player.id }}">
-            <button type="button" class="looked-off-add" data-player-id="{{ lineup.player.id }}">
-                #{{ lineup.player.jersey_number }} {{ lineup.player.name.split(' ')[0] }}
+        {% for player in line %}
+        <span class="looked-off-chip" data-player-id="{{ player.id }}">
+            <button type="button" class="looked-off-add" data-player-id="{{ player.id }}">
+                #{{ player.jersey_number }} {{ player.name.split(' ')[0] }}
                 <span class="looked-off-count">0</span>
             </button>
-            <button type="button" class="looked-off-remove" data-player-id="{{ lineup.player.id }}" aria-label="Take one back" hidden>−</button>
+            <button type="button" class="looked-off-remove" data-player-id="{{ player.id }}" aria-label="Take one back" hidden>−</button>
         </span>
         {% endfor %}
     </div>
@@ -376,9 +367,9 @@
     <div class="player-select" id="player-select">
         <h5>Select Player</h5>
         <div class="player-grid">
-            {% for lineup in point.lineups %}
-            <button class="player-card" data-player-id="{{ lineup.player.id }}">
-                #{{ lineup.player.jersey_number }} - {{ lineup.player.name }}
+            {% for player in line %}
+            <button class="player-card" data-player-id="{{ player.id }}">
+                #{{ player.jersey_number }} - {{ player.name }}
             </button>
             {% endfor %}
             <button class="player-card" data-player-id="unknown">Unknown</button>
@@ -445,10 +436,6 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td><kbd>M</kbd></td>
-                                <td>Toggle between Event and Cutting Skill tracking modes</td>
-                            </tr>
-                            <tr>
                                 <td><kbd>U</kbd></td>
                                 <td>Undo last action</td>
                             </tr>
@@ -495,9 +482,9 @@
                         <label for="player-out" class="form-label">Player Out:</label>
                         <select class="form-select" id="player-out">
                             <option value="">Select player to sub out</option>
-                            {% for lineup in point.lineups %}
-                            <option value="{{ lineup.player.id }}">
-                                #{{ lineup.player.jersey_number }} - {{ lineup.player.name }}
+                            {% for player in line %}
+                            <option value="{{ player.id }}">
+                                #{{ player.jersey_number }} - {{ player.name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -567,7 +554,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const cuttingSelect = document.getElementById('cutting-select');
     const outcomeSelect = document.getElementById('outcome-select');
     const undoButton = document.getElementById('undo-button');
-    const modeToggle = document.getElementById('mode-toggle');
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingMessage = document.getElementById('loading-message');
     const finishPointButton = document.getElementById('finish-point');
@@ -755,66 +741,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Track which mode we're in (events or cutting skills)
-    let currentMode = 'events';
-
-    // Mode toggle handler
-    modeToggle.addEventListener('click', function() {
-        currentMode = currentMode === 'events' ? 'cutting' : 'events';
-        
-        // Update button text
-        modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Detailed Cut Log'}`;
-        
-        // Update button styling based on mode
-        if (currentMode === 'events') {
-            modeToggle.classList.remove('btn-purple');
-            modeToggle.classList.add('btn-info');
-            // Add a subtle animation
-            modeToggle.animate([
-                { transform: 'scale(1.1)' },
-                { transform: 'scale(1)' }
-            ], {
-                duration: 300,
-                easing: 'ease-out'
-            });
-        } else {
-            modeToggle.classList.remove('btn-info');
-            modeToggle.classList.add('btn-purple');
-            // Add a subtle animation
-            modeToggle.animate([
-                { transform: 'scale(1.1)' },
-                { transform: 'scale(1)' }
-            ], {
-                duration: 300,
-                easing: 'ease-out'
-            });
-        }
-        
-        // Show a temporary toast notification
-        const toast = document.createElement('div');
-        toast.className = 'position-fixed top-0 end-0 p-3';
-        toast.style.zIndex = '1070';
-        toast.innerHTML = `
-            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="toast-header">
-                    <strong class="me-auto">Mode Changed</strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-                <div class="toast-body">
-                    Switched to ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'} mode
-                </div>
-            </div>
-        `;
-        document.body.appendChild(toast);
-        
-        // Remove the toast after 2 seconds
-        setTimeout(() => {
-            toast.remove();
-        }, 2000);
-        
-        console.log('Switched to mode:', currentMode);
-    });
-
     // End Point button listener
     document.getElementById('finish-point').addEventListener('click', function() {
         // Show loading indicator
@@ -871,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
             inEndzone: relativeX < 0.18 || relativeX > 0.82
         };
 
-        console.log(`${currentMode} field click coordinates:`, {
+        console.log('Field click coordinates:', {
             clientX: e.clientX,
             clientY: e.clientY,
             fieldX: selectedPosition.x,
@@ -881,7 +807,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showPlayerSelect();
     });
 
-    // Player selection - UPDATED to check currentMode
+    // Player selection
     document.querySelectorAll('.player-card').forEach(card => {
         card.addEventListener('click', function() {
             selectedPlayer = this.dataset.playerId;
@@ -902,12 +828,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             playerSelect.style.display = 'none';
             
-            // Check the current mode and show appropriate options
-            if (currentMode === 'cutting') {
-                showCuttingSelect();
-            } else {
-                showActionSelect();
-            }
+            showActionSelect();
         });
     });
 
@@ -1329,6 +1250,20 @@ document.addEventListener('DOMContentLoaded', function() {
             actionGrid.appendChild(btn);
         });
 
+        // A detailed cut (type + outcome) for one of our players, from the
+        // same tap: no separate mode to switch into.
+        if (gameState.is_offensive && /^\d+$/.test(String(selectedPlayer))) {
+            const cutBtn = document.createElement('button');
+            cutBtn.className = 'action-button action-button-cut';
+            cutBtn.textContent = 'LOG CUT…';
+            cutBtn.title = 'Record the cut this player made here (type and outcome). Doesn\'t change possession.';
+            cutBtn.onclick = () => {
+                actionSelect.style.display = 'none';
+                showCuttingSelect();
+            };
+            actionGrid.appendChild(cutBtn);
+        }
+
         actionSelect.style.display = 'block';
     }
 
@@ -1705,10 +1640,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
                 
-            case 'm': // Toggle mode (m key)
-                modeToggle.click();
-                break;
-                
             case 's': // Substitution (s key)
                 subPlayerButton.click();
                 break;
@@ -1740,7 +1671,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add keyboard shortcut info to buttons
     finishPointButton.setAttribute('title', 'End Point (E)');
     subPlayerButton.setAttribute('title', 'Substitution (S)');
-    modeToggle.setAttribute('title', 'Toggle Mode (M)');
     undoButton.setAttribute('title', 'Undo (U)');
 
     // "Open, not thrown to": one tap records it, − removes that player's last one.

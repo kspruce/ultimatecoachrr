@@ -47,7 +47,10 @@ def record_events(point_id):
                 'field_position_x': c.field_position_x, 'field_position_y': c.field_position_y,
             } for c in skills],
         }
-        return render_template('stats/record.html', point=point, existing=existing)
+        # Players in kit-number order (no number last), not the order picked
+        line = sorted((lu.player for lu in point.lineups if lu.player),
+                      key=lambda p: (p.jersey_number is None, p.jersey_number or 0, p.name or ''))
+        return render_template('stats/record.html', point=point, line=line, existing=existing)
 
     if request.method == 'POST':
         try:

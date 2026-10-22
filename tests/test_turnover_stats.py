@@ -197,3 +197,19 @@ def test_cuts_come_from_upfield_catches(app, season):
                 if throw_kind(t.x_start, t.y_start, t.x_end, t.y_end) not in (None, 'dump_swing')]
     assert len(cuts) == len(expected) == profile['receptions']
     assert sum(q['thrown_to'] for q in profile['by_type'].values()) + profile['unknown_side'] == len(cuts)
+
+
+def test_recorder_lists_players_by_kit_number_with_no_mode_switch(setup):
+    from app.models.player import Player
+    line = _line()  # men then women: not kit-number order
+    _save(setup, line)
+    point = Point.query.filter_by(game_id=setup['game_id']).one()
+    db.session.get(Player, line[0]).jersey_number = None  # no number goes last
+    db.session.commit()
+    page = setup['client'].get(f'/stats/record/{point.id}').get_data(as_text=True)
+    grid = page.split('id="player-select"')[1].split('data-player-id="unknown"')[0]
+    shown = [int(x) for x in __import__('re').findall(r'data-player-id="(\d+)"', grid)]
+    numbers = {p.id: p.jersey_number for p in Player.query.filter(Player.id.in_(line))}
+    expected = sorted(line, key=lambda pid: (numbers[pid] is None, numbers[pid] or 0))
+    assert shown == expected and shown[-1] == line[0]
+    assert 'mode-toggle' not in page and 'LOG CUT' in page
