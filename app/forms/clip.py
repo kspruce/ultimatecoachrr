@@ -3,6 +3,7 @@ from wtforms import StringField, IntegerField, TextAreaField, SelectField, Selec
 from wtforms.validators import DataRequired, Optional, URL, Length
 from app.models.game import Game
 from app.models.player import Player
+from app.models.point import Point
 from app.models.clip import ClipTag
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
@@ -47,8 +48,17 @@ class ClipForm(FlaskForm):
         else:
             self.game_id.choices = [(0, 'Select Game')]
         
-        # Point choices will be populated via AJAX when a game is selected
+        # The page refills the point list when the game changes; the server has
+        # to know the chosen game's points too or a picked point won't validate.
         self.point_id.choices = [(0, 'Select Point')]
+        if team_id and self.game_id.data:
+            self.point_id.choices += [
+                (p.id, f"Point {p.point_number}")
+                for p in Point.query.join(Game, Game.id == Point.game_id).filter(
+                    Point.game_id == self.game_id.data,
+                    Game.team_organization_id == team_id
+                ).order_by(Point.point_number).all()
+            ]
         
         # Populate tag choices with hierarchical structure and categories - FILTERED BY TEAM
         if team_id:

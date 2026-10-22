@@ -36,6 +36,7 @@ class Clip(db.Model):
     view_count = db.Column(db.Integer, default=0)
     is_hidden = db.Column(db.Boolean, default=False)          # Admin can hide a clip from players
     is_flagged_for_sharing = db.Column(db.Boolean, default=False)  # Admin marks clip ready to share
+    share_version = db.Column(db.Integer, default=0, nullable=False)  # Bumped to revoke share links
     
     # Relationships
     game = db.relationship('Game', back_populates='clips')

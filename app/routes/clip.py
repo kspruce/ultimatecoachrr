@@ -1,4 +1,4 @@
-from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from app import db
@@ -30,6 +30,11 @@ def get_share_serializer():
     """Serializer for generating and verifying share tokens."""
     # Different salt for safety and future rotation
     return URLSafeSerializer(current_app.config['SECRET_KEY'], salt='clip-share-v1')
+
+
+def _sees_hidden_clips():
+    """Admins and coaches see clips hidden from players."""
+    return current_user.is_admin or current_user.is_coach
 
 # ============================================================================
 # CLIP ROUTES
@@ -115,7 +120,7 @@ def index():
         query = query.order_by(priority_key, Clip.created_at.desc())
 
     # Non-admins and non-coaches never see hidden clips
-    if not (current_user.is_admin or current_user.is_coach):
+    if not _sees_hidden_clips():
         query = query.filter(Clip.is_hidden == False)
 
     # Get clips
@@ -168,10 +173,10 @@ def game_clips(game_id):
     game = Game.query.filter_by(id=game_id, team_organization_id=team_id).first_or_404()
     
     # Filter clips by game and team
-    clips = Clip.query.filter_by(
-        game_id=game_id,
-        team_organization_id=team_id
-    ).order_by(Clip.created_at.desc()).all()
+    query = Clip.query.filter_by(game_id=game_id, team_organization_id=team_id)
+    if not _sees_hidden_clips():
+        query = query.filter(Clip.is_hidden == False)
+    clips = query.order_by(Clip.created_at.desc()).all()
     
     return render_template('clip/game_clips.html', game=game, clips=clips)
 
@@ -188,10 +193,10 @@ def point_clips(point_id):
     game = Game.query.filter_by(id=point.game_id, team_organization_id=team_id).first_or_404()
     
     # Filter clips by point and team
-    clips = Clip.query.filter_by(
-        point_id=point_id,
-        team_organization_id=team_id
-    ).order_by(Clip.created_at.desc()).all()
+    query = Clip.query.filter_by(point_id=point_id, team_organization_id=team_id)
+    if not _sees_hidden_clips():
+        query = query.filter(Clip.is_hidden == False)
+    clips = query.order_by(Clip.created_at.desc()).all()
     
     return render_template('clip/point_clips.html', point=point, clips=clips)
 
@@ -217,6 +222,7 @@ def add_clip():
             start_time=form.start_time.data,
             end_time=form.end_time.data,
             description=form.description.data,
+            is_featured=form.is_featured.data,
             created_by_id=current_user.id,
             team_organization_id=team_id
         )
@@ -249,15 +255,14 @@ def add_clip():
 def view_clip(clip_id):
     """View a single clip with all annotations"""
     team_id = get_current_team_id()
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
-    
-    # Block non-admin/coach users from viewing hidden clips
-    if clip.is_hidden and not (current_user.is_admin or current_user.is_coach):
-        abort(404)
+    clip = _get_clip_or_404(clip_id)
 
-    # Increment view count
-    clip.view_count = (clip.view_count or 0) + 1
-    db.session.commit()
+    # Count a view once per visitor session, not on every reload or filter change
+    viewed = session.get('viewed_clips', [])
+    if clip.id not in viewed:
+        clip.view_count = (clip.view_count or 0) + 1
+        db.session.commit()
+        session['viewed_clips'] = (viewed + [clip.id])[-50:]
     
     # Get annotations with optional filtering
     query = ClipAnnotation.query.filter_by(clip_id=clip_id)
@@ -277,9 +282,9 @@ def view_clip(clip_id):
     if event_filter:
         query = query.filter_by(event_type=event_filter)
     
-    creator_filter = request.args.get('creator_filter')
+    creator_filter = request.args.get('creator_filter', type=int)
     if creator_filter:
-        query = query.filter_by(user_id=int(creator_filter))
+        query = query.filter_by(user_id=creator_filter)
     
     key_only = request.args.get('key_only')
     if key_only:
@@ -328,20 +333,17 @@ def edit_clip(clip_id):
         # Pre-select tags and players
         form.tags.data = [tag.id for tag in clip.tags]
         form.players.data = [player.id for player in clip.players]
-        
-        # If clip has a point, populate the point choices
-        if clip.game_id:
-            points = Point.query.filter_by(game_id=clip.game_id).all()
-            form.point_id.choices = [(0, 'Select Point')] + [(p.id, f"Point {p.point_number}") for p in points]
     
     if form.validate_on_submit():
         clip.title = form.title.data
         clip.game_id = form.game_id.data if form.game_id.data and form.game_id.data > 0 else None
         clip.point_id = form.point_id.data if form.point_id.data and form.point_id.data > 0 else None
+        clip.video_source = form.video_source.data
         clip.youtube_link = form.youtube_link.data
         clip.start_time = form.start_time.data
         clip.end_time = form.end_time.data
         clip.description = form.description.data
+        clip.is_featured = form.is_featured.data
         
         # Update tags
         if form.tags.data:
@@ -465,9 +467,12 @@ def mark_segment(clip_id, action):
         return ('Invalid action', 400)
 
 def _get_clip_or_404(clip_id):
-    """Return clip only if it belongs to the current user's team."""
+    """Return clip only if it belongs to the current user's team and, for
+    players, isn't hidden."""
     team_id = get_current_team_id()
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    if clip.is_hidden and not _sees_hidden_clips():
+        abort(404)
     return clip
 
 # ============================================================================
@@ -479,7 +484,7 @@ def _get_clip_or_404(clip_id):
 def add_annotation(clip_id):
     """Add a new annotation to a clip"""
     team_id = get_current_team_id()
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    clip = _get_clip_or_404(clip_id)
     form = AnnotationForm()
     
     # Prefill from query param t
@@ -562,6 +567,8 @@ def edit_annotation(annotation_id):
                   .filter(ClipAnnotation.id == annotation_id,
                           Clip.team_organization_id == team_id)
                   .first_or_404())
+    if annotation.clip.is_hidden and not _sees_hidden_clips():
+        abort(404)
 
     # Check permissions
     if not (current_user.id == annotation.user_id or
@@ -645,6 +652,8 @@ def delete_annotation(annotation_id):
                   .filter(ClipAnnotation.id == annotation_id,
                           Clip.team_organization_id == team_id)
                   .first_or_404())
+    if annotation.clip.is_hidden and not _sees_hidden_clips():
+        abort(404)
 
     # Check permissions
     if not (current_user.id == annotation.user_id or
@@ -1149,8 +1158,7 @@ def get_game_link(game_id):
 @login_required
 def api_get_annotations(clip_id):
     """API endpoint to get all annotations for a clip (JSON)"""
-    team_id = get_current_team_id()
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    _get_clip_or_404(clip_id)
 
     # Respect visibility: non-coaches only see 'team' annotations, their own, and ones targeted at them
     ann_query = ClipAnnotation.query.filter_by(clip_id=clip_id)
@@ -1186,10 +1194,12 @@ def create_share_link(clip_id):
     """
     # Only allow admins/coaches or the clip creator to create share links
     team_id = get_current_team_id()
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    clip = _get_clip_or_404(clip_id)
 
     if not (current_user.is_admin or getattr(current_user, 'is_coach', False) or clip.created_by_id == current_user.id):
         return jsonify({'error': 'Not authorized'}), 403
+    if clip.is_hidden:
+        return jsonify({'error': 'This clip is hidden from players. Unhide it before sharing.'}), 400
 
     try:
         expires_days = int(request.form.get('expires_days', 7))
@@ -1200,6 +1210,7 @@ def create_share_link(clip_id):
     payload = {
         'clip_id': clip.id,
         'team_id': team_id,
+        'v': clip.share_version or 0,
         'exp': int(time.time()) + expires_days * 86400  # unix timestamp expiry
     }
     s = get_share_serializer()
@@ -1207,6 +1218,19 @@ def create_share_link(clip_id):
 
     share_url = url_for('clip.shared_clip_view', token=token, _external=True)
     return jsonify({'url': share_url, 'expires_days': expires_days})
+
+
+@bp.route('/<int:clip_id>/revoke_share_links', methods=['POST'])
+@login_required
+def revoke_share_links(clip_id):
+    """Invalidate every share link handed out for this clip so far."""
+    clip = _get_clip_or_404(clip_id)
+    if not (current_user.is_admin or getattr(current_user, 'is_coach', False) or clip.created_by_id == current_user.id):
+        abort(403)
+    clip.share_version = (clip.share_version or 0) + 1
+    db.session.commit()
+    flash(f'Existing share links for "{clip.title}" no longer work.', 'info')
+    return redirect(url_for('clip.view_clip', clip_id=clip.id))
 
 
 @bp.route('/share/<token>')
@@ -1232,24 +1256,27 @@ def shared_clip_view(token):
 
     # Enforce team scoping
     clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    if clip.is_hidden:
+        abort(404)
+    if data.get('v', 0) != (clip.share_version or 0):
+        return render_template('error.html', error_message='This share link has been revoked.'), 410
 
     # Shared views only expose 'team' annotations — never coaches-only or private
     annotations = (ClipAnnotation.query
                    .filter_by(clip_id=clip.id, visibility='team')
                    .order_by(ClipAnnotation.timestamp).all())
 
-    # Build an embed URL for YouTube/Veo if possible
+    # Build an embed URL for YouTube/Veo if possible (Veo links live in youtube_link too)
     embed_url = None
-    if clip.youtube_link:
+    if clip.video_source == 'veo':
+        if clip.youtube_link and validate_veo_link(clip.youtube_link):
+            embed_url = get_veo_embed_url(clip.youtube_link)
+    elif clip.youtube_link:
         yt_id = extract_youtube_id(clip.youtube_link)
         if yt_id:
-            embed_url = f"https://www.youtube.com/embed/{yt_id}"
-    elif clip.video_source == 'veo' and clip.youtube_link:
-        # If you store Veo links in youtube_link field or another, adapt as needed
-        try:
-            embed_url = get_veo_embed_url(clip.youtube_link)
-        except Exception:
-            embed_url = None
+            params = [f'{name}={value}' for name, value in
+                      (('start', clip.start_time), ('end', clip.end_time)) if value]
+            embed_url = f"https://www.youtube.com/embed/{yt_id}" + ('?' + '&'.join(params) if params else '')
 
     # Human-readable expiry
     expires_at = datetime.fromtimestamp(int(data['exp']))
@@ -1270,8 +1297,7 @@ def export_annotations_markdown(clip_id):
     """
     Export annotations as Markdown for easy sharing/pasting.
     """
-    team_id = get_current_team_id()
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    clip = _get_clip_or_404(clip_id)
 
     # Respect visibility on markdown export too
     md_query = ClipAnnotation.query.filter_by(clip_id=clip.id)
@@ -1333,10 +1359,7 @@ def export_annotations_markdown(clip_id):
 @login_required
 def export_annotations_csv(clip_id):
     """Export clip annotations to CSV"""
-    team_id = get_current_team_id()
-    
-    # Filter clip by team
-    clip = Clip.query.filter_by(id=clip_id, team_organization_id=team_id).first_or_404()
+    clip = _get_clip_or_404(clip_id)
 
     # Respect visibility on export too
     csv_query = ClipAnnotation.query.filter_by(clip_id=clip.id)
@@ -1541,7 +1564,11 @@ def edit_annotation_tag(tag_id):
         parent_id = form.parent_tag_id.data if form.parent_tag_id.data > 0 else None
         if parent_id:
             # Check if the new parent is actually a descendant of this tag
-            potential_parent = AnnotationTag.query.get(parent_id)
+            potential_parent = AnnotationTag.query.filter_by(
+                id=parent_id, team_organization_id=team_id).first()
+            if not potential_parent:
+                flash('Parent tag not found.', 'danger')
+                return render_template('clip/annotation_tag_form.html', form=form, tag=tag, title='Edit Annotation Tag')
             current_check = potential_parent
             while current_check:
                 if current_check.id == tag_id:

@@ -560,6 +560,13 @@
                 <i class="bi bi-share me-1"></i>Share
               </button>
             </form>
+            <form method="post" action="{{ url_for('clip.revoke_share_links', clip_id=clip.id) }}" class="d-inline"
+                  onsubmit="return confirm('Stop every share link already sent for this clip from working?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-secondary btn-sm" title="Make existing share links stop working">
+                <i class="bi bi-x-circle me-1"></i>Revoke links
+              </button>
+            </form>
             <a href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}"
                class="btn btn-outline-secondary btn-sm">
               <i class="bi bi-download me-1"></i>Export
@@ -1104,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.url) {
           try { await navigator.clipboard.writeText(data.url); } catch {}
           alert('Share link copied to clipboard:\n\n' + data.url + '\n\nExpires in ' + data.expires_days + ' day(s).');
-        } else { alert('Failed to create share link.'); }
+        } else { alert(data.error || 'Failed to create share link.'); }
       } catch { alert('Failed to create share link.'); }
     });
   }

@@ -126,6 +126,11 @@
                             {% endfor %}
                         </div>
                         
+                        <div class="form-check mb-3">
+                            {{ form.is_featured(class="form-check-input") }}
+                            {{ form.is_featured.label(class="form-check-label") }}
+                        </div>
+                        
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary") }}
                         </div>
@@ -154,69 +159,38 @@
             allowClear: true
         });
         
-        // Handle game selection to populate points
+        // When the game changes: reload its points, and fill in the game's video
+        // link unless one has been typed in already.
+        const linkInput = $('#youtube-link');
+        let linkAutoFilled = false;
+        linkInput.on('input', function() {
+            linkAutoFilled = false;
+            $('#link-auto-populated').addClass('d-none');
+        });
+
         $('#game-select').change(function() {
             const gameId = $(this).val();
-            if (gameId > 0) {
-                // Fetch points for the selected game
-                $.getJSON(`/clips/get_points/${gameId}`, function(data) {
-                    const pointSelect = $('#point-select');
-                    pointSelect.empty();
-                    pointSelect.append(new Option('Select Point', 0));
-                    
-                    $.each(data, function(index, point) {
-                        pointSelect.append(new Option(point.name, point.id));
-                    });
-                });
-            } else {
-                // Reset point select if no game is selected
-                const pointSelect = $('#point-select');
-                pointSelect.empty();
-                pointSelect.append(new Option('Select Point', 0));
-            }
-        });
-        
-        // If editing and game is already selected, trigger change to load points
-        if ($('#game-select').val() > 0) {
-            $('#game-select').trigger('change');
-        }
-    });
-    // Add this to the existing script in clip_form.html
-    $('#game-select').change(function() {
-        const gameId = $(this).val();
-        if (gameId > 0) {
-            // Fetch points for the selected game
+            const pointSelect = $('#point-select');
+            pointSelect.empty();
+            pointSelect.append(new Option('Select Point', 0));
+            if (!(gameId > 0)) return;
+
             $.getJSON(`/clips/get_points/${gameId}`, function(data) {
-                const pointSelect = $('#point-select');
-                pointSelect.empty();
-                pointSelect.append(new Option('Select Point', 0));
-                
                 $.each(data, function(index, point) {
                     pointSelect.append(new Option(point.name, point.id));
                 });
             });
-            
-            // NEW CODE: Fetch game's YouTube link
-            $.getJSON(`/clips/get_game_link/${gameId}`, function(data) {
-                if (data.youtube_link) {
-                    $('#youtube-link').val(data.youtube_link);
-                }
-            });
-        } else {
-            // Reset point select if no game is selected
-            const pointSelect = $('#point-select');
-            pointSelect.empty();
-            pointSelect.append(new Option('Select Point', 0));
-        }
-    });
-    // Show indicator when link is auto-populated
-    $.getJSON(`/clips/get_game_link/${gameId}`, function(data) {
-        if (data.youtube_link) {
-            $('#youtube-link').val(data.youtube_link);
-            $('#link-auto-populated').removeClass('d-none');
-        }
-    });
 
-
+            if (!linkInput.val() || linkAutoFilled) {
+                $.getJSON(`/clips/get_game_link/${gameId}`, function(data) {
+                    if (data.youtube_link) {
+                        linkInput.val(data.youtube_link);
+                        linkAutoFilled = true;
+                        $('#link-auto-populated').removeClass('d-none');
+                    }
+                });
+            }
+        });
+    });
 </script>
 {% endblock %}
