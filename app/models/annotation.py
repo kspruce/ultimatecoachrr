@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+from app.utils.clip_video import youtube_timestamp_link
 
 def seconds_to_timestamp(seconds):
     """Convert seconds to HH:MM:SS format"""
@@ -86,19 +87,8 @@ class ClipAnnotation(db.Model):
     @property
     def youtube_timestamp_link(self):
         """Return a direct link to this timestamp in the YouTube video."""
-        if not self.clip or not self.clip.youtube_link:
-            return None
-        
-        # Extract video ID from YouTube link
-        if 'youtube.com/watch?v=' in self.clip.youtube_link:
-            video_id = self.clip.youtube_link.split('v=')[1].split('&')[0]
-            return f"https://www.youtube.com/watch?v={video_id}&t={self.timestamp}s"
-        elif 'youtu.be/' in self.clip.youtube_link:
-            video_id = self.clip.youtube_link.split('youtu.be/')[1].split('?')[0]
-            return f"https://youtu.be/{video_id}?t={self.timestamp}s"
-        
-        return None
-    
+        return youtube_timestamp_link(self.clip.youtube_link if self.clip else None, self.timestamp)
+
     @property
     def tag_names(self):
         """Return a list of tag names for this annotation"""

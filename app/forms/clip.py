@@ -8,16 +8,84 @@ from app.models.clip import ClipTag
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
 
+# Categories a clip tag can belong to
+CLIP_TAG_CATEGORIES = [
+    'Video Type',
+    'Game Context',
+    'Training Type',
+    'Skill Focus',
+    'Strategic Focus',
+    'Player Development',
+    'Analysis',
+]
+
+VIDEO_SOURCES = [('youtube', 'YouTube'), ('veo', 'Veo')]
+
+
+def _team_id():
+    return get_current_team_id() if current_user.is_authenticated else None
+
+
+def game_choices(team_id, blank):
+    """The team's games, newest first, after a blank choice."""
+    choices = [(0, blank)]
+    if team_id:
+        choices += [
+            (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
+            for g in Game.query.filter_by(team_organization_id=team_id).order_by(Game.date.desc()).all()
+        ]
+    return choices
+
+
+def player_choices(team_id):
+    """The team's active players."""
+    if not team_id:
+        return []
+    return [(p.id, f"{p.name} (#{p.jersey_number})")
+            for p in Player.query.filter_by(team_organization_id=team_id, active=True)
+                                 .order_by(Player.name).all()]
+
+
+def tag_choices(team_id, prefix_category=False):
+    """The team's active tags as a tree, grouped by category.
+
+    By default each category gets a disabled "─── Category ───" header row;
+    with prefix_category every tag is labelled "[Category] name" instead.
+    """
+    if not team_id:
+        return []
+    tags = ClipTag.query.filter_by(
+        team_organization_id=team_id,
+        is_active=True
+    ).order_by(ClipTag.category, ClipTag.name).all()
+
+    categories = {}
+    for tag in tags:
+        categories.setdefault(tag.category or 'Other', []).append(tag)
+
+    choices = []
+
+    def add(tag, category, level):
+        label = f"{'  ' * level}↳ {tag.name}" if level else tag.name
+        choices.append((tag.id, f"[{category}] {label}" if prefix_category else label))
+        for child in tag.children.filter_by(is_active=True).order_by(ClipTag.name).all():
+            add(child, category, level + 1)
+
+    for category in sorted(categories):
+        if not prefix_category:
+            choices.append((-1, f"─── {category} ───"))
+        for tag in categories[category]:
+            if tag.parent_tag_id is None:
+                add(tag, category, 0)
+    return choices
+
 
 class ClipForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     game_id = SelectField('Game', coerce=int, validators=[Optional()])
     point_id = SelectField('Point', coerce=int, validators=[Optional()])
-    video_source = SelectField('Video Source', 
-        choices=[
-            ('youtube', 'YouTube'),
-            ('veo', 'Veo')
-        ],
+    video_source = SelectField('Video Source',
+        choices=VIDEO_SOURCES,
         default='youtube',
         validators=[DataRequired()]
     )
@@ -32,22 +100,10 @@ class ClipForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(ClipForm, self).__init__(*args, **kwargs)
-        
-        # Get current team ID
-        if current_user.is_authenticated:
-            team_id = get_current_team_id()
-        else:
-            team_id = None
-        
-        # Populate game choices - FILTERED BY TEAM
-        if team_id:
-            self.game_id.choices = [(0, 'Select Game')] + [
-                (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
-                for g in Game.query.filter_by(team_organization_id=team_id).order_by(Game.date.desc()).all()
-            ]
-        else:
-            self.game_id.choices = [(0, 'Select Game')]
-        
+        team_id = _team_id()
+
+        self.game_id.choices = game_choices(team_id, 'Select Game')
+
         # The page refills the point list when the game changes; the server has
         # to know the chosen game's points too or a picked point won't validate.
         self.point_id.choices = [(0, 'Select Point')]
@@ -59,77 +115,15 @@ class ClipForm(FlaskForm):
                     Game.team_organization_id == team_id
                 ).order_by(Point.point_number).all()
             ]
-        
-        # Populate tag choices with hierarchical structure and categories - FILTERED BY TEAM
-        if team_id:
-            self.tags.choices = self._get_hierarchical_tag_choices(team_id)
-        else:
-            self.tags.choices = []
-        
-        # Populate player choices - FILTERED BY TEAM
-        if team_id:
-            self.players.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
-                                   for p in Player.query.filter_by(
-                                       team_organization_id=team_id,
-                                       active=True
-                                   ).order_by(Player.name).all()]
-        else:
-            self.players.choices = []
-    
-    def _get_hierarchical_tag_choices(self, team_id):
-        """Build hierarchical tag choices grouped by category"""
-        choices = []
-        
-        # Get all active tags for this team
-        tags = ClipTag.query.filter_by(
-            team_organization_id=team_id,
-            is_active=True
-        ).order_by(ClipTag.category, ClipTag.name).all()
-        
-        # Group by category
-        categories = {}
-        for tag in tags:
-            category = tag.category or 'Other'
-            if category not in categories:
-                categories[category] = []
-            categories[category].append(tag)
-        
-        # Build choices with category headers
-        for category in sorted(categories.keys()):
-            # Add category header (disabled option)
-            choices.append((-1, f"─── {category} ───"))
-            # Add tags in this category
-            for tag in categories[category]:
-                if tag.parent_tag_id is None:
-                    # Root tag
-                    choices.append((tag.id, tag.name))
-                    # Add children with indentation
-                    self._add_child_tags(tag, choices, level=1)
-        
-        return choices
-    
-    def _add_child_tags(self, parent, choices, level):
-        """Recursively add child tags with indentation"""
-        children = parent.children.filter_by(is_active=True).order_by(ClipTag.name).all()
-        for child in children:
-            indent = "  " * level
-            choices.append((child.id, f"{indent}↳ {child.name}"))
-            self._add_child_tags(child, choices, level + 1)
+
+        self.tags.choices = tag_choices(team_id)
+        self.players.choices = player_choices(team_id)
 
 
 class ClipTagForm(FlaskForm):
     name = StringField('Tag Name', validators=[DataRequired(), Length(max=100)])
-    category = SelectField('Category', 
-        choices=[
-            ('', 'Select Category'),
-            ('Video Type', 'Video Type'),
-            ('Game Context', 'Game Context'),
-            ('Training Type', 'Training Type'),
-            ('Skill Focus', 'Skill Focus'),
-            ('Strategic Focus', 'Strategic Focus'),
-            ('Player Development', 'Player Development'),
-            ('Analysis', 'Analysis')
-        ],
+    category = SelectField('Category',
+        choices=[('', 'Select Category')] + [(c, c) for c in CLIP_TAG_CATEGORIES],
         validators=[Optional()]
     )
     parent_tag_id = SelectField('Parent Tag (Optional)', coerce=int, validators=[Optional()])
@@ -140,48 +134,28 @@ class ClipTagForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(ClipTagForm, self).__init__(*args, **kwargs)
-        
-        # Get current team ID
-        if current_user.is_authenticated:
-            team_id = get_current_team_id()
-        else:
-            team_id = None
-        
-        # Populate parent tag choices - FILTERED BY TEAM
+        team_id = _team_id()
+
+        self.parent_tag_id.choices = [(0, 'None (Root Tag)')]
         if team_id:
-            self.parent_tag_id.choices = [(0, 'None (Root Tag)')] + [
+            self.parent_tag_id.choices += [
                 (t.id, t.full_path) for t in ClipTag.query.filter_by(
                     team_organization_id=team_id,
                     is_active=True
                 ).order_by(ClipTag.category, ClipTag.name).all()
             ]
-        else:
-            self.parent_tag_id.choices = [(0, 'None (Root Tag)')]
 
 
 class ClipFilterForm(FlaskForm):
     game_id = SelectField('Game', coerce=int, validators=[Optional()])
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
-    tag_category = SelectField('Tag Category', 
-        choices=[
-            ('', 'All Categories'),
-            ('Video Type', 'Video Type'),
-            ('Game Context', 'Game Context'),
-            ('Training Type', 'Training Type'),
-            ('Skill Focus', 'Skill Focus'),
-            ('Strategic Focus', 'Strategic Focus'),
-            ('Player Development', 'Player Development'),
-            ('Analysis', 'Analysis')
-        ],
+    tag_category = SelectField('Tag Category',
+        choices=[('', 'All Categories')] + [(c, c) for c in CLIP_TAG_CATEGORIES],
         validators=[Optional()]
     )
     player_id = SelectField('Player', coerce=int, validators=[Optional()])
     video_source = SelectField('Video Source',
-        choices=[
-            ('', 'All Sources'),
-            ('youtube', 'YouTube'),
-            ('veo', 'Veo')
-        ],
+        choices=[('', 'All Sources')] + VIDEO_SOURCES,
         validators=[Optional()]
     )
     is_featured = SelectField('Featured Only',
@@ -206,72 +180,8 @@ class ClipFilterForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(ClipFilterForm, self).__init__(*args, **kwargs)
-        
-        # Get current team ID
-        if current_user.is_authenticated:
-            team_id = get_current_team_id()
-        else:
-            team_id = None
-        
-        # Populate game choices - FILTERED BY TEAM
-        if team_id:
-            self.game_id.choices = [(0, 'All Games')] + [
-                (g.id, f"vs {g.opponent} ({g.date.strftime('%Y-%m-%d') if g.date else 'No date'})")
-                for g in Game.query.filter_by(team_organization_id=team_id).order_by(Game.date.desc()).all()
-            ]
-        else:
-            self.game_id.choices = [(0, 'All Games')]
-        
-        # Populate tag choices with hierarchical structure - FILTERED BY TEAM
-        if team_id:
-            self.tags.choices = self._get_hierarchical_tag_choices(team_id)
-        else:
-            self.tags.choices = []
-        
-        # Populate player choices - FILTERED BY TEAM
-        if team_id:
-            self.player_id.choices = [(0, 'All Players')] + [(p.id, f"{p.name} (#{p.jersey_number})") 
-                                    for p in Player.query.filter_by(
-                                        team_organization_id=team_id,
-                                        active=True
-                                    ).order_by(Player.name).all()]
-        else:
-            self.player_id.choices = [(0, 'All Players')]
-    
-    def _get_hierarchical_tag_choices(self, team_id):
-        """Build hierarchical tag choices grouped by category"""
-        choices = []
-        
-        # Get all active tags for this team
-        tags = ClipTag.query.filter_by(
-            team_organization_id=team_id,
-            is_active=True
-        ).order_by(ClipTag.category, ClipTag.name).all()
-        
-        # Group by category
-        categories = {}
-        for tag in tags:
-            category = tag.category or 'Other'
-            if category not in categories:
-                categories[category] = []
-            categories[category].append(tag)
-        
-        # Build choices with category headers
-        for category in sorted(categories.keys()):
-            # Add tags in this category
-            for tag in categories[category]:
-                if tag.parent_tag_id is None:
-                    # Show category prefix
-                    choices.append((tag.id, f"[{category}] {tag.name}"))
-                    # Add children with indentation
-                    self._add_child_tags(tag, choices, level=1, category=category)
-        
-        return choices
-    
-    def _add_child_tags(self, parent, choices, level, category):
-        """Recursively add child tags with indentation"""
-        children = parent.children.filter_by(is_active=True).order_by(ClipTag.name).all()
-        for child in children:
-            indent = "  " * level
-            choices.append((child.id, f"[{category}] {indent}↳ {child.name}"))
-            self._add_child_tags(child, choices, level + 1, category)
+        team_id = _team_id()
+
+        self.game_id.choices = game_choices(team_id, 'All Games')
+        self.tags.choices = tag_choices(team_id, prefix_category=True)
+        self.player_id.choices = [(0, 'All Players')] + player_choices(team_id)

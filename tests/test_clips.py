@@ -9,7 +9,7 @@ from app.models.point import Point
 from tests import stats_data
 from tests.test_team_isolation import make_user
 
-YOUTUBE = 'https://www.youtube.com/watch?v=abc123XYZ'
+YOUTUBE = 'https://www.youtube.com/watch?v=abc123XYZ_-'
 
 
 @pytest.fixture
@@ -126,7 +126,7 @@ def test_share_link_plays_the_clip_and_can_be_revoked(app, herd):
     assert status == 200
     anon = app.test_client()
     body = anon.get(data['url']).get_data(as_text=True)
-    assert 'youtube.com/embed/abc123XYZ?start=30&amp;end=90' in body
+    assert 'youtube.com/embed/abc123XYZ_-?start=30&amp;end=90' in body
 
     assert c.post(f"/clips/{herd['shown']}/revoke_share_links").status_code == 302
     assert anon.get(data['url']).status_code == 410
@@ -160,3 +160,54 @@ def test_annotation_tag_parent_must_be_your_team(app, herd):
         data={'name': 'Own tag', 'parent_tag_id': herd['other_tag'], 'is_active': 'y'})
     assert r.status_code == 200
     assert db.session.get(AnnotationTag, herd['own_tag']).parent_tag_id is None
+
+
+@pytest.fixture
+def notes(app, herd):
+    """One annotation per visibility on the shown clip; 'Aimed' targets the player."""
+    other_player = make_user(db.session.get(Clip, herd['shown']).team_organization, 'player2', 'player')
+    rows = [('Team note', 'team', herd['coach'], None),
+            ('Coaches note', 'coaches', herd['coach'], None),
+            ('Aimed note', 'specific', herd['coach'], herd['player']),
+            ('Aimed elsewhere', 'specific', herd['coach'], other_player.id),
+            ('Own private', 'private', herd['player'], None),
+            ('Coach private', 'private', herd['coach'], None)]
+    for i, (title, visibility, author, target) in enumerate(rows):
+        db.session.add(ClipAnnotation(clip_id=herd['shown'], timestamp=i, title=title, visibility=visibility,
+                                      user_id=author, target_user_id=target, team_organization_id=herd['team']))
+    db.session.commit()
+    return {title for title, *_ in rows}
+
+
+@pytest.mark.parametrize('url', ['/clips/{shown}', '/clips/api/clip/{shown}/annotations',
+                                 '/clips/export_annotations_md/{shown}', '/clips/export_annotations_csv/{shown}'])
+def test_annotation_visibility_by_role(app, herd, notes, url):
+    url = url.format(**herd)
+    player_sees = {'Team note', 'Aimed note', 'Own private'}
+    body = client(app, herd, 'player').get(url).get_data(as_text=True)
+    assert {n for n in notes if n in body} == player_sees
+    body = client(app, herd, 'coach').get(url).get_data(as_text=True)
+    assert {n for n in notes if n in body} == notes
+
+
+def test_shared_page_shows_only_team_notes(app, herd, notes):
+    _, data = share_url(client(app, herd, 'coach'), herd['shown'])
+    body = app.test_client().get(data['url']).get_data(as_text=True)
+    assert {n for n in notes if n in body} == {'Team note'}
+
+
+@pytest.mark.parametrize('link', [
+    'https://www.youtube.com/watch?v=abc123XYZ_-&t=4', 'https://youtu.be/abc123XYZ_-?si=x',
+    'https://www.youtube.com/shorts/abc123XYZ_-', 'https://www.youtube.com/live/abc123XYZ_-',
+    'https://www.youtube.com/embed/abc123XYZ_-', 'https://m.youtube.com/watch?v=abc123XYZ_-',
+])
+def test_youtube_links_embed(link):
+    from app.utils.clip_video import youtube_embed_url, youtube_timestamp_link
+    assert youtube_embed_url(link, 5, 9) == 'https://www.youtube.com/embed/abc123XYZ_-?start=5&end=9'
+    assert youtube_timestamp_link(link, 12) == 'https://www.youtube.com/watch?v=abc123XYZ_-&t=12s'
+
+
+def test_non_youtube_links_do_not_embed():
+    from app.utils.clip_video import youtube_embed_url
+    for link in (None, '', 'https://vimeo.com/123', 'https://www.youtube.com/watch?v=<script>'):
+        assert youtube_embed_url(link) is None
