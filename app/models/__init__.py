@@ -19,6 +19,7 @@ from app.models.season_plan import (
     SeasonPlan, SeasonPhase, SeasonWeek, SeasonPage, SeasonMilestone,
     ClassroomSession, ClassroomResource,
 )
+from app.models.handbook import HandbookPage
 
 # Game and Tournament models
 from app.models.tournament import Tournament
@@ -85,6 +86,7 @@ __all__ = [
     # Season plan
     'SeasonPlan', 'SeasonPhase', 'SeasonWeek', 'SeasonPage', 'SeasonMilestone',
     'ClassroomSession', 'ClassroomResource',
+    'HandbookPage',
     # Playbook
     'Play', 'Formation', 'PlayTag', 'PlayerPosition', 'PlayAssignment',
     # Theory

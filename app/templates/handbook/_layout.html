@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{# Shared by every handbook page: stylesheet, search and the section tabs. #}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/handbook.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="hb-top">
+  <a class="hb-home" href="{{ url_for('handbook.index') }}"><i class="bi bi-book"></i> Leadership handbook</a>
+  <form class="hb-search" role="search" action="{{ url_for('handbook.index') }}" method="get">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ q or '' }}" placeholder="Search the handbook" aria-label="Search the handbook">
+  </form>
+</div>
+<nav class="hb-tabs" aria-label="Handbook sections">
+  <a href="{{ url_for('handbook.index') }}" class="{{ 'active' if request.endpoint == 'handbook.index' }}">Home</a>
+  {% for key, title, blurb, in_section in groups %}
+  <a href="{{ url_for('handbook.page', slug=in_section[0].slug) }}"
+     class="{{ 'active' if page is defined and page.section == key }}">{{ title }}</a>
+  {% endfor %}
+</nav>
+{% block hb_content %}{% endblock %}
+{% endblock %}

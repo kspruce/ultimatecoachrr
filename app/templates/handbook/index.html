@@ -1,0 +1,55 @@
+{% extends "handbook/_layout.html" %}
+
+{% block hb_content %}
+{% if results is not none %}
+<div class="uc-page-header">
+  <div>
+    <h1>Search</h1>
+    <p>{{ results|length }} page{{ '' if results|length == 1 else 's' }} matching “{{ q }}”</p>
+  </div>
+</div>
+<div class="hb-results">
+  {% for p in results %}
+  <a class="hb-result" href="{{ url_for('handbook.page', slug=p.slug) }}">
+    <span class="hb-label">{{ section_titles.get(p.section, p.section) }}</span>
+    <span class="hb-result-title">{{ p.title }}</span>
+    {% if p.lead %}<span class="hb-muted">{{ p.lead }}</span>{% endif %}
+  </a>
+  {% else %}
+  <p class="hb-muted">Nothing matches. Try a single word, like “timeouts” or “spirit”.</p>
+  {% endfor %}
+</div>
+{% else %}
+<div class="hb-hero">
+  <div class="hb-label">For captains and coaches</div>
+  <h1>How we lead Herd</h1>
+  <p>Build a team people love being part of. Use every session to make everyone better. Grow, season by season, into a team nobody wants to draw, and have fun getting there.</p>
+  {% if pages %}
+  <div class="hb-start">
+    <a class="btn btn-primary" href="{{ url_for('handbook.page', slug=pages[0].slug) }}">Start with {{ pages[0].title }}</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if not pages %}
+<div class="hb-card"><p class="m-0 hb-muted">The handbook is empty. Load it with <code>flask import-handbook imports/leadership-handbook/handbook.html --team &lt;slug&gt;</code>.</p></div>
+{% endif %}
+
+<div class="hb-sections">
+  {% for key, title, blurb, in_section in groups %}
+  <section class="hb-card hb-section">
+    <header>
+      <h2><a href="{{ url_for('handbook.page', slug=in_section[0].slug) }}">{{ title }}</a></h2>
+      <span class="hb-muted small">{{ in_section|length }} page{{ '' if in_section|length == 1 else 's' }}</span>
+    </header>
+    <p>{{ blurb }}</p>
+    <ul>
+      {% for p in in_section %}
+      <li><a href="{{ url_for('handbook.page', slug=p.slug) }}">{{ p.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
