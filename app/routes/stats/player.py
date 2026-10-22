@@ -119,18 +119,18 @@ def player_stats(player_id):
 
     # --- CORRECTED AND CONSOLIDATED RADAR CHART METRICS ---
     # This block ensures all necessary stats are calculated and correctly formatted.
-    if stats['points_played'] > 0:
-        # Offensive metrics
-        stats['goals_per_point'] = stats['goals'] / stats['points_played']
-        stats['assists_per_point'] = stats['assists'] / stats['points_played']
-        stats['throws_per_point'] = stats['throws'] / stats['points_played']
-        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['points_played']
+    if stats['analysed_points'] > 0:
+        # Offensive metrics (per point with full stats)
+        stats['goals_per_point'] = stats['goals'] / stats['analysed_points']
+        stats['assists_per_point'] = stats['assists'] / stats['analysed_points']
+        stats['throws_per_point'] = stats['throws'] / stats['analysed_points']
+        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['analysed_points']
         stats['break_throw_percentage'] = (stats['break_throws'] / stats['throws'] * 100) if stats['throws'] > 0 else 0
 
         # Defensive metrics
-        if stats['d_line_points_played'] > 0:
-            stats['blocks_per_point'] = stats['blocks'] / stats['d_line_points_played']
-            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats['forced_turnovers']) / stats['d_line_points_played']
+        if stats['analysed_d_line_points'] > 0:
+            stats['blocks_per_point'] = stats['blocks'] / stats['analysed_d_line_points']
+            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats['forced_turnovers']) / stats['analysed_d_line_points']
         else:
             stats['blocks_per_point'] = 0
             stats['turnovers_forced_per_point'] = 0

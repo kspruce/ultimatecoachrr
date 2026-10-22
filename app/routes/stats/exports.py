@@ -33,10 +33,11 @@ def _csv_response(rows, headers, filename):
 
 def _stat_columns(s):
     """The stat columns shared by all three exports, from one player's stats."""
-    points = s.get('points_played', 0)
+    points = s.get('analysed_points', s.get('points_played', 0))  # per-point rates
     return {
         'games_played':           s.get('games_played', 0),
-        'points_played':          points,
+        'points_played':          s.get('points_played', 0),
+        'points_with_full_stats': s.get('analysed_points', 0),
         'o_line_points_played':   s.get('o_line_points_played', 0),
         'd_line_points_played':   s.get('d_line_points_played', 0),
         'goals':                  s.get('goals', 0),
@@ -88,7 +89,7 @@ def export_player_history_csv(player_id):
 
     headers = [
         'date', 'opponent', 'result',
-        'points_played', 'o_line_points_played', 'd_line_points_played',
+        'points_played', 'points_with_full_stats', 'o_line_points_played', 'd_line_points_played',
         'goals', 'assists', 'hockey_assists', 'blocks',
         'completions', 'throws', 'completion_rate',
         'catches', 'drops', 'catch_rate',
@@ -140,7 +141,7 @@ def export_game_csv(game_id):
 
     headers = [
         'name', 'jersey_number', 'position', 'gender',
-        'points_played', 'o_line_points_played', 'd_line_points_played',
+        'points_played', 'points_with_full_stats', 'o_line_points_played', 'd_line_points_played',
         'goals', 'assists', 'hockey_assists', 'blocks',
         'completions', 'throws', 'completion_rate',
         'throwaways', 'drops', 'turnovers', 'plus_minus',
@@ -183,7 +184,7 @@ def export_team_season_csv():
 
     headers = [
         'name', 'jersey_number', 'position', 'gender',
-        'games_played', 'points_played', 'o_line_points_played', 'd_line_points_played',
+        'games_played', 'points_played', 'points_with_full_stats', 'o_line_points_played', 'd_line_points_played',
         'goals', 'assists', 'hockey_assists', 'blocks',
         'completions', 'throws', 'completion_rate',
         'catches', 'drops', 'catch_rate',

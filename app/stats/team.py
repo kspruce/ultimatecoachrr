@@ -11,7 +11,7 @@ from app.utils.team_filter import get_current_team_id
 
 from app.stats.formulas import TURNOVER_EVENTS, calculate_unadjusted_per, get_point_starting_possession, point_we_scored
 from app.stats.players import HUCK_DISTANCE, get_players_base_stats
-from app.stats.loaders import preload_game_points, game_points, game_line_points
+from app.stats.loaders import preload_game_points, game_points, game_line_points, is_analysed
 
 
 def calculate_team_averages(games=None):
@@ -35,14 +35,14 @@ def calculate_team_averages(games=None):
         'player_count': 0
     }
 
-    # First pass to calculate basic averages
+    # First pass to calculate basic averages (points with full stats only)
     for player_id, stats in player_stats.items():
-        if stats['points_played'] > 0:
+        if stats['analysed_points'] > 0:
             totals['player_count'] += 1
             totals['o_line_plus_minus'] += stats.get('o_line_plus_minus', 0)
-            totals['o_line_points'] += stats.get('o_line_points_played', 0)
+            totals['o_line_points'] += stats.get('analysed_o_line_points', 0)
             totals['d_line_plus_minus'] += stats.get('d_line_plus_minus', 0)
-            totals['d_line_points'] += stats.get('d_line_points_played', 0)
+            totals['d_line_points'] += stats.get('analysed_d_line_points', 0)
     
     # Calculate initial averages
     initial_avgs = {
@@ -53,8 +53,8 @@ def calculate_team_averages(games=None):
     
     # Second pass to calculate uPER using the initial averages
     for player_id, stats in player_stats.items():
-        if stats['points_played'] > 0:
-            # Calculate unadjusted PER without the plus-minus component
+        if stats['analysed_points'] > 0:
+            # Calculate unadjusted PERwithout the plus-minus component
             # since we don't have the final team averages yet
             raw_uper = calculate_unadjusted_per(stats)
             totals['uper_total'] += raw_uper
@@ -85,6 +85,10 @@ def calculate_game_stats(game):
         'possessions_gained': 0,
         'clean_holds': 0,
         'clean_breaks': 0,
+        # Points with full stats: possession numbers only come from these
+        'analysed_points': 0,
+        'analysed_o_line_points': 0,
+        'analysed_d_line_points': 0,
         'scoring_possessions': 0,
         'goals': 0,
 
@@ -105,6 +109,11 @@ def calculate_game_stats(game):
             stats['o_line_points'] += 1
         if is_d_point:
             stats['d_line_points'] += 1
+        analysed = bool(point_events)
+        if analysed:
+            stats['analysed_points'] += 1
+            stats['analysed_o_line_points'] += is_o_point
+            stats['analysed_d_line_points'] += is_d_point
 
         # Canonical possession analysis
         analysis = analyze_point_possessions(point, point_events)
@@ -135,13 +144,13 @@ def calculate_game_stats(game):
 
             if is_o_point:
                 stats['o_line_conversions'] += 1
-                if our_turnovers == 0:
+                if analysed and our_turnovers == 0:
                     stats['clean_holds'] += 1
 
             if is_d_point:
                 stats['d_line_conversions'] += 1
                 stats['breaks'] += 1   # <-- THIS IS THE MISSING PIECE
-                if our_turnovers == 0:
+                if analysed and our_turnovers == 0:
                     stats['clean_breaks'] += 1
 
 
@@ -157,18 +166,18 @@ def calculate_game_stats(game):
     )
 
     stats['clean_hold_percentage'] = (
-        stats['clean_holds'] / stats['o_line_points'] * 100
-        if stats['o_line_points'] else 0
+        stats['clean_holds'] / stats['analysed_o_line_points'] * 100
+        if stats['analysed_o_line_points'] else 0
     )
 
     stats['clean_break_percentage'] = (
-        stats['clean_breaks'] / stats['d_line_points'] * 100
-        if stats['d_line_points'] else 0
+        stats['clean_breaks'] / stats['analysed_d_line_points'] * 100
+        if stats['analysed_d_line_points'] else 0
     )
 
     stats['avg_turnovers_per_point'] = (
-        stats['turnovers'] / stats['points_played']
-        if stats['points_played'] else 0
+        stats['turnovers'] / stats['analysed_points']
+        if stats['analysed_points'] else 0
     )
 
     stats['possessions_per_goal'] = (
@@ -333,6 +342,8 @@ def calculate_possession_based_team_metrics(games):
     possessions_in_scoring_points = 0
 
     for point in points:
+        if point.id not in events_by_point:
+            continue  # Game Day only: no possessions recorded
         start_pos = get_point_starting_possession(point)
         is_o_point = start_pos == 'offence'
         is_d_point = start_pos == 'defence'
@@ -557,12 +568,11 @@ def calculate_additional_team_metrics(games):
     if not games:
         return _empty
 
-    # Count total points
+    # Per-point rates count only points with full stats (not Game Day only)
     total_points = 0
     for game in games:
         try:
-            points = game_points(game)
-            total_points += len(points)
+            total_points += sum(1 for p in game_points(game) if is_analysed(p))
         except Exception as e:
             current_app.logger.error(f"Error counting points for game {game.id}: {str(e)}")
 
@@ -627,14 +637,17 @@ def calculate_additional_team_metrics(games):
     # Count hucks
     hucks = sum(1 for t in throws if t.calculate_distance() and t.calculate_distance() > HUCK_DISTANCE)
 
-    # Calculate D-line totals once
+    # Calculate D-line totals once: conversion from every point, per-D-point
+    # rates from points with full stats
     d_points_count = 0
     d_conversions = 0
+    analysed_d_points = 0
 
     for game in games:
         d_points = game_line_points(game, 'D-line')
         d_points_count += len(d_points)
         d_conversions += sum(1 for p in d_points if point_we_scored(p))
+        analysed_d_points += sum(1 for p in d_points if is_analysed(p))
 
     # Break % (break throw rate) = percentage of throws that are break throws
     break_throw_percentage = (break_throws / len(throws)) * 100 if throws else 0
@@ -662,8 +675,8 @@ def calculate_additional_team_metrics(games):
         'throws_per_point': throws_per_point,
         'hucks_per_point': hucks / total_points,
         # blocks_per_point: blocks earned on D-line per D-line point played
-        'blocks_per_point': blocks / d_points_count if d_points_count > 0 else 0,
-        'turnovers_forced_per_point': turnovers_forced / d_points_count if d_points_count > 0 else 0,
+        'blocks_per_point': blocks / analysed_d_points if analysed_d_points > 0 else 0,
+        'turnovers_forced_per_point': turnovers_forced / analysed_d_points if analysed_d_points > 0 else 0,
         'break_throw_percentage': break_throw_percentage,
         'break_percentage': break_percentage,       # D-line conversion rate alias
     }

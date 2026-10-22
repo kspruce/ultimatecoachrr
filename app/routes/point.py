@@ -13,7 +13,7 @@ from app.utils.utils import admin_required, stat_taker_required
 from app.utils.team_filter import get_current_team_id
 from app.utils.point_flow import (
     abba_ratio, determine_line_and_position, get_game_roster, line_type_for,
-    next_point_to_analyse, suggested_line, sync_game_score,
+    analysis_progress, suggested_line, sync_game_score,
 )
 
 bp = Blueprint('point', __name__, url_prefix='/points')
@@ -40,8 +40,9 @@ def game_points(game_id):
         team_organization_id=get_current_team_id()
     ).order_by(Point.point_number).all()
 
+    progress = analysis_progress(game)
     return render_template('point/game_points.html', game=game, points=points,
-                           next_to_analyse=next_point_to_analyse(game))
+                           next_to_analyse=progress['next'], progress=progress)
 
 
 # ---------------------------------------

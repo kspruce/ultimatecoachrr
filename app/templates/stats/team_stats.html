@@ -484,6 +484,15 @@
 
 
     {% set bs = ball_security %}
+    {% if bs.coverage.total and bs.coverage.analysed < bs.coverage.total %}
+    <div class="alert alert-light border small mb-4 coverage-note">
+        <i class="bi bi-info-circle me-1"></i>
+        Full stats from <strong>{{ bs.coverage.analysed }} of {{ bs.coverage.total }}</strong> points{% if bs.coverage.gameday_only_games %}
+        ({{ bs.coverage.gameday_only_games }} game{{ '' if bs.coverage.gameday_only_games == 1 else 's' }} only taken live on Game Day){% endif %}.
+        Holds, breaks and the score use every point; per-point rates, possession stats and the
+        throwing analysis below only use points with full stats.
+    </div>
+    {% endif %}
     <div class="row mb-4">
         <div class="col-lg-5 mb-3 mb-lg-0">
             <div class="card h-100">

@@ -55,6 +55,8 @@ def looked_off_records(point_ids):
 def cut_profile(data, player_id, game_ids=None):
     """How often the player gets open and gets used, by type of cut."""
     point_ids = {pid for pid, g in data.game_of_point.items() if game_ids is None or g.id in game_ids}
+    # Per point counts only points with full stats: Game Day points have no catches
+    rate_points = point_ids & data.analysed
     records = looked_off_records(point_ids)
     tracked_points = {r.point_id for r in records}
 
@@ -67,8 +69,8 @@ def cut_profile(data, player_id, game_ids=None):
                   else {p for pts in data.points_played.values() for p in pts})
         played = {p for p in played if p in point_ids}
         # Points counts player-points for the team, so per point is per player.
-        player_points = (len(played) if pid is not None
-                         else sum(len({p for p in pts if p in point_ids}) for pts in data.points_played.values()))
+        player_points = (len(played & rate_points) if pid is not None
+                         else sum(len(pts & rate_points) for pts in data.points_played.values()))
         tracked_cuts = [c for c in cuts if c['point_id'] in tracked_points]
         tracked_open = [r for r in open_looked_off if r.point_id in tracked_points]
         by_type = {}

@@ -12,7 +12,7 @@ from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_optimized_line_efficiency
 from app.stats.players import get_players_base_stats
 from app.stats.team import calculate_additional_team_metrics, calculate_performance_trends, calculate_possession_based_team_metrics, calculate_team_summary, get_previous_period_games
-from app.stats.loaders import preload_game_points
+from app.stats.loaders import game_points, is_analysed, preload_game_points
 from app.stats import turnovers
 
 
@@ -151,6 +151,13 @@ def team_stats():
         'practice_period': periods,
         'min_touches': turnovers.MIN_TOUCHES,
         'min_attempts': turnovers.MIN_ATTEMPTS,
+    }
+    # How much of this has full stats rather than just the Game Day record
+    all_points = [p for g in games for p in game_points(g)]
+    ball_security['coverage'] = {
+        'total': len(all_points),
+        'analysed': sum(1 for p in all_points if is_analysed(p)),
+        'gameday_only_games': sum(1 for g in games if game_points(g) and not any(is_analysed(p) for p in game_points(g))),
     }
     # Trend over the games in the filter only
     ball_security['trends'] = turnovers.game_trends(throwing, None, game_ids)

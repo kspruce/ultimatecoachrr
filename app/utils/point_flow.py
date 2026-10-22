@@ -142,6 +142,16 @@ def next_point_to_analyse(game, after_number=0):
     ).order_by(Point.point_number).first()
 
 
+def analysis_progress(game):
+    """How many of the game's points have full stats, how many only the
+    Game Day record, and the next one to analyse."""
+    has_events = db.session.query(Event.id).filter(Event.point_id == Point.id).exists()
+    total = _points(game).count()
+    waiting = _points(game).filter(~has_events).count()
+    return {'total': total, 'analysed': total - waiting, 'waiting': waiting,
+            'next': next_point_to_analyse(game) if waiting else None}
+
+
 def sync_game_score(game):
     """Re-chain every point's before/after score in point order and set the
     game score from the result, so finishing or undoing an earlier point

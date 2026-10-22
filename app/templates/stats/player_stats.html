@@ -217,6 +217,16 @@
         </div>
     </div>
 
+    {% if stats.gameday_only_points %}
+    <div class="alert alert-light border small mb-4 coverage-note">
+        <i class="bi bi-info-circle me-1"></i>
+        Full stats from <strong>{{ stats.analysed_points }} of {{ stats.points_played }}</strong> points.
+        The other {{ stats.gameday_only_points }} were only taken live on Game Day: they count towards
+        points played, holds and breaks, the season box score and pulls, but not per-point rates, PER,
+        or the throwing and cutting analysis.
+    </div>
+    {% endif %}
+
     <!-- Filters -->
     <div class="row mb-4">
         <div class="col-12">
@@ -391,6 +401,37 @@
                     </div>
                 </div>
 
+                <!-- Every point counted: full stats where recorded, Game Day otherwise -->
+                {% set box = stats.box %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Season Box Score
+                                    <i class="bi bi-info-circle" data-bs-toggle="tooltip"
+                                       title="Every point you played: full stats where the point has them, the Game Day record where it doesn't. Nothing is counted twice."></i>
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3 text-center box-score">
+                                    <div class="col-4 col-md-2"><div class="cutting-stat-value">{{ box.points }}</div><div class="cutting-stat-label">Points</div></div>
+                                    <div class="col-4 col-md-2"><div class="cutting-stat-value">{{ box.goals }}</div><div class="cutting-stat-label">Goals</div></div>
+                                    <div class="col-4 col-md-2"><div class="cutting-stat-value">{{ box.assists }}</div><div class="cutting-stat-label">Assists</div></div>
+                                    <div class="col-4 col-md-2"><div class="cutting-stat-value">{{ box.blocks }}</div><div class="cutting-stat-label">Blocks</div></div>
+                                    <div class="col-4 col-md-2"><div class="cutting-stat-value">{{ box.turnovers }}</div><div class="cutting-stat-label">Turnovers</div></div>
+                                    <div class="col-4 col-md-2"><div class="cutting-stat-value">{{ stats.pulls.pulls }}</div><div class="cutting-stat-label">Pulls</div></div>
+                                </div>
+                                {% if box.gameday_points %}
+                                <p class="small text-muted mt-3 mb-0">
+                                    {{ box.full_points }} points with full stats, {{ box.gameday_points }} from Game Day
+                                    ({{ box.from_gameday }} play{{ '' if box.from_gameday == 1 else 's' }} counted from the Game Day record).
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card">
@@ -426,7 +467,7 @@
                         </div>
                         <div class="card-body text-center d-flex flex-column justify-content-center">
                             <div id="perDisplay">
-                                <div class="display-1 fw-bold" id="perValue">{{ stats.per|round(1) }}</div>
+                                <div class="display-1 fw-bold" id="perValue">{{ stats.per|round(1) if stats.analysed_points else '–' }}</div>
                                 <div class="text-muted">Player Efficiency Rating</div>
                             </div>
                             <div class="small text-muted mt-3">
@@ -622,6 +663,25 @@
         
         <!-- Defensive Tab -->
         <div class="tab-pane fade" id="defensive" role="tabpanel" aria-labelledby="defensive-tab">
+            {% set pl = stats.pulls %}
+            {% if pl.pulls %}
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header"><h5 class="mb-0">Pulls <small class="text-muted fw-normal">· from Game Day</small></h5></div>
+                        <div class="card-body">
+                            <div class="row g-3 text-center">
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ pl.pulls }}</div><div class="cutting-stat-label">Pulls</div></div>
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ tm.pct(pl.in_rate) }}</div><div class="cutting-stat-label">In bounds</div><div class="small text-muted">{{ pl.out }} out</div></div>
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.1f"|format(pl.avg_hang_time) ~ 's' if pl.avg_hang_time is not none else '–' }}</div><div class="cutting-stat-label">Average hang time</div><div class="small text-muted">{{ pl.timed }} timed</div></div>
+                                <div class="col-6 col-md-3"><div class="cutting-stat-value">{{ "%.1f"|format(pl.best_hang_time) ~ 's' if pl.best_hang_time is not none else '–' }}</div><div class="cutting-stat-label">Best hang time</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Defensive Stats Content -->
             <div class="row mb-4">
                 <div class="col-md-12">
@@ -1127,7 +1187,7 @@
                                             <th>Goals</th>
                                             <th>Assists</th>
                                             <th>Blocks</th>
-                                            <th>Throwaways</th>
+                                            <th>Turnovers</th>
                                             <th>PER</th>
                                         </tr>
                                     </thead>
@@ -1140,12 +1200,15 @@
                                                     vs {{ game_data.game.opponent }}
                                                 </a>
                                             </td>
-                                            <td>{{ game_data.stats.points_played }}</td>
-                                            <td>{{ game_data.stats.goals }}</td>
-                                            <td>{{ game_data.stats.assists }}</td>
-                                            <td>{{ game_data.stats.blocks }}</td>
-                                            <td>{{ game_data.stats.throwaways }}</td>
-                                            <td>{{ game_data.stats.per|round(2) }}</td>
+                                            <td>{{ game_data.stats.points_played }}
+                                                {% if not game_data.stats.analysed_points %}<span class="badge bg-light text-dark border ms-1" title="Only taken live on Game Day: no full stats">Game Day only</span>
+                                                {% elif game_data.stats.gameday_only_points %}<small class="text-muted">({{ game_data.stats.analysed_points }} full)</small>{% endif %}
+                                            </td>
+                                            <td>{{ game_data.stats.box.goals }}</td>
+                                            <td>{{ game_data.stats.box.assists }}</td>
+                                            <td>{{ game_data.stats.box.blocks }}</td>
+                                            <td>{{ game_data.stats.box.turnovers }}</td>
+                                            <td>{{ game_data.stats.per|round(2) if game_data.stats.analysed_points else '–' }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -1254,7 +1317,7 @@ function initializePerformanceTrendChart() {
 
     // Build per-game data from Jinja — sorted oldest → newest for chart readability
     const performanceData = [
-        {% for game_data in player_games|sort(attribute='game.date') %}
+        {% for game_data in player_games|sort(attribute='game.date') if game_data.stats.analysed_points %}
         {
             date: "{{ game_data.game.date.strftime('%d %b') if game_data.game.date else '?' }}",
             fullDate: "{{ game_data.game.date.strftime('%Y-%m-%d') if game_data.game.date else '' }}",
@@ -1263,9 +1326,9 @@ function initializePerformanceTrendChart() {
             per:             {{ game_data.stats.per|default(0)|round(2) }},
             plus_minus:      {{ (game_data.stats.goals + game_data.stats.assists + game_data.stats.blocks - (game_data.stats.throwaways + game_data.stats.drops))|round(1) }},
             completion_rate: {{ ((game_data.stats.completions / game_data.stats.throws * 100) if game_data.stats.throws > 0 else 0)|round(1) }},
-            goals_per_point: {{ (game_data.stats.goals / game_data.stats.points_played if game_data.stats.points_played > 0 else 0)|round(3) }},
-            assists_per_point: {{ (game_data.stats.assists / game_data.stats.points_played if game_data.stats.points_played > 0 else 0)|round(3) }},
-            blocks_per_point: {{ (game_data.stats.blocks / game_data.stats.points_played if game_data.stats.points_played > 0 else 0)|round(3) }}
+            goals_per_point: {{ (game_data.stats.goals / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
+            assists_per_point: {{ (game_data.stats.assists / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }},
+            blocks_per_point: {{ (game_data.stats.blocks / game_data.stats.analysed_points if game_data.stats.analysed_points > 0 else 0)|round(3) }}
         },
         {% endfor %}
     ];

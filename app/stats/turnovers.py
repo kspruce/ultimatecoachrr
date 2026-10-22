@@ -117,6 +117,8 @@ class ThrowingData:
         self.events_by_point = {
             pid: sorted(point.events, key=lambda e: e.id) for pid, point in self.points.items()
         }
+        # Points with full stats (not just taken live on Game Day)
+        self.analysed = {pid for pid, events in self.events_by_point.items() if events}
 
     # --- slicing ---------------------------------------------------------
 
