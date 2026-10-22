@@ -1,0 +1,41 @@
+{% extends "handbook/_layout.html" %}
+
+{% macro contents(open) %}
+<details class="hb-toc"{{ ' open' if open }}>
+  <summary>Contents</summary>
+  <nav aria-label="Contents">
+    {% for key, title, blurb, in_section in groups %}
+    <div class="hb-label hb-toc-group">{{ title }}</div>
+    {% for p in in_section %}
+    <a href="{{ url_for('handbook.page', slug=p.slug) }}" {% if p.id == page.id %}aria-current="page"{% endif %}>{{ p.title }}</a>
+    {% endfor %}
+    {% endfor %}
+  </nav>
+</details>
+{% endmacro %}
+
+{% block hb_content %}
+<div class="hb-reader">
+  <aside class="hb-rail d-none d-lg-block">{{ contents(true) }}</aside>
+  <div class="hb-main">
+    <div class="d-lg-none">{{ contents(false) }}</div>
+    <article class="hb-card hb-page">
+      <div class="hb-crumbs">
+        <a href="{{ url_for('handbook.index') }}">Handbook</a> <span aria-hidden="true">›</span>
+        <a href="{{ url_for('handbook.page', slug=section_first.slug) }}">{{ section_title }}</a>
+      </div>
+      <header>
+        <div class="hb-label">{{ section_title }}</div>
+        <h1>{{ page.title }}</h1>
+        {% if page.lead %}<p class="lead">{{ page.lead }}</p>{% endif %}
+      </header>
+      <div class="hb-body">{{ body|safe }}</div>
+      <div class="hb-edit"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('handbook.edit', slug=page.slug) }}"><i class="bi bi-pencil"></i> Edit page</a></div>
+    </article>
+    <nav class="hb-pager" aria-label="Previous and next">
+      {% if prev_page %}<a class="prev" href="{{ url_for('handbook.page', slug=prev_page.slug) }}"><small>← Previous</small><span>{{ prev_page.title }}</span></a>{% endif %}
+      {% if next_page %}<a class="next" href="{{ url_for('handbook.page', slug=next_page.slug) }}"><small>Next →</small><span>{{ next_page.title }}</span></a>{% endif %}
+    </nav>
+  </div>
+</div>
+{% endblock %}

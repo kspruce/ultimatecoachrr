@@ -35,6 +35,8 @@ class TeamSettings(db.Model):
 
     # Off by default: only teams that import a season plan switch it on
     season_plan_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
+    # Off by default: leaders-only pages, switched on per team
+    leadership_handbook_enabled = db.Column(db.Boolean, default=False, server_default=sa.false(), nullable=False)
 
     # Team colours (#RRGGBB); empty means the default Ultimate Coach colours
     primary_color = db.Column(db.String(7))
