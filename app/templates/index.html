@@ -109,6 +109,14 @@
 
   /* ─── Getting started ───────────────────────────────────── */
   .ob-card { margin-top: 1.75rem; }
+  .tw-card { position: relative; z-index: 2; display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-lg); color: var(--ink); text-decoration: none; border-left: 4px solid var(--club); }
+  .tw-card:hover { color: var(--ink); border-color: var(--rule-strong); border-left-color: var(--club); }
+  .tw-main { flex: 1; min-width: 0; }
+  .tw-title { font-family: var(--font-serif); font-size: 1.3rem; line-height: 1.2; margin: .3rem 0 .15rem; }
+  .tw-count { text-align: center; line-height: 1; color: var(--ink-3); font-size: .9rem; white-space: nowrap; }
+  .tw-count b { font-size: 1.6rem; color: var(--ink); }
+  .tw-count span { display: block; font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; margin-top: .2rem; }
+  .tw-chev { color: var(--ink-3); }
   .ob-signup { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
   .ob-signup-t { font-size: 1.05rem; color: var(--ink); margin: .3rem 0 .15rem; }
   .ob-signup-t b { color: var(--club-ink); }
@@ -156,7 +164,8 @@
       {%- if next_game -%}{{ short_name }} play {{ next_game.opponent }} {{ day_word(next_game.date) }}{% if later_games %}, then {{ later_games[0].opponent }}{% endif %}.{% endif %}
       {%- if next_session %} {% if session_today %}Session tonight{% else %}Next session {{ day_word(next_session.date) }}{% endif %}{% if next_session.focus_area %}: {{ next_session.focus_area }}{% endif %}.{% endif %}
       {%- if squad and squad.no_reply %} {{ squad.no_reply }} still to reply for {{ squad.tournament.name }}.{% endif %}
-      {%- if not next_game and not next_session and not squad %}Nothing on the calendar yet. Add a session or game to get started.{% endif -%}
+      {%- if my_training and my_training[0][1].next %} Up next in your programme: {{ my_training[0][1].next.title }}.{% endif %}
+      {%- if not next_game and not next_session and not squad and not my_training %}Nothing on the calendar yet. Add a session or game to get started.{% endif -%}
     </p>
     {% else %}
     <div class="sash-kicker">Ultimate Coach</div>
@@ -173,6 +182,26 @@
 
 {% block content %}
 {% if current_user.is_authenticated %}
+
+
+{# ══════════ MY PROGRAMME THIS WEEK ══════════ #}
+{% for enrolment, wk in my_training|default([]) %}
+<a class="panel tw-card" href="{{ url_for('programmes.me', programme_id=enrolment.programme_id) }}#this-week">
+  <div class="tw-main">
+    <div class="uc-eyebrow">{{ enrolment.programme.name }} · {% if wk.starts %}starts {{ wk.starts.strftime('%a %-d %b') }}{% else %}this week{% endif %}</div>
+    {% if wk.next %}
+    <div class="tw-title">Up next: {{ wk.next.title }}</div>
+    <div class="pc-meta">{{ wk.next.week.track.name }}{% if wk.next.duration_minutes %} · {{ wk.next.duration_minutes }} min{% endif %}</div>
+    {% elif wk.required %}
+    <div class="tw-title">All done for this week</div>
+    {% else %}
+    <div class="tw-title">Nothing set this week</div>
+    {% endif %}
+  </div>
+  {% if wk.required and not wk.starts %}<div class="tw-count"><b>{{ wk.done }}</b>/{{ wk.required }}<span>done</span></div>{% endif %}
+  <i class="bi bi-chevron-right tw-chev" aria-hidden="true"></i>
+</a>
+{% endfor %}
 
 {# ══════════ POSTER ══════════ #}
 <section class="poster">
@@ -232,6 +261,7 @@
   </div>
   {% endif %}
 </section>
+
 
 {# ══════════ GETTING STARTED ══════════ #}
 {% if checklist %}

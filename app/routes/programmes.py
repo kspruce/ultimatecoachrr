@@ -800,7 +800,8 @@ def preview(programme_id):
         abort(404)
     return render_template('programmes/player_view.html', programme=programme, version=version, enrolment=None,
                            progress=None, preview=True, shared_view=False,
-                           weeks=_player_weeks(programme, version, None, None))
+                           weeks=_player_weeks(programme, version, None, None),
+                           now=svc.this_week(programme, version))
 
 
 @bp.route('/<int:programme_id>/publish', methods=['GET', 'POST'])
@@ -918,7 +919,8 @@ def _player_page(programme, enrolment, coach_view=False):
     logs = {lg.session_key: lg for lg in enrolment.logs}
     return render_template('programmes/player_view.html', programme=programme, version=enrolment.version,
                            enrolment=enrolment, progress=progress, logs=logs, preview=False, shared_view=False,
-                           coach_view=coach_view, weeks=_player_weeks(programme, enrolment.version, enrolment, progress))
+                           coach_view=coach_view, weeks=_player_weeks(programme, enrolment.version, enrolment, progress),
+                           now=svc.this_week(programme, enrolment.version, enrolment, progress))
 
 
 def _log_redirect(programme, enrolment, coach_view):

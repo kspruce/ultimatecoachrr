@@ -38,3 +38,72 @@
 .pg-ex-table input, .pg-ex-table textarea { min-width: 4.5rem; font-size: .85rem; }
 .pg-ex-table td { vertical-align: top; }
 .pg-pre { white-space: pre-wrap; }
+
+/* Player page: "This week" first, built for a phone */
+.pg-now { border-top: 4px solid var(--club); }
+.pg-now-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.pg-now-count { text-align: right; line-height: 1; font-size: .95rem; color: var(--ink-3); white-space: nowrap; }
+.pg-now-count b { font-size: 1.6rem; color: var(--ink); }
+.pg-now-count span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; margin-top: .2rem; }
+.pg-meter { height: 6px; border-radius: 999px; background: var(--sunken); overflow: hidden; margin: .75rem 0 0; }
+.pg-meter span { display: block; height: 100%; background: var(--club); }
+.pg-next {
+  margin: 1rem 0 .5rem; padding: .9rem 1rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--rule); border-left: 4px solid var(--track, var(--club));
+  background: color-mix(in srgb, var(--track, var(--club)) 6%, var(--card));
+}
+.pg-next-title { font-family: var(--font-serif); font-size: 1.35rem; line-height: 1.2; margin: .2rem 0 .35rem; }
+.pg-next-done { border-left-color: var(--good, #2e7d32); font-weight: 600; }
+.pg-next-detail { margin-top: .6rem; }
+.pg-next-detail > summary, .pg-do > summary { cursor: pointer; list-style: none; }
+.pg-next-detail > summary::-webkit-details-marker, .pg-do > summary::-webkit-details-marker { display: none; }
+.pg-next-detail > summary { font-weight: 600; font-size: .9rem; color: var(--club-ink, var(--club)); }
+.pg-next-detail > summary::after { content: ' ▾'; }
+.pg-next-detail[open] > summary::after { content: ' ▴'; }
+.pg-tap { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; min-height: 44px; padding-inline: 1.1rem; }
+.pg-now-track { margin-top: 1rem; }
+.pg-now-track-h { display: flex; flex-wrap: wrap; gap: .1rem .5rem; align-items: baseline; padding-bottom: .3rem;
+  border-bottom: 2px solid var(--track, var(--club)); }
+.pg-do { border-bottom: 1px solid var(--rule); }
+.pg-do > summary { display: flex; align-items: center; gap: .7rem; padding: .7rem 0; min-height: 48px; }
+.pg-do-mark { font-size: 1.15rem; color: var(--ink-3); flex: none; }
+.pg-do-done .pg-do-mark { color: var(--good, #2e7d32); }
+.pg-do-missing .pg-do-mark { color: var(--bad, #c62828); }
+.pg-do-done .pg-do-title { color: var(--ink-3); }
+.pg-do-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pg-do-title { font-weight: 600; color: var(--ink); }
+.pg-do-meta { font-size: .8rem; color: var(--ink-3); }
+.pg-do-chev { color: var(--ink-3); transition: transform .15s; flex: none; }
+.pg-do[open] .pg-do-chev { transform: rotate(180deg); }
+.pg-do-body { padding: 0 0 .9rem 1.85rem; }
+.pg-now-tests { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap;
+  margin-top: 1rem; padding: .7rem .9rem; border-radius: var(--radius-sm); background: var(--sunken); font-size: .9rem; }
+
+/* Exercises as a list rather than a wide table, so nothing scrolls sideways */
+.pg-ex-list { list-style: none; padding: 0; margin: .6rem 0 0; }
+.pg-ex-list > li { padding: .5rem 0; border-top: 1px dashed var(--rule); }
+.pg-ex-list > li:first-child { border-top: 0; }
+.pg-ex-head { display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; }
+.pg-ex-block { font-size: .7rem; font-weight: 700; color: var(--ink-3); background: var(--sunken); border-radius: 4px; padding: 0 .3rem; }
+.pg-ex-rx { font-size: .9rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.pg-test-list { list-style: none; padding: 0; margin: .5rem 0 0; }
+.pg-test-list > li { padding: .55rem 0; border-top: 1px solid var(--rule); }
+.pg-test-list > li:first-child { border-top: 0; }
+
+.pg-section-h { font-family: var(--font-serif); font-weight: 400; font-size: 1.35rem; margin: 1.6rem 0 .6rem; }
+.pg-jump { display: flex; gap: .4rem; overflow-x: auto; margin: 0 0 1rem; padding-bottom: .25rem; }
+.pg-jump a { flex: none; padding: .35rem .8rem; border: 1px solid var(--rule); border-left: 4px solid var(--track, var(--club));
+  border-radius: 999px; background: var(--card); color: var(--ink); font-size: .85rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.pg-track { scroll-margin-top: 5rem; }
+
+@media (max-width: 575.98px) {
+  .pg-card { padding: .9rem 1rem; }
+  .pg-head h1 { font-size: 1.6rem; }
+  .pg-stats { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .pg-stat { padding: .6rem .75rem; }
+  .pg-stat .pg-value { font-size: 1.25rem; }
+  .pg-next .pg-tap { width: 100%; }
+  .pg-do-body { padding-left: 0; }
+  .pg-do-body .pg-tap { width: 100%; }
+}
