@@ -111,8 +111,9 @@
 
       {# Training #}
       {% set show_season_plan = ts and ts.season_plan_enabled and season_plan_nav() %}
-      {% if not ts or ts.sessions_enabled or ts.fitness_enabled or show_season_plan or programmes_nav() %}
-      {% set in_training = in_training or request.endpoint.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') %}
+      {% set show_handbook = ts and ts.leadership_handbook_enabled and handbook_nav() %}
+      {% if not ts or ts.sessions_enabled or ts.fitness_enabled or show_season_plan or show_handbook or programmes_nav() %}
+      {% set in_training = in_training or request.endpoint.startswith('feedback.') or ep.startswith('season_plan.') or ep.startswith('programmes.') or ep.startswith('handbook.') %}
       <li class="nav-item dropdown {% if in_training %}uc-active{% endif %}">
         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
           <i class="bi bi-lightning-charge-fill"></i> Training
@@ -136,6 +137,10 @@
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="{{ url_for('feedback.hub') }}">
             <i class="bi bi-chat-square-text-fill"></i> Player Feedback</a></li>
+          {% if show_handbook %}
+          <li><a class="dropdown-item" href="{{ url_for('handbook.index') }}">
+            <i class="bi bi-book"></i> Leadership Handbook</a></li>
+          {% endif %}
           {% endif %}
           {% if not ts or ts.fitness_enabled %}
           <li><hr class="dropdown-divider"></li>

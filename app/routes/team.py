@@ -393,6 +393,7 @@ def feature_settings():
         settings.scouting_enabled = bool(request.form.get('scouting_enabled'))
         settings.fitness_enabled = bool(request.form.get('fitness_enabled'))
         settings.season_plan_enabled = bool(request.form.get('season_plan_enabled'))
+        settings.leadership_handbook_enabled = bool(request.form.get('leadership_handbook_enabled'))
 
         db.session.commit()
         flash('Feature visibility updated.', 'success')
