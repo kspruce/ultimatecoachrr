@@ -150,11 +150,6 @@
                                 View Fitness Profile
                             </a>
 
-                            {% if current_user.is_coach %}
-                            <a href="{{ url_for('fitness.record_fitness', player_id=player.id) }}" class="btn btn-outline-success ms-2">
-                                Record New Fitness Data
-                            </a>
-                            {% endif %}
                         </div>
                     </div>
                 </div>

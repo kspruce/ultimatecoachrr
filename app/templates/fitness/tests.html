@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Fitness tests{% endblock %}
+
+{% block content %}
+{% include "fitness/_styles.html" %}
+
+<div class="container py-4" style="max-width:860px">
+
+  <div class="uc-page-header">
+    <div>
+      <h2>The tests</h2>
+      <p>Four tests that matter for ultimate, how to run them and how to get better.</p>
+    </div>
+    <a href="{{ url_for('fitness.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Fitness
+    </a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="mb-2"><i class="bi bi-calendar-check me-2" style="color:var(--club-ink)"></i>Running a test day</h5>
+      <ul class="mb-0" style="color:var(--ink-2)">
+        <li>Test three times a season: pre-season, mid-season and a few weeks before your main tournament.</li>
+        <li>Do all four in one session, about an hour, in this order: broad jump, 10 m sprint, pro agility, then the Yo-Yo last because it empties the tank.</li>
+        <li>Warm up properly first: 10 minutes of jogging, dynamic stretches and a few build-up sprints.</li>
+        <li>Same surface, same shoes and the same timing method each time, so results are comparable.</li>
+      </ul>
+    </div>
+  </div>
+
+  {% for metric in metrics %}
+  {% set t = metric.test %}
+  <div class="card mb-4" id="test-{{ metric.key }}" style="scroll-margin-top:5rem">
+    <div class="card-body">
+      <div class="fit-tile-head mb-1"><i class="bi {{ t.icon }}"></i>{{ t.quality }}</div>
+      <h4 class="mb-1">{{ metric.name }}</h4>
+      <p class="fit-muted mb-3">
+        Measured in {{ metric.unit }} · {{ 'higher' if metric.higher_is_better else 'lower' }} is better
+      </p>
+      <p>{{ t.why }}</p>
+
+      <div class="row g-4">
+        <div class="col-md-6">
+          <h6 class="text-uppercase fit-muted" style="letter-spacing:.05em">How to run it</h6>
+          <p class="mb-2" style="font-size:.9rem"><strong>You need:</strong> {{ t.kit }}</p>
+          <ol class="mb-0" style="font-size:.9rem;padding-left:1.2rem">
+            {% for step in t.how %}<li class="mb-1">{{ step }}</li>{% endfor %}
+          </ol>
+        </div>
+        <div class="col-md-6">
+          <h6 class="text-uppercase fit-muted" style="letter-spacing:.05em">How to improve</h6>
+          <ul class="mb-0" style="font-size:.9rem;padding-left:1.2rem">
+            {% for tip in t.improve %}<li class="mb-1">{{ tip }}</li>{% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

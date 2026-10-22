@@ -1,1263 +1,323 @@
 # app/routes/fitness.py
-from flask import abort, Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
-from flask_login import login_required, current_user
-from app import db
-from app.models.fitness import FitnessGoal, FitnessMetric, FitnessRecord, TestingPhase
-from app.models.player import Player
-from app.utils.utils import admin_required
-from sqlalchemy import func, and_
+"""Fitness: four standard tests, everyone's PBs, an opt-in team leaderboard
+and a guide to running and improving on each test."""
 from datetime import datetime
-from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileRequired, FileAllowed
-from wtforms import FloatField, TextAreaField, SubmitField, SelectField, StringField, BooleanField, DateField
-from wtforms.validators import DataRequired, Optional, Length
-import csv
-import io
-import tempfile
+
+from flask import abort, Blueprint, render_template, redirect, url_for, flash, request
+from flask_login import login_required, current_user
+
+from app import db
+from app.models.fitness import FitnessGoal, FitnessMetric, FitnessRecord
+from app.models.player import Player
 from app.utils.team_filter import get_current_team_id
 
 bp = Blueprint('fitness', __name__, url_prefix='/fitness')
 
+LEADERBOARD_SIZE = 10
 
-def _team_metrics():
-    """Active metrics this team can use: its own plus shared ones (no team)."""
-    return FitnessMetric.query.filter(
-        FitnessMetric.active.is_(True),
-        db.or_(FitnessMetric.team_organization_id == get_current_team_id(),
-               FitnessMetric.team_organization_id.is_(None))
-    ).order_by(FitnessMetric.name)
 
-# Helper function to get current team ID
-
-class FitnessRecordForm(FlaskForm):
-    metric = SelectField('Metric', coerce=int, validators=[DataRequired()])
-    value = FloatField('Value', validators=[DataRequired()])
-    notes = TextAreaField('Notes', validators=[Optional()])
-    submit = SubmitField('Save Record')
-
-class FitnessMetricForm(FlaskForm):
-    name = StringField('Metric Name', validators=[DataRequired(), Length(max=100)])
-    description = TextAreaField('Description', validators=[Optional()])
-    unit = StringField('Unit of Measurement', validators=[DataRequired(), Length(max=20)])
-    higher_is_better = BooleanField('Higher Values Are Better', default=True)
-    active = BooleanField('Active', default=True)
-    submit = SubmitField('Save Metric')
-
-class TestingPhaseForm(FlaskForm):
-    name = StringField('Phase Name', validators=[DataRequired(), Length(max=100)])
-    phase_type = SelectField('Phase Type', choices=[
-        ('pre_season',  'Pre-Season'),
-        ('mid_season',  'Mid-Season'),
-        ('post_season', 'Post-Season'),
-        ('custom',      'Custom'),
-    ])
-    description = TextAreaField('Description', validators=[Optional()])
-    start_date = DateField('Start Date', validators=[Optional()])
-    end_date = DateField('End Date', validators=[Optional()])
-    active = BooleanField('Active', default=True)
-    submit = SubmitField('Save Phase')
-
-@bp.route('/')
-@login_required
-def index():
-    """Main fitness dashboard"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-        
-    # Active metrics
-    metrics = _team_metrics().all()
-
-    # Metric summary (team avg + record holder)
-    metric_data = []
-    for metric in metrics:
-        team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
-            metric_id=metric.id, team_organization_id=team_id
-        ).scalar()
-        if metric.higher_is_better:
-            record = FitnessRecord.query.filter_by(
-                metric_id=metric.id, team_organization_id=team_id
-            ).order_by(FitnessRecord.value.desc()).first()
-        else:
-            record = FitnessRecord.query.filter_by(
-                metric_id=metric.id, team_organization_id=team_id
-            ).order_by(FitnessRecord.value).first()
-        metric_data.append({
-            'metric': metric,
-            'average': round(team_avg, 2) if team_avg else None,
-            'record_holder': {'player': record.player, 'value': record.value} if record else None,
-        })
-
-    # Active testing phases
-    active_phases = TestingPhase.query.filter_by(
-        team_organization_id=team_id, active=True
-    ).order_by(TestingPhase.created_at.desc()).limit(3).all()
-
-    # Player roster with latest record date + record counts
-    players = Player.query.filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
-    player_data = []
-    for player in players:
-        last_record = FitnessRecord.query.filter_by(
-            player_id=player.id, team_organization_id=team_id
-        ).order_by(FitnessRecord.date_recorded.desc()).first()
-
-        record_count = FitnessRecord.query.filter_by(
-            player_id=player.id, team_organization_id=team_id
-        ).count()
-
-        # Pick 3 spotlight metrics: vertical jump, 40-yard sprint, beep test (fall back to whatever exists)
-        spotlight_metrics = [m for m in metrics if m.name in ('Vertical Jump', '40-Yard Sprint', 'Beep Test/Yo-Yo Test')]
-        if not spotlight_metrics:
-            spotlight_metrics = metrics[:3]
-
-        spots = []
-        for sm in spotlight_metrics[:3]:
-            latest = FitnessRecord.query.filter_by(
-                player_id=player.id, metric_id=sm.id, team_organization_id=team_id
-            ).order_by(FitnessRecord.date_recorded.desc()).limit(2).all()
-            if latest:
-                trend = None
-                if len(latest) == 2:
-                    diff = latest[0].value - latest[1].value
-                    trend = 'up' if diff > 0 else ('down' if diff < 0 else 'flat')
-                    # For lower-is-better, flip the colour logic (handled in template)
-                spots.append({'metric': sm, 'value': latest[0].value, 'trend': trend})
-
-        player_data.append({
-            'player': player,
-            'last_date': last_record.date_recorded if last_record else None,
-            'record_count': record_count,
-            'spots': spots,
-        })
-
-    # Recent activity feed
-    recent_records = FitnessRecord.query.join(Player).filter(
-        Player.active == True,
-        FitnessRecord.team_organization_id == team_id
-    ).order_by(FitnessRecord.date_recorded.desc()).limit(12).all()
-
-    total_records = FitnessRecord.query.filter_by(team_organization_id=team_id).count()
-    players_tested = db.session.query(func.count(func.distinct(FitnessRecord.player_id))).filter_by(
-        team_organization_id=team_id
-    ).scalar() or 0
-
-    return render_template('fitness/index.html',
-                           metric_data=metric_data,
-                           active_phases=active_phases,
-                           player_data=player_data,
-                           recent_records=recent_records,
-                           total_records=total_records,
-                           players_tested=players_tested,
-                           total_players=len(players))
-
-@bp.route('/player/<int:player_id>')
-@login_required
-def player_fitness(player_id):
-    """View fitness data for a specific player"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-        
-    # Filter player by team
-    player = Player.query.filter_by(
-        id=player_id,
-        team_organization_id=team_id
-    ).first_or_404()
-    
-    # Check permissions - only the player, coaches, or admins can view detailed fitness data
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to view this player\'s fitness data.', 'danger')
-        return redirect(url_for('team.player_detail', player_id=player_id))
-    
-    # Define metric categories
-    categories = {
-        'sprinting': ['20-Yard Sprint', '40-Yard Sprint', 'Flying 20', '5-10-5 Shuttle/Pro Agility', 'Change of Direction Speed'],
-        'endurance': ['Beep Test/Yo-Yo Test', '1-Mile Run', '300-Yard Shuttle', 'Ultimate-Specific Conditioning Test', 'Recovery Heart Rate'],
-        'power': ['Vertical Jump', 'Broad Jump', 'Box Jump'],
-        'strength': ['Plank Hold', 'Push-Ups', 'Pull-Ups', 'Squat Endurance'],
-        'skills': ['Maximum Pull Distance', 'Throwing Accuracy', 'Lateral Quickness Drill', 'Jump & Reach']
-    }
-    
-    # Get all metrics - filter by team
-    all_metrics = _team_metrics().all()
-    
-    # Organize metrics by category
-    categorized_metrics = {}
-    for category, metric_names in categories.items():
-        categorized_metrics[category] = []
-        for metric in all_metrics:
-            if metric.name in metric_names:
-                # Get player's data for this metric - filter by team
-                latest_record = FitnessRecord.query.filter_by(
-                    player_id=player_id, 
-                    metric_id=metric.id,
-                    team_organization_id=team_id
-                ).order_by(FitnessRecord.date_recorded.desc()).first()
-                
-                history = FitnessRecord.query.filter_by(
-                    player_id=player_id, 
-                    metric_id=metric.id,
-                    team_organization_id=team_id
-                ).order_by(FitnessRecord.date_recorded).all()
-                
-                # Calculate team average for this specific team
-                team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
-                    metric_id=metric.id,
-                    team_organization_id=team_id
-                ).scalar()
-                
-                # Get record holder for this specific team
-                if metric.higher_is_better:
-                    record = FitnessRecord.query.filter_by(
-                        metric_id=metric.id,
-                        team_organization_id=team_id
-                    ).order_by(FitnessRecord.value.desc()).first()
-                else:
-                    record = FitnessRecord.query.filter_by(
-                        metric_id=metric.id,
-                        team_organization_id=team_id
-                    ).order_by(FitnessRecord.value).first()
-                
-                record_holder = record
-                
-                categorized_metrics[category].append({
-                    'metric': metric,
-                    'latest': latest_record,
-                    'history': history,
-                    'team_average': team_avg,
-                    'record_holder': record_holder
-                })
-    
-    # Create a dictionary of all metric categories for the template
-    all_metrics = {
-        'sprinting_metrics': categorized_metrics['sprinting'],
-        'endurance_metrics': categorized_metrics['endurance'],
-        'power_metrics': categorized_metrics['power'],
-        'strength_metrics': categorized_metrics['strength'],
-        'skills_metrics': categorized_metrics['skills']
-    }
-    
-    # Prepare radar chart data
-    radar_labels = []
-    player_radar_data = []
-    team_radar_data = []
-    
-    # Select one representative metric from each category for the radar chart
-    for category, metrics in categorized_metrics.items():
-        if metrics:
-            metric_data = metrics[0]
-            radar_labels.append(metric_data['metric'].name)
-            
-            # Calculate percentile score (0-100)
-            if metric_data['latest'] and metric_data['team_average']:
-                value = float(metric_data['latest'].value)
-                avg = float(metric_data['team_average'])
-                
-                # For metrics where lower is better, invert the calculation
-                if not metric_data['metric'].higher_is_better:
-                    if value > 0:  # Avoid division by zero
-                        score = min(100, (avg / value) * 50)  # Scale appropriately
-                    else:
-                        score = 0
-                else:
-                    if avg > 0:  # Avoid division by zero
-                        score = min(100, (value / avg) * 50)  # Scale appropriately
-                    else:
-                        score = 0
-                
-                player_radar_data.append(score)
-            else:
-                player_radar_data.append(0)
-            
-            team_radar_data.append(50)  # Team average is always at 50% on the radar
-    
-    # Find top metrics where player excels
-    top_metrics = []
-    all_player_metrics = []
-    
-    for category_metrics in categorized_metrics.values():
-        for metric_data in category_metrics:
-            if metric_data['latest'] and metric_data['team_average']:
-                value = float(metric_data['latest'].value)
-                avg = float(metric_data['team_average'])
-                
-                # Calculate how much better than average (as a percentage)
-                if metric_data['metric'].higher_is_better:
-                    if avg > 0:
-                        percentile = int((value / avg - 1) * 100)
-                    else:
-                        percentile = 0
-                else:
-                    if value > 0:
-                        percentile = int((avg / value - 1) * 100)
-                    else:
-                        percentile = 0
-                
-                all_player_metrics.append({
-                    'name': metric_data['metric'].name,
-                    'value': value,
-                    'unit': metric_data['metric'].unit,
-                    'percentile': percentile
-                })
-    
-    # Sort by percentile and get top 4
-    all_player_metrics.sort(key=lambda x: x['percentile'], reverse=True)
-    top_metrics = all_player_metrics[:4]
-    
-    fitness_goals = _goal_progress(player_id, team_id, completed=False)
-
-    # Get recent records for this player
-    recent_records = FitnessRecord.query.filter_by(
-        player_id=player_id,
-        team_organization_id=team_id
-    ).order_by(
-        FitnessRecord.date_recorded.desc()
-    ).limit(5).all()
-    
-    return render_template('fitness/player_fitness.html',
-                          player=player,
-                          sprinting_metrics=categorized_metrics['sprinting'],
-                          endurance_metrics=categorized_metrics['endurance'],
-                          power_metrics=categorized_metrics['power'],
-                          strength_metrics=categorized_metrics['strength'],
-                          skills_metrics=categorized_metrics['skills'],
-                          all_metrics=all_metrics,
-                          radar_labels=radar_labels,
-                          player_radar_data=player_radar_data,
-                          team_radar_data=team_radar_data,
-                          top_metrics=top_metrics,
-                          fitness_goals=fitness_goals,
-                          recent_records=recent_records)
-
-@bp.route('/record/<int:player_id>', methods=['GET', 'POST'])
-@login_required
-def record_fitness(player_id):
-    """Record a new fitness metric for a player"""
-       
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-    
-    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    
-    # Check permissions
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to record fitness data for this player.', 'danger')
-        return redirect(url_for('team.player_detail', player_id=player_id))
-    
-    form = FitnessRecordForm()
-    
-    # Get all active metrics for the form dropdown
-    active_metrics = _team_metrics().all()
-    form.metric.choices = [(m.id, f"{m.name} ({m.unit})") for m in active_metrics]
-    
-    # Create a dictionary of metric descriptions for the JavaScript
-    metric_descriptions = {m.id: m.description for m in active_metrics}
-    
-    if form.validate_on_submit():
-        try:
-            record = FitnessRecord(
-                player_id=player_id,
-                metric_id=form.metric.data,
-                value=form.value.data,
-                notes=form.notes.data,
-                date_recorded=datetime.utcnow(),
-                team_organization_id=team_id  # Add team ID
-            )
-            db.session.add(record)
-            db.session.commit()
-            
-            for goal in FitnessGoal.query.filter_by(player_id=player_id, metric_id=record.metric_id,
-                                                    completed=False, team_organization_id=team_id):
-                if goal.is_met_by(record.value):
-                    goal.completed = True
-                    goal.completed_date = datetime.utcnow()
-                    flash(f'Congratulations! Goal achieved for {goal.metric.name}!', 'success')
-            db.session.commit()
-
-            flash('Fitness record added successfully!', 'success')
-            return redirect(url_for('fitness.player_fitness', player_id=player_id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error recording fitness data: {str(e)}', 'danger')
-    
-    # Get recent records for this player
-    recent_records = FitnessRecord.query.filter_by(
-        player_id=player_id,
-        team_organization_id=team_id
-    ).order_by(
-        FitnessRecord.date_recorded.desc()
-    ).limit(5).all()
-    
-    return render_template('fitness/record_form.html', 
-                          form=form, 
-                          player=player,
-                          metric_descriptions=metric_descriptions,
-                          recent_records=recent_records)
-
-@bp.route('/metrics')
-@login_required
-@admin_required
-def manage_metrics():
-    """Manage fitness metrics (admin only)"""
+def _team_id_or_redirect():
     team_id = get_current_team_id()
     if team_id is None:
         flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))    
-    metrics = _team_metrics().all()
-    return render_template('fitness/manage_metrics.html', metrics=metrics)
-
-@bp.route('/metrics/add', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def add_metric():
-    """Add a new fitness metric (admin only)"""
-    team_id = get_current_team_id()
-    if team_id is None:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-
-    form = FitnessMetricForm()
-    
-    if form.validate_on_submit():
-        try:
-            metric = FitnessMetric(
-                name=form.name.data,
-                description=form.description.data,
-                unit=form.unit.data,
-                higher_is_better=form.higher_is_better.data,
-                active=form.active.data
-            )
-            db.session.add(metric)
-            db.session.commit()
-            flash(f'Fitness metric "{metric.name}" added successfully!', 'success')
-            return redirect(url_for('fitness.manage_metrics'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error adding fitness metric: {str(e)}', 'danger')
-    
-    return render_template('fitness/metric_form.html', 
-                          form=form, 
-                          title="Add New Fitness Metric")
-
-def _editable_metric_or_404(metric_id):
-    """Metrics are shared between teams; a team admin may only change their
-    own team's metrics, a superadmin any (including shared ones)."""
-    metric = FitnessMetric.query.get_or_404(metric_id)
-    if not current_user.is_superadmin and metric.team_organization_id != get_current_team_id():
-        abort(404)
-    return metric
+    return team_id
 
 
-@bp.route('/metrics/edit/<int:metric_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_metric(metric_id):
-    """Edit an existing fitness metric (admin only)"""
-    team_id = get_current_team_id()
-    if team_id is None:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-    
-    metric = _editable_metric_or_404(metric_id)
-    form = FitnessMetricForm(obj=metric)
-    
-    # Get player count for this metric
-    player_count = db.session.query(FitnessRecord.player_id).filter_by(
-        metric_id=metric_id,
-        team_organization_id=team_id
-    ).distinct().count()
-    
-    # Get team-specific record holder
-    if metric.higher_is_better:
-        record_holder = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).order_by(FitnessRecord.value.desc()).first()
-    else:
-        record_holder = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).order_by(FitnessRecord.value).first()
-    
-    if form.validate_on_submit():
-        try:
-            metric.name = form.name.data
-            metric.description = form.description.data
-            metric.unit = form.unit.data
-            metric.higher_is_better = form.higher_is_better.data
-            metric.active = form.active.data
-            
-            db.session.commit()
-            flash(f'Fitness metric "{metric.name}" updated successfully!', 'success')
-            return redirect(url_for('fitness.manage_metrics'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error updating fitness metric: {str(e)}', 'danger')
-    
-    return render_template('fitness/metric_form.html', 
-                          form=form, 
-                          metric=metric,
-                          player_count=player_count,
-                          record_holder=record_holder,  # Use the team-specific record holder
-                          title="Edit Fitness Metric")
-
-@bp.route('/metrics/delete/<int:metric_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_metric(metric_id):
-    """Delete a fitness metric (admin only)"""
-    team_id = get_current_team_id()
-    if team_id is None:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-
-    metric = _editable_metric_or_404(metric_id)
-    
-    try:
-        # Check if there are any records using this metric
-        record_count = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).count()
-        
-        if record_count > 0:
-            # Instead of deleting, just mark as inactive
-            metric.active = False
-            db.session.commit()
-            flash(f'Fitness metric "{metric.name}" has been deactivated because it has {record_count} records. Records are preserved.', 'warning')
-        else:
-            # Safe to delete if no records exist
-            name = metric.name
-            db.session.delete(metric)
-            db.session.commit()
-            flash(f'Fitness metric "{name}" has been deleted.', 'success')
-            
-        return redirect(url_for('fitness.manage_metrics'))
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error processing request: {str(e)}', 'danger')
-        return redirect(url_for('fitness.manage_metrics'))
-
-@bp.route('/record/delete/<int:record_id>', methods=['POST'])
-@login_required
-def delete_record(record_id):
-    """Delete a fitness record"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-
-    record = FitnessRecord.query.filter_by(id=record_id, team_organization_id=team_id).first_or_404()
-    player_id = record.player_id
-    
-    # Check permissions
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to delete this record.', 'danger')
-        return redirect(url_for('fitness.player_fitness', player_id=player_id))
-    
-    try:
-        metric_name = record.metric.name
-        db.session.delete(record)
-        db.session.commit()
-        flash(f'Fitness record for {metric_name} deleted successfully.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error deleting record: {str(e)}', 'danger')
-    
-    return redirect(url_for('fitness.player_fitness', player_id=player_id))
-
-@bp.route('/team-leaderboard')
-@login_required
-def team_leaderboard():
-    """Display leaderboards for all fitness metrics"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-
-    metrics = _team_metrics().all()
-    
-    leaderboards = []
-    for metric in metrics:
-        # Get top 5 records for this metric
-        if metric.higher_is_better:
-            top_records = FitnessRecord.query.filter_by(
-                metric_id=metric.id,
-                team_organization_id=team_id
-            ).join(Player)\
-                .filter(Player.active == True)\
-                .order_by(FitnessRecord.value.desc())\
-                .limit(5).all()
-        else:
-            top_records = FitnessRecord.query.filter_by(
-                metric_id=metric.id,
-                team_organization_id=team_id
-            ).join(Player)\
-                .filter(Player.active == True)\
-                .order_by(FitnessRecord.value)\
-                .limit(5).all()
-        
-        leaderboards.append({
-            'metric': metric,
-            'records': top_records
-        })
-    
-    return render_template('fitness/leaderboard.html', leaderboards=leaderboards)
-
-@bp.route('/player/<int:player_id>/history/<int:metric_id>')
-@login_required
-def player_metric_history(player_id, metric_id):
-    """View detailed history for a specific player and metric"""
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))    
-    
-    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    metric = _team_metric_or_404(metric_id)
-    
-    # Check permissions
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        flash('You do not have permission to view this data.', 'danger')
-        return redirect(url_for('team.player_detail', player_id=player_id))
-    
-    # Get all records for this player and metric
-    records = FitnessRecord.query.filter_by(
-        player_id=player_id,
-        metric_id=metric_id,
-        team_organization_id=team_id
-    ).order_by(FitnessRecord.date_recorded.desc()).all()
-    
-    # Get team average
-    team_avg = db.session.query(func.avg(FitnessRecord.value)).filter_by(
-        metric_id=metric_id,
-        team_organization_id=team_id
-    ).scalar()
-    
-    # Get record holder
-    if metric.higher_is_better:
-        record_holder = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).order_by(FitnessRecord.value.desc()).first()
-    else:
-        record_holder = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).order_by(FitnessRecord.value).first()
-    
-    # Calculate best value and date
-    best_value = None
-    best_date = None
-    if records:
-        if metric.higher_is_better:
-            best_record = max(records, key=lambda r: r.value)
-        else:
-            best_record = min(records, key=lambda r: r.value)
-        best_value = best_record.value
-        best_date = best_record.date_recorded
-    
-    # Calculate trend (% change over last 3 records)
-    trend = 0
-    if len(records) >= 3:
-        recent_records = sorted(records[:3], key=lambda r: r.date_recorded, reverse=True)
-        if recent_records[2].value > 0:  # Avoid division by zero
-            change = (recent_records[0].value - recent_records[2].value) / recent_records[2].value
-            # For metrics where lower is better, invert the trend
-            trend = change * 100 if metric.higher_is_better else -change * 100
-    
-    return render_template('fitness/metric_history.html',
-                          player=player,
-                          metric=metric,
-                          records=records,
-                          team_average=team_avg,
-                          record_holder=record_holder,
-                          best_value=best_value,
-                          best_date=best_date,
-                          trend=trend)
-
-@bp.route('/set-goal/<int:player_id>/<int:metric_id>', methods=['POST'])
-@login_required
-def set_goal(player_id, metric_id):
-    """Set a goal from a player's metric history page."""
-    player = _goal_player_or_404(player_id)
-    goal = _create_goal(player, _team_metric_or_404(metric_id))
-    if goal:
-        flash(f'Goal set for {goal.metric.name}!', 'success')
-    return redirect(url_for('fitness.player_metric_history', player_id=player.id, metric_id=metric_id))
-
-@bp.route('/batch-record', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def batch_record():
-    """Record fitness data for multiple players at once (admin/coach only)"""
-    team_id = get_current_team_id()
-    if team_id is None:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-    
-    metric_id = request.args.get('metric_id', type=int)
-    
-    if not metric_id:
-        metrics = _team_metrics().all()
-        return render_template('fitness/batch_select_metric.html', metrics=metrics)    
-   
-    metric = _team_metric_or_404(metric_id)
-    active_players = Player.query.filter_by(active=True, team_organization_id=team_id).order_by(Player.name).all()
-    
-    # Get top records for this metric to display on the page
-    if metric.higher_is_better:
-        top_records = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).join(Player)\
-            .filter(Player.active == True)\
-            .order_by(FitnessRecord.value.desc())\
-            .limit(5).all()
-    else:
-        top_records = FitnessRecord.query.filter_by(
-            metric_id=metric_id,
-            team_organization_id=team_id
-        ).join(Player)\
-            .filter(Player.active == True)\
-            .order_by(FitnessRecord.value)\
-            .limit(5).all()
-    
-    # Available phases for optional linking
-    phases = TestingPhase.query.filter_by(
-        team_organization_id=team_id, active=True
-    ).order_by(TestingPhase.created_at.desc()).all()
-
-    if request.method == 'POST':
-        try:
-            records_added = 0
-
-            # Parse test date (default to today)
-            date_str = request.form.get('test_date', '').strip()
-            try:
-                test_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
-            except ValueError:
-                test_date = datetime.utcnow()
-
-            # Optional phase
-            phase_id = request.form.get('phase_id', type=int) or None
-            if phase_id and not TestingPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first():
-                phase_id = None
-
-            for player in active_players:
-                value_key = f'value_{player.id}'
-                notes_key = f'notes_{player.id}'
-                if value_key in request.form and request.form[value_key].strip():
-                    try:
-                        value = float(request.form[value_key])
-                        notes = request.form.get(notes_key, '')
-                        record = FitnessRecord(
-                            player_id=player.id,
-                            metric_id=metric_id,
-                            value=value,
-                            notes=notes,
-                            date_recorded=test_date,
-                            testing_phase_id=phase_id,
-                            team_organization_id=team_id,
-                        )
-                        db.session.add(record)
-                        records_added += 1
-                    except ValueError:
-                        pass
-
-            db.session.commit()
-            flash(f'Recorded {records_added} results for {metric.name}.', 'success')
-            return redirect(url_for('fitness.index'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error recording fitness data: {str(e)}', 'danger')
-
-    return render_template('fitness/batch_record.html',
-                           metric=metric,
-                           players=active_players,
-                           top_records=top_records,
-                           phases=phases)
-
-@bp.route('/api/player/<int:player_id>/metrics/<int:metric_id>/chart-data')
-@login_required
-def api_player_metric_chart_data(player_id, metric_id):
-    """API endpoint to get chart data for a player's metric history"""
-    # Check permissions
-    # ADD THIS BLOCK
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        return jsonify({'error': 'Please select a team first'}), 400
-
-    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
-    metric = _team_metric_or_404(metric_id)
-
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'player') and current_user.player and current_user.player.id == player_id) or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        return jsonify({'error': 'Permission denied'}), 403
-    
-    records = FitnessRecord.query.filter_by(
-        player_id=player_id,
-        metric_id=metric_id,
-        team_organization_id=team_id
-    ).order_by(FitnessRecord.date_recorded).all()
-    
-    data = {
-        'labels': [record.date_recorded.strftime('%Y-%m-%d') for record in records],
-        'values': [float(record.value) for record in records]
-    }
-    
-    
-    return jsonify(data)
-
-@bp.route('/api/previous-values/<int:metric_id>')
-@login_required
-def api_previous_values(metric_id):
-    """API endpoint to get the most recent values for a metric for all players"""
-    # Check permissions for batch operations
-    team_id = get_current_team_id()
-    if team_id is None and current_user.is_admin:
-        return jsonify({'error': 'Please select a team first'}), 400
-    
-    # Verify metric belongs to current team
-    metric = _team_metric_or_404(metric_id)
-
-    if not (current_user.is_admin or 
-            (hasattr(current_user, 'role') and current_user.role == 'coach')):
-        return jsonify({'error': 'Permission denied'}), 403
-    
-    # Subquery to get the most recent record for each player
-    subquery = db.session.query(
-        FitnessRecord.player_id,
-        func.max(FitnessRecord.date_recorded).label('max_date')
-    ).filter_by(
-        metric_id=metric_id,
-        team_organization_id=team_id
-    ).group_by(FitnessRecord.player_id).subquery()
-    
-    # Join with the main table to get the actual records
-    records = db.session.query(FitnessRecord).join(
-        subquery,
-        and_(
-            FitnessRecord.player_id == subquery.c.player_id,
-            FitnessRecord.date_recorded == subquery.c.max_date,
-            FitnessRecord.metric_id == metric_id,
-            FitnessRecord.team_organization_id == team_id
-        )
-    ).all()
-    
-    # Format the response
-    result = {}
-    for record in records:
-        result[record.player_id] = {
-            'value': float(record.value),
-            'notes': record.notes
-        }
-    
-    return jsonify(result)
-
-@bp.route('/export-data')
-@login_required
-@admin_required
-def export_data():
-    """Export all fitness data as CSV"""
-    team_id = get_current_team_id()
-    if team_id is None:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-
-    try:
-        # Create a StringIO object to write CSV data
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # Write header row
-        writer.writerow(['Player ID', 'Player Name', 'Metric ID', 'Metric Name', 'Value', 'Unit', 'Date Recorded', 'Notes'])
-        
-        # Query all fitness records with player and metric information
-        records = db.session.query(
-            FitnessRecord, Player, FitnessMetric
-        ).join(
-            Player, FitnessRecord.player_id == Player.id
-        ).join(
-            FitnessMetric, FitnessRecord.metric_id == FitnessMetric.id
-        ).filter(
-            FitnessRecord.team_organization_id == team_id
-        ).all()
-        
-        # Write data rows
-        for record, player, metric in records:
-            writer.writerow([
-                player.id,
-                player.name,
-                metric.id,
-                metric.name,
-                record.value,
-                metric.unit,
-                record.date_recorded.strftime('%Y-%m-%d %H:%M:%S'),
-                record.notes or ''
-            ])
-        
-        # Reset the pointer to the beginning of the StringIO object
-        output.seek(0)
-        
-        # Create a temporary file to store the CSV data
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv', mode='w') as temp_file:
-            temp_file.write(output.getvalue())
-            temp_file_path = temp_file.name
-        
-        # Generate a timestamp for the filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        
-        # Send the file as an attachment
-        return send_file(
-            temp_file_path,
-            as_attachment=True,
-            download_name=f'fitness_data_export_{timestamp}.csv',
-            mimetype='text/csv'
-        )
-    
-    except Exception as e:
-        flash(f'Error exporting data: {str(e)}', 'danger')
-        return redirect(url_for('fitness.manage_metrics'))
-
-class ImportForm(FlaskForm):
-    csv_file = FileField('CSV File', validators=[
-        FileRequired(),
-        FileAllowed(['csv'], 'CSV files only!')
-    ])
-    submit = SubmitField('Import Data')
-
-@bp.route('/import-data', methods=['POST'])
-@login_required
-@admin_required
-def import_data():
-    """Import fitness data from CSV"""
-    team_id = get_current_team_id()
-    if team_id is None:
-        flash('Please select a team first', 'warning')
-        return redirect(url_for('team.select_team'))
-    
-    if 'csv_file' not in request.files:
-        flash('No file part', 'danger')
-        return redirect(url_for('fitness.manage_metrics'))
-    
-    file = request.files['csv_file']
-    
-    if file.filename == '':
-        flash('No selected file', 'danger')
-        return redirect(url_for('fitness.manage_metrics'))
-    
-    if file and file.filename.endswith('.csv'):
-        try:
-            # Read the CSV file
-            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-            csv_reader = csv.reader(stream)
-            
-            # Skip header row
-            header = next(csv_reader)
-            expected_header = ['Player ID', 'Player Name', 'Metric ID', 'Metric Name', 'Value', 'Unit', 'Date Recorded', 'Notes']
-            
-            # Check if header matches expected format
-            if header != expected_header:
-                flash('CSV file format is incorrect. Please use the export format as a template.', 'danger')
-                return redirect(url_for('fitness.manage_metrics'))
-            
-            records_added = 0
-            records_updated = 0
-            records_skipped = 0
-            
-            for row in csv_reader:
-                try:
-                    player_id = int(row[0])
-                    metric_id = int(row[2])
-                    value = float(row[4])
-                    date_str = row[6]
-                    notes = row[7]
-                    
-                    # Check if player and metric exist
-                    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first()
-                    metric = FitnessMetric.query.get(metric_id)
-                    if metric and metric.team_organization_id not in (None, team_id):
-                        metric = None
-
-                    if not player or not metric:
-                        records_skipped += 1
-                        continue
-                    
-                    # Parse date
-                    try:
-                        date_recorded = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
-                    except ValueError:
-                        date_recorded = datetime.utcnow()
-                    
-                    # Check if record already exists for this player, metric, and date
-                    existing_record = FitnessRecord.query.filter_by(
-                        player_id=player_id,
-                        metric_id=metric_id,
-                        date_recorded=date_recorded,
-                        team_organization_id=team_id
-                    ).first()
-                    
-                    if existing_record:
-                        # Update existing record
-                        existing_record.value = value
-                        existing_record.notes = notes
-                        records_updated += 1
-                    else:
-                        # Create new record
-                        record = FitnessRecord(
-                            player_id=player_id,
-                            metric_id=metric_id,
-                            value=value,
-                            notes=notes,
-                            date_recorded=date_recorded,
-                            team_organization_id=team_id  # Add team ID
-                        )
-                        db.session.add(record)
-                        records_added += 1
-                
-                except Exception as e:
-                    records_skipped += 1
-                    continue
-            
-            db.session.commit()
-            flash(f'Import complete: {records_added} records added, {records_updated} records updated, {records_skipped} records skipped.', 'success')
-        
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error importing data: {str(e)}', 'danger')
-    
-    else:
-        flash('Invalid file format. Please upload a CSV file.', 'danger')
-    
-    return redirect(url_for('fitness.manage_metrics'))
-
-def _team_metric_or_404(metric_id):
-    """Metrics are either shared (no team) or belong to one team."""
-    metric = FitnessMetric.query.get_or_404(metric_id)
-    if metric.team_organization_id not in (None, get_current_team_id()):
-        abort(404)
-    return metric
+def _own_player(player):
+    me = getattr(current_user, 'player', None)
+    return me is not None and me.id == player.id
 
 
-def _goal_player_or_404(player_id):
-    """The player, if the current user may manage their goals: coaches and
-    admins for anyone on their team, players for themselves."""
+def _player_or_404(player_id):
+    """The player, if the current user may see and log their results:
+    coaches and admins for anyone on their team, players for themselves."""
     player = Player.query.filter_by(id=player_id,
                                     team_organization_id=get_current_team_id()).first_or_404()
-    own = getattr(current_user, 'player', None) is not None and current_user.player.id == player.id
-    if not (current_user.is_coach or own):
+    if not (current_user.is_coach or _own_player(player)):
         abort(403)
     return player
 
 
-def _latest_value(player_id, metric_id, team_id):
-    latest = FitnessRecord.query.filter_by(
-        player_id=player_id, metric_id=metric_id, team_organization_id=team_id
-    ).order_by(FitnessRecord.date_recorded.desc()).first()
-    return latest.value if latest else None
+def _better(metric, a, b):
+    """True if value a beats value b on this metric."""
+    return a < b if not metric.higher_is_better else a > b
 
 
-def _goal_progress(player_id, team_id, completed=None):
-    query = FitnessGoal.query.filter_by(player_id=player_id, team_organization_id=team_id)
-    if completed is not None:
-        query = query.filter_by(completed=completed)
-    out = []
-    for goal in query.order_by(FitnessGoal.completed, FitnessGoal.target_date.is_(None),
-                               FitnessGoal.target_date, FitnessGoal.id):
-        current = _latest_value(player_id, goal.metric_id, team_id)
-        out.append({'goal': goal, 'id': goal.id, 'metric': goal.metric,
-                    'target_value': goal.target_value, 'target_date': goal.target_date,
-                    'current_value': current, 'progress': goal.progress(current),
-                    'achieved': goal.completed or goal.is_met_by(current)})
-    return out
+def _pbs(team_id, metrics, player_ids=None):
+    """{(player_id, metric_id): best record} for these metrics."""
+    query = FitnessRecord.query.filter(
+        FitnessRecord.team_organization_id == team_id,
+        FitnessRecord.metric_id.in_([m.id for m in metrics]))
+    if player_ids is not None:
+        query = query.filter(FitnessRecord.player_id.in_(player_ids))
+    by_id = {m.id: m for m in metrics}
+    best = {}
+    for record in query.order_by(FitnessRecord.date_recorded):
+        key = (record.player_id, record.metric_id)
+        if key not in best or _better(by_id[record.metric_id], record.value, best[key].value):
+            best[key] = record
+    return best
 
 
-def _create_goal(player, metric):
-    """Add a goal from the posted target_value / target_date / notes.
-    Returns the goal, or None (with a flash) if the form was invalid."""
-    try:
-        target_value = float(request.form.get('target_value', ''))
-    except ValueError:
-        flash('Enter a number for the target.', 'danger')
-        return None
-    target_date = None
-    if request.form.get('target_date'):
-        try:
-            target_date = datetime.strptime(request.form['target_date'], '%Y-%m-%d').date()
-        except ValueError:
-            flash('Enter a valid target date.', 'danger')
-            return None
-    goal = FitnessGoal(player_id=player.id, metric_id=metric.id, target_value=target_value,
-                       target_date=target_date, notes=request.form.get('notes') or None,
-                       created_by=current_user.id, team_organization_id=player.team_organization_id)
-    db.session.add(goal)
-    db.session.flush()
-    if goal.is_met_by(_latest_value(player.id, metric.id, player.team_organization_id)):
-        goal.completed = True
-        goal.completed_date = datetime.utcnow()
-    db.session.commit()
-    return goal
+def _leaderboards(team_id, metrics):
+    """Per test, the opted-in active players ranked on their PBs."""
+    players = Player.query.filter_by(team_organization_id=team_id, active=True,
+                                     fitness_leaderboard=True).all()
+    pbs = _pbs(team_id, metrics, [p.id for p in players])
+    boards = []
+    for metric in metrics:
+        rows = [pbs[(p.id, metric.id)] for p in players if (p.id, metric.id) in pbs]
+        rows.sort(key=lambda r: r.value, reverse=metric.higher_is_better)
+        boards.append({'metric': metric, 'records': rows[:LEADERBOARD_SIZE]})
+    return boards, len(players)
 
 
-@bp.route('/player/<int:player_id>/goals')
+@bp.route('/')
 @login_required
-def player_goals(player_id):
-    """A player's fitness goals: progress on open ones, achieved ones, and a
-    form to add more."""
-    player = _goal_player_or_404(player_id)
+def index():
+    """The hub: your PBs, the leaderboard, the tests and, for coaches, the squad."""
+    team_id = _team_id_or_redirect()
+    if team_id is None:
+        return redirect(url_for('team.select_team'))
+
+    metrics = FitnessMetric.standard()
+    me = getattr(current_user, 'player', None)
+    if me is not None and me.team_organization_id != team_id:
+        me = None
+    my_pbs = _pbs(team_id, metrics, [me.id]) if me else {}
+
+    leaderboards, opted_in = _leaderboards(team_id, metrics)
+
+    squad = []
+    if current_user.is_coach:
+        players = Player.query.filter_by(team_organization_id=team_id, active=True) \
+                              .order_by(Player.name).all()
+        pbs = _pbs(team_id, metrics, [p.id for p in players])
+        squad = [{'player': p, 'pbs': [pbs.get((p.id, m.id)) for m in metrics]} for p in players]
+
+    return render_template('fitness/index.html', metrics=metrics, me=me,
+                           my_pbs=[my_pbs.get((me.id, m.id)) for m in metrics] if me else [],
+                           leaderboards=leaderboards, opted_in=opted_in, squad=squad)
+
+
+@bp.route('/tests')
+@login_required
+def tests_guide():
+    """How to run each test and how to get better at it."""
+    return render_template('fitness/tests.html', metrics=FitnessMetric.standard())
+
+
+@bp.route('/team-leaderboard')
+@login_required
+def team_leaderboard():
+    return redirect(url_for('fitness.index', _anchor='leaderboard'))
+
+
+@bp.route('/player/<int:player_id>')
+@login_required
+def player_fitness(player_id):
+    """One player's PBs, history and targets, and a form to log a result."""
+    player = _player_or_404(player_id)
     team_id = player.team_organization_id
-    goals = _goal_progress(player.id, team_id)
-    metrics = FitnessMetric.query.filter(
-        FitnessMetric.active.is_(True),
-        db.or_(FitnessMetric.team_organization_id == team_id,
-               FitnessMetric.team_organization_id.is_(None))
-    ).order_by(FitnessMetric.name).all()
-    return render_template('fitness/player_goals.html', player=player, metrics=metrics,
-                           open_goals=[g for g in goals if not g['goal'].completed],
-                           done_goals=[g for g in goals if g['goal'].completed])
+    metrics = FitnessMetric.standard()
+
+    records = FitnessRecord.query.filter_by(player_id=player.id, team_organization_id=team_id) \
+                                 .order_by(FitnessRecord.date_recorded.desc()).all()
+    targets = {g.metric_id: g for g in FitnessGoal.query.filter_by(
+        player_id=player.id, team_organization_id=team_id, completed=False)}
+    pbs = _pbs(team_id, metrics, [player.id])
+
+    tests = []
+    for metric in metrics:
+        history = [r for r in records if r.metric_id == metric.id]
+        pb = pbs.get((player.id, metric.id))
+        target = targets.get(metric.id)
+        tests.append({'metric': metric, 'pb': pb, 'history': history,
+                      'target': target,
+                      'progress': target.progress(pb.value if pb else None) if target else None})
+
+    # Results on tests the club no longer runs: kept, shown as PBs only
+    standard_ids = {m.id for m in metrics}
+    older = {}
+    for record in records:
+        if record.metric_id in standard_ids:
+            continue
+        best = older.get(record.metric_id)
+        if best is None or _better(record.metric, record.value, best.value):
+            older[record.metric_id] = record
+
+    return render_template('fitness/player_fitness.html', player=player, tests=tests,
+                           older=sorted(older.values(), key=lambda r: r.metric.name),
+                           own=_own_player(player),
+                           today=datetime.utcnow().date().isoformat())
 
 
-def _goal_or_404(goal_id):
-    goal = FitnessGoal.query.filter_by(id=goal_id,
-                                       team_organization_id=get_current_team_id()).first_or_404()
-    _goal_player_or_404(goal.player_id)
-    return goal
-
-
-@bp.route('/goal/<int:goal_id>/complete', methods=['POST'])
-@login_required
-def complete_goal(goal_id):
-    goal = _goal_or_404(goal_id)
-    goal.completed = True
-    goal.completed_date = datetime.utcnow()
-    db.session.commit()
-    flash('Goal marked as completed!', 'success')
-    return redirect(url_for('fitness.player_goals', player_id=goal.player_id))
-
-
-@bp.route('/goal/<int:goal_id>/delete', methods=['POST'])
-@login_required
-def delete_goal(goal_id):
-    goal = _goal_or_404(goal_id)
-    player_id = goal.player_id
-    db.session.delete(goal)
-    db.session.commit()
-    flash('Goal deleted.', 'success')
-    return redirect(url_for('fitness.player_goals', player_id=player_id))
-
-
-@bp.route('/add-goal/<int:player_id>', methods=['POST'])
-@login_required
-def add_goal(player_id):
-    player = _goal_player_or_404(player_id)
+def _parse_date(value):
+    if not value:
+        return datetime.utcnow()
     try:
-        metric_id = int(request.form.get('metric_id', ''))
+        return datetime.strptime(value, '%Y-%m-%d')
     except ValueError:
-        abort(400)
-    goal = _create_goal(player, _team_metric_or_404(metric_id))
-    if goal:
-        flash(f'New goal for {goal.metric.name} added.', 'success')
-    return redirect(url_for('fitness.player_goals', player_id=player.id))
+        return None
 
 
-# ─── Testing Phase management ────────────────────────────────────────────────
+def _standard_metric_or_404(metric_id):
+    metric = db.session.get(FitnessMetric, metric_id)
+    if metric is None or metric.test is None:
+        abort(404)
+    return metric
 
-@bp.route('/phases')
+
+def _complete_goals(player_id, metric_id, value, team_id):
+    for goal in FitnessGoal.query.filter_by(player_id=player_id, metric_id=metric_id,
+                                            completed=False, team_organization_id=team_id):
+        if goal.is_met_by(value):
+            goal.completed = True
+            goal.completed_date = datetime.utcnow()
+            flash(f'Target hit for {goal.metric.name}!', 'success')
+
+
+@bp.route('/record/<int:player_id>', methods=['GET', 'POST'])
 @login_required
-def phases():
-    """List all testing phases"""
-    team_id = get_current_team_id()
-    all_phases = TestingPhase.query.filter_by(
-        team_organization_id=team_id
-    ).order_by(TestingPhase.created_at.desc()).all()
+def record_fitness(player_id):
+    """Log one result for a player."""
+    player = _player_or_404(player_id)
+    back = redirect(url_for('fitness.player_fitness', player_id=player.id))
+    if request.method == 'GET':
+        return back
 
-    # Annotate with record counts
-    phase_data = []
-    for phase in all_phases:
-        count = phase.records.filter_by(team_organization_id=team_id).count()
-        phase_data.append({'phase': phase, 'record_count': count})
+    metric = _standard_metric_or_404(request.form.get('metric_id', type=int) or 0)
+    value = request.form.get('value', type=float)
+    date = _parse_date(request.form.get('date'))
+    if value is None or value <= 0 or date is None:
+        flash('Enter a result above zero and a valid date.', 'danger')
+        return back
 
-    return render_template('fitness/phases.html', phase_data=phase_data)
-
-
-@bp.route('/phases/add', methods=['GET', 'POST'])
-@login_required
-def add_phase():
-    team_id = get_current_team_id()
-    if not (current_user.is_admin or getattr(current_user, 'role', None) == 'coach'):
-        flash('Only coaches and admins can manage testing phases.', 'warning')
-        return redirect(url_for('fitness.phases'))
-
-    form = TestingPhaseForm()
-    if form.validate_on_submit():
-        phase = TestingPhase(
-            name=form.name.data,
-            phase_type=form.phase_type.data,
-            description=form.description.data,
-            start_date=form.start_date.data,
-            end_date=form.end_date.data,
-            active=form.active.data,
-            team_organization_id=team_id,
-        )
-        db.session.add(phase)
-        db.session.commit()
-        flash(f'Testing phase "{phase.name}" created.', 'success')
-        return redirect(url_for('fitness.phases'))
-
-    return render_template('fitness/phase_form.html', form=form, phase=None)
-
-
-@bp.route('/phases/edit/<int:phase_id>', methods=['GET', 'POST'])
-@login_required
-def edit_phase(phase_id):
-    team_id = get_current_team_id()
-    if not (current_user.is_admin or getattr(current_user, 'role', None) == 'coach'):
-        flash('Only coaches and admins can manage testing phases.', 'warning')
-        return redirect(url_for('fitness.phases'))
-
-    phase = TestingPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first_or_404()
-    form = TestingPhaseForm(obj=phase)
-    if form.validate_on_submit():
-        phase.name = form.name.data
-        phase.phase_type = form.phase_type.data
-        phase.description = form.description.data
-        phase.start_date = form.start_date.data
-        phase.end_date = form.end_date.data
-        phase.active = form.active.data
-        db.session.commit()
-        flash('Phase updated.', 'success')
-        return redirect(url_for('fitness.phases'))
-
-    return render_template('fitness/phase_form.html', form=form, phase=phase)
-
-
-@bp.route('/phases/delete/<int:phase_id>', methods=['POST'])
-@login_required
-def delete_phase(phase_id):
-    team_id = get_current_team_id()
-    if not current_user.is_admin:
-        flash('Only admins can delete phases.', 'warning')
-        return redirect(url_for('fitness.phases'))
-
-    phase = TestingPhase.query.filter_by(id=phase_id, team_organization_id=team_id).first_or_404()
-    # Unlink records rather than cascade-delete them
-    FitnessRecord.query.filter_by(testing_phase_id=phase_id).update({'testing_phase_id': None})
-    db.session.delete(phase)
+    team_id = player.team_organization_id
+    previous = _pbs(team_id, [metric], [player.id]).get((player.id, metric.id))
+    db.session.add(FitnessRecord(player_id=player.id, metric_id=metric.id, value=value,
+                                 notes=request.form.get('notes') or None, date_recorded=date,
+                                 team_organization_id=team_id))
+    _complete_goals(player.id, metric.id, value, team_id)
     db.session.commit()
-    flash('Phase deleted.', 'success')
-    return redirect(url_for('fitness.phases'))
+    if previous is None or _better(metric, value, previous.value):
+        flash(f'New PB: {metric.format(value)} {metric.unit} on the {metric.name}.', 'success')
+    else:
+        flash(f'{metric.name} result saved.', 'success')
+    return back
 
+
+@bp.route('/record/delete/<int:record_id>', methods=['POST'])
+@login_required
+def delete_record(record_id):
+    record = FitnessRecord.query.filter_by(id=record_id,
+                                           team_organization_id=get_current_team_id()).first_or_404()
+    player = _player_or_404(record.player_id)
+    db.session.delete(record)
+    db.session.commit()
+    flash('Result deleted.', 'success')
+    return redirect(url_for('fitness.player_fitness', player_id=player.id))
+
+
+@bp.route('/player/<int:player_id>/target/<int:metric_id>', methods=['POST'])
+@login_required
+def set_target(player_id, metric_id):
+    """Set or clear a player's target on one test."""
+    player = _player_or_404(player_id)
+    metric = _standard_metric_or_404(metric_id)
+    back = redirect(url_for('fitness.player_fitness', player_id=player.id))
+
+    raw = '' if request.form.get('clear') else (request.form.get('target_value') or '').strip()
+    target = None
+    if raw:
+        try:
+            target = float(raw)
+        except ValueError:
+            target = None
+        if target is None or target <= 0:
+            flash('Enter a target above zero.', 'danger')
+            return back
+
+    team_id = player.team_organization_id
+    goal = None
+    if target is not None:
+        goal = FitnessGoal(player_id=player.id, metric=metric, target_value=target,
+                           created_by=current_user.id, team_organization_id=team_id)
+        pb = _pbs(team_id, [metric], [player.id]).get((player.id, metric.id))
+        if pb and goal.is_met_by(pb.value):
+            flash(f'The PB of {metric.format(pb.value)} {metric.unit} already beats that. Aim higher!',
+                  'info')
+            return back
+
+    FitnessGoal.query.filter_by(player_id=player.id, metric_id=metric.id, completed=False,
+                                team_organization_id=team_id).delete()
+    if goal is not None:
+        db.session.add(goal)
+    db.session.commit()
+    flash(f'{metric.name} target {"set" if goal else "cleared"}.', 'success')
+    return back
+
+
+@bp.route('/player/<int:player_id>/leaderboard', methods=['POST'])
+@login_required
+def toggle_leaderboard(player_id):
+    """Players opt themselves in or out of the leaderboard."""
+    player = _player_or_404(player_id)
+    if not _own_player(player):
+        abort(403)
+    player.fitness_leaderboard = request.form.get('opt_in') == '1'
+    db.session.commit()
+    flash('You are on the leaderboard.' if player.fitness_leaderboard
+          else 'You are off the leaderboard.', 'success')
+    if request.form.get('next') == 'hub':
+        return redirect(url_for('fitness.index', _anchor='leaderboard'))
+    return redirect(url_for('fitness.player_fitness', player_id=player.id))
+
+
+@bp.route('/test-day', methods=['GET', 'POST'])
+@login_required
+def test_day():
+    """Coaches enter one test's results for the whole squad."""
+    if not current_user.is_coach:
+        abort(403)
+    team_id = _team_id_or_redirect()
+    if team_id is None:
+        return redirect(url_for('team.select_team'))
+
+    metrics = FitnessMetric.standard()
+    metric = _standard_metric_or_404(request.args.get('metric_id', type=int) or metrics[0].id)
+    players = Player.query.filter_by(active=True, team_organization_id=team_id) \
+                          .order_by(Player.name).all()
+
+    if request.method == 'POST':
+        date = _parse_date(request.form.get('date'))
+        if date is None:
+            flash('Enter a valid date.', 'danger')
+            return redirect(url_for('fitness.test_day', metric_id=metric.id))
+        saved = skipped = 0
+        for player in players:
+            raw = (request.form.get(f'value_{player.id}') or '').strip()
+            if not raw:
+                continue
+            try:
+                value = float(raw)
+            except ValueError:
+                value = 0
+            if value <= 0:
+                skipped += 1
+                continue
+            db.session.add(FitnessRecord(player_id=player.id, metric_id=metric.id, value=value,
+                                         date_recorded=date, team_organization_id=team_id))
+            _complete_goals(player.id, metric.id, value, team_id)
+            saved += 1
+        db.session.commit()
+        flash(f'Saved {saved} {metric.name} result{"s" if saved != 1 else ""}.', 'success')
+        if skipped:
+            flash(f'{skipped} result{"s were" if skipped != 1 else " was"} not a number above zero '
+                  'and was skipped.', 'warning')
+        return redirect(url_for('fitness.test_day', metric_id=metric.id))
+
+    pbs = _pbs(team_id, [metric], [p.id for p in players])
+    return render_template('fitness/test_day.html', metrics=metrics, metric=metric,
+                           rows=[{'player': p, 'pb': pbs.get((p.id, metric.id))} for p in players],
+                           today=datetime.utcnow().date().isoformat())

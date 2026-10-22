@@ -57,6 +57,10 @@ class Player(db.Model):
 
     coach_feedback = db.Column(db.Text)
 
+    # Players choose whether their fitness PBs appear on the team leaderboard
+    fitness_leaderboard = db.Column(db.Boolean, nullable=False, default=False,
+                                    server_default=db.false())
+
 
     # Stats
     points_played = db.Column(db.Integer, default=0)

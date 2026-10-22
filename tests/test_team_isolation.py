@@ -102,15 +102,14 @@ def test_filter_dropdowns_only_list_your_team(app, teams):
     assert 'Other play' in component and 'Herd secret play' not in component
 
 
-def test_fitness_only_offers_your_team_and_shared_metrics(app, teams):
+def test_fitness_only_offers_the_standard_tests(app, teams):
     c = client(app, teams)
-    for url in ('/fitness/metrics', f"/fitness/record/{teams['other_player']}"):
-        body = page(c, url)
-        assert 'Shared beep test' in body and 'Herd secret sprint' not in body, url
+    body = page(c, f"/fitness/player/{teams['other_player']}")
+    assert '10 m Sprint' in body and 'Herd secret sprint' not in body
     metric = teams['herd_metric']
-    assert c.get(f"/fitness/player/{teams['other_player']}/history/{metric}").status_code == 404
-    assert c.get(f'/fitness/api/previous-values/{metric}').status_code == 404
-    assert c.get(f'/fitness/batch-record?metric_id={metric}').status_code == 404
+    assert c.get(f'/fitness/test-day?metric_id={metric}').status_code == 404
+    assert c.post(f"/fitness/record/{teams['other_player']}",
+                  data={'metric_id': metric, 'value': '5'}).status_code == 404
 
 
 def test_cannot_delete_another_teams_clip_segment(app, teams):

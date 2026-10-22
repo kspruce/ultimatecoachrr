@@ -60,7 +60,7 @@ def test_captain_has_team_admin_powers(app, teams):
 
     c = login(app, teams['captain'])
     # Admin-only pages on their own team
-    assert c.get('/fitness/metrics').status_code == 200
+    assert c.get('/fitness/test-day').status_code == 200
     assert c.get('/playbook/plays/add').status_code == 200
     assert c.get(f"/teams/edit/{teams['herd']}").status_code == 200
 
