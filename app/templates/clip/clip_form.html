@@ -56,7 +56,7 @@
                         
                         <div class="mb-3">
                             {{ form.video_source.label(class="form-label") }}
-                            {{ form.video_source(class="form-select") }}
+                            {{ form.video_source(class="form-select", id="video-source") }}
                             {% for error in form.video_source.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
@@ -70,25 +70,46 @@
                                     <i class="bi bi-link" title="Auto-populated from game"></i>
                                 </span>
                             </div>
-                            <div class="form-text">Enter a video URL from the selected platform</div>
+                            <div class="form-text">A YouTube link (watch, youtu.be, shorts or live) or a Veo match link</div>
+                            <div class="text-danger small mt-1 d-none" id="link-check-error" role="status"></div>
                             {% for error in form.youtube_link.errors %}
                             <div class="text-danger">{{ error }}</div>
                             {% endfor %}
+                        </div>
+
+                        <!-- Preview: play to the moment, then "Set start" / "Set end" -->
+                        <div class="mb-3 d-none" id="clip-preview">
+                            <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark">
+                                <iframe id="preview-player" title="Video preview"
+                                        allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                            </div>
                         </div>
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 {{ form.start_time.label(class="form-label") }}
-                                {{ form.start_time(class="form-control") }}
-                                <div class="form-text">Time in seconds where the clip should start</div>
+                                <div class="input-group">
+                                    {{ form.start_time(class="form-control", id="start-time", placeholder="m:ss") }}
+                                    <button type="button" class="btn btn-outline-secondary d-none set-from-video"
+                                            data-target="start-time" title="Use the preview's current time">
+                                        <i class="bi bi-stopwatch me-1"></i>Set start
+                                    </button>
+                                </div>
+                                <div class="form-text">e.g. 1:30 or 1:02:03 — or play the preview and press Set start</div>
                                 {% for error in form.start_time.errors %}
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
                             <div class="col-md-6">
                                 {{ form.end_time.label(class="form-label") }}
-                                {{ form.end_time(class="form-control") }}
-                                <div class="form-text">Time in seconds where the clip should end</div>
+                                <div class="input-group">
+                                    {{ form.end_time(class="form-control", id="end-time", placeholder="m:ss") }}
+                                    <button type="button" class="btn btn-outline-secondary d-none set-from-video"
+                                            data-target="end-time" title="Use the preview's current time">
+                                        <i class="bi bi-stopwatch me-1"></i>Set end
+                                    </button>
+                                </div>
+                                <div class="form-text">e.g. 1:30 or 1:02:03</div>
                                 {% for error in form.end_time.errors %}
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
@@ -145,52 +166,12 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // Initialize Select2 for tags and players
-        $('#tags-select').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Select tags',
-            allowClear: true
-        });
-        
-        $('#players-select').select2({
-            theme: 'bootstrap-5',
-            placeholder: 'Select players',
-            allowClear: true
-        });
-        
-        // When the game changes: reload its points, and fill in the game's video
-        // link unless one has been typed in already.
-        const linkInput = $('#youtube-link');
-        let linkAutoFilled = false;
-        linkInput.on('input', function() {
-            linkAutoFilled = false;
-            $('#link-auto-populated').addClass('d-none');
-        });
-
-        $('#game-select').change(function() {
-            const gameId = $(this).val();
-            const pointSelect = $('#point-select');
-            pointSelect.empty();
-            pointSelect.append(new Option('Select Point', 0));
-            if (!(gameId > 0)) return;
-
-            $.getJSON(`/clips/get_points/${gameId}`, function(data) {
-                $.each(data, function(index, point) {
-                    pointSelect.append(new Option(point.name, point.id));
-                });
-            });
-
-            if (!linkInput.val() || linkAutoFilled) {
-                $.getJSON(`/clips/get_game_link/${gameId}`, function(data) {
-                    if (data.youtube_link) {
-                        linkInput.val(data.youtube_link);
-                        linkAutoFilled = true;
-                        $('#link-auto-populated').removeClass('d-none');
-                    }
-                });
-            }
-        });
-    });
+window.CLIP_FORM = {
+  checkLinkUrl: {{ url_for('clip.check_video_link') | tojson }},
+  pointsUrl: {{ (url_for('clip.get_points', game_id=0)[:-1] ~ '__ID__') | tojson }},
+  gameLinkUrl: {{ (url_for('clip.get_game_link', game_id=0)[:-1] ~ '__ID__') | tojson }}
+};
 </script>
+<script src="{{ url_for('static', filename='js/clip_form.js') }}"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 {% endblock %}

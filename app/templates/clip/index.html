@@ -307,7 +307,7 @@
     <div>
       <h2>Clip Library
         <span class="badge bg-secondary ms-1" id="clipCount"
-              style="font-size:.7rem;vertical-align:middle">{{ clips|length }}</span>
+              style="font-size:.7rem;vertical-align:middle">{{ pagination.total }}</span>
       </h2>
       <p>Video analysis and highlights</p>
     </div>
@@ -329,15 +329,19 @@
     <div class="col-md-3 col-xl-2">
       <div class="clips-sidebar">
 
-        <!-- Search (client-side) -->
-        <div class="clip-search-wrap mb-3">
+        <!-- Search titles and descriptions (keeps the other filters) -->
+        <form method="get" action="{{ url_for('clip.index') }}" class="clip-search-wrap mb-3" role="search">
           <i class="bi bi-search"></i>
-          <input type="text" id="clipSearch" class="form-control clip-search-input"
-                 placeholder="Search clips…" autocomplete="off">
-        </div>
+          <input type="search" name="q" id="clipSearch" class="form-control clip-search-input"
+                 placeholder="Search clips…" autocomplete="off" value="{{ active_filters.q }}"
+                 aria-label="Search clips">
+          {% for key, value in request.args.items(multi=True) if key not in ('q', 'page') %}
+          <input type="hidden" name="{{ key }}" value="{{ value }}">
+          {% endfor %}
+        </form>
 
         <!-- Active filters -->
-        {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id
+        {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id or active_filters.q
               or active_filters.video_source or active_filters.is_featured or active_filters.tag_category %}
         <div class="sidebar-card mb-3">
           <div class="sidebar-card-header">
@@ -347,6 +351,11 @@
             </a>
           </div>
           <div class="sidebar-card-body" style="padding-bottom:.5rem">
+            {% if active_filters.q %}
+            <span class="active-chip">"{{ active_filters.q }}"
+              <button onclick="removeFilter('q', null)" aria-label="Clear search">×</button>
+            </span>
+            {% endif %}
             {% if active_filters.tag_ids %}
               {% for tag_id in active_filters.tag_ids %}
               <span class="active-chip">Tag #{{ tag_id }}
@@ -410,6 +419,7 @@
           <div id="advFilters" class="collapse {% if active_filters.game_id or active_filters.player_id or active_filters.video_source or active_filters.is_featured or active_filters.tag_ids or active_filters.tag_category %}show{% endif %}">
             <div class="sidebar-card-body">
               <form method="get" action="{{ url_for('clip.index') }}" id="filterForm">
+                {% if active_filters.q %}<input type="hidden" name="q" value="{{ active_filters.q }}">{% endif %}
 
                 <div class="mb-2">
                   <label class="sidebar-label">{{ form.game_id.label.text }}</label>
@@ -496,9 +506,7 @@
           {% set yt_id = clip.embed_url.split('youtube.com/embed/')[1].split('?')[0] %}
         {% endif %}
 
-        <div class="col-sm-6 col-lg-4 col-xxl-3 clip-item"
-             data-title="{{ clip.title|lower }}"
-             data-desc="{{ (clip.description or '')|lower }}">
+        <div class="col-sm-6 col-lg-4 col-xxl-3 clip-item">
           <div class="clip-card {% if clip.is_featured %}featured{% endif %} {% if clip.is_hidden %}is-hidden{% endif %}"
                onclick="window.location='{{ url_for('clip.view_clip', clip_id=clip.id) }}'">
 
@@ -541,11 +549,12 @@
                   vs {{ clip.game.opponent }}{% if clip.game.date %} · {{ clip.game.date.strftime('%d %b %Y') }}{% endif %}
                 </span>
                 {% endif %}
-                {% if clip.annotation_count %}
-                <span><i class="bi bi-chat-left-text"></i>{{ clip.annotation_count }}</span>
+                {% set n_notes, n_key = counts[clip.id] %}
+                {% if n_notes %}
+                <span><i class="bi bi-chat-left-text"></i>{{ n_notes }}</span>
                 {% endif %}
-                {% if clip.key_moments_count > 0 %}
-                <span style="color:var(--uc-amber)"><i class="bi bi-star-fill"></i>{{ clip.key_moments_count }}</span>
+                {% if n_key > 0 %}
+                <span style="color:var(--uc-amber)"><i class="bi bi-star-fill"></i>{{ n_key }}</span>
                 {% endif %}
               </div>
 
@@ -597,9 +606,9 @@
                 </div>
                 <div class="modal-body" style="font-size:.875rem">
                   Delete <strong>{{ clip.title }}</strong>?
-                  {% if clip.annotations|length > 0 %}
+                  {% if counts[clip.id][0] > 0 %}
                   <div class="alert alert-warning mt-2 mb-0 py-2" style="font-size:.8rem">
-                    {{ clip.annotations|length }} annotation(s) will also be removed.
+                    {{ counts[clip.id][0] }} annotation(s) will also be removed.
                   </div>
                   {% endif %}
                 </div>
@@ -618,17 +627,38 @@
         {% endfor %}
       </div>
 
-      <!-- No-search-results message -->
-      <div id="noResults" class="clips-empty d-none">
-        <i class="bi bi-search"></i>
-        <p>No clips match your search.</p>
-      </div>
+      {% if pagination.pages > 1 %}
+      <nav class="mt-4" aria-label="Clip pages">
+        <ul class="pagination pagination-sm justify-content-center flex-wrap">
+          {% set args = request.args.to_dict(flat=False) %}
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('clip.index', **dict(args, page=pagination.prev_num)) }}">Previous</a>
+          </li>
+          {% for n in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if n %}
+            <li class="page-item {% if n == pagination.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('clip.index', **dict(args, page=n)) }}">{{ n }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('clip.index', **dict(args, page=pagination.next_num)) }}">Next</a>
+          </li>
+        </ul>
+      </nav>
+      {% endif %}
 
       {% else %}
       <div class="clips-empty">
         <i class="bi bi-camera-video"></i>
         <p>
-          {% if active_filters.tag_ids or active_filters.game_id or active_filters.player_id %}
+          {% if active_filters.q %}
+            No clips match "{{ active_filters.q }}".
+            <a href="{{ url_for('clip.index', **dict(request.args.to_dict(flat=False), q='', page=1)) }}">Clear search</a>
+          {% elif active_filters.tag_ids or active_filters.game_id or active_filters.player_id
+                or active_filters.video_source or active_filters.is_featured or active_filters.tag_category %}
             No clips match these filters.
             <a href="{{ url_for('clip.index') }}">Clear filters</a>
           {% else %}
@@ -664,35 +694,17 @@ document.addEventListener('DOMContentLoaded', function () {
     advFilters.addEventListener('hidden.bs.collapse', () => { advIcon.className = 'bi bi-chevron-down'; });
   }
 
-  /* ── Client-side search ────────────────────────────────── */
-  const searchInput = document.getElementById('clipSearch');
-  const items       = Array.from(document.querySelectorAll('.clip-item'));
-  const countEl     = document.getElementById('clipCount');
-  const noResults   = document.getElementById('noResults');
-
-  if (searchInput) {
-    searchInput.addEventListener('input', function () {
-      const q = this.value.trim().toLowerCase();
-      let visible = 0;
-      items.forEach(item => {
-        const match = !q || item.dataset.title.includes(q) || item.dataset.desc.includes(q);
-        item.style.display = match ? '' : 'none';
-        if (match) visible++;
-      });
-      if (countEl) countEl.textContent = visible;
-      if (noResults) noResults.classList.toggle('d-none', visible > 0 || !q);
-    });
-  }
-
   /* ── Tag filter helpers ────────────────────────────────── */
   window.filterByTag = function (tagId) {
     const p = new URLSearchParams(window.location.search);
+    p.delete('page');
     if (!p.getAll('tags').includes(tagId.toString())) p.append('tags', tagId);
     window.location.href = '{{ url_for("clip.index") }}?' + p.toString();
   };
 
   window.removeFilter = function (name, val) {
     const p = new URLSearchParams(window.location.search);
+    p.delete('page');
     if (val !== null) {
       const vals = p.getAll(name);
       p.delete(name);

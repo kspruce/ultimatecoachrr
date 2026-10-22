@@ -256,3 +256,43 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 });
+
+/* ── Keyboard shortcuts ─────────────────────────────────── */
+function annotationTimes() {
+  return [...new Set([...document.querySelectorAll('.ann-timestamp[data-ts]')]
+    .map(a => parseInt(a.dataset.ts, 10)).filter(t => !isNaN(t)))].sort((a, b) => a - b);
+}
+
+function jumpToAnnotation(direction) {
+  const now = getCurrentTimeSeconds();
+  const times = annotationTimes();
+  // A little slack so "previous" from just after an annotation goes to the one before it
+  const target = direction > 0 ? times.find(t => t > now) : times.reverse().find(t => t < now - 1);
+  if (target !== undefined) seekToTime(target);
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const el = e.target;
+  if (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(el.tagName)) return;
+  if (document.querySelector('.offcanvas.show, .modal.show')) return;
+  if (!ytPlayer || !ytPlayer.getPlayerState) {
+    if (e.key === '?') document.getElementById('shortcut-help')?.toggleAttribute('open');
+    return;
+  }
+
+  switch (e.key) {
+    case 'k':
+    case ' ':
+      ytPlayer.getPlayerState() === YT.PlayerState.PLAYING ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
+      break;
+    case 'j': ytPlayer.seekTo(Math.max(0, ytPlayer.getCurrentTime() - 5), true); break;
+    case 'l': ytPlayer.seekTo(ytPlayer.getCurrentTime() + 5, true); break;
+    case 'n': jumpToAnnotation(1); break;
+    case 'p': jumpToAnnotation(-1); break;
+    case 'a': document.getElementById('btn-add-annotation')?.click(); break;
+    case '?': document.getElementById('shortcut-help')?.toggleAttribute('open'); break;
+    default: return;
+  }
+  e.preventDefault();
+});

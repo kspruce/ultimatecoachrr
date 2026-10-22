@@ -3,6 +3,8 @@
 from flask import abort, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 from flask_wtf import FlaskForm
+from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
 
 from app import db
 from app.forms.clip import ClipFilterForm, ClipForm
@@ -14,8 +16,12 @@ from app.models.point import Point
 from app.models.user import User
 from app.routes.clip import bp
 from app.routes.clip.helpers import get_clip_or_404, sees_hidden_clips, visible_annotations
+from app.utils.clip_video import check_link
 from app.utils.team_filter import get_current_team_id
 from app.utils.utils import admin_required
+
+
+CLIPS_PER_PAGE = 24
 
 
 @bp.route('/')
@@ -40,6 +46,8 @@ def index():
     video_source = request.args.get('video_source', type=str)
     is_featured = request.args.get('is_featured', type=str)
     sort_by = request.args.get('sort_by', default='created_desc', type=str)
+    search = request.args.get('q', default='', type=str).strip()
+    page = request.args.get('page', default=1, type=int)
 
     # Get current team ID
     team_id = get_current_team_id()
@@ -68,6 +76,12 @@ def index():
 
     if is_featured == '1':
         query = query.filter(Clip.is_featured == True)
+
+    if search:
+        escaped = search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        like = f'%{escaped}%'
+        query = query.filter(or_(Clip.title.ilike(like, escape='\\'),
+                                 Clip.description.ilike(like, escape='\\')))
 
     # Priority key: flagged for sharing floats to top (0), hidden sinks to bottom (2), rest in middle (1).
     # This is always applied as the primary sort so admins get a clear grouped view.
@@ -102,7 +116,20 @@ def index():
         query = query.filter(Clip.is_hidden == False)
 
     # Get clips
-    clips = query.all()
+    query = query.options(selectinload(Clip.tags), selectinload(Clip.game))
+    pagination = query.paginate(page=page, per_page=CLIPS_PER_PAGE, error_out=False)
+    clips = pagination.items
+
+    # Annotation and key-moment counts for this page's cards, in one query
+    counts = dict.fromkeys([c.id for c in clips], (0, 0))
+    if clips:
+        counts.update({
+            clip_id: (total, key or 0) for clip_id, total, key in
+            db.session.query(ClipAnnotation.clip_id, func.count(ClipAnnotation.id),
+                             func.sum(sa_case((ClipAnnotation.is_key_moment == True, 1), else_=0)))
+            .filter(ClipAnnotation.clip_id.in_(counts))
+            .group_by(ClipAnnotation.clip_id)
+        })
 
     # Get tag statistics for sidebar
     tag_stats = (db.session.query(
@@ -117,7 +144,8 @@ def index():
                  .filter(
                     ClipTag.team_organization_id == team_id,
                     Clip.team_organization_id == team_id,
-                    ClipTag.is_active == True
+                    ClipTag.is_active == True,
+                    or_(Clip.is_hidden == False, sees_hidden_clips())
                  )
                  .group_by(ClipTag.id)
                  .order_by(ClipTag.category, func.count(clip_tag_relation.c.clip_id).desc())
@@ -126,6 +154,8 @@ def index():
     return render_template(
         'clip/index.html',
         clips=clips,
+        pagination=pagination,
+        counts=counts,
         form=form,
         delete_form=delete_form,
         tag_stats=tag_stats,
@@ -136,7 +166,8 @@ def index():
             'player_id': player_id,
             'video_source': video_source,
             'is_featured': is_featured,
-            'sort_by': sort_by
+            'sort_by': sort_by,
+            'q': search
         }
     )
 
@@ -482,6 +513,12 @@ def get_points(game_id):
     points = Point.query.filter_by(game_id=game_id).order_by(Point.point_number).all()
     return jsonify([{'id': p.id, 'name': f'Point {p.point_number}'} for p in points])
 
+
+@bp.route('/check_link')
+@login_required
+def check_video_link():
+    """AJAX: can this link be played, and with what player (clip form preview)."""
+    return jsonify(check_link(request.args.get('source', 'youtube'), request.args.get('url', '')))
 
 @bp.route('/get_game_link/<int:game_id>')
 @login_required

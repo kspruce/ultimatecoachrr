@@ -71,6 +71,11 @@
   <div class="ratio ratio-16x9 mb-3">
     <iframe src="{{ embed_url }}" title="Video" allow="autoplay; encrypted-media" allowfullscreen></iframe>
   </div>
+  {% elif clip.video_source == 'veo' and clip.youtube_link %}
+  <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <span><i class="bi bi-camera-video me-1"></i>This clip is on Veo{% if clip.start_time %}, from {{ clip.start_time | clip_time }}{% endif %}{% if clip.end_time %} to {{ clip.end_time | clip_time }}{% endif %}.</span>
+    <a href="{{ clip.youtube_link }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">Watch on Veo</a>
+  </div>
   {% endif %}
 
   {% if clip.description %}

@@ -434,6 +434,14 @@
                     frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
+          {% elif clip.video_source == 'veo' and clip.youtube_link %}
+            <div class="no-video">
+              <i class="bi bi-box-arrow-up-right"></i>
+              <span>This clip is on Veo{% if clip.start_time %}, from {{ clip.start_time | clip_time }}{% endif %}{% if clip.end_time %} to {{ clip.end_time | clip_time }}{% endif %}.</span>
+              <a href="{{ clip.youtube_link }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary mt-2">
+                <i class="bi bi-play-circle me-1"></i>Watch on Veo
+              </a>
+            </div>
           {% else %}
             <div class="no-video">
               <i class="bi bi-camera-video-off"></i>
@@ -586,13 +594,26 @@
             <i class="bi bi-plus-circle me-1"></i>Add Annotation
             <span style="font-size:.7rem;opacity:.75;margin-left:.2rem">(at current time)</span>
           </button>
+          {% if current_user.is_admin or current_user.is_coach %}
           <button id="btn-point-start" class="btn btn-outline-success btn-sm" type="button">
             <i class="bi bi-flag me-1"></i>Mark Point Start
           </button>
           <button id="btn-point-end" class="btn btn-outline-danger btn-sm" type="button">
             <i class="bi bi-flag-fill me-1"></i>Mark Point End
           </button>
+          {% endif %}
         </div>
+        {% if clip.embed_url %}
+        <details class="mt-2 small text-muted d-none d-md-block" id="shortcut-help">
+          <summary>Keyboard shortcuts <kbd>?</kbd></summary>
+          <ul class="list-unstyled mb-0 mt-1">
+            <li><kbd>k</kbd> or <kbd>Space</kbd> play / pause</li>
+            <li><kbd>j</kbd> / <kbd>l</kbd> back / forward 5 seconds</li>
+            <li><kbd>p</kbd> / <kbd>n</kbd> previous / next annotation</li>
+            <li><kbd>a</kbd> add an annotation at the current time</li>
+          </ul>
+        </details>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -680,7 +701,7 @@
             {% for annotation in annotations %}
             <div class="ann-card {% if annotation.is_key_moment %}key-moment{% endif %}">
               <div class="d-flex align-items-start justify-content-between gap-2">
-                <a class="ann-timestamp" onclick="seekToTime({{ annotation.timestamp }})">
+                <a class="ann-timestamp" data-ts="{{ annotation.timestamp or 0 }}" onclick="seekToTime({{ annotation.timestamp or 0 }})">
                   <i class="bi bi-play-fill"></i>{{ annotation.formatted_timestamp }}
                 </a>
                 <div class="d-flex align-items-center gap-1">

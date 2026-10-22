@@ -1,4 +1,6 @@
 """Clip library: saving clips, hiding them from players and sharing them."""
+import html
+
 import pytest
 
 from app import db
@@ -145,13 +147,16 @@ def test_hidden_clips_cannot_be_shared(app, herd):
     assert app.test_client().get(data['url']).status_code == 404
 
 
-def test_veo_clips_embed_on_share_page(app, herd):
+def test_veo_clips_link_out(app, herd):
     clip = db.session.get(Clip, herd['shown'])
     clip.video_source, clip.youtube_link = 'veo', 'https://app.veo.co/matches/abc-123'
     db.session.commit()
     _, data = share_url(client(app, herd, 'coach'), clip.id)
-    body = app.test_client().get(data['url']).get_data(as_text=True)
-    assert 'https://app.veo.co/embed/abc-123' in body
+    for body in (app.test_client().get(data['url']).get_data(as_text=True),
+                 client(app, herd, 'player').get(f"/clips/{clip.id}").get_data(as_text=True)):
+        assert 'Watch on Veo' in body and 'from 0:30 to 1:30' in body
+        assert 'href="https://app.veo.co/matches/abc-123"' in body
+        assert '<iframe src="https://app.veo.co' not in body
 
 
 def test_annotation_tag_parent_must_be_your_team(app, herd):
@@ -211,3 +216,104 @@ def test_non_youtube_links_do_not_embed():
     from app.utils.clip_video import youtube_embed_url
     for link in (None, '', 'https://vimeo.com/123', 'https://www.youtube.com/watch?v=<script>'):
         assert youtube_embed_url(link) is None
+
+
+@pytest.mark.parametrize('start, end, saved', [
+    ('1:30', '2:05', (90, 125)), ('90', '1:02:03', (90, 3723)), ('', '', (None, None)),
+])
+def test_clip_times_take_minutes_and_seconds(app, herd, start, end, saved):
+    r = client(app, herd, 'admin').post('/clips/add_clip', data=clip_data(herd, start_time=start, end_time=end))
+    assert r.status_code == 302
+    clip = Clip.query.filter_by(title='Break mark').one()
+    assert (clip.start_time, clip.end_time) == saved
+
+
+@pytest.mark.parametrize('start, end, error', [
+    ('2:00', '1:00', 'The end must be after the start.'),
+    ('1:75', '', 'Use m:ss or h:mm:ss'),
+    ('soon', '', 'Use m:ss or h:mm:ss'),
+])
+def test_bad_clip_times_are_explained(app, herd, start, end, error):
+    r = client(app, herd, 'admin').post('/clips/add_clip', data=clip_data(herd, start_time=start, end_time=end))
+    assert r.status_code == 200 and error in r.get_data(as_text=True)
+    assert Clip.query.filter_by(title='Break mark').count() == 0
+
+
+def test_start_time_comes_from_a_shared_link(app, herd):
+    link = 'https://youtu.be/abc123XYZ_-?t=1m15s'
+    r = client(app, herd, 'admin').post('/clips/add_clip',
+                                        data=clip_data(herd, youtube_link=link, start_time='', end_time=''))
+    assert r.status_code == 302
+    assert Clip.query.filter_by(title='Break mark').one().start_time == 75
+
+
+def test_edit_form_shows_times_as_minutes(app, herd):
+    body = client(app, herd, 'admin').get(f"/clips/edit/{herd['shown']}").get_data(as_text=True)
+    assert 'value="0:30"' in body and 'value="1:30"' in body
+
+
+@pytest.mark.parametrize('source, link, error', [
+    ('youtube', 'https://app.veo.co/matches/abc-123', 'Choose Veo as the source'),
+    ('veo', YOUTUBE, 'Choose YouTube as the source'),
+    ('youtube', 'https://vimeo.com/12345', "Can't play this link"),
+    ('veo', 'https://example.com/match', 'Not a Veo match link'),
+])
+def test_links_must_suit_the_source(app, herd, source, link, error):
+    c = client(app, herd, 'admin')
+    r = c.post('/clips/add_clip', data=clip_data(herd, video_source=source, youtube_link=link))
+    assert r.status_code == 200 and error in html.unescape(r.get_data(as_text=True))
+    check = c.get('/clips/check_link', query_string={'source': source, 'url': link}).get_json()
+    assert error in check['error'] and check['embed_url'] is None
+
+
+def test_check_link_previews_youtube(app, herd):
+    check = client(app, herd, 'admin').get(
+        '/clips/check_link', query_string={'url': 'https://youtu.be/abc123XYZ_-?t=42'}).get_json()
+    assert check == {'embed_url': 'https://www.youtube.com/embed/abc123XYZ_-', 'start': 42, 'error': None}
+
+
+def library(c, **args):
+    return c.get('/clips/', query_string=args).get_data(as_text=True)
+
+
+def test_library_search(app, herd):
+    db.session.add_all([
+        Clip(title='Zone O breakdown', youtube_link=YOUTUBE, team_organization_id=herd['team']),
+        Clip(title='Hucks', description='Deep shots vs the ZONE', youtube_link=YOUTUBE,
+             team_organization_id=herd['team']),
+        Clip(title='50% of throws', youtube_link=YOUTUBE, team_organization_id=herd['team'])])
+    db.session.commit()
+    c = client(app, herd, 'player')
+    body = library(c, q='zone')
+    assert 'Zone O breakdown' in body and 'Hucks' in body and 'Shown clip' not in body
+    assert 'Hidden clip' not in library(client(app, herd, 'player'), q='hidden')
+    assert '50% of throws' in library(c, q='%') and 'Hucks' not in library(c, q='%')
+    assert 'No clips match "nothing here"' in library(c, q='nothing here')
+
+
+def test_library_pages(app, herd):
+    db.session.add_all([Clip(title=f'Bulk {i:02d}', youtube_link=YOUTUBE, team_organization_id=herd['team'])
+                        for i in range(30)])
+    db.session.commit()
+    c = client(app, herd, 'player')
+    first, second = library(c), library(c, page=2)
+    on_first = {f'Bulk {i:02d}' for i in range(30) if f'Bulk {i:02d}<' in first}
+    on_second = {f'Bulk {i:02d}' for i in range(30) if f'Bulk {i:02d}<' in second}
+    assert len(on_first) + len(on_second) + ('Shown clip' in first or 'Shown clip' in second) == 31
+    assert not on_first & on_second
+    assert 'page=2' in first and '>31</span>' in first
+
+
+def test_library_counts_annotations_per_clip(app, herd):
+    for i, key in enumerate([True, False, True]):
+        db.session.add(ClipAnnotation(clip_id=herd['shown'], timestamp=i, is_key_moment=key,
+                                      visibility='team', team_organization_id=herd['team']))
+    db.session.commit()
+    body = library(client(app, herd, 'coach'))
+    assert 'bi-chat-left-text"></i>3<' in body and 'bi-star-fill"></i>2<' in body
+
+
+def test_point_markers_are_for_coaches(app, herd):
+    url = f"/clips/{herd['shown']}"
+    assert 'btn-point-start' not in client(app, herd, 'player').get(url).get_data(as_text=True)
+    assert 'btn-point-start' in client(app, herd, 'coach').get(url).get_data(as_text=True)

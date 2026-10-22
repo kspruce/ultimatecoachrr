@@ -1,10 +1,11 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, TextAreaField, SelectField, SelectMultipleField, SubmitField, BooleanField
-from wtforms.validators import DataRequired, Optional, URL, Length
+from wtforms import StringField, TextAreaField, SelectField, SelectMultipleField, SubmitField, BooleanField
+from wtforms.validators import DataRequired, Optional, URL, Length, ValidationError
 from app.models.game import Game
 from app.models.player import Player
 from app.models.point import Point
 from app.models.clip import ClipTag
+from app.utils.clip_video import check_link, format_timestamp, link_start_seconds, parse_timestamp
 from app.utils.team_filter import get_current_team_id
 from flask_login import current_user
 
@@ -20,6 +21,24 @@ CLIP_TAG_CATEGORIES = [
 ]
 
 VIDEO_SOURCES = [('youtube', 'YouTube'), ('veo', 'Veo')]
+
+
+class TimestampField(StringField):
+    """A time in the video, typed as 90, 1:30 or 1:02:03; data is seconds."""
+
+    def _value(self):
+        if self.raw_data:
+            return self.raw_data[0]
+        return format_timestamp(self.data)
+
+    def process_formdata(self, valuelist):
+        self.data = None
+        text = valuelist[0].strip() if valuelist else ''
+        if text:
+            try:
+                self.data = parse_timestamp(text)
+            except ValueError:
+                raise ValueError('Use m:ss or h:mm:ss, e.g. 1:30')
 
 
 def _team_id():
@@ -90,8 +109,8 @@ class ClipForm(FlaskForm):
         validators=[DataRequired()]
     )
     youtube_link = StringField('Video Link', validators=[DataRequired(), URL()])
-    start_time = IntegerField('Start Time (seconds)', validators=[Optional()])
-    end_time = IntegerField('End Time (seconds)', validators=[Optional()])
+    start_time = TimestampField('Start Time')
+    end_time = TimestampField('End Time')
     description = TextAreaField('Description', validators=[Optional()])
     tags = SelectMultipleField('Tags', coerce=int, validators=[Optional()])
     players = SelectMultipleField('Players', coerce=int, validators=[Optional()])
@@ -118,6 +137,20 @@ class ClipForm(FlaskForm):
 
         self.tags.choices = tag_choices(team_id)
         self.players.choices = player_choices(team_id)
+
+    def validate_youtube_link(self, field):
+        error = check_link(self.video_source.data, field.data)['error']
+        if error:
+            raise ValidationError(error)
+
+    def validate_start_time(self, field):
+        # A YouTube link shared "at current time" carries t=…; use it as the start
+        if field.data is None and self.video_source.data == 'youtube':
+            field.data = link_start_seconds(self.youtube_link.data)
+
+    def validate_end_time(self, field):
+        if field.data is not None and self.start_time.data is not None and field.data <= self.start_time.data:
+            raise ValidationError('The end must be after the start.')
 
 
 class ClipTagForm(FlaskForm):
