@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Test day - {{ metric.name }}{% endblock %}
+
+{% block content %}
+{% include "fitness/_styles.html" %}
+
+<div class="container py-4" style="max-width:760px">
+
+  <div class="uc-page-header">
+    <div>
+      <h2>Test day</h2>
+      <p>Pick a test and enter everyone's result. Leave a box empty to skip someone.</p>
+    </div>
+    <a href="{{ url_for('fitness.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Fitness
+    </a>
+  </div>
+
+  <ul class="nav nav-pills mb-3 flex-wrap gap-1">
+    {% for m in metrics %}
+    <li class="nav-item">
+      <a class="nav-link {{ 'active' if m.id == metric.id }}" href="{{ url_for('fitness.test_day', metric_id=m.id) }}">
+        <i class="bi {{ m.test.icon }} me-1"></i>{{ m.name }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <p class="fit-muted mb-3">
+    {{ metric.test.kit }}
+    <a href="{{ url_for('fitness.tests_guide') }}#test-{{ metric.key }}">How to run it</a>
+  </p>
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card">
+      <div class="card-body pb-2 d-flex align-items-center gap-2 flex-wrap">
+        <label for="td-date" class="form-label mb-0">Date</label>
+        <input class="form-control form-control-sm" style="max-width:11rem" id="td-date" name="date"
+               type="date" value="{{ today }}" max="{{ today }}">
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0 fit-table align-middle">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th class="text-end">PB</th>
+              <th style="width:9rem">{{ metric.name }} ({{ metric.unit }})</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td>{% if row.player.jersey_number is not none %}<span class="fit-muted">#{{ row.player.jersey_number }}</span> {% endif %}{{ row.player.name }}</td>
+              <td class="text-end">{% if row.pb %}{{ metric.format(row.pb.value) }}{% else %}<span class="fit-muted">-</span>{% endif %}</td>
+              <td><input class="form-control form-control-sm" name="value_{{ row.player.id }}" type="number"
+                         step="any" min="0" inputmode="decimal" aria-label="{{ row.player.name }}"></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="fit-muted">No active players.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body pt-3">
+        <button class="btn btn-primary">Save {{ metric.name }} results</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

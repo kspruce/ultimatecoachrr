@@ -420,14 +420,14 @@
   {% if not s or s.fitness_enabled %}
   <div class="htu-feat">
     <div class="htu-feat-icon ic-red"><i class="bi bi-heart-pulse"></i></div>
-    <div class="htu-feat-name">Fitness Tracking</div>
-    <div class="htu-feat-desc">Log and track individual player fitness metrics over time.</div>
+    <div class="htu-feat-name">Fitness</div>
+    <div class="htu-feat-desc">Four ultimate fitness tests, everyone's PBs and an opt-in leaderboard.</div>
     <ol class="htu-feat-steps">
-      <li>Coaches define fitness metrics (e.g. 2km time, bench press)</li>
-      <li>Record values for each player at each test date</li>
-      <li>View progress charts and the team leaderboard</li>
+      <li>Run a test day: 10 m sprint, pro agility, broad jump and the Yo-Yo test</li>
+      <li>Players log their own results and set targets</li>
+      <li>Players choose whether to appear on the leaderboard</li>
     </ol>
-    <a href="{{ url_for('fitness.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Fitness Dashboard</a>
+    <a href="{{ url_for('fitness.index') }}" class="btn btn-sm btn-outline-primary mt-auto" style="border-radius:7px;font-size:.79rem;width:fit-content">Fitness</a>
   </div>
   {% endif %}
 

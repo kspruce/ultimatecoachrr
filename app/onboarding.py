@@ -98,9 +98,9 @@ def _has_rsvp(user, team):
                              or _exists(TournamentRSVP.query.filter_by(player_id=player.id)))
 
 
-def _has_fitness_goal(user, team):
-    from app.models.fitness import FitnessGoal
-    return bool(user.player) and _exists(FitnessGoal.query.filter_by(player_id=user.player.id))
+def _has_fitness_result(user, team):
+    from app.models.fitness import FitnessRecord
+    return bool(user.player) and _exists(FitnessRecord.query.filter_by(player_id=user.player.id))
 
 
 def _session_plan(user, team):
@@ -118,9 +118,9 @@ def _play(user, team):
     return _team_has(Play)(user, team)
 
 
-def _fitness_metric(user, team):
-    from app.models.fitness import FitnessMetric
-    return _team_has(FitnessMetric)(user, team)
+def _fitness_test_day(user, team):
+    from app.models.fitness import FitnessRecord
+    return _team_has(FitnessRecord)(user, team)
 
 
 def _player_id(user):
@@ -168,9 +168,9 @@ STEPS = {s.key: s for s in [
          'Draw up your offence and defence so players can learn their positions.',
          'playbook.index', 'bi-journal-richtext', check=_play, feature='playbook_enabled',
          optional=True),
-    Step('fitness_setup', 'Set up fitness tests',
-         'Pick the metrics you test (sprints, broad jump...) to track progress through the year.',
-         'fitness.manage_metrics', 'bi-heart-pulse', check=_fitness_metric,
+    Step('fitness_setup', 'Run a fitness test day',
+         'Take the squad through the four fitness tests and enter everyone\'s results in one go.',
+         'fitness.test_day', 'bi-heart-pulse', check=_fitness_test_day,
          feature='fitness_enabled', optional=True),
 
     # Game day
@@ -199,9 +199,9 @@ STEPS = {s.key: s for s in [
          'See where you line up in each play.',
          'playbook.position_view', 'bi-journal-richtext', feature='playbook_enabled',
          optional=True),
-    Step('fitness_goals', 'Set a fitness goal',
-         'Pick a target, like a faster sprint, and track it through the season.',
-         'fitness.player_goals', 'bi-heart-pulse', check=_has_fitness_goal,
+    Step('fitness_goals', 'Log a fitness PB',
+         'Record a result on one of the four fitness tests and set yourself a target.',
+         'fitness.player_fitness', 'bi-heart-pulse', check=_has_fitness_result,
          feature='fitness_enabled', optional=True, needs_player=True, url_kwargs=_player_id),
     Step('discord_linked', 'Link your Discord',
          'Get reminders and event posts tagged to you in the team Discord.',

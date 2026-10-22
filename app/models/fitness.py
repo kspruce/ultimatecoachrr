@@ -2,167 +2,161 @@
 from app import db
 from datetime import datetime
 
-# Define the default metrics
-DEFAULT_METRICS = [
-    # Sprinting Metrics
+from sqlalchemy.exc import IntegrityError
+
+# The club's fitness tests. Four tests, one each for acceleration, change of
+# direction, power and the engine to keep doing it point after point. They
+# need cones, a tape measure, a stopwatch and a speaker, and the whole squad
+# can do all four in one session.
+STANDARD_TESTS = [
     {
-        'name': '20-Yard Sprint',
-        'description': 'Measures short-burst acceleration, critical for making quick cuts. Start from standstill.',
-        'unit': 'seconds',
+        'key': 'sprint_10m',
+        'name': '10 m Sprint',
+        'unit': 's',
         'higher_is_better': False,
-        'active': True
+        'decimals': 2,
+        'icon': 'bi-lightning-charge-fill',
+        'quality': 'Acceleration',
+        'why': 'Most cuts are won in the first two or three steps. A quick 10 m '
+               'is what gets you open underneath and away from your mark.',
+        'kit': 'Two cones 10 m apart, a stopwatch (or a phone filming in slow motion).',
+        'how': [
+            'Start from a standing split stance with your front foot just behind the line.',
+            'The timer starts on your first movement and stops when your chest crosses 10 m.',
+            'Three runs with 2 to 3 minutes walking rest between them. Record the best.',
+        ],
+        'improve': [
+            ('Strength', [
+                'Twice a week: trap bar deadlift 3 × 5, rear-foot-elevated split squat 3 × 6 each leg, '
+                'hip thrust 3 × 8, calf raises 3 × 12.',
+            ]),
+            ('Power and plyometrics', [
+                'Broad jumps 4 × 3 and bounding 3 × 20 m, with full rest so every rep is fast.',
+                'Wall drives and A-skips 3 × 20 s to groove a strong forward lean.',
+            ]),
+            ('Field session', [
+                'Acceleration block at the start of training, while fresh: 2 sets of 4 × 10 to 20 m '
+                'from different starts (split stance, side-on, from a jog, reacting to a call). '
+                '90 s between reps, 3 minutes between sets.',
+                'Finish with 3 × 15 m hill or sled sprints.',
+            ]),
+        ],
     },
     {
-        'name': '40-Yard Sprint',
-        'description': 'Evaluates medium-distance speed, important for deep cuts. Start from standstill.',
-        'unit': 'seconds',
+        'key': 'pro_agility',
+        'name': '5-10-5 Pro Agility',
+        'unit': 's',
         'higher_is_better': False,
-        'active': True
+        'decimals': 2,
+        'icon': 'bi-shuffle',
+        'quality': 'Change of direction',
+        'why': 'Breaking on an in-cut, changing direction on the mark and recovering '
+               'on defence all come down to how fast you stop and go again.',
+        'kit': 'Three cones in a line, 5 yards (4.6 m) apart, and a stopwatch.',
+        'how': [
+            'Straddle the middle cone. Sprint 5 yards to one side and touch the line with your hand.',
+            'Turn, sprint 10 yards to the far line and touch it, then sprint back through the middle.',
+            'Two runs each way with full rest. Record the best time.',
+        ],
+        'improve': [
+            ('Strength', [
+                'Twice a week: Nordic curls 3 × 5, Copenhagen plank 3 × 20 s each side, '
+                'lateral lunge 3 × 8 each side, single-leg Romanian deadlift 3 × 8. '
+                'Strong hamstrings and groin also protect you when cutting.',
+            ]),
+            ('Agility and footwork', [
+                'Deceleration: sprint 5, 10 or 15 m and stop dead within three steps, hips low. 2 × 4.',
+                '5-10-5 and L-drill reps: 6 to 8 at full effort with full rest, planting on the outside foot.',
+                'Lateral bounds and skater jumps 3 × 6 each side.',
+            ]),
+            ('Field session', [
+                'Cutting session with a thrower: under-and-deep and in-out cuts, focusing on a sharp plant and first step.',
+                'Mirror drill and 1v1 marking reps in pairs: 6 × 10 s, the defender reacting to the attacker.',
+            ]),
+        ],
     },
     {
-        'name': 'Flying 20',
-        'description': 'Sprint time for 20 yards after a 10-yard running start, measuring top speed.',
-        'unit': 'seconds',
-        'higher_is_better': False,
-        'active': True
-    },
-    {
-        'name': '5-10-5 Shuttle/Pro Agility',
-        'description': 'Sprint 5 yards to the right, 10 yards to the left, then 5 yards back to start.',
-        'unit': 'seconds',
-        'higher_is_better': False,
-        'active': True
-    },
-    {
-        'name': 'Change of Direction Speed',
-        'description': 'Time to complete a zigzag course with sharp 90-degree cuts.',
-        'unit': 'seconds',
-        'higher_is_better': False,
-        'active': True
-    },
-    
-    # Endurance Metrics
-    {
-        'name': 'Beep Test/Yo-Yo Test',
-        'description': 'Progressive shuttle run test measuring aerobic capacity. Record the highest level completed.',
-        'unit': 'level',
+        'key': 'broad_jump',
+        'name': 'Standing Broad Jump',
+        'unit': 'cm',
         'higher_is_better': True,
-        'active': True
+        'decimals': 0,
+        'icon': 'bi-arrows-expand',
+        'quality': 'Power',
+        'why': 'Explosive leg power drives your first step, your skies and your '
+               'layouts, and it is quick and simple to measure.',
+        'kit': 'A line on the ground and a tape measure.',
+        'how': [
+            'Toes behind the line, feet about hip-width apart.',
+            'Swing your arms and jump forward off both feet, landing on both feet.',
+            'Hold the landing without stepping or falling back. Measure from the line to the back of the nearest heel.',
+            'Three jumps. Record the best.',
+        ],
+        'improve': [
+            ('Strength', [
+                'Twice a week: back or front squat 4 × 5, Romanian deadlift 3 × 8, '
+                'hip thrust 3 × 8, kettlebell swings 3 × 12.',
+            ]),
+            ('Power and plyometrics', [
+                'Box jumps 4 × 4 and broad jumps 4 × 3, sticking every landing with knees in line with toes.',
+                'Single-leg hops 3 × 5 each leg. Add depth drops 3 × 5 once you have a solid strength base.',
+            ]),
+            ('Field session', [
+                'Skying drills: pairs jump for floaty hucks at the highest point, 3 sets of 5 contested jumps.',
+                'Layout practice on soft grass or crash mats once jumps feel powerful.',
+            ]),
+        ],
     },
     {
-        'name': '1-Mile Run',
-        'description': 'Measures sustained running capacity over one mile distance.',
-        'unit': 'min:sec',
-        'higher_is_better': False,
-        'active': True
-    },
-    {
-        'name': '300-Yard Shuttle',
-        'description': 'Run back and forth between two lines 25 yards apart six times.',
-        'unit': 'seconds',
-        'higher_is_better': False,
-        'active': True
-    },
-    {
-        'name': 'Ultimate-Specific Conditioning Test',
-        'description': 'Complete 10 full-field cuts with disc catches in minimal time.',
-        'unit': 'points',
+        'key': 'yoyo_ir1',
+        'name': 'Yo-Yo Intermittent Recovery (Level 1)',
+        'unit': 'm',
         'higher_is_better': True,
-        'active': True
+        'decimals': 0,
+        'icon': 'bi-heart-pulse-fill',
+        'quality': 'Repeat-sprint fitness',
+        'why': 'A point is bursts of hard running with short breaks, and so is this '
+               'test. It shows whether you can still cut hard at the end of a long point and on the last game of the day.',
+        'kit': 'Cones marking a 20 m lane with a 5 m recovery zone behind the start, '
+               'a speaker and the Yo-Yo IR1 audio (free apps and videos have it).',
+        'how': [
+            'Run 20 m out and 20 m back, arriving on each beep.',
+            'After each shuttle you get 10 seconds to jog round the cone 5 m behind the start and back.',
+            'The beeps speed up. Miss the line twice and you are out.',
+            'Record the total distance covered (every shuttle is 40 m).',
+        ],
+        'improve': [
+            ('Conditioning programme', [
+                'Six weeks, twice a week, after a good warm-up:',
+                'Weeks 1 and 2: 15 s hard, 15 s easy for 10 minutes. 2 sets with 3 minutes rest.',
+                'Weeks 3 and 4: 40 m shuttle sprints (20 out, 20 back) with 20 s rest. 3 sets of 6 to 8.',
+                'Weeks 5 and 6: 4 × 4 minutes hard (breathing heavily, can only say a few words) with 3 minutes easy jogging.',
+                'Plus one easy 30 to 40 minute run, bike or swim a week to build the aerobic base that speeds up recovery.',
+            ]),
+            ('Field session', [
+                'Small-sided games: 3v3 or 4v4 on half a pitch, 3-minute points with 1 minute rest.',
+                'Point simulation: 60 to 90 s of cut, sprint and jog patterns, 60 s rest, 8 reps.',
+            ]),
+            ('Strength', [
+                'One session a week of single-leg work and calf raises keeps your legs robust for the running.',
+                'Sleep, eat and drink well before tournaments. Fitness is wasted if you turn up tired.',
+            ]),
+        ],
     },
-    {
-        'name': 'Recovery Heart Rate',
-        'description': 'Heart rate 1 minute after completing a standardized sprint workout.',
-        'unit': 'BPM',
-        'higher_is_better': False,
-        'active': True
-    },
-    
-    # Power & Jumping Metrics
-    {
-        'name': 'Vertical Jump',
-        'description': 'Maximum vertical leap from standing position.',
-        'unit': 'inches',
-        'higher_is_better': True,
-        'active': True
-    },
-    {
-        'name': 'Broad Jump',
-        'description': 'Maximum horizontal jump from standing position.',
-        'unit': 'inches',
-        'higher_is_better': True,
-        'active': True
-    },
-    {
-        'name': 'Box Jump',
-        'description': 'Highest box that can be jumped onto from standing position.',
-        'unit': 'inches',
-        'higher_is_better': True,
-        'active': True
-    },
-    
-    # Throwing Power & Accuracy
-    {
-        'name': 'Maximum Pull Distance',
-        'description': 'Maximum distance of controlled pull throw.',
-        'unit': 'yards',
-        'higher_is_better': True,
-        'active': True
-    },
-    {
-        'name': 'Throwing Accuracy',
-        'description': 'Points scored hitting targets at various distances in 1 minute.',
-        'unit': 'points',
-        'higher_is_better': True,
-        'active': True
-    },
-    
-    # Strength & Core Metrics
-    {
-        'name': 'Plank Hold',
-        'description': 'Maximum time maintaining proper plank position.',
-        'unit': 'seconds',
-        'higher_is_better': True,
-        'active': True
-    },
-    {
-        'name': 'Push-Ups',
-        'description': 'Maximum number of proper form push-ups completed.',
-        'unit': 'count',
-        'higher_is_better': True,
-        'active': True
-    },
-    {
-        'name': 'Pull-Ups',
-        'description': 'Maximum number of proper form pull-ups completed.',
-        'unit': 'count',
-        'higher_is_better': True,
-        'active': True
-    },
-    {
-        'name': 'Squat Endurance',
-        'description': 'Maximum number of bodyweight squats in 1 minute.',
-        'unit': 'count',
-        'higher_is_better': True,
-        'active': True
-    },
-    
-    # Ultimate-Specific Skills
-    {
-        'name': 'Lateral Quickness Drill',
-        'description': 'Time to complete a defensive footwork drill with lateral movements.',
-        'unit': 'seconds',
-        'higher_is_better': False,
-        'active': True
-    },
-    {
-        'name': 'Jump & Reach',
-        'description': 'Maximum height reached when jumping for a disc.',
-        'unit': 'inches',
-        'higher_is_better': True,
-        'active': True
-    }
 ]
+
+STANDARD_TEST_KEYS = [t['key'] for t in STANDARD_TESTS]
+
+
+def standard_test(key):
+    return next((t for t in STANDARD_TESTS if t['key'] == key), None)
+
+
+def format_value(value, decimals):
+    if value is None:
+        return '-'
+    return f'{value:.{decimals}f}'
+
 
 class FitnessMetric(db.Model):
     __tablename__ = 'fitness_metric'
@@ -174,6 +168,8 @@ class FitnessMetric(db.Model):
     higher_is_better = db.Column(db.Boolean, default=True)
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Set on the shared rows behind STANDARD_TESTS
+    key = db.Column(db.String(40), unique=True)
 
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
@@ -184,25 +180,38 @@ class FitnessMetric(db.Model):
     
     def __repr__(self):
         return f'<FitnessMetric {self.name}>'
-    
+
     @property
-    def team_average(self):
-        """Calculate team average for this metric"""
-        from sqlalchemy import func
-        result = db.session.query(func.avg(FitnessRecord.value)).filter_by(
-            metric_id=self.id, 
-            team_organization_id=self.team_organization_id
-        ).scalar()
-        return round(result, 2) if result else None
-    
+    def test(self):
+        """The STANDARD_TESTS entry this metric stands for, if any."""
+        return standard_test(self.key) if self.key else None
+
     @property
-    def record_holder(self):
-        """Get the record holder for this metric"""
-        if self.higher_is_better:
-            record = self.records.order_by(FitnessRecord.value.desc()).first()
-        else:
-            record = self.records.order_by(FitnessRecord.value).first()
-        return record
+    def decimals(self):
+        return self.test['decimals'] if self.test else 2
+
+    def format(self, value):
+        return format_value(value, self.decimals)
+
+    @classmethod
+    def standard(cls):
+        """The shared metrics behind STANDARD_TESTS, created on first use,
+        in STANDARD_TESTS order."""
+        rows = {m.key: m for m in cls.query.filter(cls.key.in_(STANDARD_TEST_KEYS))}
+        missing = [t for t in STANDARD_TESTS if t['key'] not in rows]
+        for test in missing:
+                metric = cls(key=test['key'], name=test['name'], unit=test['unit'],
+                             higher_is_better=test['higher_is_better'], active=True,
+                             team_organization_id=None)
+                db.session.add(metric)
+                rows[test['key']] = metric
+        if missing:
+            try:
+                db.session.commit()
+            except IntegrityError:  # another request created them first
+                db.session.rollback()
+                return cls.standard()
+        return [rows[key] for key in STANDARD_TEST_KEYS]
 
 
 class TestingPhase(db.Model):

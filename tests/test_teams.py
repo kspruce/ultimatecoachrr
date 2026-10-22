@@ -123,11 +123,11 @@ def test_tournament_bulk_update_needs_coach_and_same_team(app, two_teams):
     assert other.post(f"/tournaments/{two_teams['tournament']}/bulk-update").status_code == 404
 
 
-def test_fitness_metric_edit_is_limited_to_its_team(app, two_teams):
+def test_fitness_page_is_limited_to_its_team(app, two_teams):
     other = client_for(app, two_teams['other_admin'])
-    assert other.get(f"/fitness/metrics/edit/{two_teams['metric']}").status_code == 404
+    assert other.get(f"/fitness/player/{two_teams['herd_player']}").status_code == 404
     herd = client_for(app, two_teams['herd_admin'])
-    assert herd.get(f"/fitness/metrics/edit/{two_teams['metric']}").status_code == 200
+    assert herd.get(f"/fitness/player/{two_teams['herd_player']}").status_code == 200
 
 
 def test_deleting_a_team_removes_its_data_and_nothing_else(app):
