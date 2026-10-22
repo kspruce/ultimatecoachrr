@@ -264,65 +264,107 @@
                 colours: {...DEFAULT_FIELD.colours, ...((field && field.colours) || {})}};
     }
 
-    function logicalSize(field) {
-        return {w: (field.length + 2 * field.endzone) * PX_PER_YARD,
-                h: field.width * PX_PER_YARD};
+    // `rotated` is the portrait view used on phones: the field runs up the
+    // screen, attacking the top. Drawings are always saved the landscape way
+    // round (see toDisplay/toSaved).
+    function logicalSize(field, rotated) {
+        const w = (field.length + 2 * field.endzone) * PX_PER_YARD, h = field.width * PX_PER_YARD;
+        return rotated ? {w: h, h: w} : {w, h};
     }
 
     // The part of the field shown: all of it, the attacking half, or the
     // attacking endzone and 25 yards in front of it
-    function viewRect(field) {
+    function viewRect(field, rotated) {
         const {w, h} = logicalSize(field);
         let x = 0;
         if (field.view === 'half') x = (field.endzone + field.length / 2) * PX_PER_YARD;
         if (field.view === 'endzone') x = Math.max(0, (field.endzone + field.length - 25) * PX_PER_YARD);
-        return {x, y: 0, w: w - x, h};
+        return rotated ? {x: 0, y: 0, w: h, h: w - x} : {x, y: 0, w: w - x, h};
     }
+
+    // Landscape (saved) to portrait (shown) and back
+    function rotation(field, back) {
+        const L = (field.length + 2 * field.endzone) * PX_PER_YARD;
+        return back ? {pt: p => ({x: L - p.y, y: p.x}), vec: v => ({x: -v.y, y: v.x}), angle: 90}
+                    : {pt: p => ({x: p.y, y: L - p.x}), vec: v => ({x: v.y, y: -v.x}), angle: -90};
+    }
+
+    // Players, discs, cones and text stay upright when the field turns
+    const UPRIGHT = ['player-o', 'player-d', 'disc', 'cone', 'text', 'ghost'];
+
+    function rotateObjects(objects, field, back) {
+        const r = rotation(field, back);
+        return objects.map(o => {
+            const copy = JSON.parse(JSON.stringify(o));
+            const p = r.pt({x: o.left, y: o.top});
+            copy.left = fmt(p.x);
+            copy.top = fmt(p.y);
+            if (o.type === 'herdLine') {
+                copy.points = o.points.map(v => {
+                    const q = r.vec(v);
+                    return {x: fmt(q.x), y: fmt(q.y)};
+                });
+            } else if (!(UPRIGHT.includes(o.herdType) && centred(o))) {
+                copy.angle = ((o.angle || 0) + r.angle + 360) % 360;
+            }
+            return copy;
+        });
+    }
+
+    const toDisplay = (objects, field, rotated) => (rotated ? rotateObjects(objects, field, false) : objects);
+    const toSaved = (objects, field, rotated) => (rotated ? rotateObjects(objects, field, true) : objects);
+    const pointToDisplay = (p, field, rotated) => (rotated ? rotation(field, false).pt(p) : p);
+    const pointToSaved = (p, field, rotated) => (rotated ? rotation(field, true).pt(p) : p);
 
     function fieldObject(obj) {
         obj.set({selectable: false, evented: false, herdType: 'field'});
         return obj;
     }
 
-    function fieldParts(field) {
+    // Drawn the landscape way round, then turned for the portrait view
+    function fieldParts(field, rotated) {
         const {w, h} = logicalSize(field);
+        const P = p => pointToDisplay(p, field, rotated);
+        const rect = (x, y, rw, rh, opts) => {
+            const a = P({x, y}), b = P({x: x + rw, y: y + rh});
+            return fieldObject(new fabric.Rect({left: Math.min(a.x, b.x), top: Math.min(a.y, b.y),
+                width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y), ...opts}));
+        };
+        const line = (x1, y1, x2, y2, opts) => {
+            const a = P({x: x1, y: y1}), b = P({x: x2, y: y2});
+            return fieldObject(new fabric.Line([a.x, a.y, b.x, b.y], opts));
+        };
+        const text = (str, x, y, opts) => {
+            const a = P({x, y});
+            return fieldObject(new fabric.Text(str, {left: a.x, top: a.y, originX: 'center', originY: 'center', ...opts}));
+        };
         const y = PX_PER_YARD;
         const ez = field.endzone * y;
-        const parts = [fieldObject(new fabric.Rect({left: 0, top: 0, width: w, height: h,
-                                                     fill: COLOURS.field, strokeWidth: 0}))];
+        const parts = [rect(0, 0, w, h, {fill: COLOURS.field, strokeWidth: 0})];
         if (field.grid) {
-            for (let x = 5 * y; x < w; x += 5 * y) {
-                parts.push(fieldObject(new fabric.Line([x, 0, x, h],
-                    {stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1})));
-            }
-            for (let gy = 5 * y; gy < h; gy += 5 * y) {
-                parts.push(fieldObject(new fabric.Line([0, gy, w, gy],
-                    {stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1})));
-            }
+            const grid = {stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1};
+            for (let x = 5 * y; x < w; x += 5 * y) parts.push(line(x, 0, x, h, grid));
+            for (let gy = 5 * y; gy < h; gy += 5 * y) parts.push(line(0, gy, w, gy, grid));
         }
-        const line = {stroke: '#ffffff', strokeWidth: 2};
-        parts.push(fieldObject(new fabric.Rect({left: 1, top: 1, width: w - 2, height: h - 2,
-                                                 fill: '', ...line})));
-        parts.push(fieldObject(new fabric.Line([ez, 0, ez, h], line)));
-        parts.push(fieldObject(new fabric.Line([w - ez, 0, w - ez, h], line)));
+        const white = {stroke: '#ffffff', strokeWidth: 2};
+        parts.push(rect(1, 1, w - 2, h - 2, {fill: '', ...white}));
+        parts.push(line(ez, 0, ez, h, white));
+        parts.push(line(w - ez, 0, w - ez, h, white));
         // Brick marks, 20 yards out from each endzone line
         [ez + 20 * y, w - ez - 20 * y].forEach(bx => {
-            if (bx > ez && bx < w - ez) {
-                parts.push(fieldObject(new fabric.Text('×', {left: bx, top: h / 2, fontSize: 18,
-                    fill: '#ffffff', originX: 'center', originY: 'center'})));
-            }
+            if (bx > ez && bx < w - ez) parts.push(text('×', bx, h / 2, {fontSize: 18, fill: '#ffffff'}));
         });
         if (field.markers) {
             for (let yd = 10; yd < field.length; yd += 10) {
-                parts.push(fieldObject(new fabric.Text(String(yd), {left: ez + yd * y, top: 4,
-                    fontSize: 11, fill: 'rgba(255,255,255,0.8)', originX: 'center'})));
+                parts.push(text(String(yd), ez + yd * y, 10, {fontSize: 11, fill: 'rgba(255,255,255,0.8)'}));
             }
         }
         if (FORCES[field.force]) {
-            const view = viewRect(field);
+            const view = viewRect(field, rotated);
+            const at = rotated ? {left: 8, top: view.h - 8} : {left: Math.max(view.x, ez) + 8, top: h - 8};
             parts.push(fieldObject(new fabric.Text(FORCES[field.force], {
-                left: Math.max(view.x, ez) + 8, top: h - 8, fontSize: 13, fontWeight: 'bold',
-                fontFamily: 'Arial', fill: '#ffffff', originY: 'bottom', backgroundColor: 'rgba(0,0,0,0.35)',
+                ...at, fontSize: 13, fontWeight: 'bold', originY: 'bottom',
+                fontFamily: 'Arial', fill: '#ffffff', backgroundColor: 'rgba(0,0,0,0.35)',
             })));
         }
         return parts;
@@ -540,9 +582,10 @@
             const last = stages.length - 1;
             const i = Math.min(Math.floor(position), last);
             if (i !== shown) {
-                if (options.beforeShow) options.beforeShow();
-                await showStage(canvas, stages[i].objects);
-                plan = i < last ? transitionPlan(stages[i].objects, stages[i + 1].objects) : null;
+                const map = options.mapObjects || (objects => objects);
+                const here = map(stages[i].objects);
+                await showStage(canvas, here);
+                plan = i < last ? transitionPlan(here, map(stages[i + 1].objects)) : null;
                 shown = i;
                 if (options.afterShow) options.afterShow(i);
             }
@@ -695,6 +738,7 @@
         HerdLine, lineControls: null,
         mid, lineSegments, segmentMiddle, samplePoints,
         withDefaults, logicalSize, viewRect, fieldParts, textOn, recolourPlayers,
+        toDisplay, toSaved, pointToDisplay, pointToSaved,
         centred, isArrow, movements, nextStageObjects,
         transitionPlan, applyFrame, enliven, showStage, createPlayer,
         exportStage, videoType, recordVideo, normaliseState,

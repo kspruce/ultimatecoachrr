@@ -194,4 +194,4 @@ def test_drill_page_plays_staged_drawings(app, team, coach):
     coach.put(f'/sessions/api/drills/{drill_id}', data=staged_form(one['stages'], ('blue',), one),
               content_type='multipart/form-data')
     page = coach.get(f'/sessions/drills/{drill_id}').get_data(as_text=True)
-    assert 'drill-animation' not in page and 'drill_viewer.js' not in page
+    assert 'id="drill-animation"' not in page and 'drill_viewer.js' not in page

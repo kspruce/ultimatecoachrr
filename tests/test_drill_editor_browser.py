@@ -64,7 +64,7 @@ def serve_cdn_locally(context):
                   lambda route: route.abort())
 
 
-def logged_in_page(app, browser, live_server, user, team):
+def logged_in_page(app, browser, live_server, user, team, **context_options):
     user_id, team_id = user.get_id(), team.id  # (the request below ends the DB session)
     client = app.test_client()
     with client.session_transaction() as s:
@@ -72,7 +72,7 @@ def logged_in_page(app, browser, live_server, user, team):
         s['_fresh'] = True
         s['current_team_id'] = team_id
     cookie = client.get_cookie('session')
-    context = browser.new_context(viewport={'width': 1400, 'height': 950})
+    context = browser.new_context(**{'viewport': {'width': 1400, 'height': 950}, **context_options})
     context.add_cookies([{'name': 'session', 'value': cookie.value, 'url': live_server}])
     serve_cdn_locally(context)
     page = context.new_page()
@@ -146,4 +146,70 @@ def test_draw_stages_save_and_play(app, team, live_server, browser):
     page.wait_for_function(
         "document.querySelector('.animation-caption strong').textContent.startsWith('2/2')", timeout=10000)
     assert page.errors == []
+    db.session.remove()
+
+
+def test_phone_portrait_touch(app, team, live_server, browser):
+    """On a phone held upright the field turns to portrait; taps place
+    things, a selected player's handle draws their cut, a long press opens
+    the menu, and the drawing is still saved the landscape way round."""
+    coach = make_user(team, 'phonecoach', role='coach')
+    page = logged_in_page(app, browser, live_server, coach, team,
+                          viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True)
+    page.goto(live_server + '/sessions/drills/editor')
+    page.wait_for_selector('.upper-canvas')
+    page.wait_for_timeout(300)
+    cdp = page.context.new_cdp_session(page)
+
+    def touch(kind, points):
+        cdp.send('Input.dispatchTouchEvent', {
+            'type': kind, 'touchPoints': [{'x': x, 'y': y, 'id': i} for i, (x, y) in enumerate(points)]})
+
+    # A new drill on a phone shows the attacking half (55 yards), top aligned:
+    # saved point (x, y) is shown at (y, 1100 - x)
+    box = page.locator('.upper-canvas').bounding_box()
+    assert box['height'] > box['width']
+    zoom = min(box['width'] / 400, box['height'] / 550)
+    left = (box['width'] - 400 * zoom) / 2
+
+    def screen(x, y):
+        return box['x'] + left + y * zoom, box['y'] + (1100 - x) * zoom
+
+    page.fill('#drill-title', 'Phone drill')
+    page.click('.tool-btn[data-tool="player-o"]')
+    page.touchscreen.tap(*screen(800, 200))
+    page.click('.tool-btn[data-tool="disc"]')
+    page.touchscreen.tap(*screen(812, 188))
+    page.click('.tool-btn[data-tool="select"]')
+    page.touchscreen.tap(*screen(797, 203))
+
+    # Drag the handle at the player's top right to draw a cut
+    px, py = screen(800, 200)
+    touch('touchStart', [(px + 14 * zoom + 10, py - 14 * zoom - 10)])
+    for i in range(1, 9):
+        touch('touchMove', [screen(800 + 150 * i / 8, 200 - 80 * i / 8)])
+    touch('touchEnd', [])
+
+    # A long press opens the menu
+    touch('touchStart', [(px, py)])
+    page.wait_for_timeout(750)
+    touch('touchEnd', [])
+    page.wait_for_selector('#object-menu')
+    page.touchscreen.tap(30, 160)
+
+    page.click('#add-stage')
+    page.wait_for_function("document.querySelector('#stage-count').textContent.startsWith('2 /')")
+    page.click('#save-drill')
+    page.wait_for_selector('.alert-success')
+    assert page.errors == []
+
+    drill = SavedDrill.query.filter_by(title='Phone drill').one()
+    state = json.loads(drill.editor_diagram.editor_json)
+    first, second = (s['objects'] for s in state['stages'])
+    o1 = next(o for o in first if o.get('herdType') == 'player-o')
+    cut = next(o for o in first if o.get('type') == 'herdLine')
+    assert abs(o1['left'] - 800) < 3 and abs(o1['top'] - 200) < 3
+    assert cut['herdFrom'] == o1['herdId']
+    moved = next(o for o in second if o.get('herdId') == o1['herdId'])
+    assert abs(moved['left'] - 950) < 3 and abs(moved['top'] - 120) < 3
     db.session.remove()

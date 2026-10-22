@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const TOOL_KEYS = {v: 'select', o: 'player-o', d: 'player-d', f: 'disc', c: 'cone',
                        l: 'cut', r: 'throw', m: 'move', p: 'path', a: 'area', t: 'text'};
     const TOOL_HINTS = {
-        select: 'Drag to move; arrows drawn from a player follow them. Select an arrow to drag its points; double-click a point to remove it. Scroll to zoom, middle-drag or Alt-drag to pan.',
+        select: 'Drag to move. Select a player and drag their blue arrow handle to draw a cut (or from the disc, a throw). Select an arrow to drag its points. Right-click for more. Scroll to zoom, middle-drag or Alt-drag to pan.',
         cut: 'Start on a player and drag for a straight arrow, or click points and double-click (or Enter) to finish. Hold Shift for straight angles.',
         throw: 'Start on the disc and drag, or click points for a longer throw. Tick Curved, then drag the middle handle to bend it.',
         move: 'Dotted arrow for a defender or a jog. Drag, or click points and double-click to finish.',
@@ -50,6 +50,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let areaDraft = null;   // the area being drawn: {start, shape}
     let panning = null;
     let baseZoom = 1;
+    // Phones show the field in portrait (see DrillDiagram.toDisplay); fingers
+    // get bigger handles and snapping
+    let rotated = false;
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const TOUCH = coarse ? 2 : 1;
+    if (coarse) {
+        fabric.Object.prototype.cornerSize = 18;
+        fabric.Object.prototype.touchCornerSize = 40;
+    }
 
     // ---- canvas -------------------------------------------------------------
 
@@ -57,8 +66,10 @@ document.addEventListener('DOMContentLoaded', function () {
         backgroundColor: '#ffffff',
         selection: true,
         preserveObjectStacking: true,
-        targetFindTolerance: 6,
+        targetFindTolerance: 6 * TOUCH,
         fireMiddleClick: true,
+        fireRightClick: true,
+        stopContextMenu: true,
     });
     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
     canvas.freeDrawingBrush.color = COLOURS.line;
@@ -73,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function drawField() {
         canvas.getObjects().filter(o => o.herdType === 'field').forEach(o => canvas.remove(o));
-        DD.fieldParts(field).forEach((p, i) => canvas.insertAt(p, i));
+        DD.fieldParts(field, rotated).forEach((p, i) => canvas.insertAt(p, i));
         document.getElementById('field-size').textContent = `${field.length}×${field.width} yards`;
         document.getElementById('endzone-size').textContent = `${field.endzone} yards`;
         document.getElementById('field-view').value = field.view;
@@ -86,24 +97,35 @@ document.addEventListener('DOMContentLoaded', function () {
         return canvas.getObjects().filter(o => below.includes(o.herdType)).length;
     }
 
+    function displaySize() {
+        return DD.logicalSize(field, rotated);
+    }
+
     function fitToScreen() {
-        const view = DD.viewRect(field);
+        const view = DD.viewRect(field, rotated);
+        const whole = DD.logicalSize(field, rotated);
         const cw = holder.clientWidth;
         const ch = holder.clientHeight || cw * view.h / view.w;
         baseZoom = Math.min(cw / view.w, ch / view.h);
         canvas.setDimensions({width: cw, height: ch});
-        // Part of the field: keep its far end on the right, so any spare
-        // width shows more field rather than blank space
-        const left = view.x ? cw - (view.x + view.w) * baseZoom
-                            : (cw - view.w * baseZoom) / 2;
-        canvas.setViewportTransform([baseZoom, 0, 0, baseZoom,
-            left, (ch - view.h * baseZoom) / 2 - view.y * baseZoom]);
+        // Part of the field: keep the attacking end at the edge (right, or
+        // top in portrait), so any spare space shows more field, not blank
+        const partial = view.w < whole.w || view.h < whole.h;
+        const left = partial && !rotated ? cw - (view.x + view.w) * baseZoom
+                                         : (cw - view.w * baseZoom) / 2 - view.x * baseZoom;
+        const top = partial && rotated ? -view.y * baseZoom
+                                       : (ch - view.h * baseZoom) / 2 - view.y * baseZoom;
+        canvas.setViewportTransform([baseZoom, 0, 0, baseZoom, left, top]);
         canvas.getObjects().forEach(o => o.setCoords());
         canvas.requestRenderAll();
     }
 
     function zoomBy(factor, point) {
-        const zoom = Math.min(baseZoom * 8, Math.max(baseZoom * 0.6, canvas.getZoom() * factor));
+        zoomTo(canvas.getZoom() * factor, point);
+    }
+
+    function zoomTo(wanted, point) {
+        const zoom = Math.min(baseZoom * 8, Math.max(baseZoom * 0.6, wanted));
         const at = point || {x: canvas.getWidth() / 2, y: canvas.getHeight() / 2};
         canvas.zoomToPoint(new fabric.Point(at.x, at.y), zoom);
         canvas.getObjects().forEach(o => o.setCoords());
@@ -158,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 herdType: 'text', shadow: 'rgba(0,0,0,0.6) 1px 1px 2px'});
         }
         if (obj) obj.set('herdId', newId());
-        return obj;
+        return obj && decorate(obj);
     }
 
     function makeLine(points, style, from) {
@@ -214,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ctx.strokeStyle = '#0d6efd';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(left, top, 6, 0, 2 * Math.PI);
+        ctx.arc(left, top, 6 * (coarse ? 1.6 : 1), 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
         ctx.restore();
@@ -226,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(left, top, 4.5, 0, 2 * Math.PI);
+        ctx.arc(left, top, 4.5 * (coarse ? 1.6 : 1), 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
         ctx.restore();
@@ -363,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Returns {x, y}, plus the id and type of the player or disc it snapped to
     function snapPoint(p, angleFrom, except, prefer) {
         if (angleFrom) return snapAngle(p, angleFrom);
-        const radius = 12 / canvas.getZoom();
+        const radius = 12 * TOUCH / canvas.getZoom();
         let best = null, bestD = radius;
         snapTargets(except).forEach(t => {
             let d = Math.hypot(t.p.x - p.x, t.p.y - p.y);
@@ -402,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pts.length < 2) return;
         if (!draft.preview) {
             loading = true;  // not an undo step until finished
-            draft.preview = makeLine(pts, LINE_TOOLS[currentTool]);
+            draft.preview = makeLine(pts, LINE_TOOLS[draft.tool]);
             draft.preview.set({selectable: false, evented: false, opacity: 0.8});
             addLine(draft.preview);
             loading = false;
@@ -416,16 +438,19 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('finish-arrow').classList.toggle('d-none', !on);
     }
 
+    function dropDraftPreview(d) {
+        if (!d.preview) return;
+        loading = true;
+        canvas.remove(d.preview);
+        loading = false;
+    }
+
     function finishDraft() {
         if (!draft) return;
         const d = draft;
         draft = null;
         setDrafting(false);
-        if (d.preview) {
-            loading = true;
-            canvas.remove(d.preview);
-            loading = false;
-        }
+        dropDraftPreview(d);
         // Drop repeated points (e.g. from the clicks of a double-click)
         const pts = d.points.filter((p, i, all) => i === 0 ||
             Math.hypot(p.x - all[i - 1].x, p.y - all[i - 1].y) > 3).map(p => ({x: p.x, y: p.y}));
@@ -443,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function linePointer(opt) {
         const p = canvas.getPointer(opt.e);
         const prev = draft && draft.points[draft.points.length - 1];
-        const prefer = LINE_TOOLS[currentTool] === 'throw' ? 'disc' : null;
+        const prefer = LINE_TOOLS[draft ? draft.tool : currentTool] === 'throw' ? 'disc' : null;
         return snapPoint({x: p.x, y: p.y}, opt.e.shiftKey ? prev : null, null, prefer);
     }
 
@@ -453,27 +478,125 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.setCursor('grabbing');
     }
 
+    function clientPoint(e) {
+        const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+        return {x: t.clientX, y: t.clientY};
+    }
+
+    const isTouch = e => !!e && (e.type || '').startsWith('touch');
+
+    // ---- an arrow straight out of a player ----------------------------------
+
+    // A selected player (or the disc) has a handle: drag it to draw a cut
+    // from the player (or a throw from the disc) without changing tools.
+    function renderArrowHandle(ctx, left, top) {
+        const r = coarse ? 13 : 9;
+        ctx.save();
+        ctx.fillStyle = '#0d6efd';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(left, top, r, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(left - r * 0.45, top);
+        ctx.lineTo(left + r * 0.45, top);
+        ctx.moveTo(left + r * 0.1, top - r * 0.35);
+        ctx.lineTo(left + r * 0.45, top);
+        ctx.lineTo(left + r * 0.1, top + r * 0.35);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function startHandleArrow(e, transform) {
+        const o = transform.target;
+        const c = centreOf(o);
+        const start = {x: c.x, y: c.y, id: o.herdId, type: o.herdType};
+        draft = {tool: o.herdType === 'disc' ? 'throw' : 'cut', points: [start], down: start,
+                 pressed: true, dragged: true};
+    }
+
+    const arrowHandle = new fabric.Control({
+        x: 0.5, y: -0.5, offsetX: 10, offsetY: -10, cursorStyle: 'crosshair', actionName: 'drawArrow',
+        mouseDownHandler: startHandleArrow, actionHandler: () => false, render: renderArrowHandle,
+    });
+
+    // Players and the disc: the arrow handle instead of resize/rotate handles
+    function decorate(o) {
+        if (MOVERS.includes(o.herdType)) {
+            o.controls = {arrow: arrowHandle};
+            o.set({lockScalingX: true, lockScalingY: true, lockRotation: true});
+        }
+        return o;
+    }
+
+    // ---- pointer ------------------------------------------------------------
+
+    let pendingPlace = null;  // tap to place: placed when the finger lifts
+    let pressTimer = null;    // long press for the menu
+    let pressStart = null;
+    let longPressed = false;
+    let gesture = null;       // two fingers: zoom and pan
+    let gestureUsed = false;
+
+    function cancelPress() {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+    }
+
+    // Undo whatever one finger started before a second one came down
+    function cancelPointerAction() {
+        cancelPress();
+        pendingPlace = null;
+        if (areaDraft) {
+            loading = true;
+            canvas.remove(areaDraft.obj);
+            loading = false;
+            areaDraft = null;
+        }
+        if (draft && draft.pressed) {
+            if (draft.points.length === 1) {
+                dropDraftPreview(draft);
+                draft = null;
+                setDrafting(false);
+            } else {
+                draft.points.pop();
+                draft.pressed = false;
+            }
+        }
+        const t = canvas._currentTransform;
+        if (t && t.target && t.original) {
+            t.target.set({left: t.original.left, top: t.original.top});
+            t.target.setCoords();
+        }
+        canvas._currentTransform = null;
+        canvas.requestRenderAll();
+    }
+
     canvas.on('mouse:down', function (opt) {
+        if (opt.button === 3) {
+            if (!playback && opt.target && isUser(opt.target)) openMenu(opt.target, clientPoint(opt.e));
+            return;
+        }
         if (opt.e.button === 1 || (opt.e.altKey && !opt.target && !canvas.isDrawingMode)) {
             startPan(opt);
             return;
         }
-        if (playback) return;
+        if (playback || gesture) return;
         const p = canvas.getPointer(opt.e);
+        if (currentTool === 'select' && opt.target && isUser(opt.target) && isTouch(opt.e) && !draft) {
+            pressStart = clientPoint(opt.e);
+            const target = opt.target;
+            pressTimer = setTimeout(() => {
+                pressTimer = null;
+                longPressed = true;
+                cancelPointerAction();
+                openMenu(target, pressStart);
+            }, 550);
+        }
         if (PLACE_TOOLS.includes(currentTool)) {
-            // Keep new things on the field
-            const {w, h} = DD.logicalSize(field);
-            const s = snapGrid(p);
-            const x = Math.min(w - 8, Math.max(8, s.x));
-            const y = Math.min(h - 8, Math.max(8, s.y));
-            const obj = makeObject(currentTool, x, y);
-            canvas.add(obj);
-            if (currentTool === 'text') {
-                setTool('select');
-                canvas.setActiveObject(obj);
-                obj.enterEditing();
-                obj.selectAll();
-            }
+            pendingPlace = p;
         } else if (currentTool === 'area') {
             const start = snapGrid(p);
             loading = true;
@@ -490,7 +613,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 const last = draft.points[draft.points.length - 1];
                 // Clicking the last point again finishes the arrow
-                if (Math.hypot(point.x - last.x, point.y - last.y) < 6 / canvas.getZoom()) {
+                if (Math.hypot(point.x - last.x, point.y - last.y) < 6 * TOUCH / canvas.getZoom()) {
                     finishDraft();
                     return;
                 }
@@ -502,6 +625,22 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    function placeAt(p) {
+        // Keep new things on the field
+        const {w, h} = displaySize();
+        const s = snapGrid(p);
+        const x = Math.min(w - 8, Math.max(8, s.x));
+        const y = Math.min(h - 8, Math.max(8, s.y));
+        const obj = makeObject(currentTool, x, y);
+        canvas.add(obj);
+        if (currentTool === 'text') {
+            setTool('select');
+            canvas.setActiveObject(obj);
+            obj.enterEditing();
+            obj.selectAll();
+        }
+    }
+
     function areaBox(start, p) {
         const end = snapGrid(p);
         return {x: Math.min(start.x, end.x), y: Math.min(start.y, end.y),
@@ -509,6 +648,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     canvas.on('mouse:move', function (opt) {
+        if (gesture) return;
+        if (pressTimer) {
+            const c = clientPoint(opt.e);
+            if (Math.hypot(c.x - pressStart.x, c.y - pressStart.y) > 8) cancelPress();
+        }
         if (panning) {
             canvas.relativePan(new fabric.Point(opt.e.clientX - panning.x, opt.e.clientY - panning.y));
             panning.x = opt.e.clientX;
@@ -524,6 +668,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         if (!draft) return;
+        // A finger can't hover: only show the next segment while pressed
+        if (isTouch(opt.e) && !draft.pressed) return;
         const point = linePointer(opt);
         if (draft.pressed && Math.hypot(point.x - draft.down.x, point.y - draft.down.y) > 6) {
             draft.dragged = true;
@@ -532,11 +678,24 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     canvas.on('mouse:up', function (opt) {
+        cancelPress();
+        if (gestureUsed || longPressed) {
+            longPressed = false;
+            pendingPlace = null;
+            if (draft) draft.pressed = false;
+            return;
+        }
         if (panning) {
             canvas.selection = panning.selection;
             panning = null;
             canvas.getObjects().forEach(o => o.setCoords());
             canvas.setCursor(canvas.defaultCursor);
+            return;
+        }
+        if (pendingPlace) {
+            const p = pendingPlace;
+            pendingPlace = null;
+            placeAt(p);
             return;
         }
         if (areaDraft) {
@@ -562,6 +721,46 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Two fingers zoom and pan. Fabric only follows the first finger, so its
+    // moves are held back while two are down.
+    const upper = canvas.upperCanvasEl;
+
+    function twoTouches(e) {
+        const r = upper.getBoundingClientRect();
+        const [a, b] = e.touches;
+        return {x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top,
+                d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1};
+    }
+
+    upper.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 2) return;
+        cancelPointerAction();
+        gesture = {...twoTouches(e), zoom: canvas.getZoom()};
+        gestureUsed = true;
+        e.preventDefault();
+    }, {passive: false});
+
+    window.addEventListener('touchmove', function (e) {
+        if (!gesture) return;
+        e.stopPropagation();
+        e.preventDefault();
+        if (e.touches.length < 2) return;
+        const t = twoTouches(e);
+        zoomTo(gesture.zoom * t.d / gesture.d, t);
+        canvas.relativePan(new fabric.Point(t.x - gesture.x, t.y - gesture.y));
+        gesture.x = t.x;
+        gesture.y = t.y;
+    }, {capture: true, passive: false});
+
+    window.addEventListener('touchend', function (e) {
+        if (gesture && e.touches.length < 2) {
+            gesture = null;
+            canvas.getObjects().forEach(o => o.setCoords());
+        }
+        // (fabric's own touchend, after this, still sees gestureUsed)
+        if (e.touches.length === 0 && gestureUsed) setTimeout(() => { gestureUsed = false; }, 0);
+    }, {capture: true});
+
     // Freehand cut: add an arrowhead at the end
     canvas.on('path:created', function (opt) {
         const path = opt.path;
@@ -580,6 +779,29 @@ document.addEventListener('DOMContentLoaded', function () {
             {herdType: 'cut', herdId: newId()}));
     });
 
+    function removePoint(line, p) {
+        const abs = line.absolutePoints();
+        const i = abs.findIndex(a => Math.hypot(a.x - p.x, a.y - p.y) < 8 * TOUCH / canvas.getZoom());
+        if (i < 0 || abs.length < 3) return false;
+        abs.splice(i, 1);
+        line.setAbsolutePoints(abs);
+        line.setControls();
+        if (i === 0) relinkLine(line);
+        canvas.requestRenderAll();
+        changed();
+        return true;
+    }
+
+    async function renamePlayer(target) {
+        const label = await ask('Player label', {input: target.herdLabel || '', ok: 'Rename'});
+        if (label === null) return;
+        const text = target.getObjects().find(o => o.type === 'text');
+        text.set('text', label.slice(0, 4));
+        target.set('herdLabel', label.slice(0, 4));
+        canvas.requestRenderAll();
+        changed();
+    }
+
     canvas.on('mouse:dblclick', function (opt) {
         if (playback) return;
         if (draft) {
@@ -588,31 +810,146 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const target = opt.target;
         if (!target) return;
+        // Double-click an arrow's point to remove it
         if (target.type === 'herdLine') {
-            // Double-click a point to remove it
-            const p = canvas.getPointer(opt.e);
-            const abs = target.absolutePoints();
-            const i = abs.findIndex(a => Math.hypot(a.x - p.x, a.y - p.y) < 8 / canvas.getZoom());
-            if (i >= 0 && abs.length > 2) {
-                abs.splice(i, 1);
-                target.setAbsolutePoints(abs);
-                target.setControls();
-                if (i === 0) relinkLine(target);
-                canvas.requestRenderAll();
-                changed();
-            }
+            removePoint(target, canvas.getPointer(opt.e));
             return;
         }
         // Double-click a player to rename them (e.g. "H1", "C2")
-        if (!target.herdType || !target.herdType.startsWith('player')) return;
-        const label = prompt('Player label', target.herdLabel || '');
-        if (label === null) return;
-        const text = target.getObjects().find(o => o.type === 'text');
-        text.set('text', label.slice(0, 4));
-        target.set('herdLabel', label.slice(0, 4));
-        canvas.requestRenderAll();
-        changed();
+        if (target.herdType && target.herdType.startsWith('player')) renamePlayer(target);
     });
+
+    // ---- menu (long press, or right-click) ----------------------------------
+
+    function closeMenu() {
+        const menu = document.getElementById('object-menu');
+        if (menu) menu.remove();
+    }
+
+    function openMenu(target, at) {
+        closeMenu();
+        if (draft) finishDraft();
+        canvas.setActiveObject(target);
+        canvas.requestRenderAll();
+        const menu = document.createElement('div');
+        menu.id = 'object-menu';
+        menu.className = 'dropdown-menu show shadow object-menu';
+        const item = (label, action, cls) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dropdown-item' + (cls ? ' ' + cls : '');
+            btn.textContent = label;
+            btn.addEventListener('click', () => {
+                closeMenu();
+                action();
+            });
+            menu.appendChild(btn);
+        };
+        const header = text => {
+            const h = document.createElement('h6');
+            h.className = 'dropdown-header';
+            h.textContent = text;
+            menu.appendChild(h);
+        };
+        if (target.herdType && target.herdType.startsWith('player')) {
+            item('Rename…', () => renamePlayer(target));
+        }
+        if (target.type === 'herdLine') {
+            header('Style');
+            [['cut', 'Cut'], ['throw', 'Throw'], ['move', 'Movement']].forEach(([style, label]) =>
+                item((target.lineStyle === style ? '✓ ' : '') + label, () => {
+                    applyToLines({lineStyle: style});
+                    relinkLine(target);
+                    changed();
+                }));
+            item((target.smooth ? '✓ ' : '') + 'Curved', () => {
+                if (applyToLines({smooth: !target.smooth})) changed();
+            });
+            header('Starts moving');
+            [[0, 'At the start'], [0.25, '¼ through'], [0.5, 'Halfway'], [0.75, '¾ through']].forEach(([d, label]) =>
+                item((Math.abs(target.delay - d) < 0.01 ? '✓ ' : '') + label, () => {
+                    if (applyToLines({delay: d})) changed();
+                }));
+            menu.appendChild(Object.assign(document.createElement('hr'), {className: 'dropdown-divider'}));
+        }
+        if (target.type === 'i-text') {
+            item('Edit text', () => {
+                target.enterEditing();
+                target.selectAll();
+            });
+        }
+        item('Duplicate', () => {
+            copySelection();
+            paste();
+        });
+        item('Delete', deleteSelected, 'text-danger');
+        document.body.appendChild(menu);
+        // Keep it on screen
+        const r = menu.getBoundingClientRect();
+        menu.style.left = Math.max(8, Math.min(at.x, window.innerWidth - r.width - 8)) + 'px';
+        menu.style.top = Math.max(8, Math.min(at.y, window.innerHeight - r.height - 8)) + 'px';
+    }
+
+    document.addEventListener('pointerdown', e => {
+        if (!e.target.closest('#object-menu')) closeMenu();
+    }, true);
+
+    // ---- dialogs ------------------------------------------------------------
+
+    // In-page replacement for prompt() and confirm(): resolves to the text
+    // typed (input) or true, or null/false if cancelled
+    function ask(message, options) {
+        options = options || {};
+        let modal = document.getElementById('askModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'askModal';
+            modal.tabIndex = -1;
+            modal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content">
+                  <form>
+                    <div class="modal-body">
+                      <p class="ask-message mb-2"></p>
+                      <input type="text" class="form-control ask-input" maxlength="100">
+                    </div>
+                    <div class="modal-footer py-2">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn ask-ok"></button>
+                    </div>
+                  </form>
+                </div></div>`;
+            document.body.appendChild(modal);
+        }
+        const input = modal.querySelector('.ask-input');
+        const okBtn = modal.querySelector('.ask-ok');
+        modal.querySelector('.ask-message').textContent = message;
+        input.classList.toggle('d-none', options.input === undefined);
+        input.value = options.input || '';
+        okBtn.textContent = options.ok || 'OK';
+        okBtn.className = 'btn ask-ok ' + (options.danger ? 'btn-danger' : 'btn-primary');
+        const instance = bootstrap.Modal.getOrCreateInstance(modal);
+        return new Promise(resolve => {
+            let answer = options.input === undefined ? false : null;
+            const form = modal.querySelector('form');
+            const submit = e => {
+                e.preventDefault();
+                answer = options.input === undefined ? true : input.value.trim();
+                instance.hide();
+            };
+            const shown = () => { if (options.input !== undefined) input.select(); };
+            const hidden = () => {
+                form.removeEventListener('submit', submit);
+                modal.removeEventListener('shown.bs.modal', shown);
+                modal.removeEventListener('hidden.bs.modal', hidden);
+                resolve(answer === '' ? null : answer);
+            };
+            form.addEventListener('submit', submit);
+            modal.addEventListener('shown.bs.modal', shown);
+            modal.addEventListener('hidden.bs.modal', hidden);
+            instance.show();
+        });
+    }
 
     canvas.on('object:moving', function (e) {
         const o = e.target;
@@ -634,8 +971,9 @@ document.addEventListener('DOMContentLoaded', function () {
         changed();
     }
 
-    function clearDrawing() {
-        if (!userObjects().length || !confirm('Remove everything from this stage?')) return;
+    async function clearDrawing() {
+        if (!userObjects().length) return;
+        if (!await ask('Remove everything from this stage?', {ok: 'Remove', danger: true})) return;
         loading = true;
         userObjects().forEach(o => canvas.remove(o));
         loading = false;
@@ -674,25 +1012,30 @@ document.addEventListener('DOMContentLoaded', function () {
         },
     };
 
-    function applyFormation(name) {
+    async function applyFormation(name) {
         const existing = userObjects().filter(o => MOVERS.includes(o.herdType) || o.type === 'herdLine');
-        if (existing.length && !confirm('Replace the players, disc and arrows on this stage?')) return;
+        if (existing.length && !await ask('Replace the players, disc and arrows on this stage?', {ok: 'Replace'})) return;
         exitPlaybackIfNeeded();
         const total = field.length + 2 * field.endzone;
         const xd = Math.max(field.endzone + 5, field.endzone + field.length - 35);
-        const clampX = x => Math.min(total - 1, Math.max(1, x)) * YD;
-        const clampY = y => Math.min(field.width - 1, Math.max(1, y)) * YD;
+        // Positions are worked out the landscape way round, then shown
+        const at = (x, y) => DD.pointToDisplay({x: Math.min(total - 1, Math.max(1, x)) * YD,
+                                                y: Math.min(field.width - 1, Math.max(1, y)) * YD}, field, rotated);
         const spots = FORMATIONS[name](field, xd, field.width / 2);
         canvas.discardActiveObject();
         loading = true;
         existing.forEach(o => canvas.remove(o));
-        spots.forEach(([type, x, y, label]) => canvas.add(makeObject(type, clampX(x), clampY(y), label)));
+        spots.forEach(([type, x, y, label]) => {
+            const p = at(x, y);
+            canvas.add(makeObject(type, p.x, p.y, label));
+        });
         const [, x, y] = spots[0];
-        canvas.add(makeObject('disc', clampX(x) + YD, clampY(y) - YD));
+        const discAt = at(x + 1, y - 1);
+        canvas.add(makeObject('disc', discAt.x, discAt.y));
         loading = false;
         canvas.requestRenderAll();
         changed();
-        if (name !== 'zone' && confirm('Add a defender on each player?')) matchDefenders();
+        if (name !== 'zone' && await ask('Add a defender on each player?', {ok: 'Add defenders'})) matchDefenders();
     }
 
     // Put a defender on each offensive player that hasn't got one, on the
@@ -701,15 +1044,17 @@ document.addEventListener('DOMContentLoaded', function () {
     function matchDefenders() {
         exitPlaybackIfNeeded();
         const objects = canvas.getObjects();
+        // Worked out the landscape way round (downfield is +x)
+        const savedCentre = o => DD.pointToSaved(centreOf(o), field, rotated);
         const offence = objects.filter(o => o.herdType === 'player-o');
-        const defence = objects.filter(o => o.herdType === 'player-d').map(centreOf);
+        const defence = objects.filter(o => o.herdType === 'player-d').map(savedCentre);
         const disc = objects.find(o => o.herdType === 'disc');
-        const discAt = disc && centreOf(disc);
+        const discAt = disc && savedCentre(disc);
         let thrower = null;
         if (discAt) {
             let bestD = 3 * YD;
             offence.forEach(o => {
-                const c = centreOf(o);
+                const c = savedCentre(o);
                 const d = Math.hypot(c.x - discAt.x, c.y - discAt.y);
                 if (d < bestD) { thrower = o; bestD = d; }
             });
@@ -718,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let added = 0;
         loading = true;
         offence.forEach(o => {
-            const c = centreOf(o);
+            const c = savedCentre(o);
             if (defence.some(d => Math.hypot(d.x - c.x, d.y - c.y) < 3 * YD)) return;
             let side = 0;   // -1: towards the top sideline, 1: towards the bottom
             if (field.force === 'down') side = -1;
@@ -729,7 +1074,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const mark = o === thrower;
             const x = c.x + (mark && !side ? 2 : 0.8) * YD;
             const y = c.y + (mark && !side ? 0 : (side || -1) * 2) * YD;
-            canvas.add(makeObject('player-d', x, y));
+            const p = DD.pointToDisplay({x, y}, field, rotated);
+            canvas.add(makeObject('player-d', p.x, p.y));
             added++;
         });
         loading = false;
@@ -864,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // (Not while a stage is still being put on the canvas, or playing)
     function commitStage() {
         if (loading || playback) return;
-        stages[current].objects = userObjects().map(serialiseObject);
+        stages[current].objects = DD.toSaved(userObjects().map(serialiseObject), field, rotated);
     }
 
     function editorState() {
@@ -877,8 +1223,11 @@ document.addEventListener('DOMContentLoaded', function () {
         loading = true;
         canvas.discardActiveObject();
         canvas.getObjects().filter(o => o.herdType && o.herdType !== 'field').forEach(o => canvas.remove(o));
-        return DD.enliven(objects).then(enlivened => {
-            enlivened.forEach(o => canvas.add(o));
+        return DD.enliven(DD.toDisplay(objects, field, rotated)).then(enlivened => {
+            enlivened.forEach(o => {
+                decorate(o);
+                canvas.add(o);
+            });
             return addGhosts();
         }).then(() => {
             loading = false;
@@ -891,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.getObjects().filter(o => o.herdType === 'ghost').forEach(o => canvas.remove(o));
         if (!showGhosts || current === 0 || playback) return;
         const previous = stages[current - 1].objects.filter(o => MOVERS.includes(o.herdType));
-        const ghosts = await DD.enliven(previous);
+        const ghosts = await DD.enliven(DD.toDisplay(previous, field, rotated));
         ghosts.forEach(g => {
             g.set({opacity: 0.3, selectable: false, evented: false, herdType: 'ghost'});
             canvas.insertAt(g, layerIndex('ghost'));
@@ -909,6 +1258,38 @@ document.addEventListener('DOMContentLoaded', function () {
         history.push(snapshot());
         if (history.length > 80) history.shift();
         future = [];
+        keepDraft();
+    }
+
+    // Unsaved work is kept on this device too, in case the browser closes
+    // the page (phones do this to background tabs)
+    const draftKey = () => `drill-editor-draft:${drillId || 'new'}`;
+    let draftTimer = null;
+
+    function keepDraft() {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(() => {
+            try {
+                localStorage.setItem(draftKey(), JSON.stringify({
+                    savedAt: Date.now(), title: val('drill-title'),
+                    state: {version: 2, field, stages},
+                }));
+            } catch (e) { /* storage full or blocked: nothing to do */ }
+        }, 800);
+    }
+
+    function forgetDraft(key) {
+        clearTimeout(draftTimer);
+        try { localStorage.removeItem(key || draftKey()); } catch (e) { /* blocked */ }
+    }
+
+    function readDraft() {
+        try {
+            const draft = JSON.parse(localStorage.getItem(draftKey()) || 'null');
+            return draft && draft.state && Array.isArray(draft.state.stages) ? draft : null;
+        } catch (e) {
+            return null;
+        }
     }
 
     function restore(snap) {
@@ -916,7 +1297,10 @@ document.addEventListener('DOMContentLoaded', function () {
         stages = s.stages;
         current = Math.min(s.current, stages.length - 1);
         renderStageBar();
-        return showObjects(stages[current].objects).then(() => { dirty = true; });
+        return showObjects(stages[current].objects).then(() => {
+            dirty = true;
+            keepDraft();
+        });
     }
 
     function undo() {
@@ -988,23 +1372,23 @@ document.addEventListener('DOMContentLoaded', function () {
         showObjects(stages[current].objects).then(changed);
     }
 
-    function deleteStage() {
+    async function deleteStage() {
         exitPlaybackIfNeeded();
         if (stages.length < 2) {
             showNotification('A drill needs at least one stage. Use Clear to empty it.', 'warning');
             return;
         }
-        if (!confirm(`Delete "${stages[current].name}"?`)) return;
+        if (!await ask(`Delete "${stages[current].name}"?`, {ok: 'Delete', danger: true})) return;
         stages.splice(current, 1);
         current = Math.max(0, current - 1);
         renderStageBar();
         showObjects(stages[current].objects).then(changed);
     }
 
-    function renameStage() {
-        const name = prompt('Stage name', stages[current].name);
-        if (name === null || !name.trim()) return;
-        stages[current].name = name.trim().slice(0, 100);
+    async function renameStage() {
+        const name = await ask('Stage name', {input: stages[current].name, ok: 'Rename'});
+        if (!name) return;
+        stages[current].name = name.slice(0, 100);
         renderStageBar();
         changed();
     }
@@ -1072,6 +1456,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // While playing (or scrubbing), the canvas shows the animation; editing
     // comes back on the stage you choose (or the one you were on).
     const player = DD.createPlayer(canvas, () => stages, {
+        mapObjects: objects => DD.toDisplay(objects, field, rotated),
         onUpdate: function (position, playing) {
             const scrubber = document.getElementById('stage-scrubber');
             scrubber.value = String(Math.round(position * 1000));
@@ -1271,6 +1656,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const body = await r.json().catch(() => ({}));
             if (!r.ok || !body.success) throw new Error(body.message || `HTTP ${r.status}`);
+            forgetDraft();
             if (!drillId) {
                 drillId = body.drill_id;
                 updateUrl = `${createUrl}/${drillId}`;
@@ -1353,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function copySelection() {
         const active = canvas.getActiveObjects();
-        if (active.length) clipboard = active.map(serialiseObject);
+        if (active.length) clipboard = DD.toSaved(active.map(serialiseObject), field, rotated);
     }
 
     // Pasted things keep their identity (so they animate) unless they're
@@ -1362,13 +1748,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!clipboard) return;
         const here = new Set(userObjects().map(o => o.herdId));
         const offset = here.size ? 2 * YD : 0;
-        const enlivened = await DD.enliven(clipboard);
+        const enlivened = await DD.enliven(DD.toDisplay(clipboard, field, rotated));
         canvas.discardActiveObject();
         loading = true;
         enlivened.forEach(o => {
             if (here.has(o.herdId)) {
                 o.set({herdId: newId(), left: o.left + offset, top: o.top + offset});
             }
+            decorate(o);
             if (o.type === 'herdLine') addLine(o);
             else if (o.herdType === 'area') canvas.insertAt(o, layerIndex('area'));
             else canvas.add(o);
@@ -1430,6 +1817,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         fillFieldSettings();
         drawField();
+        keepDraft();
         if (recolour) {
             stages.forEach(s => DD.recolourPlayers(s.objects, field));
             showObjects(stages[current].objects).then(changed);
@@ -1442,19 +1830,35 @@ document.addEventListener('DOMContentLoaded', function () {
         field = {...field, view: e.target.value};
         drawField();
         dirty = true;
+        keepDraft();
     });
 
     // ---- wiring -------------------------------------------------------------
 
+    // Phones: More shows the other tools and the settings
+    const container = document.querySelector('.editor-container');
+    function showMore(on) {
+        container.classList.toggle('show-more', on);
+        document.getElementById('toggle-more').setAttribute('aria-expanded', String(on));
+    }
+    document.getElementById('toggle-more').addEventListener('click', () =>
+        showMore(!container.classList.contains('show-more')));
+
     document.querySelectorAll('.tool-btn[data-tool]').forEach(btn =>
-        btn.addEventListener('click', () => setTool(btn.dataset.tool)));
+        btn.addEventListener('click', () => {
+            setTool(btn.dataset.tool);
+            showMore(false);
+        }));
     document.querySelector('[data-action="delete"]').addEventListener('click', deleteSelected);
     document.querySelector('[data-action="clear"]').addEventListener('click', clearDrawing);
     document.querySelector('[data-action="undo"]').addEventListener('click', undo);
     document.querySelector('[data-action="redo"]').addEventListener('click', redo);
     document.getElementById('save-drill').addEventListener('click', saveDrill);
     document.getElementById('preview-drill').addEventListener('click', showPreview);
-    document.getElementById('drill-title').addEventListener('input', () => { dirty = true; });
+    document.getElementById('drill-title').addEventListener('input', () => {
+        dirty = true;
+        keepDraft();
+    });
     document.getElementById('add-stage').addEventListener('click', () => addStage(false));
     document.getElementById('duplicate-stage').addEventListener('click', () => addStage(true));
     document.getElementById('rename-stage').addEventListener('click', renameStage);
@@ -1541,9 +1945,30 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Portrait on a phone held upright (not from the space left for the
+    // field, which changes as panels open and close)
+    const portraitPhone = window.matchMedia('(max-width: 767.98px) and (orientation: portrait)');
+    function wantRotated() {
+        return portraitPhone.matches;
+    }
+
+    function reorient() {
+        exitPlaybackIfNeeded();
+        finishDraft();
+        commitStage();
+        rotated = wantRotated();
+        drawField();
+        showObjects(stages[current].objects);
+    }
+
     // Refit whenever the space for the field changes
-    if (window.ResizeObserver) new ResizeObserver(fitToScreen).observe(holder);
-    else window.addEventListener('resize', fitToScreen);
+    function onResize() {
+        if (wantRotated() !== rotated && !loading) reorient();
+        else fitToScreen();
+    }
+
+    if (window.ResizeObserver) new ResizeObserver(onResize).observe(holder);
+    else window.addEventListener('resize', onResize);
     window.addEventListener('beforeunload', function (e) {
         if (dirty) {
             e.preventDefault();
@@ -1553,15 +1978,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ---- start --------------------------------------------------------------
 
-    const saved = DD.normaliseState(JSON.parse(document.getElementById('editor-state').textContent || 'null'), newId);
-    field = saved.field;
-    stages = saved.stages;
-    fillFieldSettings();
-    drawField();
-    setTool('select');
-    renderStageBar();
-    showObjects(stages[current].objects).then(function () {
+    function start(state, title) {
+        field = state.field;
+        stages = state.stages;
+        current = 0;
+        if (title !== undefined) document.getElementById('drill-title').value = title;
+        fillFieldSettings();
+        drawField();
+        setTool('select');
+        renderStageBar();
+        return showObjects(stages[current].objects);
+    }
+
+    const savedJson = JSON.parse(document.getElementById('editor-state').textContent || 'null');
+    const saved = DD.normaliseState(savedJson, newId);
+    rotated = wantRotated();
+    // A new drill on a phone starts on the attacking half, which fits the screen
+    if (!savedJson && rotated) saved.field.view = 'half';
+    start(saved).then(async function () {
         history = [snapshot()];
         dirty = false;
+        const kept = readDraft();
+        if (!kept) return;
+        const same = JSON.stringify(kept.state.stages) === JSON.stringify(stages) &&
+                     kept.title === val('drill-title');
+        if (same) {
+            forgetDraft();
+            return;
+        }
+        const when = new Date(kept.savedAt).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
+        if (await ask(`You have unsaved changes to this drill from ${when}. Restore them?`, {ok: 'Restore'})) {
+            await start(DD.normaliseState(kept.state, newId), kept.title);
+            history = [snapshot()];
+            dirty = true;
+        } else {
+            forgetDraft();
+        }
     });
 });
