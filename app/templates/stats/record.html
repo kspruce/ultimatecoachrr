@@ -252,6 +252,83 @@
         color: white;
     }
     
+    .record-actions .btn { margin-left: .35rem; }
+    .label-short { display: none; }
+    .picker-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .picker-head h5 { margin: 0; }
+    .picker-cancel {
+        border: 1px solid var(--rule-strong); background: transparent; color: var(--ink-2);
+        border-radius: 6px; padding: 4px 10px; font-size: .85rem;
+    }
+    /* Where the stat-taker just tapped, while they pick who and what */
+    .pending-marker {
+        position: absolute; width: 22px; height: 22px; border-radius: 50%;
+        border: 3px solid #fff; box-shadow: 0 0 0 2px #222; background: rgba(255, 255, 255, .35);
+        transform: translate(-50%, -50%); z-index: 11; pointer-events: none;
+    }
+
+    /* Phones held upright: the field stands up (attacking up the screen)
+       with the "Open, not thrown to" chips in a column beside it. Bigger
+       taps, and the whole field, chips and header fit on one screen. */
+    .field-container.field-vertical {
+        width: min(calc(100vw - 32px - 150px - 8px), calc(74vh * 0.37), calc(74svh * 0.37));
+        height: auto;
+        padding-bottom: 0;
+        aspect-ratio: 37 / 100;
+        margin: 0;
+        flex: none;
+    }
+    .field-vertical .endzone { width: 100%; height: 18%; left: 0; }
+    .field-vertical .endzone-left { top: auto; bottom: 0; }
+    .field-vertical .endzone-right { top: 0; }
+    .field-vertical .endzone-label { transform: translate(-50%, -50%); }
+    .field-vertical .center-line { top: 50%; left: 0; width: 100%; height: 2px; }
+
+    @media (max-width: 576px), (max-height: 500px) {
+        .record-header { padding: .5rem .75rem; }
+        .record-header h4 { font-size: 1.05rem; margin-bottom: 0; }
+        .record-header p { font-size: .85rem; }
+        .record-detail, #help-button, .label-long { display: none; }
+        .label-short { display: inline; }
+        .record-actions .btn { padding: .3rem .6rem; font-size: .85rem; margin-left: .25rem; }
+        .record-header .row { flex-wrap: nowrap; }
+
+        /* Pickers become a bottom sheet with two columns */
+        .player-select, .action-select, .cutting-select, .outcome-select {
+            top: auto; bottom: 0; left: 0; right: 0; transform: none;
+            max-width: none; max-height: 62vh; border-radius: 14px 14px 0 0; z-index: 1065;
+            border-width: 2px 0 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+        }
+        .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+            grid-template-columns: 1fr 1fr !important; gap: 8px;
+        }
+        .player-card, .action-button, .cutting-button, .outcome-button {
+            padding: 12px 6px; font-size: .95rem; min-height: 48px;
+        }
+        .undo-button { bottom: calc(12px + env(safe-area-inset-bottom)); right: 12px; }
+    }
+    @media (max-width: 576px) and (orientation: portrait) {
+        .field-area { display: flex; gap: 8px; align-items: flex-start; padding: 8px 16px 0; }
+        .field-area .looked-off-strip {
+            flex: 1; min-width: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch;
+            margin: 0; padding: 6px; max-height: calc(74svh); overflow-y: auto;
+        }
+        .field-area .looked-off-label { margin: 0 0 2px; font-size: .78rem; }
+        .field-area .looked-off-chip { width: 100%; }
+        .field-area .looked-off-add { flex: 1; text-align: left; }
+    }
+    /* Phones on their side: keep the whole field on screen */
+    @media (max-height: 500px) and (orientation: landscape) {
+        .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+        .player-select, .action-select, .cutting-select, .outcome-select { max-height: 80vh; }
+        .field-container {
+            width: min(100%, calc((100vh - 110px) / 0.37), calc((100svh - 110px) / 0.37));
+            height: auto; padding-bottom: 0; aspect-ratio: 100 / 37; margin: 0 auto 8px;
+        }
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .tables-container {
@@ -267,24 +344,22 @@
 <div class="record-container">
     <div class="record-header">
         <div class="row align-items-center">
-            <div class="col">
-                <h4>Recording Point #{{ point.point_number }}</h4>
+            <div class="col record-title">
+                <h4><span class="label-long">Recording </span>Point #{{ point.point_number }}</h4>
                 <p class="mb-0">
-                    {{ point.our_score_before }}-{{ point.their_score_before }} | 
-                    {{ point.our_line_type }} | 
-                    Starting on {{ point.starting_position }}
-                </p>
-                <p class="mb-0 mt-1">
-                    <span id="possession-indicator" class="badge bg-primary">On Offense</span>
+                    {{ point.our_score_before }}-{{ point.their_score_before }} |
+                    {{ point.our_line_type }}<span class="record-detail"> |
+                    Starting on {{ point.starting_position }}</span>
+                    <span id="possession-indicator" class="badge bg-primary ms-1">On Offense</span>
                 </p>
             </div>
-            <div class="col text-end">
-                <button id="attack-toggle" class="btn btn-outline-dark me-2"
+            <div class="col-auto text-end record-actions">
+                <button id="attack-toggle" class="btn btn-outline-dark"
                         title="Which endzone we're attacking on screen. Positions are saved the same either way.">
                     Attacking →
                 </button>
-                <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
-                <button id="finish-point" class="btn btn-success me-2">End Point</button>
+                <button id="sub-player" class="btn btn-warning"><span class="label-long">Substitution</span><span class="label-short">Sub</span></button>
+                <button id="finish-point" class="btn btn-success"><span class="label-long">End Point</span><span class="label-short">End</span></button>
                 <button id="help-button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal">
                     <i class="bi bi-question-circle"></i> Help
                 </button>
@@ -294,6 +369,7 @@
 
     <!-- Mode toggle button removed from here and moved next to substitution button above -->
 
+    <div class="field-area">
     <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
         <div class="endzone endzone-left"><span class="endzone-label"></span></div>
@@ -316,6 +392,7 @@
             <button type="button" class="looked-off-remove" data-player-id="{{ player.id }}" aria-label="Take one back" hidden>−</button>
         </span>
         {% endfor %}
+    </div>
     </div>
 
     <!-- Tables container with both tables side by side -->
@@ -364,8 +441,8 @@
     </div>
 
     <!-- Player selection overlay -->
-    <div class="player-select" id="player-select">
-        <h5>Select Player</h5>
+    <div class="player-select picker" id="player-select">
+        <div class="picker-head"><h5>Select Player</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="player-grid">
             {% for player in line %}
             <button class="player-card" data-player-id="{{ player.id }}">
@@ -378,16 +455,16 @@
     </div>
 
     <!-- Action selection overlay -->
-    <div class="action-select" id="action-select">
-        <h5>Select Action</h5>
+    <div class="action-select picker" id="action-select">
+        <div class="picker-head"><h5>Select Action</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="action-grid" id="action-grid">
             <!-- Actions will be added here dynamically -->
         </div>
     </div>
 
     <!-- Cutting selection overlay -->
-    <div class="cutting-select" id="cutting-select">
-        <h5>Select Cutting Type</h5>
+    <div class="cutting-select picker" id="cutting-select">
+        <div class="picker-head"><h5>Select Cutting Type</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="cutting-grid">
             <button class="cutting-button" data-cutting-type="open_deep">Open Deep</button>
             <button class="cutting-button" data-cutting-type="break_deep">Break Deep</button>
@@ -397,8 +474,8 @@
     </div>
 
     <!-- Outcome selection overlay -->
-    <div class="outcome-select" id="outcome-select">
-        <h5>Select Outcome</h5>
+    <div class="outcome-select picker" id="outcome-select">
+        <div class="picker-head"><h5>Select Outcome</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="outcome-grid" id="outcome-grid">
             <!-- Outcomes will be added here dynamically -->
         </div>
@@ -658,8 +735,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let attackRight = defaultAttackRight();
 
+    // On a phone held upright the field is drawn standing up: the view
+    // turned a quarter-turn anticlockwise, so "attacking right" is
+    // attacking up the screen and the thrower's right is still on the right.
+    const portraitPhone = window.matchMedia('(max-width: 576px) and (orientation: portrait)');
+    let vertical = portraitPhone.matches;
+
     function screenToField(relX, relY) {
         // relX/relY are 0–1 across the field as shown
+        if (vertical) {
+            return {
+                x: (attackRight ? 1 - relY : relY) * 100,
+                y: (attackRight ? relX : 1 - relX) * 37,
+            };
+        }
         return {
             x: (attackRight ? relX : 1 - relX) * 100,
             y: (attackRight ? relY : 1 - relY) * 37,
@@ -669,6 +758,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function placeMarker(marker) {
         const x = parseFloat(marker.dataset.fieldX);
         const y = parseFloat(marker.dataset.fieldY);
+        if (vertical) {
+            marker.style.left = `${((attackRight ? y : 37 - y) / 37) * 100}%`;
+            marker.style.top = `${attackRight ? 100 - x : x}%`;
+            return;
+        }
         marker.style.left = `${attackRight ? x : 100 - x}%`;
         marker.style.top = `${((attackRight ? y : 37 - y) / 37) * 100}%`;
     }
@@ -682,7 +776,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showDirection() {
-        attackToggle.textContent = attackRight ? 'Attacking →' : '← Attacking';
+        field.classList.toggle('field-vertical', vertical);
+        attackToggle.textContent = vertical
+            ? (attackRight ? 'Attacking ↑' : 'Attacking ↓')
+            : (attackRight ? 'Attacking →' : '← Attacking');
         const left = document.querySelector('.endzone-left');
         const right = document.querySelector('.endzone-right');
         const [attack, defend] = attackRight ? [right, left] : [left, right];
@@ -690,8 +787,13 @@ document.addEventListener('DOMContentLoaded', function() {
         defend.classList.remove('attacking');
         attack.querySelector('.endzone-label').textContent = 'Attacking';
         defend.querySelector('.endzone-label').textContent = 'Defending';
-        document.querySelectorAll('.event-marker, .cutting-marker').forEach(placeMarker);
+        document.querySelectorAll('.event-marker, .cutting-marker, .pending-marker').forEach(placeMarker);
     }
+
+    portraitPhone.addEventListener('change', () => {
+        vertical = portraitPhone.matches;
+        showDirection();
+    });
 
     attackToggle.addEventListener('click', function() {
         attackRight = !attackRight;
@@ -794,8 +896,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         selectedPosition = {
             ...screenToField(relativeX, relativeY),
-            inEndzone: relativeX < 0.18 || relativeX > 0.82
+            inEndzone: vertical ? (relativeY < 0.18 || relativeY > 0.82)
+                                : (relativeX < 0.18 || relativeX > 0.82)
         };
+        showPendingMarker(selectedPosition);
 
         console.log('Field click coordinates:', {
             clientX: e.clientX,
@@ -1227,6 +1331,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Show selection overlays
+    // A ring where they tapped, until the play is recorded or cancelled
+    function showPendingMarker(position) {
+        let marker = field.querySelector('.pending-marker');
+        if (!marker) {
+            marker = document.createElement('div');
+            marker.className = 'pending-marker';
+            field.appendChild(marker);
+        }
+        marker.dataset.fieldX = position.x;
+        marker.dataset.fieldY = position.y;
+        placeMarker(marker);
+    }
+    function clearPendingMarker() {
+        const marker = field.querySelector('.pending-marker');
+        if (marker) marker.remove();
+    }
+    function closePickers() {
+        [playerSelect, actionSelect, cuttingSelect, outcomeSelect].forEach(el => { el.style.display = 'none'; });
+        clearPendingMarker();
+    }
+    document.querySelectorAll('.picker-cancel').forEach(btn => btn.addEventListener('click', closePickers));
+
     function showPlayerSelect() {
         playerSelect.style.display = 'block';
         actionSelect.style.display = 'none';
@@ -1295,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const marker = document.createElement('div');
+        clearPendingMarker();
         marker.className = 'event-marker';
         marker.dataset.fieldX = event.field_position_x;
         marker.dataset.fieldY = event.field_position_y;
@@ -1313,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        clearPendingMarker();
         const marker = document.createElement('div');
         marker.className = 'cutting-marker';
         marker.dataset.fieldX = cuttingSkill.field_position_x;
@@ -1511,7 +1639,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // Show brief toast (replaces the old blocking confirm dialog)
                     const undoToast = document.createElement('div');
-                    undoToast.className = 'position-fixed bottom-0 start-50 translate-middle-x p-3';
+                    undoToast.className = 'position-fixed top-0 start-50 translate-middle-x p-3';
                     undoToast.style.zIndex = '1080';
                     undoToast.innerHTML = `
                       <div class="toast show bg-warning text-dark shadow" role="alert">
@@ -1660,10 +1788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
                 
             case 'Escape': // Close any visible overlay
-                if (playerSelect.style.display === 'block') playerSelect.style.display = 'none';
-                if (actionSelect.style.display === 'block') actionSelect.style.display = 'none';
-                if (cuttingSelect.style.display === 'block') cuttingSelect.style.display = 'none';
-                if (outcomeSelect.style.display === 'block') outcomeSelect.style.display = 'none';
+                closePickers();
                 break;
         }
     });
