@@ -36,6 +36,24 @@ def game_points(game):
     return game.__dict__[_ATTR]
 
 
+def analysed_point_ids(point_ids):
+    """The points that have full stats recorded (any event), as opposed to
+    points only taken live on Game Day: those have a line and a result
+    but no catches, throws or turnovers, so they mustn't count towards
+    per-point rates."""
+    from app import db
+    from app.models.event import Event
+    if not point_ids:
+        return set()
+    rows = db.session.query(Event.point_id).filter(Event.point_id.in_(list(point_ids))).distinct()
+    return {pid for (pid,) in rows}
+
+
+def is_analysed(point):
+    """For points loaded by preload_game_points (events already loaded)."""
+    return bool(point.events)
+
+
 def game_line_points(game, line_type):
     """The game's points where we started on 'O-line' or 'D-line'."""
     return [p for p in game_points(game) if p.our_line_type == line_type]

@@ -6,6 +6,7 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
+from app.utils.point_flow import analysis_progress
 
 from app.routes.stats import bp
 from app.stats.formulas import calculate_per
@@ -80,4 +81,5 @@ def game_stats(game_id):
         heatmap_data=htmlsafe_json_dumps(heatmap_data),
         connections=htmlsafe_json_dumps(connection_data),
         calculate_impact_score=calculate_impact_score,
+        progress=analysis_progress(game),
     )

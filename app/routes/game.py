@@ -16,6 +16,7 @@ from datetime import datetime
 from app.models.game_player import GamePlayer
 from app.models.tournament_rsvp import TournamentRSVP
 from app.utils.team_filter import get_current_team_id, team_player_ids
+from app.utils.point_flow import analysis_progress
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -134,7 +135,8 @@ def detail(game_id):
                          game_players=game_players,
                          delete_form=delete_form,
                          gameday_stats=gameday_stats,
-                         has_positional_stats=has_positional_stats)
+                         has_positional_stats=has_positional_stats,
+                         progress=analysis_progress(game))
 
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required

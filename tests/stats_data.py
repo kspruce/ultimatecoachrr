@@ -162,6 +162,7 @@ def record_season(app, team, admin, players, seed=7, games_per_tournament=3,
                               starting_position='offense' if line_type == 'O-line' else 'defense',
                               point_outcome='scored', gender_ratio='4F3M' if four_women else '3F4M',
                               majority_gender='female' if four_women else 'male',
+                              force_direction='forehand' if n % 3 else 'backhand',
                               team_organization_id=team_id)
                 db.session.add(point)
                 db.session.commit()

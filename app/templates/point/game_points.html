@@ -26,6 +26,8 @@
         </div>
     </div>
 
+    {% include 'partials/analysis_progress.html' %}
+
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -51,7 +53,9 @@
                             <tbody>
                                 {% for point in points %}
                                 <tr>
-                                    <td>{{ point.point_number }}</td>
+                                    <td>{{ point.point_number }}
+                                        {% if not point.events %}<span class="badge bg-light text-dark border ms-1" title="Only taken live on Game Day: no full stats yet">Game Day only</span>{% endif %}
+                                    </td>
                                     <td>{{ point.our_line_type }}</td>
                                     <td>{{ point.starting_position|capitalize }}</td>
                                     <td>{{ point.our_score_before }}-{{ point.their_score_before }}</td>

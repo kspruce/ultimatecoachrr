@@ -1,0 +1,15 @@
+{# How many of a game's points still only have the Game Day record.
+   Needs `progress` from app.utils.point_flow.analysis_progress. #}
+{% if progress and progress.waiting %}
+<div class="alert alert-light border d-flex flex-wrap align-items-center gap-2 py-2 analysis-progress">
+    <i class="bi bi-hourglass-split"></i>
+    <span><strong>{{ progress.waiting }} of {{ progress.total }}</strong> point{{ '' if progress.total == 1 else 's' }}
+        waiting for full stats{% if progress.analysed %} ({{ progress.analysed }} done){% endif %}.
+        Until then they count for the score, lines and box score, not per-point rates.</span>
+    {% if current_user.is_stat_taker and progress.next %}
+    <a href="{{ url_for('stat.record_events', point_id=progress.next.id) }}" class="btn btn-sm btn-success ms-auto">
+        Analyse point {{ progress.next.point_number }} →
+    </a>
+    {% endif %}
+</div>
+{% endif %}

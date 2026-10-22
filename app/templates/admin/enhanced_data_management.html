@@ -464,7 +464,7 @@
                                 <form method="POST" action="{{ url_for('stat.mark_break_throws') }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-outline-secondary">
-                                        <i class="bi bi-shuffle me-1"></i>Mark missing break throws
+                                        <i class="bi bi-shuffle me-1"></i>Re-mark break throws from force
                                     </button>
                                 </form>
                                 <form method="POST" action="{{ url_for('stat.recalculate_throw_distances') }}">

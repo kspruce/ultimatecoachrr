@@ -8,7 +8,7 @@ from app.models.throws import Throw
 import math
 from app.utils.team_filter import get_current_team_id
 from app.stats.formulas import point_we_scored
-from app.stats.loaders import preload_game_points, game_points
+from app.stats.loaders import analysed_point_ids, preload_game_points, game_points
 
 
 
@@ -83,31 +83,129 @@ def get_players_base_stats(players, games=None):
             events_by_player[event.player_id] = []
         events_by_player[event.player_id].append(event)
     
+    # Points with full stats: per-point rates only count these
+    analysed = analysed_point_ids({lu.point_id for lus in lineups_by_player.values() for lu in lus})
+
     # 4. Process the preloaded data for each player
     player_stats = {}
     for player in players:
         player_stats[player.id] = process_player_stats(
-            player, 
+            player,
             lineups_by_player.get(player.id, []),
             throws_by_thrower.get(player.id, []),
             throws_by_receiver.get(player.id, []),
             events_by_player.get(player.id, []),
-            games
+            games,
+            analysed=analysed,
         )
-    
+
+    # Game Day: the box score for points without full stats, and pulls
+    # (only Game Day records those)
+    lineup_points = {lu.point_id for lus in lineups_by_player.values() for lu in lus}
+    gameday = gameday_by_player(player_ids, lineup_points - analysed, point_ids)
+    for player in players:
+        stats = player_stats[player.id]
+        gd = gameday.get(player.id, {})
+        stats['box'] = season_box_score(stats, gd)
+        stats['pulls'] = pull_stats(gd)
+
     return player_stats
 
+
+GAMEDAY_TURNOVERS = ('throwaway', 'drop', 'stall')
+
+
+def gameday_by_player(player_ids, gameday_points, point_ids=None):
+    """Counts of each player's Game Day plays: box-score plays on points
+    without full stats (so nothing is counted twice), and every pull in
+    scope with its hang time."""
+    from app.models.gameday import GameDayEvent
+    query = GameDayEvent.query.filter(
+        GameDayEvent.player_id.in_(player_ids),
+        GameDayEvent.team_organization_id == get_current_team_id(),
+    )
+    if point_ids is not None:
+        query = query.filter(GameDayEvent.point_id.in_(point_ids))
+    out = {}
+    for e in query.all():
+        gd = out.setdefault(e.player_id, {'goals': 0, 'assists': 0, 'blocks': 0, 'callahans': 0,
+                                          'turnovers': 0, 'pulls': 0, 'pulls_out': 0, 'hang_times': []})
+        if e.event_type == 'pull':
+            gd['pulls'] += 1
+            gd['pulls_out'] += e.event_result == 'out'
+            if e.hang_time is not None:
+                gd['hang_times'].append(e.hang_time)
+            continue
+        if e.point_id not in gameday_points:
+            continue  # this point has full stats: those win
+        if e.event_type == 'score':
+            gd['goals'] += 1
+        elif e.event_type == 'assist':
+            gd['assists'] += 1
+        elif e.event_type == 'block':
+            gd['blocks'] += 1
+        elif e.event_type == 'callahan':
+            gd['callahans'] += 1
+        elif e.event_type in GAMEDAY_TURNOVERS:
+            gd['turnovers'] += 1
+    return out
+
+
+def season_box_score(stats, gd):
+    """Goals, assists, blocks and turnovers from every point: full stats
+    where the point has them, the Game Day record where it doesn't."""
+    def total(full, key):
+        return full + gd.get(key, 0)
+    callahans = total(stats['callahans'], 'callahans')
+    return {
+        'points': stats['points_played'],
+        'full_points': stats['analysed_points'],
+        'gameday_points': stats['gameday_only_points'],
+        # A Callahan is a goal and a block
+        'goals': total(stats['goals'], 'goals') + callahans,
+        'assists': total(stats['assists'], 'assists'),
+        'blocks': total(stats['blocks'], 'blocks') + callahans,
+        'callahans': callahans,
+        'turnovers': total(stats['turnovers'], 'turnovers'),
+        'from_gameday': sum(gd.get(k, 0) for k in ('goals', 'assists', 'blocks', 'callahans', 'turnovers')),
+    }
+
+
+def pull_stats(gd):
+    hang = gd.get('hang_times', [])
+    pulls = gd.get('pulls', 0)
+    return {
+        'pulls': pulls,
+        'out': gd.get('pulls_out', 0),
+        'in_rate': 100.0 * (pulls - gd.get('pulls_out', 0)) / pulls if pulls else None,
+        'avg_hang_time': sum(hang) / len(hang) if hang else None,
+        'best_hang_time': max(hang) if hang else None,
+        'timed': len(hang),
+    }
+
 # Same definition as the team huck count in app.stats.team.
-HUCK_DISTANCE = 20  # metres
+from app.stats.throwing import HUCK_DISTANCE  # noqa: E402,F401  (re-exported for app.stats.team)
 
 
-def process_player_stats(player, lineups, throws_by_player, throws_to_player, events, games=None):
-    """Process preloaded data for a single player"""
+def process_player_stats(player, lineups, throws_by_player, throws_to_player, events, games=None,
+                         analysed=None):
+    """Process preloaded data for a single player.
+
+    points_played and the O/D point counts and conversion rates are every
+    point the player was on a line for. Per-point rates (and PER) divide
+    by analysed_points: the points with full stats, so points only taken
+    live on Game Day don't water them down. analysed is the set of those
+    point ids (None: treat every point as analysed)."""
+    analysed_lineups = [l for l in lineups if analysed is None or l.point_id in analysed]
     # Start with default values for ALL possible stats
     stats = {
         # Basic stats
         'points_played': len(lineups),
-        'games_played': 0,
+        'analysed_points': len(analysed_lineups),
+        'gameday_only_points': len(lineups) - len(analysed_lineups),
+        'analysed_o_line_points': 0,
+        'analysed_d_line_points': 0,
+'games_played': 0,
         'goals': 0,
         'assists': 0,
         'hockey_assists': 0,
@@ -144,7 +242,8 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
         
         # Additional stats
         'callahans': 0,
-        'stalls': 0,
+        'stalls': 0,  # times this player was stalled (a turnover)
+        'forced_turnovers': 0,
         'o_line_points_scored': 0,
         'd_line_points_scored': 0,
         'o_line_conversion_rate': 0,
@@ -271,9 +370,11 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
             stats['stalls'] += 1
         elif event.event_type == 'callahan':
             stats['callahans'] += 1
+        elif event.event_type == 'forced_turnover':
+            stats['forced_turnovers'] += 1
     
     # Calculate derived stats
-    stats['turnovers'] = stats['throwaways'] + stats['drops']
+    stats['turnovers'] = stats['throwaways'] + stats['drops'] + stats['stalls']
     
     # Calculate rates
     if stats['throws'] > 0:
@@ -295,7 +396,9 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     
     stats['o_line_points_played'] = len(o_line_points)
     stats['d_line_points_played'] = len(d_line_points)
-    # Conversion: share of their O-line points we held, D-line points we broke
+    stats['analysed_o_line_points'] = sum(1 for l in analysed_lineups if l.point.our_line_type == 'O-line')
+    stats['analysed_d_line_points'] = sum(1 for l in analysed_lineups if l.point.our_line_type == 'D-line')
+# Conversion: share of their O-line points we held, D-line points we broke
     stats['o_line_points_scored'] = sum(1 for l in o_line_points if point_we_scored(l.point))
     stats['d_line_points_scored'] = sum(1 for l in d_line_points if point_we_scored(l.point))
     if o_line_points:
@@ -340,10 +443,10 @@ def process_player_stats(player, lineups, throws_by_player, throws_to_player, ev
     stats['d_line_plus_minus'] = d_line_plus_minus
     
     # Calculate per point stats
-    if stats['o_line_points_played'] > 0:
-        stats['o_line_plus_minus_per_point'] = stats['o_line_plus_minus'] / stats['o_line_points_played']
-    if stats['d_line_points_played'] > 0:
-        stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['d_line_points_played']
+    if stats['analysed_o_line_points'] > 0:
+        stats['o_line_plus_minus_per_point'] = stats['o_line_plus_minus'] / stats['analysed_o_line_points']
+    if stats['analysed_d_line_points'] > 0:
+        stats['d_line_plus_minus_per_point'] = stats['d_line_plus_minus'] / stats['analysed_d_line_points']
     
     # Calculate break throw percentage
     if stats['throws'] > 0:
@@ -394,139 +497,6 @@ def calculate_cutting_stats(cutting_skills):
             stats['preferred_cut'] = preferred_cut_type.replace('_', ' ').title()
             
     return stats
-
-def calculate_most_common_throwaway_direction(player, games=None):
-    """Analyzes throwaway throws to find the most common direction."""
-    point_ids = get_point_ids_from_games(games)
-
-    query = Throw.query.filter_by(
-        thrower_id=player.id, 
-        throw_type='throwaway',
-        team_organization_id=get_current_team_id()
-    )
-    if point_ids:
-        query = query.filter(Throw.point_id.in_(point_ids))
-        
-    throwaways = query.all()
-
-    if not throwaways:
-        return {"compass": "N/A", "field_relative": "N/A", "count": 0, "total": 0, "direction_data": {}}
-
-    direction_counts = {
-        'E': 0, 'ENE': 0, 'NE': 0, 'NNE': 0, 'N': 0, 'NNW': 0, 'NW': 0, 'WNW': 0,
-        'W': 0, 'WSW': 0, 'SW': 0, 'SSW': 0, 'S': 0, 'SSE': 0, 'SE': 0, 'ESE': 0
-    }
-    
-    # Define mapping from compass to field-relative directions
-    field_direction_mapping = {
-        'E': "Directly Upfield",
-        'ENE': "Slightly Right Upfield",
-        'NE': "Upfield Right",
-        'NNE': "Far Right Upfield",
-        'N': "Directly Right",
-        'NNW': "Far Right Downfield",
-        'NW': "Downfield Right",
-        'WNW': "Slightly Right Downfield",
-        'W': "Directly Downfield",
-        'WSW': "Slightly Left Downfield",
-        'SW': "Downfield Left",
-        'SSW': "Far Left Downfield",
-        'S': "Directly Left",
-        'SSE': "Far Left Upfield",
-        'SE': "Upfield Left",
-        'ESE': "Slightly Left Upfield"
-    }
-    
-    for throw in throwaways:
-        if throw.x_start is not None and throw.y_start is not None and throw.x_end is not None and throw.y_end is not None:
-            dx = throw.x_end - throw.x_start
-            dy = throw.y_end - throw.y_start
-            angle = math.atan2(dy, dx)
-            degrees = (angle * 180 / math.pi + 360) % 360
-
-            # Map angle to 16-point direction
-            if degrees >= 348.75 or degrees < 11.25: direction = 'E'
-            elif degrees >= 11.25 and degrees < 33.75: direction = 'ENE'
-            elif degrees >= 33.75 and degrees < 56.25: direction = 'NE'
-            elif degrees >= 56.25 and degrees < 78.75: direction = 'NNE'
-            elif degrees >= 78.75 and degrees < 101.25: direction = 'N'
-            elif degrees >= 101.25 and degrees < 123.75: direction = 'NNW'
-            elif degrees >= 123.75 and degrees < 146.25: direction = 'NW'
-            elif degrees >= 146.25 and degrees < 168.75: direction = 'WNW'
-            elif degrees >= 168.75 and degrees < 191.25: direction = 'W'
-            elif degrees >= 191.25 and degrees < 213.75: direction = 'WSW'
-            elif degrees >= 213.75 and degrees < 236.25: direction = 'SW'
-            elif degrees >= 236.25 and degrees < 258.75: direction = 'SSW'
-            elif degrees >= 258.75 and degrees < 281.25: direction = 'S'
-            elif degrees >= 281.25 and degrees < 303.75: direction = 'SSE'
-            elif degrees >= 303.75 and degrees < 326.25: direction = 'SE'
-            else: direction = 'ESE'
-            
-            direction_counts[direction] += 1
-
-    if not any(direction_counts.values()):
-        return {"compass": "N/A", "field_relative": "N/A", "count": 0, "total": 0, "direction_data": {}}
-
-    most_common_direction = max(direction_counts, key=direction_counts.get)
-    total_throwaways = sum(direction_counts.values())
-    
-    return {
-        "compass": most_common_direction,
-        "field_relative": field_direction_mapping[most_common_direction],
-        "count": direction_counts[most_common_direction],
-        "total": total_throwaways,
-        "direction_data": direction_counts
-    }
-
-def calculate_most_common_throwaway_location(player, games=None):
-    """Analyzes throwaway events to find the most common field zone."""
-    point_ids = get_point_ids_from_games(games)
-    
-    query = Event.query.filter_by(
-        player_id=player.id, 
-        event_type='throwaway',
-        team_organization_id=get_current_team_id()
-    )
-    if point_ids:
-        query = query.filter(Event.point_id.in_(point_ids))
-        
-    throwaways = query.all()
-    
-    if not throwaways:
-        return "N/A"
-
-    # Define field zones
-    x_zones = {
-        (0, 20): "Own Endzone Area",
-        (20, 40): "Defensive Third",
-        (40, 60): "Midfield",
-        (60, 80): "Attacking Third",
-        (80, 100): "Opponent Endzone Area"
-    }
-    y_zones = {
-        (0, 12): "Left Sideline",
-        (12, 25): "Center of Field",
-        (25, 37): "Right Sideline"
-    }
-    
-    zone_counts = {}
-
-    for event in throwaways:
-        if event.field_position_x is not None and event.field_position_y is not None:
-            x_pos, y_pos = event.field_position_x, event.field_position_y
-            
-            x_zone_name = next((name for (start, end), name in x_zones.items() if start <= x_pos < end), "Unknown X")
-            y_zone_name = next((name for (start, end), name in y_zones.items() if start <= y_pos < end), "Unknown Y")
-            
-            zone_key = f"{y_zone_name}, {x_zone_name}"
-            zone_counts[zone_key] = zone_counts.get(zone_key, 0) + 1
-            
-    if not zone_counts:
-        return "N/A"
-        
-    # Find the most common zone
-    most_common_zone = max(zone_counts, key=zone_counts.get)
-    return most_common_zone
 
 def generate_player_sankey_data(player_id, point_ids=None):
     """Generate Sankey diagram data for a specific player"""

@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import validates
 
 VALID_EVENT_TYPES = [
-    'catch', 'goal', 'throwaway', 'drop',  # offensive events
+    'catch', 'goal', 'throwaway', 'drop', 'stall',  # offensive events
     'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'  # defensive events
 ]
 
@@ -29,7 +29,7 @@ class Event(db.Model):
     
     # Define valid event types
     VALID_EVENT_TYPES = [
-        'catch', 'goal', 'throwaway', 'drop', 'assist', 'hockey_assist',   # offensive events
+        'catch', 'goal', 'throwaway', 'drop', 'stall', 'assist', 'hockey_assist',   # offensive events
         'shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on',  # defensive events
         'substitution'  # Add this
     ]

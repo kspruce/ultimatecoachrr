@@ -1,0 +1,174 @@
+{# Shared pieces for the turnover analysis on the player and team pages. #}
+
+{% macro pct(value, digits=0) -%}
+{% if value is none %}–{% else %}{{ ("%." ~ digits ~ "f")|format(value) }}%{% endif %}
+{%- endmacro %}
+
+{# Background for a completion rate compared with the team's. #}
+{% macro vs_team_class(rate, team_rate, enough=True) -%}
+{%- if not enough or rate is none or team_rate is none -%}
+{%- elif rate - team_rate <= -10 -%}to-bad
+{%- elif rate - team_rate <= -4 -%}to-warn
+{%- elif rate - team_rate >= 4 -%}to-ok
+{%- endif -%}
+{%- endmacro %}
+
+{% macro styles() %}
+<style>
+    .to-bad  { background: var(--bad-soft) !important; }
+    .to-warn { background: var(--warn-soft) !important; }
+    .to-ok   { background: var(--ok-soft) !important; }
+    .to-legend span { display: inline-block; width: 14px; height: 14px; vertical-align: -2px;
+                      border: 1px solid var(--rule); margin: 0 4px 0 10px; }
+    .to-small-n { opacity: .55; }
+    .zone-grid td, .zone-grid th { text-align: center; vertical-align: middle; min-width: 4.5rem; }
+    .zone-grid td .rate { font-weight: 700; font-size: 1.05rem; }
+    .zone-grid td .n { font-size: .75rem; color: var(--ink-3); }
+    .focus-item { border-left: 4px solid var(--bad); padding: .5rem .75rem; margin-bottom: .75rem;
+                  background: var(--bad-soft); border-radius: 4px; }
+    .focus-item.strength { border-left-color: var(--ok); background: var(--ok-soft); }
+    .focus-item .focus-title { font-weight: 700; }
+    .turnover-field { width: 100%; height: auto; max-height: 340px; display: block; }
+    .verdict-better { color: var(--ok); font-weight: 700; }
+    .verdict-worse  { color: var(--bad); font-weight: 700; }
+    .verdict-same   { color: var(--ink-3); }
+</style>
+{% endmacro %}
+
+{% macro legend(min_attempts, what='rows') %}
+<div class="small text-muted to-legend mt-2">
+    Compared with the team:
+    <span class="to-bad"></span>10+ points worse
+    <span class="to-warn"></span>4–10 worse
+    <span class="to-ok"></span>4+ better
+    · {{ 'faded rows have' if what == 'rows' else 'cells are only coloured with' }} {{ 'fewer than' if what == 'rows' else '' }} {{ min_attempts }}{{ '' if what == 'rows' else '+' }} throws
+</div>
+{% endmacro %}
+
+{# One small table per way of splitting the throws (throw type, side...). #}
+{% macro breakdown_tables(sections, who='You', show_share=True) %}
+<div class="row">
+    {% for section in sections %}
+    <div class="col-lg-6 mb-3">
+        <h6 class="text-muted text-uppercase small mb-1">{{ section.title }}</h6>
+        <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead>
+                <tr>
+                    <th></th><th class="text-end">Throws</th><th class="text-end">{{ who }}</th>
+                    {% if who != 'Team' %}<th class="text-end">Team</th>{% endif %}
+                    {% if show_share %}<th class="text-end" title="Share of the turnovers">% of TOs</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in section.rows %}
+                <tr class="{{ '' if row.enough else 'to-small-n' }}">
+                    <td>{{ row.label }}</td>
+                    <td class="text-end">{{ row.attempts }}</td>
+                    <td class="text-end {{ vs_team_class(row.completion_rate, row.team_completion_rate, row.enough) if who != 'Team' else '' }}">{{ pct(row.completion_rate) }}</td>
+                    {% if who != 'Team' %}<td class="text-end text-muted">{{ pct(row.team_completion_rate) }}</td>{% endif %}
+                    {% if show_share %}<td class="text-end">{{ pct(row.turnover_share) }}</td>{% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{# Completion by where the throw was made, attacking left to right. #}
+{% macro zone_grid(grid, compare=True) %}
+<div class="table-responsive">
+<table class="table table-bordered table-sm zone-grid mb-0">
+    <thead>
+        <tr><th></th>{% for col in grid.columns %}<th class="small">{{ col }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+        {% for row in grid.rows %}
+        <tr>
+            <th class="small text-start">{{ row.label }}</th>
+            {% for cell in row.cells %}
+            <td class="{{ vs_team_class(cell.completion_rate, cell.team_completion_rate, cell.attempts >= 5) if compare else '' }}"
+                title="{{ cell.attempts }} throws, {{ cell.turnovers }} turnovers{% if compare %}; team {{ pct(cell.team_completion_rate) }}{% endif %}">
+                {% if cell.attempts %}
+                <div class="rate">{{ pct(cell.completion_rate) }}</div>
+                <div class="n">{{ cell.turnovers }}/{{ cell.attempts }} lost</div>
+                {% else %}<span class="text-muted">–</span>{% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<div class="small text-muted mt-1">Where the throw was made from, attacking left → right.</div>
+{% endmacro %}
+
+{# The field, attacking right, with each turnover drawn on it: an arrow
+   from where it was thrown to where it went, a dot for drops and stalls. #}
+{% macro turnover_map(log, uid='tomap') %}
+<svg class="turnover-field" viewBox="-1 -1 102 39" role="img" aria-label="Turnover map">
+    <defs>
+        <marker id="{{ uid }}-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--bad)"></path>
+        </marker>
+    </defs>
+    <rect x="0" y="0" width="100" height="37" fill="var(--ok-soft)" stroke="var(--rule-strong)" stroke-width="0.3"></rect>
+    <rect x="0" y="0" width="18" height="37" fill="var(--surface-2, var(--rule))" opacity="0.6"></rect>
+    <rect x="82" y="0" width="18" height="37" fill="var(--surface-2, var(--rule))" opacity="0.6"></rect>
+    <line x1="50" y1="0" x2="50" y2="37" stroke="var(--rule-strong)" stroke-width="0.2" stroke-dasharray="1 1"></line>
+    <text x="91" y="20" font-size="2.6" text-anchor="middle" fill="var(--ink-3)">Attacking</text>
+    {% for t in log %}
+        {% if t.x_end is not none and t.y_end is not none %}
+            {% if t.x_start is not none and t.y_start is not none %}
+            <line x1="{{ t.x_start }}" y1="{{ t.y_start }}" x2="{{ t.x_end }}" y2="{{ t.y_end }}"
+                  stroke="var(--bad)" stroke-width="0.45" marker-end="url(#{{ uid }}-arrow)" opacity="0.85">
+                <title>{{ t.game.opponent }}, point {{ t.point.point_number }}: {{ t.kind or 'throw' }}{% if t.side %} ({{ t.side }} side){% endif %}</title>
+            </line>
+            <circle cx="{{ t.x_start }}" cy="{{ t.y_start }}" r="0.7" fill="var(--ink-2)"></circle>
+            {% else %}
+            <circle cx="{{ t.x_end }}" cy="{{ t.y_end }}" r="1.1"
+                    fill="{{ 'var(--warn)' if t.type == 'drop' else 'var(--ink)' }}">
+                <title>{{ t.type|capitalize }} vs {{ t.game.opponent }}, point {{ t.point.point_number }}</title>
+            </circle>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+</svg>
+<div class="small text-muted to-legend">
+    <span style="background: var(--bad); border: 0; height: 3px; vertical-align: 3px;"></span>throwaway (thrown from the grey dot)
+    <span style="background: var(--warn); border-radius: 50%;"></span>drop
+    <span style="background: var(--ink); border-radius: 50%;"></span>stall
+</div>
+{% endmacro %}
+
+{% macro turnover_log_table(log, show_player=False) %}
+<div class="table-responsive">
+<table class="table table-sm mb-0">
+    <thead>
+        <tr>
+            <th>Game</th><th>Pt</th><th>Score</th>{% if show_player %}<th>Player</th>{% endif %}
+            <th>What</th><th>Where it went</th><th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in log %}
+        <tr>
+            <td>{{ t.game.date.strftime('%d %b') if t.game.date }} vs {{ t.game.opponent }}</td>
+            <td>{{ t.point.point_number }}</td>
+            <td>{{ t.score }}</td>
+            {% if show_player %}<td>{{ t.player_name or '' }}</td>{% endif %}
+            <td>{{ t.type|capitalize }}{% if t.kind %} · {{ t.kind }}{% endif %}{% if t.side %} · {{ t.side }} side{% endif %}</td>
+            <td class="small">{{ t.zone }}</td>
+            <td class="text-nowrap">
+                {% if t.video_url %}<a href="{{ t.video_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-play-circle"></i> Video</a>{% endif %}
+                {% if t.has_clips %}<a href="{{ url_for('clip.point_clips', point_id=t.point.id) }}" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-film"></i> Clips</a>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endmacro %}

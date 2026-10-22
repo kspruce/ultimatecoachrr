@@ -10,7 +10,8 @@ from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_per
 from app.stats.history import get_player_game_history
-from app.stats.players import calculate_cutting_stats, calculate_most_common_throwaway_direction, calculate_most_common_throwaway_location, get_players_base_stats, get_point_ids_from_games
+from app.stats.players import calculate_cutting_stats, get_players_base_stats, get_point_ids_from_games
+from app.stats import cutting, turnovers
 from app.stats.team import calculate_additional_team_metrics, calculate_possession_based_team_metrics, calculate_team_summary
 
 
@@ -80,34 +81,56 @@ def player_stats(player_id):
     if point_ids:
         cutting_skills_query = cutting_skills_query.filter(CuttingSkill.point_id.in_(point_ids))
     cutting_skills = cutting_skills_query.all()
-    cutting_data = [skill.to_dict() for skill in cutting_skills]
-    cutting_stats = calculate_cutting_stats(cutting_skills) # Refactored for clarity
+    # The detailed cut log (cut type picked by the stat-taker)
+    cutting_stats = calculate_cutting_stats(
+        [s for s in cutting_skills if s.cutting_type in CuttingSkill.DETAILED_CUTTING_TYPES])
 
     # --- Game History Calculation ---
     player_games = get_player_game_history(player, tournament_id, game_id)
 
-    # --- Turnover Analysis ---
-    most_common_throwaway_location = calculate_most_common_throwaway_location(player, games)
-    throwaway_direction_data = calculate_most_common_throwaway_direction(player, games)
-    if throwaway_direction_data and throwaway_direction_data.get('total', 0) > 0:
-        throwaway_direction_data['percentage'] = (throwaway_direction_data['count'] / throwaway_direction_data['total']) * 100
-    else:
-        throwaway_direction_data['percentage'] = 0
+    # --- Where the turnovers are: rates by bucket, vs team, over time ---
+    all_games = Game.query.filter_by(team_organization_id=get_current_team_id()).all()
+    throwing = turnovers.ThrowingData(all_games)
+    game_ids = {g.id for g in games}
+    periods = turnovers.period_ids(all_games, tournament_id, game_id,
+                                   player_games=throwing.games_played[player.id])
+    improvement = {
+        'handling': turnovers.handling_summary(throwing, player.id, game_ids),
+        'team_handling': turnovers.handling_summary(throwing, None, game_ids),
+        'focus': turnovers.focus_areas(throwing, player.id, game_ids),
+        'breakdown': turnovers.breakdown(throwing, player.id, game_ids),
+        'zones': turnovers.zone_grid(throwing, player.id, game_ids),
+        'directions': turnovers.direction_split(throwing, player.id, game_ids),
+        'log': turnovers.turnover_log(throwing, player.id, game_ids),
+        'trends': turnovers.game_trends(throwing, player.id),
+        'comparison': periods and turnovers.compare_periods(
+            throwing, player.id, periods['current'], periods['baseline'],
+            periods['current_label'], periods['baseline_label']),
+        'repeat': None if (game_id or tournament_id) else turnovers.repeat_focus(throwing, player.id, all_games),
+    }
+
+    # Cuts worked out from catches, plus the open-but-not-thrown-to taps
+    cut_profile = cutting.cut_profile(throwing, player.id, game_ids)
+    # Heatmap: where they caught it, and where logged cuts were made
+    cutting_data = [{k: c[k] for k in ('cutting_type', 'outcome', 'field_position_x', 'field_position_y')}
+                    for c in cut_profile.pop('cuts')]
+    cutting_data += [skill.to_dict() for skill in cutting_skills
+                     if skill.field_position_x is not None and skill.cutting_type != 'unspecified']
 
     # --- CORRECTED AND CONSOLIDATED RADAR CHART METRICS ---
     # This block ensures all necessary stats are calculated and correctly formatted.
-    if stats['points_played'] > 0:
-        # Offensive metrics
-        stats['goals_per_point'] = stats['goals'] / stats['points_played']
-        stats['assists_per_point'] = stats['assists'] / stats['points_played']
-        stats['throws_per_point'] = stats['throws'] / stats['points_played']
-        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['points_played']
+    if stats['analysed_points'] > 0:
+        # Offensive metrics (per point with full stats)
+        stats['goals_per_point'] = stats['goals'] / stats['analysed_points']
+        stats['assists_per_point'] = stats['assists'] / stats['analysed_points']
+        stats['throws_per_point'] = stats['throws'] / stats['analysed_points']
+        stats['hucks_per_point'] = stats.get('hucks', 0) / stats['analysed_points']
         stats['break_throw_percentage'] = (stats['break_throws'] / stats['throws'] * 100) if stats['throws'] > 0 else 0
 
         # Defensive metrics
-        if stats['d_line_points_played'] > 0:
-            stats['blocks_per_point'] = stats['blocks'] / stats['d_line_points_played']
-            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats.get('stalls', 0)) / stats['d_line_points_played']
+        if stats['analysed_d_line_points'] > 0:
+            stats['blocks_per_point'] = stats['blocks'] / stats['analysed_d_line_points']
+            stats['turnovers_forced_per_point'] = (stats['blocks'] + stats['forced_turnovers']) / stats['analysed_d_line_points']
         else:
             stats['blocks_per_point'] = 0
             stats['turnovers_forced_per_point'] = 0
@@ -173,6 +196,6 @@ def player_stats(player_id):
         completion_by_direction=stats['completion_by_direction'],
         cutting_data=cutting_data,
         cutting_stats=cutting_stats,
-        most_common_throwaway_location=most_common_throwaway_location,
-        throwaway_direction_data=throwaway_direction_data
+        cut_profile=cut_profile,
+        improvement=improvement,
     )

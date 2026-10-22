@@ -177,6 +177,29 @@
     }
     
     /* Undo button */
+    .action-button-cut { border-style: dashed; }
+
+    .looked-off-strip {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+        margin: 8px auto 0; padding: 6px 8px; max-width: 1200px;
+        border: 1px dashed var(--rule-strong); border-radius: 8px;
+    }
+    .looked-off-label { font-size: .85rem; font-weight: 600; color: var(--ink-2); margin-right: 4px; }
+    .looked-off-chip { display: inline-flex; }
+    .looked-off-chip button {
+        border: 1px solid var(--rule-strong); background: var(--paper, transparent); color: var(--ink);
+        padding: 6px 10px; font-size: .9rem; min-height: 40px;
+    }
+    .looked-off-add { border-radius: 20px; }
+    .looked-off-chip.has-count .looked-off-add { border-radius: 20px 0 0 20px; border-color: var(--warn); }
+    .looked-off-remove { border-radius: 0 20px 20px 0; border-left: 0 !important; border-color: var(--warn) !important; }
+    .looked-off-count {
+        display: inline-block; min-width: 1.4em; margin-left: 4px; padding: 0 4px; border-radius: 10px;
+        background: var(--rule); font-weight: 700; font-size: .8rem;
+    }
+    .looked-off-chip.has-count .looked-off-count { background: var(--warn); color: #fff; }
+    .looked-off-chip.flash .looked-off-add { background: var(--warn-soft); }
+
     .undo-button {
         position: fixed;
         bottom: 20px;
@@ -218,16 +241,6 @@
         height: 3rem;
     }
 
-    /* Mode toggle button */
-    #mode-toggle {
-        padding: 0.375rem 0.75rem;
-        border-radius: 8px;
-        background: var(--uc-sky);
-        color: white;
-        border: none;
-        cursor: pointer;
-    }
-
     /* Custom button style for cutting mode */
     .btn-purple {
         background-color: var(--uc-purple);
@@ -239,6 +252,83 @@
         color: white;
     }
     
+    .record-actions .btn { margin-left: .35rem; }
+    .label-short { display: none; }
+    .picker-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .picker-head h5 { margin: 0; }
+    .picker-cancel {
+        border: 1px solid var(--rule-strong); background: transparent; color: var(--ink-2);
+        border-radius: 6px; padding: 4px 10px; font-size: .85rem;
+    }
+    /* Where the stat-taker just tapped, while they pick who and what */
+    .pending-marker {
+        position: absolute; width: 22px; height: 22px; border-radius: 50%;
+        border: 3px solid #fff; box-shadow: 0 0 0 2px #222; background: rgba(255, 255, 255, .35);
+        transform: translate(-50%, -50%); z-index: 11; pointer-events: none;
+    }
+
+    /* Phones held upright: the field stands up (attacking up the screen)
+       with the "Open, not thrown to" chips in a column beside it. Bigger
+       taps, and the whole field, chips and header fit on one screen. */
+    .field-container.field-vertical {
+        width: min(calc(100vw - 32px - 150px - 8px), calc(74vh * 0.37), calc(74svh * 0.37));
+        height: auto;
+        padding-bottom: 0;
+        aspect-ratio: 37 / 100;
+        margin: 0;
+        flex: none;
+    }
+    .field-vertical .endzone { width: 100%; height: 18%; left: 0; }
+    .field-vertical .endzone-left { top: auto; bottom: 0; }
+    .field-vertical .endzone-right { top: 0; }
+    .field-vertical .endzone-label { transform: translate(-50%, -50%); }
+    .field-vertical .center-line { top: 50%; left: 0; width: 100%; height: 2px; }
+
+    @media (max-width: 576px), (max-height: 500px) {
+        .record-header { padding: .5rem .75rem; }
+        .record-header h4 { font-size: 1.05rem; margin-bottom: 0; }
+        .record-header p { font-size: .85rem; }
+        .record-detail, #help-button, .label-long { display: none; }
+        .label-short { display: inline; }
+        .record-actions .btn { padding: .3rem .6rem; font-size: .85rem; margin-left: .25rem; }
+        .record-header .row { flex-wrap: nowrap; }
+
+        /* Pickers become a bottom sheet with two columns */
+        .player-select, .action-select, .cutting-select, .outcome-select {
+            top: auto; bottom: 0; left: 0; right: 0; transform: none;
+            max-width: none; max-height: 62vh; border-radius: 14px 14px 0 0; z-index: 1065;
+            border-width: 2px 0 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+        }
+        .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+            grid-template-columns: 1fr 1fr !important; gap: 8px;
+        }
+        .player-card, .action-button, .cutting-button, .outcome-button {
+            padding: 12px 6px; font-size: .95rem; min-height: 48px;
+        }
+        .undo-button { bottom: calc(12px + env(safe-area-inset-bottom)); right: 12px; }
+    }
+    @media (max-width: 576px) and (orientation: portrait) {
+        .field-area { display: flex; gap: 8px; align-items: flex-start; padding: 8px 16px 0; }
+        .field-area .looked-off-strip {
+            flex: 1; min-width: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch;
+            margin: 0; padding: 6px; max-height: calc(74svh); overflow-y: auto;
+        }
+        .field-area .looked-off-label { margin: 0 0 2px; font-size: .78rem; }
+        .field-area .looked-off-chip { width: 100%; }
+        .field-area .looked-off-add { flex: 1; text-align: left; }
+    }
+    /* Phones on their side: keep the whole field on screen */
+    @media (max-height: 500px) and (orientation: landscape) {
+        .player-grid, .action-grid, .cutting-grid, .outcome-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+        .player-select, .action-select, .cutting-select, .outcome-select { max-height: 80vh; }
+        .field-container {
+            width: min(100%, calc((100vh - 110px) / 0.37), calc((100svh - 110px) / 0.37));
+            height: auto; padding-bottom: 0; aspect-ratio: 100 / 37; margin: 0 auto 8px;
+        }
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .tables-container {
@@ -254,25 +344,22 @@
 <div class="record-container">
     <div class="record-header">
         <div class="row align-items-center">
-            <div class="col">
-                <h4>Recording Point #{{ point.point_number }}</h4>
+            <div class="col record-title">
+                <h4><span class="label-long">Recording </span>Point #{{ point.point_number }}</h4>
                 <p class="mb-0">
-                    {{ point.our_score_before }}-{{ point.their_score_before }} | 
-                    {{ point.our_line_type }} | 
-                    Starting on {{ point.starting_position }}
-                </p>
-                <p class="mb-0 mt-1">
-                    <span id="possession-indicator" class="badge bg-primary">On Offense</span>
+                    {{ point.our_score_before }}-{{ point.their_score_before }} |
+                    {{ point.our_line_type }}<span class="record-detail"> |
+                    Starting on {{ point.starting_position }}</span>
+                    <span id="possession-indicator" class="badge bg-primary ms-1">On Offense</span>
                 </p>
             </div>
-            <div class="col text-end">
-                <button id="attack-toggle" class="btn btn-outline-dark me-2"
+            <div class="col-auto text-end record-actions">
+                <button id="attack-toggle" class="btn btn-outline-dark"
                         title="Which endzone we're attacking on screen. Positions are saved the same either way.">
                     Attacking →
                 </button>
-                <button id="sub-player" class="btn btn-warning me-2">Substitution</button>
-                <button id="mode-toggle" class="btn btn-info me-2">Mode: Event Tracking</button>
-                <button id="finish-point" class="btn btn-success me-2">End Point</button>
+                <button id="sub-player" class="btn btn-warning"><span class="label-long">Substitution</span><span class="label-short">Sub</span></button>
+                <button id="finish-point" class="btn btn-success"><span class="label-long">End Point</span><span class="label-short">End</span></button>
                 <button id="help-button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#keyboardShortcutsModal">
                     <i class="bi bi-question-circle"></i> Help
                 </button>
@@ -282,11 +369,30 @@
 
     <!-- Mode toggle button removed from here and moved next to substitution button above -->
 
+    <div class="field-area">
     <!-- Single field for both events and cutting skills -->
     <div class="field-container" id="field">
         <div class="endzone endzone-left"><span class="endzone-label"></span></div>
         <div class="center-line"></div>
         <div class="endzone endzone-right"><span class="endzone-label"></span></div>
+    </div>
+
+    <!-- One tap per player who got open and wasn't thrown to. Catches
+         already record the cuts that worked, so this is all cutting needs. -->
+    <div class="looked-off-strip" id="looked-off-strip">
+        <span class="looked-off-label" title="Tap a player each time they get open and aren't thrown to. Use − to take one back.">
+            Open, not thrown to:
+        </span>
+        {% for player in line %}
+        <span class="looked-off-chip" data-player-id="{{ player.id }}">
+            <button type="button" class="looked-off-add" data-player-id="{{ player.id }}">
+                #{{ player.jersey_number }} {{ player.name.split(' ')[0] }}
+                <span class="looked-off-count">0</span>
+            </button>
+            <button type="button" class="looked-off-remove" data-player-id="{{ player.id }}" aria-label="Take one back" hidden>−</button>
+        </span>
+        {% endfor %}
+    </div>
     </div>
 
     <!-- Tables container with both tables side by side -->
@@ -335,12 +441,12 @@
     </div>
 
     <!-- Player selection overlay -->
-    <div class="player-select" id="player-select">
-        <h5>Select Player</h5>
+    <div class="player-select picker" id="player-select">
+        <div class="picker-head"><h5>Select Player</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="player-grid">
-            {% for lineup in point.lineups %}
-            <button class="player-card" data-player-id="{{ lineup.player.id }}">
-                #{{ lineup.player.jersey_number }} - {{ lineup.player.name }}
+            {% for player in line %}
+            <button class="player-card" data-player-id="{{ player.id }}">
+                #{{ player.jersey_number }} - {{ player.name }}
             </button>
             {% endfor %}
             <button class="player-card" data-player-id="unknown">Unknown</button>
@@ -349,16 +455,16 @@
     </div>
 
     <!-- Action selection overlay -->
-    <div class="action-select" id="action-select">
-        <h5>Select Action</h5>
+    <div class="action-select picker" id="action-select">
+        <div class="picker-head"><h5>Select Action</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="action-grid" id="action-grid">
             <!-- Actions will be added here dynamically -->
         </div>
     </div>
 
     <!-- Cutting selection overlay -->
-    <div class="cutting-select" id="cutting-select">
-        <h5>Select Cutting Type</h5>
+    <div class="cutting-select picker" id="cutting-select">
+        <div class="picker-head"><h5>Select Cutting Type</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="cutting-grid">
             <button class="cutting-button" data-cutting-type="open_deep">Open Deep</button>
             <button class="cutting-button" data-cutting-type="break_deep">Break Deep</button>
@@ -368,8 +474,8 @@
     </div>
 
     <!-- Outcome selection overlay -->
-    <div class="outcome-select" id="outcome-select">
-        <h5>Select Outcome</h5>
+    <div class="outcome-select picker" id="outcome-select">
+        <div class="picker-head"><h5>Select Outcome</h5><button type="button" class="picker-cancel" aria-label="Cancel">Cancel</button></div>
         <div class="outcome-grid" id="outcome-grid">
             <!-- Outcomes will be added here dynamically -->
         </div>
@@ -406,10 +512,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td><kbd>M</kbd></td>
-                                <td>Toggle between Event and Cutting Skill tracking modes</td>
-                            </tr>
                             <tr>
                                 <td><kbd>U</kbd></td>
                                 <td>Undo last action</td>
@@ -457,9 +559,9 @@
                         <label for="player-out" class="form-label">Player Out:</label>
                         <select class="form-select" id="player-out">
                             <option value="">Select player to sub out</option>
-                            {% for lineup in point.lineups %}
-                            <option value="{{ lineup.player.id }}">
-                                #{{ lineup.player.jersey_number }} - {{ lineup.player.name }}
+                            {% for player in line %}
+                            <option value="{{ player.id }}">
+                                #{{ player.jersey_number }} - {{ player.name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -529,7 +631,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const cuttingSelect = document.getElementById('cutting-select');
     const outcomeSelect = document.getElementById('outcome-select');
     const undoButton = document.getElementById('undo-button');
-    const modeToggle = document.getElementById('mode-toggle');
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingMessage = document.getElementById('loading-message');
     const finishPointButton = document.getElementById('finish-point');
@@ -574,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', checkFieldDimensions);
 
     // Define event types - UPDATED with correct event types
-    const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop'];
+    const OFFENSIVE_EVENTS = ['catch', 'goal', 'throwaway', 'drop', 'stall'];
     const DEFENSIVE_EVENTS = ['shutdown', 'forced_turnover', 'unforced_turnover', 'block', 'callahan', 'scored_on'];
     
     // Define cutting skill outcomes - UPDATED with correct outcomes
@@ -634,8 +735,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let attackRight = defaultAttackRight();
 
+    // On a phone held upright the field is drawn standing up: the view
+    // turned a quarter-turn anticlockwise, so "attacking right" is
+    // attacking up the screen and the thrower's right is still on the right.
+    const portraitPhone = window.matchMedia('(max-width: 576px) and (orientation: portrait)');
+    let vertical = portraitPhone.matches;
+
     function screenToField(relX, relY) {
         // relX/relY are 0–1 across the field as shown
+        if (vertical) {
+            return {
+                x: (attackRight ? 1 - relY : relY) * 100,
+                y: (attackRight ? relX : 1 - relX) * 37,
+            };
+        }
         return {
             x: (attackRight ? relX : 1 - relX) * 100,
             y: (attackRight ? relY : 1 - relY) * 37,
@@ -645,6 +758,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function placeMarker(marker) {
         const x = parseFloat(marker.dataset.fieldX);
         const y = parseFloat(marker.dataset.fieldY);
+        if (vertical) {
+            marker.style.left = `${((attackRight ? y : 37 - y) / 37) * 100}%`;
+            marker.style.top = `${attackRight ? 100 - x : x}%`;
+            return;
+        }
         marker.style.left = `${attackRight ? x : 100 - x}%`;
         marker.style.top = `${((attackRight ? y : 37 - y) / 37) * 100}%`;
     }
@@ -658,7 +776,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showDirection() {
-        attackToggle.textContent = attackRight ? 'Attacking →' : '← Attacking';
+        field.classList.toggle('field-vertical', vertical);
+        attackToggle.textContent = vertical
+            ? (attackRight ? 'Attacking ↑' : 'Attacking ↓')
+            : (attackRight ? 'Attacking →' : '← Attacking');
         const left = document.querySelector('.endzone-left');
         const right = document.querySelector('.endzone-right');
         const [attack, defend] = attackRight ? [right, left] : [left, right];
@@ -666,8 +787,13 @@ document.addEventListener('DOMContentLoaded', function() {
         defend.classList.remove('attacking');
         attack.querySelector('.endzone-label').textContent = 'Attacking';
         defend.querySelector('.endzone-label').textContent = 'Defending';
-        document.querySelectorAll('.event-marker, .cutting-marker').forEach(placeMarker);
+        document.querySelectorAll('.event-marker, .cutting-marker, .pending-marker').forEach(placeMarker);
     }
+
+    portraitPhone.addEventListener('change', () => {
+        vertical = portraitPhone.matches;
+        showDirection();
+    });
 
     attackToggle.addEventListener('click', function() {
         attackRight = !attackRight;
@@ -716,66 +842,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updatePossessionIndicator();
         }
     }
-
-    // Track which mode we're in (events or cutting skills)
-    let currentMode = 'events';
-
-    // Mode toggle handler
-    modeToggle.addEventListener('click', function() {
-        currentMode = currentMode === 'events' ? 'cutting' : 'events';
-        
-        // Update button text
-        modeToggle.textContent = `Mode: ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'}`;
-        
-        // Update button styling based on mode
-        if (currentMode === 'events') {
-            modeToggle.classList.remove('btn-purple');
-            modeToggle.classList.add('btn-info');
-            // Add a subtle animation
-            modeToggle.animate([
-                { transform: 'scale(1.1)' },
-                { transform: 'scale(1)' }
-            ], {
-                duration: 300,
-                easing: 'ease-out'
-            });
-        } else {
-            modeToggle.classList.remove('btn-info');
-            modeToggle.classList.add('btn-purple');
-            // Add a subtle animation
-            modeToggle.animate([
-                { transform: 'scale(1.1)' },
-                { transform: 'scale(1)' }
-            ], {
-                duration: 300,
-                easing: 'ease-out'
-            });
-        }
-        
-        // Show a temporary toast notification
-        const toast = document.createElement('div');
-        toast.className = 'position-fixed top-0 end-0 p-3';
-        toast.style.zIndex = '1070';
-        toast.innerHTML = `
-            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="toast-header">
-                    <strong class="me-auto">Mode Changed</strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-                <div class="toast-body">
-                    Switched to ${currentMode === 'events' ? 'Event Tracking' : 'Cutting Skill Tracking'} mode
-                </div>
-            </div>
-        `;
-        document.body.appendChild(toast);
-        
-        // Remove the toast after 2 seconds
-        setTimeout(() => {
-            toast.remove();
-        }, 2000);
-        
-        console.log('Switched to mode:', currentMode);
-    });
 
     // End Point button listener
     document.getElementById('finish-point').addEventListener('click', function() {
@@ -830,10 +896,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         selectedPosition = {
             ...screenToField(relativeX, relativeY),
-            inEndzone: relativeX < 0.18 || relativeX > 0.82
+            inEndzone: vertical ? (relativeY < 0.18 || relativeY > 0.82)
+                                : (relativeX < 0.18 || relativeX > 0.82)
         };
+        showPendingMarker(selectedPosition);
 
-        console.log(`${currentMode} field click coordinates:`, {
+        console.log('Field click coordinates:', {
             clientX: e.clientX,
             clientY: e.clientY,
             fieldX: selectedPosition.x,
@@ -843,7 +911,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showPlayerSelect();
     });
 
-    // Player selection - UPDATED to check currentMode
+    // Player selection
     document.querySelectorAll('.player-card').forEach(card => {
         card.addEventListener('click', function() {
             selectedPlayer = this.dataset.playerId;
@@ -864,12 +932,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             playerSelect.style.display = 'none';
             
-            // Check the current mode and show appropriate options
-            if (currentMode === 'cutting') {
-                showCuttingSelect();
-            } else {
-                showActionSelect();
-            }
+            showActionSelect();
         });
     });
 
@@ -1268,6 +1331,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Show selection overlays
+    // A ring where they tapped, until the play is recorded or cancelled
+    function showPendingMarker(position) {
+        let marker = field.querySelector('.pending-marker');
+        if (!marker) {
+            marker = document.createElement('div');
+            marker.className = 'pending-marker';
+            field.appendChild(marker);
+        }
+        marker.dataset.fieldX = position.x;
+        marker.dataset.fieldY = position.y;
+        placeMarker(marker);
+    }
+    function clearPendingMarker() {
+        const marker = field.querySelector('.pending-marker');
+        if (marker) marker.remove();
+    }
+    function closePickers() {
+        [playerSelect, actionSelect, cuttingSelect, outcomeSelect].forEach(el => { el.style.display = 'none'; });
+        clearPendingMarker();
+    }
+    document.querySelectorAll('.picker-cancel').forEach(btn => btn.addEventListener('click', closePickers));
+
     function showPlayerSelect() {
         playerSelect.style.display = 'block';
         actionSelect.style.display = 'none';
@@ -1290,6 +1375,20 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.onclick = () => handleAction(action);
             actionGrid.appendChild(btn);
         });
+
+        // A detailed cut (type + outcome) for one of our players, from the
+        // same tap: no separate mode to switch into.
+        if (gameState.is_offensive && /^\d+$/.test(String(selectedPlayer))) {
+            const cutBtn = document.createElement('button');
+            cutBtn.className = 'action-button action-button-cut';
+            cutBtn.textContent = 'LOG CUT…';
+            cutBtn.title = 'Record the cut this player made here (type and outcome). Doesn\'t change possession.';
+            cutBtn.onclick = () => {
+                actionSelect.style.display = 'none';
+                showCuttingSelect();
+            };
+            actionGrid.appendChild(cutBtn);
+        }
 
         actionSelect.style.display = 'block';
     }
@@ -1322,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const marker = document.createElement('div');
+        clearPendingMarker();
         marker.className = 'event-marker';
         marker.dataset.fieldX = event.field_position_x;
         marker.dataset.fieldY = event.field_position_y;
@@ -1334,11 +1434,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add cutting skill marker to the field - FIXED to handle potential missing data
     function addCuttingSkillMarker(cuttingSkill) {
+        if (cuttingSkill && cuttingSkill.cutting_type === 'unspecified') return;  // one-tap, no position
         if (!cuttingSkill || typeof cuttingSkill.field_position_x === 'undefined' || typeof cuttingSkill.field_position_y === 'undefined') {
             console.error('Invalid cutting skill data for marker:', cuttingSkill);
             return;
         }
         
+        clearPendingMarker();
         const marker = document.createElement('div');
         marker.className = 'cutting-marker';
         marker.dataset.fieldX = cuttingSkill.field_position_x;
@@ -1452,7 +1554,8 @@ document.addEventListener('DOMContentLoaded', function() {
             row.appendChild(playerCell);
             
             const typeCell = document.createElement('td');
-            typeCell.textContent = skill.cutting_type.replace('_', ' ').toUpperCase();
+            typeCell.textContent = skill.cutting_type === 'unspecified'
+                ? '—' : skill.cutting_type.replace('_', ' ').toUpperCase();
             row.appendChild(typeCell);
             
             const outcomeCell = document.createElement('td');
@@ -1536,7 +1639,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // Show brief toast (replaces the old blocking confirm dialog)
                     const undoToast = document.createElement('div');
-                    undoToast.className = 'position-fixed bottom-0 start-50 translate-middle-x p-3';
+                    undoToast.className = 'position-fixed top-0 start-50 translate-middle-x p-3';
                     undoToast.style.zIndex = '1080';
                     undoToast.innerHTML = `
                       <div class="toast show bg-warning text-dark shadow" role="alert">
@@ -1568,6 +1671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         gameState.cuttingSkills.pop();
                         updateCuttingSkillsTable();
+                        if (window.refreshAllLookedOff) window.refreshAllLookedOff();
                     }
                     
                     // Hide undo button if no more events/skills
@@ -1664,10 +1768,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 break;
                 
-            case 'm': // Toggle mode (m key)
-                modeToggle.click();
-                break;
-                
             case 's': // Substitution (s key)
                 subPlayerButton.click();
                 break;
@@ -1688,10 +1788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
                 
             case 'Escape': // Close any visible overlay
-                if (playerSelect.style.display === 'block') playerSelect.style.display = 'none';
-                if (actionSelect.style.display === 'block') actionSelect.style.display = 'none';
-                if (cuttingSelect.style.display === 'block') cuttingSelect.style.display = 'none';
-                if (outcomeSelect.style.display === 'block') outcomeSelect.style.display = 'none';
+                closePickers();
                 break;
         }
     });
@@ -1699,13 +1796,75 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add keyboard shortcut info to buttons
     finishPointButton.setAttribute('title', 'End Point (E)');
     subPlayerButton.setAttribute('title', 'Substitution (S)');
-    modeToggle.setAttribute('title', 'Toggle Mode (M)');
     undoButton.setAttribute('title', 'Undo (U)');
+
+    // "Open, not thrown to": one tap records it, − removes that player's last one.
+    function lookedOffIds(playerId) {
+        return gameState.cuttingSkills
+            .filter(c => String(c.player) === String(playerId) && c.cutting_type === 'unspecified')
+            .map(c => c.id);
+    }
+    function refreshLookedOff(playerId, flash) {
+        const chip = document.querySelector(`.looked-off-chip[data-player-id="${playerId}"]`);
+        if (!chip) return;
+        const n = lookedOffIds(playerId).length;
+        chip.querySelector('.looked-off-count').textContent = n;
+        chip.classList.toggle('has-count', n > 0);
+        chip.querySelector('.looked-off-remove').hidden = n === 0;
+        if (flash) {
+            chip.classList.add('flash');
+            setTimeout(() => chip.classList.remove('flash'), 250);
+        }
+    }
+    function postJSON(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(body)
+        }).then(r => r.json().then(data => {
+            if (!r.ok) throw new Error(data.error || `Server returned ${r.status}`);
+            return data;
+        }));
+    }
+    document.querySelectorAll('.looked-off-add').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const playerId = this.dataset.playerId;
+            postJSON(`/stats/record_cutting_skill/{{ point.id }}`, {
+                player_id: parseInt(playerId, 10), cutting_type: 'unspecified', outcome: 'open_looked_off'
+            }).then(data => {
+                updateCuttingSkillsState({
+                    id: data.cutting_skill_id, player_id: playerId, cutting_type: 'unspecified',
+                    outcome: 'open_looked_off', field_position_x: null, field_position_y: null
+                });
+                updateCuttingSkillsTable();
+                refreshLookedOff(playerId, true);
+            }).catch(err => notify(`Couldn't record that: ${err.message}`));
+        });
+    });
+    document.querySelectorAll('.looked-off-remove').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const playerId = this.dataset.playerId;
+            const ids = lookedOffIds(playerId);
+            if (!ids.length) return;
+            const id = ids[ids.length - 1];
+            postJSON(`/stats/undo_cutting_skill/{{ point.id }}`, { cutting_skill_id: id }).then(() => {
+                gameState.cuttingSkills = gameState.cuttingSkills.filter(c => c.id !== id);
+                updateCuttingSkillsTable();
+                refreshLookedOff(playerId, false);
+            }).catch(err => notify(`Couldn't undo that: ${err.message}`));
+        });
+    });
 
     // Reopening a point: show what's already been recorded.
     const existing = {{ existing | tojson }};
     existing.events.forEach(e => { addEventMarker(e); updateEventsState(e); });
     existing.cutting_skills.forEach(c => { addCuttingSkillMarker(c); updateCuttingSkillsState(c); });
+    window.refreshAllLookedOff = () =>
+        document.querySelectorAll('.looked-off-chip').forEach(chip => refreshLookedOff(chip.dataset.playerId, false));
+    window.refreshAllLookedOff();
     if (existing.events.length || existing.cutting_skills.length) {
         updateEventsTable();
         updateCuttingSkillsTable();

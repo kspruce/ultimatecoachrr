@@ -31,12 +31,18 @@ def _box_and_passing(stats):
     return box + passing
 
 
+def _analysed_points(stats):
+    """Points with full stats (falls back to points_played for stats
+    built without the split)."""
+    return stats.get('analysed_points', stats['points_played'])
+
+
 def calculate_unadjusted_per(stats):
     """Raw PER per point, without the plus-minus term or league scaling.
     Used to work out the team average that PER is scaled against."""
-    if stats['points_played'] == 0:
+    if _analysed_points(stats) == 0:
         return 0
-    return (1 / stats['points_played']) * _box_and_passing(stats)
+    return (1 / _analysed_points(stats)) * _box_and_passing(stats)
 
 def calculate_per(stats, team_avgs):
     """Player Efficiency Rating, scaled so the team average is 15.
@@ -44,11 +50,11 @@ def calculate_per(stats, team_avgs):
     PER = (box score + passing + plus-minus vs team average) per point,
     multiplied by 15 / team average unadjusted PER. team_avgs comes from
     app.stats.team.calculate_team_averages for the same set of games."""
-    if stats['points_played'] == 0:
+    if _analysed_points(stats) == 0:
         return 0
 
-    o_line_points = stats.get('o_line_points_played', 0)
-    d_line_points = stats.get('d_line_points_played', 0)
+    o_line_points = stats.get('analysed_o_line_points', stats.get('o_line_points_played', 0))
+    d_line_points = stats.get('analysed_d_line_points', stats.get('d_line_points_played', 0))
     total_points = o_line_points + d_line_points
     plus_minus = 0
     if total_points > 0:
@@ -58,7 +64,7 @@ def calculate_per(stats, team_avgs):
             stats.get('d_line_plus_minus_per_point', 0) - team_avgs.get('avg_d_line_plus_minus_per_point', 0))
         plus_minus = PER_WEIGHTS['plus_minus'] * (o_part + d_part)
 
-    raw = (1 / stats['points_played']) * (_box_and_passing(stats) + plus_minus)
+    raw = (1 / _analysed_points(stats)) * (_box_and_passing(stats) + plus_minus)
     avg_uper = team_avgs.get('avg_uper', 1)
     if avg_uper <= 0:
         avg_uper = 1
