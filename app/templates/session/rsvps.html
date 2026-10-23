@@ -1,113 +1,50 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>RSVPs for Session</h1>
-            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
-        </div>
-    </div>
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+{% endblock %}
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Attending ({{ attending|length }})</h5>
-                </div>
-                <div class="card-body">
-                    {% if attending %}
-                    <ul class="list-group">
-                        {% for rsvp in attending %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ rsvp.player.name }}</strong>
-                                    {% if rsvp.player.jersey_number %}
-                                    <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
-                                    {% endif %}
-                                </div>
-                                <span class="badge bg-success">Attending</span>
-                            </div>
-                            {% if rsvp.notes %}
-                            <small class="text-muted">{{ rsvp.notes }}</small>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-center">No players have confirmed attendance yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Maybe ({{ maybe|length }})</h5>
-                </div>
-                <div class="card-body">
-                    {% if maybe %}
-                    <ul class="list-group">
-                        {% for rsvp in maybe %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ rsvp.player.name }}</strong>
-                                    {% if rsvp.player.jersey_number %}
-                                    <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
-                                    {% endif %}
-                                </div>
-                                <span class="badge bg-warning text-dark">Maybe</span>
-                            </div>
-                            {% if rsvp.notes %}
-                            <small class="text-muted">{{ rsvp.notes }}</small>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-center">No players have responded with "maybe" yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0">Not Attending ({{ not_attending|length }})</h5>
-                </div>
-                <div class="card-body">
-                    {% if not_attending %}
-                    <ul class="list-group">
-                        {% for rsvp in not_attending %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ rsvp.player.name }}</strong>
-                                    {% if rsvp.player.jersey_number %}
-                                    <span class="badge bg-secondary">#{{ rsvp.player.jersey_number }}</span>
-                                    {% endif %}
-                                </div>
-                                <span class="badge bg-danger">Not Attending</span>
-                            </div>
-                            {% if rsvp.notes %}
-                            <small class="text-muted">{{ rsvp.notes }}</small>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p class="text-center">No players have declined yet.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+{% block content %}
+{% set columns = [('attending', 'Yes'), ('maybe', 'Maybe'), ('not_attending', 'No')] %}
+{% if show_unanswered %}{% set columns = columns + [('none', 'No answer')] %}{% endif %}
+<div class="container" style="max-width:1000px">
+  <div class="uc-page-header">
+    <div>
+      <div class="uc-eyebrow">Who's coming</div>
+      <h1>{{ session.title }}</h1>
+      <p>{{ session.formatted_date }}{% if session.start_time %} · {{ session.formatted_time }}{% endif %}{% if session.squads %} · {{ session.squad_names }}{% endif %}</p>
     </div>
+    <div class="tr-actions">
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('session.admin_rsvp', session_id=session.id) }}" class="btn btn-outline-primary">Answer for players</a>
+      {% endif %}
+      <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-outline-secondary">Back to session</a>
+    </div>
+  </div>
+
+  {% if session.is_cancelled %}
+  <div class="alert alert-danger">This session is cancelled{% if session.cancel_reason %}: {{ session.cancel_reason }}{% endif %}.</div>
+  {% endif %}
+
+  <div class="row">
+    {% for status, label in columns %}
+    <div class="col-md-{{ 3 if show_unanswered else 4 }}">
+      <div class="tr-card">
+        <h3><span class="pill pill-{{ status }}">{{ label }}</span> {{ groups[status]|length }}</h3>
+        {% if names %}
+        {% for player, answer in groups[status] %}
+        <div>
+          {{ player.name }}{% if answer and answer.usual %}<span class="tr-muted" title="Their usual answer for this schedule">*</span>{% endif %}
+          {% if answer and answer.notes %}<div class="tr-muted">{{ answer.notes }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="tr-muted">Nobody</div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if names %}<p class="tr-muted">* their usual answer for this schedule, not one given for this date.</p>{% endif %}
 </div>
 {% endblock %}

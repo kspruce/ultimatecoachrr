@@ -1,0 +1,20 @@
+{# Yes / Maybe / No buttons. A plain form (works without JavaScript);
+   static/js/availability.js saves it in place. #}
+{% macro answer_buttons(session, answer, player=None, label=None) %}
+<form method="post" class="ans-form d-inline-flex align-items-center gap-2"
+      action="{{ url_for('training.answer', session_id=session.id, player_id=player.id if player else None) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="ans{% if answer and answer.usual %} is-usual{% endif %}" role="group" aria-label="{{ label or 'Are you coming?' }}">
+    {% for value, text in [('attending', 'Yes'), ('maybe', 'Maybe'), ('not_attending', 'No')] %}
+    <button type="submit" name="status" value="{{ value }}"
+            class="{% if answer and answer.status == value %}on-{{ value }}{% endif %}"
+            aria-pressed="{{ 'true' if answer and answer.status == value else 'false' }}">{{ text }}</button>
+    {% endfor %}
+  </div>
+  <span class="av-saved" aria-live="polite">{% if answer and answer.usual %}usual{% endif %}</span>
+</form>
+{% endmacro %}
+
+{% macro squad_pills(item) %}
+{% for squad in item.squads %}<span class="pill pill-squad">{{ squad.name }}</span> {% endfor %}
+{% endmacro %}

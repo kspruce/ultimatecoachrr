@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Import availability{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:820px">
+  <div class="uc-page-header">
+    <div>
+      <div class="uc-eyebrow">Availability</div>
+      <h1>Bring in your spreadsheet</h1>
+      <p>Move the team's availability sheet across in one go.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('training.grid') }}">Back to the grid</a>
+  </div>
+
+  {% if report %}
+  <div class="tr-card">
+    <h2>Imported</h2>
+    <p><b>{{ report.saved }}</b> answers saved.</p>
+    {% if report.unknown_players %}<p>Players not found on the team (check the spelling matches the roster): {{ report.unknown_players|join(', ') }}</p>{% endif %}
+    {% if report.unmatched_columns %}<p>Columns with no matching session (no session that day, or more than one and the name didn't match): {{ report.unmatched_columns|join(', ') }}</p>{% endif %}
+    {% if report.bad_cells %}<p>{{ report.bad_cells }} cells weren't Yes, Maybe or No and were skipped.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="tr-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <p>Save the sheet as CSV (File → Download → CSV in Google Sheets or Excel). Lay it out like this:</p>
+    <pre class="p-2 rounded" style="background:var(--sunken)">Player,2026-11-07,2026-11-11,2026-11-14 Saturday training
+Alex Smith,Yes,No,Maybe
+Sam Jones,Y,,N</pre>
+    <ul class="tr-muted">
+      <li>First column: player names, as on the roster.</li>
+      <li>One column per session, headed by its date (2026-11-07 or 07/11/2026). If two sessions share a day, add the session's name after the date.</li>
+      <li>Cells: Yes / Maybe / No (or Y / ? / N). Empty cells are left alone. The grid's own CSV export imports back as it is.</li>
+      <li>Sessions have to exist first – <a href="{{ url_for('training.schedules_page') }}">set up your training schedule</a>.</li>
+    </ul>
+    <div class="mb-3">
+      <label class="form-label" for="file">CSV file</label>
+      <input class="form-control" type="file" id="file" name="file" accept=".csv,text/csv">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="text">…or paste it</label>
+      <textarea class="form-control" id="text" name="text" rows="6"></textarea>
+    </div>
+    <button class="btn btn-primary">Import</button>
+  </form>
+</div>
+{% endblock %}

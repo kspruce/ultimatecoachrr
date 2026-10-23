@@ -50,6 +50,16 @@ class Config:
     # Application URL
     BASE_URL = os.environ.get('BASE_URL', 'https://ultimatecoach.applikuapp.com')
 
+    # The site's Discord application (one for every team; see app/discord/api.py)
+    DISCORD_CLIENT_ID = os.environ.get('DISCORD_CLIENT_ID')
+    DISCORD_CLIENT_SECRET = os.environ.get('DISCORD_CLIENT_SECRET')
+    DISCORD_BOT_TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
+    DISCORD_PUBLIC_KEY = os.environ.get('DISCORD_PUBLIC_KEY')
+
+    # Reminders, training dates and weekly posts run in the web process
+    # (app/scheduler.py); set to 0 to run `flask training-jobs` from cron instead
+    SCHEDULER_ENABLED = os.environ.get('SCHEDULER_ENABLED', '1') != '0'
+
     # Team sign-up is invite-link only unless a superadmin opens it to
     # everyone (Manage Teams -> Team sign-ups); that switch lives in the DB.
 
