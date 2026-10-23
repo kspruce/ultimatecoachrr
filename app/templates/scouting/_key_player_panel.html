@@ -1,0 +1,71 @@
+{# "Their #10 is a cutter who wants it open under; our #12 marks them", in one panel.
+   Needs `panel` (from routes.scouting.key_player_panel) and `back` ('detail' or 'matchups'). #}
+<div class="offcanvas offcanvas-bottom scouting-page kp-panel" tabindex="-1" id="keyPlayer" aria-labelledby="keyPlayerLabel">
+  <div class="offcanvas-header pb-1">
+    <h5 class="offcanvas-title" id="keyPlayerLabel">Key player · {{ panel.report.team_name }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body pt-1">
+    <form method="post" action="{{ url_for('scouting.add_key_player', report_id=panel.report.id) }}" id="keyPlayerForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="back" value="{{ back }}">
+
+      <div class="d-flex gap-2 mb-2">
+        <div style="width:5.5rem">
+          <label class="form-label small mb-1" for="kp-number">Their #</label>
+          <input class="form-control" id="kp-number" name="jersey_number" inputmode="numeric" maxlength="10" placeholder="10" autocomplete="off">
+        </div>
+        <div class="flex-grow-1">
+          <label class="form-label small mb-1" for="kp-name">Name <span class="text-muted fw-normal">(if you know it)</span></label>
+          <input class="form-control" id="kp-name" name="name" maxlength="100" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="section-kicker mb-1">They play</div>
+      <div class="scroll-strip mb-2" role="radiogroup" aria-label="Position">
+        {% for pos in panel.positions %}
+        <input type="radio" class="btn-check" name="position" id="kp-pos-{{ pos }}" value="{{ pos }}" autocomplete="off">
+        <label class="btn btn-sm btn-outline-secondary note-chip" for="kp-pos-{{ pos }}">{{ pos|capitalize }}</label>
+        {% endfor %}
+        <span class="kp-divider" aria-hidden="true"></span>
+        <input type="radio" class="btn-check" name="gender" id="kp-g-f" value="female" autocomplete="off">
+        <label class="btn btn-sm btn-outline-secondary note-chip" for="kp-g-f">Woman</label>
+        <input type="radio" class="btn-check" name="gender" id="kp-g-m" value="male" autocomplete="off">
+        <label class="btn btn-sm btn-outline-secondary note-chip" for="kp-g-m">Man</label>
+      </div>
+
+      <div class="section-kicker mb-1">Why they're dangerous</div>
+      <div class="d-flex flex-wrap gap-1 mb-2">
+        {% for key, label in panel.threat_roles %}
+        <input type="checkbox" class="btn-check" name="threat_roles" id="kp-t-{{ key }}" value="{{ key }}" autocomplete="off">
+        <label class="btn btn-sm btn-outline-secondary note-chip rounded-pill" for="kp-t-{{ key }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+      <textarea class="form-control mb-3" name="notes" rows="1" data-autogrow maxlength="1000" aria-label="In your words"
+                placeholder="In your words, e.g. wants it open under, breaks the mark inside"></textarea>
+
+      <div class="section-kicker mb-1">Marked by <span class="text-muted fw-normal text-lowercase" data-kp-hint></span></div>
+      <div class="kp-markers mb-3" role="radiogroup" aria-label="Who of ours marks them">
+        <input type="radio" class="btn-check" name="matched_player_id" id="kp-m-0" value="0" checked autocomplete="off">
+        <label class="kp-marker" for="kp-m-0"><span class="kp-who">Nobody yet</span></label>
+        {% for d in panel.defenders %}
+        <input type="radio" class="btn-check" name="matched_player_id" id="kp-m-{{ d.id }}" value="{{ d.id }}" autocomplete="off" data-defender="{{ d.id }}">
+        <label class="kp-marker" for="kp-m-{{ d.id }}" data-defender="{{ d.id }}">
+          <span class="kp-who">{{ defender_label(d, with_roles=false) }}</span>
+          {% if d.defensive_roles %}<span class="kp-roles">{{ d.defensive_roles|role_labels }}</span>{% endif %}
+          <span class="kp-fit" hidden></span>
+        </label>
+        {% endfor %}
+      </div>
+      {% if not panel.defenders|selectattr('defensive_roles')|list %}
+      <p class="small text-muted">Tag your players' strengths on <a href="{{ url_for('scouting.defenders', report=panel.report.id) }}">Our defenders</a> and the best markers will rise to the top here.</p>
+      {% endif %}
+
+      <div class="d-flex gap-2 sticky-save">
+        <button type="submit" class="btn btn-primary flex-fill">Save key player</button>
+        <button type="submit" name="add_another" value="1" class="btn btn-outline-primary">Save &amp; add another</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script type="application/json" id="kp-data">{{ panel.data|tojson }}</script>

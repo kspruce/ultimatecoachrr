@@ -32,6 +32,12 @@ details.card-fold > summary { min-height:auto }
 .gc-num { font-weight:800; min-width:2.2rem }
 .gc-note { color:var(--uc-gray-600); font-size:.8rem }
 .gc-arrow { color:var(--uc-gray-400) }
+.gc-mu { padding:.35rem 0; border-bottom:1px dashed var(--uc-gray-200) }
+.gc-mu:last-of-type { border-bottom:none }
+.gc-mu-them { display:flex; flex-wrap:wrap; align-items:baseline; gap:.4rem; font-size:.95rem }
+.gc-mu-note { font-size:.9rem; color:var(--uc-gray-800) }
+.gc-mu-ours { font-size:.9rem; color:var(--uc-green) }
+.gc-mu-ours .gc-note { color:var(--uc-gray-600) }
 .gc-ours { font-weight:700; color:var(--uc-green) }
 @media (max-width: 575.98px) {
   .gc-player .gc-detail { flex-basis:100%; margin-left:2.7rem !important; text-align:left !important }
@@ -39,7 +45,7 @@ details.card-fold > summary { min-height:auto }
   .game-card { padding:1rem; border-radius:12px }
   .gc-head h2 { font-size:1.6rem }
   .gc-plan { font-size:1.2rem }
-  .gc-list, .gc-player, .gc-lines { font-size:1.05rem }
+  .gc-list, .gc-player, .gc-lines, .gc-mu-them, .gc-mu-note, .gc-mu-ours { font-size:1.05rem }
   .gc-note { font-size:.9rem }
   .gc-section > summary { font-size:.78rem; min-height:40px }
 }
@@ -94,18 +100,19 @@ details.card-fold > summary { min-height:auto }
     <details class="gc-section card-fold" data-fold-key="matchups" open>
       <summary>Matchups</summary>
       {% for p in matchups %}
-      <div class="gc-player gc-mu">
-        <span class="gc-num">{{ '#' ~ p.jersey_number if p.jersey_number else '' }}</span>
-        <span><strong>{{ p.name }}</strong></span>
-        <span class="gc-arrow" aria-label="marked by">&larr;</span>
-        <span class="gc-ours">{{ p.matched_player.name }}</span>
-        {% if reasons.get(p.id) %}
-        <span class="gc-note gc-detail ms-auto text-end">{{ reasons[p.id]|map('last')|join(', ') }}</span>
-        {% endif %}
+      <div class="gc-mu">
+        <div class="gc-mu-them">
+          <strong>{{ p.label }}</strong>
+          {% if p.threat_role_list %}<span class="gc-note">{{ p.threat_roles|role_labels|lower }}</span>
+          {% elif p.position %}<span class="gc-note">{{ p.position }}</span>{% endif %}
+        </div>
+        {% if p.notes %}<div class="gc-mu-note">{{ p.notes.strip().split('\n')[0] }}</div>{% endif %}
+        <div class="gc-mu-ours">&rarr; <strong>{{ p.matched_player.jersey_number is not none and ('#' ~ p.matched_player.jersey_number ~ ' ') or '' }}{{ p.matched_player.name }}</strong>
+          {% if reasons.get(p.id) %}<span class="gc-note">({% for theirs, ours in reasons[p.id] %}{{ ours|lower }} vs {{ theirs|lower }}{{ ', ' if not loop.last }}{% endfor %})</span>{% endif %}</div>
       </div>
       {% endfor %}
       {% if uncovered %}
-      <div class="gc-note mt-1"><strong>No marker yet:</strong> {{ uncovered|map(attribute='name')|join(', ') }}</div>
+      <div class="gc-note mt-1"><strong>No marker yet:</strong> {{ uncovered|map(attribute='label')|join(', ') }}</div>
       {% endif %}
     </details>
     {% endif %}

@@ -78,3 +78,21 @@ details.form-fold > summary { font-size:.78rem; font-weight:700; text-transform:
   .star-input label { font-size:2.1rem; padding:.15rem }
   .star-input label.star-clear { font-size:.8rem; padding:.75rem .25rem }
 }
+
+/* Key player panel */
+.offcanvas.kp-panel { --bs-offcanvas-height:auto; height:auto; max-height:92vh; border-radius:16px 16px 0 0 }
+.kp-panel .kp-divider { width:1px; background:var(--uc-gray-200); margin:0 .25rem; flex-shrink:0 }
+.kp-markers { display:flex; flex-direction:column; gap:.35rem; max-height:38vh; overflow-y:auto }
+.kp-marker { flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:.15rem .5rem; padding:.55rem .75rem; min-height:44px;
+  border:1px solid var(--uc-card-border); border-radius:10px; cursor:pointer; background:var(--uc-card-bg); margin:0 }
+.kp-marker .kp-who { font-weight:700; font-size:.9rem }
+.kp-marker .kp-roles { font-size:.72rem; color:var(--uc-gray-400) }
+.kp-marker .kp-fit { flex-basis:100%; font-size:.72rem; color:var(--uc-green); font-weight:600 }
+.kp-marker.good { border-color:var(--ok) }
+.kp-marker.off { opacity:.45; cursor:not-allowed }
+.btn-check:checked + .kp-marker { border-color:var(--club-ink); box-shadow:0 0 0 2px var(--club-ink) inset;
+  background:color-mix(in srgb, var(--club-ink) 6%, var(--uc-card-bg)) }
+.btn-check:focus-visible + .kp-marker { outline:2px solid var(--uc-blue) }
+@media (min-width: 768px) {
+  .offcanvas.kp-panel { max-width:640px; margin:0 auto; left:0; right:0 }
+}

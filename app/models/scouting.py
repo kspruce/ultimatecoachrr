@@ -45,6 +45,7 @@ THREAT_ROLES = [
     ('deep_threat', 'Deep threat'),
     ('give_go', 'Give-and-go'),
     ('fast_cutter', 'Fast cutter'),
+    ('under_cutter', 'Under cutter'),
     ('big_target', 'Big target / aerial'),
     ('break_thrower', 'Break thrower'),
 ]
@@ -55,6 +56,7 @@ COUNTERS = {
     'deep_threat': ['deep_d', 'aerial_d', 'fast_d'],
     'give_go': ['handler_d', 'fast_d'],
     'fast_cutter': ['fast_d', 'deep_d'],
+    'under_cutter': ['fast_d', 'handler_d'],
     'big_target': ['aerial_d', 'deep_d'],
     'break_thrower': ['hassler', 'handler_d'],
 }
@@ -236,6 +238,13 @@ class OpponentPlayer(db.Model):
         return 'low'
 
     @property
+    def label(self):
+        """'#10 Jamie', or just '#10' when that's all we know."""
+        if self.jersey_number and self.name not in (f'#{self.jersey_number}', self.jersey_number):
+            return f'#{self.jersey_number} {self.name}'
+        return self.name if not self.jersey_number else f'#{self.jersey_number}'
+
+    @property
     def threat_role_list(self):
         return _tag_list(self.threat_roles)
 
@@ -336,9 +345,36 @@ def defender_gender(player):
     return _gender(player.gender_match or player.gender)
 
 
+def threats_of(opponent):
+    """Their threat types, or what their position suggests when none are set."""
+    return opponent.threat_role_list or POSITION_THREATS.get(opponent.position, [])
+
+
+def fit_score(threats, defender_roles):
+    """How well a defender's strengths answer these threats (first-listed answer counts double)."""
+    ours = set(defender_roles)
+    return sum(2 if COUNTERS[t][0] in ours else 1 if ours & set(COUNTERS[t][1:]) else 0
+               for t in threats if t in COUNTERS)
+
+
+def defender_label(player, with_roles=True):
+    """'#12 Sam · Fast defender, Deep defender'."""
+    label = f'#{player.jersey_number} {player.name}' if player.jersey_number is not None else player.name
+    roles = [ROLE_LABELS.get(r, r) for r in _tag_list(player.defensive_roles)]
+    return f'{label} · {", ".join(roles)}' if with_roles and roles else label
+
+
+def rank_defenders(opponent, defenders):
+    """(good fits best first, everyone else): who of ours suits marking them."""
+    threats = threats_of(opponent)
+    scored = [(fit_score(threats, _tag_list(d.defensive_roles)), d) for d in defenders if can_mark(opponent, d)]
+    good = [d for score, d in sorted(scored, key=lambda x: -x[0]) if score > 0]
+    return good, [d for d in defenders if d not in good]
+
+
 def matchup_reasons(opponent, defender):
     """[(their threat label, our strength label)] that make this a good pairing."""
-    threats = opponent.threat_role_list or POSITION_THREATS.get(opponent.position, [])
+    threats = threats_of(opponent)
     ours = set(_tag_list(defender.defensive_roles))
     reasons = []
     for threat in threats:
@@ -367,14 +403,13 @@ def suggest_matchups(opponents, defenders):
     suggestions = {}
     for opponent in sorted((o for o in opponents if o.on_matchup_board and not o.matched_player_id),
                            key=lambda o: o.sort_key):
-        threats = opponent.threat_role_list or POSITION_THREATS.get(opponent.position, [])
+        threats = threats_of(opponent)
         best, best_score = None, 0
         for defender in free:
             if not can_mark(opponent, defender):
                 continue
             ours = set(_tag_list(defender.defensive_roles))
-            score = sum(2 if COUNTERS[t][0] in ours else 1 if ours & set(COUNTERS[t][1:]) else 0
-                        for t in threats if t in COUNTERS)
+            score = fit_score(threats, ours)
             # Between equals, keep the more versatile defenders for later threats
             if score > best_score or (score == best_score and score and best
                                       and len(ours) < len(_tag_list(best.defensive_roles))):
