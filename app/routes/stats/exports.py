@@ -8,6 +8,7 @@ from app.models.game import Game
 from app.models.point import Point, LineUp
 from datetime import datetime
 from app.utils.team_filter import get_current_team_id
+from app.utils.season import scope_games, season_players, viewing_season
 
 from app.routes.stats import bp
 from app.stats.formulas import calculate_per
@@ -165,19 +166,18 @@ def export_game_csv(game_id):
 @bp.route('/team/export.csv')
 @login_required
 def export_team_season_csv():
-    """Download season player stats (all games) as CSV (admin/coach only)."""
+    """Download player stats for the season being viewed (or all time) as
+    CSV (admin/coach only)."""
     if not current_user.is_coach:
         flash('Only admins and coaches can export team stats.', 'danger')
         return redirect(url_for('stats_dashboard.team_stats'))
 
-    games = Game.query.filter_by(
+    season = viewing_season()
+    games = scope_games(Game.query.filter_by(
         team_organization_id=get_current_team_id()
-    ).order_by(Game.date).all()
+    )).order_by(Game.date).all()
 
-    players = Player.query.filter_by(
-        team_organization_id=get_current_team_id(),
-        active=True
-    ).all()
+    players = season_players()
 
     team_avgs = get_cached_team_averages(games)
     player_stats_dict = get_players_base_stats(players, games)
@@ -205,4 +205,4 @@ def export_team_season_csv():
         s['per'] = calculate_per(s, team_avgs)
         rows.append({**_player_columns(player), **_stat_columns(s)})
 
-    return _csv_response(rows, headers, 'team_season_stats')
+    return _csv_response(rows, headers, f'team_season_stats_{season.year}' if season else 'team_stats_all_time')

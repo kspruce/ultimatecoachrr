@@ -179,9 +179,15 @@
 <div class="container">
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>Team Roster</h1>
+            <h1>Team Roster{% if roster_season %} <small class="text-muted">{{ roster_season.name }}{% if viewing_squad %} · {{ viewing_squad.name }}{% endif %}</small>{% endif %}</h1>
+            {% if not roster_season %}<p class="text-muted mb-0">Everyone who has played for the club. Pick a season from the season menu to see that year's roster.</p>{% endif %}
         </div>
         <div class="col-md-4 text-end d-flex gap-2 justify-content-end flex-wrap">
+            {% if current_user.is_coach and roster_season %}
+                <a href="{{ url_for('seasons.roster', season_id=roster_season.id) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar3 me-1"></i> Edit {{ roster_season.name }} roster
+                </a>
+            {% endif %}
             {% if current_user.is_coach %}
                 <a href="{{ url_for('team.bulk_import') }}" class="btn btn-outline-primary">
                     <i class="bi bi-upload me-1"></i> Import Players
@@ -217,13 +223,6 @@
                                 {{ form.gender_match(class="form-select") }}
                             </div>
                             <div class="col-md-2">
-                                {{ form.team.label(class="form-label") }}
-                                {{ form.team(class="form-select") }}
-                                {% for error in form.team.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-2">
                                 <div class="form-check mt-4">
                                     {{ form.active_only(class="form-check-input") }}
                                     {{ form.active_only.label(class="form-check-label") }}
@@ -255,17 +254,19 @@
                                     <th>Position</th>
                                     <th>Line</th>
                                     <th>Gender</th>
-                                    <th>Team</th>
+                                    <th>Squad</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for player in players %}
+                                {% set entry = entries.get(player.id) %}
+                                {% set shirt = entry.jersey_number if entry and entry.jersey_number is not none else player.jersey_number %}
                                 <tr>
                                     <td>
-                                        {% if player.jersey_number %}
-                                            <span class="jersey-number">{{ player.jersey_number }}</span>
+                                        {% if shirt is not none and shirt != '' %}
+                                            <span class="jersey-number">{{ shirt }}</span>
                                         {% else %}
                                             -
                                         {% endif %}
@@ -276,9 +277,10 @@
                                         </a>
                                     </td>
                                     <td>
-                                        {% if player.position %}
-                                            <span class="position-badge position-{{ player.position }}">
-                                                {{ player.position|capitalize }}
+                                        {% set pos = (entry.position if entry and entry.position else player.position) %}
+                                        {% if pos %}
+                                            <span class="position-badge position-{{ pos }}">
+                                                {{ pos|capitalize }}
                                             </span>
                                         {% else %}
                                             -
@@ -301,16 +303,16 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if player.team %}
-                                            <span class="team-badge team-{{ player.team[-1]|lower }}">
-                                                {{ player.team }}
-                                            </span>
+                                        {% if entry and entry.squad %}
+                                            <span class="badge bg-light text-dark">{{ entry.squad.name }}</span>
                                         {% else %}
                                             -
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if player.active %}
+                                        {% if entry %}
+                                        <span class="badge {{ {'active': 'bg-success', 'injured': 'bg-warning text-dark'}.get(entry.status, 'bg-secondary') }}">{{ entry.status|capitalize }}</span>
+                                        {% elif player.active %}
                                         <span class="badge bg-success">Active</span>
                                         {% else %}
                                         <span class="badge bg-secondary">Inactive</span>

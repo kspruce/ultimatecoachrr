@@ -126,6 +126,36 @@
                 </div>
             </div>
             
+            {% if season_rows %}
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <h5 class="mb-0">Seasons</h5>
+                    <span class="ms-auto small text-muted">Career: {{ season_rows|sum(attribute='games') }} games · {{ season_rows|sum(attribute='points') }} points</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead><tr><th>Season</th>{% if squads %}<th>Squad</th>{% endif %}<th>Shirt</th><th>Status</th><th class="text-end">Games</th><th class="text-end">Points</th><th></th></tr></thead>
+                            <tbody>
+                                {% for row in season_rows %}
+                                {% set e = row.entry %}
+                                <tr>
+                                    <td>{{ row.season.name }}{% if row.season.is_current %} <span class="badge bg-success">Current</span>{% endif %}</td>
+                                    {% if squads %}<td>{{ e.squad.name if e and e.squad else '—' }}</td>{% endif %}
+                                    <td>{{ e.jersey_number if e and e.jersey_number is not none else '—' }}</td>
+                                    <td>{{ e.status|capitalize if e else 'Not on roster' }}</td>
+                                    <td class="text-end">{{ row.games }}</td>
+                                    <td class="text-end">{{ row.points }}</td>
+                                    <td class="text-end"><a class="small" href="{{ url_for('stats_dashboard.player_stats', player_id=player.id, season=row.season.year) }}">Stats</a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             {% if current_user.is_coach or current_user.id == player.user_id %}
             <div class="card mb-4">
                 <div class="card-header">

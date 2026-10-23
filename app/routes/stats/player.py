@@ -5,6 +5,7 @@ from app.models.game import Game
 from app.models.tournament import Tournament
 from app.models.cutting_skill import CuttingSkill
 from app.utils.team_filter import get_current_team_id
+from app.utils.season import scope_games, scope_tournaments
 
 from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
@@ -50,10 +51,11 @@ def player_stats(player_id):
             team_organization_id=get_current_team_id()
         ).all() if tournament else []
     else:
-        games = Game.query.filter_by(
+        # The season (and squad) being viewed
+        games = scope_games(Game.query.filter_by(
             team_organization_id=get_current_team_id()
-        ).all()
-    
+        )).all()
+
     # Use the new batch function for a single player to ensure consistency
     player_stats_dict = get_players_base_stats([player], games)
     stats = player_stats_dict[player.id]
@@ -159,9 +161,9 @@ def player_stats(player_id):
                     'turnovers_forced_per_point', 'break_throw_percentage', 'break_percentage']:
             team_summary[key] = team_metrics.get(key, 0)
 
-    tournaments = Tournament.query.filter_by(
+    tournaments = scope_tournaments(Tournament.query.filter_by(
         team_organization_id=get_current_team_id()
-    ).order_by(Tournament.start_date.desc()).all()
+    )).order_by(Tournament.start_date.desc()).all()
 
     # Add this right after calculating d_line_conversion_rate
     current_app.logger.debug(f"DEBUG: Player {player.name}")

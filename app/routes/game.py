@@ -18,6 +18,8 @@ from app.models.tournament_rsvp import TournamentRSVP
 from app.models.scouting import scouting_for_game
 from app.utils.team_filter import get_current_team_id, team_player_ids
 from app.utils.point_flow import analysis_progress
+from app.models.season import SeasonRoster
+from app.utils.season import scope_games, scope_tournaments, team_squads, viewing_squad
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -39,11 +41,13 @@ def index():
     form.opponent.data = opponent
     form.result.data = result
     
-    # Build query based on filters
+    # Build query based on filters: a tournament, else the season (and squad) being viewed
     query = Game.query.filter_by(team_organization_id=get_current_team_id())
     
     if tournament_id and tournament_id > 0:
         query = query.filter(Game.tournament_id == tournament_id)
+    else:
+        query = scope_games(query)
     if opponent:
         query = query.filter(Game.opponent.ilike(f'%{opponent}%'))
     if result == 'win':
@@ -57,7 +61,7 @@ def index():
     games = query.order_by(Game.date.desc()).all()
     
     # Get tournaments for quick filters
-    tournaments = Tournament.query.filter_by(team_organization_id=get_current_team_id()).order_by(Tournament.start_date.desc()).all()
+    tournaments = scope_tournaments(Tournament.query.filter_by(team_organization_id=get_current_team_id())).order_by(Tournament.start_date.desc()).all()
     
     return render_template('game/index.html', 
                          games=games, 
@@ -143,12 +147,25 @@ def detail(game_id):
                          has_positional_stats=has_positional_stats,
                          progress=analysis_progress(game))
 
+def _picked_squad_id(form):
+    """The squad picked on the form, else the tournament's."""
+    picked = next((s.id for s in team_squads(get_current_team_id()) if str(s.id) == (form.squad_id.data or '')), None)
+    if picked is None and form.tournament_id.data and form.tournament_id.data > 0:
+        tournament = Tournament.query.filter_by(id=form.tournament_id.data,
+                                                team_organization_id=get_current_team_id()).first()
+        picked = tournament.squad_id if tournament else None
+    return picked
+
+
 @bp.route('/add', methods=['GET', 'POST'])
 @login_required
 @stat_taker_required
 def add():
     form = GameForm(team_id=get_current_team_id())
-    
+    if request.method == 'GET':
+        squad = viewing_squad()
+        form.squad_id.data = str(squad.id) if squad else ''
+
     if form.validate_on_submit():
         
         game = Game(
@@ -163,7 +180,8 @@ def add():
         
         if form.tournament_id.data > 0:
             game.tournament_id = form.tournament_id.data
-        
+        game.squad_id = _picked_squad_id(form)
+
         db.session.add(game)
         db.session.flush()
 
@@ -183,12 +201,17 @@ def add():
 
         if not auto_player_ids:
             # No tournament attendance data — fall back to the full active roster
+            # (just the game's squad, if it has one)
             auto_player_ids = [
                 p.id for p in Player.query.filter_by(
                     active=True,
                     team_organization_id=team_id
                 ).all()
             ]
+            if game.squad_id and game.season_id:
+                in_squad = {r.player_id for r in SeasonRoster.query.filter_by(
+                    season_id=game.season_id, squad_id=game.squad_id)}
+                auto_player_ids = [pid for pid in auto_player_ids if pid in in_squad]
 
         for player_id in auto_player_ids:
             db.session.add(GamePlayer(
@@ -247,6 +270,8 @@ def edit(game_id):
     ).first_or_404()
     
     form = GameForm(obj=game, team_id=get_current_team_id())
+    if request.method == 'GET':
+        form.squad_id.data = str(game.squad_id or '')
 
     if form.validate_on_submit():
         game.opponent = form.opponent.data
@@ -260,7 +285,8 @@ def edit(game_id):
             game.tournament_id = form.tournament_id.data
         else:
             game.tournament_id = None
-        
+        game.squad_id = _picked_squad_id(form)
+
         db.session.commit()
         flash(f'Game against {game.opponent} has been updated!', 'success')
         return redirect(url_for('game.detail', game_id=game.id))

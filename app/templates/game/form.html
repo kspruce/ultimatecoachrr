@@ -37,6 +37,15 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        {% if form.squad_id.choices|length > 1 %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.squad_id.label(class="form-label") }}
+                                {{ form.squad_id(class="form-select") }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="form-text mb-3">The game goes into the season its date is in{% if current_season %} (the {{ current_season.name }} season if it has no date){% endif %}.</div>
                         
                         <div class="mb-3">
                             {{ form.opponent.label(class="form-label") }}

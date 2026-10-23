@@ -230,6 +230,45 @@
 
       {% if current_user.is_authenticated %}
 
+      {# Season (and squad) switcher: pages show this season unless told otherwise #}
+      {% if seasons %}
+      <div class="nav-item dropdown">
+        <a class="uc-team-badge uc-season-badge dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button"
+           title="Which season (and squad) pages show">
+          <i class="bi bi-calendar3" style="font-size:.7rem"></i>
+          {{ viewing_season.name if viewing_season else 'All time' }}{% if viewing_squad %} · {{ viewing_squad.name }}{% endif %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end uc-nav-links" style="min-width:200px">
+          <li><span class="dropdown-header">Season</span></li>
+          {% for s in seasons %}
+          <li><a class="dropdown-item d-flex align-items-center" href="{{ season_switch_url(season=s.year) }}">
+            {{ s.name }}{% if s.is_current %}<span class="badge bg-success ms-2">Current</span>{% endif %}
+            {% if viewing_season and viewing_season.id == s.id %}<span class="uc-team-tick ms-auto"><i class="bi bi-check"></i></span>{% endif %}
+          </a></li>
+          {% endfor %}
+          <li><a class="dropdown-item d-flex align-items-center" href="{{ season_switch_url(season='all') }}">
+            All time{% if not viewing_season %}<span class="uc-team-tick ms-auto"><i class="bi bi-check"></i></span>{% endif %}
+          </a></li>
+          {% if squads %}
+          <li><hr class="dropdown-divider"></li>
+          <li><span class="dropdown-header">Squad</span></li>
+          <li><a class="dropdown-item d-flex align-items-center" href="{{ season_switch_url(squad='all') }}">
+            Whole club{% if not viewing_squad %}<span class="uc-team-tick ms-auto"><i class="bi bi-check"></i></span>{% endif %}
+          </a></li>
+          {% for sq in squads %}
+          <li><a class="dropdown-item d-flex align-items-center" href="{{ season_switch_url(squad=sq.id) }}">
+            {{ sq.name }}{% if viewing_squad and viewing_squad.id == sq.id %}<span class="uc-team-tick ms-auto"><i class="bi bi-check"></i></span>{% endif %}
+          </a></li>
+          {% endfor %}
+          {% endif %}
+          {% if current_user.is_coach %}
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('seasons.index') }}"><i class="bi bi-gear"></i> Seasons &amp; squads</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+
       {# Admin: active team badge (desktop) #}
       {% if current_user.is_admin and current_team %}
       <a href="{{ url_for('team_organization.index') }}" class="uc-team-badge d-none d-xxl-flex">
@@ -360,6 +399,14 @@
     <strong>Guest / Demo Mode</strong> — You are viewing a read-only demonstration account.
     Browsing all sections is allowed, but no changes can be saved.
   </span>
+</div>
+{% endif %}
+
+{% if current_user.is_authenticated and seasons and current_season and (not viewing_season or not viewing_season.is_current) %}
+<div class="alert uc-alert-amber d-flex align-items-center gap-2 mb-3 py-2" style="border-radius:10px">
+  <i class="bi bi-clock-history" style="flex-shrink:0"></i>
+  <span>You're looking at <strong>{{ viewing_season.name if viewing_season else 'all seasons' }}</strong>.</span>
+  <a class="ms-auto fw-semibold" href="{{ season_switch_url(season=current_season.year) }}">Back to {{ current_season.name }}</a>
 </div>
 {% endif %}
 

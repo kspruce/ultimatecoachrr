@@ -1,10 +1,10 @@
 from flask import render_template, request
 from flask_login import login_required
 from app import db
-from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
 from app.utils.team_filter import get_current_team_id
+from app.utils.season import scope_games, scope_tournaments, season_players, team_seasons, viewing_season, viewing_squad
 
 from app.routes.stats import bp
 from app.stats.formulas import calculate_per
@@ -22,21 +22,17 @@ def team_stats():
     """
     Team-level statistics and analysis
     """
-    # Get filter parameters
-    season = request.args.get('season', '')
+    # Get filter parameters: a tournament, else the season (and squad) being viewed
     tournament_id = request.args.get('tournament_id', type=int)
-    
+    season, squad = viewing_season(), viewing_squad()
+
     # Get filtered games
     games_query = Game.query.filter_by(team_organization_id=get_current_team_id())
     if tournament_id:
         games_query = games_query.filter_by(tournament_id=tournament_id)
-    elif season:
-        tournament_ids = [t.id for t in Tournament.query.filter_by(
-            season=season,
-            team_organization_id=get_current_team_id()
-        ).all()]
-        games_query = games_query.filter(Game.tournament_id.in_(tournament_ids))
-    
+    else:
+        games_query = scope_games(games_query)
+
     # Use eager loading for related data
     # Use eager loading for tournament only
     games_query = games_query.options(
@@ -61,7 +57,7 @@ def team_stats():
     
     # Calculate previous period stats for comparison
     # (e.g., previous season or previous tournament)
-    prev_games = get_previous_period_games(season, tournament_id)
+    prev_games = get_previous_period_games(season, tournament_id, squad)
     prev_summary = calculate_team_summary(prev_games)
     prev_metrics = calculate_additional_team_metrics(prev_games)
     
@@ -80,11 +76,7 @@ def team_stats():
         team_summary[f'prev_{key}'] = value
     
     # Calculate player statistics scoped to the current team organisation
-    players_query = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    )
-    players = players_query.all()
+    players = season_players()
     
     # Get cached team averages
     team_avgs = get_cached_team_averages(games)
@@ -163,23 +155,18 @@ def team_stats():
     ball_security['trends'] = turnovers.game_trends(throwing, None, game_ids)
 
     # Get filter options
-    tournaments = Tournament.query.filter_by(
+    tournaments = scope_tournaments(Tournament.query.filter_by(
         team_organization_id=get_current_team_id()
-    ).order_by(Tournament.start_date.desc()).all()
-    
-    seasons = db.session.query(Tournament.season).filter_by(
-        team_organization_id=get_current_team_id()
-    ).distinct().all()
-    seasons = [s[0] for s in seasons if s[0]]
-    
+    )).order_by(Tournament.start_date.desc()).all()
+
     return render_template(
         'stats/team_stats.html',
         player_stats=player_stats_dict,
         team_summary=team_summary,
         tournaments=tournaments,
-        seasons=seasons,
+        season_options=[str(s.year) for s in team_seasons(get_current_team_id())],
         selected_tournament=tournament_id,
-        selected_season=season,
+        selected_season=str(season.year) if season else 'all',
         o_line_players=o_line_players,
         d_line_players=d_line_players,
         o_line_women=o_line_women,

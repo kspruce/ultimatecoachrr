@@ -21,6 +21,10 @@ class SessionPlan(db.Model):
     share_token_expires = db.Column(db.DateTime, nullable=True)  # Optional: for expiring links
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
+    # The club season this session is in (from its date); `season` below is
+    # the season plan's own label
+    season_id = db.Column(db.Integer, db.ForeignKey('season.id', ondelete='SET NULL'), nullable=True, index=True)
+    club_season = db.relationship('Season')
 
     # Season plan fields (filled by `flask import-season`; all optional)
     external_id = db.Column(db.String(100), nullable=True)

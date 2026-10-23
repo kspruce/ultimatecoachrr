@@ -4,6 +4,7 @@
 from app.models.team_organization import TeamOrganization
 from app.models.user import User
 from app.models.player import Player
+from app.models.season import Season, Squad, SeasonRoster
 
 # Drill and Session models
 from app.models.drill import SavedDrill, Drill, DrillFrame, DrillDiagram
@@ -80,7 +81,7 @@ from app.models.onboarding import UserOnboarding
 
 __all__ = [
     # Core
-    'TeamOrganization', 'User', 'Player',
+    'TeamOrganization', 'User', 'Player', 'Season', 'Squad', 'SeasonRoster',
     # Drills & Sessions
     'SavedDrill', 'Drill', 'DrillFrame', 'DrillDiagram', 'SessionPlan', 'SessionComponent', 
     'Attendance', 'SessionRSVP',
