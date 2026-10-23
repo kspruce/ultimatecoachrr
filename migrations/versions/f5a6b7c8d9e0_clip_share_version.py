@@ -1,7 +1,7 @@
 """Clip share links can be revoked
 
 Revision ID: f5a6b7c8d9e0
-Revises: e4f5a6b7c8d9
+Revises: f3b4c5d6e7f8
 Create Date: 2026-10-22
 
 - clip.share_version: goes into every share link; bumping it revokes the
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision = 'f5a6b7c8d9e0'
-down_revision = 'e4f5a6b7c8d9'
+down_revision = 'f3b4c5d6e7f8'
 branch_labels = None
 depends_on = None
 
