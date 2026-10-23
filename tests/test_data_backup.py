@@ -76,7 +76,9 @@ def test_backup_restores_users_and_blank_numbers(app, team, tmp_path):
         for n, data in files.items():
             z.writestr(n, data)
 
+    from app.models.team_membership import TeamMembership
     db.session.query(Player).delete()
+    db.session.query(TeamMembership).delete()
     db.session.query(User).delete()
     db.session.commit()
 

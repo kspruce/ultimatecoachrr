@@ -9,6 +9,7 @@ from app.models import Clip, ClipAnnotation
 from app.models.annotation import AnnotationTag
 from app.models.player import Player
 from app.models.user import User
+from app.models.team_membership import TeamMembership
 from app.routes.clip import bp
 from app.routes.clip.helpers import get_clip_or_404, sees_hidden_clips, visible_annotations
 from app.utils.team_filter import get_current_team_id
@@ -39,7 +40,7 @@ def add_annotation(clip_id):
         if requested_visibility == 'specific':
             raw_target = request.form.get('target_user_id', 0, type=int)
             if raw_target and raw_target > 0:
-                target_u = User.query.filter_by(id=raw_target, team_organization_id=team_id).first()
+                target_u = User.query.filter(User.id == raw_target, User.memberships.any(TeamMembership.team_organization_id == team_id)).first()
                 target_user_id = target_u.id if target_u else None
             if not target_user_id:
                 # Fallback: treat as coaches-only if no valid target selected
@@ -88,7 +89,7 @@ def add_annotation(clip_id):
         flash('Annotation added successfully!', 'success')
         return redirect(url_for('clip.view_clip', clip_id=clip_id))
     
-    team_users = User.query.filter_by(team_organization_id=team_id).order_by(User.username).all()
+    team_users = User.query.filter(User.memberships.any(TeamMembership.team_organization_id == team_id)).order_by(User.username).all()
     return render_template('clip/add_annotation.html', form=form, clip=clip, team_users=team_users)
 
 
@@ -131,7 +132,7 @@ def edit_annotation(annotation_id):
         if requested_visibility == 'specific':
             raw_target = request.form.get('target_user_id', 0, type=int)
             if raw_target and raw_target > 0:
-                target_u = User.query.filter_by(id=raw_target, team_organization_id=team_id).first()
+                target_u = User.query.filter(User.id == raw_target, User.memberships.any(TeamMembership.team_organization_id == team_id)).first()
                 target_user_id = target_u.id if target_u else None
             if not target_user_id:
                 requested_visibility = 'coaches'
@@ -174,7 +175,7 @@ def edit_annotation(annotation_id):
         flash('Annotation updated successfully!', 'success')
         return redirect(url_for('clip.view_clip', clip_id=annotation.clip_id))
     
-    team_users = User.query.filter_by(team_organization_id=team_id).order_by(User.username).all()
+    team_users = User.query.filter(User.memberships.any(TeamMembership.team_organization_id == team_id)).order_by(User.username).all()
     return render_template('clip/edit_annotation.html', form=form, annotation=annotation, team_users=team_users)
 
 

@@ -57,11 +57,11 @@ def _has_colours(user, team):
 
 
 def _has_staff(user, team):
-    from app.models.user import User
+    from app.models.team_membership import TeamMembership
     staff_roles = [r for r, level in ROLE_ORDER.items() if level >= ROLE_ORDER['coach']]
-    return _exists(User.query.filter(User.team_organization_id == team.id,
-                                     User.id != user.id,
-                                     User.role.in_(staff_roles)))
+    return _exists(TeamMembership.query.filter(TeamMembership.team_organization_id == team.id,
+                                               TeamMembership.user_id != user.id,
+                                               TeamMembership.role.in_(staff_roles)))
 
 
 def _players_invited(user, team):

@@ -5,12 +5,14 @@ from sqlalchemy import text
 from app import db
 from app.models.player import Player
 from app.models.user import User
+from app.models.team_membership import TeamMembership
 from app.forms.team import PlayerForm, PlayerFilterForm
 from app.models.point import LineUp
 from app.models.event import Event, Pull
 from app.models.scouting import OpponentPlayer
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import coach_required
+from app.utils.permissions import can_manage_account
 from app.models.team_organization import TeamOrganization
 from app.models.team_settings import TeamSettings
 from datetime import datetime
@@ -98,6 +100,9 @@ def add_player():
                 if existing_user:
                     flash(f'Username {form.username.data} is already taken.', 'danger')
                     return render_template('team/player_form.html', title='Add Player', form=form)
+                if form.email.data and User.query.filter_by(email=form.email.data).first():
+                    flash('That email already has an account (maybe on another team). Save the player without an account, then send them an invite link from the roster: they log in and this team is added to their account.', 'danger')
+                    return render_template('team/player_form.html', title='Add Player', form=form)
                 
                 
                 user = User(
@@ -158,7 +163,13 @@ def edit_player(player_id):
 
             # Handle user account
             if form.create_account.data:
-                if player.user_account:
+                if player.user_account and not can_manage_account(player.user_account):
+                    # Their login is shared with another team (or outranks
+                    # yours): leave it alone
+                    if (form.username.data != player.user_account.username) or form.password.data:
+                        flash('Their login wasn\'t changed: only they, or someone who runs every team '
+                              'they\'re on, can change it.', 'warning')
+                elif player.user_account:
                     # Update existing user account
                     if form.username.data != player.user_account.username:
                         # Check if new username is already taken
@@ -180,6 +191,9 @@ def edit_player(player_id):
                     existing_user = User.query.filter_by(username=form.username.data).first()
                     if existing_user:
                         flash(f'Username {form.username.data} is already taken.', 'danger')
+                        return render_template('team/player_form.html', title='Edit Player', form=form, player=player)
+                    if form.email.data and User.query.filter_by(email=form.email.data).first():
+                        flash('That email already has an account (maybe on another team). Save the player without an account, then send them an invite link from the roster: they log in and this team is added to their account.', 'danger')
                         return render_template('team/player_form.html', title='Edit Player', form=form, player=player)
                     
                     
@@ -406,6 +420,12 @@ def feature_settings():
     return render_template('team/feature_settings.html', team=team)
 
 
+def _keeps_account_without(team_id):
+    """Is the current user on another team too (so deleting this team
+    leaves their account)?"""
+    return any(m.team_organization_id != team_id for m in current_user.memberships)
+
+
 def _own_team_or_403():
     """The team a team admin (captain or admin) runs; superadmins can act on
     the team they've switched to."""
@@ -421,8 +441,12 @@ def data_settings():
     team = _own_team_or_403()
     from app.utils.team_data import team_tables
     counts = {name: len(rows) for name, rows in team_tables(team.id).items()}
+    from app.utils.team_data import members_only_here
+    only_here = members_only_here(team.id)
+    shared = TeamMembership.query.filter_by(team_organization_id=team.id).count() - len(only_here)
     return render_template('team/data_settings.html', team=team, counts=counts,
-                           members=User.query.filter_by(team_organization_id=team.id).count())
+                           members=len(only_here), shared_members=shared,
+                           keeps_own_account=_keeps_account_without(team.id))
 
 
 @bp.route('/settings/data/export')
@@ -455,17 +479,18 @@ def delete_team():
 
     team_id, team_name, who = team.id, team.name, current_user.username
     superadmin = current_user.is_superadmin
+    keeps_account = _keeps_account_without(team_id)
     deleted = delete_team_data(team_id)
     db.session.commit()
     current_app.logger.warning(f'Team {team_id} "{team_name}" deleted by {who}: {deleted}')
     for admin_email in current_app.config.get('ADMINS', []):
         send_email(admin_email, f'Team deleted on Ultimate Coach: {team_name}',
                    f'{who} deleted the team "{team_name}" and all its data.\n')
-    if superadmin:
+    if superadmin or keeps_account:
         from flask import session
         session.pop('current_team_id', None)
         flash(f'"{team_name}" and all its data have been deleted.', 'success')
-        return redirect(url_for('team_organization.index'))
+        return redirect(url_for('team_organization.index') if superadmin else url_for('main.index'))
     logout_user()  # their account went with the team
     flash(f'"{team_name}" and all its data, including your account, have been deleted.', 'success')
     return redirect(url_for('main.index'))
@@ -610,7 +635,7 @@ def bulk_import():
                     if not email:
                         note = 'No email — account not created'
                     elif User.query.filter_by(email=email).first():
-                        note = 'Email already in use — account not created'
+                        note = 'Email already has an account (maybe on another team): send them an invite link'
                     else:
                         username = _generate_username(name, team_id)
                         temp_pw  = _temp_password()

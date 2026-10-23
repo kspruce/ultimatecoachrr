@@ -6,21 +6,19 @@ def get_current_team_id():
     """The team whose data the current user is working on.
 
     Superadmins can switch between every team (the choice is kept in the
-    session) and default to their own team. Everyone else, team admins
-    included, only ever sees their own team.
+    session) and default to their own team. Everyone else switches between
+    the teams they belong to, starting on their home team.
     """
     if not current_user.is_authenticated:
         return None
 
-    if current_user.is_superadmin:
-        if 'superadmin_team_id' not in g:
-            g.superadmin_team_id = _valid_superadmin_team_id()
-        return g.superadmin_team_id
-
-    if current_user.team_organization_id:
-        return current_user.team_organization_id
-    player = getattr(current_user, 'player', None)
-    return player.team_organization_id if player else None
+    cached = g.get('current_team')
+    if cached and cached[0] == current_user.id:
+        return cached[1]
+    team_id = (_valid_superadmin_team_id() if current_user.is_superadmin
+               else _valid_member_team_id())
+    g.current_team = (current_user.id, team_id)
+    return team_id
 
 
 def team_row_or_404(model, row_id):
@@ -35,14 +33,26 @@ def accessible_teams(user):
         return []
     if user.is_superadmin:
         return TeamOrganization.query.order_by(TeamOrganization.id).all()
-    if user.team_organization_id:
-        team = TeamOrganization.query.get(user.team_organization_id)
-        return [team] if team else []
-    return []
+    if not user.team_ids:
+        return []
+    return (TeamOrganization.query.filter(TeamOrganization.id.in_(user.team_ids))
+            .order_by(TeamOrganization.name).all())
 
 
 def can_access_team(user, team_id):
-    return user.is_authenticated and (user.is_superadmin or user.team_organization_id == team_id)
+    return user.is_authenticated and (user.is_superadmin or user.is_member_of(team_id))
+
+
+def _valid_member_team_id():
+    """The team they switched to if they're still on it, else their home
+    team, else any team they're on."""
+    team_ids = current_user.team_ids
+    if not team_ids:
+        return current_user.team_organization_id
+    for team_id in (session.get('current_team_id'), current_user.team_organization_id):
+        if team_id in team_ids:
+            return team_id
+    return team_ids[0]
 
 
 def _valid_superadmin_team_id():
@@ -69,10 +79,6 @@ def filter_query(query, model):
     
     # If no team ID or model doesn't have team_organization_id, return original query
     if team_id is None or not hasattr(model, 'team_organization_id'):
-        return query
-        
-    # If current user is global admin and no team is selected, return all results
-    if current_user.is_admin and current_user.team_organization_id is None and not team_id:
         return query
         
     # Filter by team organization

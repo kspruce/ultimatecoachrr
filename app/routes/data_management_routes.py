@@ -4,6 +4,7 @@ Enhanced data management routes for Flask Application
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from app.utils.utils import superadmin_required
+from app.utils.team_filter import get_current_team_id
 from app.utils.enhanced_data_manager import EnhancedDataManager
 import os
 import json
@@ -174,7 +175,6 @@ def _resolve_target_team_id():
     - Admins: allow explicit form selection; fallback to session or admin's own team.
     - Non-admins: force use of their own team.
     """
-    from flask import session
     from app.models.team_organization import TeamOrganization
 
     team_id = None
@@ -183,10 +183,10 @@ def _resolve_target_team_id():
         raw = request.form.get('team_id', '').strip()
         team_id = int(raw) if raw.isdigit() else None
         if not team_id:
-            team_id = session.get('current_team_id') or getattr(current_user, 'team_organization_id', None)
+            team_id = get_current_team_id()
     else:
         # Non-admins: always use their team
-        team_id = getattr(current_user, 'team_organization_id', None)
+        team_id = get_current_team_id()
 
     if not team_id:
         flash('❌ No team selected or associated with your account.', 'error')
@@ -483,12 +483,27 @@ def season_reset():
             )
 
         # --- 9) Optionally delete non-admin Users in this team only ---
+        # (people also on another team just come off this one)
         if also_delete_non_admin_users:
-            deleted['users'] += _safe_delete(
-                lambda: User.query.filter(User.team_organization_id == team_id,
-                                          User.id != admin_user_id).delete(synchronize_session=False),
-                "DELETE non-admin Users (team)"
-            )
+            from app.models.team_membership import TeamMembership
+
+            def _remove_team_users():
+                members = User.query.filter(
+                    User.memberships.any(TeamMembership.team_organization_id == team_id),
+                    User.id != admin_user_id).all()
+                only_here = [u.id for u in members
+                             if all(m.team_organization_id == team_id for m in u.memberships)]
+                for u in members:
+                    if u.id not in only_here:
+                        u.leave_team(team_id)
+                db.session.flush()
+                if only_here:
+                    TeamMembership.query.filter(TeamMembership.user_id.in_(only_here)
+                                                ).delete(synchronize_session=False)
+                    User.query.filter(User.id.in_(only_here)).delete(synchronize_session=False)
+                return len(members)
+
+            deleted['users'] += _safe_delete(_remove_team_users, "DELETE non-admin Users (team)")
 
         db.session.commit()
         logger.info("[Season Reset] Committed database changes")

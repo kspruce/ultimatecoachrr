@@ -6,6 +6,28 @@
   <h1 class="ac-title" style="text-align:left">Account settings</h1>
   <p class="ac-sub" style="text-align:left">Signed in as <strong>{{ current_user.username }}</strong></p>
 
+  {% if current_user.memberships %}
+  <div class="ac-card">
+    <div class="ac-section">Your teams</div>
+    <ul class="list-unstyled mb-2">
+      {% for m in current_user.memberships|sort(attribute='team_organization.name') %}
+      <li class="d-flex align-items-center gap-2 py-1">
+        <i class="bi bi-people-fill"></i>
+        <span>{{ m.team_organization.name }}</span>
+        <span class="text-muted small">{{ 'Team Admin' if m.role == 'admin' else m.role|replace('_', ' ')|title }}</span>
+        {% if current_team and current_team.id == m.team_organization_id %}
+        <span class="badge bg-light text-dark border ms-auto">Current</span>
+        {% else %}
+        <a class="ms-auto small" href="{{ url_for('team_organization.switch', team_id=m.team_organization_id) }}">Switch</a>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="ac-hint mb-0">One login for all your teams. To join another team, open its join link or
+      invite while logged in.</p>
+  </div>
+  {% endif %}
+
   <div class="ac-card">
     <div class="ac-section">Email address</div>
     <form method="POST">

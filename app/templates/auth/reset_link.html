@@ -22,7 +22,7 @@
     </div>
     {% endif %}
   </div>
-  <p class="ac-footer"><a href="{{ url_for('auth.users', team_id=user.team_organization_id) }}">Back to User Management</a></p>
+  <p class="ac-footer"><a href="{{ url_for('auth.users') }}">Back to User Management</a></p>
 </div>
 {% include "auth/_copy_script.html" %}
 {% endblock %}

@@ -74,13 +74,12 @@ class Player(db.Model):
     )
 
 
-    # User account relationship
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True)
+    # User account relationship (a login has one player profile per team)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     user_account = db.relationship(
         "User",
-        back_populates="player_profile",
-        uselist=False
+        back_populates="player_profiles"
     )
 
 
@@ -179,6 +178,7 @@ class Player(db.Model):
     __table_args__ = (
         db.Index("idx_player_active", "active"),
         db.Index("idx_player_team", "team_organization_id"),
+        db.UniqueConstraint("user_id", "team_organization_id", name="uq_player_user_team"),
     )
 
 
