@@ -54,12 +54,19 @@
 .record-line { font-size:.85rem; color:var(--uc-gray-600); margin:.15rem 0 .35rem }
 .section-bar { position:sticky; top:var(--nav-h, 60px); z-index:1020; display:flex; margin:0 calc(var(--bs-gutter-x, 1.5rem) * -.5) 1rem;
   background:var(--bg, var(--uc-gray-50)); border-bottom:1px solid var(--uc-card-border) }
-.section-bar a { flex:1; text-align:center; padding:.7rem .25rem; font-size:.85rem; font-weight:600;
+.section-bar { overflow-x:auto; scrollbar-width:none }
+.section-bar::-webkit-scrollbar { display:none }
+.section-bar a { flex:1 0 auto; text-align:center; padding:.7rem .6rem; font-size:.85rem; font-weight:600; white-space:nowrap;
   color:var(--uc-gray-600); text-decoration:none; border-bottom:2px solid transparent }
 .section-bar a.active { color:var(--uc-gray-800); border-bottom-color:var(--club-ink) }
 .section-bar a span { font-size:.7rem; color:var(--uc-gray-400) }
-.quick-note { height:auto; max-height:85vh; border-radius:16px 16px 0 0 }
-.look-toggle { border:1px solid transparent }
+.offcanvas.quick-note { --bs-offcanvas-height:auto; height:auto; max-height:85vh; border-radius:16px 16px 0 0 }
+.btn.look-toggle { border:1px solid transparent; --bs-btn-color:currentColor; --bs-btn-hover-color:currentColor;
+  --bs-btn-active-color:currentColor }
+.btn.look-o { --bs-btn-bg:color-mix(in srgb, var(--club-ink) 10%, transparent); --bs-btn-hover-bg:var(--bs-btn-bg);
+  --bs-btn-active-bg:var(--bs-btn-bg); color:var(--uc-blue) }
+.btn.look-d { --bs-btn-bg:color-mix(in srgb, var(--bad) 10%, transparent); --bs-btn-hover-bg:var(--bs-btn-bg);
+  --bs-btn-active-bg:var(--bs-btn-bg); color:var(--uc-red) }
 .look-toggle.on { border-color:currentColor; font-weight:700 }
 .look-toggle.on::before { content:'\F26E'; font-family:'bootstrap-icons'; margin-right:.25rem }
 @media print {

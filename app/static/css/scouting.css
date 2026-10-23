@@ -35,6 +35,9 @@
     margin-left:calc(var(--bs-gutter-x, 1.5rem) * -.5); margin-right:calc(var(--bs-gutter-x, 1.5rem) * -.5);
     padding:0 calc(var(--bs-gutter-x, 1.5rem) * .5) .25rem; scroll-snap-type:x proximity }
   .offcanvas .scroll-strip { margin-left:-1rem; margin-right:-1rem; padding:0 1rem .25rem }
+  /* Inside a card or popup the strip stays within the box */
+  .card .scroll-strip, .modal .scroll-strip, .scroll-strip.no-bleed, .clips-toolbar .scroll-strip {
+    margin-left:0; margin-right:0; padding-left:0; padding-right:0 }
   .scroll-strip::-webkit-scrollbar { display:none }
   .scroll-strip > * { flex-shrink:0; scroll-snap-align:start }
 }

@@ -59,7 +59,7 @@
 
   {% if players %}
   <div class="d-flex gap-2 mb-3 align-items-center">
-  <div class="scroll-strip flex-grow-1" id="filterBar">
+  <div class="scroll-strip no-bleed flex-grow-1 min-w-0" id="filterBar" style="min-width:0">
     <button type="button" class="filter-pill active" data-pos="all">All ({{ players|length }})</button>
     {% set keys = players|selectattr('is_key_threat')|list %}
     {% if keys %}<button type="button" class="filter-pill" data-pos="key">Key threats ({{ keys|length }})</button>{% endif %}
