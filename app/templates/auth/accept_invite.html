@@ -93,7 +93,11 @@
       </button>
     </form>
 
-    <p style="text-align:center;font-size:.78rem;color:var(--uc-gray-400);margin-top:1.25rem;margin-bottom:0">
+    <p style="text-align:center;font-size:.85rem;color:var(--uc-gray-600);margin-top:1.25rem;margin-bottom:0">
+      Already have an account, maybe with another team?
+      <a href="{{ url_for('auth.login', next=login_next) }}">Log in to add {{ invite.team.name }} to it</a>
+    </p>
+    <p style="text-align:center;font-size:.78rem;color:var(--uc-gray-400);margin-top:.75rem;margin-bottom:0">
       This invite link expires in 7 days and can only be used once.
     </p>
     <p style="text-align:center;font-size:.78rem;color:var(--uc-gray-400);margin-top:.5rem;margin-bottom:0">

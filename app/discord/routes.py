@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.discord.bot import discord_bot
 from app.discord.webhooks import discord_webhook
+from app.utils.team_filter import get_current_team_id
 import logging
 import sqlalchemy.exc
 
@@ -21,11 +22,7 @@ def settings():
         return redirect(url_for('main.index'))
     
     # Get current team ID
-    team_id = None
-    if hasattr(current_user, 'team_organization_id'):
-        team_id = current_user.team_organization_id
-    elif 'current_team_id' in session:
-        team_id = session['current_team_id']
+    team_id = get_current_team_id()
     
     # Default settings dictionary
     settings_dict = {

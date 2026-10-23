@@ -16,10 +16,21 @@
                 <h6 class="text-muted">Account Details</h6>
                 <hr>
 
+                {% if other_teams %}
+                <div class="alert alert-info small">
+                    <i class="bi bi-people me-1"></i>
+                    Also on {{ other_teams|join(', ') }}, with the same login.
+                    {% if account_editable is false %}Their username, email and password can only be changed
+                    by them, or by someone who runs all of their teams. You can change their role and
+                    linked player on this team.{% endif %}
+                </div>
+                {% endif %}
+
+                {% set locked = {'disabled': true} if account_editable is false else {} %}
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+                        {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), **locked) }}
                         {% if form.username.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.username.errors %}
@@ -31,7 +42,7 @@
 
                     <div class="col-md-6">
                         {{ form.email.label(class="form-label") }}
-                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), **locked) }}
                         {% if form.email.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.email.errors %}
@@ -45,7 +56,7 @@
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+                        {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), **locked) }}
                         <div class="form-text">
                             {% if title == 'Add User' %}Optional. Leave blank and use <strong>Reset link</strong>
                             on the user list so they choose their own.{% else %}Leave blank to keep current password.{% endif %}
@@ -61,7 +72,7 @@
 
                     <div class="col-md-6">
                         {{ form.confirm_password.label(class="form-label") }}
-                        {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else "")) }}
+                        {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), **locked) }}
                         {% if form.confirm_password.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.confirm_password.errors %}

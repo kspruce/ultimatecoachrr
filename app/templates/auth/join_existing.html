@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "auth/_styles.html" %}
+
+<div class="ac-wrap">
+  <div class="ac-card">
+    <div class="ac-icon"><i class="bi bi-people-fill"></i></div>
+    <h1 class="ac-title">Join {{ team.name }}</h1>
+    <p class="ac-sub">
+      Add {{ team.name }} to your account, <strong>{{ current_user.username }}</strong>{% if player %},
+      linked to <strong>{{ player.name }}</strong> on the roster{% endif %}.
+      You keep one login and switch between your teams from the menu.
+    </p>
+    <form method="POST" action="{{ action }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="ac-btn"><i class="bi bi-check-circle me-2"></i>Join {{ team.name }}</button>
+    </form>
+  </div>
+  <p class="ac-footer">Not you? <a href="{{ url_for('main.index') }}">Go back</a> and log out first.</p>
+</div>
+{% endblock %}

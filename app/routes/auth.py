@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session, g
 from urllib.parse import urlparse
 from flask_login import login_user, logout_user, current_user, login_required
 import logging
@@ -8,6 +8,7 @@ import time
 from app import csrf, db, limiter, onboarding
 from app.models.user import ROLE_ORDER, User
 from app.models.player import Player
+from app.models.team_membership import TeamMembership
 from app.models.team_organization import TeamOrganization, generate_join_code, normalize_join_code
 from app.models.team_settings import TeamSettings
 from app.models.invite_token import InviteToken
@@ -17,7 +18,7 @@ from app.forms.auth import LoginForm, UserForm
 from app.utils.email import email_configured, is_real_email, send_email
 from app.utils.password_reset import (COACH_LINK_SECONDS, EMAIL_LINK_SECONDS,
                                       reset_url, user_for_reset_token)
-from app.utils.permissions import can_manage_team_users, can_manage_user, grantable_roles
+from app.utils.permissions import can_manage_account, can_manage_team_users, can_manage_user, grantable_roles
 from app.utils.team_filter import get_current_team_id
 
 # ---------------------------------------
@@ -58,9 +59,15 @@ _REASSIGN_ON_USER_DELETE = {('player_feedback', 'coach_id')}
 # ---------------------------------------
 
 def _get_managed_team_id():
+    """The team whose people are being managed: the current team. A
+    superadmin can name another team, which switches to it (so roles and
+    linked players on the page are that team's)."""
     if current_user.is_superadmin:
-        return request.args.get('team_id', type=int) or get_current_team_id()
-    return current_user.team_organization_id
+        team_id = request.args.get('team_id', type=int)
+        if team_id and team_id != get_current_team_id() and db.session.get(TeamOrganization, team_id):
+            session['current_team_id'] = team_id
+            g.pop('current_team', None)
+    return get_current_team_id()
 
 
 def _populate_team_choices(form, selected_team_id, set_default=True):
@@ -100,32 +107,32 @@ def _populate_player_choices(form, team_id):
     ]
 
 
-def _link_player_to_user(user, player_id):
+def _link_player_to_user(user, player_id, team_id):
     """
-    Ensure clean 1:1 linking between player and user.
+    Link the user to one player on a team (one player per user per team).
     """
+    current = user.player_for(team_id)
     if not player_id or player_id == 0:
         # Unlink existing player if removing
-        if user.player:
-            user.player.user_id = None
+        if current:
+            current.user_account = None
         return
 
-    player = Player.query.get(player_id)
-    if not player or player.team_organization_id != user.team_organization_id:
+    player = db.session.get(Player, player_id)
+    if not player or player.team_organization_id != team_id:
         return
 
     # Unlink from previous user if needed
-    if player.user_id and player.user_id != user.id:
-        other_user = User.query.get(player.user_id)
-        if other_user:
-            flash(f'Player was unlinked from user {other_user.username}', 'warning')
+    if player.user_account and player.user_account is not user:
+        flash(f'Player was unlinked from user {player.user_account.username}', 'warning')
 
-    # Unlink user's current player if different
-    if user.player and user.player.id != player_id:
-        user.player.user_id = None
+    # Unlink user's current player if different (first, as a user has one
+    # player per team)
+    if current and current.id != player_id:
+        current.user_account = None
+        db.session.flush()
 
-    player.user_id = user.id
-    player.team_organization_id = user.team_organization_id
+    player.user_account = user
 
 
 def _clean_email(raw):
@@ -146,7 +153,8 @@ def _new_account_errors(username, email, password, confirm):
         if not is_real_email(email):
             errors.append('That email address doesn\'t look right.')
         elif User.query.filter_by(email=email).first():
-            errors.append('That email address is already registered.')
+            errors.append('That email address is already registered. If it\'s yours, log in '
+                          'instead: one account can be on several teams.')
     errors.extend(_password_errors(password, confirm))
     return errors
 
@@ -191,9 +199,25 @@ def _unlinked_players_exist(team_id):
                                   user_id=None).first() is not None
 
 
-def _after_joining(user):
-    """Where a new team member goes after creating their account."""
-    if not user.player and _unlinked_players_exist(user.team_organization_id):
+def _team_managed_for(user):
+    """The team whose role and player for `user` are being managed: the
+    current team, or (for a superadmin acting on someone who isn't on it)
+    their home team."""
+    team_id = get_current_team_id()
+    if not user.is_member_of(team_id) and user.team_organization_id:
+        return user.team_organization_id
+    return team_id
+
+
+def _switch_to(team_id):
+    session['current_team_id'] = team_id
+    g.pop('current_team', None)
+
+
+def _after_joining(user, team_id):
+    """Where a new team member goes after joining: pick their name from the
+    roster if they aren't linked to a player there yet."""
+    if not user.player_for(team_id) and _unlinked_players_exist(team_id):
         flash('Pick your name from the roster so your stats and RSVPs are linked to you.', 'info')
         return redirect(url_for('auth.link_player'))
     return redirect(url_for('main.index'))
@@ -292,15 +316,12 @@ def users():
         teams = [TeamOrganization.query.get(team_id)]
 
     if viewing_unassigned:
-        users = User.query.filter_by(
-            team_organization_id=None
-        ).order_by(User.username).all()
+        users = User.query.filter(~User.memberships.any()).order_by(User.username).all()
         current_team = None
     else:
-        users = User.query.filter_by(
-            team_organization_id=team_id
-        ).order_by(User.username).all()
-        current_team = TeamOrganization.query.get(team_id)
+        users = User.query.filter(User.memberships.any(TeamMembership.team_organization_id == team_id)
+                                  ).order_by(User.username).all()
+        current_team = db.session.get(TeamOrganization, team_id)
 
     return render_template(
         "auth/users.html",
@@ -310,6 +331,7 @@ def users():
         viewing_unassigned=viewing_unassigned,
         is_superadmin=current_user.is_superadmin,
         manageable_ids={u.id for u in users if can_manage_user(u)},
+        account_ids={u.id for u in users if can_manage_account(u)},
         email_enabled=email_configured(),
         member_status=onboarding.member_status(users),
         roster_signup=onboarding.roster_signup(current_team.id) if current_team else None,
@@ -355,7 +377,7 @@ def add_user():
         db.session.add(user)
         db.session.flush()
 
-        _link_player_to_user(user, form.player_id.data)
+        _link_player_to_user(user, form.player_id.data, user.team_organization_id)
 
         db.session.commit()
 
@@ -374,7 +396,7 @@ def add_user():
 def edit_user(user_id):
 
     user = User.query.get_or_404(user_id)
-    team_id = user.team_organization_id
+    team_id = get_current_team_id()
 
     if user.id == current_user.id and not current_user.is_superadmin:
         return redirect(url_for('auth.account'))
@@ -384,14 +406,19 @@ def edit_user(user_id):
         return redirect(url_for("auth.users") if can_manage_team_users(team_id)
                         else url_for("main.index"))
 
-    if team_id is None:
-        # Unassigned account (superadmin only): offer the current team
-        team_id = get_current_team_id()
+    team_id = _team_managed_for(user)
+
+    # Someone also on teams this person doesn't run: only their role and
+    # player here can change, not the login they share with those teams
+    account_editable = can_manage_account(user)
 
     form = UserForm(
         original_username=user.username,
         original_email=user.email
     )
+    if request.method == 'POST' and not account_editable:
+        form.username.data, form.email.data = user.username, user.email
+        form.password.data = form.confirm_password.data = ''
 
     # Populate choices but only set defaults on GET request
     _populate_team_choices(form, team_id, set_default=(request.method == 'GET'))
@@ -401,35 +428,45 @@ def edit_user(user_id):
     if request.method == "GET":
         form.username.data = user.username
         form.email.data = user.email
-        form.role.data = user.role
+        form.role.data = user.role_in(team_id)
         form.team_organization_id.data = team_id
-        form.player_id.data = user.player.id if user.player else 0
+        player = user.player_for(team_id)
+        form.player_id.data = player.id if player else 0
 
     if form.validate_on_submit():
 
-        user.username = form.username.data.strip()
-        user.email = _clean_email(form.email.data)
-        old_role = user.role
-        user.role = form.role.data.lower()
-        promoted = ROLE_ORDER.get(user.role, 0) > ROLE_ORDER.get(old_role, 0)
+        if account_editable:
+            user.username = form.username.data.strip()
+            user.email = _clean_email(form.email.data)
+            if form.password.data:
+                user.set_password(form.password.data)
 
-        if current_user.is_superadmin:
-            user.team_organization_id = form.team_organization_id.data
+        old_role = user.role_in(team_id) if user.is_member_of(team_id) else None
+        new_role = form.role.data.lower()
+        promoted = ROLE_ORDER.get(new_role, 0) > ROLE_ORDER.get(old_role, 0)
 
-        if form.password.data:
-            user.set_password(form.password.data)
+        new_team_id = form.team_organization_id.data
+        if current_user.is_superadmin and new_team_id and new_team_id != team_id:
+            # Move them from this team to the chosen one
+            user.leave_team(team_id)
+            team_id = new_team_id
+        if not user.is_member_of(team_id):
+            user.join_team(team_id, new_role)
+        user.set_role_in(team_id, new_role)
 
-        _link_player_to_user(user, form.player_id.data)
+        _link_player_to_user(user, form.player_id.data, team_id)
 
         db.session.commit()
 
         flash("User updated.", "success")
-        if promoted and user.role in onboarding.ROLES:
+        if promoted and new_role in onboarding.ROLES:
             flash(f"{user.username} will see a short welcome to their new role next time "
                   "they open the dashboard.", "info")
-        return redirect(url_for("auth.users", team_id=user.team_organization_id))
+        return redirect(url_for("auth.users", team_id=team_id))
 
-    return render_template("auth/user_form.html", form=form, title="Edit User")
+    other_teams = [m.team_organization.name for m in user.memberships if m.team_organization_id != team_id]
+    return render_template("auth/user_form.html", form=form, title="Edit User",
+                           account_editable=account_editable, other_teams=other_teams)
 
 
 @bp.route('/users/delete/<int:user_id>', methods=['POST'])
@@ -437,7 +474,7 @@ def edit_user(user_id):
 def delete_user(user_id):
 
     user = User.query.get_or_404(user_id)
-    team_id = user.team_organization_id
+    team_id = _team_managed_for(user)
 
     if user.id == current_user.id:
         flash("You cannot delete yourself.", "danger")
@@ -446,6 +483,14 @@ def delete_user(user_id):
     if not can_manage_user(user):
         flash("You can only delete people whose role is below yours.", "danger")
         return redirect(url_for("main.index"))
+
+    if any(m.team_organization_id != team_id for m in user.memberships):
+        # Also on other teams: take them off this one and keep the account
+        user.leave_team(team_id)
+        db.session.commit()
+        flash(f"{user.username} was removed from this team. Their account stays, "
+              "because they're also on another team.", "success")
+        return redirect(url_for("auth.users", team_id=team_id))
 
     try:
         _detach_user_rows(user.id)
@@ -468,8 +513,9 @@ def create_reset_link(user_id):
     players without email, or when email isn't set up). Also emailed to the
     player when possible."""
     user = User.query.get_or_404(user_id)
-    if not can_manage_user(user):
-        flash("You can only reset passwords for people whose role is below yours.", "danger")
+    if not can_manage_account(user):
+        flash("You can only reset passwords for people whose role is below yours on every "
+              "team they're on.", "danger")
         return redirect(url_for("main.index"))
 
     link = reset_url(user, COACH_LINK_SECONDS)
@@ -538,11 +584,20 @@ def join_team(code):
         return redirect(url_for('auth.join'))
 
     if current_user.is_authenticated:
-        if current_user.team_organization_id == team.id:
+        # Already have an account: add this team to it (after they confirm,
+        # so a link someone else planted can't sign them up)
+        if current_user.is_member_of(team.id):
+            _switch_to(team.id)
             return redirect(url_for('main.index'))
-        flash(f'You\'re logged in to another team. Log out first to create an account on {team.name}.',
-              'warning')
-        return redirect(url_for('main.index'))
+        if request.method == 'POST':
+            user = current_user._get_current_object()
+            user.join_team(team.id, 'player')
+            db.session.commit()
+            _switch_to(team.id)
+            flash(f'Welcome to {team.name}! Switch between your teams from the menu.', 'success')
+            return _after_joining(user, team.id)
+        return render_template('auth/join_existing.html', title=f'Join {team.name}', team=team,
+                               action=url_for('auth.join_team', code=code))
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -562,10 +617,11 @@ def join_team(code):
 
         login_user(user)
         flash(f'Welcome to {team.name}, {username}!', 'success')
-        return _after_joining(user)
+        return _after_joining(user, team.id)
 
     return render_template('auth/join.html', title=f'Join {team.name}', team=team,
-                           code=code, form_data={})
+                           code=code, form_data={},
+                           login_next=url_for('auth.join_team', code=code))
 
 
 # ---------------------------------------
@@ -643,7 +699,7 @@ def account():
             if email and not is_real_email(email):
                 flash('That email address doesn\'t look right.', 'danger')
             elif email and User.query.filter(User.email == email, User.id != current_user.id).first():
-                flash('That email address is already registered.', 'danger')
+                flash('That email address is already registered to another account.', 'danger')
             else:
                 current_user.email = email
                 db.session.commit()
@@ -703,12 +759,13 @@ def link_player():
             flash('Invalid player selected.', 'danger')
             return redirect(url_for('auth.link_player'))
 
-        # Unlink previous
+        # Unlink previous (first, as a user has one player per team)
         if current_user.player and current_user.player.id != player_id:
-            current_user.player.user_id = None
+            current_user.player.user_account = None
+            db.session.flush()
 
         # Link new
-        player.user_id = current_user.id
+        player.user_account = current_user._get_current_object()
 
         db.session.commit()
 
@@ -764,8 +821,7 @@ def accept_invite(token):
         return redirect(url_for('auth.login'))
 
     if current_user.is_authenticated:
-        flash('You are already logged in.', 'info')
-        return redirect(url_for('main.index'))
+        return _accept_invite_signed_in(invite)
 
     player_email = invite.player.email if invite.player and is_real_email(invite.player.email) else None
     if player_email and User.query.filter_by(email=player_email).first():
@@ -809,7 +865,41 @@ def accept_invite(token):
         return redirect(url_for('main.index'))
 
     return render_template('auth/accept_invite.html', invite=invite, username='',
-                           email=player_email or '', min_password=MIN_PASSWORD_LENGTH)
+                           email=player_email or '', min_password=MIN_PASSWORD_LENGTH,
+                           login_next=url_for('auth.accept_invite', token=token))
+
+
+def _accept_invite_signed_in(invite):
+    """Someone with an account follows an invite: add the team (and the
+    player it's for) to their account once they confirm."""
+    user = current_user._get_current_object()
+    team_id = invite.team_organization_id
+    player = invite.player
+    linked_here = user.player_for(team_id)
+
+    if player and player.user_account is not None and player.user_account is not user:
+        flash('That player is already linked to another account. Ask your coach for help.', 'warning')
+        return redirect(url_for('main.index'))
+    if player and linked_here and linked_here is not player:
+        flash(f'Your account is already linked to {linked_here.name} on {invite.team.name}. '
+              'Ask your coach if that\'s wrong.', 'warning')
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        user.join_team(team_id, 'player')
+        if player:
+            player.user_account = user
+        invite.used_at = datetime.utcnow()
+        invite.used_by_user_id = user.id
+        db.session.commit()
+        _switch_to(team_id)
+        flash(f'{invite.team.name} has been added to your account. '
+              'Switch between your teams from the menu.', 'success')
+        return _after_joining(user, team_id)
+
+    return render_template('auth/join_existing.html', title=f'Join {invite.team.name}',
+                           team=invite.team, player=player,
+                           action=url_for('auth.accept_invite', token=invite.token))
 
 
 # ─────────────────────────────────────────────────────────────

@@ -335,7 +335,7 @@
             <i class="bi bi-gear-fill"></i> Manage Teams</a></li>
           {% endif %}
 
-          {% if current_user.is_superadmin %}
+          {% if current_user.is_superadmin or available_teams|length > 1 %}
           <li><hr class="dropdown-divider"></li>
           <li><span class="dropdown-header">Switch Team</span></li>
 
