@@ -1,109 +1,147 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ title }}</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('scouting.index') }}" class="btn btn-secondary">Back to Scouting Reports</a>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-10 offset-md-1">
-            <div class="card">
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                {{ form.team_name.label(class="form-label") }}
-                                {{ form.team_name(class="form-control") }}
-                                {% for error in form.team_name.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-4">
-                                {{ form.date.label(class="form-label") }}
-                                {{ form.date(class="form-control", type="date") }}
-                                {% for error in form.date.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                {{ form.tournament_id.label(class="form-label") }}
-                                {{ form.tournament_id(class="form-select") }}
-                                {% for error in form.tournament_id.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6">
-                                {{ form.game_id.label(class="form-label") }}
-                                {{ form.game_id(class="form-select") }}
-                                {% for error in form.game_id.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.offense_strategy.label(class="form-label") }}
-                            {{ form.offense_strategy(class="form-control", rows=3) }}
-                            <div class="form-text">Describe their offensive strategies, formations, and tendencies.</div>
-                            {% for error in form.offense_strategy.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.defense_strategy.label(class="form-label") }}
-                            {{ form.defense_strategy(class="form-control", rows=3) }}
-                            <div class="form-text">Describe their defensive strategies, formations, and tendencies.</div>
-                            {% for error in form.defense_strategy.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.strengths.label(class="form-label") }}
-                            {{ form.strengths(class="form-control", rows=3) }}
-                            <div class="form-text">What are this team's key strengths and advantages?</div>
-                            {% for error in form.strengths.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.weaknesses.label(class="form-label") }}
-                            {{ form.weaknesses(class="form-control", rows=3) }}
-                            <div class="form-text">What are this team's key weaknesses and vulnerabilities?</div>
-                            {% for error in form.weaknesses.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows=3) }}
-                            <div class="form-text">Any additional notes or observations about this team.</div>
-                            {% for error in form.notes.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+{% macro textarea(field, help, rows=3) %}
+<div class="mb-3">
+  {{ field.label(class="form-label") }}
+  {{ field(class="form-control", rows=rows) }}
+  {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
+  {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
 </div>
+{% endmacro %}
+
+{% macro tag_boxes(field) %}
+<div class="mb-3">
+  <div class="form-label">{{ field.label.text }}</div>
+  <div class="tag-boxes">
+    {% for sub in field %}
+    <span class="tag-box">{{ sub(class="btn-check", autocomplete="off") }}{{ sub.label(class="btn btn-sm btn-outline-secondary") }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<style>
+.tag-boxes { display:flex; flex-wrap:wrap; gap:.35rem }
+.tag-boxes .btn { font-size:.78rem; padding:.2rem .6rem }
+.form-section { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--uc-gray-400); margin:1.5rem 0 .75rem; padding-bottom:.35rem; border-bottom:1px solid var(--uc-gray-100) }
+</style>
+
+<div class="container py-4">
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>{{ title }}</h2>
+      {% if report %}<p>{{ report.team_name }}</p>{% elif game %}<p>For the game vs {{ game.opponent }}</p>{% endif %}
+    </div>
+    <div>
+      <a href="{{ url_for('scouting.detail', report_id=report.id) if report else url_for('scouting.index') }}"
+         class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+
+      {% if previous and not report %}
+      <div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
+        <div class="me-auto">
+          You scouted <strong>{{ previous.team_name }}</strong>
+          {% if previous.date %}on {{ previous.date.strftime('%d %b %Y') }}{% else %}before{% endif %}.
+          Start from that report to keep its players and notes?
+        </div>
+        <form method="post" action="{{ url_for('scouting.copy_report', report_id=previous.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if game %}<input type="hidden" name="game_id" value="{{ game.id }}">{% endif %}
+          <button type="submit" class="btn btn-sm btn-primary">Start from that report</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <div class="card-body">
+          <form method="post" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-8">
+                {{ form.team_name.label(class="form-label") }}
+                {{ form.team_name(class="form-control", list="opponentNames", autocomplete="off") }}
+                <datalist id="opponentNames">
+                  {% for name in form.games|map(attribute='opponent')|unique %}<option value="{{ name }}">{% endfor %}
+                </datalist>
+                {% for error in form.team_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                {{ form.date.label(class="form-label") }}
+                {{ form.date(class="form-control", type="date") }}
+                {% for error in form.date.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                {{ form.game_id.label(class="form-label") }}
+                <select class="form-select" id="game_id" name="game_id">
+                  {% for value, label, selected, _ in form.game_id.iter_choices() %}
+                  {% set g = form.games|selectattr('id', 'equalto', value)|first if value else none %}
+                  <option value="{{ value }}" {% if selected %}selected{% endif %}
+                    {% if g %}data-opponent="{{ g.opponent }}" data-date="{{ g.date.isoformat() if g.date else '' }}"
+                    data-tournament="{{ g.tournament_id or 0 }}"{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Picking a game fills in the opponent, date and tournament.</div>
+                {% for error in form.game_id.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                {{ form.tournament_id.label(class="form-label") }}
+                {{ form.tournament_id(class="form-select") }}
+                {% for error in form.tournament_id.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+              </div>
+            </div>
+
+            <div class="form-section">How they play</div>
+            {{ tag_boxes(form.offense_tags) }}
+            {{ textarea(form.offense_strategy, 'Formations, who touches the disc, set plays, how they score.') }}
+            {{ tag_boxes(form.defense_tags) }}
+            {{ textarea(form.defense_strategy, 'Marks, force, when they switch to zone, who poaches.') }}
+            <div class="row g-3">
+              <div class="col-md-6">{{ textarea(form.strengths, 'One per line. Shown as a list of things to watch out for.', 4) }}</div>
+              <div class="col-md-6">{{ textarea(form.weaknesses, 'One per line. Shown as a list of things to exploit.', 4) }}</div>
+            </div>
+
+            <div class="form-section">Our game plan</div>
+            {{ textarea(form.game_plan, 'The few things everyone needs to know, e.g. "Force flick, they can\'t break it."', 4) }}
+            <div class="row g-3">
+              <div class="col-md-6">{{ textarea(form.o_line_plan, 'Who starts, the set play to open, how we beat their D.') }}</div>
+              <div class="col-md-6">{{ textarea(form.d_line_plan, 'Who starts, the force, the look to throw at them.') }}</div>
+            </div>
+            <p class="form-text mt-0">Key matchups are set per player: mark someone as a key threat and pick who of ours marks them.</p>
+
+            <div class="form-section">Anything else</div>
+            {{ textarea(form.notes, '') }}
+
+            <div class="d-grid">{{ form.submit(class="btn btn-primary") }}</div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const game = document.getElementById('game_id');
+  const name = document.getElementById('team_name');
+  const date = document.getElementById('date');
+  const tour = document.getElementById('tournament_id');
+  game.addEventListener('change', function () {
+    const opt = game.selectedOptions[0];
+    if (!opt || !opt.dataset.opponent) return;
+    if (!name.value.trim()) name.value = opt.dataset.opponent;
+    if (!date.value && opt.dataset.date) date.value = opt.dataset.date;
+    if (tour.value === '0' && opt.dataset.tournament !== '0') tour.value = opt.dataset.tournament;
+  });
+});
+</script>
 {% endblock %}

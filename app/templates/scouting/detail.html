@@ -1,90 +1,150 @@
 {% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
+
+{% macro line_chips(text, good) %}
+<div class="sw-chip-wrap">
+  {% for line in text.split('\n') if line.strip() %}
+  <div class="sw-chip {{ 'sw-good' if good else 'sw-bad' }}">
+    <i class="bi {{ 'bi-check-circle-fill' if good else 'bi-exclamation-circle-fill' }}"></i>
+    <span>{{ line.strip() }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
 
 {% block content %}
+{{ m.styles() }}
 <style>
-/* ── Strategy sections ──────────────────────────────────── */
 .strategy-block { border-radius:var(--uc-radius); padding:1rem 1.25rem; margin-bottom:.75rem }
-.strategy-block h6 { font-size:.72rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.06em; margin-bottom:.5rem }
-
-/* ── SW chips ───────────────────────────────────────────── */
+.strategy-block h6 { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.5rem }
 .sw-chip-wrap { display:flex; flex-direction:column; gap:.5rem }
-.sw-chip { display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .75rem;
-  border-radius:8px; font-size:.84rem; line-height:1.4 }
-
-/* ── Player mini-card ───────────────────────────────────── */
+.sw-chip { display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .75rem; border-radius:8px;
+  font-size:.84rem; line-height:1.4 }
+.sw-chip i { font-size:.9rem; margin-top:.1rem; flex-shrink:0 }
+.sw-bad { background:color-mix(in srgb, var(--bad) 6%, transparent); border:1px solid color-mix(in srgb, var(--bad) 15%, transparent) }
+.sw-bad i { color:var(--uc-red) }
+.sw-good { background:color-mix(in srgb, var(--ok) 6%, transparent); border:1px solid color-mix(in srgb, var(--ok) 20%, transparent) }
+.sw-good i { color:var(--uc-green) }
+.plan-block { border-left:3px solid var(--uc-green); padding:.25rem 0 .25rem 1rem; margin-bottom:1rem }
+.plan-block:last-child { margin-bottom:0 }
 .mini-player { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:10px;
-  padding:.65rem .9rem; transition:box-shadow .12s }
-.mini-player:hover { box-shadow:var(--uc-shadow-sm) }
-.mini-skill-bar { height:5px; border-radius:3px; overflow:hidden; background:var(--uc-gray-100);
-  margin-top:.3rem }
-.mini-skill-fill { height:100%; border-radius:3px }
-
-/* ── Clip card ──────────────────────────────────────────── */
-.clip-thumb { background:var(--uc-gray-800); border-radius:8px; overflow:hidden;
-  position:relative; aspect-ratio:16/9 }
-.clip-type-badge { position:absolute; top:.4rem; left:.4rem; font-size:.65rem;
-  font-weight:700; padding:.15rem .5rem; border-radius:20px; text-transform:capitalize }
-
-/* ── Section labels ─────────────────────────────────────── */
-.section-kicker { font-size:.7rem; font-weight:700; text-transform:uppercase;
-  letter-spacing:.07em; color:var(--uc-gray-400); margin-bottom:.6rem }
-
-/* ── Quick actions sidebar ──────────────────────────────── */
-.qa-list-btn { display:flex; align-items:center; gap:.65rem; padding:.6rem .8rem;
-  border-radius:8px; font-size:.875rem; font-weight:600; color:var(--uc-gray-800);
-  text-decoration:none; border:1px solid var(--uc-card-border); background:var(--uc-card-bg); transition:all .15s }
+  padding:.65rem .9rem; height:100% }
+.mini-skill-bar { height:5px; border-radius:3px; overflow:hidden; background:var(--uc-gray-100); margin-top:.3rem }
+.mini-skill-fill { height:100%; border-radius:3px; background:var(--club-ink) }
+.clip-thumb { background:var(--uc-gray-800); border-radius:8px; overflow:hidden; position:relative; aspect-ratio:16/9; display:block }
+.clip-thumb img { width:100%; height:100%; object-fit:cover; opacity:.85 }
+.clip-type-badge { position:absolute; top:.4rem; left:.4rem; font-size:.65rem; font-weight:700; padding:.15rem .5rem;
+  border-radius:20px; text-transform:capitalize; color:#fff; background:rgba(0,0,0,.6) }
+.qa-list-btn { display:flex; align-items:center; gap:.65rem; padding:.6rem .8rem; border-radius:8px; font-size:.875rem;
+  font-weight:600; color:var(--uc-gray-800); text-decoration:none; border:1px solid var(--uc-card-border);
+  background:var(--uc-card-bg); transition:all .15s; width:100%; text-align:left }
 .qa-list-btn:hover { border-color:var(--uc-blue); color:var(--uc-blue); background:color-mix(in srgb, var(--club-ink) 4%, transparent) }
 .qa-list-btn i { font-size:1rem; flex-shrink:0 }
+.info-row { display:flex; justify-content:space-between; gap:1rem; padding:.3rem 0; border-bottom:1px solid var(--uc-gray-100) }
+.info-row:last-child { border-bottom:none }
+.info-row > span:first-child { color:var(--uc-gray-400) }
+.result-w { color:var(--uc-green); font-weight:700 }
+.result-l { color:var(--uc-red); font-weight:700 }
+@media print {
+  .uc-navbar, .footer, .no-print, .btn, form { display:none !important }
+  .card { break-inside:avoid; border:1px solid #ccc !important; box-shadow:none !important }
+  .col-lg-8, .col-lg-4 { width:100% !important }
+}
 </style>
 
 <div class="container py-4">
 
-  <!-- Header -->
-  <div class="uc-page-header mb-4">
+  <div class="uc-page-header mb-3">
     <div>
       <h2>{{ report.team_name }}</h2>
       <p>
-        {% if report.date %}{{ report.date.strftime('%d %B %Y') }}{% endif %}
+        {% if report.date %}{{ report.date.strftime('%d %B %Y') }}{% else %}No date{% endif %}
         {% if report.tournament %} · {{ report.tournament.name }}{% endif %}
-        {% if report.game %} · Game #{{ report.game.id }}{% endif %}
+        {% if report.game %} · <a href="{{ url_for('game.detail', game_id=report.game.id) }}">Game {{ report.game.date.strftime('%d %b') if report.game.date else '' }}
+          {% if report.game.our_score or report.game.their_score %}({{ report.game.result_string }}){% endif %}</a>{% endif %}
       </p>
+      {% if report.offense_tag_list or report.defense_tag_list %}<div>{{ m.tag_chips(report) }}</div>{% endif %}
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a href="{{ url_for('scouting.card', report_id=report.id) }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-card-text me-1"></i>Game card
+      </a>
+      {% if current_user.is_coach %}
       <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-outline-primary btn-sm">
         <i class="bi bi-pencil me-1"></i>Edit
       </a>
+      {% endif %}
       <a href="{{ url_for('scouting.index') }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Reports
       </a>
-      <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-printer me-1"></i>Print
-      </button>
     </div>
   </div>
 
   <div class="row g-4">
-
-    <!-- Main column -->
     <div class="col-lg-8">
+
+      <!-- Game plan -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-check2-square me-2" style="color:var(--uc-green)"></i>Our Game Plan</h5>
+        </div>
+        <div class="card-body">
+          {% if report.has_game_plan %}
+            {% if report.game_plan %}
+            <div class="plan-block"><div class="section-kicker">How we beat them</div>
+              <div style="font-size:.92rem">{{ report.game_plan|nl2br }}</div></div>
+            {% endif %}
+            <div class="row g-3">
+              {% if report.o_line_plan %}
+              <div class="col-md-6"><div class="plan-block" style="border-color:var(--uc-blue)">
+                <div class="section-kicker">O-line</div><div style="font-size:.88rem">{{ report.o_line_plan|nl2br }}</div></div></div>
+              {% endif %}
+              {% if report.d_line_plan %}
+              <div class="col-md-6"><div class="plan-block" style="border-color:var(--uc-red)">
+                <div class="section-kicker">D-line</div><div style="font-size:.88rem">{{ report.d_line_plan|nl2br }}</div></div></div>
+              {% endif %}
+            </div>
+          {% else %}
+            <p class="text-muted small mb-2">No game plan yet: the two or three things the team needs to know to beat {{ report.team_name }}.</p>
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}#game_plan" class="btn btn-sm btn-outline-primary">Write the game plan</a>
+            {% endif %}
+          {% endif %}
+
+          {% set matchups = players|selectattr('matched_player')|list %}
+          {% if matchups %}
+          <div class="section-kicker mt-3">Key matchups</div>
+          <div class="row g-2">
+            {% for p in matchups %}
+            <div class="col-md-6">
+              <div class="d-flex flex-wrap align-items-center gap-2 small">
+                <strong class="text-nowrap">{{ p.matched_player.name }}</strong>
+                <i class="bi bi-arrow-left-right text-muted"></i>
+                <span class="text-nowrap">{% if p.jersey_number %}#{{ p.jersey_number }} {% endif %}{{ p.name }}</span>
+                <span class="text-nowrap">{{ m.threat_badge(p, small=true) }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
 
       <!-- Team analysis -->
       <div class="card mb-4">
         <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-clipboard-data me-2" style="color:var(--uc-blue)"></i>Team Analysis</h5>
+          <h5 class="mb-0"><i class="bi bi-clipboard-data me-2" style="color:var(--uc-blue)"></i>How They Play</h5>
         </div>
         <div class="card-body">
-
           {% if report.offense_strategy %}
           <div class="strategy-block" style="background:color-mix(in srgb, var(--club-ink) 6%, transparent);border-left:3px solid var(--uc-blue)">
-            <h6 style="color:var(--uc-blue)"><i class="bi bi-arrow-right-circle me-1"></i>Offensive Strategy</h6>
+            <h6 style="color:var(--uc-blue)"><i class="bi bi-arrow-right-circle me-1"></i>Offence</h6>
             <p style="font-size:.9rem;margin:0;color:var(--uc-gray-800)">{{ report.offense_strategy|nl2br }}</p>
           </div>
           {% endif %}
-
           {% if report.defense_strategy %}
           <div class="strategy-block" style="background:color-mix(in srgb, var(--bad) 6%, transparent);border-left:3px solid var(--uc-red)">
-            <h6 style="color:var(--uc-red)"><i class="bi bi-shield-fill me-1"></i>Defensive Strategy</h6>
+            <h6 style="color:var(--uc-red)"><i class="bi bi-shield-fill me-1"></i>Defence</h6>
             <p style="font-size:.9rem;margin:0;color:var(--uc-gray-800)">{{ report.defense_strategy|nl2br }}</p>
           </div>
           {% endif %}
@@ -94,38 +154,13 @@
             {% if report.strengths %}
             <div class="col-md-6">
               <div class="section-kicker"><i class="bi bi-arrow-up-circle me-1"></i>Strengths — watch out for</div>
-              <div class="sw-chip-wrap">
-                {% for line in report.strengths.split('\n') if line.strip() %}
-                <div class="sw-chip" style="background:color-mix(in srgb, var(--bad) 6%, transparent);border:1px solid color-mix(in srgb, var(--bad) 15%, transparent)">
-                  <i class="bi bi-exclamation-circle-fill" style="color:var(--uc-red);font-size:.9rem;margin-top:.1rem;flex-shrink:0"></i>
-                  {{ line.strip() }}
-                </div>
-                {% else %}
-                <div class="sw-chip" style="background:color-mix(in srgb, var(--bad) 6%, transparent);border:1px solid color-mix(in srgb, var(--bad) 15%, transparent)">
-                  <i class="bi bi-exclamation-circle-fill" style="color:var(--uc-red);font-size:.9rem;flex-shrink:0"></i>
-                  {{ report.strengths }}
-                </div>
-                {% endfor %}
-              </div>
+              {{ line_chips(report.strengths, false) }}
             </div>
             {% endif %}
-
             {% if report.weaknesses %}
             <div class="col-md-6">
               <div class="section-kicker"><i class="bi bi-arrow-down-circle me-1"></i>Weaknesses — exploit these</div>
-              <div class="sw-chip-wrap">
-                {% for line in report.weaknesses.split('\n') if line.strip() %}
-                <div class="sw-chip" style="background:color-mix(in srgb, var(--ok) 6%, transparent);border:1px solid color-mix(in srgb, var(--ok) 20%, transparent)">
-                  <i class="bi bi-check-circle-fill" style="color:var(--uc-green);font-size:.9rem;margin-top:.1rem;flex-shrink:0"></i>
-                  {{ line.strip() }}
-                </div>
-                {% else %}
-                <div class="sw-chip" style="background:color-mix(in srgb, var(--ok) 6%, transparent);border:1px solid color-mix(in srgb, var(--ok) 20%, transparent)">
-                  <i class="bi bi-check-circle-fill" style="color:var(--uc-green);font-size:.9rem;flex-shrink:0"></i>
-                  {{ report.weaknesses }}
-                </div>
-                {% endfor %}
-              </div>
+              {{ line_chips(report.weaknesses, true) }}
             </div>
             {% endif %}
           </div>
@@ -142,83 +177,79 @@
           <div class="uc-empty py-3">
             <div class="uc-empty-icon"><i class="bi bi-file-earmark-text"></i></div>
             <p>No analysis added yet.</p>
-            <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">
-              Add Analysis
-            </a>
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">Add Analysis</a>
+            {% endif %}
           </div>
           {% endif %}
-
         </div>
       </div>
 
-      <!-- Key players preview -->
-      {% if players %}
+      <!-- Players -->
       <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-red)"></i>Key Players</h5>
-          <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">
-            All {{ players|length }} Players
-          </a>
+          <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-red)"></i>Players</h5>
+          <div class="d-flex gap-2 no-print">
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Add</a>
+            {% endif %}
+            {% if players %}
+            <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">All {{ players|length }}</a>
+            {% endif %}
+          </div>
         </div>
         <div class="card-body">
+          {% if players %}
           <div class="row g-2">
             {% for player in players[:6] %}
-            {% set ratings = [player.throwing_ability, player.cutting_ability,
-                              player.defensive_ability, player.athletic_ability]|select|list %}
-            {% set avg = (ratings|sum / ratings|length) if ratings else 0 %}
-            {% if avg >= 4.5 %}{% set tc='#92400e' %}{% set tb='#fef3c7' %}{% set tl='Elite' %}
-            {% elif avg >= 3.5 %}{% set tc='#991b1b' %}{% set tb='#fee2e2' %}{% set tl='High' %}
-            {% elif avg >= 2.5 %}{% set tc='#713f12' %}{% set tb='#fef9c3' %}{% set tl='Med' %}
-            {% else %}{% set tc='#065f46' %}{% set tb='#d1fae5' %}{% set tl='Low' %}{% endif %}
-
             <div class="col-sm-6 col-md-4">
               <div class="mini-player">
-                <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex justify-content-between align-items-start gap-1">
                   <div>
                     <div style="font-weight:700;font-size:.875rem">
-                      {% if player.jersey_number %}<span style="color:var(--uc-gray-400)">#{{ player.jersey_number }}</span> {% endif %}
-                      {{ player.name }}
+                      {% if player.jersey_number %}<span style="color:var(--uc-gray-400)">#{{ player.jersey_number }}</span> {% endif %}{{ player.name }}
                     </div>
                     <div style="font-size:.72rem;color:var(--uc-gray-400);text-transform:capitalize">
-                      {{ player.position or 'Unknown' }}{% if player.height %} · {{ player.height }}{% endif %}
+                      {{ player.position or 'Position unknown' }}{% if player.height %} · {{ player.height }}{% endif %}
                     </div>
                   </div>
-                  <span style="font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:20px;
-                               background:{{ tb }};color:{{ tc }};flex-shrink:0">{{ tl }}</span>
+                  <div class="text-end">{{ m.threat_badge(player, small=true) }}</div>
                 </div>
-                <!-- Overall skill bar -->
-                <div class="mini-skill-bar">
-                  <div class="mini-skill-fill"
-                       style="width:{{ (avg / 5 * 100)|int }}%;background:var(--club-ink)"></div>
-                </div>
+                {% if player.ratings %}
+                <div class="mini-skill-bar"><div class="mini-skill-fill" style="width:{{ (player.average_rating / 5 * 100)|int }}%"></div></div>
+                {% endif %}
+                {% if player.matched_player %}
+                <div style="font-size:.72rem;color:var(--uc-gray-600);margin-top:.35rem"><i class="bi bi-person-check"></i> {{ player.matched_player.name }}</div>
+                {% endif %}
                 {% if player.notes %}
-                  <p style="font-size:.72rem;color:var(--uc-gray-500);margin:.4rem 0 0;
-                             white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                    {{ player.notes|truncate(60) }}
-                  </p>
+                <p style="font-size:.72rem;color:var(--uc-gray-500);margin:.35rem 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ player.notes }}</p>
                 {% endif %}
               </div>
             </div>
             {% endfor %}
           </div>
+          {% else %}
+          <div class="uc-empty py-3">
+            <div class="uc-empty-icon" style="font-size:1.8rem"><i class="bi bi-person-plus"></i></div>
+            <p style="font-size:.875rem">No players yet.</p>
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('scouting.add_players', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">Paste their roster</a>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
       </div>
-      {% endif %}
 
-      <!-- Clips preview -->
+      <!-- Clips -->
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0"><i class="bi bi-play-circle me-2" style="color:var(--uc-purple)"></i>
-            Video Clips {% if clips %}({{ clips|length }}){% endif %}
-          </h5>
-          <div class="d-flex gap-2">
-            <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">
-              <i class="bi bi-plus me-1"></i>Add
-            </a>
+          <h5 class="mb-0"><i class="bi bi-play-circle me-2" style="color:var(--uc-purple)"></i>Video Clips {% if clips %}({{ clips|length }}){% endif %}</h5>
+          <div class="d-flex gap-2 no-print">
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Add</a>
+            {% endif %}
             {% if clips %}
-            <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">
-              Manage
-            </a>
+            <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">All clips</a>
             {% endif %}
           </div>
         </div>
@@ -227,158 +258,148 @@
           <div class="row g-3">
             {% for clip in clips[:3] %}
             <div class="col-sm-4">
-              <div class="clip-thumb">
-                <img src="https://img.youtube.com/vi/{{ clip.youtube_embed_url.split('/embed/')[1].split('?')[0] if clip.youtube_embed_url else '' }}/mqdefault.jpg"
-                     alt="{{ clip.title }}"
-                     style="width:100%;height:100%;object-fit:cover;opacity:.85"
-                     onerror="this.style.display='none'">
-                {% if clip.clip_type %}
-                <span class="clip-type-badge"
-                      style="{% if clip.clip_type == 'offense' %}background:color-mix(in srgb, var(--club-ink) 85%, transparent)
-                             {% elif clip.clip_type == 'defense' %}background:color-mix(in srgb, var(--bad) 85%, transparent)
-                             {% elif clip.clip_type == 'set_play' %}background:color-mix(in srgb, var(--accent) 85%, transparent)
-                             {% elif clip.clip_type == 'pull' %}background:color-mix(in srgb, var(--ok) 85%, transparent)
-                             {% else %}background:rgba(0,0,0,.6){% endif %};color:#fff">
-                  {{ clip.clip_type|replace('_',' ') }}
-                </span>
-                {% endif %}
-              </div>
+              <a class="clip-thumb" href="{{ url_for('scouting.view_clip', clip_id=clip.id) }}">
+                {% if clip.thumbnail_url %}<img src="{{ clip.thumbnail_url }}" alt="" loading="lazy" onerror="this.style.display='none'">{% endif %}
+                {% if clip.clip_type %}<span class="clip-type-badge">{{ clip.clip_type|replace('_',' ') }}</span>{% endif %}
+              </a>
               <div style="margin-top:.4rem">
                 <div style="font-size:.82rem;font-weight:600;color:var(--uc-gray-800)">{{ clip.title|truncate(40) }}</div>
-                <a href="{{ url_for('scouting.view_clip', clip_id=clip.id) }}"
-                   style="font-size:.75rem;color:var(--uc-blue)">Watch →</a>
+                {% if clip.opponent_player %}<div style="font-size:.72rem;color:var(--uc-gray-400)">{{ clip.opponent_player.name }}</div>{% endif %}
               </div>
             </div>
             {% endfor %}
           </div>
-          {% if clips|length > 3 %}
-          <div class="text-center mt-3">
-            <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">
-              View all {{ clips|length }} clips
-            </a>
-          </div>
-          {% endif %}
           {% else %}
           <div class="uc-empty py-3">
             <div class="uc-empty-icon" style="font-size:1.8rem"><i class="bi bi-camera-video"></i></div>
-            <p style="font-size:.875rem">No clips added yet.</p>
-            <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">
-              Add First Clip
-            </a>
+            <p style="font-size:.875rem">No clips yet.</p>
+            {% if current_user.is_coach %}
+            <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">Add a YouTube clip</a>
+            {% endif %}
           </div>
           {% endif %}
         </div>
       </div>
-
     </div>
 
     <!-- Sidebar -->
     <div class="col-lg-4">
 
-      <!-- Quick actions -->
-      <div class="card mb-4">
+      {% if current_user.is_coach %}
+      <div class="card mb-4 no-print">
         <div class="card-header"><h5 class="mb-0">Quick Actions</h5></div>
         <div class="card-body d-flex flex-column gap-2">
           <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="qa-list-btn">
-            <i class="bi bi-person-plus" style="color:var(--uc-blue)"></i>Add Player
-          </a>
-          <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="qa-list-btn">
-            <i class="bi bi-people" style="color:var(--uc-teal)"></i>
-            View All Players
-            {% if players %}<span class="badge bg-secondary ms-auto">{{ players|length }}</span>{% endif %}
-          </a>
+            <i class="bi bi-person-plus" style="color:var(--uc-blue)"></i>Add a player</a>
+          <a href="{{ url_for('scouting.add_players', report_id=report.id) }}" class="qa-list-btn">
+            <i class="bi bi-list-ol" style="color:var(--uc-teal)"></i>Paste a roster</a>
           <a href="{{ url_for('scouting.add_clip', report_id=report.id) }}" class="qa-list-btn">
-            <i class="bi bi-camera-video" style="color:var(--uc-purple)"></i>Add Clip
-          </a>
-          <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="qa-list-btn">
-            <i class="bi bi-collection-play" style="color:var(--uc-indigo)"></i>
-            View All Clips
-            {% if clips %}<span class="badge bg-secondary ms-auto">{{ clips|length }}</span>{% endif %}
-          </a>
-          <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="qa-list-btn">
-            <i class="bi bi-pencil-square" style="color:var(--uc-amber)"></i>Edit Report
-          </a>
-          <button onclick="window.print()" class="qa-list-btn" style="border:none;cursor:pointer">
-            <i class="bi bi-printer" style="color:var(--uc-gray-600)"></i>Print / Export
-          </button>
-        </div>
-      </div>
-
-      <!-- Threat summary -->
-      {% if players %}
-      <div class="card mb-4">
-        <div class="card-header"><h5 class="mb-0">Threat Summary</h5></div>
-        <div class="card-body">
-          {% set elite_count  = [] %}
-          {% set high_count   = [] %}
-          {% set medium_count = [] %}
-          {% set low_count    = [] %}
-          {% for p in players %}
-            {% set r = [p.throwing_ability,p.cutting_ability,p.defensive_ability,p.athletic_ability]|select|list %}
-            {% set a = (r|sum/r|length) if r else 0 %}
-            {% if a>=4.5 %}{% set _=elite_count.append(1) %}
-            {% elif a>=3.5 %}{% set _=high_count.append(1) %}
-            {% elif a>=2.5 %}{% set _=medium_count.append(1) %}
-            {% else %}{% set _=low_count.append(1) %}{% endif %}
-          {% endfor %}
-
-          {% for label, count, col in [
-              ('Elite',  elite_count|length,  '#92400e'),
-              ('High',   high_count|length,   '#991b1b'),
-              ('Medium', medium_count|length, '#713f12'),
-              ('Low',    low_count|length,    '#065f46')] %}
-          {% if count > 0 %}
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span style="font-size:.82rem;font-weight:600;color:{{ col }}">{{ label }}</span>
-            <div style="flex:1;height:6px;border-radius:3px;background:var(--uc-gray-100);margin:0 .75rem;overflow:hidden">
-              <div style="height:100%;border-radius:3px;background:{{ col }};
-                          width:{{ (count / players|length * 100)|int }}%"></div>
-            </div>
-            <span style="font-size:.82rem;font-weight:700;color:var(--uc-gray-800)">{{ count }}</span>
-          </div>
-          {% endif %}
-          {% endfor %}
-
-          <a href="{{ url_for('scouting.players', report_id=report.id) }}"
-             class="btn btn-sm btn-outline-primary w-100 mt-1">View Full Roster</a>
+            <i class="bi bi-camera-video" style="color:var(--uc-purple)"></i>Add a clip</a>
+          <form method="post" action="{{ url_for('scouting.copy_report', report_id=report.id) }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="qa-list-btn" title="A new report with this one's notes, plan and players">
+              <i class="bi bi-files" style="color:var(--uc-amber)"></i>New report from this one</button>
+          </form>
+          <button onclick="window.print()" class="qa-list-btn"><i class="bi bi-printer" style="color:var(--uc-gray-600)"></i>Print full report</button>
         </div>
       </div>
       {% endif %}
 
-      <!-- Report details -->
-      <div class="card">
-        <div class="card-header"><h5 class="mb-0">Report Info</h5></div>
+      <!-- Head to head -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Head to Head</h5>
+          <a href="{{ url_for('scouting.opponent', name=report.team_name) }}" class="small no-print">History →</a>
+        </div>
         <div class="card-body" style="font-size:.85rem">
-          <div class="d-flex justify-content-between py-1 border-bottom">
-            <span style="color:var(--uc-gray-400)">Opponent</span>
-            <span style="font-weight:600">{{ report.team_name }}</span>
+          {% if record.played %}
+          <div class="mb-2"><strong>{{ record.wins }}–{{ record.losses }}{% if record.ties %}–{{ record.ties }}{% endif %}</strong>
+            <span class="text-muted">in {{ record.played }} game{{ 's' if record.played != 1 }}</span></div>
+          {% endif %}
+          {% for g in games[:5] %}
+          <div class="info-row">
+            <a href="{{ url_for('game.detail', game_id=g.id) }}">{{ g.date.strftime('%d %b %Y') if g.date else 'No date' }}{% if g.tournament %} · {{ g.tournament.name }}{% endif %}</a>
+            {% if g.our_score or g.their_score %}
+            <span class="{{ 'result-w' if g.is_win else 'result-l' if g.is_loss else '' }}">{{ g.result_string }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
           </div>
-          {% if report.date %}
-          <div class="d-flex justify-content-between py-1 border-bottom">
-            <span style="color:var(--uc-gray-400)">Date</span>
-            <span>{{ report.date.strftime('%d %b %Y') }}</span>
+          {% else %}
+          <p class="text-muted mb-0">No games against {{ report.team_name }} yet.</p>
+          {% endfor %}
+
+          {% if current_user.is_coach %}
+          <div class="mt-3 pt-2 no-print" style="border-top:1px solid var(--uc-gray-100)">
+            {% if report.game %}
+            <form method="post" action="{{ url_for('scouting.link_game', report_id=report.id) }}" class="d-flex align-items-center gap-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="game_id" value="0">
+              <span class="small text-muted me-auto">Linked to the game on {{ report.game.date.strftime('%d %b') if report.game.date else 'an undated day' }}</span>
+              <button type="submit" class="btn btn-sm btn-link px-0">Unlink</button>
+            </form>
+            {% elif games %}
+            <form method="post" action="{{ url_for('scouting.link_game', report_id=report.id) }}" class="d-flex gap-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="game_id" class="form-select form-select-sm" aria-label="Game to link">
+                {% for g in games %}<option value="{{ g.id }}">{{ g.date.strftime('%d %b %Y') if g.date else 'No date' }}{% if g.tournament %} · {{ g.tournament.name }}{% endif %}</option>{% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Link game</button>
+            </form>
+            <div class="form-text">Linked reports show on the game's page and on Game Day.</div>
+            {% endif %}
           </div>
           {% endif %}
-          {% if report.tournament %}
-          <div class="d-flex justify-content-between py-1 border-bottom">
-            <span style="color:var(--uc-gray-400)">Tournament</span>
-            <span>{{ report.tournament.name }}</span>
-          </div>
-          {% endif %}
-          <div class="d-flex justify-content-between py-1 border-bottom">
-            <span style="color:var(--uc-gray-400)">Players</span>
-            <span>{{ players|length }}</span>
-          </div>
-          <div class="d-flex justify-content-between py-1">
-            <span style="color:var(--uc-gray-400)">Clips</span>
-            <span>{{ clips|length }}</span>
-          </div>
-          <div class="mt-2" style="font-size:.72rem;color:var(--uc-gray-400)">
-            Last updated {{ report.updated_at.strftime('%d %b %Y') if report.updated_at else '—' }}
-          </div>
         </div>
       </div>
 
+      {% if history %}
+      <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Other Reports on {{ report.team_name }}</h5></div>
+        <div class="card-body" style="font-size:.85rem">
+          {% for r in history[:5] %}
+          <div class="info-row">
+            <a href="{{ url_for('scouting.detail', report_id=r.id) }}">{{ r.date.strftime('%d %b %Y') if r.date else 'No date' }}</a>
+            <span class="text-muted">{{ r.tournament.name if r.tournament else '' }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if players %}
+      {% set rated = players|selectattr('threat_level')|list %}
+      <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Threat Summary</h5></div>
+        <div class="card-body" style="font-size:.85rem">
+          {% set key_count = players|selectattr('is_key_threat')|list|length %}
+          {% if key_count %}<div class="info-row"><span>Key threats</span><strong>{{ key_count }}</strong></div>{% endif %}
+          {% for level in ['elite', 'high', 'medium', 'low'] %}
+          {% set n = rated|selectattr('threat_level', 'equalto', level)|list|length %}
+          {% if n %}<div class="info-row"><span>{{ level|capitalize }}</span><strong>{{ n }}</strong></div>{% endif %}
+          {% endfor %}
+          {% if players|length > rated|length %}
+          <div class="info-row"><span>Not rated</span><strong>{{ players|length - rated|length }}</strong></div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <div class="card-header"><h5 class="mb-0">Report Info</h5></div>
+        <div class="card-body" style="font-size:.85rem">
+          <div class="info-row"><span>Opponent</span><strong>{{ report.team_name }}</strong></div>
+          {% if report.tournament %}<div class="info-row"><span>Tournament</span><span>{{ report.tournament.name }}</span></div>{% endif %}
+          <div class="info-row"><span>Players</span><span>{{ players|length }}</span></div>
+          <div class="info-row"><span>Clips</span><span>{{ clips|length }}</span></div>
+          <div class="info-row"><span>Last updated</span><span>{{ report.updated_at.strftime('%d %b %Y') if report.updated_at else '—' }}</span></div>
+          {% if current_user.is_coach %}
+          <div class="mt-3 no-print">
+            {{ m.delete_button(url_for('scouting.delete_report', report_id=report.id), 'Delete report',
+                 'Delete this report on "' ~ report.team_name ~ '"? Its ' ~ players|length ~ ' players and ' ~ clips|length ~ ' clips go with it.',
+                 'deleteReport') }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </div>

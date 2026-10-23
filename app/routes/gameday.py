@@ -5,6 +5,7 @@ from sqlalchemy import func
 from app import db
 from app.models.game import Game
 from app.models.player import Player
+from app.models.scouting import scouting_for_game
 from app.utils.point_flow import get_game_roster
 from app.models.point import Point, LineUp
 from app.models.gameday import GameDayEvent, GameDayPlayerStats, LineTemplate, LineTemplatePlayer
@@ -92,8 +93,11 @@ def game_dashboard(game_id):
     ).scalar()
     next_point_number = (max_point_number or 0) + 1
     
+    linked_report, other_reports = scouting_for_game(game)
+
     return render_template('gameday/dashboard.html', 
                           game=game,
+                          scouting_report=linked_report or (other_reports[0] if other_reports else None),
                           mmp_players=mmp_players,
                           fmp_players=fmp_players,
                           line_templates=line_templates,
