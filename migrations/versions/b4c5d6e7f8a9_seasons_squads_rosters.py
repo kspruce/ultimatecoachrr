@@ -1,7 +1,7 @@
 """Seasons, squads and season rosters
 
 Revision ID: b4c5d6e7f8a9
-Revises: 52c437aed7f5
+Revises: 4df1e9017ad4
 Create Date: 2026-10-23 15:00:00.000000
 
 Adds the season, squad and season_roster tables, and season_id (plus
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 
 
 revision = 'b4c5d6e7f8a9'
-down_revision = '52c437aed7f5'
+down_revision = '4df1e9017ad4'
 branch_labels = None
 depends_on = None
 
