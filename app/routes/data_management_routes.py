@@ -22,6 +22,7 @@ from app.models.tournament import Tournament
 from app.models.clip import Clip
 from app.models.annotation import ClipAnnotation
 from app.models.event import Event, Pull
+from app.models.scouting import OpponentPlayer
 
 # Optional, only if present
 try:
@@ -456,6 +457,11 @@ def season_reset():
             deleted['by_player_id'] += _safe_delete(
                 lambda: Pull.query.filter(Pull.player_id.in_(players_to_delete)).delete(synchronize_session=False),
                 "DELETE Pull by player_id"
+            )
+            _safe_delete(
+                lambda: OpponentPlayer.query.filter(OpponentPlayer.matched_player_id.in_(players_to_delete))
+                .update({OpponentPlayer.matched_player_id: None}, synchronize_session=False),
+                "CLEAR OpponentPlayer matchups by player_id"
             )
             deleted['by_player_id'] += _safe_delete(
                 lambda: Throw.query.filter(or_(Throw.thrower_id.in_(players_to_delete),

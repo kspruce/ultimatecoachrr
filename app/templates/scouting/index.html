@@ -1,124 +1,191 @@
 {% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Scouting Reports</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('scouting.add_report') }}" class="btn btn-primary">Add Scouting Report</a>
-        </div>
-    </div>
+{{ m.styles() }}
+<style>
+.report-card { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:var(--uc-radius);
+  height:100%; display:flex; flex-direction:column; transition:box-shadow .15s }
+.report-card:hover { box-shadow:var(--uc-shadow-sm) }
+.report-card-body { padding:.9rem 1rem; flex:1 }
+.report-card-foot { padding:.6rem 1rem; border-top:1px solid var(--uc-gray-100); display:flex; gap:.5rem;
+  align-items:center; flex-wrap:wrap }
+.report-meta { font-size:.75rem; color:var(--uc-gray-400) }
+.report-stat { font-size:.75rem; color:var(--uc-gray-600); display:inline-flex; align-items:center; gap:.25rem;
+  margin-right:.75rem }
+.report-line { font-size:.8rem; color:var(--uc-gray-600); margin:.35rem 0 0; display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+.group-head { display:flex; align-items:baseline; gap:.75rem; margin:1.5rem 0 .75rem; flex-wrap:wrap }
+.group-head h5 { margin:0 }
+.filters .form-label { font-size:.75rem; font-weight:600; color:var(--uc-gray-600); margin-bottom:.2rem }
+</style>
 
-    <!-- Filter section remains unchanged -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Filter Reports</h5>
-                </div>
-                <div class="card-body">
-                    <form method="get" action="{{ url_for('scouting.index') }}">
-                        <div class="row">
-                            <div class="col-md-10">
-                                {{ form.tournament_id.label(class="form-label") }}
-                                {{ form.tournament_id(class="form-select") }}
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"> </label>
-                                <button type="submit" class="btn btn-primary w-100">Filter</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+<div class="container py-4">
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>Scouting</h2>
+      <p>What we know about the teams we play, and how we plan to beat them.</p>
     </div>
+    {% if current_user.is_coach %}
+    <div>
+      <a href="{{ url_for('scouting.add_report') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>New Report
+      </a>
+    </div>
+    {% endif %}
+  </div>
 
-    <div class="row">
-        {% if reports %}
-            {% for report in reports %}
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <!-- Card header and body remain unchanged -->
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">{{ report.team_name }}</h5>
-                        <span class="text-muted small">{{ report.date.strftime('%Y-%m-%d') if report.date else 'No date' }}</span>
-                    </div>
-                    <div class="card-body">
-                        <!-- ... existing card body content ... -->
-                    </div>
-                    <div class="card-footer">
-                        <div class="btn-group w-100">
-                            <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            {% if current_user.is_admin %}
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ report.id }}">Delete</button>
-                            {% endif %}
-                        </div>
-                        
-                        {% if current_user.is_admin %}
-                            <!-- Delete Confirmation Modal -->
-                            <div class="modal fade" id="deleteModal{{ report.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ report.id }}" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="deleteModalLabel{{ report.id }}">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to delete the scouting report for "{{ report.team_name }}"?</p>
-                                            {% if report.players.count() > 0 or report.clips.count() > 0 %}
-                                            <div class="alert alert-warning">
-                                                Warning: This will also delete:
-                                                <ul class="mb-0">
-                                                    {% if report.players.count() > 0 %}
-                                                        <li>{{ report.players.count() }} player scouting records</li>
-                                                    {% endif %}
-                                                    {% if report.clips.count() > 0 %}
-                                                        <li>{{ report.clips.count() }} associated clips</li>
-                                                    {% endif %}
-                                                </ul>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <form action="{{ url_for('scouting.delete_report', report_id=report.id) }}" method="POST" class="d-inline">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                                <button type="submit" class="btn btn-danger">Delete Report</button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-        <div class="col-12">
-            <div class="alert alert-info">
-                No scouting reports found. <a href="{{ url_for('scouting.add_report') }}">Add a scouting report</a> to get started.
-            </div>
+  {% if any_reports %}
+  <form method="get" action="{{ url_for('scouting.index') }}" class="card mb-3 filters" id="scoutFilters">
+    <div class="card-body py-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="q">Opponent</label>
+          <input type="search" class="form-control form-control-sm" id="q" name="q" value="{{ form.q.data or '' }}"
+                 placeholder="Search by team name…" autocomplete="off">
         </div>
-        {% endif %}
+        <div class="col-6 col-md-3">
+          {{ form.tournament_id.label(class="form-label") }}
+          {{ form.tournament_id(class="form-select form-select-sm") }}
+        </div>
+        <div class="col-6 col-md-2">
+          {{ form.tag.label(class="form-label") }}
+          {{ form.tag(class="form-select form-select-sm") }}
+        </div>
+        <div class="col-6 col-md-3">
+          {{ form.group.label(class="form-label") }}
+          {{ form.group(class="form-select form-select-sm") }}
+        </div>
+        <div class="col-6 col-md-2">
+          {{ form.date_from.label(class="form-label") }}
+          {{ form.date_from(class="form-control form-control-sm", type="date") }}
+        </div>
+        <div class="col-6 col-md-2">
+          {{ form.date_to.label(class="form-label") }}
+          {{ form.date_to(class="form-control form-control-sm", type="date") }}
+        </div>
+        <div class="col-6 col-md-2">
+          <noscript><button type="submit" class="btn btn-sm btn-primary">Filter</button></noscript>
+          {% if filtered %}
+          <a href="{{ url_for('scouting.index', group=group) }}" class="btn btn-sm btn-link px-0">Clear filters</a>
+          {% endif %}
+        </div>
+      </div>
     </div>
+  </form>
+  <div class="report-meta mb-2">{{ report_count }} report{{ 's' if report_count != 1 }}</div>
+  {% endif %}
+
+  {% for g in groups %}
+  {% if g.heading %}
+  <div class="group-head">
+    <h5>{{ g.heading }}</h5>
+    {% if group == 'opponent' %}
+    <a href="{{ url_for('scouting.opponent', name=g.opponent) }}" class="small">History &amp; head-to-head →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  <div class="row g-3">
+    {% for report in g.reports %}
+    <div class="col-md-6 col-xl-4">
+      <div class="report-card">
+        <div class="report-card-body">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="fw-bold text-decoration-none"
+               style="color:var(--uc-gray-800)">{{ report.team_name }}</a>
+            <span class="report-meta text-nowrap">{{ report.date.strftime('%d %b %Y') if report.date else 'No date' }}</span>
+          </div>
+          <div class="report-meta mt-1">
+            {% if report.tournament and group != 'tournament' %}<i class="bi bi-trophy"></i> {{ report.tournament.name }}{% endif %}
+            {% if report.game %}
+              {% if report.tournament and group != 'tournament' %} · {% endif %}
+              <i class="bi bi-controller"></i> {{ report.game.result_string if (report.game.our_score or report.game.their_score) else 'Game linked' }}
+            {% endif %}
+            {% if group != 'opponent' %}
+              {% if report.tournament or report.game %} · {% endif %}<a href="{{ url_for('scouting.opponent', name=report.team_name) }}">Head-to-head</a>
+            {% endif %}
+          </div>
+          {% if report.offense_tag_list or report.defense_tag_list %}
+          <div class="mt-2">{{ m.tag_chips(report) }}</div>
+          {% endif %}
+          {% if report.weaknesses %}
+          <p class="report-line"><i class="bi bi-bullseye" style="color:var(--uc-green)"></i>
+            {{ report.weaknesses.strip().split('\n')[0] }}</p>
+          {% elif report.strengths %}
+          <p class="report-line"><i class="bi bi-exclamation-circle" style="color:var(--uc-red)"></i>
+            {{ report.strengths.strip().split('\n')[0] }}</p>
+          {% endif %}
+          <div class="mt-2">
+            <span class="report-stat"><i class="bi bi-people"></i>{{ counts.players.get(report.id, 0) }} players</span>
+            {% if counts.threats.get(report.id) %}
+            <span class="report-stat"><i class="bi bi-star-fill" style="color:var(--accent)"></i>{{ counts.threats[report.id] }} key</span>
+            {% endif %}
+            <span class="report-stat"><i class="bi bi-camera-video"></i>{{ counts.clips.get(report.id, 0) }} clips</span>
+            {% if report.has_game_plan %}
+            <span class="report-stat"><i class="bi bi-check2-square" style="color:var(--uc-green)"></i>Game plan</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="report-card-foot">
+          <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">Open</a>
+          <a href="{{ url_for('scouting.card', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary"
+             title="One-page game card"><i class="bi bi-card-text"></i> Card</a>
+          {% if current_user.is_coach %}
+          <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+          <span class="ms-auto">
+          {{ m.delete_button(url_for('scouting.delete_report', report_id=report.id), 'Delete report',
+               'Delete the report on "' ~ report.team_name ~ '"? Its ' ~ counts.players.get(report.id, 0) ~ ' players and '
+               ~ counts.clips.get(report.id, 0) ~ ' clips go with it.', 'deleteReport' ~ report.id, icon_only=true) }}
+          </span>
+          {% endif %}
+          <span class="report-meta {% if not current_user.is_coach %}ms-auto{% endif %} w-100">
+            Updated {{ report.updated_at.strftime('%d %b %Y') if report.updated_at else '—' }}
+          </span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if not groups %}
+    {% if any_reports %}
+    <div class="uc-empty card py-5">
+      <div class="uc-empty-icon"><i class="bi bi-search"></i></div>
+      <p>No reports match these filters.</p>
+      <a href="{{ url_for('scouting.index') }}" class="btn btn-sm btn-outline-primary">Clear filters</a>
+    </div>
+    {% else %}
+    <div class="uc-empty card py-5">
+      <div class="uc-empty-icon"><i class="bi bi-binoculars"></i></div>
+      <p class="mb-1"><strong>No scouting reports yet.</strong></p>
+      <p style="max-width:32rem;margin:0 auto 1rem">
+        A report holds an opponent's offence and defence, their key players, video clips
+        and your game plan. Open it on the sideline as a one-page game card.
+      </p>
+      {% if current_user.is_coach %}
+      <a href="{{ url_for('scouting.add_report') }}" class="btn btn-primary btn-sm">Write the first report</a>
+      {% else %}
+      <p class="small text-muted">Your coaches haven't added any yet.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-// Remove the deleteReport function since we're using form submission now
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize any Bootstrap components if needed
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('scoutFilters');
+  if (!form) return;
+  // Filters apply as soon as they change; the search box waits for a pause in typing
+  form.querySelectorAll('select, input[type=date]').forEach(el => el.addEventListener('change', () => form.submit()));
+  const q = document.getElementById('q');
+  let timer;
+  q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => form.submit(), 500); });
+  if (q.value) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 });
 </script>
 {% endblock %}

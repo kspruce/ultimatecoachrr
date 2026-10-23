@@ -30,6 +30,11 @@
         <a href="{{ url_for('gameday.game_stats', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-bar-chart-fill"></i><span class="d-none d-sm-inline ms-1">Stats</span>
         </a>
+        {% if scouting_report and (not current_team or not current_team.settings or current_team.settings.scouting_enabled) %}
+        <a href="{{ url_for('scouting.card', report_id=scouting_report.id) }}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Scouting game card">
+          <i class="bi bi-binoculars"></i><span class="d-none d-sm-inline ms-1">Scout</span>
+        </a>
+        {% endif %}
         <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline ms-1">Back</span>
         </a>

@@ -1,0 +1,91 @@
+{# Shared bits for the scouting pages #}
+
+{% macro threat_badge(player, small=false) %}
+  {% if player.is_key_threat %}
+  <span class="threat-badge threat-key{% if small %} small{% endif %}" title="Marked as a key threat"><i class="bi bi-star-fill"></i> Key threat</span>
+  {% endif %}
+  {% set level = player.threat_level %}
+  {% if level %}
+  <span class="threat-badge threat-{{ level }}{% if small %} small{% endif %}">{{ level|capitalize }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro tag_chips(report) %}
+  {% for t in report.offense_tag_list %}
+  <span class="look-chip look-o" title="Offence">{{ scouting_tag_labels.get(t, t) }}</span>
+  {% endfor %}
+  {% for t in report.defense_tag_list %}
+  <span class="look-chip look-d" title="Defence">{{ scouting_tag_labels.get(t, t) }}</span>
+  {% endfor %}
+{% endmacro %}
+
+{% macro star_input(field) %}
+  {# A 1-5 star picker; the radios post the same values as the select it replaces #}
+  <div class="mb-1">
+    <div class="form-label mb-1">{{ field.label.text }}</div>
+    <div class="star-input" role="radiogroup" aria-label="{{ field.label.text }}">
+      {% for value in ['5', '4', '3', '2', '1'] %}
+      <input type="radio" id="{{ field.id }}-{{ value }}" name="{{ field.name }}" value="{{ value }}"
+             {% if field.data is not none and field.data|string == value %}checked{% endif %}>
+      <label for="{{ field.id }}-{{ value }}" title="{{ value }} of 5"><i class="bi bi-star-fill"></i></label>
+      {% endfor %}
+      <input type="radio" id="{{ field.id }}-none" name="{{ field.name }}" value=""
+             {% if field.data is none %}checked{% endif %} class="star-clear-input">
+      <label for="{{ field.id }}-none" class="star-clear" title="Not rated">clear</label>
+    </div>
+    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro delete_button(action, label, message, id, small=true, icon_only=false) %}
+  <button type="button" class="btn {% if small %}btn-sm{% endif %} btn-outline-danger"
+          data-bs-toggle="modal" data-bs-target="#{{ id }}" title="{{ label }}">
+    <i class="bi bi-trash"></i>{% if not icon_only %} {{ label }}{% endif %}
+  </button>
+  <div class="modal fade" id="{{ id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ label }}?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="font-size:.9rem">{{ message }}</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <form action="{{ action }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger btn-sm">{{ label }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro styles() %}
+<style>
+.threat-badge { display:inline-block; padding:.15rem .5rem; border-radius:20px; font-size:.68rem;
+  font-weight:700; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap }
+.threat-badge.small { font-size:.62rem; padding:.1rem .4rem }
+.threat-key    { background:var(--ink); color:var(--card, #fff); border:1px solid var(--ink) }
+.threat-elite  { background:var(--accent-soft); color:var(--ink); border:1px solid var(--accent) }
+.threat-high   { background:var(--bad-soft); color:var(--ink); border:1px solid var(--bad) }
+.threat-medium { background:var(--warn-soft); color:var(--ink); border:1px solid var(--warn) }
+.threat-low    { background:var(--ok-soft); color:var(--ink); border:1px solid var(--ok) }
+.look-chip { display:inline-block; padding:.12rem .5rem; border-radius:6px; font-size:.72rem; font-weight:600;
+  margin:0 .25rem .25rem 0; white-space:nowrap }
+.look-o { background:color-mix(in srgb, var(--club-ink) 10%, transparent); color:var(--uc-blue) }
+.look-d { background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
+.section-kicker { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--uc-gray-400); margin-bottom:.6rem }
+.star-input { display:inline-flex; flex-direction:row-reverse; align-items:center; gap:.1rem }
+.star-input input { position:absolute; opacity:0; width:1px; height:1px }
+.star-input label { cursor:pointer; font-size:1.35rem; color:var(--uc-gray-200); line-height:1; padding:.1rem }
+.star-input label.star-clear { font-size:.72rem; color:var(--uc-gray-400); order:-1; margin-left:.5rem;
+  text-decoration:underline }
+.star-input input:not(.star-clear-input):checked ~ label:not(.star-clear),
+.star-input label:not(.star-clear):hover, .star-input label:not(.star-clear):hover ~ label:not(.star-clear) {
+  color:var(--warn, #f59e0b) }
+.star-input input:focus-visible + label { outline:2px solid var(--uc-blue); border-radius:4px }
+</style>
+{% endmacro %}

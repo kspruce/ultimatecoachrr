@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>Paste a Roster</h2>
+      <p>{{ report.team_name }}</p>
+    </div>
+    <div>
+      <a href="{{ url_for('scouting.players', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Players</a>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body">
+          <p class="small text-muted">
+            One player per line: number (optional), name, then a position if you know it
+            ({{ positions|join(', ') }}). Copying a roster from a tournament website usually works as it is.
+            Rate the players that matter afterwards.
+          </p>
+          <form method="post" novalidate>
+            {{ form.hidden_tag() }}
+            {{ form.roster(class="form-control font-monospace", rows=14, autofocus=true,
+                           placeholder="7 Jane Doe handler\n12 Sam Lee (cutter)\n#3 Alex Kim\nRiley") }}
+            {% for error in form.roster.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            <div class="d-grid mt-3">{{ form.submit(class="btn btn-primary") }}</div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

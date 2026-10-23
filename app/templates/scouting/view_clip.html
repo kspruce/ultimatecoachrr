@@ -1,81 +1,98 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ clip.title }}</h1>
+<style>
+.moment-btn { font-size:.78rem; font-weight:600; padding:.3rem .65rem; border-radius:6px; border:1px solid var(--uc-gray-200);
+  background:var(--card); color:var(--uc-gray-600); font-variant-numeric:tabular-nums }
+.moment-btn.active, .moment-btn:hover { border-color:var(--uc-gray-800); color:var(--uc-gray-800) }
+</style>
+<div class="container py-4">
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>{{ clip.title }}</h2>
+      <p>
+        {{ report.team_name }}
+        {% if clip.clip_type %} · {{ clip.clip_type|replace('_', ' ')|capitalize }}{% endif %}
+        {% if clip.opponent_player %} · {{ clip.opponent_player.name }}{% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      {% if current_user.is_coach %}
+      <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
+      {% endif %}
+      <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Clips</a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body">
+          {% if clip.video_id %}
+          <div class="ratio ratio-16x9 mb-3">
+            <iframe id="clipFrame" src="{{ clip.youtube_embed_url }}" title="{{ clip.title }}"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+          {% else %}
+          <div class="alert alert-warning">This clip's video link doesn't work. {% if current_user.is_coach %}Edit the clip to fix it.{% endif %}</div>
+          {% endif %}
+
+          {% if clip.moment_list %}
+          <div class="d-flex flex-wrap gap-1 mb-3" id="moments">
+            <button type="button" class="moment-btn active" data-src="{{ clip.embed_url_for(clip.start_time, clip.end_time, autoplay=true) }}">
+              {{ clip.start_time|scouting_time if clip.start_time else '0:00' }} Main clip</button>
+            {% for mo in clip.moment_list %}
+            <button type="button" class="moment-btn" data-src="{{ clip.embed_url_for(mo.start, mo.end, autoplay=true) }}">
+              {{ mo.start|scouting_time }}{% if mo.end %}–{{ mo.end|scouting_time }}{% endif %} {{ mo.label }}</button>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if clip.description %}<p>{{ clip.description|nl2br }}</p>{% endif %}
+
+          <p class="small text-muted mb-0">
+            {% if clip.start_time or clip.end_time %}
+              {% if clip.start_time %}From {{ clip.start_time|scouting_time }}{% endif %}
+              {% if clip.end_time %} to {{ clip.end_time|scouting_time }}{% endif %} ·
+            {% endif %}
+            <a href="{{ clip.youtube_link }}{% if clip.start_time %}&t={{ clip.start_time }}s{% endif %}" target="_blank" rel="noopener">Open on YouTube</a>
+          </p>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('scouting.edit_clip', clip_id=clip.id) }}" class="btn btn-outline-primary">Edit Clip</a>
-                <a href="{{ url_for('scouting.clips', report_id=report.id) }}" class="btn btn-secondary">Back to Clips</a>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <div class="ratio ratio-16x9 mb-3">
-                        <iframe src="{{ clip.youtube_embed_url }}" allowfullscreen></iframe>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Team:</strong> {{ report.team_name }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Type:</strong> {{ clip.clip_type|replace('_', ' ')|capitalize if clip.clip_type else 'General' }}</p>
-                        </div>
-                    </div>
-                    
-                    {% if clip.description %}
-                    <h5>Description</h5>
-                    <p>{{ clip.description|nl2br }}</p>
-                    {% endif %}
-                    
-                    <h5>Video Link</h5>
-                    <p><a href="{{ clip.youtube_link }}" target="_blank">{{ clip.youtube_link }}</a></p>
-                    
-                    {% if clip.start_time or clip.end_time %}
-                    <h5>Clip Timing</h5>
-                    <p>
-                        {% if clip.start_time %}
-                        Start: {{ clip.start_time // 60 }}:{{ '%02d' % (clip.start_time % 60) }}
-                        {% endif %}
-                        {% if clip.end_time %}
-                        End: {{ clip.end_time // 60 }}:{{ '%02d' % (clip.end_time % 60) }}
-                        {% endif %}
-                    </p>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><h5 class="mb-0">Scouting Report</h5></div>
+        <div class="card-body">
+          <h6>{{ report.team_name }}</h6>
+          <p class="small text-muted">
+            {% if report.date %}{{ report.date.strftime('%d %B %Y') }}{% endif %}
+            {% if report.tournament %} · {{ report.tournament.name }}{% endif %}
+          </p>
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-primary btn-sm">View full report</a>
+            {% if clip.opponent_player %}
+            <a href="{{ url_for('scouting.clips', report_id=report.id, player=clip.opponent_player.id) }}" class="btn btn-outline-secondary btn-sm">More of {{ clip.opponent_player.name }}</a>
+            {% endif %}
+          </div>
         </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Scouting Report</h5>
-                </div>
-                <div class="card-body">
-                    <h6>{{ report.team_name }}</h6>
-                    <p>
-                        {% if report.date %}
-                            {{ report.date.strftime('%B %d, %Y') }}
-                        {% endif %}
-                        {% if report.tournament %}
-                            | {{ report.tournament.name }}
-                        {% endif %}
-                    </p>
-                    
-                    <div class="d-grid gap-2 mt-3">
-                        <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-primary">View Full Report</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const frame = document.getElementById('clipFrame');
+  document.querySelectorAll('#moments .moment-btn').forEach(btn => btn.addEventListener('click', function () {
+    document.querySelectorAll('#moments .moment-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    if (frame) frame.src = this.dataset.src;
+  }));
+});
+</script>
 {% endblock %}

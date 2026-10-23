@@ -15,6 +15,7 @@ from app.utils.utils import coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
 from app.models.tournament_rsvp import TournamentRSVP
+from app.models.scouting import scouting_for_game
 from app.utils.team_filter import get_current_team_id, team_player_ids
 from app.utils.point_flow import analysis_progress
 
@@ -129,8 +130,12 @@ def detail(game_id):
         reverse=True
     )
 
+    scouting_report, scouting_matches = scouting_for_game(game)
+
     return render_template('game/detail.html',
                          game=game,
+                         scouting_report=scouting_report,
+                         scouting_matches=scouting_matches,
                          all_players=all_players,
                          game_players=game_players,
                          delete_form=delete_form,

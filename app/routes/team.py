@@ -8,6 +8,7 @@ from app.models.user import User
 from app.forms.team import PlayerForm, PlayerFilterForm
 from app.models.point import LineUp
 from app.models.event import Event, Pull
+from app.models.scouting import OpponentPlayer
 from app.models.session import Attendance, SessionRSVP
 from app.utils.utils import coach_required
 from app.models.team_organization import TeamOrganization
@@ -252,6 +253,9 @@ def delete_player(player_id):
             player_id=player_id,
             team_organization_id=get_current_team_id()
         ).delete()
+
+        # Scouting matchups they were down for go back to nobody
+        OpponentPlayer.query.filter_by(matched_player_id=player_id).update({OpponentPlayer.matched_player_id: None})
         
         Attendance.query.filter_by(
             player_id=player_id,

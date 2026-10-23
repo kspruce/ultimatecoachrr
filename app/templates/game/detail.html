@@ -135,6 +135,57 @@
         </div>
     </div>
 
+    <!-- Scouting -->
+    {% if (not current_team or not current_team.settings or current_team.settings.scouting_enabled) and (scouting_report or scouting_matches or current_user.is_coach) %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-binoculars me-1"></i> Scouting: {{ game.opponent }}</h5>
+            <a href="{{ url_for('scouting.opponent', name=game.opponent) }}" class="small">History</a>
+        </div>
+        <div class="card-body">
+            {% if scouting_report %}
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    Report from {{ scouting_report.date.strftime('%d %b %Y') if scouting_report.date else 'an undated day' }}
+                    {% if scouting_report.game_plan %}
+                    <div class="small text-muted">{{ scouting_report.game_plan.strip().split('\n')[0]|truncate(120) }}</div>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('scouting.card', report_id=scouting_report.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-card-text"></i> Game card</a>
+                <a href="{{ url_for('scouting.detail', report_id=scouting_report.id) }}" class="btn btn-sm btn-outline-secondary">Full report</a>
+            </div>
+            {% elif scouting_matches %}
+            {% set match = scouting_matches[0] %}
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="me-auto">
+                    You scouted {{ match.team_name }} {% if match.date %}on {{ match.date.strftime('%d %b %Y') }}{% endif %}.
+                    {% if current_user.is_coach %}<span class="small text-muted">Link it to show it here and on Game Day, or start a fresh report from it.</span>{% endif %}
+                </div>
+                <a href="{{ url_for('scouting.card', report_id=match.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-card-text"></i> Game card</a>
+                {% if current_user.is_coach %}
+                <form method="post" action="{{ url_for('scouting.link_game', report_id=match.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="game_id" value="{{ game.id }}">
+                    <input type="hidden" name="next" value="{{ url_for('game.detail', game_id=game.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Link to this game</button>
+                </form>
+                <form method="post" action="{{ url_for('scouting.copy_report', report_id=match.id) }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="game_id" value="{{ game.id }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">New report from it</button>
+                </form>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="me-auto text-muted">No scouting report on {{ game.opponent }} yet.</span>
+                <a href="{{ url_for('scouting.add_report', game_id=game.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Scout {{ game.opponent }}</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Gameday Stats — shown when gameday data exists and no full positional analysis -->
     {% if gameday_stats %}
     <div class="row mb-4">
