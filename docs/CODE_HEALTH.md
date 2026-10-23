@@ -16,8 +16,8 @@ SQLite and Postgres in GitHub Actions on every pull request.
 3. `error_handlers.py` calls `db.session.remove()` after every request,
    which throws away unsaved work in code that briefly opens a request
    context (Flask-SQLAlchemy already cleans up).
-4. Smaller broken imports in rarely used paths: `app/discord/notifications.py`
-   (`Session`), `data_management_routes.py` (`Stat`).
+4. A smaller broken import in a rarely used path: `data_management_routes.py`
+   (`Stat`).
 5. `Throw.opposition_team` is never filled in when recording, so the
    opposition filter on the connections chart never matches anything.
 6. 25 unused variables, 6 `raise` without `from`, and ~240 broad

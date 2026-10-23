@@ -137,58 +137,34 @@
                         <i class="bi bi-calendar-check me-1"></i> Session RSVPs
                     </div>
 
-                    {% if current_user.player and current_user.player.session_rsvps %}
-                    <div class="d-flex flex-column gap-2">
-                        {% for rsvp in current_user.player.session_rsvps %}
-                        <div class="d-flex align-items-center gap-3 p-3"
-                             style="border:1px solid var(--uc-gray-100);border-radius:10px;
-                                    background:var(--uc-gray-50)">
-                            <div style="flex:1;min-width:0">
-                                <div style="font-weight:600;font-size:.875rem;color:var(--uc-gray-800)
-                                        ;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                                    {{ rsvp.session.title }}
-                                </div>
-                                <div style="font-size:.78rem;color:var(--uc-gray-400)">
-                                    {{ rsvp.session.formatted_date }} · {{ rsvp.session.formatted_time }}
-                                </div>
-                                {% if rsvp.notes %}
-                                <div style="font-size:.78rem;color:var(--uc-gray-400);margin-top:.2rem">
-                                    "{{ rsvp.notes }}"
-                                </div>
-                                {% endif %}
-                            </div>
-                            <div class="d-flex flex-column align-items-end gap-1">
-                                <span class="badge
-                                    {% if rsvp.status == 'attending' %}bg-success
-                                    {% elif rsvp.status == 'maybe' %}bg-warning text-dark
-                                    {% else %}bg-danger{% endif %}"
-                                    style="font-size:.72rem">
-                                    {{ rsvp.status|replace('_', ' ')|capitalize }}
-                                </span>
-                                <div class="d-flex gap-1">
-                                    <a href="{{ url_for('session.rsvp', session_id=rsvp.session_id) }}"
-                                       class="btn btn-sm btn-outline-primary" style="font-size:.72rem;padding:.2rem .5rem">
-                                        Update
-                                    </a>
-                                    <a href="{{ url_for('session.detail', session_id=rsvp.session_id) }}"
-                                       class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;padding:.2rem .5rem">
-                                        View
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    <p style="font-size:.9rem">Say which sessions you can make – all your upcoming dates on one page.</p>
+                    <a href="{{ url_for('training.availability') }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-hand-thumbs-up"></i> My availability
+                    </a>
+                </div>
+            </div>
+
+            {% if discord_ready() %}
+            <div class="card mb-4">
+                <div class="card-body p-4">
+                    <div style="font-size:.82rem;color:var(--uc-gray-400);font-weight:700;
+                                letter-spacing:.07em;text-transform:uppercase;margin-bottom:1rem">
+                        <i class="bi bi-discord me-1"></i> Discord
                     </div>
+                    {% if current_user.discord_id %}
+                    <p style="font-size:.9rem">Connected as <b>{{ current_user.discord_username or 'your Discord account' }}</b>.
+                        Your taps on Discord's Yes / Maybe / No buttons count as your answer, and reminders come as a Discord message.</p>
+                    <form method="post" action="{{ url_for('discord.disconnect') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-secondary">Disconnect</button>
+                    </form>
                     {% else %}
-                    <div class="uc-empty" style="padding:1.5rem 1rem">
-                        <div class="uc-empty-icon" style="width:40px;height:40px;font-size:1rem">
-                            <i class="bi bi-calendar-x"></i>
-                        </div>
-                        <p style="margin:0;font-size:.85rem">No session RSVPs yet.</p>
-                    </div>
+                    <p style="font-size:.9rem">Connect your Discord account to answer with the buttons in your team's Discord and get reminders there instead of by email.</p>
+                    <a href="{{ url_for('discord.connect') }}" class="btn btn-sm btn-primary"><i class="bi bi-discord"></i> Connect Discord</a>
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <!-- Tournament RSVPs -->
             <div class="card">

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from 'session/partials/_badges.html' import session_type_colour, component_colour, component_icon %}
+{% from 'training/_macros.html' import answer_buttons, squad_pills %}
 
 
 
@@ -14,23 +15,64 @@
             <span class="badge bg-{{ session_type_colour(session.session_type) }} mb-2">
                 {{ session.session_type_display }}
             </span>
-            {% if session.is_recurring %}
-            <span class="badge bg-secondary mb-2">{{ session.recurrence_pattern }}</span>
-            {% endif %}
+            {{ squad_pills(session) }}
+            {% if session.schedule %}<span class="tr-muted">· {{ session.schedule.name }} schedule</span>{% endif %}
+            {% if current_user.is_coach and not session.is_published %}<span class="pill pill-none">Plan not published</span>{% endif %}
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
                 <a href="{{ url_for('session.index') }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Sessions
                 </a>
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-primary">
-                    <i class="bi bi-pencil"></i> Edit Session
+                {% if current_user.is_coach %}
+                <a href="{{ url_for('training.plan', session_id=session.id) }}" class="btn btn-primary">
+                    <i class="bi bi-layout-text-sidebar"></i> {{ 'Edit plan' if components else 'Plan this session' }}
+                </a>
+                <a href="{{ url_for('session.edit_session', session_id=session.id) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Details
                 </a>
                 {% endif %}
             </div>
         </div>
     </div>
+
+    {% if session.is_cancelled %}
+    <div class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><b>Cancelled</b>{% if session.cancel_reason %}: {{ session.cancel_reason }}{% endif %}</span>
+        {% if current_user.is_coach %}
+        <form method="post" action="{{ url_for('training.restore', session_id=session.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-danger">Put it back on</button>
+        </form>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="tr-card d-flex justify-content-between align-items-center flex-wrap gap-3">
+        {% if current_user.player %}
+        <div>
+            <b class="d-block mb-1">Are you coming?</b>
+            {{ answer_buttons(session, my_answer) }}
+            {% if my_answer and my_answer.usual %}<div class="tr-muted">That's your usual answer – tap to confirm or change it.</div>{% endif %}
+        </div>
+        {% endif %}
+        {% if answer_counts %}
+        <a class="text-decoration-none" href="{{ url_for('session.rsvps', session_id=session.id) }}">
+            <span class="pill pill-attending">{{ answer_counts.attending }} yes</span>
+            <span class="pill pill-maybe">{{ answer_counts.maybe }} maybe</span>
+            <span class="pill pill-not_attending">{{ answer_counts.not_attending }} no</span>
+            {% if current_user.is_coach %}<span class="pill pill-none">{{ answer_counts.none }} no answer</span>{% endif %}
+        </a>
+        {% endif %}
+        {% if current_user.is_coach %}
+        <form method="post" action="{{ url_for('training.cancel', session_id=session.id) }}" class="d-flex gap-2"
+              onsubmit="return confirm('Cancel this session? Players who answered will see it is off.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input name="reason" class="form-control form-control-sm" placeholder="Reason (optional)" maxlength="200" aria-label="Reason for cancelling">
+            <button class="btn btn-sm btn-outline-danger text-nowrap">Cancel session</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <div class="row">
         <!-- Session Details -->
@@ -90,31 +132,23 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         {% if current_user.player %}
-                            {% if user_has_rsvp %}
-                            <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-warning">
-                                <i class="bi bi-pencil-square"></i> Change your RSVP
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('session.rsvp', session_id=session.id) }}" class="btn btn-outline-success">
-                                <i class="bi bi-check-circle"></i> RSVP for this Session
-                            </a>
-                            {% endif %}
+                        <a href="{{ url_for('training.availability') }}" class="btn btn-outline-success">
+                            <i class="bi bi-calendar-check"></i> All your upcoming sessions
+                        </a>
                         {% endif %}
-						{% if current_user.is_admin %}
-						<a href="{{ url_for('session.admin_rsvp', session_id=session.id) }}" class="btn btn-warning">Manage RSVPs</a>
-						{% endif %}
+                        {% if answer_counts %}
                         <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-outline-info">
-                            <i class="bi bi-people"></i> View RSVPs
+                            <i class="bi bi-people"></i> Who's coming
                         </a>
-                        {% if current_user.is_admin %}
+                        {% endif %}
+                        {% if current_user.is_coach %}
                         <a href="{{ url_for('session.attendance', session_id=session.id) }}" class="btn btn-outline-primary">
-                            <i class="bi bi-clipboard-check"></i> Record Attendance
+                            <i class="bi bi-clipboard-check"></i> Take the register
                         </a>
-                        <a href="{{ url_for('session.components', session_id=session.id) }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-list-check"></i> Manage Components
-                        </a>
-                        <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-outline-dark">
-                            <i class="bi bi-plus-circle"></i> Add Component
+                        {% endif %}
+                        {% if current_user.is_admin %}
+                        <a href="{{ url_for('session.admin_rsvp', session_id=session.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-person-check"></i> Answer for players
                         </a>
                         {% endif %}
                         {% if current_user.is_coach %}
@@ -267,20 +301,25 @@
                         </div>
                         {% endfor %}
                     </div>
-                    {% if current_user.is_admin %}
+                    {% if current_user.is_coach %}
                     <div class="text-center mt-3">
-                        <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-plus-circle"></i> Add another component
+                        <a href="{{ url_for('training.plan', session_id=session.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-layout-text-sidebar"></i> Edit the plan
                         </a>
                     </div>
                     {% endif %}
+                    {% elif not show_plan %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-hourglass-split" style="font-size: 2.5rem; color: var(--ink-2);"></i>
+                        <p class="mt-2 text-muted">Your coaches haven't shared the plan for this session yet.</p>
+                    </div>
                     {% else %}
                     <div class="text-center py-4">
                         <i class="bi bi-clipboard-plus" style="font-size: 2.5rem; color: var(--ink-2);"></i>
-                        <p class="mt-2 text-muted">No components added yet for this session.</p>
-                        {% if current_user.is_admin %}
-                        <a href="{{ url_for('session.add_component', session_id=session.id) }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Add your first component
+                        <p class="mt-2 text-muted">Nothing planned for this session yet.</p>
+                        {% if current_user.is_coach %}
+                        <a href="{{ url_for('training.plan', session_id=session.id) }}" class="btn btn-primary">
+                            <i class="bi bi-layout-text-sidebar"></i> Plan this session
                         </a>
                         {% endif %}
                     </div>
@@ -336,6 +375,7 @@
 {% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
 {{ super() }}
 <style>
     /* Timeline styling */
@@ -463,6 +503,7 @@
 
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/availability.js') }}"></script>
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -1,115 +1,109 @@
+"""Announce new things in a team's Discord once they're saved.
+
+New one-off sessions (not the dates a training schedule makes: the weekly
+post covers those), tournaments and games go out when the team has "new
+events" on; clips and theory topics when it has "new items" on. Rows are
+noted as they're inserted and posted after the commit, on a background
+thread, so a slow or broken Discord never holds up the page.
+"""
 import logging
+import threading
 
-# Set up logging
+from flask import current_app, has_app_context
+from sqlalchemy import event, select
+from sqlalchemy.orm import Session as OrmSession
+
 logger = logging.getLogger(__name__)
+_registered = False
 
-# Global flag to track if listeners have been registered
-_listeners_registered = False
+# model name -> TeamSettings flag that turns its announcements on
+FLAGS = {
+    'SessionPlan': 'discord_notify_new_events',
+    'Tournament': 'discord_notify_new_events',
+    'Game': 'discord_notify_new_events',
+    'Clip': 'discord_notify_new_items',
+    'TheoryTopic': 'discord_notify_new_items',
+}
 
-def register_event_listeners(app):
-    """Register event listeners for Discord integration
-    
-    Parameters:
-    -----------
-    app: Flask
-        The Flask application
-    """
-    global _listeners_registered
-    
-    # Only register listeners once
-    if _listeners_registered:
-        logger.debug("Event listeners already registered, skipping")
+
+def register():
+    global _registered
+    if _registered:
         return
-    
-    logger.info("Registering Discord event listeners")
-    
-    from app.discord.notifications import notification_service
-    from sqlalchemy import event
-    
-    # Register session listeners
-    try:
-        from app.models.session import SessionPlan
-        
-        @event.listens_for(SessionPlan, 'after_insert', once=True)
-        def session_after_insert(mapper, connection, target):
-            """Listen for new session creation"""
-            logger.info(f"New session created: {target.title}")
-            # Pass team_organization_id to notification service
-            notification_service.notify_new_database_item('session', target, target.team_organization_id)
-        
-        logger.info("Session listeners registered")
-    except Exception as e:
-        logger.error(f"Error setting up session listeners: {str(e)}")
-    
-    # Register tournament listeners
-    try:
-        from app.models.tournament import Tournament
-        
-        @event.listens_for(Tournament, 'after_insert', once=True)
-        def tournament_after_insert(mapper, connection, target):
-            """Listen for new tournament creation"""
-            logger.info(f"New tournament created: {target.name}")
-            # Pass team_organization_id to notification service
-            notification_service.notify_new_database_item('tournament', target, target.team_organization_id)
-        
-        logger.info("Tournament listeners registered")
-    except Exception as e:
-        logger.error(f"Error setting up tournament listeners: {str(e)}")
-    
-    # Register game listeners
-    try:
-        from app.models.game import Game
-        
-        @event.listens_for(Game, 'after_insert', once=True)
-        def game_after_insert(mapper, connection, target):
-            """Listen for new game creation"""
-            logger.info(f"New game created: vs {target.opponent if hasattr(target, 'opponent') else 'TBD'}")
-            # Pass team_organization_id to notification service
-            notification_service.notify_new_event('game', target, target.team_organization_id)
-        
-        logger.info("Game listeners registered")
-    except Exception as e:
-        logger.error(f"Error setting up game listeners: {str(e)}")
-    
-    # Register clip listeners
-    try:
-        from app.models.clip import Clip
-        
-        @event.listens_for(Clip, 'after_insert', once=True)
-        def clip_after_insert(mapper, connection, target):
-            """Listen for new clip creation"""
-            logger.info(f"New clip created: ID {target.id}")
-            # Pass team_organization_id to notification service
-            notification_service.notify_new_database_item('clip', target, target.team_organization_id)
-        
-        logger.info("Clip listeners registered")
-    except Exception as e:
-        logger.error(f"Error setting up clip listeners: {str(e)}")
-    
-    # Register theory listeners
-    try:
-        from app.models.theory import TheoryTopic
-        
-        @event.listens_for(TheoryTopic, 'after_insert', once=True)
-        def theory_topic_after_insert(mapper, connection, target):
-            """Listen for new theory topic creation"""
-            logger.info(f"New theory topic created: {target.title}")
-            # Pass team_organization_id to notification service
-            notification_service.notify_new_database_item('theory', target, target.team_organization_id)
-        
-        from app.models.theory import TheorySection
-        
-        @event.listens_for(TheorySection, 'after_insert', once=True)
-        def theory_section_after_insert(mapper, connection, target):
-            """Listen for new theory section creation"""
-            logger.info(f"New theory section created: {target.title}")
-            # Pass team_organization_id to notification service
-            notification_service.notify_new_database_item('theory', target, target.team_organization_id)
-        
-        logger.info("Theory listeners registered")
-    except Exception as e:
-        logger.error(f"Error setting up theory listeners: {str(e)}")
-    
-    # Mark listeners as registered
-    _listeners_registered = True
-    logger.info("All Discord event listeners registered successfully")
+    _registered = True
+    from app.models.clip import Clip
+    from app.models.game import Game
+    from app.models.session import SessionPlan
+    from app.models.theory import TheoryTopic
+    from app.models.tournament import Tournament
+
+    for model in (SessionPlan, Tournament, Game, Clip, TheoryTopic):
+        event.listen(model, 'after_insert', _noted)
+    event.listen(OrmSession, 'after_commit', _after_commit)
+    event.listen(OrmSession, 'after_rollback', lambda session: session.info.pop('discord_new', None))
+
+
+def _noted(mapper, connection, target):
+    name = type(target).__name__
+    team_id = getattr(target, 'team_organization_id', None)
+    if not team_id or (name == 'SessionPlan' and target.schedule_id):
+        return
+    from app.models.team_settings import TeamSettings
+    table = TeamSettings.__table__
+    wanted = connection.execute(
+        select(table.c.discord_enabled, table.c[FLAGS[name]]).where(table.c.team_id == team_id)).first()
+    if not wanted or not wanted[0] or not wanted[1]:
+        return
+    from sqlalchemy.orm import object_session
+    session = object_session(target)
+    if session is not None:
+        session.info.setdefault('discord_new', []).append((name, target.id))
+
+
+def _after_commit(session):
+    items = session.info.pop('discord_new', None)
+    if not items or not has_app_context():
+        return
+    app = current_app._get_current_object()
+
+    def run():
+        with app.app_context():
+            for name, row_id in items:
+                try:
+                    announce(name, row_id)
+                except Exception as e:  # never let a post break anything
+                    logger.warning('Discord announcement of %s %s failed: %s', name, row_id, e)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def announce(name, row_id):
+    from app import db
+    from app.discord import messages, notify
+    from app.models.clip import Clip
+    from app.models.game import Game
+    from app.models.session import SessionPlan
+    from app.models.theory import TheoryTopic
+    from app.models.tournament import Tournament
+
+    model = {'SessionPlan': SessionPlan, 'Tournament': Tournament, 'Game': Game,
+             'Clip': Clip, 'TheoryTopic': TheoryTopic}[name]
+    row = db.session.get(model, row_id)
+    if row is None:
+        return False
+    link = messages.link
+    if name == 'SessionPlan':
+        payload = messages.session_post(row, intro='📅 New session added')
+    elif name == 'Tournament':
+        dates = row.start_date.strftime('%a %-d %b') if row.start_date else 'Dates to be set'
+        payload = messages.announcement(f'🏆 New tournament: {row.name}', f'{dates} · {row.location or ""}'.strip(' ·'),
+                                        link('tournament.detail', tournament_id=row.id), messages.GOLD)
+    elif name == 'Game':
+        payload = messages.announcement(f'🥏 New game: vs {row.opponent or "TBD"}',
+                                        row.date.strftime('%a %-d %b') if row.date else None,
+                                        link('game.detail', game_id=row.id), messages.RED)
+    elif name == 'Clip':
+        payload = messages.announcement(f'🎬 New clip: {row.title}', None, link('clip.view_clip', clip_id=row.id))
+    else:
+        payload = messages.announcement(f'📚 New theory: {row.title}', None, link('theory.topic', topic_id=row.id))
+    return notify.post(row.team_organization_id, payload)

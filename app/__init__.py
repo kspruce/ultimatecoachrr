@@ -233,6 +233,9 @@ def create_app(config_class=Config):
     from app.routes.session import bp as session_bp
     app.register_blueprint(session_bp)
 
+    from app.routes.training import bp as training_bp
+    app.register_blueprint(training_bp)
+
     from app.routes.season_plan import bp as season_plan_bp
     app.register_blueprint(season_plan_bp)
     from app.routes.handbook import bp as handbook_bp
@@ -307,26 +310,18 @@ def create_app(config_class=Config):
         if app.config.get('RUN_CREATE_ALL', False):
             db.create_all()
 
-    # Conditionally enable Discord integration (default False)
-    # Set DISCORD_ENABLED=True in env or config to turn it on.
-    discord_enabled = str(app.config.get('DISCORD_ENABLED', os.getenv('DISCORD_ENABLED', 'False'))).lower() == 'true'
-    if discord_enabled:
-        try:
-            # Patch the bot class
-            from app.discord import fix_bot_class
-            fix_bot_class()
+    # Discord: always available; a team turns it on from its settings, and
+    # the site's bot (DISCORD_* variables) gives one-click setup and buttons
+    from app.discord.routes import discord_bp
+    app.register_blueprint(discord_bp)
+    from app.discord.api import bot_ready as discord_ready
+    app.jinja_env.globals['discord_ready'] = discord_ready
+    from app.discord import events as discord_events
+    discord_events.register()
 
-            # Register Discord blueprint
-            from app.discord.routes import discord_bp
-            app.register_blueprint(discord_bp)
-
-            # Initialize Discord integration
-            from app.discord_integration import init_discord_integration
-            init_discord_integration(app)
-        except Exception as e:
-            app.logger.error(f"Failed to initialize Discord integration: {e}")
-            # Don't crash the app if Discord fails
-            pass
+    # Background jobs: training dates, answer reminders, weekly Discord posts
+    from app.scheduler import init_scheduler
+    init_scheduler(app)
 
     # ── Guest read-only enforcement ───────────────────────────────
     @app.before_request

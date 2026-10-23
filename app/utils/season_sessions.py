@@ -18,6 +18,13 @@ building again updates them in place: the plan owns the title, date, times,
 location, aim, notes and components. Attendance and RSVPs are never touched.
 A session the plan no longer has is deleted if nobody has RSVPed or been
 marked present, and otherwise left alone with a warning.
+
+When the team has a training schedule, a week's session fills in the
+schedule's date that week for the same squads (joint: a session for the
+whole club; 1s / 2s: that squad's own session) instead of making a new one,
+so players' answers for that date stay with it. The schedule keeps the date,
+time and place; the plan's training days and times are only used for weeks
+no schedule covers.
 """
 import re
 from dataclasses import dataclass, field
@@ -327,6 +334,37 @@ def _drill_lookup(team_id):
     return {title.strip().lower(): drill_id for drill_id, title in rows if title}
 
 
+WHEN_KEYS = ('date', 'start_time', 'end_time', 'location')
+PLAN_KEYS = ('season', 'phase_number', 'phase_name', 'block', 'week_number', 'week_commencing', 'squad',
+             'aim', 'learning_points', 'notes', 'focus_area')
+
+
+def _scheduled_date(team_id, week, squad):
+    """An unplanned training-schedule date in this week for this squad."""
+    if not week.week_commencing:
+        return None
+    candidates = SessionPlan.query.filter(
+        SessionPlan.team_organization_id == team_id, SessionPlan.schedule_id.isnot(None),
+        SessionPlan.external_id.is_(None), SessionPlan.status != SessionPlan.STATUS_CANCELLED,
+        SessionPlan.date >= week.week_commencing,
+        SessionPlan.date <= week.week_commencing + timedelta(days=6)).order_by(SessionPlan.date).all()
+    for session in candidates:
+        if session.components.count():
+            continue
+        names = {q.name.strip().lower() for q in session.squads}
+        if (squad == 'joint' and len(names) != 1) or (squad != 'joint' and names == {squad}):
+            return session
+    return None
+
+
+def _squads_for(team_id, squad):
+    """The team's Squad rows for a plan squad ('joint' is everyone)."""
+    if squad == 'joint':
+        return []
+    from app.models.season import Squad
+    return [q for q in Squad.query.filter_by(team_organization_id=team_id) if q.name.strip().lower() == squad]
+
+
 def _has_people(session):
     return session.attendances.count() > 0 or session.rsvps.count() > 0
 
@@ -358,14 +396,26 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
                 ext = item['external_id']
                 wanted_ids.add(ext)
                 session = existing.pop(ext, None)
+                values = item['values']
                 if session is None:
-                    session = SessionPlan(team_organization_id=team_id, external_id=ext)
-                    _apply(session, item['values'])
-                    db.session.add(session)
+                    session = _scheduled_date(team_id, week, values['squad'])
+                    if session is not None:
+                        # Fill in the schedule's date; it keeps its own when and where
+                        session.external_id = ext
+                        session.is_published = True
+                        _apply(session, {k: v for k, v in values.items() if k not in WHEN_KEYS})
+                        status = 'created'
+                    else:
+                        session = SessionPlan(team_organization_id=team_id, external_id=ext)
+                        _apply(session, values)
+                        session.squads = _squads_for(team_id, values['squad'])
+                        db.session.add(session)
+                        status = 'created'
                     db.session.flush()
-                    status = 'created'
                 else:
-                    status = 'updated' if _apply(session, item['values']) else 'unchanged'
+                    if session.schedule_id:
+                        values = {k: v for k, v in values.items() if k not in WHEN_KEYS}
+                    status = 'updated' if _apply(session, values) else 'unchanged'
                 for c in item['components']:
                     c['drill_external_id'] = c['title'].strip().lower()
                 if _sync_components(session, item['components'], drills, team_id) and status == 'unchanged':
@@ -414,6 +464,9 @@ def build_sessions(plan, weeks=None, dry_run=False, commit=True):
 
 
 def _remove(session, report):
+    if session.schedule_id:
+        _unplan(session, report)
+        return
     if _has_people(session):
         report.warnings.append(f'{session.title}: no longer in the plan, but kept because it '
                                f'has attendance or RSVPs')
@@ -427,6 +480,25 @@ def _remove(session, report):
         db.session.execute(assoc.delete().where(assoc.c.component_id.in_(ids)))
     report.removed.append(session.title)
     db.session.delete(session)
+
+
+def _unplan(session, report):
+    """A schedule date the plan no longer uses goes back to being an
+    unplanned date of its schedule (answers kept)."""
+    from app.models.playbook import Play
+    from app.models.season_plan import SeasonWeek
+    SeasonWeek.query.filter_by(session_plan_id=session.id).update({'session_plan_id': None})
+    assoc = Play.play_session_component
+    ids = [c.id for c in session.components]
+    if ids:
+        db.session.execute(assoc.delete().where(assoc.c.component_id.in_(ids)))
+        for c in session.components:
+            db.session.delete(c)
+    report.removed.append(f'{session.title} (back to an unplanned {session.schedule.name} date)')
+    session.external_id = None
+    for key in PLAN_KEYS:
+        setattr(session, key, None)
+    session.title = session.schedule.name
 
 
 def sync_week(plan, week):

@@ -6,7 +6,7 @@ from app import db
 from app.models.game import Game
 from app.models.player import Player
 from app.models.point import Point
-from app.models.session import SessionPlan, SessionRSVP
+from app.models.session import Attendance, SessionPlan, SessionRSVP
 from app.models.tournament import Tournament
 from app.models.user import User
 from tests import stats_data
@@ -88,11 +88,13 @@ def test_quick_checkin_is_for_admins_and_this_team(season):
     db.session.add_all([session, outsider])
     db.session.commit()
     url = f'/sessions/{session.id}/quick_checkin'
-    season['player'].post(url, json={'player_id': season['player_id'], 'status': 'yes'})
-    assert season['coach'].post(url, json={'player_id': outsider.id, 'status': 'yes'}).status_code == 404
-    assert SessionRSVP.query.count() == 0
-    assert season['coach'].post(url, json={'player_id': season['player_id'], 'status': 'yes'}).status_code == 200
-    assert SessionRSVP.query.count() == 1
+    season['player'].post(url, json={'player_id': season['player_id'], 'status': 'present'})
+    assert season['coach'].post(url, json={'player_id': outsider.id, 'status': 'present'}).status_code == 404
+    assert Attendance.query.count() == 0
+    # It records attendance (it used to put present/late into RSVPs)
+    assert season['coach'].post(url, json={'player_id': season['player_id'], 'status': 'yes'}).status_code == 400
+    assert season['coach'].post(url, json={'player_id': season['player_id'], 'status': 'present'}).status_code == 200
+    assert Attendance.query.one().status == 'present' and SessionRSVP.query.count() == 0
 
 
 @pytest.mark.parametrize('target', ['//evil.example', '/\\evil.example', 'https://evil.example',

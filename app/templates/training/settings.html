@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Session settings{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+<style>.fs-row{display:flex;gap:1rem;justify-content:space-between;align-items:center;padding:.75rem 0;border-top:1px solid var(--rule)}.fs-row:first-of-type{border-top:0}</style>
+{% endblock %}
+
+{% block content %}
+<div class="uc-settings">
+  {% include "team/_settings_nav.html" %}
+  <div>
+    <div class="uc-page-header">
+      <div>
+        <h1>Sessions</h1>
+        <p>What players see, and when they're reminded to answer.</p>
+      </div>
+      <a class="btn btn-outline-primary" href="{{ url_for('training.schedules_page') }}"><i class="bi bi-calendar-week"></i> Training schedule</a>
+    </div>
+
+    <form method="post" style="max-width:720px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="tr-card">
+        <h3>Who's coming</h3>
+        <p class="tr-muted">What players see about each other's answers. Coaches always see everything.</p>
+        {% for value, label in visibility_choices %}
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="attendee_visibility" id="vis-{{ value }}" value="{{ value }}" {% if settings.attendee_visibility == value %}checked{% endif %}>
+          <label class="form-check-label" for="vis-{{ value }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="tr-card">
+        <h3>Session plans</h3>
+        <p class="tr-muted">Plans are drafts until you publish them from the session builder. Once published, players see them:</p>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="plan_when" id="plan-now" value="now" {% if settings.plan_visible_days is none %}checked{% endif %}>
+          <label class="form-check-label" for="plan-now">Straight away</label>
+        </div>
+        <div class="form-check d-flex align-items-center gap-2">
+          <input class="form-check-input" type="radio" name="plan_when" id="plan-days" value="days" {% if settings.plan_visible_days is not none %}checked{% endif %}>
+          <label class="form-check-label" for="plan-days">From</label>
+          <input type="number" min="0" max="60" class="form-control form-control-sm" style="width:5rem" name="plan_visible_days" value="{{ settings.plan_visible_days if settings.plan_visible_days is not none else 2 }}" aria-label="Days before">
+          <span>days before the session</span>
+        </div>
+      </div>
+
+      <div class="tr-card">
+        <h3>Reminders</h3>
+        <label class="fs-row" for="reminders_enabled">
+          <div><b>Remind the maybes</b><div class="tr-muted">Players on Maybe, or who haven't answered, get one reminder (Discord message if they've connected it, otherwise email).</div></div>
+          <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="reminders_enabled" name="reminders_enabled" {% if settings.reminders_enabled %}checked{% endif %}></div>
+        </label>
+        <div class="fs-row">
+          <label for="reminder_days"><b>How far ahead</b></label>
+          <div class="d-flex align-items-center gap-2"><input type="number" min="1" max="28" class="form-control" style="width:5rem" id="reminder_days" name="reminder_days" value="{{ settings.reminder_days or 7 }}"> days before</div>
+        </div>
+        {% if has_endpoint('discord.settings') and current_user.is_admin %}
+        <p class="tr-muted mb-0">Weekly Discord posts with Yes / Maybe / No buttons are in <a href="{{ url_for('discord.settings') }}">Discord settings</a>.</p>
+        {% endif %}
+      </div>
+
+      <div class="d-flex justify-content-end"><button class="btn btn-primary">Save</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
