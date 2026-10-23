@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
 
 {% macro textarea(field, help, rows=3) %}
 <div class="mb-3">
   {{ field.label(class="form-label") }}
-  {{ field(class="form-control", rows=rows) }}
+  {{ field(class="form-control", rows=rows, data_autogrow=true) }}
   {% if help %}<div class="form-text">{{ help }}</div>{% endif %}
   {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
 </div>
@@ -21,14 +22,16 @@
 {% endmacro %}
 
 {% block content %}
+{{ m.styles() }}
 <style>
 .tag-boxes { display:flex; flex-wrap:wrap; gap:.35rem }
 .tag-boxes .btn { font-size:.78rem; padding:.2rem .6rem }
+.form-fold > .fold-body { padding-bottom:.5rem }
 .form-section { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
   color:var(--uc-gray-400); margin:1.5rem 0 .75rem; padding-bottom:.35rem; border-bottom:1px solid var(--uc-gray-100) }
 </style>
 
-<div class="container py-4">
+<div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">
     <div>
       <h2>{{ title }}</h2>
@@ -60,9 +63,18 @@
 
       <div class="card">
         <div class="card-body">
-          <form method="post" novalidate>
+          {% set draft_key = 'report-' ~ (report.id if report else 'new') %}
+          <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2" data-draft-banner="{{ draft_key }}" hidden>
+            <span class="me-auto">You have unsaved changes from <span data-draft-when></span>.</span>
+            <button type="button" class="btn btn-sm btn-primary" data-draft-restore>Restore</button>
+            <button type="button" class="btn btn-sm btn-link" data-draft-discard>Discard</button>
+          </div>
+          <form method="post" novalidate data-draft-key="{{ draft_key }}">
             {{ form.hidden_tag() }}
 
+            <details class="form-fold" open>
+            <summary>The opponent</summary>
+            <div class="fold-body">
             <div class="row g-3 mb-3">
               <div class="col-md-8">
                 {{ form.team_name.label(class="form-label") }}
@@ -96,8 +108,12 @@
                 {% for error in form.tournament_id.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
               </div>
             </div>
+            </div>
+            </details>
 
-            <div class="form-section">How they play</div>
+            <details class="form-fold" open>
+            <summary>How they play</summary>
+            <div class="fold-body">
             {{ tag_boxes(form.offense_tags) }}
             {{ textarea(form.offense_strategy, 'Formations, who touches the disc, set plays, how they score.') }}
             {{ tag_boxes(form.defense_tags) }}
@@ -106,19 +122,29 @@
               <div class="col-md-6">{{ textarea(form.strengths, 'One per line. Shown as a list of things to watch out for.', 4) }}</div>
               <div class="col-md-6">{{ textarea(form.weaknesses, 'One per line. Shown as a list of things to exploit.', 4) }}</div>
             </div>
+            </div>
+            </details>
 
-            <div class="form-section">Our game plan</div>
+            <details class="form-fold" open>
+            <summary>Our game plan</summary>
+            <div class="fold-body">
             {{ textarea(form.game_plan, 'The few things everyone needs to know, e.g. "Force flick, they can\'t break it."', 4) }}
             <div class="row g-3">
               <div class="col-md-6">{{ textarea(form.o_line_plan, 'Who starts, the set play to open, how we beat their D.') }}</div>
               <div class="col-md-6">{{ textarea(form.d_line_plan, 'Who starts, the force, the look to throw at them.') }}</div>
             </div>
-            <p class="form-text mt-0">Key matchups are set per player: mark someone as a key threat and pick who of ours marks them.</p>
+            <p class="form-text mt-0">Who marks whom is planned on the {% if report %}<a href="{{ url_for('scouting.matchups', report_id=report.id) }}">matchup board</a>{% else %}matchup board once the report is saved{% endif %}.</p>
+            </div>
+            </details>
 
-            <div class="form-section">Anything else</div>
+            <details class="form-fold" open>
+            <summary>Anything else</summary>
+            <div class="fold-body">
             {{ textarea(form.notes, '') }}
+            </div>
+            </details>
 
-            <div class="d-grid">{{ form.submit(class="btn btn-primary") }}</div>
+            <div class="d-grid sticky-save">{{ form.submit(class="btn btn-primary") }}</div>
           </form>
         </div>
       </div>
@@ -129,6 +155,7 @@
 
 {% block scripts %}
 {{ super() }}
+{{ m.scripts() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const game = document.getElementById('game_id');

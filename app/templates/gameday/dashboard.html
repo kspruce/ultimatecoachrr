@@ -475,9 +475,11 @@
   OfflineQueue.setCsrfRefreshUrl('{{ url_for("gameday.get_csrf_token") }}');
 
   // Unregister any old service workers that might be cached in the browser
+  // (but not scouting's, which only keeps game cards readable offline)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(function(registrations) {
       for (let registration of registrations) {
+        if (new URL(registration.scope).pathname.indexOf('/scouting/') === 0) continue;
         registration.unregister();
         console.log('Old service worker unregistered.');
       }

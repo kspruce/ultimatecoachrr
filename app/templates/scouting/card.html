@@ -17,8 +17,13 @@
 .gc-head h2 { margin:0; font-size:1.5rem; font-weight:800 }
 .gc-sub { font-size:.8rem; color:var(--uc-gray-600) }
 .gc-section { margin-bottom:1rem }
-.gc-section h6 { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; margin:0 0 .35rem;
-  color:var(--uc-gray-600) }
+.gc-section h6, .gc-section > summary { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
+  margin:0 0 .35rem; color:var(--uc-gray-600) }
+details.card-fold > summary { min-height:auto }
+.gc-tools { display:flex; gap:.5rem; justify-content:center; align-items:center; flex-wrap:wrap }
+.gc-fresh { font-size:.75rem; color:var(--uc-gray-400) }
+.gc-fresh.stale { color:var(--warn-ink, #92400e); font-weight:600 }
+[data-wake-lock].active { background:var(--ok-soft); border-color:var(--ok); color:var(--ink) }
 .gc-plan { font-size:1rem; font-weight:600; line-height:1.45 }
 .gc-list { margin:0; padding-left:1.1rem; font-size:.9rem }
 .gc-list li { margin-bottom:.15rem }
@@ -26,8 +31,17 @@
 .gc-player:last-child { border-bottom:none }
 .gc-num { font-weight:800; min-width:2.2rem }
 .gc-note { color:var(--uc-gray-600); font-size:.8rem }
+.gc-arrow { color:var(--uc-gray-400) }
+.gc-ours { font-weight:700; color:var(--uc-green) }
 @media (max-width: 575.98px) {
   .gc-player .gc-detail { flex-basis:100%; margin-left:2.7rem !important; text-align:left !important }
+  /* Read at arm's length between points */
+  .game-card { padding:1rem; border-radius:12px }
+  .gc-head h2 { font-size:1.6rem }
+  .gc-plan { font-size:1.2rem }
+  .gc-list, .gc-player, .gc-lines { font-size:1.05rem }
+  .gc-note { font-size:.9rem }
+  .gc-section > summary { font-size:.78rem; min-height:40px }
 }
 @media print {
   .uc-navbar, .footer, .no-print, .alert { display:none !important }
@@ -39,11 +53,14 @@
 }
 </style>
 
-<div class="container py-3">
-  <div class="d-flex gap-2 justify-content-center mb-3 no-print">
+<div class="container py-3 scouting-page" data-offline-card>
+  <div class="gc-tools mb-2 no-print">
     <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Full report</a>
-    <button type="button" onclick="window.print()" class="btn btn-primary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-wake-lock aria-pressed="false" hidden>
+      <i class="bi bi-brightness-high me-1"></i><span data-wake-label>Keep screen on</span></button>
+    <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
   </div>
+  <div class="text-center mb-3 no-print"><span class="gc-fresh" data-rendered-at="{{ rendered_at }}"></span></div>
 
   <div class="game-card">
     <div class="gc-head">
@@ -67,29 +84,55 @@
     {% endif %}
 
     {% if report.game_plan %}
-    <div class="gc-section">
-      <h6>Game plan</h6>
+    <details class="gc-section card-fold" data-fold-key="plan" open>
+      <summary>Game plan</summary>
       <div class="gc-plan">{{ report.game_plan|nl2br }}</div>
-    </div>
+    </details>
+    {% endif %}
+
+    {% if matchups or uncovered %}
+    <details class="gc-section card-fold" data-fold-key="matchups" open>
+      <summary>Matchups</summary>
+      {% for p in matchups %}
+      <div class="gc-player gc-mu">
+        <span class="gc-num">{{ '#' ~ p.jersey_number if p.jersey_number else '' }}</span>
+        <span><strong>{{ p.name }}</strong></span>
+        <span class="gc-arrow" aria-label="marked by">&larr;</span>
+        <span class="gc-ours">{{ p.matched_player.name }}</span>
+        {% if reasons.get(p.id) %}
+        <span class="gc-note gc-detail ms-auto text-end">{{ reasons[p.id]|map('last')|join(', ') }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if uncovered %}
+      <div class="gc-note mt-1"><strong>No marker yet:</strong> {{ uncovered|map(attribute='name')|join(', ') }}</div>
+      {% endif %}
+    </details>
     {% endif %}
 
     {% if report.o_line_plan or report.d_line_plan %}
-    <div class="row g-2 gc-section">
-      {% if report.o_line_plan %}<div class="col-sm-6"><h6>O-line</h6><div style="font-size:.9rem">{{ report.o_line_plan|nl2br }}</div></div>{% endif %}
-      {% if report.d_line_plan %}<div class="col-sm-6"><h6>D-line</h6><div style="font-size:.9rem">{{ report.d_line_plan|nl2br }}</div></div>{% endif %}
-    </div>
+    <details class="gc-section card-fold" data-fold-key="lines" open>
+      <summary>Lines</summary>
+      <div class="row g-2 gc-lines" style="font-size:.9rem">
+        {% if report.o_line_plan %}<div class="col-sm-6"><h6>O-line</h6><div>{{ report.o_line_plan|nl2br }}</div></div>{% endif %}
+        {% if report.d_line_plan %}<div class="col-sm-6"><h6>D-line</h6><div>{{ report.d_line_plan|nl2br }}</div></div>{% endif %}
+      </div>
+    </details>
     {% endif %}
 
     {% if report.weaknesses or report.strengths %}
-    <div class="row g-2 gc-section">
-      {% if report.weaknesses %}<div class="col-sm-6"><h6>Exploit</h6>{{ bullets(report.weaknesses) }}</div>{% endif %}
-      {% if report.strengths %}<div class="col-sm-6"><h6>Watch out for</h6>{{ bullets(report.strengths) }}</div>{% endif %}
-    </div>
+    <details class="gc-section card-fold" data-fold-key="sw" open>
+      <summary>Exploit &amp; watch out for</summary>
+      <div class="row g-2">
+        {% if report.weaknesses %}<div class="col-sm-6"><h6>Exploit</h6>{{ bullets(report.weaknesses) }}</div>{% endif %}
+        {% if report.strengths %}<div class="col-sm-6"><h6>Watch out for</h6>{{ bullets(report.strengths) }}</div>{% endif %}
+      </div>
+    </details>
     {% endif %}
 
     {% if threats %}
-    <div class="gc-section">
-      <h6>Players to know</h6>
+    <details class="gc-section card-fold" data-fold-key="players" open>
+      <summary>Players to know</summary>
       {% for p in threats %}
       <div class="gc-player">
         <span class="gc-num">{{ '#' ~ p.jersey_number if p.jersey_number else '' }}</span>
@@ -101,27 +144,18 @@
         </span>
       </div>
       {% endfor %}
-    </div>
+    </details>
     {% endif %}
 
-    {% set other_matchups = matchups|reject('in', threats)|list %}
-    {% if other_matchups %}
-    <div class="gc-section">
-      <h6>Other matchups</h6>
-      {% for p in other_matchups %}
-      <div class="gc-player">
-        <span class="gc-num">{{ '#' ~ p.jersey_number if p.jersey_number else '' }}</span>
-        <span>{{ p.name }}</span>
-        <span class="gc-note ms-auto"><strong>{{ p.matched_player.name }}</strong></span>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if not (report.has_game_plan or report.weaknesses or report.strengths or threats) %}
+    {% if not (report.has_game_plan or report.weaknesses or report.strengths or threats or matchups) %}
     <p class="text-muted mb-0">This report has no game plan, strengths, weaknesses or key players yet, so the card is empty.
       {% if current_user.is_coach %}<a href="{{ url_for('scouting.edit_report', report_id=report.id) }}">Add them</a>.{% endif %}</p>
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ m.scripts() }}
 {% endblock %}
