@@ -306,6 +306,18 @@ def reset_two_factor(username):
     click.echo(f'Two-step sign-in is off for {username}; they can log in with their password.')
 
 
+@click.command('backfill-seasons')
+@with_appcontext
+def backfill_seasons():
+    """Set up seasons for every team that has none yet (safe to run again)."""
+    from app.models.team_organization import TeamOrganization
+    from app.utils.season import ensure_seasons
+
+    for team in TeamOrganization.query.order_by(TeamOrganization.id):
+        made = ensure_seasons(team.id)
+        click.echo(f'{team.name}: {"seasons set up" if made else "already has seasons"}')
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
     app.cli.add_command(export_data)
@@ -316,4 +328,5 @@ def register_commands(app):
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
     app.cli.add_command(reset_two_factor)
+    app.cli.add_command(backfill_seasons)
     register_tag_commands(app)

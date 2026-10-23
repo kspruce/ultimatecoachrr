@@ -15,6 +15,9 @@ from app.models.team_organization import TeamOrganization
 from app.models.team_settings import TeamSettings
 from datetime import datetime
 from app.utils.team_filter import get_current_team_id
+from app.models.season import SeasonRoster
+from app.utils.season import (current_season, player_seasons, put_on_roster, roster_entry, roster_rows, team_squads,
+                              viewing_season, viewing_squad)
 import re
 import random
 
@@ -24,15 +27,17 @@ bp = Blueprint('team', __name__, url_prefix='/team')
 @bp.route('/')
 @login_required
 def index():
+    """The roster for the season (and squad) being viewed; all time lists
+    everyone who has played for the club."""
     form = PlayerFilterForm()
-    
+    team_id = get_current_team_id()
+
     # Get filter parameters
     position = request.args.get('position', '')
     line_preference = request.args.get('line_preference', '')
     gender_match = request.args.get('gender_match', '')
-    team = request.args.get('team', '')
     active_only = 'active_only' in request.args
-    
+
     # Set form values from query parameters
     if position:
         form.position.data = position
@@ -40,40 +45,64 @@ def index():
         form.line_preference.data = line_preference
     if gender_match:
         form.gender_match.data = gender_match
-    if team and hasattr(form, 'team'):
-        form.team.data = team
     form.active_only.data = active_only != 'n'
-    
-    # Build query based on filters
-    query = Player.query.filter_by(team_organization_id=get_current_team_id())
-    
+
+    roster_season, squad = viewing_season(team_id), viewing_squad(team_id)
+    rows = roster_rows(roster_season, squad)
+    entries = {}
+    query = Player.query.filter_by(team_organization_id=team_id)
+    if rows or (roster_season is not None and squad is not None):
+        entries = {r.player_id: r for r in rows if r.on_team or not active_only}
+        query = query.filter(Player.id.in_(list(entries) or [-1]))
+    else:
+        if squad is not None:
+            query = query.filter(Player.id.in_(db.session.query(SeasonRoster.player_id)
+                                               .filter(SeasonRoster.squad_id == squad.id)))
+        if active_only:
+            query = query.filter(Player.active == True)
+
     if position:
         query = query.filter(Player.position == position)
     if line_preference:
         query = query.filter(Player.line_preference == line_preference)
     if gender_match:
         query = query.filter(Player.gender_match == gender_match)
-    if team and hasattr(Player, 'team'):
-        query = query.filter(Player.team == team)
-    if active_only:
-        query = query.filter(Player.active == True)
-    
-    # Get players and sort by jersey number
-    players = query.order_by(Player.jersey_number).all()
-    
+
+    # Sort by this season's shirt number, then name
+    def shirt(player):
+        entry = entries.get(player.id)
+        number = entry.jersey_number if entry and entry.jersey_number is not None else player.jersey_number
+        try:
+            return (0, int(number), player.name)
+        except (TypeError, ValueError):
+            return (1, 0, player.name)
+    players = sorted(query.all(), key=shirt)
+
     # Create a form instance for CSRF token
     csrf_form = FlaskForm()
-    
-    return render_template('team/index.html', 
-                         players=players, 
+
+    return render_template('team/index.html',
+                         players=players,
+                         entries=entries,
+                         roster_season=roster_season if (rows or squad is not None) else None,
                          form=form,
                          csrf_form=csrf_form)
+
+
+def _squad_choices(form, team_id):
+    form.squad_id.choices = [('', 'No squad')] + [(str(s.id), s.name) for s in team_squads(team_id)]
+
+
+def _picked_squad(form, team_id):
+    return next((s.id for s in team_squads(team_id) if str(s.id) == (form.squad_id.data or '')), None)
+
 
 @bp.route('/add_player', methods=['GET', 'POST'])
 @login_required
 @coach_required
 def add_player():
     form = PlayerForm()
+    _squad_choices(form, get_current_team_id())
     if form.validate_on_submit():
         try:
             
@@ -90,7 +119,13 @@ def add_player():
             )
             
             db.session.add(player)
-            
+
+            # On this season's roster, unless "on the roster" is unticked
+            season = current_season(get_current_team_id())
+            if season is not None and form.active.data:
+                put_on_roster(player, season, _picked_squad(form, get_current_team_id()),
+                              form.jersey_number.data, form.position.data)
+
             # Create user account if requested
             if form.create_account.data and form.username.data and form.password.data:
                 # Check if username already exists
@@ -139,11 +174,16 @@ def edit_player(player_id):
     ).first_or_404()
     
     form = PlayerForm(obj=player)
-    
+    _squad_choices(form, get_current_team_id())
+    season = current_season(get_current_team_id())
+    entry = roster_entry(player, season)
+
     if request.method == 'GET' and player.user_account:
         form.create_account.data = True
         form.username.data = player.user_account.username
-    
+    if request.method == 'GET' and entry and entry.squad_id:
+        form.squad_id.data = str(entry.squad_id)
+
     if form.validate_on_submit():
         try:
             player.name = form.name.data
@@ -151,10 +191,13 @@ def edit_player(player_id):
             player.position = form.position.data
             player.gender = form.gender_match.data
             player.gender_match = form.gender_match.data
-            player.team = form.team.data if hasattr(form, 'team') else None
             player.email = form.email.data
             player.line_preference = form.line_preference.data
             player.active = form.active.data
+            # The current season's roster follows "on the roster"
+            if season is not None and (entry is not None or form.active.data):
+                put_on_roster(player, season, _picked_squad(form, get_current_team_id()),
+                              form.jersey_number.data, form.position.data, on_team=form.active.data)
 
             # Handle user account
             if form.create_account.data:
@@ -330,6 +373,7 @@ def player_detail(player_id):
     return render_template(
         'team/player_detail.html', 
         player=player, 
+        season_rows=player_seasons(player),
         now=now,
         games_played=games_played,
         points_played=points_played,

@@ -8,13 +8,17 @@ class Tournament(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     location = db.Column(db.String(100), nullable=True)
-    season = db.Column(db.String(20), nullable=True)
+    season = db.Column(db.String(20), nullable=True)  # label, kept in step with season_id
+    season_id = db.Column(db.Integer, db.ForeignKey('season.id', ondelete='SET NULL'), nullable=True, index=True)
+    squad_id = db.Column(db.Integer, db.ForeignKey('squad.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
     # Use back_populates instead of backref
+    season_obj = db.relationship('Season')
+    squad = db.relationship('Squad')
     games = db.relationship('Game', back_populates='tournament', lazy='dynamic')
     # Add relationship with TournamentRSVP
     rsvps = db.relationship('TournamentRSVP', back_populates='tournament', lazy='dynamic', cascade='all, delete-orphan')

@@ -52,7 +52,11 @@ def team_info_processor():
             except Exception:
                 pass
 
+        from app.utils.season import season_context
+        season_info = season_context() if current_team else {}
+
         return {
+            **season_info,
             'current_team': current_team,
             'available_teams': available_teams,
             'is_guest': current_user.role == 'guest',

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block styles %}{% include "seasons/_styles.html" %}{% endblock %}
+
+{% block content %}
+<div class="uc-settings">
+  {% include "team/_settings_nav.html" %}
+  <div>
+    <div class="uc-page-header">
+      <div>
+        <h1>Start the {{ year }} season</h1>
+        <p>Nothing is deleted: {% if previous %}{{ previous.name }}'s{% else %}earlier{% endif %} games, stats and roster stay and can be picked from the season menu. Untick anyone who isn't carrying on; they keep their account and history.</p>
+      </div>
+    </div>
+
+    {% if existing %}
+    <div class="alert alert-info">There is already a {{ year }} season{% if existing.is_current %} and it's current{% endif %}. Saving this updates its roster and makes it current.</div>
+    {% endif %}
+
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <div class="fs-card">
+        <h3>Dates</h3>
+        <div class="d-flex flex-wrap gap-3">
+          <div><label class="form-label" for="start_date">Starts</label>
+            <input class="form-control" type="date" id="start_date" name="start_date" value="{{ (existing.start_date if existing else start_date).isoformat() }}" required></div>
+          <div><label class="form-label" for="end_date">Ends</label>
+            <input class="form-control" type="date" id="end_date" name="end_date" value="{{ (existing.end_date if existing else end_date).isoformat() }}" required></div>
+        </div>
+        <p class="hint mt-2 mb-0">Games, tournaments and sessions dated in this range go into the {{ year }} season.</p>
+      </div>
+
+      <div class="fs-card">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <h3 class="m-0">Roster</h3>
+          <span class="hint">{% if previous %}Ticked: on the {{ previous.name }} roster.{% endif %} You can add new players from the roster page afterwards.</span>
+          <div class="ms-auto d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.ss-keep').forEach(c => c.checked = true)">Tick all</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.ss-keep').forEach(c => c.checked = false)">Untick all</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table ss-table mb-0">
+            <thead><tr><th>Carry on</th><th>Player</th>{% if squads %}<th>Squad</th>{% endif %}<th>Shirt</th><th>Position</th></tr></thead>
+            <tbody>
+              {% for row in rows %}
+              {% set p = row.player %}{% set e = row.entry %}
+              {% set shirt = e.jersey_number if e and e.jersey_number is not none else p.jersey_number %}
+              <tr>
+                <td><input class="form-check-input ss-keep" type="checkbox" name="player_id" value="{{ p.id }}" id="keep_{{ p.id }}" {% if row.checked %}checked{% endif %}></td>
+                <td><label for="keep_{{ p.id }}">{{ p.name }}</label>{% if e and e.status == 'left' %} <span class="badge bg-secondary">Left in {{ previous.name }}</span>{% elif not e and previous %} <span class="badge bg-light text-dark">Not on {{ previous.name }} roster</span>{% endif %}</td>
+                {% if squads %}
+                <td><select class="form-select form-select-sm" name="squad_{{ p.id }}" aria-label="Squad for {{ p.name }}">
+                  <option value="">No squad</option>
+                  {% for sq in squads %}<option value="{{ sq.id }}" {% if e and e.squad_id == sq.id %}selected{% endif %}>{{ sq.name }}</option>{% endfor %}
+                </select></td>
+                {% endif %}
+                <td><input class="form-control form-control-sm shirt" type="number" min="0" max="999" name="jersey_{{ p.id }}" value="{{ shirt if shirt is not none else '' }}" aria-label="Shirt number for {{ p.name }}"></td>
+                <td><select class="form-select form-select-sm" name="position_{{ p.id }}" aria-label="Position for {{ p.name }}">
+                  {% set pos = (e.position if e and e.position else p.position) or '' %}
+                  {% for value, label in [('', '—'), ('handler', 'Handler'), ('cutter', 'Cutter'), ('hybrid', 'Hybrid')] %}<option value="{{ value }}" {% if pos == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="hint">No players yet. Start the season, then add players from the roster page.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" href="{{ url_for('seasons.index') }}">Cancel</a>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-arrow-right-circle me-1"></i> Start {{ year }} season</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

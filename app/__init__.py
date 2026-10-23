@@ -209,6 +209,9 @@ def create_app(config_class=Config):
     from app.routes.team import bp as team_bp
     app.register_blueprint(team_bp)
 
+    from app.routes.seasons import bp as seasons_bp
+    app.register_blueprint(seasons_bp)
+
     from app.routes.tournament import bp as tournament_bp
     app.register_blueprint(tournament_bp)
 
@@ -277,6 +280,8 @@ def create_app(config_class=Config):
     # Import the models package so ALL models are registered.
     # This ensures all models are loaded into SQLAlchemy's metadata
     from app import models as app_models  # noqa: F401
+    # New games, tournaments and sessions are put in a season as they're saved
+    from app.utils import season as _season_listeners  # noqa: F401
 
     # Create upload directory structure
     try:

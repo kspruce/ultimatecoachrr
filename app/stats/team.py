@@ -1,6 +1,5 @@
 """Team and game level stats."""
 from flask import current_app
-from app import db
 from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
@@ -683,50 +682,32 @@ def calculate_additional_team_metrics(games):
 
     return result
 
-def get_previous_period_games(season, tournament_id):
-    """Get games from previous period for comparison"""
+def get_previous_period_games(season, tournament_id, squad=None):
+    """Games from the period before for comparison: the tournament before
+    this one in the same season, or the season before this one."""
+    from app.models.season import Season
+
+    team_id = get_current_team_id()
     if tournament_id:
-        # Get current tournament
-        current_tournament = Tournament.query.filter_by(
-            id=tournament_id,
-            team_organization_id=get_current_team_id()
-        ).first()
-        
-        if current_tournament:
-            # Find previous tournament in same season
+        current_tournament = Tournament.query.filter_by(id=tournament_id, team_organization_id=team_id).first()
+        if current_tournament and current_tournament.start_date:
             prev_tournament = Tournament.query.filter(
-                Tournament.season == current_tournament.season,
+                Tournament.season_id == current_tournament.season_id,
+                Tournament.squad_id == current_tournament.squad_id,
                 Tournament.start_date < current_tournament.start_date,
-                Tournament.team_organization_id == get_current_team_id()
+                Tournament.team_organization_id == team_id
             ).order_by(Tournament.start_date.desc()).first()
-            
             if prev_tournament:
-                return Game.query.filter_by(
-                    tournament_id=prev_tournament.id,
-                    team_organization_id=get_current_team_id()
-                ).all()
-    elif season:
-        # Get previous season
-        seasons = db.session.query(Tournament.season).filter_by(
-            team_organization_id=get_current_team_id()
-        ).distinct().order_by(Tournament.season).all()
-        
-        seasons = [s[0] for s in seasons if s[0]]
-        
-        if season in seasons:
-            idx = seasons.index(season)
-            if idx > 0:
-                prev_season = seasons[idx - 1]
-                tournament_ids = [t.id for t in Tournament.query.filter_by(
-                    season=prev_season,
-                    team_organization_id=get_current_team_id()
-                ).all()]
-                
-                return Game.query.filter(
-                    Game.tournament_id.in_(tournament_ids),
-                    Game.team_organization_id == get_current_team_id()
-                ).all()
-    
+                return Game.query.filter_by(tournament_id=prev_tournament.id, team_organization_id=team_id).all()
+    elif season is not None:
+        prev_season = (Season.query.filter(Season.team_organization_id == team_id, Season.year < season.year)
+                       .order_by(Season.year.desc()).first())
+        if prev_season:
+            query = Game.query.filter_by(season_id=prev_season.id, team_organization_id=team_id)
+            if squad is not None:
+                query = query.filter_by(squad_id=squad.id)
+            return query.all()
+
     # Default: return empty list if no previous period found
     return []
 

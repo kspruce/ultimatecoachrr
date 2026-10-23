@@ -7,6 +7,7 @@ from app.models.game import Game
 from app.models.session import SessionPlan
 from app.models.tournament import Tournament
 from datetime import date, datetime
+from app.utils.season import scope_games, viewing_season, viewing_squad
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -29,11 +30,16 @@ def _dashboard_extras(team_id):
     # A game with no points scored yet hasn't really been played
     played = [g for g in played if (g.our_score or 0) + (g.their_score or 0) > 0]
 
-    season_games = [g for g in played if g.date.year == today.year]
+    # The season being viewed (the current one unless another is picked)
+    viewing = viewing_season(team_id)
+    squad_view = viewing_squad(team_id)
+    season_games = [g for g in played
+                    if (viewing is None or g.season_id == viewing.id)
+                    and (squad_view is None or g.squad_id == squad_view.id)]
     wins = sum(1 for g in season_games if g.is_win)
     losses = sum(1 for g in season_games if g.is_loss)
     season = {
-        'year': today.year,
+        'year': viewing.name if viewing else 'all time',
         'games': len(season_games),
         'wins': wins,
         'losses': losses,
@@ -182,11 +188,7 @@ def index():
                 logger.debug(f"Database counts - Games: {future_games_count}, Sessions: {future_sessions_count}, Tournaments: {future_tournaments_count}")
 
                 # Games Statistics
-                current_year = datetime.now().year
-                games = Game.query.filter(
-                    db.extract('year', Game.date) == current_year,
-                    Game.team_organization_id == team_id
-                ).all()
+                games = scope_games(Game.query.filter(Game.team_organization_id == team_id), team_id).all()
                 
                 stats['games_count'] = len(games)
                 if games:
