@@ -256,6 +256,21 @@
 /* ── Result count ───────────────────────────────────────── */
 #clipCount { font-size: .8rem; color: var(--uc-gray-500); font-weight: 600; }
 
+/* ── Phones: clips as compact rows (thumbnail left, details right) ── */
+@media (max-width: 575.98px) {
+  .clip-card { display: grid; grid-template-columns: 136px 1fr; grid-template-rows: 1fr auto; }
+  .clip-card:hover { transform: none; }
+  .clip-thumb { grid-row: 1 / span 2; aspect-ratio: auto; min-height: 84px; }
+  .clip-card-body { padding: .5rem .65rem .25rem; min-width: 0; }
+  .clip-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .clip-card-footer { border-top: 0; padding: 0 .65rem .5rem; }
+  .clip-card-footer .clip-watch-btn { display: none; }
+  .clip-card-footer .btn { min-width: 40px; min-height: 34px; }
+  .clip-play-overlay, .clip-views { display: none; }
+  .clip-featured-badge, .clip-hidden-badge, .clip-share-badge { font-size: .55rem; padding: .1rem .35rem; }
+  .clip-tags { display: none; }
+}
+
 /* ── Tag browser scroll ─────────────────────────────────── */
 .tag-browser-scroll { max-height: 380px; overflow-y: auto; }
 
@@ -385,6 +400,17 @@
         </div>
         {% endif %}
 
+        <!-- Phones: tags and filters fold away behind one button -->
+        {% set n_filters = (active_filters.tag_ids|length) + (1 if active_filters.game_id else 0)
+                           + (1 if active_filters.player_id else 0) + (1 if active_filters.video_source else 0)
+                           + (1 if active_filters.is_featured else 0) + (1 if active_filters.tag_category else 0) %}
+        <button class="btn btn-outline-secondary btn-sm w-100 d-md-none mb-3 d-flex justify-content-between align-items-center"
+                type="button" data-bs-toggle="collapse" data-bs-target="#clipFilters"
+                aria-expanded="false" aria-controls="clipFilters" style="min-height:40px">
+          <span><i class="bi bi-funnel me-1"></i>Tags &amp; filters{% if n_filters %} <span class="badge bg-primary ms-1">{{ n_filters }}</span>{% endif %}</span>
+          <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="collapse d-md-block" id="clipFilters">
         <!-- Tag browser -->
         <div class="sidebar-card">
           <div class="sidebar-card-header">
@@ -467,6 +493,7 @@
           </div>
         </div>
 
+        </div>{# /clipFilters #}
       </div>
     </div>
 
@@ -576,7 +603,7 @@
             <!-- Footer actions -->
             <div class="clip-card-footer" onclick="event.stopPropagation()">
               <a href="{{ url_for('clip.view_clip', clip_id=clip.id) }}"
-                 class="btn btn-sm btn-primary flex-fill"
+                 class="btn btn-sm btn-primary flex-fill clip-watch-btn"
                  style="font-size:.75rem;padding:.3rem .6rem">
                 <i class="bi bi-play-circle me-1"></i>Watch
               </a>

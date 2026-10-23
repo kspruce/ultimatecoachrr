@@ -19,7 +19,7 @@ function plShow(index, play) {
   const track = tracks[index];
 
   document.querySelectorAll('.pl-track').forEach(li =>
-    li.classList.toggle('active', Number(li.dataset.index) === index));
+    li.classList.toggle('is-current', Number(li.dataset.index) === index));
   document.getElementById('pl-position').textContent = `${index + 1} of ${tracks.length} ·`;
   document.getElementById('pl-title').textContent = track.title;
   document.getElementById('pl-note').textContent = track.note;
