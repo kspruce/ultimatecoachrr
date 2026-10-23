@@ -130,8 +130,9 @@ def test_each_role_gets_its_own_checklist(app, teams):
     assert {'profile_linked', 'staff_added', 'players_invited', 'gameday_tour'} <= set(captain)
     assert keys(teams['coach'], herd)[:2] == ['roster_reviewed', 'first_session']
     assert keys(teams['player'], herd)[:3] == ['profile_linked', 'email_added', 'rsvp_given']
-    # Discord steps only appear when the Discord integration is running
-    assert 'discord' not in captain and 'discord_linked' not in keys(teams['player'], herd)
+    # Admins can always set up Discord (a webhook needs nothing from the site);
+    # players only get "link your Discord" once the site's bot is set up
+    assert 'discord' in captain and 'discord_linked' not in keys(teams['player'], herd)
 
     guest = make_user(db.session.get(TeamOrganization, herd), 'guesty', role='guest')
     assert keys(guest, herd) == []

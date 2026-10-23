@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Availability{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">{% endblock %}
+
+{% block content %}
+{% set short = {'attending': 'Y', 'maybe': '?', 'not_attending': 'N'} %}
+<div class="container-fluid" style="max-width:1400px">
+  <div class="uc-page-header">
+    <div>
+      <div class="uc-eyebrow">Sessions</div>
+      <h1>Who's coming</h1>
+      <p>Click a cell to change it: blank → Yes → Maybe → No. Faded italics are players' usual answers.</p>
+    </div>
+    <div class="tr-actions">
+      <a class="btn btn-outline-secondary" href="{{ url_for('training.grid_csv', start=start.isoformat(), weeks=weeks, squad=squad.id if squad else None) }}"><i class="bi bi-download"></i> CSV</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('training.import_page') }}"><i class="bi bi-upload"></i> Import</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('training.schedules_page') }}"><i class="bi bi-calendar-week"></i> Schedule</a>
+    </div>
+  </div>
+
+  <form class="tr-actions mb-2" method="get">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('training.grid', start=prev_start.isoformat(), weeks=weeks, squad=squad.id if squad else None) }}" aria-label="Earlier">‹</a>
+    <input type="date" class="form-control form-control-sm" style="width:auto" name="start" value="{{ start.isoformat() }}" aria-label="From">
+    <select class="form-select form-select-sm" style="width:auto" name="weeks" aria-label="Weeks">
+      {% for w in [2, 4, 6, 8, 12, 26] %}<option value="{{ w }}" {% if w == weeks %}selected{% endif %}>{{ w }} weeks</option>{% endfor %}
+    </select>
+    {% if squads %}
+    <select class="form-select form-select-sm" style="width:auto" name="squad" aria-label="Squad">
+      <option value="">Whole club</option>
+      {% for s in squads %}<option value="{{ s.id }}" {% if squad and squad.id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <button class="btn btn-sm btn-primary">Show</button>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('training.grid', start=next_start.isoformat(), weeks=weeks, squad=squad.id if squad else None) }}" aria-label="Later">›</a>
+  </form>
+
+  {% if not columns %}
+  <div class="tr-card">No sessions in these weeks. <a href="{{ url_for('training.schedules_page') }}">Set up your training schedule</a> and the dates appear here.</div>
+  {% else %}
+  <div class="grid-wrap">
+    <table class="av-grid" id="grid">
+      <thead>
+        <tr>
+          <th class="player">Player</th>
+          {% for c in columns %}{% set s = c.session %}
+          <th scope="col" class="{% if s.is_cancelled %}cancelled{% endif %}">
+            <a href="{{ url_for('session.detail', session_id=s.id) }}">{{ s.date.strftime('%a') }}<br>{{ s.date.strftime('%-d %b') }}</a>
+            <small title="{{ s.title }}">{{ s.title|truncate(14, True, '…') }}</small>
+            {% if s.squads %}<small>{{ s.squad_names }}</small>{% endif %}
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in players %}
+        <tr>
+          <td class="player">{{ p.name }}{% if player_squads.get(p.id) and squad_names %} <span class="tr-muted">{{ squad_names.get(player_squads.get(p.id)) }}</span>{% endif %}</td>
+          {% for c in columns %}{% set s = c.session %}{% set a = answers.get((s.id, p.id)) %}
+          <td>
+            {% if s.is_cancelled %}
+            <span class="av-cell na" aria-label="Cancelled"></span>
+            {% else %}
+            <button type="button" class="av-cell {% if a %}s-{{ a.status }}{% if a.usual %} usual{% endif %}{% elif p.id not in c.expected %}na{% endif %}"
+                    data-session="{{ s.id }}" data-player="{{ p.id }}" data-status="{{ a.status if a and not a.usual else '' }}"
+                    title="{{ p.name }}, {{ s.date.strftime('%-d %b') }}: {{ a.label if a else ('not their squad' if p.id not in c.expected else 'no answer') }}{% if a and a.usual %} (usual){% endif %}{% if a and a.notes %} – {{ a.notes }}{% endif %}"
+                    aria-label="{{ p.name }}, {{ s.date.strftime('%-d %b') }}: {{ a.label if a else 'no answer' }}">{{ short[a.status] if a else '' }}</button>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="player">Yes / Maybe</td>
+          {% for c in columns %}<td id="count-{{ c.session.id }}">{% if not c.session.is_cancelled %}{{ c.counts.attending }} / {{ c.counts.maybe }}{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="player">No answer</td>
+          {% for c in columns %}
+          <td>
+            {% if not c.session.is_cancelled and (c.counts.none or c.counts.maybe) %}
+            <form method="post" action="{{ url_for('training.nudge', session_id=c.session.id) }}" class="m-0">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <button class="btn btn-link btn-sm p-0 text-nowrap" title="{{ c.counts.none }} with no answer. Remind them and anyone on Maybe">{{ c.counts.none }} <i class="bi bi-bell"></i></button>
+            </form>
+            {% elif not c.session.is_cancelled %}0{% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="grid-legend">
+    <span><span class="pill pill-attending">Y</span> Yes</span>
+    <span><span class="pill pill-maybe">?</span> Maybe</span>
+    <span><span class="pill pill-not_attending">N</span> No</span>
+    <span>Striped: not their squad's session (click to say they're coming anyway)</span>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const order = ['', 'attending', 'maybe', 'not_attending'];
+  const short = {attending: 'Y', maybe: '?', not_attending: 'N', '': ''};
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+  document.getElementById('grid')?.addEventListener('click', async (event) => {
+    const cell = event.target.closest('button.av-cell');
+    if (!cell) return;
+    const next = order[(order.indexOf(cell.dataset.status) + 1) % order.length];
+    cell.disabled = true;
+    try {
+      const response = await fetch(`{{ url_for('training.answer', session_id=0, player_id=0) }}`
+        .replace('/0/answer/0', `/${cell.dataset.session}/answer/${cell.dataset.player}`), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf, 'Accept': 'application/json'},
+        body: JSON.stringify({status: next || 'none'}),
+      });
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.message);
+      cell.dataset.status = next;
+      cell.className = 'av-cell' + (next ? ` s-${next}` : '');
+      cell.textContent = short[next];
+      const count = document.getElementById(`count-${cell.dataset.session}`);
+      if (count) {
+        const cells = [...document.querySelectorAll(`button.av-cell[data-session="${cell.dataset.session}"]`)];
+        const n = (status) => cells.filter((c) => c.classList.contains(`s-${status}`)).length;
+        count.textContent = `${n('attending')} / ${n('maybe')}`;
+      }
+    } catch (error) {
+      alert(error.message || 'Could not save that.');
+    } finally {
+      cell.disabled = false;
+      cell.focus();
+    }
+  });
+})();
+</script>
+{% endblock %}

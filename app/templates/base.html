@@ -30,7 +30,7 @@
 {# ── Active-section helpers ───────────────────────────────── #}
 {% set ep = request.endpoint or '' %}
 {% set in_club     = ep.startswith('team.') or ep.startswith('game.') or ep.startswith('tournament.') or ep.startswith('calendar.') %}
-{% set in_training = ep.startswith('session.') or ep.startswith('fitness.') %}
+{% set in_training = ep.startswith('session.') or ep.startswith('fitness.') or ep.startswith('training.') %}
 {% set in_strategy = ep.startswith('playbook.') or ep.startswith('scouting.') %}
 {% set in_theory   = ep.startswith('theory.') %}
 {% set in_stats    = ep.startswith('stats_dashboard.') or ep in ('gameday.team_stats', 'gameday.game_stats', 'gameday.tournament_stats') %}
@@ -128,8 +128,18 @@
             <i class="bi bi-journal-check"></i> Programmes</a></li>
           {% endif %}
           {% if not ts or ts.sessions_enabled %}
+          {% if current_user.is_authenticated and current_user.player %}
+          <li><a class="dropdown-item" href="{{ url_for('training.availability') }}">
+            <i class="bi bi-hand-thumbs-up-fill"></i> My Availability</a></li>
+          {% endif %}
           <li><a class="dropdown-item" href="{{ url_for('session.index') }}">
             <i class="bi bi-calendar-check-fill"></i> Session Plans</a></li>
+          {% if current_user.is_authenticated and current_user.is_coach %}
+          <li><a class="dropdown-item" href="{{ url_for('training.grid') }}">
+            <i class="bi bi-grid-3x3"></i> Who's Coming</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('training.schedules_page') }}">
+            <i class="bi bi-calendar-week"></i> Training Schedule</a></li>
+          {% endif %}
           <li><a class="dropdown-item" href="{{ url_for('session.drills') }}">
             <i class="bi bi-clipboard2-check"></i> Drill Library</a></li>
           {% endif %}

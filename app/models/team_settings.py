@@ -9,16 +9,31 @@ class TeamSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
     
+    # Discord (app/discord): the server the site's bot was added to and the
+    # channel it posts in, or just a webhook URL for posts without buttons
     discord_enabled = db.Column(db.Boolean, default=False)
     discord_webhook_url = db.Column(db.String(255))
-    discord_bot_token = db.Column(db.String(255))
     discord_guild_id = db.Column(db.String(255))
-    discord_calendar_channel_id = db.Column(db.String(255))
+    discord_guild_name = db.Column(db.String(100))
     discord_notification_channel_id = db.Column(db.String(255))
-    discord_sync_calendar = db.Column(db.Boolean, default=False)
+    # New one-off sessions, tournaments and games
     discord_notify_new_events = db.Column(db.Boolean, default=False)
+    # The weekly "this week's training" post with RSVP buttons
     discord_notify_upcoming_events = db.Column(db.Boolean, default=False)
+    # New clips and theory
     discord_notify_new_items = db.Column(db.Boolean, default=False)
+    discord_week_post_day = db.Column(db.Integer, default=0, server_default='0')  # 0 = Monday
+    discord_week_posted_on = db.Column(db.Date)  # the last weekly post, so it goes once
+
+    # Sessions: what players see and when they're reminded
+    ATTENDEE_VISIBILITY = [('names', 'Names of who is coming'), ('counts', 'Just the numbers'),
+                           ('hidden', 'Nothing (coaches only)')]
+    attendee_visibility = db.Column(db.String(10), nullable=False, default='names', server_default='names')
+    # Players see a published plan this many days before (None: once published)
+    plan_visible_days = db.Column(db.Integer)
+    # Remind players on Maybe (or with no answer) this many days before
+    reminders_enabled = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.true())
+    reminder_days = db.Column(db.Integer, nullable=False, default=7, server_default='7')
     
     # Feature toggles (UI modules)
     stats_enabled = db.Column(db.Boolean, default=True)

@@ -1,0 +1,63 @@
+{# The schedule form's fields; `values` holds them as strings (see training._form_values). #}
+<div class="row g-3">
+  <div class="col-md-6">
+    <label class="form-label" for="name">Name</label>
+    <input class="form-control" id="name" name="name" maxlength="100" required value="{{ values.name or '' }}" placeholder="Saturday training">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" for="location">Where</label>
+    <input class="form-control" id="location" name="location" maxlength="100" value="{{ values.location or '' }}" placeholder="Pitch, park or hall">
+  </div>
+  <div class="col-12">
+    <span class="form-label d-block">Day</span>
+    <div class="weekday-picks" role="radiogroup" aria-label="Day">
+      {% for day in weekdays %}
+      <label><input type="radio" name="weekday" value="{{ loop.index0 }}" required {% if values.weekday == loop.index0|string %}checked{% endif %}><span>{{ day[:3] }}</span></label>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label" for="start_time">From</label>
+    <input class="form-control" type="time" id="start_time" name="start_time" value="{{ values.start_time or '' }}">
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label" for="end_time">To</label>
+    <input class="form-control" type="time" id="end_time" name="end_time" value="{{ values.end_time or '' }}">
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label" for="start_date">First date</label>
+    <input class="form-control" type="date" id="start_date" name="start_date" required value="{{ values.start_date or '' }}">
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label" for="end_date">Last date</label>
+    <input class="form-control" type="date" id="end_date" name="end_date" value="{{ values.end_date or '' }}">
+    <div class="form-text">Leave empty to run all season.</div>
+  </div>
+  {% if squads %}
+  <div class="col-12">
+    <span class="form-label d-block">Who it's for</span>
+    {% for squad in squads %}
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="squads" value="{{ squad.id }}" id="sq-{{ squad.id }}" {% if squad.id|string in (values.squads or []) %}checked{% endif %}>
+      <label class="form-check-label" for="sq-{{ squad.id }}">{{ squad.name }}</label>
+    </div>
+    {% endfor %}
+    <div class="form-text">Tick none for a session the whole club trains at (e.g. joint Saturdays). Tick one for a squad's own night.</div>
+    <div class="form-check mt-2">
+      <input class="form-check-input" type="checkbox" name="others_welcome" id="others_welcome" {% if values.others_welcome %}checked{% endif %}>
+      <label class="form-check-label" for="others_welcome">Players from other squads can say they're coming too</label>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-md-6">
+    <label class="form-label" for="session_type">Type</label>
+    <select class="form-select" id="session_type" name="session_type">
+      {% for value, label in session_types %}<option value="{{ value }}" {% if values.session_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label" for="skip_dates">Weeks off <span class="tr-muted">(optional)</span></label>
+    <input class="form-control" id="skip_dates" name="skip_dates" value="{{ values.skip_dates or '' }}" placeholder="2026-12-26, 2027-01-02">
+    <div class="form-text">Those dates are made but marked cancelled.</div>
+  </div>
+</div>

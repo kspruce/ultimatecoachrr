@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from 'training/_macros.html' import squad_pills %}
+
+{% block title %}Training schedule{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1000px">
+  <div class="uc-page-header">
+    <div>
+      <div class="uc-eyebrow">Sessions</div>
+      <h1>Training schedule</h1>
+      <p>When you train each week. Dates are made ahead for the whole run, so players can say whether they're coming before you plan.</p>
+    </div>
+    <div class="tr-actions">
+      <a class="btn btn-outline-primary" href="{{ url_for('training.grid') }}"><i class="bi bi-grid-3x3"></i> Availability</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('training.settings') }}"><i class="bi bi-gear"></i> Settings</a>
+    </div>
+  </div>
+
+  {% if clashes %}
+  <div class="tr-card" style="border-color:var(--warn)">
+    <h2><i class="bi bi-exclamation-triangle"></i> Training during tournaments</h2>
+    {% for session, tournament in clashes %}
+    <div class="d-flex justify-content-between align-items-center gap-2 py-1 flex-wrap">
+      <span><a href="{{ url_for('session.detail', session_id=session.id) }}">{{ session.title }}, {{ session.date.strftime('%a %-d %b') }}</a> is during <b>{{ tournament.name }}</b></span>
+      <form method="post" action="{{ url_for('training.cancel', session_id=session.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="reason" value="{{ tournament.name }}">
+        <input type="hidden" name="next" value="{{ url_for('training.schedules_page') }}">
+        <button class="btn btn-sm btn-outline-danger">Cancel that session</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for schedule in schedules %}
+  <div class="tr-card">
+    <div class="sch-row">
+      <div>
+        <h3>{{ schedule.name }} {{ squad_pills(schedule) }}{% if not schedule.squads %}<span class="pill pill-none">Everyone</span>{% endif %}</h3>
+        <div class="tr-muted">
+          {{ schedule.weekday_name }}s{% if schedule.time_range %}, {{ schedule.time_range }}{% endif %}{% if schedule.location %} · {{ schedule.location }}{% endif %}
+          · {{ schedule.start_date.strftime('%-d %b %Y') }} to {{ schedule.end_date.strftime('%-d %b %Y') if schedule.end_date else 'the end of the season' }}
+          {% if schedule.others_welcome %}· other squads welcome{% endif %}
+        </div>
+      </div>
+      <div class="tr-actions">
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('training.edit_schedule', schedule_id=schedule.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('training.delete_schedule', schedule_id=schedule.id) }}" onsubmit="return confirm('Remove this schedule? Past dates stay; future dates nobody answered for are deleted, the rest cancelled.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-outline-danger">Remove</button>
+        </form>
+      </div>
+    </div>
+    <div class="sch-dates">
+      {% for s in upcoming[schedule.id] %}
+      <a class="sch-date {% if s.is_cancelled %}cancelled{% elif s.id in planned %}planned{% endif %}" href="{{ url_for('session.detail', session_id=s.id) }}"
+         title="{{ 'Cancelled' if s.is_cancelled else ('Planned' if s.id in planned else 'Not planned yet') }}">{{ s.date.strftime('%a %-d %b') }}</a>
+      {% else %}
+      <span class="tr-muted">No upcoming dates.</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="tr-card"><p class="mb-0">No training schedule yet. Add your regular sessions below – e.g. Saturdays for everyone all year, and a midweek session per squad for three months.</p></div>
+  {% endfor %}
+
+  <form method="post" class="tr-card" id="add">
+    <h2>Add a regular session</h2>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% include 'training/_schedule_fields.html' %}
+    <div class="mt-3"><button class="btn btn-primary">Add schedule</button></div>
+  </form>
+  <p class="tr-muted">Dates outlined in your club colour have a plan; crossed-out dates are cancelled. A one-off session? <a href="{{ url_for('session.add_session') }}">Add it on its own</a>.</p>
+</div>
+{% endblock %}

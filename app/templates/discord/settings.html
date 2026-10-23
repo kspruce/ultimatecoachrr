@@ -1,344 +1,131 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container py-4">
-    <div class="d-flex align-items-center mb-4 gap-3">
-        <i class="bi bi-discord fs-2 text-primary"></i>
-        <div>
-            <h1 class="mb-0">Discord Integration</h1>
-            <p class="text-muted mb-0">Connect your team's Discord server to receive notifications and sync events.</p>
-        </div>
-    </div>
-
-    {# ── Connection status banner ── #}
-    {% if discord_enabled and discord_webhook_url %}
-        <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
-            <i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i>
-            <div>
-                <strong>Discord is connected.</strong>
-                Your team will receive notifications via webhook.
-                <button type="button" class="btn btn-sm btn-outline-success ms-3" id="testWebhookBtn">
-                    <i class="bi bi-send me-1"></i>Send test message
-                </button>
-            </div>
-        </div>
-    {% elif discord_enabled and not discord_webhook_url %}
-        <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
-            <div>
-                <strong>Discord is enabled but no webhook URL is set.</strong>
-                Add a webhook URL below to start receiving notifications.
-            </div>
-        </div>
-    {% else %}
-        <div class="alert alert-secondary d-flex align-items-center mb-4" role="alert">
-            <i class="bi bi-slash-circle me-2 flex-shrink-0"></i>
-            <div>
-                <strong>Discord is not connected.</strong>
-                Follow the quick-setup guide below to get started in under 2 minutes.
-            </div>
-        </div>
-    {% endif %}
-
-    <form method="POST" action="{{ url_for('discord.settings') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        {# ═══════════════════════════════════════════════
-           QUICK SETUP — Webhook (recommended for most teams)
-           ═══════════════════════════════════════════════ #}
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-lightning-charge-fill me-2"></i>
-                    Quick Setup — Webhook
-                    <span class="badge bg-light text-primary ms-2">Recommended</span>
-                </h5>
-            </div>
-            <div class="card-body">
-
-                {# Step-by-step guide #}
-                <div class="mb-4 p-3 bg-light rounded border">
-                    <p class="fw-semibold mb-2">
-                        <i class="bi bi-info-circle me-1"></i>
-                        How to get a Webhook URL (takes ~2 minutes) &nbsp;·&nbsp;
-                        <a href="{{ url_for('discord.setup_guide') }}#webhook-guide" target="_blank">View full guide</a>
-                    </p>
-                    <ol class="mb-0 ps-3" style="line-height:2;">
-                        <li>Open <strong>Discord</strong> and go to the channel where you want notifications to appear.</li>
-                        <li>Click the <strong>gear icon</strong> next to the channel name → <em>Edit Channel</em>.</li>
-                        <li>Select the <strong>Integrations</strong> tab → <strong>Webhooks</strong> → <strong>New Webhook</strong>.</li>
-                        <li>Give it a name (e.g. <em>Ultimate Coach</em>), then click <strong>Copy Webhook URL</strong>.</li>
-                        <li>Paste the URL into the field below and save.</li>
-                    </ol>
-                </div>
-
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-8">
-                        <label for="discord_webhook_url" class="form-label fw-semibold">Webhook URL</label>
-                        <input type="password" class="form-control" id="discord_webhook_url"
-                               name="discord_webhook_url" value="{{ discord_webhook_url or '' }}"
-                               placeholder="https://discord.com/api/webhooks/…">
-                        <div class="form-text">Paste the webhook URL you copied from Discord. It stays hidden for security.</div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check form-switch mt-3">
-                            <input class="form-check-input" type="checkbox" id="discord_enabled"
-                                   name="discord_enabled" {% if discord_enabled %}checked{% endif %}>
-                            <label class="form-check-label fw-semibold" for="discord_enabled">
-                                Enable Discord notifications
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {# ═══════════════════════════════════════════════
-           NOTIFICATION PREFERENCES
-           ═══════════════════════════════════════════════ #}
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-bell me-2"></i>
-                    Notification Preferences
-                </h5>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small mb-3">Choose which events trigger a Discord message for your team.</p>
-                <div class="row g-2">
-                    <div class="col-sm-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="discord_sync_calendar"
-                                   name="discord_sync_calendar" {% if discord_sync_calendar %}checked{% endif %}>
-                            <label class="form-check-label" for="discord_sync_calendar">
-                                Sync calendar events to Discord
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="discord_notify_new_events"
-                                   name="discord_notify_new_events" {% if discord_notify_new_events %}checked{% endif %}>
-                            <label class="form-check-label" for="discord_notify_new_events">
-                                Notify when new events are created
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="discord_notify_upcoming_events"
-                                   name="discord_notify_upcoming_events" {% if discord_notify_upcoming_events %}checked{% endif %}>
-                            <label class="form-check-label" for="discord_notify_upcoming_events">
-                                Remind about upcoming events (3-day heads-up)
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="discord_notify_new_items"
-                                   name="discord_notify_new_items" {% if discord_notify_new_items %}checked{% endif %}>
-                            <label class="form-check-label" for="discord_notify_new_items">
-                                Notify about new sessions, clips &amp; playbook entries
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {# ═══════════════════════════════════════════════
-           ADVANCED — Bot (collapsible)
-           ═══════════════════════════════════════════════ #}
-        <div class="card mb-4">
-            <div class="card-header" style="cursor:pointer;" data-bs-toggle="collapse"
-                 data-bs-target="#advancedBotSection" aria-expanded="false"
-                 aria-controls="advancedBotSection">
-                <h5 class="mb-0 d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="bi bi-robot me-2"></i>
-                        Advanced — Discord Bot
-                        <span class="badge bg-secondary ms-2">Optional</span>
-                    </span>
-                    <i class="bi bi-chevron-down"></i>
-                </h5>
-            </div>
-            <div class="collapse {% if discord_bot_token or discord_guild_id %}show{% endif %}"
-                 id="advancedBotSection">
-                <div class="card-body">
-                    <div class="alert alert-info small mb-3">
-                        <i class="bi bi-info-circle me-1"></i>
-                        A bot allows two-way interaction (e.g. <code>!uc upcoming</code>).
-                        Most teams only need the webhook above.
-                        See the <a href="{{ url_for('discord.setup_guide') }}#bot-guide">full bot setup guide</a> for step-by-step instructions including where to find all IDs.
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="discord_bot_token" class="form-label">Bot Token</label>
-                            <input type="password" class="form-control" id="discord_bot_token"
-                                   name="discord_bot_token" value="{{ discord_bot_token or '' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="discord_guild_id" class="form-label">Server (Guild) ID</label>
-                            <input type="text" class="form-control" id="discord_guild_id"
-                                   name="discord_guild_id" value="{{ discord_guild_id or '' }}"
-                                   placeholder="Right-click server → Copy ID">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="discord_calendar_channel_id" class="form-label">Calendar Channel ID</label>
-                            <input type="text" class="form-control" id="discord_calendar_channel_id"
-                                   name="discord_calendar_channel_id"
-                                   value="{{ discord_calendar_channel_id or '' }}"
-                                   placeholder="Right-click channel → Copy ID">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="discord_notification_channel_id" class="form-label">Notification Channel ID</label>
-                            <input type="text" class="form-control" id="discord_notification_channel_id"
-                                   name="discord_notification_channel_id"
-                                   value="{{ discord_notification_channel_id or '' }}"
-                                   placeholder="Right-click channel → Copy ID">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {# ── Save / test actions ── #}
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-save me-2"></i>Save Settings
-            </button>
-            <button type="button" class="btn btn-outline-primary" id="testWebhookBtnFooter">
-                <i class="bi bi-send me-2"></i>Test Webhook
-            </button>
-            {% if discord_bot_token %}
-            <button type="button" class="btn btn-outline-secondary" id="testBotBtn">
-                <i class="bi bi-robot me-2"></i>Test Bot
-            </button>
-            <button type="button" class="btn btn-outline-secondary" id="syncCalendarBtn">
-                <i class="bi bi-calendar-sync me-2"></i>Sync Calendar Now
-            </button>
-            {% endif %}
-        </div>
-
-    </form>
-
-    {# ═══════════════════════════════════════════════
-       BOT COMMANDS REFERENCE
-       ═══════════════════════════════════════════════ #}
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="bi bi-terminal me-2"></i>
-                Available Discord Commands
-            </h5>
-        </div>
-        <div class="card-body">
-            <p class="text-muted small">Players can use these commands in your Discord server once a bot is connected.</p>
-            <table class="table table-sm table-striped mb-0">
-                <thead>
-                    <tr><th>Command</th><th>What it does</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>!uc upcoming</code></td>
-                        <td>Shows events in the next 7 days</td>
-                    </tr>
-                    <tr>
-                        <td><code>!uc rsvp session 5 yes</code></td>
-                        <td>RSVP to a session (yes / no / maybe)</td>
-                    </tr>
-                    <tr>
-                        <td><code>!uc link player@example.com</code></td>
-                        <td>Links a Discord account to an Ultimate Coach account</td>
-                    </tr>
-                    <tr>
-                        <td><code>!uc help</code></td>
-                        <td>Lists all available commands</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-{# ── Bot Setup Modal ── #}
-<div class="modal fade" id="botSetupModal" tabindex="-1" aria-labelledby="botSetupModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="botSetupModalLabel">Discord Bot Setup Guide</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <h6>Step 1 — Create a Discord Application</h6>
-                <ol>
-                    <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a>.</li>
-                    <li>Click <strong>New Application</strong> and name it (e.g. "Ultimate Coach").</li>
-                    <li>Go to the <strong>Bot</strong> tab → <strong>Add Bot</strong>.</li>
-                    <li>Enable <em>Presence Intent</em>, <em>Server Members Intent</em>, and <em>Message Content Intent</em>.</li>
-                    <li>Click <strong>Reset Token</strong> and copy it — this is your Bot Token.</li>
-                </ol>
-                <h6>Step 2 — Add the Bot to Your Server</h6>
-                <ol>
-                    <li>Go to <strong>OAuth2 → URL Generator</strong>.</li>
-                    <li>Select scopes: <code>bot</code> and <code>applications.commands</code>.</li>
-                    <li>Bot permissions: Send Messages, Embed Links, Read Message History, Manage Events.</li>
-                    <li>Open the generated URL, select your server and authorise.</li>
-                </ol>
-                <h6>Step 3 — Get Your Server and Channel IDs</h6>
-                <ol>
-                    <li>In Discord: <strong>User Settings → Advanced → Developer Mode</strong> (enable it).</li>
-                    <li>Right-click your server icon → <strong>Copy ID</strong> for the Guild ID.</li>
-                    <li>Right-click each channel → <strong>Copy ID</strong> for the channel IDs.</li>
-                </ol>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+{% block title %}Discord{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+<style>
+  .dc-step { display:flex; gap:1rem; align-items:flex-start; }
+  .dc-num { flex:0 0 2rem; height:2rem; border-radius:50%; display:grid; place-items:center; font-weight:700; background:var(--sunken); }
+  .dc-num.done { background:var(--ok); color:#fff; }
+  .fs-row { display:flex; gap:1rem; justify-content:space-between; align-items:center; padding:.7rem 0; border-top:1px solid var(--rule); }
+  .fs-row:first-of-type { border-top:0; }
+</style>
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}
-<script>
-(function () {
-    function csrfToken() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
-    }
+{% block content %}
+<div class="uc-settings">
+  {% include "team/_settings_nav.html" %}
+  <div style="max-width:760px">
+    <div class="uc-page-header">
+      <div>
+        <h1>Discord</h1>
+        <p>Post {{ team.name }}'s training to your Discord server with Yes / Maybe / No buttons, and remind the maybes there.</p>
+      </div>
+    </div>
 
-    function postAction(url, body) {
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken()
-            },
-            body: body
-        })
-        .then(r => r.json())
-        .then(data => alert(data.success ? '\u2705 ' + data.message : '\u274C ' + data.message))
-        .catch(err => alert('\u274C Request failed: ' + err));
-    }
+    {% if bot_ready %}
+    <div class="tr-card">
+      <div class="dc-step">
+        <div class="dc-num {% if settings.discord_guild_id %}done{% endif %}">{% if settings.discord_guild_id %}<i class="bi bi-check-lg"></i>{% else %}1{% endif %}</div>
+        <div class="flex-grow-1">
+          {% if settings.discord_guild_id %}
+          <h3>Connected to {{ settings.discord_guild_name or 'your server' }}</h3>
+          <form method="post" class="d-inline" onsubmit="return confirm('Remove the bot from this server?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button name="action" value="disconnect" class="btn btn-sm btn-outline-danger">Disconnect</button>
+          </form>
+          <a class="btn btn-sm btn-link" href="{{ url_for('discord.add_bot') }}">Use a different server</a>
+          {% else %}
+          <h3>Add the bot to your server</h3>
+          <p class="tr-muted">You'll pick the server on Discord (you need to be able to manage it), then come straight back here.</p>
+          <a class="btn btn-primary" href="{{ url_for('discord.add_bot') }}"><i class="bi bi-discord"></i> Add to Discord</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
 
-    function bindTestWebhook(btnId) {
-        const btn = document.getElementById(btnId);
-        if (btn) btn.addEventListener('click', () =>
-            postAction('{{ url_for("discord.test_notification") }}', 'type=webhook'));
-    }
+    {% if settings.discord_guild_id %}
+    <div class="tr-card">
+      <div class="dc-step">
+        <div class="dc-num {% if settings.discord_notification_channel_id %}done{% endif %}">{% if settings.discord_notification_channel_id %}<i class="bi bi-check-lg"></i>{% else %}2{% endif %}</div>
+        <div class="flex-grow-1">
+          <h3>Pick the channel it posts in</h3>
+          {% if channel_error %}
+          <div class="alert alert-warning">Couldn't read the server's channels: {{ channel_error }}</div>
+          {% else %}
+          <form method="post" class="d-flex gap-2 flex-wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="channel_id" class="form-select" style="max-width:20rem" aria-label="Channel">
+              {% for id, name in channels %}<option value="{{ id }}" {% if id == settings.discord_notification_channel_id %}selected{% endif %}>#{{ name }}</option>{% endfor %}
+            </select>
+            <button name="action" value="channel" class="btn btn-primary">Save and say hello</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
 
-    bindTestWebhook('testWebhookBtn');
-    bindTestWebhook('testWebhookBtnFooter');
+    <form method="post" class="tr-card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="dc-step">
+        <div class="dc-num">{{ 3 if bot_ready else 1 }}</div>
+        <div class="flex-grow-1">
+          <h3>What gets posted</h3>
+          <label class="fs-row" for="discord_enabled">
+            <div><b>Discord on</b><div class="tr-muted">Turn everything below off without losing the setup.</div></div>
+            <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="discord_enabled" name="discord_enabled" {% if settings.discord_enabled %}checked{% endif %}></div>
+          </label>
+          <div class="fs-row">
+            <label for="week_post"><b>This week's training</b><div class="tr-muted">Every session in the coming week, each with its buttons{% if not bot_ready or not settings.discord_guild_id %} (buttons need the bot){% endif %}.</div></label>
+            <div class="d-flex align-items-center gap-2">
+              <select name="week_post_day" class="form-select form-select-sm" style="width:auto" aria-label="Day to post">
+                {% for day in weekdays %}<option value="{{ loop.index0 }}" {% if (settings.discord_week_post_day or 0) == loop.index0 %}selected{% endif %}>{{ day }}s</option>{% endfor %}
+              </select>
+              <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="week_post" name="week_post" {% if settings.discord_notify_upcoming_events %}checked{% endif %}></div>
+            </div>
+          </div>
+          <label class="fs-row" for="new_events">
+            <div><b>New sessions, tournaments and games</b><div class="tr-muted">One-off sessions and fixtures as they're added (not every date of a training schedule), and session plans when you publish them.</div></div>
+            <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="new_events" name="new_events" {% if settings.discord_notify_new_events %}checked{% endif %}></div>
+          </label>
+          <label class="fs-row" for="new_items">
+            <div><b>New clips and theory</b></div>
+            <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="new_items" name="new_items" {% if settings.discord_notify_new_items %}checked{% endif %}></div>
+          </label>
+          <div class="d-flex gap-2 mt-2 flex-wrap">
+            <button name="action" value="posts" class="btn btn-primary">Save</button>
+            {% if target %}<button name="action" value="post_week" class="btn btn-outline-primary">Post this week now</button>{% endif %}
+          </div>
+          <p class="tr-muted mt-2 mb-0">Cancelled sessions are always posted. Reminders for players on Maybe are set in <a href="{{ url_for('training.settings') }}">session settings</a>.</p>
+        </div>
+      </div>
+    </form>
 
-    const testBotBtn = document.getElementById('testBotBtn');
-    if (testBotBtn) testBotBtn.addEventListener('click', () =>
-        postAction('{{ url_for("discord.test_notification") }}', 'type=bot'));
+    {% if bot_ready %}
+    <div class="tr-card">
+      <h3>Players</h3>
+      <p class="mb-1">{{ linked }} member{{ 's' if linked != 1 }} of {{ team.name }} {{ 'have' if linked != 1 else 'has' }} connected Discord.
+        Connected players' button taps count as their answer, and reminders reach them as a Discord message instead of email.</p>
+      <p class="mb-0 tr-muted">Ask players to tap <b>Connect Discord</b> on their profile, or share this link:
+        <code>{{ url_for('discord.connect', _external=True) }}</code>. Anyone who taps a button before connecting is sent the link.</p>
+    </div>
+    {% endif %}
 
-    const syncCalendarBtn = document.getElementById('syncCalendarBtn');
-    if (syncCalendarBtn) syncCalendarBtn.addEventListener('click', () =>
-        postAction('{{ url_for("discord.sync_calendar") }}', ''));
-})();
-</script>
+    <details class="tr-card" {% if not bot_ready or settings.discord_webhook_url %}open{% endif %}>
+      <summary><b>{{ 'Or: post with a webhook only' if bot_ready else 'Post with a webhook' }}</b></summary>
+      <p class="tr-muted mt-2">
+        {% if not bot_ready %}The site's Discord bot isn't set up{% if current_user.is_superadmin %} – <a href="{{ url_for('discord.setup_guide') }}">set it up</a> for one-click setup and buttons{% else %}, so posts can't have buttons yet. Ask your site admin to set it up for one-click setup{% endif %}. Meanwhile a{% else %}A{% endif %} webhook posts your sessions without buttons, each with a link to answer on the site.
+        In Discord: <b>Server settings → Integrations → Webhooks → New webhook</b>, pick the channel, then <b>Copy webhook URL</b> and paste it here.
+      </p>
+      <form method="post" class="d-flex gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input name="webhook_url" class="form-control" style="max-width:32rem" value="{{ settings.discord_webhook_url or '' }}" placeholder="https://discord.com/api/webhooks/…" aria-label="Webhook URL">
+        <button name="action" value="webhook" class="btn btn-outline-primary">Save and test</button>
+      </form>
+      {% if settings.discord_guild_id and settings.discord_webhook_url %}<p class="tr-muted mt-2 mb-0">The bot is used while it's connected; the webhook is the fallback.</p>{% endif %}
+    </details>
+  </div>
+</div>
 {% endblock %}

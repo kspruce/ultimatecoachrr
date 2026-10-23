@@ -87,7 +87,8 @@ def _discord_available(endpoint):
 
 
 def _player_discord_available(user, team):
-    return 'discord.link_account' in current_app.view_functions and _discord_on(user, team)
+    from app.discord.api import bot_ready
+    return bot_ready() and _discord_on(user, team)
 
 
 def _has_rsvp(user, team):
@@ -150,7 +151,7 @@ STEPS = {s.key: s for s in [
          'Put your next tournament or game in so players can RSVP and you can pick the squad.',
          'tournament.index', 'bi-trophy', check=_has_event),
     Step('discord', 'Connect Discord',
-         'Post new events and reminders to your team Discord server automatically.',
+         'Post training to your team Discord with Yes / Maybe / No buttons, and remind the maybes there.',
          'discord.settings', 'bi-discord', check=_discord_on, optional=True,
          available=_discord_available('discord.settings')),
 
@@ -204,8 +205,8 @@ STEPS = {s.key: s for s in [
          'fitness.player_fitness', 'bi-heart-pulse', check=_has_fitness_result,
          feature='fitness_enabled', optional=True, needs_player=True, url_kwargs=_player_id),
     Step('discord_linked', 'Link your Discord',
-         'Get reminders and event posts tagged to you in the team Discord.',
-         'discord.link_account', 'bi-discord', check=lambda user, team: bool(user.discord_id),
+         'Answer with the buttons in your team Discord and get reminders there.',
+         'discord.connect', 'bi-discord', check=lambda user, team: bool(user.discord_id),
          optional=True, available=_player_discord_available),
 ]}
 

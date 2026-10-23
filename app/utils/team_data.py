@@ -25,7 +25,6 @@ SECRET_COLUMNS = {
     'user': {'password_hash', 'totp_secret', 'totp_recovery_codes'},
     'invite_token': {'token'},
     'team_signup_invite': {'token'},
-    'team_settings': {'discord_bot_token'},
 }
 
 

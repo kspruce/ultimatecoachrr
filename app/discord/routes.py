@@ -1,275 +1,285 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
-from flask_login import login_required, current_user
-from app import db
-from app.discord.bot import discord_bot
-from app.discord.webhooks import discord_webhook
-from app.utils.team_filter import get_current_team_id
+"""Discord pages: a team's setup (add the bot, pick a channel, choose what
+gets posted), players connecting their account, the site's one-off setup,
+and the endpoint Discord sends button clicks to.
+"""
 import logging
-import sqlalchemy.exc
 
-# Set up logging
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required
+from itsdangerous import BadSignature, URLSafeTimedSerializer
+
+from app import csrf, db
+from app.discord import api, interactions, messages, notify
+from app.models.team_organization import TeamOrganization
+from app.models.team_settings import TeamSettings
+from app.models.user import User
+from app.utils.team_filter import get_current_team_id
+
 logger = logging.getLogger(__name__)
-
-# Create blueprint
 discord_bp = Blueprint('discord', __name__, url_prefix='/discord')
+
+WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+
+def _settings(team_id):
+    settings = TeamSettings.query.filter_by(team_id=team_id).first()
+    if settings is None:
+        settings = TeamSettings(team_id=team_id)
+        db.session.add(settings)
+        db.session.flush()
+    return settings
+
+
+def _require_team_admin():
+    if not current_user.is_admin:
+        abort(403)
+    return TeamOrganization.query.get_or_404(get_current_team_id())
+
+
+def _callback_url():
+    return url_for('discord.callback', _external=True)
+
+
+def _state(kind, team_id=None):
+    """A signed state for the sign-in round trip, kept in the session too
+    so it can't be replayed by someone else."""
+    signer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt='discord-oauth')
+    state = signer.dumps({'kind': kind, 'user': current_user.id, 'team': team_id})
+    session['discord_state'] = state
+    return state
+
+
+def _read_state(state):
+    signer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt='discord-oauth')
+    if not state or state != session.pop('discord_state', None):
+        return None
+    try:
+        data = signer.loads(state, max_age=900)
+    except BadSignature:
+        return None
+    return data if data.get('user') == current_user.id else None
+
+
+def _link_account(user, discord_user):
+    """Point a Discord account at this login (and away from any other)."""
+    discord_id = str(discord_user['id'])
+    User.query.filter(User.discord_id == discord_id, User.id != user.id).update(
+        {'discord_id': None, 'discord_username': None})
+    user.discord_id = discord_id
+    user.discord_username = api.display_name(discord_user)
+
+
+# ── The team's setup ───────────────────────────────────────────────────────
 
 @discord_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    """Discord integration settings page"""
-    if not current_user.is_admin:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    
-    # Get current team ID
-    team_id = get_current_team_id()
-    
-    # Default settings dictionary
-    settings_dict = {
-        'discord_enabled': current_app.config.get('DISCORD_ENABLED', False),
-        'discord_sync_calendar': current_app.config.get('DISCORD_SYNC_CALENDAR', True),
-        'discord_notify_new_events': current_app.config.get('DISCORD_NOTIFY_NEW_EVENTS', True),
-        'discord_notify_upcoming_events': current_app.config.get('DISCORD_NOTIFY_UPCOMING_EVENTS', True),
-        'discord_notify_new_items': current_app.config.get('DISCORD_NOTIFY_NEW_ITEMS', True),
-        'discord_bot_token': current_app.config.get('DISCORD_BOT_TOKEN', ''),
-        'discord_guild_id': current_app.config.get('DISCORD_GUILD_ID', ''),
-        'discord_calendar_channel_id': current_app.config.get('DISCORD_CALENDAR_CHANNEL_ID', ''),
-        'discord_notification_channel_id': current_app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID', ''),
-        'discord_webhook_url': current_app.config.get('DISCORD_WEBHOOK_URL', '')
-    }
-    
-    # Try to import TeamSettings, but handle the case where it doesn't exist yet
-    try:
-        from app.models.team_settings import TeamSettings
-        
-        # Check if the table exists
-        try:
-            # Get team settings
-            if team_id:
-                team_settings = TeamSettings.query.filter_by(team_id=team_id).first()
-                
-                if not team_settings and team_id:
-                    # Create default settings if they don't exist
-                    team_settings = TeamSettings(
-                        team_id=team_id,
-                        discord_enabled=current_app.config.get('DISCORD_ENABLED', False),
-                        discord_webhook_url=current_app.config.get('DISCORD_WEBHOOK_URL', ''),
-                        discord_bot_token=current_app.config.get('DISCORD_BOT_TOKEN', ''),
-                        discord_guild_id=current_app.config.get('DISCORD_GUILD_ID', ''),
-                        discord_calendar_channel_id=current_app.config.get('DISCORD_CALENDAR_CHANNEL_ID', ''),
-                        discord_notification_channel_id=current_app.config.get('DISCORD_NOTIFICATION_CHANNEL_ID', ''),
-                        discord_sync_calendar=current_app.config.get('DISCORD_SYNC_CALENDAR', True),
-                        discord_notify_new_events=current_app.config.get('DISCORD_NOTIFY_NEW_EVENTS', True),
-                        discord_notify_upcoming_events=current_app.config.get('DISCORD_NOTIFY_UPCOMING_EVENTS', True),
-                        discord_notify_new_items=current_app.config.get('DISCORD_NOTIFY_NEW_ITEMS', True)
-                    )
-                    db.session.add(team_settings)
-                    db.session.commit()
-                
-                # Update settings_dict with team-specific settings
-                if team_settings:
-                    settings_dict = {
-                        'discord_enabled': team_settings.discord_enabled,
-                        'discord_sync_calendar': team_settings.discord_sync_calendar,
-                        'discord_notify_new_events': team_settings.discord_notify_new_events,
-                        'discord_notify_upcoming_events': team_settings.discord_notify_upcoming_events,
-                        'discord_notify_new_items': team_settings.discord_notify_new_items,
-                        'discord_bot_token': team_settings.discord_bot_token,
-                        'discord_guild_id': team_settings.discord_guild_id,
-                        'discord_calendar_channel_id': team_settings.discord_calendar_channel_id,
-                        'discord_notification_channel_id': team_settings.discord_notification_channel_id,
-                        'discord_webhook_url': team_settings.discord_webhook_url
-                    }
-            
-            if request.method == 'POST':
-                # Update Discord settings for this team
-                if team_id:
-                    team_settings = TeamSettings.query.filter_by(team_id=team_id).first()
-                    
-                    if team_settings:
-                        team_settings.discord_enabled = 'discord_enabled' in request.form
-                        team_settings.discord_sync_calendar = 'discord_sync_calendar' in request.form
-                        team_settings.discord_notify_new_events = 'discord_notify_new_events' in request.form
-                        team_settings.discord_notify_upcoming_events = 'discord_notify_upcoming_events' in request.form
-                        team_settings.discord_notify_new_items = 'discord_notify_new_items' in request.form
-                        
-                        # Update Discord bot settings
-                        team_settings.discord_bot_token = request.form.get('discord_bot_token', '')
-                        team_settings.discord_guild_id = request.form.get('discord_guild_id', '')
-                        team_settings.discord_calendar_channel_id = request.form.get('discord_calendar_channel_id', '')
-                        team_settings.discord_notification_channel_id = request.form.get('discord_notification_channel_id', '')
-                        
-                        # Update Discord webhook settings
-                        team_settings.discord_webhook_url = request.form.get('discord_webhook_url', '')
-                        
-                        db.session.commit()
+    team = _require_team_admin()
+    settings = _settings(team.id)
+    bot_ready = api.bot_ready()
 
-                # Only update the in-memory per-team webhook URL cache —
-                # do NOT write to current_app.config, which is shared across
-                # all teams and would cause cross-team interference.
-                from app.discord.webhooks import discord_webhook as _wh
-                if team_id:
-                    new_url = request.form.get('discord_webhook_url', '')
-                    if new_url:
-                        _wh.team_webhook_urls[team_id] = new_url
-                    elif team_id in _wh.team_webhook_urls:
-                        del _wh.team_webhook_urls[team_id]
-
-                flash('Discord settings updated successfully.', 'success')
-                return redirect(url_for('discord.settings'))
-
-        except sqlalchemy.exc.ProgrammingError as e:
-            # Table doesn't exist yet
-            logger.warning(f"TeamSettings table doesn't exist yet: {e}")
-            db.session.rollback()
-            
-            # Create the table
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'channel' and settings.discord_guild_id:
+            channel_id = request.form.get('channel_id', '')
             try:
-                TeamSettings.__table__.create(db.engine)
-                db.session.commit()
-                flash('Team settings table created. Please refresh the page.', 'info')
-            except Exception as e:
-                logger.error(f"Error creating TeamSettings table: {e}")
-                flash('Error creating team settings table. Please contact an administrator.', 'danger')
-            
-            # POST handling for when table doesn't exist — settings cannot be
-            # persisted yet, so just inform the user to retry after the table
-            # has been created (the table creation flash above covers this).
-            if request.method == 'POST':
-                flash('Settings table was just created. Please save your settings again.', 'warning')
+                allowed = {cid for cid, _ in api.text_channels(settings.discord_guild_id)}
+            except api.DiscordError as e:
+                flash(f"Couldn't read your server's channels. {e}", 'danger')
                 return redirect(url_for('discord.settings'))
+            if channel_id not in allowed:
+                flash('Pick one of your server\'s text channels.', 'danger')
+                return redirect(url_for('discord.settings'))
+            settings.discord_notification_channel_id = channel_id
+            settings.discord_enabled = True
+            db.session.commit()
+            ok = notify.post(team.id, messages.plain(
+                f"👋 Ultimate Coach will post {team.name}'s training here. "
+                "Tap the buttons on each session to say whether you're coming."), settings)
+            flash('Channel saved' + (' and a hello message posted.' if ok else
+                  ", but the bot couldn't post there. Check it can see and send messages in that channel."),
+                  'success' if ok else 'warning')
+        elif action == 'webhook':
+            url = request.form.get('webhook_url', '').strip()
+            if url and not api.is_webhook_url(url):
+                flash('That isn\'t a Discord webhook URL. It starts with https://discord.com/api/webhooks/', 'danger')
+                return redirect(url_for('discord.settings'))
+            settings.discord_webhook_url = url or None
+            if url:
+                settings.discord_enabled = True
+            db.session.commit()
+            if url:
+                ok = notify.post(team.id, messages.plain(f'👋 Ultimate Coach will post {team.name}\'s training here.'),
+                                 settings)
+                flash('Webhook saved' + (' and a test message posted.' if ok else
+                      ", but posting to it failed. Check the URL."), 'success' if ok else 'warning')
+            else:
+                flash('Webhook removed.', 'success')
+        elif action == 'posts':
+            settings.discord_enabled = bool(request.form.get('discord_enabled'))
+            settings.discord_notify_upcoming_events = bool(request.form.get('week_post'))
+            settings.discord_notify_new_events = bool(request.form.get('new_events'))
+            settings.discord_notify_new_items = bool(request.form.get('new_items'))
+            day = request.form.get('week_post_day', '0')
+            settings.discord_week_post_day = int(day) if day.isdigit() and int(day) < 7 else 0
+            db.session.commit()
+            flash('Discord settings saved.', 'success')
+        elif action == 'post_week':
+            sent = notify.post_week(team, settings=settings)
+            flash(f'Posted {sent} session{"s" if sent != 1 else ""} for the coming week.' if sent else
+                  'Nothing posted: no sessions in the next 7 days, or no channel set up yet.',
+                  'success' if sent else 'info')
+        elif action == 'disconnect':
+            if settings.discord_guild_id and bot_ready:
+                try:
+                    api.leave_guild(settings.discord_guild_id)
+                except api.DiscordError as e:
+                    logger.info('Leaving guild %s: %s', settings.discord_guild_id, e)
+            settings.discord_guild_id = settings.discord_guild_name = None
+            settings.discord_notification_channel_id = None
+            settings.discord_enabled = bool(settings.discord_webhook_url)
+            db.session.commit()
+            flash('Discord server disconnected.', 'success')
+        return redirect(url_for('discord.settings'))
 
-    except ImportError:
-        # TeamSettings model not available — cannot persist per-team settings.
-        logger.warning("TeamSettings model not found; Discord settings cannot be saved")
-        if request.method == 'POST':
-            flash('Discord settings could not be saved: TeamSettings model is unavailable. Contact your administrator.', 'danger')
-            return redirect(url_for('discord.settings'))
-    
-    # Always return a response at the end of the function
-    return render_template(
-        'discord/settings.html',
-        title='Discord Settings',
-        **settings_dict
-    )
+    channels, channel_error = [], None
+    if settings.discord_guild_id and bot_ready:
+        try:
+            channels = api.text_channels(settings.discord_guild_id)
+        except api.DiscordError as e:
+            channel_error = str(e)
+    db.session.commit()  # the settings row, if it was just made
+    linked = User.query.filter(User.discord_id.isnot(None),
+                               User.memberships.any(team_organization_id=team.id)).count()
+    return render_template('discord/settings.html', team=team, settings=settings, bot_ready=bot_ready,
+                           channels=channels, channel_error=channel_error, weekdays=WEEKDAYS,
+                           linked=linked, target=notify.channel_target(settings))
 
 
-@discord_bp.route('/link-account', methods=['GET', 'POST'])
+@discord_bp.route('/add')
+@login_required
+def add_bot():
+    """Send a team admin to Discord to add the site's bot to their server."""
+    team = _require_team_admin()
+    if not api.bot_ready():
+        flash("The site's Discord bot isn't set up yet.", 'warning')
+        return redirect(url_for('discord.settings'))
+    return redirect(api.authorize_url(_state('install', team.id), _callback_url(), add_bot=True))
+
+
+@discord_bp.route('/connect')
+@login_required
+def connect():
+    """Players (and coaches) connect their Discord account by signing in."""
+    if not api.bot_ready():
+        flash("Discord isn't set up on this site yet.", 'warning')
+        return redirect(url_for('auth.profile'))
+    return redirect(api.authorize_url(_state('connect'), _callback_url()))
+
+
+@discord_bp.route('/link-account')
 @login_required
 def link_account():
-    """Link Discord account to Ultimate Coach account"""
-    if request.method == 'POST':
-        discord_id = request.form.get('discord_id', '')
-        
-        if not discord_id:
-            flash('Please enter your Discord ID.', 'danger')
-            return redirect(url_for('discord.link_account'))
-        
-        # Update user's Discord ID
-        current_user.discord_id = discord_id
-        db.session.commit()
-        
-        flash('Your Discord account has been linked successfully.', 'success')
-        return redirect(url_for('auth.profile'))
-    
-    return render_template(
-        'discord/link_account.html',
-        title='Link Discord Account'
-    )
+    """Old address of the connect page."""
+    return redirect(url_for('discord.connect'))
 
-@discord_bp.route('/test-notification', methods=['POST'])
+
+@discord_bp.route('/disconnect', methods=['POST'])
 @login_required
-def test_notification():
-    """Send a test notification to Discord"""
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Permission denied'}), 403
-    
-    notification_type = request.form.get('type', 'webhook')
-    
+def disconnect():
+    current_user.discord_id = None
+    current_user.discord_username = None
+    db.session.commit()
+    flash('Your Discord account is no longer connected.', 'success')
+    return redirect(url_for('auth.profile'))
+
+
+@discord_bp.route('/callback')
+@login_required
+def callback():
+    state = _read_state(request.args.get('state'))
+    if state is None:
+        flash('That Discord sign-in had expired. Please try again.', 'warning')
+        return redirect(url_for('main.index'))
+    if request.args.get('error'):
+        flash('Discord sign-in was cancelled.', 'info')
+        return redirect(url_for('discord.settings') if state['kind'] == 'install' else url_for('auth.profile'))
     try:
-        if notification_type == 'webhook':
-            # Test webhook
-            success = discord_webhook.send_message(
-                content="This is a test notification from Ultimate Coach.",
-                embeds=[{
-                    "title": "Test Notification",
-                    "description": "If you can see this, your Discord webhook is working correctly!",
-                    "color": 3066993  # Green color
-                }]
-            )
-            
-            if success:
-                return jsonify({'success': True, 'message': 'Test notification sent successfully via webhook.'})
-            else:
-                return jsonify({'success': False, 'message': 'Failed to send test notification via webhook. Check your webhook URL and settings.'})
-        
-        elif notification_type == 'bot':
-            # Test bot
-            if not discord_bot.bot:
-                return jsonify({'success': False, 'message': 'Discord bot is not initialized. Check your bot token and settings.'})
-            
-            try:
-                import discord
-                success = discord_bot.send_notification(
-                    title="Test Notification",
-                    message="This is a test notification from Ultimate Coach.",
-                    embed=discord.Embed(
-                        title="Test Notification",
-                        description="If you can see this, your Discord bot is working correctly!",
-                        color=discord.Color.green()
-                    )
-                )
-                
-                if success:
-                    return jsonify({'success': True, 'message': 'Test notification sent successfully via bot.'})
-                else:
-                    return jsonify({'success': False, 'message': 'Failed to send test notification via bot. Check your bot settings and channel ID.'})
-            except ImportError:
-                return jsonify({'success': False, 'message': 'Discord.py library not installed or not properly imported.'})
-        
-        else:
-            return jsonify({'success': False, 'message': 'Invalid notification type.'}), 400
-    
-    except Exception as e:
-        logger.error(f"Error sending test notification: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        token = api.exchange_code(request.args.get('code', ''), _callback_url())
+        discord_user = api.signed_in_user(token['access_token'])
+    except (api.DiscordError, KeyError) as e:
+        flash(f'Discord sign-in failed. {e}', 'danger')
+        return redirect(url_for('main.index'))
+
+    _link_account(current_user, discord_user)
+    if state['kind'] == 'install':
+        if not current_user.is_admin or state.get('team') != get_current_team_id():
+            db.session.commit()
+            abort(403)
+        guild = token.get('guild') or {}
+        if not guild.get('id'):
+            db.session.commit()
+            flash("Discord didn't say which server the bot was added to. Please try again.", 'danger')
+            return redirect(url_for('discord.settings'))
+        settings = _settings(state['team'])
+        settings.discord_guild_id = str(guild['id'])
+        settings.discord_guild_name = (guild.get('name') or '')[:100]
+        settings.discord_notification_channel_id = guild.get('system_channel_id') or None
+        settings.discord_enabled = True
+        if settings.discord_notify_upcoming_events is None or not settings.discord_notification_channel_id:
+            settings.discord_notify_upcoming_events = True
+        db.session.commit()
+        flash(f"The bot is in {settings.discord_guild_name or 'your server'}. Now pick the channel it posts in.",
+              'success')
+        return redirect(url_for('discord.settings'))
+
+    db.session.commit()
+    flash(f"Discord connected as {current_user.discord_username}. You can now answer with Discord's buttons.",
+          'success')
+    return redirect(url_for('auth.profile'))
 
 
-@discord_bp.route('/setup-guide')
+# ── The site's own setup (superadmins) ─────────────────────────────────────
+
+@discord_bp.route('/setup', methods=['GET', 'POST'])
 @login_required
 def setup_guide():
-    """Discord setup guide — accessible to all admins and coaches"""
-    if not current_user.is_admin and not current_user.is_coach:
-        flash('You do not have permission to access this page.', 'danger')
-        return redirect(url_for('main.index'))
-    return render_template('discord/setup_guide.html', title='Discord Setup Guide')
-
-
-@discord_bp.route('/sync-calendar', methods=['POST'])
-@login_required
-def sync_calendar():
-    """Manually trigger calendar synchronization"""
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Permission denied'}), 403
-    
-    try:
-        # Trigger calendar sync
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Create a future to run the sync_calendar method
-        future = asyncio.ensure_future(discord_bot.sync_calendar())
-        
-        # Run the future to completion
+    if not current_user.is_superadmin:
+        if current_user.is_admin:
+            return redirect(url_for('discord.settings'))
+        abort(403)
+    interactions_url = url_for('discord.interactions_endpoint', _external=True)
+    status = {key: bool((current_app.config.get(key) or '').strip()) for key in
+              ('DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'DISCORD_BOT_TOKEN', 'DISCORD_PUBLIC_KEY')}
+    app_info = None
+    if request.method == 'POST' and api.bot_ready():
         try:
-            loop.run_until_complete(future)
-        finally:
-            loop.close()
-        
-        return jsonify({'success': True, 'message': 'Calendar synchronization started successfully.'})
-    
-    except Exception as e:
-        logger.error(f"Error syncing calendar: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+            api.set_interactions_url(interactions_url)
+            flash('Done: Discord sends button clicks to this site now.', 'success')
+        except api.DiscordError as e:
+            flash(f"Discord wouldn't save it. {e}", 'danger')
+        return redirect(url_for('discord.setup_guide'))
+    if api.bot_ready():
+        try:
+            app_info = api.application()
+        except api.DiscordError as e:
+            flash(f"Couldn't check the bot with Discord. {e}", 'danger')
+    return render_template('discord/setup_guide.html', status=status, app_info=app_info,
+                           interactions_url=interactions_url, callback_url=_callback_url())
 
+
+# ── Button clicks ──────────────────────────────────────────────────────────
+
+@discord_bp.route('/interactions', methods=['POST'])
+@csrf.exempt
+def interactions_endpoint():
+    body = request.get_data()
+    if not api.bot_ready() or not api.verify_signature(request.headers.get('X-Signature-Ed25519'),
+                                                       request.headers.get('X-Signature-Timestamp'), body):
+        return 'invalid request signature', 401
+    try:
+        return jsonify(interactions.handle(request.get_json(force=True) or {}))
+    except Exception:
+        logger.exception('Discord interaction failed')
+        db.session.rollback()
+        return jsonify(interactions.reply('Something went wrong saving that. Please try again on the site.'))

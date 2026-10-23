@@ -1,3 +1,2 @@
-from app.discord.bot_fix import fix_bot_class
-__all__ = ["fix_bot_class"]
-# Do not call fix_bot_class() at import time
+"""Discord for teams: posts with Yes / Maybe / No buttons, reminders by
+direct message, and announcements. See api.py for how it's set up."""

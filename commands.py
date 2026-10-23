@@ -318,8 +318,20 @@ def backfill_seasons():
         click.echo(f'{team.name}: {"seasons set up" if made else "already has seasons"}')
 
 
+@click.command('training-jobs')
+@with_appcontext
+def training_jobs_command():
+    """Make training schedules' next dates, send due reminders and weekly
+    Discord posts (what the web process does on its own every hour)."""
+    from flask import current_app
+    from app.scheduler import run_jobs
+    result = run_jobs(current_app._get_current_object())
+    click.echo(', '.join(f'{k}: {v}' for k, v in result.items()))
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
+    app.cli.add_command(training_jobs_command)
     app.cli.add_command(export_data)
     app.cli.add_command(import_season_command)
     app.cli.add_command(import_season_plan_command)

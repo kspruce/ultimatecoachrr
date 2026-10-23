@@ -54,7 +54,8 @@
         <input class="form-control form-control-sm" id="session_location" name="session_location" maxlength="100" value="{{ form.session_location or '' }}">
       </div>
     </div>
-    <p class="sp-muted small mt-3 mb-0">The day is counted from each week's w/c date. A session's last activity runs to the end time, unless the table's heading gives a length such as "(about 2 hours)".</p>
+    <p class="sp-muted small mt-3 mb-0">If a <a href="{{ url_for('training.schedules_page') }}">training schedule</a> has a date that week for the same squads (joint: a session for everyone; 1s / 2s: that squad's own), the plan fills in that date and the schedule's day, time and place are used, so players' answers stay with it. These settings are for weeks no schedule covers.
+      The day is counted from each week's w/c date. A session's last activity runs to the end time, unless the table's heading gives a length such as "(about 2 hours)".</p>
   </div>
 
   <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">

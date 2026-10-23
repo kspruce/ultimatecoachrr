@@ -14,6 +14,7 @@ from app.models.session import (
     Attendance,
     SessionRSVP
 )
+from app.models.schedule import TrainingSchedule, ScheduleAvailability, SessionTemplate, SessionReminder
 from app.models.playbook import Play, Formation, PlayTag, PlayerPosition, PlayAssignment
 from app.models.theory import TheorySection, TheoryTopic, TheoryVideo, TheoryTag
 from app.models.season_plan import (
@@ -85,6 +86,7 @@ __all__ = [
     # Drills & Sessions
     'SavedDrill', 'Drill', 'DrillFrame', 'DrillDiagram', 'SessionPlan', 'SessionComponent', 
     'Attendance', 'SessionRSVP',
+    'TrainingSchedule', 'ScheduleAvailability', 'SessionTemplate', 'SessionReminder',
     # Season plan
     'SeasonPlan', 'SeasonPhase', 'SeasonWeek', 'SeasonPage', 'SeasonMilestone',
     'ClassroomSession', 'ClassroomResource',
