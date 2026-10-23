@@ -8,10 +8,10 @@ short note goes to Discord when a webhook is set up; players see the
 selection only once the coach publishes it.
 
 Where it lives:
-- `app/utils/rsvp.py`: answers, eligibility, picks, game line-ups
-- `app/utils/event_notify.py`: emails/Discord, daily reminders
-  (in-process at 09:05, or `flask send-rsvp-reminders`; `RSVP_REMINDERS=0`
-  turns the in-process job off)
+- `app/utils/tournament_rsvp.py`: tournament answers, eligibility, picks,
+  game line-ups (session answers stay in `app/utils/rsvp.py`)
+- `app/utils/event_notify.py`: emails/Discord, reply-by reminders (run by
+  the background jobs in `app/scheduler.py`, or `flask send-rsvp-reminders`)
 - `app/utils/schedule_parse.py`: pasted schedules
 - `app/routes/tournament.py` + `templates/tournament/detail.html`: the hub
 - `app/routes/calendar_routes.py`: `/calendar/events` feed and

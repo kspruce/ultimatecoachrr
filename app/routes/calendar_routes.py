@@ -16,12 +16,13 @@ from app import db
 from app.models.game import Game
 from app.models.game_player import GamePlayer
 from app.models.player import Player
-from app.models.session import SessionPlan, SessionRSVP
+from app.models.session import SessionPlan
 from app.models.team_organization import TeamOrganization
 from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP
 from app.models.user import User
-from app.utils import rsvp as rsvps
+from app.utils import rsvp as session_rsvp
+from app.utils import tournament_rsvp as rsvps
 from app.utils.season import team_squads
 from app.utils.team_filter import get_current_team_id
 
@@ -44,17 +45,6 @@ def _iso(day, time=None):
     return datetime.combine(day, time).isoformat() if time else day.isoformat()
 
 
-def _session_counts(session_ids):
-    counts = {}
-    if session_ids:
-        rows = (db.session.query(SessionRSVP.session_id, SessionRSVP.status, db.func.count(SessionRSVP.id))
-                .filter(SessionRSVP.session_id.in_(session_ids))
-                .group_by(SessionRSVP.session_id, SessionRSVP.status))
-        for session_id, status, count in rows:
-            counts.setdefault(session_id, {})[status] = count
-    return counts
-
-
 def team_events(team_id, start, end, player=None, types=TYPES, squad_id=None, mine=False, coach=False):
     """Events between start and end (inclusive) as dicts for FullCalendar."""
     events = []
@@ -62,32 +52,40 @@ def team_events(team_id, start, end, player=None, types=TYPES, squad_id=None, mi
     if 'session' in types:
         sessions = (SessionPlan.query.filter(SessionPlan.team_organization_id == team_id,
                                              SessionPlan.date >= start, SessionPlan.date <= end)
-                    .order_by(SessionPlan.date).all())
-        mine_by_session = {}
-        if player:
-            mine_by_session = {r.session_id: r for r in SessionRSVP.query.filter(
-                SessionRSVP.player_id == player.id, SessionRSVP.session_id.in_([s.id for s in sessions] or [-1]))}
-        counts = _session_counts([s.id for s in sessions]) if coach else {}
+                    .order_by(SessionPlan.date, SessionPlan.start_time).all())
+        if squad_id:
+            sessions = [s for s in sessions if session_rsvp.is_for(s, squad_id)]
+        answers = session_rsvp.answers(sessions) if sessions else {}
+        squads = session_rsvp.player_squads(team_id) if sessions else {}
+        players = session_rsvp.team_players(team_id) if coach and sessions else None
         for s in sessions:
-            answer = mine_by_session.get(s.id)
-            if mine and answer and answer.status == 'not_attending':
-                continue
+            answer = answers.get((s.id, player.id)) if player else None
+            if mine and player:
+                # Sessions for their squad (or ones they've said they'll come to), not ones they said no to
+                said = answer and not answer.usual
+                if (answer and answer.status == 'not_attending') or (
+                        not session_rsvp.is_for(s, squads.get(player.id)) and not said):
+                    continue
+            cancelled = s.is_cancelled
             event = {
-                'id': f'session-{s.id}', 'event_id': s.id, 'type': 'session', 'title': s.title,
+                'id': f'session-{s.id}', 'event_id': s.id, 'type': 'session',
+                'title': ('Cancelled: ' if cancelled else '') + s.title,
                 'start': _iso(s.date, s.start_time), 'allDay': not s.start_time,
                 'formatted_date': s.formatted_date, 'formatted_time': s.formatted_time,
-                'location': s.location, 'focus_area': s.focus_area, 'notes': s.notes,
+                'location': s.location, 'focus_area': s.focus_area,
+                'notes': (s.cancel_reason or 'This session is cancelled.') if cancelled else s.notes,
                 'rsvp_status': answer.status if answer else None,
                 'rsvp_notes': answer.notes if answer else None,
                 'details_url': url_for('session.detail', session_id=s.id),
-                'can_rsvp': True,
+                'can_rsvp': not cancelled and (player is None or session_rsvp.can_join(s, squads.get(player.id))),
+                'cancelled': cancelled,
             }
             if s.start_time and s.end_time:
                 event['end'] = _iso(s.date, s.end_time)
             if coach:
-                c = counts.get(s.id, {})
-                event['counts'] = {'attending': c.get('attending', 0), 'maybe': c.get('maybe', 0),
-                                   'not_attending': c.get('not_attending', 0)}
+                c = session_rsvp.counts(s, answers, players, squads)
+                event['counts'] = {'attending': c['attending'], 'maybe': c['maybe'],
+                                   'not_attending': c['not_attending'], 'no_reply': c['none']}
                 event['edit_url'] = url_for('session.edit_session', session_id=s.id)
                 event['manage_url'] = url_for('session.rsvps', session_id=s.id)
             events.append(event)

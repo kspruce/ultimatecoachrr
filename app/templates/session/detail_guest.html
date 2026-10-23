@@ -11,9 +11,6 @@
             <span class="badge bg-{{ session_type_colour(session.session_type) }} mb-2">
                 {{ session.session_type_display }}
             </span>
-            {% if session.is_recurring %}
-            <span class="badge bg-secondary mb-2">{{ session.recurrence_pattern }}</span>
-            {% endif %}
         </div>
     </div>
 

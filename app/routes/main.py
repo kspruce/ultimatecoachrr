@@ -76,7 +76,7 @@ def _dashboard_extras(team_id):
                                Tournament.start_date.isnot(None), Tournament.start_date >= today)
                        .order_by(Tournament.start_date.asc()).first())
     if next_tournament:
-        from app.utils.rsvp import squad_summary
+        from app.utils.tournament_rsvp import squad_summary
         summary = squad_summary(next_tournament)
         squad = {
             'tournament': next_tournament,
@@ -101,9 +101,8 @@ def _dashboard_extras(team_id):
 def _needs_reply(team_id, today):
     """Upcoming tournaments (and sessions in the next fortnight) the
     signed-in player hasn't answered yet, soonest first."""
-    from app.models.session import SessionRSVP
     from app.models.tournament_rsvp import TournamentRSVP
-    from app.utils.rsvp import eligible_players
+    from app.utils.tournament_rsvp import eligible_players
 
     player = current_user.player
     if player is None:
@@ -121,13 +120,13 @@ def _needs_reply(team_id, today):
         items.append({'type': 'tournament', 'id': t.id, 'title': t.name, 'day': t.start_date,
                       'when': t.formatted_date_range, 'deadline': t.rsvp_deadline,
                       'url': url_for('tournament.detail', tournament_id=t.id)})
-    answered = {s for (s,) in db.session.query(SessionRSVP.session_id).filter(SessionRSVP.player_id == player.id)}
-    sessions = (SessionPlan.query
-                .filter(SessionPlan.team_organization_id == team_id, SessionPlan.date >= today,
-                        SessionPlan.date <= today + timedelta(days=14))
-                .order_by(SessionPlan.date).all())
+    # Sessions for their squad they have no answer for (a usual answer counts)
+    from app.utils import rsvp as session_rsvp
+    sessions = session_rsvp.upcoming_sessions(team_id, today, today + timedelta(days=14))
+    answers = session_rsvp.answers(sessions, [player.id])
+    squad_id = session_rsvp.player_squads(team_id).get(player.id)
     for s in sessions:
-        if s.id not in answered:
+        if (s.id, player.id) not in answers and session_rsvp.is_for(s, squad_id):
             items.append({'type': 'session', 'id': s.id, 'title': s.title, 'day': s.date,
                           'when': s.date.strftime('%a %d %b') + (f', {s.start_time.strftime("%H:%M")}' if s.start_time else ''),
                           'deadline': None, 'url': url_for('session.detail', session_id=s.id)})

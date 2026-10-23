@@ -18,10 +18,13 @@ from app.utils.utils import admin_required, coach_required
 from app.utils.season import scope_sessions
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
-    SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm,
-    AdminSessionRSVPForm
+    SessionComponentForm, SessionFilterForm, AdminBulkRSVPForm,
 )
 from secrets import token_urlsafe
+from app.utils.rsvp import (
+    LABELS as rsvp_labels, STATUSES as RSVP_STATUSES, answers as rsvp_answers, attendee_visibility,
+    counts as rsvp_counts, expected_players, plan_visible, set_rsvp,
+)
 
 csrf = CSRFProtect()
 
@@ -147,7 +150,8 @@ def index():
 @coach_required
 def add_session():
     form = SessionPlanForm()
-    
+    squads = _squad_choices(form)
+
     if form.validate_on_submit():
         
         session_plan = SessionPlan(
@@ -158,17 +162,17 @@ def add_session():
             location=form.location.data,
             focus_area=form.focus_area.data,
             notes=form.notes.data,
-            is_recurring=form.is_recurring.data,
-            recurrence_pattern=form.recurrence_pattern.data if form.is_recurring.data else None,
             session_type=form.session_type.data,
+            is_published=form.is_published.data,
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
+        session_plan.squads = [s for s in squads if s.id in (form.squads.data or [])]
         
         db.session.add(session_plan)
         db.session.commit()
         
-        flash(f'Session plan "{session_plan.title}" has been created! Add components to build out your session.', 'success')
-        return redirect(url_for('session.detail', session_id=session_plan.id))
+        flash(f'Session "{session_plan.title}" has been created. Now plan what you\'ll do.', 'success')
+        return redirect(url_for('training.plan', session_id=session_plan.id))
 
     if request.method == 'GET' and request.args.get('date'):  # "add on this day" from the calendar
         try:
@@ -176,6 +180,14 @@ def add_session():
         except ValueError:
             pass
     return render_template('session/session_form.html', form=form, title='Add Session Plan')
+
+
+def _squad_choices(form):
+    """Fill the form's squad choices with the team's squads; returns them."""
+    from app.utils.season import team_squads
+    squads = team_squads(get_current_team_id())
+    form.squads.choices = [(s.id, s.name) for s in squads]
+    return squads
 
 # Drill Library Routes
 @bp.route('/drills')
@@ -659,356 +671,144 @@ def delete_component(component_id):
 @login_required
 @coach_required
 def attendance(session_id):
-    session_plan = SessionPlan.query.filter_by(
-        id=session_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
-    form = AttendanceForm(team_organization_id=get_current_team_id())  # ADD team_organization_id here
-    
-    if form.validate_on_submit():
-        status = form.status.data
+    """The register: everyone the session is for, starting from what they
+    said (Yes = present) until someone records what actually happened."""
+    session_plan = _session_or_404(session_id)
+    team_id = session_plan.team_organization_id
+    records = {a.player_id: a for a in Attendance.query.filter_by(session_id=session_id)}
+    answer_map = rsvp_answers([session_plan])
+    answered = {pid for (_, pid) in answer_map}
+    players = expected_players(session_plan, answered=answered | set(records))
+    others = [p for p in Player.query.filter_by(team_organization_id=team_id, active=True)
+              .order_by(Player.name) if p not in players]
 
-        # First remove ALL attendance records for this session/status
-        Attendance.query.filter_by(
-            session_id=session_id,
-            status=status,
-            team_organization_id=get_current_team_id()
-        ).delete()
-
-        # Then add back only the currently selected players
-        for player_id in form.players.data:
-            player = Player.query.filter_by(
-                id=player_id,
-                team_organization_id=get_current_team_id()
-            ).first()
-
-            if player:
-
-                attendance = Attendance(
-                    session_id=session_id,
-                    player_id=player_id,
-                    status=status,
-                    notes=form.notes.data,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(attendance)
-
+    if request.method == 'POST':
+        ids = {p.id for p in players + others}
+        for player_id in ids:
+            status = request.form.get(f'p{player_id}', '')
+            record = records.get(player_id)
+            if status in ATTENDANCE_STATUSES:
+                if record is None:
+                    record = Attendance(session_id=session_id, player_id=player_id, team_organization_id=team_id)
+                    db.session.add(record)
+                record.status = status
+            elif record is not None and f'p{player_id}' in request.form:
+                db.session.delete(record)
         db.session.commit()
-
-        flash(f'Attendance for {len(form.players.data)} players has been recorded as {status}!', 'success')
+        flash('Attendance saved.', 'success')
         return redirect(url_for('session.attendance', session_id=session_id))
-    
-    # Pre-select players based on the selected status in the form
-    if request.method == 'GET':
-        status = request.args.get('status', 'present')
-        form.status.data = status
-        
-        # Get players with the selected status
-        attendances = Attendance.query.filter_by(
-            session_id=session_id, 
-            status=status,
-            team_organization_id=get_current_team_id()
-        ).all()
-        
-        form.players.data = [a.player_id for a in attendances]
-    
-    players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).order_by(Player.name).all()
-    
-    attendances = Attendance.query.filter_by(
-        session_id=session_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    # Group attendances by status
-    attendance_by_status = {
-        'present': [],
-        'absent': [],
-        'late': [],
-        'excused': []
-    }
-    
-    for attendance in attendances:
-        if attendance.status in attendance_by_status:
-            attendance_by_status[attendance.status].append(attendance)
-    
-    return render_template(
-        'session/attendance.html', 
-        session=session_plan, 
-        form=form, 
-        players=players, 
-        attendances=attendances,
-        attendance_by_status=attendance_by_status
-    )
+
+    prefilled = not records
+    rows = []
+    for player in players:
+        answer = answer_map.get((session_id, player.id))
+        record = records.get(player.id)
+        status = record.status if record else ('present' if answer and answer.status == 'attending' else '')
+        rows.append({'player': player, 'answer': answer, 'status': status})
+    return render_template('session/attendance.html', session=session_plan, rows=rows, others=others,
+                           prefilled=prefilled, statuses=ATTENDANCE_STATUSES)
+
+
+ATTENDANCE_STATUSES = ('present', 'late', 'excused', 'absent')
+
 
 # RSVP Routes
+def _session_or_404(session_id):
+    return SessionPlan.query.filter_by(
+        id=session_id, team_organization_id=get_current_team_id()).first_or_404()
+
+
 @bp.route('/<int:session_id>/rsvp', methods=['GET', 'POST'])
 @bp.route('/<int:session_id>/rsvp/<int:player_id>', methods=['GET', 'POST'])
 @login_required
 def rsvp(session_id, player_id=None):
-    session_plan = SessionPlan.query.filter_by(
-        id=session_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
-    # Check if this is an admin RSVP for a specific player
-    is_admin_rsvp = current_user.is_admin and player_id is not None
-    
-    # Check if we should show admin form (admin choosing player)
-    # This happens when: admin visits /rsvp without player_id, or includes ?admin=1
-    show_admin_form = current_user.is_admin and (
-        player_id is None and request.args.get('admin') == '1'
-    )
-    
-    if is_admin_rsvp:
-        # Admin RSVPing for a specific player
-        player = Player.query.filter_by(
-            id=player_id,
-            team_organization_id=get_current_team_id()
-        ).first_or_404()
-        
-        existing_rsvp = SessionRSVP.query.filter_by(
-            session_id=session_id,
-            player_id=player.id,
-            team_organization_id=get_current_team_id()
-        ).first()
-        
-        form = SessionRSVPForm(obj=existing_rsvp)
-        
-        if form.validate_on_submit():
-            if existing_rsvp:
-                existing_rsvp.status = form.status.data
-                existing_rsvp.notes = form.notes.data
-                flash(f'RSVP for {player.name} has been updated!', 'success')
-            else:
-                rsvp_record = SessionRSVP(
-                    session_id=session_id,
-                    player_id=player.id,
-                    status=form.status.data,
-                    notes=form.notes.data,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(rsvp_record)
-                flash(f'RSVP for {player.name} has been submitted!', 'success')
-            
-            db.session.commit()
+    """A player's answer for one session; admins can answer for a player
+    (the availability grid is the quick way to do that for many)."""
+    session_plan = _session_or_404(session_id)
+    if player_id is not None and not current_user.is_admin:
+        abort(403)
+    if player_id is None and not current_user.player:
+        if current_user.is_coach:
+            return redirect(url_for('training.grid'))
+        flash('You need to link your account to a player before you can RSVP.', 'warning')
+        return redirect(url_for('auth.link_player'))
+    player = (Player.query.filter_by(id=player_id, team_organization_id=get_current_team_id()).first_or_404()
+              if player_id is not None else current_user.player)
+
+    existing_rsvp = SessionRSVP.query.filter_by(session_id=session_id, player_id=player.id).first()
+    form = SessionRSVPForm(obj=existing_rsvp)
+    if session_plan.is_cancelled and request.method == 'POST':
+        flash('This session has been cancelled.', 'warning')
+        return redirect(url_for('session.detail', session_id=session_id))
+    if form.validate_on_submit():
+        set_rsvp(session_plan, player, form.status.data, form.notes.data, keep_notes=False)
+        db.session.commit()
+        who = 'Your' if player_id is None else f'{player.name}\'s'
+        flash(f'{who} answer is saved: {rsvp_labels[form.status.data]}.', 'success')
+        if player_id is not None:
             return redirect(url_for('session.rsvps', session_id=session_id))
-        
-        return render_template('session/rsvp.html', form=form, session=session_plan, 
-                             existing_rsvp=existing_rsvp, player=player, show_admin_selector=False)
-    
-    elif show_admin_form:
-        # Admin selecting which player to RSVP for
-        form = AdminSessionRSVPForm(team_organization_id=get_current_team_id())
-        
-        if form.validate_on_submit():
-            selected_player_id = form.player_id.data
-            player = Player.query.filter_by(
-                id=selected_player_id,
-                team_organization_id=get_current_team_id()
-            ).first_or_404()
-            
-            existing_rsvp = SessionRSVP.query.filter_by(
-                session_id=session_id,
-                player_id=player.id,
-                team_organization_id=get_current_team_id()
-            ).first()
-            
-            if existing_rsvp:
-                existing_rsvp.status = form.status.data
-                existing_rsvp.notes = form.notes.data
-                flash(f'RSVP for {player.name} has been updated!', 'success')
-            else:
-                rsvp_record = SessionRSVP(
-                    session_id=session_id,
-                    player_id=player.id,
-                    status=form.status.data,
-                    notes=form.notes.data,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(rsvp_record)
-                flash(f'RSVP for {player.name} has been submitted!', 'success')
-            
-            db.session.commit()
-            return redirect(url_for('session.rsvps', session_id=session_id))
-        
-        return render_template('session/rsvp.html', form=form, session=session_plan, show_admin_selector=True)
-    
-    else:
-        # Regular player RSVPing for themselves (including admins who are also players)
-        if not current_user.player:
-            # If admin without player, show admin form
-            if current_user.is_admin:
-                return redirect(url_for('session.rsvp', session_id=session_id) + '?admin=1')
-            flash('You need to link your account to a player before you can RSVP.', 'warning')
-            return redirect(url_for('auth.link_player'))
-        
-        player = current_user.player
-        
-        existing_rsvp = SessionRSVP.query.filter_by(
-            session_id=session_id, 
-            player_id=player.id,
-            team_organization_id=get_current_team_id()
-        ).first()
-        
-        form = SessionRSVPForm(obj=existing_rsvp)
-        
-        if form.validate_on_submit():
-            if existing_rsvp:
-                existing_rsvp.status = form.status.data
-                existing_rsvp.notes = form.notes.data
-                flash('Your RSVP has been updated!', 'success')
-            else:
-                rsvp_record = SessionRSVP(
-                    session_id=session_id,
-                    player_id=player.id,
-                    status=form.status.data,
-                    notes=form.notes.data,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(rsvp_record)
-                flash('Your RSVP has been submitted!', 'success')
-            
-            db.session.commit()
-            return redirect(url_for('session.detail', session_id=session_id))
-        
-        return render_template('session/rsvp.html', form=form, session=session_plan, 
-                             existing_rsvp=existing_rsvp, show_admin_selector=False)
+        return redirect(url_for('session.detail', session_id=session_id))
+
+    return render_template('session/rsvp.html', form=form, session=session_plan,
+                           existing_rsvp=existing_rsvp,
+                           player=player if player_id is not None else None)
 
 
 @bp.route('/<int:session_id>/admin_rsvp', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def admin_rsvp(session_id):
-    session_plan = SessionPlan.query.filter_by(
-        id=session_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
+    """Set the same answer for several players at once."""
+    session_plan = _session_or_404(session_id)
     form = AdminBulkRSVPForm(team_organization_id=get_current_team_id())
-    
+
     if form.validate_on_submit():
         status = form.status.data
-        
-        # Delete existing RSVPs for the selected players
-        for player_id in form.players.data:
-            SessionRSVP.query.filter_by(
-                session_id=session_id,
-                player_id=player_id,
-                team_organization_id=get_current_team_id()
-            ).delete()
-        
-        # Create new RSVPs for the selected players
-        for player_id in form.players.data:
-            player = Player.query.filter_by(
-                id=player_id,
-                team_organization_id=get_current_team_id()
-            ).first()
-            
-            if player:
-                rsvp_record = SessionRSVP(
-                    session_id=session_id,
-                    player_id=player_id,
-                    status=status,
-                    notes=form.notes.data,
-                    team_organization_id=get_current_team_id()
-                )
-                db.session.add(rsvp_record)
-        
+        players = Player.query.filter(Player.id.in_(form.players.data),
+                                      Player.team_organization_id == get_current_team_id()).all()
+        for player in players:
+            set_rsvp(session_plan, player, status, form.notes.data, keep_notes=False)
         db.session.commit()
-        flash(f'RSVPs for {len(form.players.data)} players have been recorded as {status}!', 'success')
-        return redirect(url_for('session.admin_rsvp', session_id=session_id))
-    
-    # Pre-select players based on the selected status in the form
+        flash(f'{len(players)} players marked as {rsvp_labels[status]}.', 'success')
+        return redirect(url_for('session.admin_rsvp', session_id=session_id, status=status))
+
     if request.method == 'GET':
-        status = request.args.get('status', 'attending')
-        form.status.data = status
-        
-        # Get players with the selected status
-        rsvps = SessionRSVP.query.filter_by(
-            session_id=session_id,
-            status=status,
-            team_organization_id=get_current_team_id()
-        ).all()
-        
-        form.players.data = [r.player_id for r in rsvps]
-    
-    # Get all RSVPs for this session
-    all_rsvps = SessionRSVP.query.filter_by(
-        session_id=session_id,
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    # Hide players already assigned to another RSVP status
+        form.status.data = request.args.get('status', 'attending')
     current_status = form.status.data
+    all_rsvps = SessionRSVP.query.filter_by(session_id=session_id).all()
+    if request.method == 'GET':
+        form.players.data = [r.player_id for r in all_rsvps if r.status == current_status]
+    # Players already given another answer appear only under that answer
+    elsewhere = {r.player_id for r in all_rsvps if r.status != current_status}
+    form.players.choices = [(pid, label) for pid, label in form.players.choices if pid not in elsewhere]
 
-    excluded_players = {
-        r.player_id for r in all_rsvps
-        if r.status != current_status
-    }
+    rsvps_by_status = {status: [r for r in all_rsvps if r.status == status] for status in RSVP_STATUSES}
+    return render_template('session/admin_rsvp.html', session=session_plan, form=form,
+                           rsvps_by_status=rsvps_by_status)
 
-    # Filter player choices so they only appear in one status tab
-    form.players.choices = [
-        (pid, label)
-        for pid, label in form.players.choices
-        if pid not in excluded_players
-    ]
-    
-    # Group RSVPs by status
-    rsvps_by_status = {
-        'attending': [],
-        'not_attending': [],
-        'maybe': []
-    }
-    
-    for rsvp in all_rsvps:
-        if rsvp.status in rsvps_by_status:
-            rsvps_by_status[rsvp.status].append(rsvp)
-    
-    return render_template(
-        'session/admin_rsvp.html',
-        session=session_plan,
-        form=form,
-        rsvps_by_status=rsvps_by_status
-    )
 
 @bp.route('/<int:session_id>/rsvps')
 @login_required
 def rsvps(session_id):
-    session_plan = SessionPlan.query.filter_by(
-        id=session_id,
-        team_organization_id=get_current_team_id()
-    ).first_or_404()
-    
-    # Group RSVPs by status
-    attending = SessionRSVP.query.filter_by(
-        session_id=session_id, 
-        status='attending',
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    not_attending = SessionRSVP.query.filter_by(
-        session_id=session_id, 
-        status='not_attending',
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    maybe = SessionRSVP.query.filter_by(
-        session_id=session_id, 
-        status='maybe',
-        team_organization_id=get_current_team_id()
-    ).all()
-    
-    return render_template(
-        'session/rsvps.html', 
-        session=session_plan, 
-        attending=attending, 
-        not_attending=not_attending, 
-        maybe=maybe
-    )
+    """Who is coming. Players see names, numbers or nothing, as the team
+    chose in its session settings."""
+    session_plan = _session_or_404(session_id)
+    visibility = 'names' if current_user.is_coach else attendee_visibility(session_plan.team_organization_id)
+    if visibility == 'hidden':
+        flash('Your coaches keep who is coming to themselves.', 'info')
+        return redirect(url_for('session.detail', session_id=session_id))
+
+    answer_map = rsvp_answers([session_plan])
+    answered = {pid for (_, pid) in answer_map}
+    players = expected_players(session_plan, answered=answered)
+    groups = {status: [] for status in RSVP_STATUSES + ('none',)}
+    for player in players:
+        answer = answer_map.get((session_plan.id, player.id))
+        groups[answer.status if answer else 'none'].append((player, answer))
+
+    return render_template('session/rsvps.html', session=session_plan, groups=groups,
+                           names=(visibility == 'names'), show_unanswered=current_user.is_coach)
+
 
 # Analytics Routes
 @bp.route('/attendance_analytics')
@@ -1320,20 +1120,24 @@ def detail(session_id):
         if attendance.status in attendance_by_status:
             attendance_by_status[attendance.status].append(attendance)
 
-    # Check if the current user has already RSVPed for this session
-    user_has_rsvp = False
-    if current_user.is_authenticated and current_user.player:
-        user_has_rsvp = SessionRSVP.query.filter_by(
-            session_id=session_id,
-            player_id=current_user.player.id
-        ).first() is not None
+    my_answer = None
+    if current_user.player:
+        my_answer = rsvp_answers([session_plan], [current_user.player.id]).get(
+            (session_plan.id, current_user.player.id))
+    visibility = 'names' if current_user.is_coach else attendee_visibility(session_plan.team_organization_id)
+    answer_counts = rsvp_counts(session_plan) if visibility != 'hidden' else None
+    show_plan = plan_visible(session_plan, current_user)
+    if not show_plan:
+        components = []
 
     return render_template(
         'session/detail.html',
         session=session_plan,
         components=components,
         attendance_by_status=attendance_by_status,
-        user_has_rsvp=user_has_rsvp
+        my_answer=my_answer,
+        answer_counts=answer_counts,
+        show_plan=show_plan,
     )
 
 @bp.route('/edit/<int:session_id>', methods=['GET', 'POST'])
@@ -1347,7 +1151,10 @@ def edit_session(session_id):
     ).first_or_404()
     
     form = SessionPlanForm(obj=session_plan)
-    
+    squads = _squad_choices(form)
+    if request.method == 'GET':
+        form.squads.data = [s.id for s in session_plan.squads]
+
     if form.validate_on_submit():
         session_plan.title = form.title.data
         session_plan.date = form.date.data
@@ -1356,9 +1163,9 @@ def edit_session(session_id):
         session_plan.location = form.location.data
         session_plan.focus_area = form.focus_area.data
         session_plan.notes = form.notes.data
-        session_plan.is_recurring = form.is_recurring.data
-        session_plan.recurrence_pattern = form.recurrence_pattern.data if form.is_recurring.data else None
         session_plan.session_type = form.session_type.data
+        session_plan.is_published = form.is_published.data
+        session_plan.squads = [s for s in squads if s.id in (form.squads.data or [])]
         
         db.session.commit()
         
@@ -1544,6 +1351,9 @@ def export_pdf(session_id):
         id=session_id,
         team_organization_id=get_current_team_id()
     ).first_or_404()
+    if not plan_visible(session_plan, current_user):
+        flash("Your coaches haven't shared this plan yet.", 'info')
+        return redirect(url_for('session.detail', session_id=session_id))
 
     components = session_plan.components.filter_by(
         team_organization_id=get_current_team_id()
@@ -1580,6 +1390,9 @@ def printable_view(session_id):
         id=session_id,
         team_organization_id=get_current_team_id()
     ).first_or_404()
+    if not plan_visible(session_plan, current_user):
+        flash("Your coaches haven't shared this plan yet.", 'info')
+        return redirect(url_for('session.detail', session_id=session_id))
     
     components = session_plan.components.filter_by(
         team_organization_id=get_current_team_id()
@@ -1716,36 +1529,23 @@ def revoke_share_link(session_id):
 @login_required
 @admin_required
 def quick_checkin(session_id):
-    # Same people as the admin RSVP page that calls this
-    session_plan = SessionPlan.query.filter_by(
-        id=session_id, team_organization_id=get_current_team_id()).first_or_404()
-
+    """Tap-to-mark attendance on the attendance page: one player's
+    present / late / excused / absent, saved straight away."""
+    session_plan = _session_or_404(session_id)
     data = request.get_json(silent=True) or {}
-
-    status = data.get("status")
     player = Player.query.filter_by(
         id=data.get("player_id"), team_organization_id=session_plan.team_organization_id).first()
     if player is None:
         return {"status": "error", "message": "Player not found"}, 404
-    player_id = player.id
+    status = data.get('status')
+    if status not in ATTENDANCE_STATUSES:
+        return {"status": "error", "message": "Unknown attendance status"}, 400
 
-    existing = SessionRSVP.query.filter_by(
-        session_id=session_id,
-        player_id=player_id,
-        team_organization_id=get_current_team_id()
-    ).first()
-
-    if existing:
-        existing.status = status
-    else:
-        rsvp = SessionRSVP(
-            session_id=session_id,
-            player_id=player_id,
-            status=status,
-            team_organization_id=get_current_team_id()
-        )
-        db.session.add(rsvp)
-
+    record = Attendance.query.filter_by(session_id=session_id, player_id=player.id).first()
+    if record is None:
+        record = Attendance(session_id=session_id, player_id=player.id,
+                            team_organization_id=session_plan.team_organization_id)
+        db.session.add(record)
+    record.status = status
     db.session.commit()
-
-    return {"status": "success"}
+    return {"status": "ok", "player_id": player.id, "attendance": status}

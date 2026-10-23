@@ -15,7 +15,7 @@ from flask import current_app, has_request_context, request, url_for
 from app import db
 from app.models.team_organization import TeamOrganization
 from app.models.tournament import Tournament
-from app.utils import rsvp as rsvps
+from app.utils import tournament_rsvp as rsvps
 from app.utils.email import send_email
 
 logger = logging.getLogger(__name__)
@@ -64,9 +64,8 @@ def _email(player, subject, lines):
 def _discord(tournament, content):
     """Post to the team's Discord channel if one is set up; never raises."""
     try:
-        from app.discord.webhooks import discord_webhook
-        if discord_webhook.get_webhook_url(tournament.team_organization_id):
-            discord_webhook.send_message(content, team_id=tournament.team_organization_id)
+        from app.discord import messages, notify
+        notify.post(tournament.team_organization_id, messages.plain(content))
     except Exception as e:  # Discord is optional
         logger.warning('Discord message not sent: %s', e)
 
@@ -162,7 +161,8 @@ def send_schedule(tournament):
 
 def send_due_reminders(today=None):
     """Remind non-repliers once, a couple of days before each reply-by
-    date. Run daily (`flask send-rsvp-reminders`, or the Discord scheduler)."""
+    date. The background jobs (app/scheduler.py) run this every hour from
+    9am; `flask send-rsvp-reminders` runs it by hand."""
     today = today or date.today()
     due = Tournament.query.filter(
         Tournament.rsvp_deadline.isnot(None),
@@ -176,29 +176,3 @@ def send_due_reminders(today=None):
     db.session.commit()
     return len(due), total
 
-
-def start_reminder_scheduler(app):
-    """Run send_due_reminders every morning inside the web process. The app
-    runs as a single process (see railway.toml), so this fires once a day;
-    reminder_sent_at keeps a tournament from being reminded twice anyway.
-    Set RSVP_REMINDERS=0 to turn it off (e.g. when using a cron job with
-    `flask send-rsvp-reminders` instead)."""
-    if app.config.get('TESTING') or str(app.config.get('RSVP_REMINDERS', '1')) == '0':
-        return None
-    from apscheduler.schedulers.background import BackgroundScheduler
-    from apscheduler.triggers.cron import CronTrigger
-
-    def job():
-        with app.app_context():
-            try:
-                tournaments, emails = send_due_reminders()
-                if tournaments:
-                    logger.info('Reply reminders: %s tournaments, %s emails', tournaments, emails)
-            except Exception:
-                logger.exception('Reply reminders failed')
-                db.session.rollback()
-
-    scheduler = BackgroundScheduler(daemon=True)
-    scheduler.add_job(job, CronTrigger(hour=9, minute=5), id='rsvp_reminders', replace_existing=True)
-    scheduler.start()
-    return scheduler

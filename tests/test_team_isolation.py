@@ -16,7 +16,7 @@ from app.models.off_season import TrackWorkoutWeek
 from app.models.onboarding import UserOnboarding
 from app.models.playbook import Play
 from app.models.point import Point
-from app.models.session import SessionPlan, SessionRSVP
+from app.models.session import Attendance, SessionPlan
 from app.models.tournament import Tournament
 from app.models.tournament_rsvp import TournamentRSVP
 from app.models.user import User
@@ -142,17 +142,17 @@ def test_selections_drop_another_teams_players(app, teams):
 def test_quick_checkin_is_for_your_own_session_and_players(app, teams):
     url = f"/sessions/{teams['other_session']}/quick_checkin"
     c = client(app, teams)
-    assert c.post(url, json={'player_id': teams['herd_player'], 'status': 'attending'}).status_code == 404
+    assert c.post(url, json={'player_id': teams['herd_player'], 'status': 'present'}).status_code == 404
     assert c.post(f"/sessions/{teams['herd_session']}/quick_checkin",
-                  json={'player_id': teams['other_player'], 'status': 'attending'}).status_code == 404
-    assert SessionRSVP.query.count() == 0
+                  json={'player_id': teams['other_player'], 'status': 'present'}).status_code == 404
+    assert Attendance.query.count() == 0
 
-    # Same people as the admin RSVP page that uses it
-    client(app, teams, 'coach').post(url, json={'player_id': teams['other_player'], 'status': 'attending'})
-    assert SessionRSVP.query.count() == 0
+    # Admins only (it's the register's tap-to-mark)
+    client(app, teams, 'coach').post(url, json={'player_id': teams['other_player'], 'status': 'present'})
+    assert Attendance.query.count() == 0
 
-    assert c.post(url, json={'player_id': teams['other_player'], 'status': 'attending'}).status_code == 200
-    assert SessionRSVP.query.one().player_id == teams['other_player']
+    assert c.post(url, json={'player_id': teams['other_player'], 'status': 'present'}).status_code == 200
+    assert Attendance.query.one().player_id == teams['other_player']
 
 
 def test_track_weeks_only_link_your_sessions(app, teams):

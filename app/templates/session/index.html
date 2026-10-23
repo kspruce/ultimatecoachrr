@@ -171,9 +171,6 @@
                                         <a href="{{ url_for('session.detail', session_id=session.id) }}">
                                             {{ session.title }}
                                         </a>
-                                        {% if session.is_recurring %}
-                                        <span class="badge bg-info">{{ session.recurrence_pattern }}</span>
-                                        {% endif %}
                                         {% if session.season %}
                                         <div class="small text-muted">
                                             {{ session.season }}{% if session.week_number %} · Week {{ session.week_number }}{% endif %}{% if session.squad %} · <span class="badge bg-light text-dark">{{ session.squad }}</span>{% endif %}

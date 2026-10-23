@@ -14,7 +14,7 @@ from app.models.gameday import GameDayPlayerStats
 from app.utils.utils import coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
-from app.utils.rsvp import assign_default_players
+from app.utils.tournament_rsvp import assign_default_players
 from app.models.scouting import scouting_for_game
 from app.utils.team_filter import get_current_team_id, team_player_ids
 from app.utils.point_flow import analysis_progress

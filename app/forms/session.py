@@ -16,13 +16,9 @@ class SessionPlanForm(FlaskForm):
     location = StringField('Location', validators=[Optional(), Length(max=100)])
     focus_area = StringField('Focus Area', validators=[Optional(), Length(max=100)])
     notes = TextAreaField('Notes', validators=[Optional()])
-    is_recurring = BooleanField('Recurring Session', default=False)
-    recurrence_pattern = SelectField('Recurrence Pattern', choices=[
-        ('', 'Select...'),
-        ('weekly', 'Weekly'),
-        ('biweekly', 'Bi-weekly'),
-        ('monthly', 'Monthly')
-    ], validators=[Optional()])
+    # Choices are the team's squads, filled in by the route; none ticked = everyone
+    squads = SelectMultipleField('Squads', coerce=int, validators=[Optional()], choices=[])
+    is_published = BooleanField('Players can see the plan', default=True)
     # Add session type field with choices
     session_type = SelectField(
         'Session Type',
@@ -161,27 +157,6 @@ class SessionRSVPForm(FlaskForm):
     ], validators=[DataRequired()])
     notes = TextAreaField('Notes', validators=[Optional()])
     submit = SubmitField('Submit RSVP')
-
-class AdminSessionRSVPForm(FlaskForm):
-    player_id = SelectField('Player', coerce=int, validators=[DataRequired()])
-    status = SelectField('Attendance Status', choices=[
-        ('attending', 'Will attend'),
-        ('not_attending', 'Cannot attend'),
-        ('maybe', 'Might attend')
-    ], validators=[DataRequired()])
-    notes = TextAreaField('Notes', validators=[Optional()])
-    submit = SubmitField('Submit RSVP')
-    
-    def __init__(self, team_organization_id=None, *args, **kwargs):
-        super(AdminSessionRSVPForm, self).__init__(*args, **kwargs)
-        if team_organization_id:
-            self.player_id.choices = [(p.id, f"{p.name} (#{p.jersey_number})") 
-                                     for p in Player.query.filter_by(
-                                         active=True,
-                                         team_organization_id=team_organization_id
-                                     ).order_by(Player.name).all()]
-        else:
-            self.player_id.choices = []
 
 class DrillSearchForm(FlaskForm):
     """Form for searching drills"""

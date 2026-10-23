@@ -2,6 +2,15 @@ from app import db
 from datetime import datetime
 from sqlalchemy import Integer, ForeignKey
 from sqlalchemy.orm import relationship
+import sqlalchemy as sa
+
+
+# Which squads a session is for; none means the whole club
+session_plan_squad = db.Table(
+    'session_plan_squad',
+    db.Column('session_id', db.Integer, db.ForeignKey('session_plan.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('squad_id', db.Integer, db.ForeignKey('squad.id', ondelete='CASCADE'), primary_key=True),
+)
 
 
 class SessionPlan(db.Model):
@@ -13,8 +22,6 @@ class SessionPlan(db.Model):
     location = db.Column(db.String(100), nullable=True)
     focus_area = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    is_recurring = db.Column(db.Boolean, default=False)
-    recurrence_pattern = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     share_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
@@ -25,6 +32,17 @@ class SessionPlan(db.Model):
     # the season plan's own label
     season_id = db.Column(db.Integer, db.ForeignKey('season.id', ondelete='SET NULL'), nullable=True, index=True)
     club_season = db.relationship('Season')
+
+    # The training schedule that made this date (None for one-off sessions)
+    schedule_id = db.Column(db.Integer, db.ForeignKey('training_schedule.id', ondelete='SET NULL'),
+                            nullable=True, index=True)
+    schedule = db.relationship('TrainingSchedule', back_populates='sessions')
+    squads = db.relationship('Squad', secondary=session_plan_squad, order_by='Squad.sort_order')
+    # scheduled / cancelled; a cancelled date keeps its RSVPs and isn't made again
+    status = db.Column(db.String(20), nullable=False, default='scheduled', server_default='scheduled')
+    cancel_reason = db.Column(db.String(200), nullable=True)
+    # Players see the plan (its blocks) once it's published
+    is_published = db.Column(db.Boolean, nullable=False, default=True, server_default=sa.true())
 
     # Season plan fields (filled by `flask import-season`; all optional)
     external_id = db.Column(db.String(100), nullable=True)
@@ -61,6 +79,18 @@ class SessionPlan(db.Model):
     def __repr__(self):
         return f'<SessionPlan {self.title}>'
     
+    STATUS_SCHEDULED = 'scheduled'
+    STATUS_CANCELLED = 'cancelled'
+
+    @property
+    def is_cancelled(self):
+        return self.status == self.STATUS_CANCELLED
+
+    @property
+    def squad_names(self):
+        """'1s', '1s & 2s', or '' for the whole club."""
+        return ' & '.join(s.name for s in self.squads)
+
     @property
     def duration_minutes(self):
         """Calculate the session duration in minutes."""
@@ -139,6 +169,11 @@ class Attendance(db.Model):
     player = relationship('Player', back_populates='attendances')
 
 class SessionRSVP(db.Model):
+    """A player's answer for one session: attending, maybe or not_attending.
+    Saved through app.utils.rsvp.set_rsvp."""
+    __table_args__ = (
+        db.UniqueConstraint('session_id', 'player_id', name='uq_session_rsvp_player'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session_plan.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)

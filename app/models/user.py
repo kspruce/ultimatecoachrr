@@ -46,7 +46,9 @@ class User(UserMixin, db.Model):
     is_superadmin = db.Column(db.Boolean, default=False, nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Set by "Connect Discord" (signing in with Discord), never typed in
     discord_id = db.Column(db.String(64), nullable=True, unique=True)
+    discord_username = db.Column(db.String(100), nullable=True)
 
     # Two-step sign-in (app/utils/two_factor.py): the authenticator app's
     # secret, hashed one-time recovery codes (JSON list), and the last code

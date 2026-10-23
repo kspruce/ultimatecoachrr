@@ -1,118 +1,42 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>RSVP for Session</h1>
-            <p class="lead">{{ session.title }} | {{ session.formatted_date }}</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-secondary">Back to Session</a>
-            {% if current_user.is_admin %}
-            <a href="{{ url_for('session.rsvps', session_id=session.id) }}" class="btn btn-info">View All RSVPs</a>
-            {% if not show_admin_selector %}
-            <a href="{{ url_for('session.rsvp', session_id=session.id) }}?admin=1" class="btn btn-warning">RSVP for Others</a>
-            {% endif %}
-            {% endif %}
-        </div>
-    </div>
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+{% endblock %}
 
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Session Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <p><strong>Date:</strong> {{ session.formatted_date }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Time:</strong> {{ session.formatted_time }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p><strong>Location:</strong> {{ session.location or 'TBD' }}</p>
-                        </div>
-                    </div>
-                    
-                    {% if session.focus_area %}
-                    <p><strong>Focus Area:</strong> {{ session.focus_area }}</p>
-                    {% endif %}
-                    
-                    {% if session.notes %}
-                    <p><strong>Notes:</strong> {{ session.notes }}</p>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5>
-                        {% if player is defined and player %}
-                            RSVP for {{ player.name }}
-                        {% elif show_admin_selector %}
-                            Admin RSVP - Select Player
-                        {% else %}
-                            Your RSVP
-                        {% endif %}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if show_admin_selector %}
-                        <div class="alert alert-info">
-                            As an admin, you can RSVP on behalf of any player. Select a player below.
-                        </div>
-                    {% endif %}
-                    
-                    {% if existing_rsvp and player is defined and player %}
-                    <div class="alert alert-info">
-                        {{ player.name }} has already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update the response below.
-                    </div>
-                    {% elif existing_rsvp %}
-                    <div class="alert alert-info">
-                        You have already RSVP'd as <strong>{{ existing_rsvp.status|replace('_', ' ')|title }}</strong>. You can update your response below.
-                    </div>
-                    {% endif %}
-                    
-                    <form method="post" novalidate>
-                        {{ form.hidden_tag() }}
-                        
-                        {% if form.player_id is defined %}
-                        <div class="mb-3">
-                            {{ form.player_id.label(class="form-label") }}
-                            {{ form.player_id(class="form-select") }}
-                            {% for error in form.player_id.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        <div class="mb-3">
-                            {{ form.status.label(class="form-label") }}
-                            {{ form.status(class="form-select") }}
-                            {% for error in form.status.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows=2) }}
-                            <div class="form-text">Optional notes about attendance (e.g., arriving late, leaving early)</div>
-                            {% for error in form.notes.errors %}
-                            <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+{% block content %}
+<div class="container" style="max-width:640px">
+  <div class="uc-page-header">
+    <div>
+      <div class="uc-eyebrow">{% if player %}Answer for {{ player.name }}{% else %}Are you coming?{% endif %}</div>
+      <h1>{{ session.title }}</h1>
+      <p>{{ session.formatted_date }}{% if session.start_time %} · {{ session.formatted_time }}{% endif %}{% if session.location %} · {{ session.location }}{% endif %}</p>
     </div>
+    <a href="{{ url_for('session.detail', session_id=session.id) }}" class="btn btn-outline-secondary">Back to session</a>
+  </div>
+
+  {% if session.is_cancelled %}
+  <div class="alert alert-danger">This session is cancelled{% if session.cancel_reason %}: {{ session.cancel_reason }}{% endif %}.</div>
+  {% else %}
+  <form method="post" class="tr-card" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      <div class="ans" role="radiogroup" aria-label="Answer">
+        {% for value, label in [('attending', 'Yes'), ('maybe', 'Maybe'), ('not_attending', 'No')] %}
+        <label><input type="radio" name="status" value="{{ value }}" {% if form.status.data == value %}checked{% endif %}><span class="d-inline-block">{{ label }}</span></label>
+        {% endfor %}
+      </div>
+      {% for error in form.status.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="notes">Note <span class="tr-muted">(optional)</span></label>
+      {{ form.notes(class="form-control", rows=2, id="notes", placeholder="Arriving late, leaving early…") }}
+    </div>
+    <button class="btn btn-primary">Save</button>
+    {% if not player %}
+    <a class="btn btn-link" href="{{ url_for('training.availability') }}">Answer for all your upcoming sessions</a>
+    {% endif %}
+  </form>
+  {% endif %}
 </div>
 {% endblock %}

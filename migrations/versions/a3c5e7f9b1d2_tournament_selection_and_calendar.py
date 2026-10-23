@@ -1,7 +1,7 @@
 """Tournament reply-by dates and selection, game times, calendar feeds
 
 Revision ID: a3c5e7f9b1d2
-Revises: e9f0a1b2c3d4
+Revises: c1d2e3f4a5b6
 Create Date: 2026-10-23 18:00:00.000000
 
 - tournament: notes, rsvp_deadline, squad_size_target, selection_published,
@@ -20,7 +20,7 @@ import sqlalchemy as sa
 
 
 revision = 'a3c5e7f9b1d2'
-down_revision = 'e9f0a1b2c3d4'
+down_revision = 'c1d2e3f4a5b6'
 branch_labels = None
 depends_on = None
 

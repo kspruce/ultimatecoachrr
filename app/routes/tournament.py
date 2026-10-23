@@ -24,7 +24,7 @@ from app.forms.tournament import TournamentForm, TournamentFilterForm
 from app.forms.rsvp_form import RSVPForm
 from app.utils.utils import coach_required
 from app.utils import event_notify
-from app.utils import rsvp as rsvps
+from app.utils import tournament_rsvp as rsvps
 from app.utils.schedule_parse import parse_schedule
 from app.utils.team_filter import get_current_team_id, team_player_ids, team_row_or_404
 from app.utils.season import (current_season, get_or_create_season, label_year, scope_tournaments, season_for_date,
