@@ -247,7 +247,7 @@
           <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6;margin-left:.1rem"></i>
         </a>
 
-        <ul class="dropdown-menu dropdown-menu-end uc-nav-links" style="min-width:230px">
+        <ul class="dropdown-menu dropdown-menu-end uc-nav-links uc-user-menu" style="min-width:230px">
 
           <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">
             <i class="bi bi-person-circle"></i> Profile</a></li>
@@ -314,8 +314,7 @@
           {% endfor %}
           {% endif %}
 
-          <li><hr class="dropdown-divider"></li>
-          <li><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+          <li class="uc-logout-row"><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
             <button type="submit" class="dropdown-item uc-danger">
               <i class="bi bi-box-arrow-right"></i> Log out</button></form></li>
 

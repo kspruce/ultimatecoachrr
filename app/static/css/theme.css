@@ -248,6 +248,14 @@ small, .small { color: inherit; }
   letter-spacing: .14em; text-transform: uppercase; padding: .45rem .8rem .2rem;
 }
 .uc-nav-links .dropdown-item.uc-danger, .uc-nav-links .dropdown-item.uc-danger i { color: var(--bad); }
+/* User menu can be long for admins: scroll it, and keep Log out pinned in view */
+.uc-user-menu { max-height: calc(100vh - 90px); overflow-y: auto; overscroll-behavior: contain; }
+.uc-user-menu .uc-logout-row {
+  position: sticky; bottom: -.4rem; background: var(--card);
+  margin: 0 -.4rem -.4rem; padding: 0 .4rem .4rem;
+  border-top: 1px solid var(--rule);
+}
+.uc-user-menu .uc-logout-row .dropdown-item { margin-top: .3rem; }
 .uc-team-badge {
   display: inline-flex; align-items: center; gap: .35rem;
   background: color-mix(in srgb, var(--on) 12%, transparent);
