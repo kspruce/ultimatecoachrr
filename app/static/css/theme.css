@@ -248,6 +248,16 @@ small, .small { color: inherit; }
   letter-spacing: .14em; text-transform: uppercase; padding: .45rem .8rem .2rem;
 }
 .uc-nav-links .dropdown-item.uc-danger, .uc-nav-links .dropdown-item.uc-danger i { color: var(--bad); }
+/* User menu can be long for admins: scroll it, and keep Log out pinned in view.
+   Desktop only: below 1200px it opens inline in #navbarNav, which scrolls itself. */
+.uc-logout-row { border-top: 1px solid var(--rule); padding-top: .3rem; margin-top: .3rem; }
+@media (min-width: 1200px) {
+  .uc-user-menu { max-height: calc(100dvh - 90px); overflow-y: auto; overscroll-behavior: contain; }
+  .uc-user-menu .uc-logout-row { position: sticky; bottom: 0; background: var(--card); }
+}
+@media (max-width: 1199.98px) {
+  #navbarNav .uc-logout-row { border-top-color: color-mix(in srgb, var(--on-club) 14%, transparent); }
+}
 .uc-team-badge {
   display: inline-flex; align-items: center; gap: .35rem;
   background: color-mix(in srgb, var(--on) 12%, transparent);

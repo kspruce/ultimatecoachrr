@@ -286,7 +286,7 @@
           <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6;margin-left:.1rem"></i>
         </a>
 
-        <ul class="dropdown-menu dropdown-menu-end uc-nav-links" style="min-width:230px">
+        <ul class="dropdown-menu dropdown-menu-end uc-nav-links uc-user-menu" style="min-width:230px">
 
           <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">
             <i class="bi bi-person-circle"></i> Profile</a></li>
@@ -335,7 +335,12 @@
             <i class="bi bi-gear-fill"></i> Manage Teams</a></li>
           {% endif %}
 
-          {% if current_user.is_superadmin or available_teams|length > 1 %}
+          {# Superadmins see every team, too many to list: link to Manage Teams instead #}
+          {% if current_user.is_superadmin %}
+          <li><a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
+            <i class="bi bi-arrow-left-right"></i> Switch Team
+            {% if current_team %}<span class="ms-auto small text-truncate" style="max-width:110px;opacity:.7">{{ current_team.name }}</span>{% endif %}</a></li>
+          {% elif available_teams|length > 1 %}
           <li><hr class="dropdown-divider"></li>
           <li><span class="dropdown-header">Switch Team</span></li>
 
@@ -353,8 +358,7 @@
           {% endfor %}
           {% endif %}
 
-          <li><hr class="dropdown-divider"></li>
-          <li><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+          <li class="uc-logout-row"><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
             <button type="submit" class="dropdown-item uc-danger">
               <i class="bi bi-box-arrow-right"></i> Log out</button></form></li>
 
