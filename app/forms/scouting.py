@@ -6,7 +6,7 @@ from wtforms.widgets import CheckboxInput, ListWidget, TextInput
 
 from app.models.game import Game
 from app.models.player import Player
-from app.models.scouting import (DEFENSE_TAGS, OFFENSE_TAGS, POSITIONS, extract_youtube_id, format_time,
+from app.models.scouting import (DEFENSE_TAGS, OFFENSE_TAGS, POSITIONS, THREAT_ROLES, extract_youtube_id, format_time,
                                  parse_moments, parse_time)
 from app.models.tournament import Tournament
 from app.utils.team_filter import get_current_team_id
@@ -122,6 +122,7 @@ class OpponentPlayerForm(ModelForm):
     cutting_ability = rating_field('Cutting')
     defensive_ability = rating_field('Defence')
     athletic_ability = rating_field('Athleticism')
+    threat_roles = TagField('What makes them dangerous', choices=THREAT_ROLES, validators=[Optional()])
     is_key_threat = BooleanField('Key threat')
     matched_player_id = SelectField('Marked by', coerce=int, validators=[Optional()])
     preferred_throws = StringField('Preferred Throws', validators=[Optional(), Length(max=100)])

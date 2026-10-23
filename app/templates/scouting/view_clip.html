@@ -1,12 +1,14 @@
 {% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
 
 {% block content %}
+{{ m.styles() }}
 <style>
 .moment-btn { font-size:.78rem; font-weight:600; padding:.3rem .65rem; border-radius:6px; border:1px solid var(--uc-gray-200);
   background:var(--card); color:var(--uc-gray-600); font-variant-numeric:tabular-nums }
 .moment-btn.active, .moment-btn:hover { border-color:var(--uc-gray-800); color:var(--uc-gray-800) }
 </style>
-<div class="container py-4">
+<div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">
     <div>
       <h2>{{ clip.title }}</h2>
@@ -38,7 +40,7 @@
           {% endif %}
 
           {% if clip.moment_list %}
-          <div class="d-flex flex-wrap gap-1 mb-3" id="moments">
+          <div class="scroll-strip mb-3" id="moments">
             <button type="button" class="moment-btn active" data-src="{{ clip.embed_url_for(clip.start_time, clip.end_time, autoplay=true) }}">
               {{ clip.start_time|scouting_time if clip.start_time else '0:00' }} Main clip</button>
             {% for mo in clip.moment_list %}
@@ -85,6 +87,7 @@
 
 {% block scripts %}
 {{ super() }}
+{{ m.scripts() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const frame = document.getElementById('clipFrame');

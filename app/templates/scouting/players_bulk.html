@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
 
 {% block content %}
-<div class="container py-4">
+{{ m.styles() }}
+<div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">
     <div>
       <h2>Paste a Roster</h2>
@@ -21,16 +23,26 @@
             ({{ positions|join(', ') }}). Copying a roster from a tournament website usually works as it is.
             Rate the players that matter afterwards.
           </p>
-          <form method="post" novalidate>
+          <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2" data-draft-banner="roster-{{ report.id }}" hidden>
+            <span class="me-auto">You have unsaved changes from <span data-draft-when></span>.</span>
+            <button type="button" class="btn btn-sm btn-primary" data-draft-restore>Restore</button>
+            <button type="button" class="btn btn-sm btn-link" data-draft-discard>Discard</button>
+          </div>
+          <form method="post" novalidate data-draft-key="roster-{{ report.id }}">
             {{ form.hidden_tag() }}
             {{ form.roster(class="form-control font-monospace", rows=14, autofocus=true,
                            placeholder="7 Jane Doe handler\n12 Sam Lee (cutter)\n#3 Alex Kim\nRiley") }}
             {% for error in form.roster.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-            <div class="d-grid mt-3">{{ form.submit(class="btn btn-primary") }}</div>
+            <div class="d-grid mt-3 sticky-save">{{ form.submit(class="btn btn-primary") }}</div>
           </form>
         </div>
       </div>
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ m.scripts() }}
 {% endblock %}

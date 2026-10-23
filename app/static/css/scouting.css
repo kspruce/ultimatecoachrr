@@ -1,0 +1,77 @@
+/* Scouting pages: shared badges and inputs, and the phone layout. */
+
+.threat-badge { display:inline-block; padding:.15rem .5rem; border-radius:20px; font-size:.68rem;
+  font-weight:700; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap }
+.threat-badge.small { font-size:.62rem; padding:.1rem .4rem }
+.threat-key    { background:var(--ink); color:var(--card, #fff); border:1px solid var(--ink) }
+.threat-elite  { background:var(--accent-soft); color:var(--ink); border:1px solid var(--accent) }
+.threat-high   { background:var(--bad-soft); color:var(--ink); border:1px solid var(--bad) }
+.threat-medium { background:var(--warn-soft); color:var(--ink); border:1px solid var(--warn) }
+.threat-low    { background:var(--ok-soft); color:var(--ink); border:1px solid var(--ok) }
+.look-chip { display:inline-block; padding:.12rem .5rem; border-radius:6px; font-size:.72rem; font-weight:600;
+  margin:0 .25rem .25rem 0; white-space:nowrap }
+.look-o { background:color-mix(in srgb, var(--club-ink) 10%, transparent); color:var(--uc-blue) }
+.look-d { background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
+.section-kicker { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--uc-gray-400); margin-bottom:.6rem }
+
+/* Star ratings */
+.star-input { display:inline-flex; flex-direction:row-reverse; align-items:center; gap:.1rem }
+.star-input input { position:absolute; opacity:0; width:1px; height:1px }
+.star-input label { cursor:pointer; font-size:1.35rem; color:var(--uc-gray-200); line-height:1; padding:.1rem }
+.star-input label.star-clear { font-size:.72rem; color:var(--uc-gray-400); order:-1; margin-left:.5rem;
+  text-decoration:underline }
+.star-input input:not(.star-clear-input):checked ~ label:not(.star-clear) { color:var(--warn, #f59e0b) }
+@media (hover: hover) {
+  .star-input label:not(.star-clear):hover, .star-input label:not(.star-clear):hover ~ label:not(.star-clear) {
+    color:var(--warn, #f59e0b) }
+}
+.star-input input:focus-visible + label { outline:2px solid var(--uc-blue); border-radius:4px }
+
+/* A row of chips or pills that scrolls sideways on a phone instead of wrapping */
+.scroll-strip { display:flex; gap:.4rem; flex-wrap:wrap }
+@media (max-width: 767.98px) {
+  .scroll-strip { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+    margin-left:calc(var(--bs-gutter-x, 1.5rem) * -.5); margin-right:calc(var(--bs-gutter-x, 1.5rem) * -.5);
+    padding:0 calc(var(--bs-gutter-x, 1.5rem) * .5) .25rem; scroll-snap-type:x proximity }
+  .offcanvas .scroll-strip { margin-left:-1rem; margin-right:-1rem; padding:0 1rem .25rem }
+  .scroll-strip::-webkit-scrollbar { display:none }
+  .scroll-strip > * { flex-shrink:0; scroll-snap-align:start }
+}
+
+/* Save button and action bar that stay in reach at the bottom of a phone screen */
+.sticky-save { position:sticky; bottom:0; z-index:5; background:var(--uc-card-bg, var(--card));
+  padding:.75rem 0 calc(.75rem + env(safe-area-inset-bottom)); margin-bottom:-1rem;
+  border-top:1px solid var(--uc-gray-100) }
+.phone-bar { display:none }
+@media (max-width: 991.98px) {
+  .phone-bar { display:flex; gap:.5rem; position:fixed; left:0; right:0; bottom:0; z-index:1030;
+    padding:.6rem 16px calc(.6rem + env(safe-area-inset-bottom)); background:var(--uc-card-bg, var(--card));
+    border-top:1px solid var(--uc-card-border); box-shadow:0 -4px 16px rgba(0,0,0,.06) }
+  .phone-bar > .btn { flex:1; display:flex; align-items:center; justify-content:center; gap:.35rem;
+    min-height:44px; font-size:.85rem; padding:.375rem .5rem }
+}
+
+/* Sections jumped to from a sticky bar shouldn't hide under it */
+.scout-anchor { scroll-margin-top:4.5rem }
+
+/* Folding sections (forms and the game card) */
+details.form-fold { border-top:1px solid var(--uc-gray-100); }
+details.form-fold > summary, details.card-fold > summary { list-style:none; cursor:pointer; display:flex;
+  align-items:center; justify-content:space-between; gap:.5rem; min-height:44px }
+details.form-fold > summary::-webkit-details-marker, details.card-fold > summary::-webkit-details-marker { display:none }
+details.form-fold > summary::after, details.card-fold > summary::after { content:'\F282'; font-family:'bootstrap-icons';
+  font-size:.85rem; transition:transform .15s; color:var(--uc-gray-400) }
+details.form-fold[open] > summary::after, details.card-fold[open] > summary::after { transform:rotate(180deg) }
+details.form-fold > summary { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--uc-gray-600); padding:.5rem 0 }
+
+/* Fingers, not mouse pointers: at least 44px to tap */
+@media (pointer: coarse) {
+  .scouting-page .btn-sm, .scouting-page .filter-pill, .scouting-page .type-btn, .scouting-page .moment-btn,
+  .scouting-page .tag-boxes .btn, .scouting-page .note-chip, .scouting-page .clip-action-btn {
+    min-height:44px; display:inline-flex; align-items:center; justify-content:center }
+  .scouting-page .clip-action-btn { min-width:44px }
+  .star-input label { font-size:2.1rem; padding:.15rem }
+  .star-input label.star-clear { font-size:.8rem; padding:.75rem .25rem }
+}

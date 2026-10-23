@@ -22,13 +22,26 @@
 .pos-handler { background:color-mix(in srgb, var(--club-ink) 10%, transparent); color:var(--uc-blue) }
 .pos-cutter { background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
 .pos-hybrid { background:color-mix(in srgb, var(--ok) 10%, transparent); color:var(--uc-green) }
+.role-chip { font-size:.68rem; font-weight:600; padding:.1rem .45rem; border-radius:6px;
+  background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red); white-space:nowrap }
+.opp-marker { font-size:.75rem; color:var(--uc-gray-600); margin-top:.3rem }
+/* Phone: one compact row per player; tap to see ratings, notes and actions */
+@media (max-width: 767.98px) {
+  .opp-card { height:auto }
+  .opp-card-header { cursor:pointer; border-bottom:none; padding:.7rem .9rem }
+  .opp-body { display:none; border-top:1px solid var(--uc-gray-100) }
+  .opp-card.open .opp-body { display:block }
+  .opp-card.open .opp-chevron { transform:rotate(180deg) }
+  .opp-chevron { color:var(--uc-gray-400); transition:transform .15s; margin-top:.2rem }
+  #playerGrid { --bs-gutter-y:.5rem }
+}
 .filter-pill { padding:.3rem .75rem; border-radius:20px; font-size:.8rem; font-weight:600; border:1.5px solid var(--uc-card-border);
   background:var(--uc-card-bg); cursor:pointer; transition:all .15s; color:var(--uc-gray-800) }
 .filter-pill.active, .filter-pill:hover { border-color:var(--uc-blue); color:var(--uc-blue);
   background:color-mix(in srgb, var(--club-ink) 6%, transparent) }
 </style>
 
-<div class="container py-4">
+<div class="container py-4 scouting-page">
   <div class="uc-page-header mb-3">
     <div>
       <h2>{{ report.team_name }} Players</h2>
@@ -39,12 +52,14 @@
       <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add Player</a>
       <a href="{{ url_for('scouting.add_players', report_id=report.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-list-ol me-1"></i>Paste Roster</a>
       {% endif %}
+      <a href="{{ url_for('scouting.matchups', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-people me-1"></i>Matchups</a>
       <a href="{{ url_for('scouting.detail', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Report</a>
     </div>
   </div>
 
   {% if players %}
-  <div class="d-flex gap-2 mb-4 flex-wrap align-items-center" id="filterBar">
+  <div class="d-flex gap-2 mb-3 align-items-center">
+  <div class="scroll-strip flex-grow-1" id="filterBar">
     <button type="button" class="filter-pill active" data-pos="all">All ({{ players|length }})</button>
     {% set keys = players|selectattr('is_key_threat')|list %}
     {% if keys %}<button type="button" class="filter-pill" data-pos="key">Key threats ({{ keys|length }})</button>{% endif %}
@@ -52,10 +67,12 @@
       {% set n = players|selectattr('position', 'equalto', pos)|list|length %}
       {% if n %}<button type="button" class="filter-pill" data-pos="{{ pos }}">{{ pos|capitalize }}s ({{ n }})</button>{% endif %}
     {% endfor %}
-    <span class="ms-auto small text-muted">Sort:</span>
-    <button type="button" class="filter-pill active" data-sort="threat">Threat</button>
-    <button type="button" class="filter-pill" data-sort="number">Number</button>
-    <button type="button" class="filter-pill" data-sort="name">Name</button>
+  </div>
+  <select class="form-select form-select-sm w-auto flex-shrink-0" id="playerSort" aria-label="Sort players">
+    <option value="threat">Threat first</option>
+    <option value="number">By number</option>
+    <option value="name">By name</option>
+  </select>
   </div>
 
   <div class="row g-3" id="playerGrid">
@@ -64,7 +81,7 @@
          data-key="{{ 1 if player.is_key_threat else 0 }}" data-name="{{ player.name|lower }}"
          data-number="{{ player.jersey_number or '' }}" data-order="{{ loop.index0 }}">
       <div class="opp-card{% if player.is_key_threat %} key{% endif %}">
-        <div class="opp-card-header">
+        <div class="opp-card-header" data-expand aria-expanded="false" aria-controls="pb-{{ player.id }}">
           <div class="d-flex align-items-start justify-content-between gap-2">
             <div class="d-flex align-items-center gap-2">
               <div class="opp-jersey">{{ player.jersey_number or '?' }}</div>
@@ -75,12 +92,20 @@
                   {% if player.height %}<span>{{ player.height }}</span>{% endif %}
                   {% if player.gender %}<span>{{ player.gender|capitalize }}</span>{% endif %}
                 </div>
+                {% if player.threat_role_list %}
+                <div class="d-flex flex-wrap gap-1 mt-1">{% for r in player.threat_role_list %}<span class="role-chip">{{ scouting_role_labels.get(r, r) }}</span>{% endfor %}</div>
+                {% endif %}
+                {% if player.matched_player %}<div class="opp-marker"><i class="bi bi-person-check me-1"></i>{{ player.matched_player.name }}</div>{% endif %}
               </div>
             </div>
-            <div class="d-flex flex-column align-items-end gap-1">{{ m.threat_badge(player) }}</div>
+            <div class="d-flex flex-column align-items-end gap-1">
+              {{ m.threat_badge(player) }}
+              <i class="bi bi-chevron-down opp-chevron d-md-none" aria-hidden="true"></i>
+            </div>
           </div>
         </div>
 
+        <div class="opp-body" id="pb-{{ player.id }}">
         <div class="px-3 pt-2 pb-1">
           {% set colours = ['var(--club-ink)', 'var(--bad)', 'var(--ok)', 'var(--warn)'] %}
           {% for skill_name, skill_val in [('Throwing', player.throwing_ability), ('Cutting', player.cutting_ability),
@@ -94,7 +119,6 @@
         </div>
 
         <div class="px-3 pb-2" style="font-size:.78rem;color:var(--uc-gray-600)">
-          {% if player.matched_player %}<div><i class="bi bi-person-check me-1"></i><strong>Marked by</strong> {{ player.matched_player.name }}</div>{% endif %}
           {% if player.preferred_throws %}<div><i class="bi bi-disc me-1"></i><strong>Throws:</strong> {{ player.preferred_throws }}</div>{% endif %}
           {% if clip_counts.get(player.id) %}
           <div><a href="{{ url_for('scouting.clips', report_id=report.id, player=player.id) }}"><i class="bi bi-camera-video me-1"></i>{{ clip_counts[player.id] }} clip{{ 's' if clip_counts[player.id] != 1 }}</a></div>
@@ -115,6 +139,7 @@
                'Remove ' ~ player.name ~ ' from this report?', 'delPlayer' ~ player.id, icon_only=true) }}
         </div>
         {% endif %}
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -137,6 +162,7 @@
 
 {% block scripts %}
 {{ super() }}
+{{ m.scripts() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const grid = document.getElementById('playerGrid');
@@ -164,10 +190,21 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#filterBar [data-pos]').forEach(x => x.classList.remove('active'));
     this.classList.add('active'); pos = this.dataset.pos; render();
   }));
-  document.querySelectorAll('#filterBar [data-sort]').forEach(p => p.addEventListener('click', function () {
-    document.querySelectorAll('#filterBar [data-sort]').forEach(x => x.classList.remove('active'));
-    this.classList.add('active'); sort = this.dataset.sort; render();
-  }));
+  document.getElementById('playerSort').addEventListener('change', function () { sort = this.value; render(); });
+
+  // Phone: tap a player's row to open it
+  const phone = window.matchMedia('(max-width: 767.98px)').matches;
+  grid.querySelectorAll('[data-expand]').forEach(head => {
+    if (phone) { head.setAttribute('role', 'button'); head.setAttribute('tabindex', '0'); }
+    const toggle = () => {
+      if (!window.matchMedia('(max-width: 767.98px)').matches) return;
+      const card = head.closest('.opp-card');
+      card.classList.toggle('open');
+      head.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
+    };
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  });
 });
 </script>
 {% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
+
+{% block content %}
+{{ m.styles() }}
+<style>
+.def-group h6 { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--uc-gray-400);
+  margin:1.25rem 0 .5rem }
+.def-row { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:12px; padding:.65rem .9rem;
+  margin-bottom:.5rem }
+.def-name { font-weight:700; font-size:.95rem; margin-bottom:.4rem }
+.def-name span { color:var(--uc-gray-400); font-weight:600; margin-right:.25rem }
+.role-boxes .btn { font-size:.78rem; padding:.25rem .65rem; border-radius:20px }
+.role-boxes .btn-check:checked + .btn { background:var(--ok-soft); border-color:var(--ok); color:var(--ink); font-weight:700 }
+</style>
+
+<div class="container py-4 scouting-page">
+  <div class="uc-page-header mb-2">
+    <div>
+      <h2>Our Defenders</h2>
+      <p>What each player is good at marking. Matchup suggestions pair these with the threats you scout.</p>
+    </div>
+    {% if report_id %}
+    <div><a href="{{ url_for('scouting.matchups', report_id=report_id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Matchups</a></div>
+    {% endif %}
+  </div>
+
+  {% if players %}
+  <form method="post" action="{{ url_for('scouting.defenders', report=report_id) if report_id else url_for('scouting.defenders') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for heading, members in groups %}
+      {% if members %}
+      <div class="def-group">
+        <h6>{{ heading }} ({{ members|length }})</h6>
+        {% for p in members %}
+        <div class="def-row">
+          <div class="def-name">{% if p.jersey_number is not none %}<span>#{{ p.jersey_number }}</span>{% endif %}{{ p.name }}
+            {% if not p.active %}<small class="text-muted fw-normal">(left the team)</small>{% endif %}</div>
+          <div class="role-boxes d-flex flex-wrap gap-1" role="group" aria-label="{{ p.name }}'s strengths">
+            {% set mine = (p.defensive_roles or '').split(',') %}
+            {% for key, label in roles %}
+            <input type="checkbox" class="btn-check" name="roles-{{ p.id }}" value="{{ key }}" id="r-{{ p.id }}-{{ key }}" autocomplete="off"
+                   {% if key in mine %}checked{% endif %}>
+            <label class="btn btn-sm btn-outline-secondary" for="r-{{ p.id }}-{{ key }}">{{ label }}</label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+    <div class="sticky-save mt-3">
+      <button type="submit" class="btn btn-primary w-100">Save{% if report_id %} and back to matchups{% endif %}</button>
+    </div>
+  </form>
+  {% else %}
+  <div class="uc-empty card py-5">
+    <div class="uc-empty-icon"><i class="bi bi-people"></i></div>
+    <p>No active players on your roster yet.</p>
+    <a href="{{ url_for('team.index') }}" class="btn btn-primary btn-sm">Go to the roster</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ m.scripts() }}
+{% endblock %}
