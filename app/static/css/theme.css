@@ -248,14 +248,16 @@ small, .small { color: inherit; }
   letter-spacing: .14em; text-transform: uppercase; padding: .45rem .8rem .2rem;
 }
 .uc-nav-links .dropdown-item.uc-danger, .uc-nav-links .dropdown-item.uc-danger i { color: var(--bad); }
-/* User menu can be long for admins: scroll it, and keep Log out pinned in view */
-.uc-user-menu { max-height: calc(100vh - 90px); overflow-y: auto; overscroll-behavior: contain; }
-.uc-user-menu .uc-logout-row {
-  position: sticky; bottom: -.4rem; background: var(--card);
-  margin: 0 -.4rem -.4rem; padding: 0 .4rem .4rem;
-  border-top: 1px solid var(--rule);
+/* User menu can be long for admins: scroll it, and keep Log out pinned in view.
+   Desktop only: below 1200px it opens inline in #navbarNav, which scrolls itself. */
+.uc-logout-row { border-top: 1px solid var(--rule); padding-top: .3rem; margin-top: .3rem; }
+@media (min-width: 1200px) {
+  .uc-user-menu { max-height: calc(100dvh - 90px); overflow-y: auto; overscroll-behavior: contain; }
+  .uc-user-menu .uc-logout-row { position: sticky; bottom: 0; background: var(--card); }
 }
-.uc-user-menu .uc-logout-row .dropdown-item { margin-top: .3rem; }
+@media (max-width: 1199.98px) {
+  #navbarNav .uc-logout-row { border-top-color: color-mix(in srgb, var(--on-club) 14%, transparent); }
+}
 .uc-team-badge {
   display: inline-flex; align-items: center; gap: .35rem;
   background: color-mix(in srgb, var(--on) 12%, transparent);
@@ -265,12 +267,6 @@ small, .small { color: inherit; }
   white-space: nowrap; text-decoration: none; flex-shrink: 0;
 }
 .uc-team-badge:hover { background: color-mix(in srgb, var(--on) 20%, transparent); color: var(--on); text-decoration: none; }
-.uc-team-tick {
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--club); color: var(--on-club);
-  display: inline-flex; align-items: center; justify-content: center;
-  font-size: .58rem; margin-left: auto;
-}
 .uc-user-btn {
   display: flex; align-items: center; gap: .45rem;
   background: color-mix(in srgb, var(--on) 10%, transparent);

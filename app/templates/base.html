@@ -297,21 +297,9 @@
           {% endif %}
 
           {% if current_user.is_superadmin %}
-          <li><hr class="dropdown-divider"></li>
-          <li><span class="dropdown-header">Switch Team</span></li>
-
-          {% for team in available_teams %}
-          <li>
-            <a class="dropdown-item d-flex align-items-center"
-               href="{{ url_for('team_organization.switch', team_id=team.id) }}">
-              <i class="bi bi-people-fill"></i>
-              {{ team.name }}
-              {% if current_team and current_team.id == team.id %}
-              <span class="uc-team-tick ms-auto"><i class="bi bi-check"></i></span>
-              {% endif %}
-            </a>
-          </li>
-          {% endfor %}
+          <li><a class="dropdown-item" href="{{ url_for('team_organization.index') }}">
+            <i class="bi bi-arrow-left-right"></i> Switch Team
+            {% if current_team %}<span class="ms-auto small text-truncate" style="max-width:110px;opacity:.7">{{ current_team.name }}</span>{% endif %}</a></li>
           {% endif %}
 
           <li class="uc-logout-row"><form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
