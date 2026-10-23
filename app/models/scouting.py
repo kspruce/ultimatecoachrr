@@ -29,6 +29,40 @@ DEFENSE_TAGS = [
 ]
 TAG_LABELS = dict(OFFENSE_TAGS + DEFENSE_TAGS)
 
+# What our players are good at marking...
+DEFENDER_ROLES = [
+    ('handler_d', 'Handler defender'),
+    ('huck_stopper', 'Huck stopper'),
+    ('deep_d', 'Deep defender'),
+    ('hassler', 'Hassler / mark'),
+    ('fast_d', 'Fast defender'),
+    ('aerial_d', 'Tall / aerial'),
+]
+# ...what makes one of their players dangerous...
+THREAT_ROLES = [
+    ('main_handler', 'Main handler'),
+    ('hucker', 'Hucker'),
+    ('deep_threat', 'Deep threat'),
+    ('give_go', 'Give-and-go'),
+    ('fast_cutter', 'Fast cutter'),
+    ('big_target', 'Big target / aerial'),
+    ('break_thrower', 'Break thrower'),
+]
+# ...and which of our strengths answer each threat, best first
+COUNTERS = {
+    'main_handler': ['handler_d', 'hassler'],
+    'hucker': ['huck_stopper', 'hassler'],
+    'deep_threat': ['deep_d', 'aerial_d', 'fast_d'],
+    'give_go': ['handler_d', 'fast_d'],
+    'fast_cutter': ['fast_d', 'deep_d'],
+    'big_target': ['aerial_d', 'deep_d'],
+    'break_thrower': ['hassler', 'handler_d'],
+}
+# When a player has no threat types yet, their position says roughly what they do
+POSITION_THREATS = {'handler': ['main_handler'], 'cutter': ['fast_cutter', 'deep_threat'],
+                    'hybrid': ['give_go']}
+ROLE_LABELS = dict(DEFENDER_ROLES + THREAT_ROLES)
+
 POSITIONS = ('handler', 'cutter', 'hybrid')
 
 _YOUTUBE_PATTERNS = [
@@ -163,6 +197,8 @@ class OpponentPlayer(db.Model):
     notes = db.Column(db.Text, nullable=True)
     # Set by the coach: always shown first and called out on the game card
     is_key_threat = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # What makes them dangerous (keys of THREAT_ROLES), comma-separated
+    threat_roles = db.Column(db.String(255), nullable=True)
     # Which of our players marks them
     matched_player_id = db.Column(db.Integer, db.ForeignKey('player.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -198,6 +234,16 @@ class OpponentPlayer(db.Model):
         if avg >= 2.5:
             return 'medium'
         return 'low'
+
+    @property
+    def threat_role_list(self):
+        return _tag_list(self.threat_roles)
+
+    @property
+    def on_matchup_board(self):
+        """Worth a matchup: flagged, typed, highly rated or already given a marker."""
+        return bool(self.is_key_threat or self.threat_roles or self.matched_player_id
+                    or self.threat_level in ('elite', 'high'))
 
     @property
     def sort_key(self):
@@ -280,3 +326,60 @@ def scouting_for_game(game):
     key = opponent_key(game.opponent)
     others = [r for r in reports if r is not linked and r.opponent_key == key]
     return linked, others
+
+
+def _gender(value):
+    return value if value in ('male', 'female') else None
+
+
+def defender_gender(player):
+    return _gender(player.gender_match or player.gender)
+
+
+def matchup_reasons(opponent, defender):
+    """[(their threat label, our strength label)] that make this a good pairing."""
+    threats = opponent.threat_role_list or POSITION_THREATS.get(opponent.position, [])
+    ours = set(_tag_list(defender.defensive_roles))
+    reasons = []
+    for threat in threats:
+        for role in COUNTERS.get(threat, []):
+            if role in ours:
+                reasons.append((ROLE_LABELS[threat], ROLE_LABELS[role]))
+                break
+    return reasons
+
+
+def can_mark(opponent, defender):
+    """In mixed, players mark someone of their own gender match (when both are known)."""
+    theirs, ours = _gender(opponent.gender), defender_gender(defender)
+    return not (theirs and ours and theirs != ours)
+
+
+def suggest_matchups(opponents, defenders):
+    """{opponent id: (defender, reasons)} for the board's players that have no marker yet.
+
+    Most dangerous first, each takes the free defender whose strengths answer
+    the most of their threats (the first-listed answer counts double). Each of
+    our players is suggested once, and nobody already marking someone is used.
+    """
+    taken = {o.matched_player_id for o in opponents if o.matched_player_id}
+    free = [d for d in defenders if d.id not in taken]
+    suggestions = {}
+    for opponent in sorted((o for o in opponents if o.on_matchup_board and not o.matched_player_id),
+                           key=lambda o: o.sort_key):
+        threats = opponent.threat_role_list or POSITION_THREATS.get(opponent.position, [])
+        best, best_score = None, 0
+        for defender in free:
+            if not can_mark(opponent, defender):
+                continue
+            ours = set(_tag_list(defender.defensive_roles))
+            score = sum(2 if COUNTERS[t][0] in ours else 1 if ours & set(COUNTERS[t][1:]) else 0
+                        for t in threats if t in COUNTERS)
+            # Between equals, keep the more versatile defenders for later threats
+            if score > best_score or (score == best_score and score and best
+                                      and len(ours) < len(_tag_list(best.defensive_roles))):
+                best, best_score = defender, score
+        if best:
+            suggestions[opponent.id] = (best, matchup_reasons(opponent, best))
+            free.remove(best)
+    return suggestions

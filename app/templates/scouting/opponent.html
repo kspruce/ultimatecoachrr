@@ -10,7 +10,7 @@
 .result-w { color:var(--uc-green); font-weight:700 }
 .result-l { color:var(--uc-red); font-weight:700 }
 </style>
-<div class="container py-4">
+<div class="container py-4 scouting-page">
   <div class="uc-page-header mb-4">
     <div>
       <h2>{{ name }}</h2>
@@ -80,4 +80,9 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ m.scripts() }}
 {% endblock %}

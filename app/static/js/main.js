@@ -237,3 +237,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Export for use in other scripts
 window.UltimateCoach = UltimateCoach;
+
+// Signing out forgets the scouting game cards saved on this device for offline use
+document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!(form.matches && form.matches('form[action$="/logout"]')) || !('caches' in window)) return;
+    e.preventDefault();
+    caches.keys().then(function (keys) {
+        return Promise.all(keys.filter(function (k) { return k.indexOf('scouting-cards-') === 0; })
+                               .map(function (k) { return caches.delete(k); }));
+    }).catch(function () {}).then(function () { form.submit(); });
+});

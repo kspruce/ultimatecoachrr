@@ -461,7 +461,7 @@ def test_delete_buttons_carry_the_form_token(scout, app):
         c = scout['coach']
         for listing, action in ((f'/scouting/{rid}/players', f'/scouting/delete_player/{p.id}'),
                                 (f'/scouting/{rid}/clips', f'/scouting/delete_clip/{clip.id}'),
-                                ('/scouting/', f'/scouting/delete/{rid}')):
+                                (f'/scouting/{rid}', f'/scouting/delete/{rid}')):
             html = page(c, listing)
             form = re.search(r'<form action="' + re.escape(action) + r'" method="post">\s*'
                              r'<input type="hidden" name="csrf_token" value="([^"]+)"', html)
@@ -471,3 +471,193 @@ def test_delete_buttons_carry_the_form_token(scout, app):
         app.config['WTF_CSRF_ENABLED'] = False
     db.session.expire_all()
     assert db.session.get(ScoutingReport, rid) is None
+
+
+# ── Matchups ─────────────────────────────────────────────────────────────
+
+from app.models.scouting import can_mark, matchup_reasons, suggest_matchups  # noqa: E402
+
+
+def _opp(id, name, roles=None, key=False, gender=None, position=None, matched=None):
+    return OpponentPlayer(id=id, name=name, threat_roles=roles, is_key_threat=key, gender=gender,
+                          position=position, matched_player_id=matched)
+
+
+def _ours(id, name, roles=None, gender=None):
+    return Player(id=id, name=name, defensive_roles=roles, gender=gender)
+
+
+def test_suggestions_answer_each_threat_with_the_right_defender():
+    hucker = _opp(1, 'Hucker', 'hucker', key=True)
+    deep = _opp(2, 'Deep', 'deep_threat', key=True)
+    handler = _opp(3, 'Handler', 'main_handler', key=True)
+    ours = [_ours(10, 'Wall', 'handler_d'), _ours(11, 'Stopper', 'huck_stopper'), _ours(12, 'Back', 'deep_d')]
+    suggested = suggest_matchups([hucker, deep, handler], ours)
+    assert {o: d.name for o, (d, _) in suggested.items()} == {1: 'Stopper', 2: 'Back', 3: 'Wall'}
+    assert suggested[1][1] == [('Hucker', 'Huck stopper')]
+
+
+def test_suggestions_use_each_defender_once_and_skip_taken_ones():
+    a = _opp(1, 'A', 'hucker', key=True)
+    b = _opp(2, 'B', 'hucker', key=True)
+    c = _opp(3, 'C', 'hucker', key=True, matched=11)  # already has a marker
+    ours = [_ours(10, 'One', 'huck_stopper'), _ours(11, 'Two', 'huck_stopper')]
+    suggested = suggest_matchups([a, b, c], ours)
+    assert list(suggested) == [1] and suggested[1][0].name == 'One'  # Two is taken by C
+
+
+def test_mixed_matchups_keep_to_gender_match():
+    her = _opp(1, 'Her', 'deep_threat', key=True, gender='female')
+    him = _ours(10, 'Him', 'deep_d', gender='male')
+    also = _ours(11, 'Also', 'deep_d', gender='female')
+    assert not can_mark(her, him) and can_mark(her, also)
+    assert suggest_matchups([her], [him, also])[1][0].name == 'Also'
+    assert suggest_matchups([her], [him]) == {}
+    him.gender_match = 'female'  # plays as a woman-matching player
+    assert can_mark(her, him)
+
+
+def test_position_stands_in_for_missing_threat_types():
+    handler = _opp(1, 'H', key=True, position='handler')
+    assert matchup_reasons(handler, _ours(10, 'W', 'handler_d')) == [('Main handler', 'Handler defender')]
+
+
+def test_matchup_board_suggests_and_coach_applies(scout):
+    c, rid = scout['coach'], scout['report']
+    ours = [db.session.get(Player, i) for i in scout['ours']]
+    ours[0].defensive_roles, ours[1].defensive_roles = 'handler_d', 'huck_stopper,deep_d'
+    hucker = OpponentPlayer(scouting_report_id=rid, name='Hucker', threat_roles='hucker', is_key_threat=True,
+                            team_organization_id=scout['herd'])
+    handler = OpponentPlayer(scouting_report_id=rid, name='Handler', threat_roles='main_handler', is_key_threat=True,
+                             team_organization_id=scout['herd'])
+    bench = OpponentPlayer(scouting_report_id=rid, name='Bench', team_organization_id=scout['herd'])
+    db.session.add_all([hucker, handler, bench])
+    db.session.commit()
+    html = page(c, f'/scouting/{rid}/matchups')
+    assert 'Use all suggestions' in html and f'value="{hucker.id}:{ours[1].id}"' in html
+    assert 'Other players (1)' in html  # the unrated, untyped player is out of the way
+
+    assert c.post(f'/scouting/{rid}/matchups', data={'use': f'{hucker.id}:{ours[1].id}'}).status_code == 302
+    db.session.expire_all()
+    assert db.session.get(OpponentPlayer, hucker.id).matched_player_id == ours[1].id
+
+    c.post(f'/scouting/{rid}/matchups', data={'use_all': '1'})
+    db.session.expire_all()
+    assert db.session.get(OpponentPlayer, handler.id).matched_player_id == ours[0].id
+
+    # The dropdowns set (or clear) a marker; another team's player is ignored
+    outsider = stats_data.build_players(db.session.get(TeamOrganization, scout['other']), 1)[0]
+    c.post(f'/scouting/{rid}/matchups', data={f'match-{hucker.id}': 0, f'match-{bench.id}': outsider.id,
+                                              f'match-{handler.id}': ours[0].id})
+    db.session.expire_all()
+    assert db.session.get(OpponentPlayer, hucker.id).matched_player_id is None
+    assert db.session.get(OpponentPlayer, bench.id).matched_player_id is None
+
+    card = page(c, f'/scouting/{rid}/card')
+    assert 'Matchups' in card and 'Handler defender' in card and 'No marker yet:</strong> Hucker' in card
+    detail = page(c, f'/scouting/{rid}')
+    assert 'Handler defender vs main handler' in detail and 'No one on Hucker yet' in detail
+
+
+def test_players_see_the_board_but_cannot_change_it(scout):
+    rid = scout['report']
+    p = OpponentPlayer(scouting_report_id=rid, name='Star', is_key_threat=True, team_organization_id=scout['herd'])
+    db.session.add(p)
+    db.session.commit()
+    html = page(scout['player'], f'/scouting/{rid}/matchups')
+    assert 'Star' in html and 'Save matchups' not in html and '<select' not in html
+    scout['player'].post(f'/scouting/{rid}/matchups', data={f'match-{p.id}': scout['ours'][0]})
+    assert db.session.get(OpponentPlayer, p.id).matched_player_id is None
+    assert scout['player'].get('/scouting/defenders').status_code == 302
+
+
+def test_coach_sets_our_defenders_strengths(scout):
+    first, second = scout['ours'][:2]
+    page(scout['coach'], '/scouting/defenders')
+    r = scout['coach'].post(f"/scouting/defenders?report={scout['report']}",
+                            data={f'roles-{first}': ['deep_d', 'hassler', 'nonsense'], f'roles-{second}': []})
+    assert r.headers['Location'].endswith(f"/scouting/{scout['report']}/matchups")
+    db.session.expire_all()
+    assert db.session.get(Player, first).defensive_roles == 'deep_d,hassler'
+    assert db.session.get(Player, second).defensive_roles is None
+
+
+def test_threat_types_are_set_on_the_player_form(scout):
+    rid = scout['report']
+    r = scout['coach'].post(f'/scouting/{rid}/add_player', data={
+        'name': 'Bomber', 'threat_roles': ['hucker', 'break_thrower'], 'matched_player_id': 0})
+    assert r.status_code == 302
+    p = OpponentPlayer.query.filter_by(name='Bomber').one()
+    assert p.threat_role_list == ['hucker', 'break_thrower'] and p.on_matchup_board
+    r = scout['coach'].post(f'/scouting/edit_player/{p.id}?back=matchups',
+                            data={'name': 'Bomber', 'matched_player_id': 0})
+    assert r.headers['Location'].endswith(f'/scouting/{rid}/matchups')
+    db.session.expire_all()
+    assert db.session.get(OpponentPlayer, p.id).threat_roles is None
+
+
+# ── Phone helpers: quick notes, look toggles, the offline card ───────────
+
+AJAX = {'X-Requested-With': 'XMLHttpRequest'}
+
+
+def test_quick_notes_land_in_the_right_place(scout):
+    c, rid = scout['coach'], scout['report']
+    p = OpponentPlayer(scouting_report_id=rid, name='Star', team_organization_id=scout['herd'])
+    db.session.add(p)
+    db.session.commit()
+    r = c.post(f'/scouting/{rid}/note', data={'text': 'Zone   downwind', 'section': 'defense', 'time': '14:05'}, headers=AJAX)
+    assert r.status_code == 200 and r.get_json() == {'success': True, 'message': 'Added to Defence.'}
+    c.post(f'/scouting/{rid}/note', data={'text': 'Tired legs', 'section': 'weakness', 'time': '14:06'}, headers=AJAX)
+    c.post(f'/scouting/{rid}/note', data={'text': 'Breaks the mark inside', 'section': f'player:{p.id}'}, headers=AJAX)
+    r = c.post(f'/scouting/{rid}/note', data={'text': '  ', 'section': 'note'}, headers=AJAX)
+    assert r.status_code == 400
+    r = c.post(f'/scouting/{rid}/note', data={'text': 'x', 'section': f"player:{scout['secret_player']}"}, headers=AJAX)
+    assert r.status_code == 400  # not a player on this report
+    db.session.expire_all()
+    report = db.session.get(ScoutingReport, rid)
+    assert report.defense_strategy == '[14:05] Zone downwind'
+    assert report.weaknesses.endswith('\nTired legs')  # a list line, no time stamp
+    assert db.session.get(OpponentPlayer, p.id).notes == 'Breaks the mark inside'
+    # Without JavaScript it's an ordinary form that comes back to the report
+    r = c.post(f'/scouting/{rid}/note', data={'text': 'Plain', 'section': 'note'})
+    assert r.status_code == 302 and r.headers['Location'].endswith(f'/scouting/{rid}')
+
+
+def test_looks_toggle_on_and_off(scout):
+    c, rid = scout['coach'], scout['report']
+    assert c.post(f'/scouting/{rid}/tag', data={'tag': 'zone'}, headers=AJAX).get_json()['on'] is True
+    assert c.post(f'/scouting/{rid}/tag', data={'tag': 'vertical'}, headers=AJAX).get_json()['on'] is False
+    assert c.post(f'/scouting/{rid}/tag', data={'tag': 'bogus'}, headers=AJAX).status_code == 400
+    db.session.expire_all()
+    report = db.session.get(ScoutingReport, rid)
+    assert report.defense_tags == 'zone' and report.offense_tags is None
+
+
+def test_players_cannot_add_notes_or_looks(scout):
+    rid = scout['report']
+    scout['player'].post(f'/scouting/{rid}/note', data={'text': 'x', 'section': 'note'}, headers=AJAX)
+    scout['player'].post(f'/scouting/{rid}/tag', data={'tag': 'zone'}, headers=AJAX)
+    report = db.session.get(ScoutingReport, rid)
+    assert report.notes is None and report.defense_tags is None
+
+
+def test_report_page_has_the_phone_tools(scout):
+    html = page(scout['coach'], f"/scouting/{scout['report']}")
+    assert 'id="quickNote"' in html and 'class="phone-bar' in html and 'class="section-bar' in html
+    assert '1–0</strong> all time' in html
+    assert 'id="quickNote"' not in page(scout['player'], f"/scouting/{scout['report']}")
+
+
+def test_game_card_works_offline(scout):
+    html = page(scout['coach'], f"/scouting/{scout['report']}/card")
+    assert 'data-offline-card' in html and 'data-wake-lock' in html and 'data-rendered-at=' in html
+    r = scout['coach'].get('/scouting/sw.js')
+    assert r.status_code == 200 and r.mimetype == 'application/javascript'
+    assert r.headers['Cache-Control'] == 'no-cache' and b'scouting-cards-' in r.data
+
+
+def test_list_shows_removable_filter_chips(scout):
+    html = page(scout['coach'], '/scouting/?q=bad&tag=vertical')
+    assert 'Remove filter: &#34;bad&#34;' in html and 'Remove filter: Vertical stack' in html
+    assert 'href="/scouting/?tag=vertical"' in html  # dropping the search keeps the look
