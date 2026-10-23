@@ -1,6 +1,23 @@
 # Roster, Tournaments, RSVPs & Calendar — Improvement Plan
 
-Status: **plan only**, nothing implemented yet.
+Status: **implemented** (all five phases). Defaults chosen for the open
+questions: only coaches see who said what (players see totals); selection has
+picked / reserve / not picked; `line_preference` is kept; emails go to
+players with an account (they can turn them off on their account page) and a
+short note goes to Discord when a webhook is set up; players see the
+selection only once the coach publishes it.
+
+Where it lives:
+- `app/utils/rsvp.py`: answers, eligibility, picks, game line-ups
+- `app/utils/event_notify.py`: emails/Discord, daily reminders
+  (in-process at 09:05, or `flask send-rsvp-reminders`; `RSVP_REMINDERS=0`
+  turns the in-process job off)
+- `app/utils/schedule_parse.py`: pasted schedules
+- `app/routes/tournament.py` + `templates/tournament/detail.html`: the hub
+- `app/routes/calendar_routes.py`: `/calendar/events` feed and
+  `/calendar/feed/<token>.ics`
+- `app/routes/team.py`: inline roster editing and quick add
+- Migration `a3c5e7f9b1d2`; tests in `tests/test_tournament_hub.py`
 
 Goal: a coach should be able to go from "we're going to Nationals" to "everyone
 knows if they're picked and which games they play" in a few minutes, and a

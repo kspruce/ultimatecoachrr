@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width:860px">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="mb-1">Add the schedule</h1>
+      <p class="text-muted mb-0">{{ tournament.name }} · {{ tournament.formatted_date_range }}</p>
+    </div>
+    <a href="{{ url_for('tournament.detail', tournament_id=tournament.id, tab='games') }}" class="btn btn-outline-secondary">Back</a>
+  </div>
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="form-label fw-semibold" for="schedule">One game per line</label>
+    <textarea class="form-control font-monospace" id="schedule" name="schedule" rows="8"
+              placeholder="Sat 09:00 vs Rival FC Field 3&#10;Sat 11:30 v Hucks @ Pitch 2&#10;Sun 10:00 Brighton Breeze">{{ pasted }}</textarea>
+    <div class="form-text mb-3">
+      Day (Sat, or a date like 2026-11-07 or 7/11), time (09:00, 2pm), opponent, then a field ("Field 3", "Pitch 2" or "@ anything").
+      Only the opponent is needed; no day means the first day. New games start with everyone picked for the squad.
+    </div>
+    <button class="btn btn-outline-primary" name="action" value="preview">Preview</button>
+
+    {% if games %}
+    <h2 class="h5 mt-4">Check these games</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Day</th><th>Time</th><th>Opponent</th><th>Field</th><th></th></tr></thead>
+        <tbody>
+          {% for g in games %}
+          <tr class="{% if not g.opponent %}table-danger{% elif g.error %}table-warning{% endif %}">
+            <td>{{ g.date.strftime('%a %d %b') if g.date else 'TBC' }}</td>
+            <td>{{ g.start_time.strftime('%H:%M') if g.start_time else '—' }}</td>
+            <td>{{ g.opponent or '—' }}</td>
+            <td>{{ g.field or '—' }}</td>
+            <td class="small">{% if g.error %}{{ g.error }}{% if not g.opponent %} (skipped){% endif %}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% set good = games|selectattr('opponent')|list %}
+    {% if good %}
+    <button class="btn btn-primary" name="action" value="save">Add {{ good|length }} game{{ 's' if good|length != 1 }}</button>
+    {% endif %}
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

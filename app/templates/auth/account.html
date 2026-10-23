@@ -54,6 +54,20 @@
   </div>
 
   <div class="ac-card">
+    <div class="ac-section">Tournament emails</div>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="notifications">
+      <label class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="email_event_updates" value="1" {% if current_user.email_event_updates %}checked{% endif %}>
+        Email me when a tournament needs a reply, when the squad is announced and with my game times
+      </label>
+      {% if not has_real_email %}<p class="ac-hint">Add an email address above to get these.</p>{% endif %}
+      <button type="submit" class="ac-btn">Save</button>
+    </form>
+  </div>
+
+  <div class="ac-card">
     <div class="ac-section">Change password</div>
     <form method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -285,3 +285,22 @@
         font-size: 0.75rem;
     }
 }
+/* Games, filters, reply badges */
+.event-game {
+    background-color: var(--uc-gray-600, #6c757d);
+    border-color: var(--uc-gray-700, #495057);
+}
+.event-game.event-playing {
+    background-color: var(--uc-purple, #6f42c1);
+    border-color: var(--uc-purple, #6f42c1);
+}
+.event-needs-reply {
+    box-shadow: inset 0 0 0 2px var(--uc-red, #dc3545);
+}
+.legend-color.event-game { background-color: var(--uc-gray-600, #6c757d); }
+.cal-filters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+.cal-filters .form-check { margin: 0; }
+.event-counts { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
+.event-counts span { background: var(--sunken, #f3f3f3); border-radius: 999px; padding: .15rem .6rem; font-size: .85rem; }
+.fc .fc-daygrid-day.fc-day-today { background: color-mix(in srgb, var(--uc-blue, #0d6efd) 7%, transparent); }
+.coach-add-hint { font-size: .8rem; color: var(--uc-gray-600, #6c757d); }

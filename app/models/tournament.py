@@ -8,6 +8,15 @@ class Tournament(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     location = db.Column(db.String(100), nullable=True)
+    # Shown to players on the tournament page
+    notes = db.Column(db.Text, nullable=True)
+    # Players are asked to reply by this day; later replies are flagged
+    rsvp_deadline = db.Column(db.Date, nullable=True)
+    squad_size_target = db.Column(db.Integer, nullable=True)
+    # Players see whether they're picked only once the coach publishes it
+    selection_published = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # Last automatic "please reply" reminder, so it's sent once
+    reminder_sent_at = db.Column(db.DateTime, nullable=True)
     season = db.Column(db.String(20), nullable=True)  # label, kept in step with season_id
     season_id = db.Column(db.Integer, db.ForeignKey('season.id', ondelete='SET NULL'), nullable=True, index=True)
     squad_id = db.Column(db.Integer, db.ForeignKey('squad.id', ondelete='SET NULL'), nullable=True)
@@ -70,5 +79,14 @@ class Tournament(db.Model):
     
     @property
     def selected_players_count(self):
-        """Return the number of players selected by admin for this tournament."""
-        return self.rsvps.filter_by(selected_by_admin=True).count()
+        """Return the number of players the coach has picked for this tournament."""
+        return self.rsvps.filter_by(selection='picked').count()
+
+    @property
+    def end_or_start(self):
+        return self.end_date or self.start_date
+
+    @property
+    def deadline_passed(self):
+        from datetime import date
+        return self.rsvp_deadline is not None and date.today() > self.rsvp_deadline

@@ -318,6 +318,17 @@ def backfill_seasons():
         click.echo(f'{team.name}: {"seasons set up" if made else "already has seasons"}')
 
 
+@click.command('send-rsvp-reminders')
+@with_appcontext
+def send_rsvp_reminders():
+    """Email players who haven't replied to tournaments whose reply-by date
+    is in the next two days (each tournament is reminded once)."""
+    from app.utils.event_notify import send_due_reminders
+
+    tournaments, emails = send_due_reminders()
+    click.echo(f'{tournaments} tournaments due a reminder; {emails} emails sent.')
+
+
 def register_commands(app):
     """Register custom commands with the Flask app."""
     app.cli.add_command(export_data)
@@ -329,4 +340,5 @@ def register_commands(app):
     app.cli.add_command(show_models)
     app.cli.add_command(reset_two_factor)
     app.cli.add_command(backfill_seasons)
+    app.cli.add_command(send_rsvp_reminders)
     register_tag_commands(app)

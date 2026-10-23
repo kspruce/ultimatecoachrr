@@ -169,7 +169,12 @@ def add_session():
         
         flash(f'Session plan "{session_plan.title}" has been created! Add components to build out your session.', 'success')
         return redirect(url_for('session.detail', session_id=session_plan.id))
-    
+
+    if request.method == 'GET' and request.args.get('date'):  # "add on this day" from the calendar
+        try:
+            form.date.data = datetime.strptime(request.args['date'], '%Y-%m-%d').date()
+        except ValueError:
+            pass
     return render_template('session/session_form.html', form=form, title='Add Session Plan')
 
 # Drill Library Routes

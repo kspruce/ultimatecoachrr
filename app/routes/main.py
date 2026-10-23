@@ -6,7 +6,7 @@ from app.models.player import Player
 from app.models.game import Game
 from app.models.session import SessionPlan
 from app.models.tournament import Tournament
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from app.utils.season import scope_games, viewing_season, viewing_squad
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -19,7 +19,6 @@ bp = Blueprint('main', __name__)
 def _dashboard_extras(team_id):
     """Results, season numbers, next game and tournament sign-ups for the
     homepage. Kept apart from the older upcoming/activity code above."""
-    from app.models.tournament_rsvp import TournamentRSVP
 
     today = date.today()
     played = (Game.query
@@ -77,20 +76,15 @@ def _dashboard_extras(team_id):
                                Tournament.start_date.isnot(None), Tournament.start_date >= today)
                        .order_by(Tournament.start_date.asc()).first())
     if next_tournament:
-        counts = dict(db.session.query(TournamentRSVP.status, db.func.count(TournamentRSVP.id))
-                      .filter(TournamentRSVP.tournament_id == next_tournament.id)
-                      .group_by(TournamentRSVP.status).all())
-        active = Player.query.filter_by(team_organization_id=team_id, active=True).count()
-        attending = counts.get('attending', 0)
-        maybe = counts.get('maybe', 0)
-        out = counts.get('not_attending', 0)
+        from app.utils.rsvp import squad_summary
+        summary = squad_summary(next_tournament)
         squad = {
             'tournament': next_tournament,
-            'attending': attending,
-            'maybe': maybe,
-            'out': out,
-            'no_reply': max(active - attending - maybe - out, 0),
-            'active': active,
+            'attending': summary['attending'],
+            'maybe': summary['maybe'],
+            'out': summary['not_attending'],
+            'no_reply': summary['no_reply'],
+            'active': summary['total'],
         }
 
     return {
@@ -100,7 +94,45 @@ def _dashboard_extras(team_id):
         'later_games': later_games,
         'squad': squad,
         'today': today,
+        'needs_reply': _needs_reply(team_id, today),
     }
+
+
+def _needs_reply(team_id, today):
+    """Upcoming tournaments (and sessions in the next fortnight) the
+    signed-in player hasn't answered yet, soonest first."""
+    from app.models.session import SessionRSVP
+    from app.models.tournament_rsvp import TournamentRSVP
+    from app.utils.rsvp import eligible_players
+
+    player = current_user.player
+    if player is None:
+        return []
+    items = []
+    answered = {t for (t,) in db.session.query(TournamentRSVP.tournament_id).filter(
+        TournamentRSVP.player_id == player.id, TournamentRSVP.status.isnot(None))}
+    tournaments = (Tournament.query
+                   .filter(Tournament.team_organization_id == team_id, Tournament.start_date.isnot(None),
+                           db.func.coalesce(Tournament.end_date, Tournament.start_date) >= today)
+                   .order_by(Tournament.start_date).limit(10).all())
+    for t in tournaments:
+        if t.id in answered or player.id not in {p.id for p in eligible_players(t)}:
+            continue
+        items.append({'type': 'tournament', 'id': t.id, 'title': t.name, 'day': t.start_date,
+                      'when': t.formatted_date_range, 'deadline': t.rsvp_deadline,
+                      'url': url_for('tournament.detail', tournament_id=t.id)})
+    answered = {s for (s,) in db.session.query(SessionRSVP.session_id).filter(SessionRSVP.player_id == player.id)}
+    sessions = (SessionPlan.query
+                .filter(SessionPlan.team_organization_id == team_id, SessionPlan.date >= today,
+                        SessionPlan.date <= today + timedelta(days=14))
+                .order_by(SessionPlan.date).all())
+    for s in sessions:
+        if s.id not in answered:
+            items.append({'type': 'session', 'id': s.id, 'title': s.title, 'day': s.date,
+                          'when': s.date.strftime('%a %d %b') + (f', {s.start_time.strftime("%H:%M")}' if s.start_time else ''),
+                          'deadline': None, 'url': url_for('session.detail', session_id=s.id)})
+    items.sort(key=lambda item: item['day'])
+    return items[:6]
 
 @bp.route('/')
 @bp.route('/index')

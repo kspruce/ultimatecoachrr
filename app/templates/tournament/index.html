@@ -59,6 +59,14 @@
                                 <a href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}">
                                     {{ tournament.name }}
                                 </a>
+                                {% set mine = my_rsvps.get(tournament.id) %}
+                                {% if current_user.player and tournament.end_or_start and tournament.end_or_start >= today %}
+                                    {% if mine and mine.status %}
+                                    <span class="badge ms-1 {{ {'attending': 'bg-success', 'maybe': 'bg-warning text-dark', 'not_attending': 'bg-secondary'}[mine.status] }}">{{ mine.status_label }}</span>
+                                    {% else %}
+                                    <a class="badge bg-danger ms-1 text-decoration-none" href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}">Reply needed</a>
+                                    {% endif %}
+                                {% endif %}
                             </td>
                             <td>
                                 {% if tournament.start_date %}
@@ -78,6 +86,7 @@
                                 <div class="btn-group">
                                     {% if current_user.is_coach %}
                                         <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <a href="{{ url_for('tournament.add', copy=tournament.id) }}" class="btn btn-sm btn-outline-secondary" title="New tournament with the same location, squad and notes">Copy</a>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ tournament.id }}">Delete</button>
                                         <!-- Delete Confirmation Modal -->
                                         <div class="modal fade" id="deleteModal{{ tournament.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ tournament.id }}" aria-hidden="true">

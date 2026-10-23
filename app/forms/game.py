@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, DateField, TextAreaField, SelectField, SubmitField, SelectMultipleField
+from wtforms import StringField, IntegerField, DateField, TimeField, TextAreaField, SelectField, SubmitField, SelectMultipleField
 from wtforms.validators import DataRequired, Optional, NumberRange, URL
 from app.models.tournament import Tournament
 from app.models.player import Player
@@ -11,6 +11,8 @@ class GameForm(FlaskForm):
     our_score = IntegerField('Our Score', validators=[Optional(), NumberRange(min=0)], default=0)
     their_score = IntegerField('Their Score', validators=[Optional(), NumberRange(min=0)], default=0)
     date = DateField('Date', format='%Y-%m-%d', validators=[Optional()])
+    start_time = TimeField('Start time', format='%H:%M', validators=[Optional()])
+    field = StringField('Field', validators=[Optional()])
     youtube_link = StringField('YouTube Link', validators=[Optional(), URL()])
     notes = TextAreaField('Notes', validators=[Optional()])
     players_present = SelectMultipleField('Players Present', coerce=int, validators=[Optional()])

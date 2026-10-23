@@ -1,158 +1,440 @@
 {% extends "base.html" %}
 
+{% block styles %}
+{{ super() }}
+<style>
+  .th-head { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:space-between; align-items:flex-start; }
+  .th-meta { color: var(--ink-2, #555); margin:0; }
+  .th-meta span + span::before { content:"·"; margin:0 .4rem; color: var(--rule, #ccc); }
+  .th-tabs .nav-link { font-weight:600; }
+  .th-card { background: var(--card, #fff); border:1px solid var(--rule, #dee2e6); border-radius:12px; padding:1rem 1.1rem; margin-bottom:1rem; }
+  .th-card h2 { font-size:1.05rem; font-weight:700; margin-bottom:.75rem; }
+  .th-status { border-left:6px solid var(--rule, #dee2e6); }
+  .th-status.is-picked { border-left-color: var(--bs-success); }
+  .th-status.is-reserve { border-left-color: var(--bs-warning); }
+  .th-status.is-out { border-left-color: var(--bs-secondary); }
+  .th-status .big { font-size:1.25rem; font-weight:700; margin-bottom:.25rem; }
+  .rsvp-buttons { display:grid; grid-template-columns:repeat(3, 1fr); gap:.5rem; }
+  .rsvp-buttons .btn { padding:.75rem .25rem; font-weight:600; }
+  .th-stats { display:flex; flex-wrap:wrap; gap:.5rem; }
+  .th-stat { background: var(--sunken, #f6f6f6); border-radius:10px; padding:.4rem .75rem; min-width:84px; }
+  .th-stat b { display:block; font-size:1.2rem; line-height:1.2; }
+  .th-stat small { color: var(--ink-2, #666); }
+  .chip-row { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.75rem; }
+  .chip-row .btn { border-radius:999px; }
+  .squad-table td, .squad-table th { vertical-align:middle; }
+  .squad-table .pick-group .btn { padding:.25rem .55rem; font-size:.8rem; }
+  .squad-row.is-picked { background: color-mix(in srgb, var(--bs-success) 8%, transparent); }
+  .squad-row.is-reserve { background: color-mix(in srgb, var(--bs-warning) 10%, transparent); }
+  .grid-wrap { overflow-x:auto; }
+  .game-grid th.game-col { min-width:96px; text-align:center; font-size:.8rem; white-space:nowrap; }
+  .game-grid td.cell { text-align:center; }
+  .game-grid td.cell input { width:1.3rem; height:1.3rem; }
+  .game-grid .sticky { position:sticky; left:0; background: var(--card, #fff); z-index:1; }
+  .saving-flash { transition: background-color .6s; }
+  .saved { background-color: color-mix(in srgb, var(--bs-success) 18%, transparent) !important; }
+  @media (max-width: 576px) {
+    .squad-table .hide-sm { display:none; }
+    .squad-table .pick-group .btn { padding:.35rem .5rem; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include 'partials/breadcrumbs.html' %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ tournament.name }}</h1>
-            <p class="lead">
-                {% if tournament.start_date %}
-                    {{ tournament.start_date.strftime('%b %d, %Y') }}
-                    {% if tournament.end_date and tournament.end_date != tournament.start_date %}
-                        - {{ tournament.end_date.strftime('%b %d, %Y') }}
-                    {% endif %}
-                {% endif %}
-                {% if tournament.location %}
-                    | {{ tournament.location }}
-                {% endif %}
-                {% if tournament.season %}
-                    | Season: {{ tournament.season }}
-                {% endif %}
-            </p>
+{% set is_coach = current_user.is_coach %}
+{% set status_badge = {'attending': 'bg-success', 'maybe': 'bg-warning text-dark', 'not_attending': 'bg-secondary'} %}
+<div class="container" id="tournament-hub" data-tournament-id="{{ tournament.id }}">
+  <div class="th-head mb-3">
+    <div>
+      <h1 class="mb-1">{{ tournament.name }}</h1>
+      <p class="th-meta">
+        <span>{{ tournament.formatted_date_range }}</span>
+        {% if tournament.location %}<span>{{ tournament.location }}</span>{% endif %}
+        {% if tournament.squad %}<span>{{ tournament.squad.name }}</span>{% endif %}
+        {% if tournament.season %}<span>Season {{ tournament.season }}</span>{% endif %}
+      </p>
+    </div>
+    {% if is_coach %}
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
+      <a href="{{ url_for('tournament.add', copy=tournament.id) }}" class="btn btn-outline-secondary"><i class="bi bi-copy"></i> Copy</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <ul class="nav nav-tabs th-tabs mb-3">
+    <li class="nav-item"><a class="nav-link {% if tab == 'overview' %}active{% endif %}" href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}">Overview</a></li>
+    {% if is_coach %}
+    <li class="nav-item"><a class="nav-link {% if tab == 'squad' %}active{% endif %}" href="{{ url_for('tournament.detail', tournament_id=tournament.id, tab='squad') }}">
+      Squad <span class="badge bg-secondary" id="tab-picked-count">{{ summary.picked }}{% if tournament.squad_size_target %}/{{ tournament.squad_size_target }}{% endif %}</span></a></li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link {% if tab == 'games' %}active{% endif %}" href="{{ url_for('tournament.detail', tournament_id=tournament.id, tab='games') }}">
+      Games <span class="badge bg-secondary">{{ games|length }}</span></a></li>
+  </ul>
+
+  {# ───────────────────────── Overview ───────────────────────── #}
+  {% if tab == 'overview' %}
+  <div class="row g-3">
+    <div class="col-lg-5">
+      {% if current_user.player %}
+      {% set sel = my_selection %}
+      <div class="th-card th-status {% if sel == 'picked' %}is-picked{% elif sel == 'reserve' %}is-reserve{% elif sel == 'not_picked' %}is-out{% endif %}" id="my-status">
+        {% if sel == 'picked' %}
+          <div class="big"><i class="bi bi-check-circle-fill text-success"></i> You're in the squad</div>
+        {% elif sel == 'reserve' %}
+          <div class="big"><i class="bi bi-hourglass-split text-warning"></i> You're a reserve</div>
+          <p class="mb-2">We'll let you know if a place opens up.</p>
+        {% elif sel == 'not_picked' %}
+          <div class="big">Not picked this time</div>
+        {% elif player_rsvp and player_rsvp.status %}
+          <div class="big">You said: <span class="badge {{ status_badge[player_rsvp.status] }}" id="my-answer">{{ player_rsvp.status_label }}</span></div>
+          <p class="mb-2 text-muted">The coaches haven't announced the squad yet.</p>
+        {% else %}
+          <div class="big">Can you make it?</div>
+          {% if tournament.rsvp_deadline %}
+          <p class="mb-2 {% if tournament.deadline_passed %}text-danger{% else %}text-muted{% endif %}">
+            Please reply by {{ tournament.rsvp_deadline.strftime('%A %d %B') }}{% if tournament.deadline_passed %} (passed — reply anyway){% endif %}.
+          </p>
+          {% endif %}
+        {% endif %}
+
+        <form method="post" action="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="js-rsvp-form mt-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="rsvp-buttons" role="group" aria-label="Your answer">
+            {% for value, label, cls, icon in [('attending', "I'm in", 'success', 'check-lg'), ('maybe', 'Maybe', 'warning', 'question-lg'), ('not_attending', "Can't make it", 'secondary', 'x-lg')] %}
+            <button type="submit" name="status" value="{{ value }}"
+                    class="btn {% if player_rsvp and player_rsvp.status == value %}btn-{{ cls }}{% else %}btn-outline-{{ cls }}{% endif %}"
+                    data-cls="{{ cls }}" aria-pressed="{{ 'true' if player_rsvp and player_rsvp.status == value else 'false' }}">
+              <i class="bi bi-{{ icon }}"></i> {{ label }}
+            </button>
+            {% endfor %}
+          </div>
+          <details class="mt-2" {% if player_rsvp and player_rsvp.notes %}open{% endif %}>
+            <summary class="small text-muted">Add a note for the coaches</summary>
+            <textarea name="notes" class="form-control mt-1" rows="2" maxlength="1000" placeholder="E.g. arriving Saturday lunchtime">{{ player_rsvp.notes if player_rsvp and player_rsvp.notes else '' }}</textarea>
+            <div class="form-text">Saved with your answer.</div>
+          </details>
+          <div class="small mt-2 d-none" role="status" id="rsvp-feedback"></div>
+        </form>
+
+        {% if my_games %}
+        <hr>
+        <h3 class="h6 fw-bold">Your games</h3>
+        <ul class="list-unstyled mb-0">
+          {% for g in my_games %}
+          <li class="mb-1"><i class="bi bi-dot"></i>
+            {% if g.date %}{{ g.date.strftime('%a') }}{% endif %} {% if g.start_time %}{{ g.start_time.strftime('%H:%M') }}{% endif %}
+            vs <strong>{{ g.opponent }}</strong>{% if g.field %} · {{ g.field }}{% endif %}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% elif current_user.is_authenticated and not is_coach %}
+      <div class="th-card">
+        <p class="mb-2">Link your account to your player profile to reply.</p>
+        <a class="btn btn-primary" href="{{ url_for('auth.link_player') }}">Link my player</a>
+      </div>
+      {% endif %}
+
+      <div class="th-card">
+        <h2>Who's coming</h2>
+        <div class="th-stats">
+          <div class="th-stat"><b>{{ summary.attending }}</b><small>Attending</small></div>
+          <div class="th-stat"><b>{{ summary.maybe }}</b><small>Maybe</small></div>
+          <div class="th-stat"><b>{{ summary.no_reply }}</b><small>No reply</small></div>
+          <div class="th-stat"><b>{{ summary.not_attending }}</b><small>Can't</small></div>
         </div>
-        <div class="col-md-4 text-end">
-            {% if current_user.is_coach %}
-            <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-outline-primary me-2">Add Game</a>
-            <a href="{{ url_for('game.add_multiple', tournament_id=tournament.id) }}" class="btn btn-primary">Add Multiple Games</a>
-            <a href="{{ url_for('tournament.edit', tournament_id=tournament.id) }}" class="btn btn-outline-primary ms-2">Edit</a>
-            {% endif %}
+        {% if tournament.rsvp_deadline %}
+        <p class="small text-muted mt-2 mb-0">Reply by {{ tournament.rsvp_deadline.strftime('%a %d %b %Y') }}</p>
+        {% endif %}
+        {% if is_coach %}
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-primary btn-sm" href="{{ url_for('tournament.detail', tournament_id=tournament.id, tab='squad') }}"><i class="bi bi-people"></i> Pick the squad</a>
+          {% if summary.no_reply %}
+          <form method="post" action="{{ url_for('tournament.nudge', tournament_id=tournament.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-secondary btn-sm"><i class="bi bi-bell"></i> Remind {{ summary.no_reply }} non-repliers</button>
+          </form>
+          {% endif %}
         </div>
+        {% endif %}
+      </div>
+
+      {% if tournament.notes %}
+      <div class="th-card">
+        <h2>Notes</h2>
+        <div style="white-space:pre-line">{{ tournament.notes }}</div>
+      </div>
+      {% endif %}
     </div>
 
-<ul class="nav nav-tabs mb-3">
-  <li class="nav-item">
-    <a class="nav-link active" href="{{ url_for('tournament.detail', tournament_id=tournament.id) }}">Overview</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('game.index', tournament_id=tournament.id) }}">Games</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('tournament.index') }}">All Tournaments</a>
-  </li>
-</ul>
-
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Tournament Summary</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Games:</strong> {{ tournament.game_count }}</p>
-                    <p><strong>Record:</strong> {{ tournament.win_count }}-{{ tournament.loss_count }}</p>
-                    <p><strong>Win Percentage:</strong> 
-                        {% if tournament.game_count > 0 %}
-                            {{ (tournament.win_count / tournament.game_count * 100) | round(1) }}%
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-            
-            {% if current_user.is_authenticated and current_user.player %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5>Your RSVP</h5>
-                </div>
-                <div class="card-body">
-                    {% if player_rsvp %}
-                        <p>Your current status: 
-                            <span class="badge 
-                                {% if player_rsvp.status == 'attending' %}bg-success
-                                {% elif player_rsvp.status == 'maybe' %}bg-warning
-                                {% else %}bg-danger{% endif %}">
-                                {{ player_rsvp.status|replace('_', ' ')|capitalize }}
-                            </span>
-                        </p>
-                        {% if player_rsvp.selected_by_admin %}
-                        <div class="alert alert-info">
-                            You have been selected by the admin to participate in this tournament.
-                        </div>
-                        {% endif %}
-                        <a href="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Update RSVP</a>
-                    {% else %}
-                        <p>You haven't RSVP'd to this tournament yet.</p>
-                        <a href="{{ url_for('tournament.rsvp', tournament_id=tournament.id) }}" class="btn btn-primary">RSVP Now</a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            {% if current_user.is_admin %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5>RSVPs</h5>
-                </div>
-                <div class="card-body">
-                    <p>Attending: {{ tournament.attending_count }}</p>
-                    <p>Total RSVPs: {{ tournament.rsvp_count }}</p>
-                    <p>Selected Players: {{ tournament.selected_players_count }}</p>
-                    <div class="d-grid gap-2">
-                        <a href="{{ url_for('tournament.rsvps', tournament_id=tournament.id) }}" class="btn btn-outline-primary">Manage RSVPs & Select Players</a>
-                        <a href="{{ url_for('tournament.assign_players', tournament_id=tournament.id) }}" class="btn btn-outline-secondary">Assign Players to Games</a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+    <div class="col-lg-7">
+      <div class="th-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="mb-0">Games</h2>
+          <span class="text-muted small">Record {{ tournament.win_count }}–{{ tournament.loss_count }}</span>
         </div>
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Games</h5>
-                </div>
-                <div class="card-body">
-                    {% if games %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Opponent</th>
-                                    <th>Result</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for game in games %}
-                                <tr>
-                                    <td>{{ game.date.strftime('%b %d, %Y') if game.date else 'N/A' }}</td>
-                                    <td>{{ game.opponent }}</td>
-                                    <td>
-                                        <span class="badge {% if game.is_win %}bg-success{% elif game.is_loss %}bg-danger{% else %}bg-secondary{% endif %}">
-                                            {{ game.result_string }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('game.detail', game_id=game.id) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-center">No games recorded for this tournament yet.</p>
-                    {% if current_user.is_coach %}
-                    <div class="text-center">
-                        <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-primary">Add Game</a>
-                    </div>
-                    {% endif %}
-                    {% endif %}
-                </div>
-            </div>
+        {% include 'tournament/_games_list.html' %}
+        {% if is_coach and not games %}
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{{ url_for('tournament.schedule', tournament_id=tournament.id) }}" class="btn btn-primary btn-sm"><i class="bi bi-clipboard-plus"></i> Paste the schedule</a>
+          <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-outline-primary btn-sm">Add one game</a>
         </div>
+        {% endif %}
+      </div>
     </div>
+  </div>
+  {% endif %}
+
+  {# ───────────────────────── Squad (coaches) ───────────────────────── #}
+  {% if tab == 'squad' and is_coach %}
+  <div class="th-card">
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-start">
+      <div class="th-stats" id="squad-summary">
+        <div class="th-stat"><b data-sum="picked">{{ summary.picked }}</b><small>Picked{% if tournament.squad_size_target %} of {{ tournament.squad_size_target }}{% endif %}</small></div>
+        <div class="th-stat"><b data-sum="picked_female">{{ summary.picked_female }}</b><small>Women</small></div>
+        <div class="th-stat"><b data-sum="picked_male">{{ summary.picked_male }}</b><small>Men</small></div>
+        <div class="th-stat"><b data-sum="picked_handlers">{{ summary.picked_handlers }}</b><small>Handlers</small></div>
+        <div class="th-stat"><b data-sum="reserve">{{ summary.reserve }}</b><small>Reserves</small></div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        {% if summary.no_reply %}
+        <form method="post" action="{{ url_for('tournament.nudge', tournament_id=tournament.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-secondary"><i class="bi bi-bell"></i> Remind {{ summary.no_reply }} non-repliers</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('tournament.publish_selection', tournament_id=tournament.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if tournament.selection_published %}
+          <input type="hidden" name="unpublish" value="1">
+          <button class="btn btn-outline-warning" title="Players currently see whether they're picked"><i class="bi bi-eye-slash"></i> Hide selection</button>
+          {% else %}
+          <button class="btn btn-success" onclick="return confirm('Show players whether they\'re picked and email them?')"><i class="bi bi-megaphone"></i> Publish squad</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    <p class="small text-muted mt-2 mb-0">
+      {% if tournament.selection_published %}<i class="bi bi-eye"></i> Published: players can see whether they're picked. Changes show straight away.
+      {% else %}<i class="bi bi-eye-slash"></i> Not published yet: players can't see your picks. Picks save as you click.{% endif %}
+    </p>
+  </div>
+
+  <div class="chip-row" role="group" aria-label="Filter players">
+    {% for key, label in [('all', 'All ' ~ summary.total), ('attending', 'Attending ' ~ summary.attending), ('maybe', 'Maybe ' ~ summary.maybe), ('no_reply', 'No reply ' ~ summary.no_reply), ('not_attending', "Can't " ~ summary.not_attending), ('picked', 'Picked')] %}
+    <button type="button" class="btn btn-sm {% if key == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %} js-chip" data-filter="{{ key }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+
+  <div class="th-card p-0">
+    <div class="table-responsive">
+      <table class="table squad-table mb-0">
+        <thead><tr><th>Player</th><th>Answer</th><th class="hide-sm">Note</th><th>Pick</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          {% set r = row.rsvp %}{% set p = row.player %}
+          {% set answer = r.status if r and r.status else 'no_reply' %}
+          {% set sel = r.selection if r else none %}
+          <tr class="squad-row {% if sel == 'picked' %}is-picked{% elif sel == 'reserve' %}is-reserve{% endif %}"
+              data-answer="{{ answer }}" data-selection="{{ sel or '' }}" data-player-id="{{ p.id }}" data-name="{{ p.name }}">
+            <td>
+              <a href="{{ url_for('team.player_detail', player_id=p.id) }}" class="fw-semibold text-decoration-none">{{ p.name }}</a>
+              <div class="small text-muted">{{ (p.position or '')|capitalize }}{% if p.gender_match %} · {{ p.gender_match|capitalize }}{% endif %}{% if not p.user_account %} · <span title="No account: can't reply themselves">no account</span>{% endif %}</div>
+            </td>
+            <td>
+              {% if r and r.status %}
+              <span class="badge {{ status_badge[r.status] }}">{{ r.status_label }}</span>
+              {% if r.is_late %}<span class="badge bg-light text-danger border" title="Replied after the reply-by date">late</span>{% endif %}
+              {% else %}<span class="badge bg-light text-muted border">No reply</span>{% endif %}
+            </td>
+            <td class="hide-sm small">{{ r.notes if r and r.notes else '' }}</td>
+            <td>
+              <div class="btn-group pick-group" role="group" aria-label="Pick {{ p.name }}">
+                {% for value, label in [('picked', 'In'), ('reserve', 'Res'), ('not_picked', 'Out')] %}
+                <input type="radio" class="btn-check js-pick" name="pick-{{ p.id }}" id="pick-{{ p.id }}-{{ value }}" value="{{ value }}" autocomplete="off" {% if sel == value %}checked{% endif %}>
+                <label class="btn btn-outline-{{ {'picked': 'success', 'reserve': 'warning', 'not_picked': 'secondary'}[value] }}" for="pick-{{ p.id }}-{{ value }}" title="{{ {'picked': 'Picked', 'reserve': 'Reserve', 'not_picked': 'Not picked'}[value] }}">{{ label }}</label>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-4">Nobody on the roster for this tournament's season{% if tournament.squad %} and squad{% endif %} yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="alert alert-warning d-none" id="squad-warning" role="alert"></div>
+  <noscript><p class="text-danger">Picking needs JavaScript turned on.</p></noscript>
+  {% endif %}
+
+  {# ───────────────────────── Games ───────────────────────── #}
+  {% if tab == 'games' %}
+  {% if is_coach %}
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{{ url_for('tournament.schedule', tournament_id=tournament.id) }}" class="btn btn-primary"><i class="bi bi-clipboard-plus"></i> Paste schedule</a>
+    <a href="{{ url_for('game.add', tournament_id=tournament.id) }}" class="btn btn-outline-primary"><i class="bi bi-plus"></i> Add one game</a>
+    {% if games and picked %}
+    <form method="post" action="{{ url_for('tournament.send_schedule', tournament_id=tournament.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-success" onclick="return confirm('Email each picked player the games they\'re in?')"><i class="bi bi-envelope"></i> Email players their games</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="th-card">
+    <h2>Schedule</h2>
+    {% include 'tournament/_games_list.html' %}
+  </div>
+
+  {% if is_coach and games %}
+  {% set picked_ids = picked|map(attribute='id')|list %}
+  {% set grid_players = picked %}
+  <div class="th-card">
+    <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+      <h2 class="mb-0">Who plays which game</h2>
+      <span class="small text-muted">Ticks save as you click. New games start with everyone picked.</span>
+    </div>
+    {% if not picked %}
+    <p class="text-muted mb-0">Pick the squad first: <a href="{{ url_for('tournament.detail', tournament_id=tournament.id, tab='squad') }}">Squad tab</a>.</p>
+    {% else %}
+    <div class="grid-wrap">
+      <table class="table table-sm game-grid mb-0">
+        <thead>
+          <tr>
+            <th class="sticky">Player</th>
+            {% for g in games %}
+            <th class="game-col">
+              {% if g.start_time %}{{ g.start_time.strftime('%H:%M') }}{% elif g.date %}{{ g.date.strftime('%a') }}{% endif %}<br>
+              <span class="fw-semibold">{{ g.opponent[:14] }}</span><br>
+              <span class="badge bg-light text-dark border" data-game-count="{{ g.id }}">{{ (assigned.get(g.id) or [])|length }}</span>
+              <div class="d-flex gap-1 justify-content-center mt-1">
+                <form method="post" action="{{ url_for('tournament.fill_game', tournament_id=tournament.id, game_id=g.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-link btn-sm p-0" title="Everyone picked plays this game">all</button>
+                </form>
+                <form method="post" action="{{ url_for('tournament.fill_game', tournament_id=tournament.id, game_id=g.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="clear" value="1">
+                  <button class="btn btn-link btn-sm p-0 text-danger" title="Nobody in this game">none</button>
+                </form>
+              </div>
+            </th>
+            {% endfor %}
+            <th class="text-center">Games</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in grid_players %}
+          <tr data-player-row="{{ p.id }}">
+            <td class="sticky"><span class="fw-semibold">{{ p.name }}</span></td>
+            {% for g in games %}
+            <td class="cell">
+              <input type="checkbox" class="form-check-input js-play" data-game-id="{{ g.id }}" data-player-id="{{ p.id }}"
+                     aria-label="{{ p.name }} plays vs {{ g.opponent }}" {% if p.id in (assigned.get(g.id) or []) %}checked{% endif %}>
+            </td>
+            {% endfor %}
+            <td class="text-center" data-row-total></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+  const hub = document.getElementById('tournament-hub');
+  const tid = hub.dataset.tournamentId;
+  const token = document.querySelector('meta[name="csrf-token"]').content;
+  const post = (url, body) => fetch(url, {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+    body: JSON.stringify(body)
+  }).then(r => r.json().then(data => ({ok: r.ok, data})));
+  const flash = el => { el.classList.add('saving-flash', 'saved'); setTimeout(() => el.classList.remove('saved'), 700); };
+
+  // One-tap answer
+  const rsvpForm = document.querySelector('.js-rsvp-form');
+  if (rsvpForm) {
+    rsvpForm.addEventListener('submit', function (e) {
+      const button = e.submitter;
+      if (!button || !button.value) return;
+      e.preventDefault();
+      const feedback = document.getElementById('rsvp-feedback');
+      post(rsvpForm.action, {status: button.value, notes: rsvpForm.querySelector('textarea').value}).then(({ok, data}) => {
+        feedback.classList.remove('d-none', 'text-danger', 'text-success');
+        feedback.classList.add(ok ? 'text-success' : 'text-danger');
+        feedback.textContent = data.message;
+        if (!ok) return;
+        rsvpForm.querySelectorAll('button[name=status]').forEach(b => {
+          const on = b === button, cls = b.dataset.cls;
+          b.classList.toggle('btn-' + cls, on);
+          b.classList.toggle('btn-outline-' + cls, !on);
+          b.setAttribute('aria-pressed', on);
+        });
+      }).catch(() => rsvpForm.submit());
+    });
+  }
+
+  // Squad picks
+  const chips = document.querySelectorAll('.js-chip');
+  let filter = 'all';
+  const applyFilter = () => document.querySelectorAll('.squad-row').forEach(row => {
+    const show = filter === 'all' || (filter === 'picked' ? row.dataset.selection === 'picked' : row.dataset.answer === filter);
+    row.classList.toggle('d-none', !show);
+  });
+  chips.forEach(chip => chip.addEventListener('click', () => {
+    filter = chip.dataset.filter;
+    chips.forEach(c => { c.classList.toggle('btn-primary', c === chip); c.classList.toggle('btn-outline-primary', c !== chip); });
+    applyFilter();
+  }));
+  document.querySelectorAll('.js-pick').forEach(radio => radio.addEventListener('change', function () {
+    const row = radio.closest('tr');
+    const warning = document.getElementById('squad-warning');
+    post(`/tournaments/${tid}/selection`, {player_id: row.dataset.playerId, selection: radio.value}).then(({ok, data}) => {
+      if (!ok) { alert(data.message || 'Not saved'); return; }
+      row.dataset.selection = radio.value;
+      row.classList.toggle('is-picked', radio.value === 'picked');
+      row.classList.toggle('is-reserve', radio.value === 'reserve');
+      flash(row);
+      Object.entries(data.summary).forEach(([k, v]) => {
+        const el = document.querySelector(`[data-sum="${k}"]`);
+        if (el) el.textContent = v;
+      });
+      const tab = document.getElementById('tab-picked-count');
+      if (tab) tab.textContent = tab.textContent.replace(/^\d+/, data.summary.picked);
+      warning.classList.toggle('d-none', !data.warning);
+      warning.textContent = data.warning || '';
+      applyFilter();
+    });
+  }));
+
+  // Game grid
+  const totals = () => document.querySelectorAll('[data-player-row]').forEach(row => {
+    row.querySelector('[data-row-total]').textContent = row.querySelectorAll('.js-play:checked').length;
+  });
+  document.querySelectorAll('.js-play').forEach(box => box.addEventListener('change', function () {
+    post(`/tournaments/${tid}/games/${box.dataset.gameId}/player`, {player_id: box.dataset.playerId, playing: box.checked})
+      .then(({ok, data}) => {
+        if (!ok) { box.checked = !box.checked; alert('Not saved'); return; }
+        const badge = document.querySelector(`[data-game-count="${box.dataset.gameId}"]`);
+        if (badge) badge.textContent = data.count;
+        flash(box.closest('td'));
+        totals();
+      });
+  }));
+  totals();
+})();
+</script>
 {% endblock %}

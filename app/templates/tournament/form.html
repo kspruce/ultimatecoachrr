@@ -42,6 +42,9 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        {% if copy_from %}
+                        <p class="form-text mt-n2">Copied from {{ copy_from.name }}: check the dates.</p>
+                        {% endif %}
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -59,13 +62,41 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        {% if form.squad_id.choices|length > 1 %}
                         <div class="row mb-3">
+                            {% if form.squad_id.choices|length > 1 %}
                             <div class="col-md-6">
                                 {{ form.squad_id.label(class="form-label") }}
                                 {{ form.squad_id(class="form-select") }}
-                                <div class="form-text">Its games count for this squad's stats.</div>
+                                <div class="form-text">Who it's for: only this squad is asked, and its games count for this squad's stats.</div>
                             </div>
+                            {% endif %}
+                            <div class="col-md-3">
+                                {{ form.rsvp_deadline.label(class="form-label") }}
+                                {{ form.rsvp_deadline(class="form-control", type="date") }}
+                                {% for error in form.rsvp_deadline.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                <div class="form-text">Players get a reminder two days before.</div>
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.squad_size_target.label(class="form-label") }}
+                                {{ form.squad_size_target(class="form-control", type="number", min="1", max="60", placeholder="e.g. 18") }}
+                                {% for error in form.squad_size_target.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows=3, placeholder="Travel, kit, costs, where to meet…") }}
+                        </div>
+
+                        {% if show_ask %}
+                        <div class="form-check mb-3">
+                            {{ form.ask_players(class="form-check-input") }}
+                            {{ form.ask_players.label(class="form-check-label") }}
+                            <div class="form-text">Emails everyone it's for (and posts to Discord, if set up) with a link to reply.</div>
                         </div>
                         {% endif %}
                         

@@ -176,30 +176,49 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
+{% set can_edit = current_user.is_coach and edit_season %}
+<div class="container" id="roster" data-season-id="{{ edit_season.id if edit_season else '' }}">
     <div class="row mb-4">
         <div class="col-md-8">
             <h1>Team Roster{% if roster_season %} <small class="text-muted">{{ roster_season.name }}{% if viewing_squad %} · {{ viewing_squad.name }}{% endif %}</small>{% endif %}</h1>
             {% if not roster_season %}<p class="text-muted mb-0">Everyone who has played for the club. Pick a season from the season menu to see that year's roster.</p>{% endif %}
+            {% if can_edit %}<p class="text-muted small mb-0">Change shirt, position, line, squad or status right in the table: it saves as you go.</p>{% endif %}
         </div>
         <div class="col-md-4 text-end d-flex gap-2 justify-content-end flex-wrap">
             {% if current_user.is_coach and roster_season %}
                 <a href="{{ url_for('seasons.roster', season_id=roster_season.id) }}" class="btn btn-outline-primary">
-                    <i class="bi bi-calendar3 me-1"></i> Edit {{ roster_season.name }} roster
+                    <i class="bi bi-calendar3 me-1"></i> {{ roster_season.name }} roster: add past players
                 </a>
             {% endif %}
             {% if current_user.is_coach %}
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#quickAdd" aria-expanded="false" aria-controls="quickAdd">
+                    <i class="bi bi-lightning me-1"></i> Quick add
+                </button>
                 <a href="{{ url_for('team.bulk_import') }}" class="btn btn-outline-primary">
                     <i class="bi bi-upload me-1"></i> Import Players
                 </a>
             {% endif %}
-            {% if current_user.is_admin %}
+            {% if current_user.is_coach %}
                 <a href="{{ url_for('team.add_player') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-1"></i> Add Player
                 </a>
             {% endif %}
         </div>
     </div>
+
+    {% if current_user.is_coach %}
+    <div class="collapse mb-4" id="quickAdd">
+        <div class="card shadow-sm"><div class="card-body">
+            <form method="post" action="{{ url_for('team.quick_add') }}">
+                {{ csrf_form.csrf_token }}
+                <label class="form-label fw-semibold" for="quick-names">Paste names, one per line</label>
+                <textarea class="form-control" id="quick-names" name="names" rows="5" placeholder="Sam Jones&#10;7 Alex Kim&#10;#12 Priya Patel"></textarea>
+                <div class="form-text mb-2">Start a line with a shirt number if you like. They go on the current season's roster{% if viewing_squad %} in {{ viewing_squad.name }}{% endif %}; fill in the rest in the table, then send invite links so they can reply to events.</div>
+                <button class="btn btn-primary">Add to roster</button>
+            </form>
+        </div></div>
+    </div>
+    {% endif %}
 
     <div class="row mb-4">
         <div class="col-12">
@@ -264,8 +283,11 @@
                                 {% set entry = entries.get(player.id) %}
                                 {% set shirt = entry.jersey_number if entry and entry.jersey_number is not none else player.jersey_number %}
                                 <tr>
-                                    <td>
-                                        {% if shirt is not none and shirt != '' %}
+                                    <td data-order="{{ shirt if shirt is not none and shirt != '' else 9999 }}">
+                                        {% if can_edit %}
+                                            <input type="number" min="0" max="999" class="form-control form-control-sm js-roster" style="width:4.5rem"
+                                                   data-player-id="{{ player.id }}" data-field="jersey" value="{{ shirt if shirt is not none else '' }}" aria-label="Shirt for {{ player.name }}">
+                                        {% elif shirt is not none and shirt != '' %}
                                             <span class="jersey-number">{{ shirt }}</span>
                                         {% else %}
                                             -
@@ -278,7 +300,11 @@
                                     </td>
                                     <td>
                                         {% set pos = (entry.position if entry and entry.position else player.position) %}
-                                        {% if pos %}
+                                        {% if can_edit %}
+                                            <select class="form-select form-select-sm js-roster" data-player-id="{{ player.id }}" data-field="position" aria-label="Position for {{ player.name }}">
+                                                {% for v, l in [('', '—'), ('handler', 'Handler'), ('cutter', 'Cutter'), ('hybrid', 'Hybrid')] %}<option value="{{ v }}" {% if (pos or '') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                                            </select>
+                                        {% elif pos %}
                                             <span class="position-badge position-{{ pos }}">
                                                 {{ pos|capitalize }}
                                             </span>
@@ -287,7 +313,11 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if player.line_preference %}
+                                        {% if can_edit %}
+                                            <select class="form-select form-select-sm js-roster" data-player-id="{{ player.id }}" data-field="line_preference" aria-label="Line for {{ player.name }}">
+                                                {% for v, l in [('', '—'), ('O-line', 'O-line'), ('D-line', 'D-line'), ('both', 'Both')] %}<option value="{{ v }}" {% if (player.line_preference or '') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                                            </select>
+                                        {% elif player.line_preference %}
                                             <span class="line-{{ player.line_preference|lower }}">
                                                 {{ player.line_preference }}
                                             </span>
@@ -296,21 +326,34 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if player.gender_match %}
+                                        {% if can_edit %}
+                                            <select class="form-select form-select-sm js-roster" data-player-id="{{ player.id }}" data-field="gender_match" aria-label="Gender match for {{ player.name }}">
+                                                {% for v, l in [('', '—'), ('female', 'Female'), ('male', 'Male'), ('other', 'Other')] %}<option value="{{ v }}" {% if (player.gender_match or '') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                                            </select>
+                                        {% elif player.gender_match %}
                                             {{ player.gender_match|capitalize }}
                                         {% else %}
                                             -
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if entry and entry.squad %}
+                                        {% if can_edit and squads %}
+                                            <select class="form-select form-select-sm js-roster" data-player-id="{{ player.id }}" data-field="squad" aria-label="Squad for {{ player.name }}">
+                                                <option value="">—</option>
+                                                {% for sq in squads %}<option value="{{ sq.id }}" {% if entry and entry.squad_id == sq.id %}selected{% endif %}>{{ sq.name }}</option>{% endfor %}
+                                            </select>
+                                        {% elif entry and entry.squad %}
                                             <span class="badge bg-light text-dark">{{ entry.squad.name }}</span>
                                         {% else %}
                                             -
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if entry %}
+                                        {% if can_edit %}
+                                        <select class="form-select form-select-sm js-roster" data-player-id="{{ player.id }}" data-field="status" aria-label="Status for {{ player.name }}">
+                                            {% for v, l in statuses %}<option value="{{ v }}" {% if (entry.status if entry else ('active' if player.active else 'left')) == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+                                        </select>
+                                        {% elif entry %}
                                         <span class="badge {{ {'active': 'bg-success', 'injured': 'bg-warning text-dark'}.get(entry.status, 'bg-secondary') }}">{{ entry.status|capitalize }}</span>
                                         {% elif player.active %}
                                         <span class="badge bg-success">Active</span>
@@ -320,7 +363,7 @@
                                     </td>
                                     <td>
                                         <div class="action-buttons">
-                                            {% if current_user.is_admin %}
+                                            {% if current_user.is_coach %}
                                                 <a href="{{ url_for('team.edit_player', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="bi bi-pencil"></i> Edit
                                                 </a>
@@ -337,9 +380,11 @@
                                                     <i class="bi bi-person-check"></i> Has account
                                                 </span>
                                                 {% endif %}
+                                                {% if current_user.is_admin %}
                                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ player.id }}">
                                                     <i class="bi bi-trash"></i> Delete
                                                 </button>
+                                                {% endif %}
                                             {% else %}
                                                 <a href="{{ url_for('team.player_detail', player_id=player.id) }}" class="btn btn-sm btn-outline-secondary">
                                                     <i class="bi bi-eye"></i> View
@@ -450,6 +495,24 @@
             }
         });
         
+        // Roster cells save as they change
+        const seasonId = document.getElementById('roster').dataset.seasonId;
+        const token = document.querySelector('meta[name="csrf-token"]').content;
+        document.querySelectorAll('.js-roster').forEach(function (el) {
+            el.addEventListener('change', function () {
+                el.classList.remove('is-invalid', 'is-valid');
+                fetch('/team/roster/' + el.dataset.playerId, {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+                    body: JSON.stringify({field: el.dataset.field, value: el.value, season_id: seasonId})
+                }).then(r => r.json()).then(function (data) {
+                    el.classList.add(data.success ? 'is-valid' : 'is-invalid');
+                    el.title = data.success ? 'Saved' : (data.message || 'Not saved');
+                    if (data.success) setTimeout(() => el.classList.remove('is-valid'), 1200);
+                }).catch(() => el.classList.add('is-invalid'));
+            });
+        });
+
         // Add tooltip functionality if needed
         $('[data-bs-toggle="tooltip"]').tooltip();
     });

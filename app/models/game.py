@@ -11,6 +11,8 @@ class Game(db.Model):
     halftime_our_score = db.Column(db.Integer, nullable=True)
     halftime_their_score = db.Column(db.Integer, nullable=True)
     date = db.Column(db.Date, nullable=True)
+    start_time = db.Column(db.Time, nullable=True)
+    field = db.Column(db.String(50), nullable=True)
     youtube_link = db.Column(db.String(200), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

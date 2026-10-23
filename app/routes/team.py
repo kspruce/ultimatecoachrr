@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, current_app, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, current_app, send_file, jsonify
 from flask_login import login_required, current_user, logout_user
 from flask_wtf import FlaskForm
 from sqlalchemy import text
@@ -15,7 +15,7 @@ from app.utils.utils import coach_required
 from app.utils.permissions import can_manage_account
 from app.models.team_organization import TeamOrganization
 from app.models.team_settings import TeamSettings
-from datetime import datetime
+from datetime import date, datetime
 from app.utils.team_filter import get_current_team_id
 from app.models.season import SeasonRoster
 from app.utils.season import (current_season, player_seasons, put_on_roster, roster_entry, roster_rows, team_squads,
@@ -87,8 +87,124 @@ def index():
                          players=players,
                          entries=entries,
                          roster_season=roster_season if (rows or squad is not None) else None,
+                         edit_season=roster_season,
+                         squads=team_squads(team_id),
+                         statuses=SeasonRoster.STATUSES,
                          form=form,
                          csrf_form=csrf_form)
+
+
+# ── Editing the roster in place ────────────────────────────────────────────
+
+ROSTER_FIELDS = {
+    # Saved on the season's roster row
+    'jersey': 'season', 'position': 'season', 'squad': 'season', 'status': 'season',
+    # Saved on the player
+    'line_preference': 'player', 'gender_match': 'player',
+}
+CHOICES = {
+    'position': {'', 'handler', 'cutter', 'hybrid'},
+    'line_preference': {'', 'O-line', 'D-line', 'both'},
+    'gender_match': {'', 'male', 'female', 'other'},
+    'status': {value for value, _ in SeasonRoster.STATUSES},
+}
+
+
+@bp.route('/roster/<int:player_id>', methods=['POST'])
+@login_required
+@coach_required
+def update_roster_field(player_id):
+    """Save one roster cell (JSON {field, value, season_id})."""
+    from app.models.season import Season
+
+    team_id = get_current_team_id()
+    player = Player.query.filter_by(id=player_id, team_organization_id=team_id).first_or_404()
+    data = request.get_json(silent=True) or {}
+    field, value = data.get('field'), str(data.get('value') if data.get('value') is not None else '').strip()
+    if field not in ROSTER_FIELDS:
+        return jsonify({'success': False, 'message': 'Unknown field'}), 400
+    if field in CHOICES and value not in CHOICES[field]:
+        return jsonify({'success': False, 'message': 'Not one of the choices'}), 400
+
+    if ROSTER_FIELDS[field] == 'player':
+        setattr(player, field, value or None)
+        if field == 'gender_match':
+            player.gender = value or None
+    else:
+        season = Season.query.filter_by(id=data.get('season_id'), team_organization_id=team_id).first()
+        if season is None:
+            return jsonify({'success': False, 'message': 'Pick a season first'}), 400
+        row = roster_entry(player, season) or put_on_roster(player, season, None, player.jersey_number,
+                                                            player.position)
+        if field == 'jersey':
+            if value and not value.isdigit():
+                return jsonify({'success': False, 'message': 'Shirt numbers are whole numbers'}), 400
+            row.jersey_number = int(value) if value else None
+        elif field == 'position':
+            row.position = value or None
+        elif field == 'squad':
+            row.squad_id = next((s.id for s in team_squads(team_id) if str(s.id) == value), None)
+        elif field == 'status':
+            if value == 'left' and row.status != 'left':
+                row.left_date = date.today() if season.is_current else season.end_date
+            elif value != 'left':
+                row.left_date = None
+            row.status = value
+        if season.is_current:
+            # The current season's details are also the player's own
+            if field == 'jersey':
+                player.jersey_number = row.jersey_number
+            elif field == 'position':
+                player.position = row.position
+            elif field == 'status':
+                player.active = row.status != 'left'
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+_QUICK_LINE = re.compile(r'^#?(\d{1,3})[\s,.\-]+(.+)$')
+
+
+@bp.route('/quick-add', methods=['POST'])
+@login_required
+@coach_required
+def quick_add():
+    """Paste names, one per line (optionally starting with a shirt number);
+    each goes on the current season's roster. Existing players with the same
+    name are put back on the roster instead of being added twice."""
+    team_id = get_current_team_id()
+    season = current_season(team_id)
+    squad = viewing_squad(team_id)
+    existing = {p.name.strip().lower(): p for p in Player.query.filter_by(team_organization_id=team_id)}
+    added, returned = [], []
+    for line in (request.form.get('names') or '').splitlines():
+        line = ' '.join(line.split())
+        if not line:
+            continue
+        m = _QUICK_LINE.match(line)
+        number, name = (int(m.group(1)), m.group(2).strip()) if m else (None, line)
+        name = name[:100]
+        player = existing.get(name.lower())
+        if player is None:
+            player = Player(name=name, jersey_number=number, active=True, team_organization_id=team_id)
+            db.session.add(player)
+            existing[name.lower()] = player
+            added.append(name)
+        else:
+            returned.append(name)
+        if season is not None:
+            entry = roster_entry(player, season)
+            put_on_roster(player, season, squad.id if squad else (entry.squad_id if entry else None),
+                          number if number is not None else (entry.jersey_number if entry else player.jersey_number),
+                          entry.position if entry else player.position)
+    db.session.commit()
+    parts = []
+    if added:
+        parts.append(f'{len(added)} player{"s" if len(added) != 1 else ""} added')
+    if returned:
+        parts.append(f'{len(returned)} already on the club list put on the roster')
+    flash(('. '.join(parts) + '.') if parts else 'Paste at least one name.', 'success' if parts else 'warning')
+    return redirect(url_for('team.index'))
 
 
 def _squad_choices(form, team_id):
@@ -115,6 +231,7 @@ def add_player():
                 position=form.position.data,
                 gender=form.gender_match.data,
                 gender_match=form.gender_match.data,
+                line_preference=form.line_preference.data or None,
                 email=form.email.data,
                 active=form.active.data,
                 team_organization_id=get_current_team_id()  # Add team organization ID
@@ -197,7 +314,7 @@ def edit_player(player_id):
             player.gender = form.gender_match.data
             player.gender_match = form.gender_match.data
             player.email = form.email.data
-            player.line_preference = form.line_preference.data
+            player.line_preference = form.line_preference.data or None
             player.active = form.active.data
             # The current season's roster follows "on the roster"
             if season is not None and (entry is not None or form.active.data):

@@ -6,6 +6,7 @@ from app.models import (
     PlayerPointStats, ExportLog
 )
 import os
+import sys
 import logging
 from logging.handlers import RotatingFileHandler
 import boto3
@@ -242,6 +243,11 @@ def create_app_instance():
 
 # This helps Gunicorn find the app
 application = create_app_instance()
+
+# Daily "please reply" emails, only in the web server (not `flask` commands)
+if os.path.basename(sys.argv[0]) in ('gunicorn', 'run.py') or __name__ == '__main__':
+    from app.utils.event_notify import start_reminder_scheduler
+    start_reminder_scheduler(app)
 
 if __name__ == "__main__":
     try:

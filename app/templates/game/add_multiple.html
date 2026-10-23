@@ -34,22 +34,30 @@
                                 <div class="card-body">
                                     <div class="row mb-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Date</label>
-                                            <input type="date" name="date[]" class="form-control" required>
-                                        </div>
-                                        <div class="col-md-6">
                                             <label class="form-label">Opponent</label>
                                             <input type="text" name="opponent[]" class="form-control" required>
                                         </div>
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Date</label>
+                                            <input type="date" name="date[]" class="form-control" value="{{ tournament.start_date.isoformat() if tournament and tournament.start_date else '' }}">
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <label class="form-label">Time</label>
+                                            <input type="time" name="start_time[]" class="form-control">
+                                        </div>
                                     </div>
                                     <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Our Score</label>
-                                            <input type="number" name="our_score[]" class="form-control" min="0" required>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Field</label>
+                                            <input type="text" name="field[]" class="form-control" maxlength="50" placeholder="e.g. Pitch 3">
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-6 col-md-4">
+                                            <label class="form-label">Our Score</label>
+                                            <input type="number" name="our_score[]" class="form-control" min="0" placeholder="0">
+                                        </div>
+                                        <div class="col-6 col-md-4">
                                             <label class="form-label">Their Score</label>
-                                            <input type="number" name="their_score[]" class="form-control" min="0" required>
+                                            <input type="number" name="their_score[]" class="form-control" min="0" placeholder="0">
                                         </div>
                                     </div>
                                     <div class="mb-3">
@@ -90,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear input values
         const inputs = gameTemplate.querySelectorAll('input, textarea');
-        inputs.forEach(input => input.value = '');
+        inputs.forEach(input => { if (input.name !== 'date[]') input.value = ''; });
         
         // Enable remove button
         const removeBtn = gameTemplate.querySelector('.remove-game');

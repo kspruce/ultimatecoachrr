@@ -55,6 +55,11 @@ class User(UserMixin, db.Model):
     totp_recovery_codes = db.Column(db.Text, nullable=True)
     totp_last_step = db.Column(db.Integer, nullable=True)
 
+    # Secret for their personal calendar feed (/calendar/feed/<token>.ics)
+    calendar_token = db.Column(db.String(64), nullable=True, unique=True)
+    # Emails about tournaments: reply reminders, selection, game schedules
+    email_event_updates = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+
     # Home team: where they land after logging in. Every team they belong
     # to, this one included, has a TeamMembership row.
     team_organization_id = db.Column(db.Integer, db.ForeignKey("team_organization.id"))

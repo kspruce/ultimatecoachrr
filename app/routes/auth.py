@@ -686,9 +686,14 @@ def reset_password(token):
 @bp.route('/account', methods=['GET', 'POST'])
 @login_required
 def account():
-    """Change your own email address or password."""
+    """Change your own email address, password or email preferences."""
     if request.method == 'POST':
         action = request.form.get('action')
+        if action == 'notifications':  # not sensitive: no password needed
+            current_user.email_event_updates = bool(request.form.get('email_event_updates'))
+            db.session.commit()
+            flash('Email preferences saved.', 'success')
+            return redirect(url_for('auth.account'))
         current_password = request.form.get('current_password', '')
         if current_user.password_hash and not current_user.check_password(current_password):
             flash('Your current password is incorrect.', 'danger')

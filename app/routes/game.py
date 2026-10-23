@@ -14,11 +14,10 @@ from app.models.gameday import GameDayPlayerStats
 from app.utils.utils import coach_required, stat_taker_required
 from datetime import datetime
 from app.models.game_player import GamePlayer
-from app.models.tournament_rsvp import TournamentRSVP
+from app.utils.rsvp import assign_default_players
 from app.models.scouting import scouting_for_game
 from app.utils.team_filter import get_current_team_id, team_player_ids
 from app.utils.point_flow import analysis_progress
-from app.models.season import SeasonRoster
 from app.utils.season import scope_games, scope_tournaments, team_squads, viewing_squad
 
 bp = Blueprint('game', __name__, url_prefix='/games')
@@ -173,6 +172,8 @@ def add():
             our_score=form.our_score.data,
             their_score=form.their_score.data,
             date=form.date.data,
+            start_time=form.start_time.data,
+            field=(form.field.data or '').strip() or None,
             youtube_link=form.youtube_link.data,
             notes=form.notes.data,
             team_organization_id=get_current_team_id()  # Add team organization ID
@@ -185,41 +186,9 @@ def add():
         db.session.add(game)
         db.session.flush()
 
-        # ── Auto-assign players to the new game ───────────────────────────
-        # Priority: players attending the linked tournament → full active roster
-        team_id = get_current_team_id()
-        auto_player_ids = []
-
-        if game.tournament_id:
-            # Players who RSVP'd as attending (or were admin-selected) for this tournament
-            attending_rsvps = TournamentRSVP.query.filter(
-                TournamentRSVP.tournament_id == game.tournament_id,
-                TournamentRSVP.team_organization_id == team_id,
-                TournamentRSVP.status == 'attending'
-            ).all()
-            auto_player_ids = [r.player_id for r in attending_rsvps]
-
-        if not auto_player_ids:
-            # No tournament attendance data — fall back to the full active roster
-            # (just the game's squad, if it has one)
-            auto_player_ids = [
-                p.id for p in Player.query.filter_by(
-                    active=True,
-                    team_organization_id=team_id
-                ).all()
-            ]
-            if game.squad_id and game.season_id:
-                in_squad = {r.player_id for r in SeasonRoster.query.filter_by(
-                    season_id=game.season_id, squad_id=game.squad_id)}
-                auto_player_ids = [pid for pid in auto_player_ids if pid in in_squad]
-
-        for player_id in auto_player_ids:
-            db.session.add(GamePlayer(
-                game_id=game.id,
-                player_id=player_id,
-                team_organization_id=team_id
-            ))
-        # ─────────────────────────────────────────────────────────────────
+        # New games start with the tournament's picked players (or the
+        # squad's roster for games outside a tournament)
+        assign_default_players(game)
 
         if form.players_present.data:
             point = Point.query.filter_by(game_id=game.id).first()
@@ -254,10 +223,20 @@ def add():
         flash(f'Game against {game.opponent} has been added!', 'success')
         return redirect(url_for('game.index'))
     
-    tournament_id = request.args.get('tournament_id', type=int)
-    if tournament_id:
-        form.tournament_id.data = tournament_id
-    
+    if request.method == 'GET':
+        tournament_id = request.args.get('tournament_id', type=int)
+        if tournament_id:
+            form.tournament_id.data = tournament_id
+            tournament = Tournament.query.filter_by(id=tournament_id, team_organization_id=get_current_team_id()).first()
+            if tournament and not form.date.data:
+                form.date.data = tournament.start_date
+        day = request.args.get('date')
+        if day:
+            try:
+                form.date.data = datetime.strptime(day, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
     return render_template('game/form.html', form=form, title='Add Game')
 
 @bp.route('/edit/<int:game_id>', methods=['GET', 'POST'])
@@ -278,6 +257,8 @@ def edit(game_id):
         game.our_score = form.our_score.data
         game.their_score = form.their_score.data
         game.date = form.date.data
+        game.start_time = form.start_time.data
+        game.field = (form.field.data or '').strip() or None
         game.youtube_link = form.youtube_link.data
         game.notes = form.notes.data
         
@@ -438,31 +419,59 @@ def add_multiple():
         ).first_or_404()
     
     if request.method == 'POST':
-        games_data = request.form.to_dict(flat=False)
-        games_count = len(games_data.get('opponent[]', []))
-        
-        for i in range(games_count):
-            
+        team_id = get_current_team_id()
+
+        def column(name):
+            return request.form.getlist(f'{name}[]')
+
+        def cell(values, i):
+            return (values[i] if i < len(values) else '').strip()
+
+        def score(value):
+            try:
+                return max(int(value), 0)
+            except ValueError:
+                return 0
+
+        opponents, dates, times, fields = column('opponent'), column('date'), column('start_time'), column('field')
+        ours, theirs, links, notes = column('our_score'), column('their_score'), column('youtube_link'), column('notes')
+        added = 0
+        for i in range(len(opponents)):
+            opponent = cell(opponents, i)
+            if not opponent:
+                continue
+            try:
+                day = datetime.strptime(cell(dates, i), '%Y-%m-%d').date() if cell(dates, i) else None
+            except ValueError:
+                day = None
+            try:
+                start_time = datetime.strptime(cell(times, i), '%H:%M').time() if cell(times, i) else None
+            except ValueError:
+                start_time = None
             game = Game(
-                opponent=games_data['opponent[]'][i],
-                our_score=int(games_data['our_score[]'][i]),
-                their_score=int(games_data['their_score[]'][i]),
-                date=datetime.strptime(games_data['date[]'][i], '%Y-%m-%d').date(),
-                youtube_link=games_data['youtube_link[]'][i] if games_data['youtube_link[]'][i] else None,
-                notes=games_data['notes[]'][i] if games_data['notes[]'][i] else None,
-                team_organization_id=get_current_team_id()  # Add team organization ID
+                opponent=opponent[:100],
+                our_score=score(cell(ours, i)),
+                their_score=score(cell(theirs, i)),
+                date=day or (tournament.start_date if tournament else None),
+                start_time=start_time,
+                field=cell(fields, i)[:50] or None,
+                youtube_link=cell(links, i) or None,
+                notes=cell(notes, i) or None,
+                team_organization_id=team_id,
             )
-            
-            if tournament_id:
-                game.tournament_id = tournament_id
-                
+            if tournament:
+                game.tournament_id = tournament.id
+                game.squad_id = tournament.squad_id
             db.session.add(game)
-        
+            db.session.flush()
+            assign_default_players(game)
+            added += 1
+
         db.session.commit()
-        flash(f'{games_count} games have been added!', 'success')
+        flash(f'{added} game{"s" if added != 1 else ""} added!', 'success' if added else 'warning')
         
         if tournament_id:
-            return redirect(url_for('tournament.detail', tournament_id=tournament_id))
+            return redirect(url_for('tournament.detail', tournament_id=tournament_id, tab='games'))
         return redirect(url_for('game.index'))
     
     return render_template('game/add_multiple.html', tournament=tournament)

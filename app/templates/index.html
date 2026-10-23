@@ -183,7 +183,6 @@
 {% block content %}
 {% if current_user.is_authenticated %}
 
-
 {# ══════════ MY PROGRAMME THIS WEEK ══════════ #}
 {% for enrolment, wk in my_training|default([]) %}
 <a class="panel tw-card" href="{{ url_for('programmes.me', programme_id=enrolment.programme_id) }}#this-week">
@@ -261,6 +260,56 @@
   </div>
   {% endif %}
 </section>
+
+{# ══════════ NEEDS YOUR REPLY ══════════ #}
+{% if needs_reply %}
+<section class="panel my-4" id="needs-reply" aria-labelledby="needs-reply-h">
+  <div class="panel-h"><h2 id="needs-reply-h">Can you make it?</h2><a href="{{ url_for('calendar.index') }}">Calendar</a></div>
+  <ul class="list-unstyled mb-0">
+    {% for item in needs_reply %}
+    <li class="nr-item" data-type="{{ item.type }}" data-id="{{ item.id }}">
+      <div class="nr-text">
+        <a href="{{ item.url }}" class="fw-semibold text-decoration-none">{{ item.title }}</a>
+        <div class="small text-muted">{{ item.when }}{% if item.deadline %} · reply by {{ item.deadline.strftime('%a %d %b') }}{% endif %}</div>
+      </div>
+      <div class="nr-buttons" role="group" aria-label="Reply to {{ item.title }}">
+        <button type="button" class="btn btn-sm btn-outline-success js-nr" data-status="attending">I'm in</button>
+        <button type="button" class="btn btn-sm btn-outline-warning js-nr" data-status="maybe">Maybe</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary js-nr" data-status="not_attending">Can't</button>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+<style>
+  .nr-item { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.5rem; padding:.6rem 0; border-top:1px solid var(--rule); }
+  .nr-item:first-child { border-top:0; }
+  .nr-buttons { display:flex; gap:.35rem; }
+  .nr-item.done .nr-buttons { display:none; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const token = document.querySelector('meta[name="csrf-token"]').content;
+  document.querySelectorAll('.js-nr').forEach(b => b.addEventListener('click', function () {
+    const item = b.closest('.nr-item');
+    fetch('{{ url_for("calendar.api_rsvp") }}', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+      body: JSON.stringify({id: item.dataset.id, type: item.dataset.type, status: b.dataset.status})
+    }).then(r => r.json()).then(data => {
+      if (!data.success) { alert(data.message || 'Not saved'); return; }
+      item.classList.add('done');
+      const note = document.createElement('span');
+      note.className = 'badge bg-success';
+      note.textContent = 'Saved: ' + b.textContent;
+      item.appendChild(note);
+    });
+  }));
+});
+</script>
+{% endif %}
+
+
 
 
 {# ══════════ GETTING STARTED ══════════ #}

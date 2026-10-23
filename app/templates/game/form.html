@@ -37,6 +37,19 @@
                                 {% endfor %}
                             </div>
                         </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                {{ form.start_time.label(class="form-label") }}
+                                {{ form.start_time(class="form-control", type="time") }}
+                                {% for error in form.start_time.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-6">
+                                {{ form.field.label(class="form-label") }}
+                                {{ form.field(class="form-control", maxlength=50, placeholder="e.g. Pitch 3") }}
+                            </div>
+                        </div>
                         {% if form.squad_id.choices|length > 1 %}
                         <div class="row mb-3">
                             <div class="col-md-6">

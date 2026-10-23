@@ -1,0 +1,27 @@
+{# The tournament's games, in order. Needs: games, my_games (optional). #}
+{% set mine = (my_games or [])|map(attribute='id')|list %}
+{% if games %}
+<div class="table-responsive">
+  <table class="table table-sm align-middle mb-2">
+    <thead><tr><th>When</th><th>Opponent</th><th class="d-none d-sm-table-cell">Field</th><th>Result</th></tr></thead>
+    <tbody>
+      {% for game in games %}
+      <tr {% if game.id in mine %}class="table-success"{% endif %}>
+        <td class="text-nowrap">{% if game.date %}{{ game.date.strftime('%a %d %b') }}{% else %}TBC{% endif %}{% if game.start_time %} <strong>{{ game.start_time.strftime('%H:%M') }}</strong>{% endif %}</td>
+        <td><a href="{{ url_for('game.detail', game_id=game.id) }}" class="text-decoration-none">{{ game.opponent }}</a>
+          {% if game.id in mine %}<span class="badge bg-success ms-1">You</span>{% endif %}
+          {% if game.field %}<div class="small text-muted d-sm-none">{{ game.field }}</div>{% endif %}</td>
+        <td class="d-none d-sm-table-cell">{{ game.field or '' }}</td>
+        <td>
+          {% if game.our_score or game.their_score %}
+          <span class="badge {% if game.is_win %}bg-success{% elif game.is_loss %}bg-danger{% else %}bg-secondary{% endif %}">{{ game.result_string }}</span>
+          {% else %}<span class="text-muted small">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-muted">No games yet.</p>
+{% endif %}

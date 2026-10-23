@@ -19,6 +19,9 @@ class Player(db.Model):
 
     gender_match = db.Column(db.String(20))
 
+    # O-line, D-line or both
+    line_preference = db.Column(db.String(20))
+
 
     # Physical attributes
     height = db.Column(db.String(20))

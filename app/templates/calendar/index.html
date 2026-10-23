@@ -11,11 +11,11 @@
     <div class="uc-page-header mb-3">
         <div>
             <h2>Team Calendar</h2>
-            <p>View and RSVP to upcoming sessions and tournaments</p>
+            <p>Sessions, tournaments and games. Tap an event to reply.{% if current_user.is_coach %} Coaches: tap an empty day to add something on it.{% endif %}</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('session.index') }}" class="btn btn-outline-primary">
-                <i class="bi bi-calendar-check me-1"></i>Sessions
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="#subscribe" class="btn btn-outline-secondary" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="subscribe">
+                <i class="bi bi-calendar-plus me-1"></i>Add to my calendar
             </a>
             <a href="{{ url_for('tournament.index') }}" class="btn btn-outline-success">
                 <i class="bi bi-trophy me-1"></i>Tournaments
@@ -23,322 +23,317 @@
         </div>
     </div>
 
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="calendar-legend">
-                <div class="legend-item">
-                    <div class="legend-color event-session"></div>
-                    <span>Practice Session</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color event-tournament"></div>
-                    <span>Tournament</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="border-left: 5px solid var(--uc-green);"></div>
-                    <span>RSVP: Attending</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="border-left: 5px solid var(--uc-amber);"></div>
-                    <span>RSVP: Maybe</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="border-left: 5px solid var(--uc-red);"></div>
-                    <span>RSVP: Not Attending</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="border-left: 5px solid var(--uc-purple);"></div>
-                    <span>Selected by Admin</span>
-                </div>
+    <div class="collapse mb-3" id="subscribe">
+        <div class="card"><div class="card-body">
+            <h3 class="h6 fw-bold">Subscribe from Google, Apple or Outlook calendar</h3>
+            {% if feed_url %}
+            <p class="small mb-2">Your personal link. It updates by itself: sessions, tournaments you haven't said no to, and the games you're playing. Keep it private.</p>
+            <div class="input-group mb-2">
+                <input type="text" class="form-control form-control-sm" id="feed-url" value="{{ feed_url }}" readonly>
+                <button class="btn btn-sm btn-outline-primary" type="button" id="copy-feed">Copy</button>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ feed_url|replace('https://', 'webcal://')|replace('http://', 'webcal://') }}">Open in calendar app</a>
             </div>
-        </div>
+            <form method="post" action="{{ url_for('calendar.feed_link') }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="reset" value="1">
+                <button class="btn btn-link btn-sm p-0" onclick="return confirm('Make a new link? The old one will stop working.')">Make a new link</button>
+            </form>
+            <p class="small text-muted mt-2 mb-0">Google Calendar: Other calendars → + → From URL, and paste the link.</p>
+            {% else %}
+            <form method="post" action="{{ url_for('calendar.feed_link') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-primary btn-sm">Get my calendar link</button>
+            </form>
+            {% endif %}
+        </div></div>
     </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card calendar-container">
-                <div class="card-body">
-                    <div id="calendar"></div>
-                </div>
-            </div>
+    <div class="card mb-3"><div class="card-body py-2">
+        <div class="cal-filters" id="cal-filters">
+            <strong class="small">Show:</strong>
+            {% for value, label, cls in [('session', 'Sessions', 'event-session'), ('tournament', 'Tournaments', 'event-tournament'), ('game', 'Games', 'event-game')] %}
+            <label class="form-check form-check-inline">
+                <input class="form-check-input js-type" type="checkbox" value="{{ value }}" checked>
+                <span class="legend-color {{ cls }} d-inline-block align-middle" style="width:12px;height:12px"></span> {{ label }}
+            </label>
+            {% endfor %}
+            {% if current_user.player %}
+            <label class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="only-mine"> Only mine
+            </label>
+            {% endif %}
+            {% if squads %}
+            <select class="form-select form-select-sm w-auto" id="squad-filter" aria-label="Squad">
+                <option value="">All squads</option>
+                {% for sq in squads %}<option value="{{ sq.id }}">{{ sq.name }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            <span class="small text-muted ms-auto"><span style="display:inline-block;width:12px;height:12px;box-shadow:inset 0 0 0 2px var(--uc-red,#dc3545)"></span> needs your reply</span>
+        </div>
+    </div></div>
+
+    <div class="card calendar-container">
+        <div class="card-body">
+            <div id="calendar"></div>
         </div>
     </div>
 </div>
 
 <!-- Event Details Modal -->
 <div class="modal fade event-modal" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="eventModalLabel">Event Details</h5>
+                <h5 class="modal-title" id="eventModalLabel">Event</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="event-details">
                     <h4 id="event-title"></h4>
-                    <p id="event-date"><i class="bi bi-calendar3"></i> <span></span></p>
+                    <p id="event-date"><i class="bi bi-calendar"></i> <span></span></p>
                     <p id="event-time"><i class="bi bi-clock"></i> <span></span></p>
                     <p id="event-location"><i class="bi bi-geo-alt"></i> <span></span></p>
                     <p id="event-focus" class="d-none"><i class="bi bi-bullseye"></i> <span></span></p>
-                    <div id="event-notes" class="event-notes d-none"></div>
+                    <p id="event-deadline" class="d-none"><i class="bi bi-hourglass"></i> <span></span></p>
+                    <div id="event-notes" class="event-notes d-none" style="white-space:pre-line"></div>
+                    <div id="event-selection" class="alert d-none mt-2 mb-0"></div>
+                    <div id="event-counts" class="event-counts d-none"></div>
                 </div>
-                
-                <div id="rsvp-status" class="alert d-none"></div>
-                
-                <div id="rsvp-section">
-                    <h5>Your RSVP</h5>
+
+                {% if current_user.player %}
+                <div id="rsvp-section" class="mt-3">
+                    <h5>Your reply</h5>
                     <div class="rsvp-buttons">
-                        <button id="rsvp-yes" class="btn btn-success"><i class="bi bi-check-lg"></i> Attending</button>
-                        <button id="rsvp-maybe" class="btn btn-warning"><i class="bi bi-question"></i> Maybe</button>
-                        <button id="rsvp-no" class="btn btn-danger"><i class="bi bi-x-lg"></i> Not Attending</button>
+                        <button type="button" data-status="attending" class="btn btn-outline-success js-rsvp"><i class="bi bi-check-lg"></i> I'm in</button>
+                        <button type="button" data-status="maybe" class="btn btn-outline-warning js-rsvp"><i class="bi bi-question-lg"></i> Maybe</button>
+                        <button type="button" data-status="not_attending" class="btn btn-outline-secondary js-rsvp"><i class="bi bi-x-lg"></i> Can't</button>
                     </div>
-                    <div class="mt-3">
-                        <label for="rsvp-notes" class="form-label">Notes (optional)</label>
-                        <textarea id="rsvp-notes" class="form-control" rows="2" placeholder="E.g., arriving late, leaving early"></textarea>
-                    </div>
+                    <details class="mt-2">
+                        <summary class="small text-muted">Add a note</summary>
+                        <textarea id="rsvp-notes" class="form-control mt-1" rows="2" maxlength="1000" placeholder="E.g. arriving late, leaving early"></textarea>
+                    </details>
+                    <div id="rsvp-status" class="alert d-none mt-2 mb-0" role="status"></div>
                 </div>
-                
+                {% endif %}
+
+                {% if current_user.is_coach %}
                 <div id="admin-section" class="admin-section d-none">
-                    <h5>Admin Actions</h5>
-                    <a id="manage-link" href="#" class="btn btn-primary"><i class="bi bi-people"></i> Manage RSVPs</a>
-                    <a id="edit-link" href="#" class="btn btn-secondary"><i class="bi bi-pencil"></i> Edit Event</a>
+                    <h5>Coach</h5>
+                    <a id="manage-link" href="#" class="btn btn-primary btn-sm"><i class="bi bi-people"></i> Replies &amp; squad</a>
+                    <a id="edit-link" href="#" class="btn btn-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
                 </div>
+                {% endif %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a id="view-details-link" href="#" class="btn btn-primary">View Full Details</a>
+                <a id="view-details-link" href="#" class="btn btn-primary">Open</a>
             </div>
         </div>
     </div>
 </div>
+
+{% if current_user.is_coach %}
+<!-- Add on a day (coaches) -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addModalLabel">Add on <span id="add-day"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-grid gap-2">
+                <a class="btn btn-outline-primary" id="add-session" data-base="{{ url_for('session.add_session') }}"><i class="bi bi-calendar-check"></i> Session</a>
+                <a class="btn btn-outline-success" id="add-tournament" data-base="{{ url_for('tournament.add') }}"><i class="bi bi-trophy"></i> Tournament</a>
+                <a class="btn btn-outline-secondary" id="add-game" data-base="{{ url_for('game.add') }}"><i class="bi bi-flag"></i> Game</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize calendar
-        const calendarEl = document.getElementById('calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,listMonth'
-            },
-            events: {{ events|safe }},
-            eventClick: function(info) {
-                showEventDetails(info.event);
-            },
-            eventClassNames: function(arg) {
-                const classes = [];
-                
-                // Add event type class
-                if (arg.event.extendedProps.type === 'session') {
-                    classes.push('event-session');
-                } else if (arg.event.extendedProps.type === 'tournament') {
-                    classes.push('event-tournament');
-                    
-                    // Add multi-day class if event spans multiple days
-                    if (arg.event.end && arg.event.start) {
-                        const startDate = new Date(arg.event.start);
-                        const endDate = new Date(arg.event.end);
-                        
-                        // Check if event spans multiple days
-                        if (endDate.getDate() !== startDate.getDate() || 
-                            endDate.getMonth() !== startDate.getMonth() || 
-                            endDate.getFullYear() !== startDate.getFullYear()) {
-                            classes.push('fc-event-multi-day');
-                        }
-                    }
-                }
-                
-                // Add RSVP status class
-                if (arg.event.extendedProps.rsvp_status === 'attending') {
-                    classes.push('event-rsvp-yes');
-                } else if (arg.event.extendedProps.rsvp_status === 'maybe') {
-                    classes.push('event-rsvp-maybe');
-                } else if (arg.event.extendedProps.rsvp_status === 'not_attending') {
-                    classes.push('event-rsvp-no');
-                }
-                
-                // Add selected class
-                if (arg.event.extendedProps.selected_by_admin) {
-                    classes.push('event-selected');
-                }
-                
-                return classes;
-            },
-            // Improve mobile responsiveness
-            windowResize: function(view) {
-                if (window.innerWidth < 768) {
-                    calendar.changeView('listMonth');
-                }
-            },
-            // Handle multi-day events properly
-            displayEventEnd: true,
-            eventDisplay: 'block',
-            // Improve touch device interaction
-            longPressDelay: 100
-        });
-        calendar.render();
-        
-        // Check initial screen size
-        if (window.innerWidth < 768) {
-            calendar.changeView('listMonth');
-        }
-        
-        // Event modal functionality
-        function showEventDetails(event) {
-            const modal = document.getElementById('eventModal');
-            const title = document.getElementById('event-title');
-            const date = document.getElementById('event-date').querySelector('span');
-            const time = document.getElementById('event-time').querySelector('span');
-            const location = document.getElementById('event-location').querySelector('span');
-            const focus = document.getElementById('event-focus');
-            const focusText = focus.querySelector('span');
-            const notes = document.getElementById('event-notes');
-            const rsvpStatus = document.getElementById('rsvp-status');
-            const adminSection = document.getElementById('admin-section');
-            const viewDetailsLink = document.getElementById('view-details-link');
-            const manageLink = document.getElementById('manage-link');
-            const editLink = document.getElementById('edit-link');
-            
-            // Set event details
-            title.textContent = event.title;
-            date.textContent = event.extendedProps.formatted_date;
-            time.textContent = event.extendedProps.formatted_time || 'All day';
-            location.textContent = event.extendedProps.location || 'TBD';
-            
-            // Update modal header based on event type
-            if (event.extendedProps.type === 'tournament') {
-                modal.classList.add('tournament-event');
-            } else {
-                modal.classList.remove('tournament-event');
-            }
-            
-            if (event.extendedProps.focus_area) {
-                focusText.textContent = event.extendedProps.focus_area;
-                focus.classList.remove('d-none');
-            } else {
-                focus.classList.add('d-none');
-            }
-            
-            if (event.extendedProps.notes) {
-                notes.innerHTML = `<strong><i class="bi bi-sticky"></i> Notes:</strong><br>${event.extendedProps.notes}`;
-                notes.classList.remove('d-none');
-            } else {
-                notes.classList.add('d-none');
-            }
-            
-            // Set RSVP status if exists
-            if (event.extendedProps.rsvp_status) {
-                rsvpStatus.textContent = `Your current RSVP: ${event.extendedProps.rsvp_status.replace('_', ' ')}`;
-                rsvpStatus.classList.remove('d-none');
-                
-                if (event.extendedProps.rsvp_status === 'attending') {
-                    rsvpStatus.className = 'alert alert-success';
-                } else if (event.extendedProps.rsvp_status === 'maybe') {
-                    rsvpStatus.className = 'alert alert-warning';
-                } else {
-                    rsvpStatus.className = 'alert alert-danger';
-                }
-                
-                if (event.extendedProps.rsvp_notes) {
-                    rsvpStatus.textContent += `: "${event.extendedProps.rsvp_notes}"`;
-                }
-            } else {
-                rsvpStatus.classList.add('d-none');
-            }
-            
-            // Set up RSVP buttons
-            document.getElementById('rsvp-yes').onclick = function() {
-                submitRSVP(event.id, event.extendedProps.type, 'attending');
-            };
-            
-            document.getElementById('rsvp-maybe').onclick = function() {
-                submitRSVP(event.id, event.extendedProps.type, 'maybe');
-            };
-            
-            document.getElementById('rsvp-no').onclick = function() {
-                submitRSVP(event.id, event.extendedProps.type, 'not_attending');
-            };
-            
-            // Show admin section for admins
-            if ({{ current_user.is_admin|tojson }}) {
-                adminSection.classList.remove('d-none');
-                
-                // Use the URLs generated by the backend
-                manageLink.href = event.extendedProps.manage_url;
-                editLink.href = event.extendedProps.edit_url;
-            } else {
-                adminSection.classList.add('d-none');
-            }
-            
-            // Set view details link
-            viewDetailsLink.href = event.extendedProps.details_url;
-            
-            // Show modal
-            const modalInstance = new bootstrap.Modal(modal);
-            modalInstance.show();
-        }
-        
-        // Function to submit RSVP
-        function submitRSVP(id, type, status) {
-            const notes = document.getElementById('rsvp-notes').value;
-            
-            // Use the API endpoint for both session and tournament RSVPs
-            fetch('/api/rsvp', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    id: id,
-                    type: type,
-                    status: status,
-                    notes: notes
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message
-                    const rsvpStatus = document.getElementById('rsvp-status');
-                    rsvpStatus.textContent = `RSVP updated successfully! You are ${status.replace('_', ' ')}.`;
-                    
-                    if (status === 'attending') {
-                        rsvpStatus.className = 'alert alert-success';
-                    } else if (status === 'maybe') {
-                        rsvpStatus.className = 'alert alert-warning';
-                    } else {
-                        rsvpStatus.className = 'alert alert-danger';
-                    }
-                    
-                    rsvpStatus.classList.remove('d-none');
-                    
-                    // Reload calendar after a short delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    // Show error message
-                    const rsvpStatus = document.getElementById('rsvp-status');
-                    rsvpStatus.textContent = `Error: ${data.message || 'Could not update RSVP'}`;
-                    rsvpStatus.className = 'alert alert-danger';
-                    rsvpStatus.classList.remove('d-none');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                const rsvpStatus = document.getElementById('rsvp-status');
-                rsvpStatus.textContent = 'An error occurred. Please try again.';
-                rsvpStatus.className = 'alert alert-danger';
-                rsvpStatus.classList.remove('d-none');
+document.addEventListener('DOMContentLoaded', function () {
+    const isCoach = {{ current_user.is_coach|tojson }};
+    const hasPlayer = {{ (current_user.player is not none)|tojson }};
+    const token = document.querySelector('meta[name="csrf-token"]').content;
+    const statusLabels = {attending: "I'm in", maybe: 'Maybe', not_attending: "Can't make it"};
+    const selectionText = {
+        picked: ["You're in the squad", 'alert-success'],
+        reserve: ["You're a reserve", 'alert-warning'],
+        not_picked: ['Not picked this time', 'alert-secondary'],
+    };
+    const narrow = () => window.innerWidth < 768;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    function filters() {
+        const types = [...document.querySelectorAll('.js-type:checked')].map(b => b.value);
+        const params = new URLSearchParams({types: types.join(',')});
+        const mine = document.getElementById('only-mine');
+        if (mine && mine.checked) params.set('mine', '1');
+        const squad = document.getElementById('squad-filter');
+        if (squad && squad.value) params.set('squad', squad.value);
+        return params;
+    }
+
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: narrow() ? 'listMonth' : 'dayGridMonth',
+        headerToolbar: narrow()
+            ? {left: 'prev,next', center: 'title', right: 'today'}
+            : {left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth'},
+        firstDay: 1,
+        height: 'auto',
+        noEventsContent: 'Nothing on in these dates',
+        events: function (info, success, failure) {
+            const params = filters();
+            params.set('start', info.startStr.slice(0, 10));
+            params.set('end', info.endStr.slice(0, 10));
+            fetch('{{ url_for("calendar.events") }}?' + params, {credentials: 'same-origin'})
+                .then(r => r.json()).then(success).catch(failure);
+        },
+        eventClick: info => { info.jsEvent.preventDefault(); showEventDetails(info.event); },
+        dateClick: isCoach ? info => showAdd(info.dateStr) : undefined,
+        eventClassNames: function (arg) {
+            const p = arg.event.extendedProps, classes = ['event-' + p.type];
+            if (p.rsvp_status === 'attending') classes.push('event-rsvp-yes');
+            else if (p.rsvp_status === 'maybe') classes.push('event-rsvp-maybe');
+            else if (p.rsvp_status === 'not_attending') classes.push('event-rsvp-no');
+            else if (hasPlayer && p.can_rsvp && (arg.event.end || arg.event.start) >= today) classes.push('event-needs-reply');
+            if (p.selection === 'picked' || p.playing) classes.push('event-selected');
+            if (p.playing) classes.push('event-playing');
+            return classes;
+        },
+        displayEventEnd: true,
+        eventDisplay: 'block',
+        longPressDelay: 100,
+    });
+    calendar.render();
+
+    document.querySelectorAll('#cal-filters input, #cal-filters select').forEach(el =>
+        el.addEventListener('change', () => calendar.refetchEvents()));
+
+    const copy = document.getElementById('copy-feed');
+    if (copy) copy.addEventListener('click', () => {
+        const input = document.getElementById('feed-url');
+        input.select();
+        (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.reject())
+            .catch(() => document.execCommand('copy'))
+            .finally(() => { copy.textContent = 'Copied'; setTimeout(() => copy.textContent = 'Copy', 1500); });
+    });
+
+    function setText(id, text) {
+        const el = document.getElementById(id);
+        el.querySelector('span').textContent = text || '';
+        el.classList.toggle('d-none', !text);
+    }
+
+    let current = null;
+    function showEventDetails(event) {
+        current = event;
+        const p = event.extendedProps;
+        const modal = document.getElementById('eventModal');
+        modal.classList.toggle('tournament-event', p.type === 'tournament');
+        document.getElementById('eventModalLabel').textContent = {session: 'Session', tournament: 'Tournament', game: 'Game'}[p.type];
+        document.getElementById('event-title').textContent = event.title;
+        setText('event-date', p.formatted_date);
+        setText('event-time', p.type === 'session' ? (p.formatted_time || 'Time TBC') : '');
+        setText('event-location', p.location);
+        setText('event-focus', p.focus_area);
+        setText('event-deadline', p.deadline ? 'Reply by ' + p.deadline : '');
+
+        const notes = document.getElementById('event-notes');
+        notes.textContent = p.notes || '';
+        notes.classList.toggle('d-none', !p.notes);
+
+        const sel = document.getElementById('event-selection');
+        const selInfo = selectionText[p.selection] || (p.playing ? ["You're playing this game", 'alert-success'] : null);
+        sel.className = 'alert mt-2 mb-0 ' + (selInfo ? selInfo[1] : 'd-none');
+        sel.textContent = selInfo ? selInfo[0] : '';
+
+        const counts = document.getElementById('event-counts');
+        counts.replaceChildren();
+        if (p.counts) {
+            const parts = [['attending', 'in'], ['maybe', 'maybe'], ['not_attending', "can't"], ['no_reply', 'no reply'], ['picked', 'picked']];
+            parts.forEach(([key, label]) => {
+                if (p.counts[key] === undefined || (key === 'picked' && !isCoach)) return;
+                const chip = document.createElement('span');
+                chip.textContent = `${p.counts[key]} ${label}`;
+                counts.appendChild(chip);
             });
         }
-    });
+        counts.classList.toggle('d-none', !counts.childElementCount);
+
+        const rsvpSection = document.getElementById('rsvp-section');
+        if (rsvpSection) {
+            rsvpSection.classList.toggle('d-none', !p.can_rsvp);
+            document.getElementById('rsvp-notes').value = p.rsvp_notes || '';
+            markAnswer(p.rsvp_status);
+            document.getElementById('rsvp-status').classList.add('d-none');
+        }
+
+        const admin = document.getElementById('admin-section');
+        if (admin) {
+            admin.classList.toggle('d-none', !p.edit_url);
+            const manage = document.getElementById('manage-link');
+            manage.classList.toggle('d-none', !p.manage_url);
+            manage.href = p.manage_url || '#';
+            document.getElementById('edit-link').href = p.edit_url || '#';
+        }
+        document.getElementById('view-details-link').href = p.details_url;
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+
+    function markAnswer(status) {
+        document.querySelectorAll('.js-rsvp').forEach(b => {
+            const cls = {attending: 'success', maybe: 'warning', not_attending: 'secondary'}[b.dataset.status];
+            const on = b.dataset.status === status;
+            b.classList.toggle('btn-' + cls, on);
+            b.classList.toggle('btn-outline-' + cls, !on);
+            b.setAttribute('aria-pressed', on);
+        });
+    }
+
+    document.querySelectorAll('.js-rsvp').forEach(button => button.addEventListener('click', function () {
+        if (!current) return;
+        const status = button.dataset.status, p = current.extendedProps;
+        const box = document.getElementById('rsvp-status');
+        fetch('{{ url_for("calendar.api_rsvp") }}', {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+            body: JSON.stringify({id: p.event_id, type: p.type, status: status,
+                                  notes: document.getElementById('rsvp-notes').value}),
+        }).then(r => r.json()).then(data => {
+            box.classList.remove('d-none', 'alert-success', 'alert-danger');
+            if (data.success) {
+                box.classList.add('alert-success');
+                box.textContent = `Saved: ${statusLabels[status]}`;
+                markAnswer(status);
+                calendar.refetchEvents();
+            } else {
+                box.classList.add('alert-danger');
+                box.textContent = data.message || 'Not saved';
+            }
+        }).catch(() => {
+            box.classList.remove('d-none');
+            box.className = 'alert alert-danger mt-2 mb-0';
+            box.textContent = 'Not saved: check your connection.';
+        });
+    }));
+
+    function showAdd(day) {
+        const modal = document.getElementById('addModal');
+        if (!modal) return;
+        document.getElementById('add-day').textContent = new Date(day + 'T12:00').toLocaleDateString(undefined, {weekday: 'short', day: 'numeric', month: 'short'});
+        ['add-session', 'add-tournament', 'add-game'].forEach(id => {
+            const link = document.getElementById(id);
+            link.href = link.dataset.base + '?date=' + day;
+        });
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+});
 </script>
 {% endblock %}
