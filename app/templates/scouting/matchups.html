@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% import 'scouting/_macros.html' as m %}
+
+{% macro role_chips(keys, cls) %}
+  {% for k in keys %}<span class="role-chip {{ cls }}">{{ scouting_role_labels.get(k, k) }}</span>{% endfor %}
+{% endmacro %}
+
+{% macro matchup_row(o) %}
+{% set suggestion = suggestions.get(o.id) %}
+<div class="mu-row{% if o.is_key_threat %} key{% endif %}">
+  <div class="mu-them">
+    <div class="mu-name">
+      {% if o.jersey_number %}<span class="mu-num">#{{ o.jersey_number }}</span>{% endif %}
+      <strong>{{ o.name }}</strong>
+      {{ m.threat_badge(o, small=true) }}
+    </div>
+    <div class="mu-roles">
+      {% if o.threat_role_list %}{{ role_chips(o.threat_role_list, 'threat') }}
+      {% elif o.position %}<span class="small text-muted">{{ o.position|capitalize }}</span>
+      {% else %}<span class="small text-muted">No threat type yet</span>{% endif %}
+      {% if current_user.is_coach %}<a href="{{ url_for('scouting.edit_player', player_id=o.id, back='matchups') }}" class="mu-edit" aria-label="Edit {{ o.name }}"><i class="bi bi-pencil"></i></a>{% endif %}
+    </div>
+  </div>
+
+  <div class="mu-us">
+    {% if current_user.is_coach %}
+    <label class="visually-hidden" for="match-{{ o.id }}">Who marks {{ o.name }}</label>
+    <select class="form-select mu-select{% if o.matched_player_id %} set{% endif %}" id="match-{{ o.id }}" name="match-{{ o.id }}">
+      <option value="0">Nobody yet</option>
+      {% for d in defenders %}
+      {% set ok = can_mark(o, d) %}
+      <option value="{{ d.id }}" {% if d.id == o.matched_player_id %}selected{% elif not ok %}disabled{% endif %}>
+        {{ d.name }}{% if d.defensive_roles %} · {{ d.defensive_roles|role_labels }}{% endif %}{% if d.id in doubled %} (marks {{ doubled[d.id]|length }}){% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    {% else %}
+    <div class="mu-marker">{% if o.matched_player %}<i class="bi bi-person-check me-1"></i><strong>{{ o.matched_player.name }}</strong>{% else %}<span class="text-muted">No one yet</span>{% endif %}</div>
+    {% endif %}
+
+    {% if o.matched_player and not can_mark(o, o.matched_player) %}
+    <div class="mu-none small" style="color:var(--warn-ink, #92400e)"><i class="bi bi-exclamation-triangle me-1"></i>{{ o.matched_player.name }} doesn't share {{ o.name }}'s gender match.</div>
+    {% endif %}
+    {% if o.matched_player and reasons.get(o.id) %}
+    <div class="mu-why">{% for theirs, ours in reasons[o.id] %}<span class="why-chip"><i class="bi bi-check2"></i>{{ ours }} vs {{ theirs|lower }}</span>{% endfor %}</div>
+    {% elif suggestion %}
+    {% set d, why = suggestion %}
+    <div class="mu-suggest">
+      <span><i class="bi bi-lightbulb"></i> <strong>{{ d.name }}</strong>{% if why %}: {{ why|map('last')|join(', ')|lower }} vs {{ why|map('first')|join(', ')|lower }}{% endif %}</span>
+      {% if current_user.is_coach %}<button type="submit" name="use" value="{{ o.id }}:{{ d.id }}" class="btn btn-sm btn-outline-primary">Use</button>{% endif %}
+    </div>
+    {% elif not o.matched_player %}
+    <div class="mu-none small text-muted">No free defender with a matching strength.</div>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+{{ m.styles() }}
+<style>
+.mu-list { display:flex; flex-direction:column; gap:.6rem }
+.mu-row { background:var(--uc-card-bg); border:1px solid var(--uc-card-border); border-radius:12px; padding:.75rem .9rem;
+  display:grid; grid-template-columns:1fr 1fr; gap:.6rem 1rem; align-items:start }
+.mu-row.key { border-color:var(--accent); box-shadow:inset 3px 0 0 var(--accent) }
+.mu-name { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; font-size:.95rem }
+.mu-num { font-weight:800; color:var(--uc-gray-400) }
+.mu-roles { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.35rem; align-items:center }
+.mu-edit { margin-left:auto; color:var(--uc-gray-400); padding:.25rem .4rem }
+.role-chip { font-size:.72rem; font-weight:600; padding:.12rem .5rem; border-radius:6px; white-space:nowrap }
+.role-chip.threat { background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
+.role-chip.ours { background:color-mix(in srgb, var(--ok) 12%, transparent); color:var(--uc-green) }
+.mu-select.set { border-color:var(--ok); font-weight:600 }
+.mu-marker { font-size:.95rem; padding:.35rem 0 }
+.mu-why { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.4rem }
+.why-chip { font-size:.72rem; color:var(--uc-green); background:color-mix(in srgb, var(--ok) 10%, transparent);
+  border-radius:6px; padding:.12rem .45rem; white-space:nowrap }
+.why-chip i { margin-right:.2rem }
+.mu-suggest { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:.4rem;
+  font-size:.8rem; color:var(--uc-gray-600); background:var(--uc-gray-50); border-radius:8px; padding:.35rem .5rem }
+.mu-suggest i { color:var(--warn) }
+.mu-none { margin-top:.4rem }
+.mu-head { display:grid; grid-template-columns:1fr 1fr; gap:1rem; padding:0 .9rem .25rem; font-size:.7rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.07em; color:var(--uc-gray-400) }
+@media (max-width: 575.98px) {
+  .mu-row { grid-template-columns:1fr }
+  .mu-head { display:none }
+  .mu-us { border-top:1px dashed var(--uc-gray-200); padding-top:.6rem }
+}
+details.mu-others > summary { cursor:pointer; font-weight:600; color:var(--uc-gray-600); padding:.5rem 0; min-height:44px;
+  display:flex; align-items:center }
+</style>
+
+<div class="container py-4 scouting-page">
+  <div class="uc-page-header mb-3">
+    <div>
+      <h2>Matchups</h2>
+      <p>vs <a href="{{ url_for('scouting.detail', report_id=report.id) }}">{{ report.team_name }}</a>
+        · {{ board|selectattr('matched_player_id')|list|length }} of {{ board|length }} threats covered</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('scouting.card', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-card-text me-1"></i>Game card</a>
+      {% if current_user.is_coach %}
+      <a href="{{ url_for('scouting.defenders', report=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-shield-check me-1"></i>Our defenders</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if current_user.is_coach %}
+    {% if not roles_set %}
+    <div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
+      <span class="me-auto"><strong>Suggestions need to know your defenders.</strong> Tag who's a handler defender, huck stopper, deep defender…</span>
+      <a href="{{ url_for('scouting.defenders', report=report.id) }}" class="btn btn-sm btn-primary">Set our defenders</a>
+    </div>
+    {% endif %}
+    {% if not typed and board %}
+    <div class="alert alert-light border small">
+      Tip: give their players a threat type (main handler, hucker, deep threat…) with the <i class="bi bi-pencil"></i> button.
+      Until then, suggestions go on position.
+    </div>
+    {% endif %}
+  {% endif %}
+
+  {% for pid, marked in doubled.items() %}
+  <div class="alert alert-warning py-2 small">
+    <i class="bi bi-exclamation-triangle me-1"></i><strong>{{ marked[0].matched_player.name }}</strong> is down to mark
+    {{ marked|map(attribute='name')|join(' and ') }}.
+  </div>
+  {% endfor %}
+
+  {% if board or others %}
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {% if current_user.is_coach and suggestions %}
+    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+      <span class="small text-muted me-auto">{{ suggestions|length }} suggestion{{ 's' if suggestions|length != 1 }} from your defenders' strengths</span>
+      <button type="submit" name="use_all" value="1" class="btn btn-sm btn-primary"><i class="bi bi-magic me-1"></i>Use all suggestions</button>
+    </div>
+    {% endif %}
+
+    {% if board %}
+    <div class="mu-head"><span>Their threat</span><span>Marked by</span></div>
+    <div class="mu-list">
+      {% for o in board %}{{ matchup_row(o) }}{% endfor %}
+    </div>
+    {% else %}
+    <div class="uc-empty card py-4">
+      <p class="mb-1">No threats picked out yet.</p>
+      <p class="small text-muted mb-0">Mark players as key threats, give them a threat type or rate them, and they'll show here.</p>
+    </div>
+    {% endif %}
+
+    {% if others %}
+    <details class="mu-others mt-3">
+      <summary>Other players ({{ others|length }})</summary>
+      <div class="mu-list">
+        {% for o in others %}{{ matchup_row(o) }}{% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% if current_user.is_coach %}
+    <div class="sticky-save mt-3">
+      <button type="submit" class="btn btn-primary w-100">Save matchups</button>
+    </div>
+    {% endif %}
+  </form>
+  {% else %}
+  <div class="uc-empty card py-5">
+    <div class="uc-empty-icon"><i class="bi bi-people"></i></div>
+    <p>Add their players to this report to plan matchups.</p>
+    {% if current_user.is_coach %}
+    <a href="{{ url_for('scouting.add_players', report_id=report.id) }}" class="btn btn-primary btn-sm">Paste their roster</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ m.scripts() }}
+{% endblock %}

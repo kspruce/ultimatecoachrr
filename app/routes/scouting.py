@@ -1,14 +1,17 @@
+import os
 import re
 from collections import OrderedDict
-from datetime import date
+from datetime import date, datetime
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_required
+from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request, jsonify, send_file
+from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from app import db
 from app.models.scouting import (ScoutingReport, OpponentPlayer, ScoutingClip, POSITIONS, TAG_LABELS,
-                                 format_time, games_against, opponent_key)
+                                 OFFENSE_TAGS, DEFENSE_TAGS, DEFENDER_ROLES, ROLE_LABELS, can_mark, defender_gender,
+                                 format_time, games_against, matchup_reasons, opponent_key, suggest_matchups)
+from app.models.player import Player
 from app.models.game import Game
 from app.forms.scouting import (ScoutingReportForm, OpponentPlayerForm, ScoutingClipForm, ScoutingFilterForm,
                                 BulkPlayersForm)
@@ -21,6 +24,13 @@ bp = Blueprint('scouting', __name__, url_prefix='/scouting')
 # Tag key -> label, for the templates (and the macros they import)
 bp.add_app_template_global(TAG_LABELS, 'scouting_tag_labels')
 bp.add_app_template_filter(format_time, 'scouting_time')
+bp.add_app_template_global(ROLE_LABELS, 'scouting_role_labels')
+
+
+@bp.app_template_filter('role_labels')
+def role_labels(value):
+    """'huck_stopper,deep_d' -> 'Huck stopper, Deep defender'."""
+    return ', '.join(ROLE_LABELS.get(k, k) for k in (value or '').split(',') if k)
 
 
 def _report_or_404(report_id):
@@ -110,7 +120,23 @@ def index():
         groups[key]['reports'].append(report)
 
     filtered = bool(q or tournament_id or tag or date_from or date_to)
+
+    # Each filter in use, with a link that drops just that one
+    params = {'q': q or None, 'tournament_id': tournament_id or None, 'tag': tag or None,
+              'date_from': date_from.isoformat() if date_from else None,
+              'date_to': date_to.isoformat() if date_to else None, 'group': group or None}
+    labels = {
+        'q': f'"{q}"',
+        'tournament_id': dict(form.tournament_id.choices).get(tournament_id),
+        'tag': TAG_LABELS.get(tag),
+        'date_from': f'From {date_from.strftime("%d %b %Y")}' if date_from else None,
+        'date_to': f'To {date_to.strftime("%d %b %Y")}' if date_to else None,
+    }
+    active_filters = [(label, url_for('scouting.index', **{k: v for k, v in params.items() if k != key and v}))
+                      for key, label in labels.items() if params[key]]
+
     return render_template('scouting/index.html', form=form, groups=list(groups.values()), group=group,
+                           active_filters=active_filters,
                            counts=counts, report_count=len(reports), filtered=filtered,
                            any_reports=filtered or bool(reports) or ScoutingReport.query.filter_by(
                                team_organization_id=team_id).first() is not None)
@@ -269,7 +295,105 @@ def detail(report_id):
         if r.opponent_key == report.opponent_key]
     games = games_against(team_id, report.opponent_key)
     return render_template('scouting/detail.html', report=report, players=players, clips=_clips(report),
-                           history=history, games=games, record=_record(games))
+                           history=history, games=games, record=_record(games), next_game=_next_game(games),
+                           reasons={p.id: matchup_reasons(p, p.matched_player) for p in players if p.matched_player},
+                           uncovered=[p for p in players if p.on_matchup_board and not p.matched_player_id],
+                           offense_tags=OFFENSE_TAGS, defense_tags=DEFENSE_TAGS)
+
+
+def _next_game(games):
+    """The soonest unplayed game from today on, if there is one."""
+    upcoming = [g for g in games if g.date and g.date >= date.today() and not (g.our_score or g.their_score)]
+    return min(upcoming, key=lambda g: g.date) if upcoming else None
+
+
+def _wants_json():
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
+
+
+# Where a quick note goes: section -> (report column, label, is it a one-per-line list)
+NOTE_SECTIONS = {
+    'offense': ('offense_strategy', 'Offence', False),
+    'defense': ('defense_strategy', 'Defence', False),
+    'strength': ('strengths', 'Strengths', True),
+    'weakness': ('weaknesses', 'Weaknesses', True),
+    'note': ('notes', 'Notes', False),
+}
+
+
+def _append_line(existing, line):
+    return f'{existing.rstrip()}\n{line}' if (existing or '').strip() else line
+
+
+@bp.route('/<int:report_id>/note', methods=['POST'])
+@login_required
+@coach_required
+def add_note(report_id):
+    """A quick line added while watching: to a section of the report or to one player."""
+    report = _report_or_404(report_id)
+    text = ' '.join((request.form.get('text') or '').split())[:1000]
+    section = request.form.get('section', 'note')
+    if not text:
+        message, ok = 'Type a note first.', False
+    else:
+        # The time on the coach's phone, e.g. "14:05", so notes read in order
+        clock = request.form.get('time', '')
+        stamped = f'[{clock}] {text}' if re.fullmatch(r'\d{1,2}:\d{2}', clock) else text
+        player = None
+        if section.startswith('player:'):
+            player = OpponentPlayer.query.filter_by(id=int(section[7:]) if section[7:].isdigit() else 0,
+                                                    scouting_report_id=report.id).first()
+        if player:
+            player.notes = _append_line(player.notes, stamped)
+            where = player.name
+        elif section in NOTE_SECTIONS:
+            column, where, is_list = NOTE_SECTIONS[section]
+            setattr(report, column, _append_line(getattr(report, column), text if is_list else stamped))
+        else:
+            message, ok, where = 'Pick where the note goes.', False, None
+        if section in NOTE_SECTIONS or player:
+            report.updated_at = datetime.utcnow()
+            db.session.commit()
+            message, ok = f'Added to {where}.', True
+
+    if _wants_json():
+        return jsonify({'success': ok, 'message': message}), (200 if ok else 400)
+    flash(message, 'success' if ok else 'danger')
+    return redirect(url_for('scouting.detail', report_id=report.id))
+
+
+@bp.route('/<int:report_id>/tag', methods=['POST'])
+@login_required
+@coach_required
+def toggle_tag(report_id):
+    """Switch one offence or defence look on or off."""
+    report = _report_or_404(report_id)
+    tag = request.form.get('tag', '')
+    column = ('offense_tags' if tag in dict(OFFENSE_TAGS) else
+              'defense_tags' if tag in dict(DEFENSE_TAGS) else None)
+    if not column:
+        if _wants_json():
+            return jsonify({'success': False, 'message': 'Unknown look.'}), 400
+        return redirect(url_for('scouting.detail', report_id=report.id))
+    tags = [t for t in (getattr(report, column) or '').split(',') if t]
+    on = tag not in tags
+    tags = tags + [tag] if on else [t for t in tags if t != tag]
+    setattr(report, column, ','.join(tags) or None)
+    report.updated_at = datetime.utcnow()
+    db.session.commit()
+    if _wants_json():
+        return jsonify({'success': True, 'on': on, 'label': TAG_LABELS[tag]})
+    return redirect(url_for('scouting.detail', report_id=report.id))
+
+
+@bp.route('/sw.js')
+def service_worker():
+    """Keeps the game cards a phone has opened readable when the signal drops.
+    Served from /scouting/ so it can only ever handle scouting pages."""
+    response = send_file(os.path.join(current_app.static_folder, 'js', 'scouting_sw.js'),
+                         mimetype='application/javascript', max_age=0)
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 
 @bp.route('/<int:report_id>/card')
@@ -283,7 +407,97 @@ def card(report_id):
     games = [g for g in games_against(get_current_team_id(), report.opponent_key)
              if (g.our_score or 0) or (g.their_score or 0)]
     return render_template('scouting/card.html', report=report, threats=threats, matchups=matchups,
-                           last_game=games[0] if games else None, record=_record(games))
+                           reasons={p.id: matchup_reasons(p, p.matched_player) for p in matchups},
+                           uncovered=[p for p in players if p.on_matchup_board and not p.matched_player_id],
+                           last_game=games[0] if games else None, record=_record(games),
+                           rendered_at=datetime.utcnow().isoformat() + 'Z')
+
+
+def _defenders(opponents=()):
+    """Our active players, plus anyone who has left but is still down to mark someone."""
+    team_id = get_current_team_id()
+    players = Player.query.filter_by(team_organization_id=team_id, active=True).all()
+    have = {p.id for p in players}
+    missing = {o.matched_player_id for o in opponents if o.matched_player_id and o.matched_player_id not in have}
+    if missing:
+        players += Player.query.filter(Player.id.in_(missing), Player.team_organization_id == team_id).all()
+    return sorted(players, key=lambda p: p.name.lower())
+
+
+@bp.route('/<int:report_id>/matchups', methods=['GET', 'POST'])
+@login_required
+def matchups(report_id):
+    """Who marks whom: the coach's picks, and suggestions from what each side is good at."""
+    report = _report_or_404(report_id)
+    opponents = _players(report)
+    defenders = _defenders(opponents)
+
+    if request.method == 'POST':
+        if not current_user.is_coach:
+            flash('Only coaches can change matchups.', 'danger')
+            return redirect(url_for('scouting.matchups', report_id=report.id))
+        ours = {d.id: d for d in defenders}
+        theirs = {o.id: o for o in opponents}
+        for o in opponents:
+            field = f'match-{o.id}'
+            if field in request.form:
+                chosen = request.form.get(field, type=int)
+                o.matched_player_id = chosen if chosen in ours else None
+        message = 'Matchups saved.'
+        use = request.form.get('use', '')
+        if re.fullmatch(r'\d+:\d+', use):
+            opponent_id, defender_id = (int(x) for x in use.split(':'))
+            if opponent_id in theirs and defender_id in ours:
+                theirs[opponent_id].matched_player_id = defender_id
+                message = f'{ours[defender_id].name} marks {theirs[opponent_id].name}.'
+        if request.form.get('use_all'):
+            suggested = suggest_matchups(opponents, defenders)
+            for opponent_id, (defender, _) in suggested.items():
+                theirs[opponent_id].matched_player_id = defender.id
+            message = (f'Used {len(suggested)} suggestion{"s" if len(suggested) != 1 else ""}.' if suggested
+                       else 'No suggestions to use.')
+        report.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash(message, 'success')
+        return redirect(url_for('scouting.matchups', report_id=report.id))
+
+    suggestions = suggest_matchups(opponents, defenders)
+    board = [o for o in opponents if o.on_matchup_board]
+    marking = {}
+    for o in opponents:
+        if o.matched_player_id:
+            marking.setdefault(o.matched_player_id, []).append(o)
+    return render_template('scouting/matchups.html', report=report, board=board,
+                           others=[o for o in opponents if not o.on_matchup_board], defenders=defenders,
+                           suggestions=suggestions, reasons={o.id: matchup_reasons(o, o.matched_player)
+                                                             for o in opponents if o.matched_player},
+                           doubled={pid: os for pid, os in marking.items() if len(os) > 1},
+                           can_mark=can_mark, roles_set=any(d.defensive_roles for d in defenders),
+                           typed=any(o.threat_roles for o in opponents))
+
+
+@bp.route('/defenders', methods=['GET', 'POST'])
+@login_required
+@coach_required
+def defenders():
+    """What each of our players is good at marking, for the matchup suggestions."""
+    players = _defenders()
+    valid = dict(DEFENDER_ROLES)
+    if request.method == 'POST':
+        for player in players:
+            roles = [r for r in request.form.getlist(f'roles-{player.id}') if r in valid]
+            player.defensive_roles = ','.join(roles) or None
+        db.session.commit()
+        flash('Defensive strengths saved.', 'success')
+        back = request.args.get('report', type=int)
+        if back and ScoutingReport.query.filter_by(id=back, team_organization_id=get_current_team_id()).first():
+            return redirect(url_for('scouting.matchups', report_id=back))
+        return redirect(url_for('scouting.defenders'))
+    # Mixed teams mark by gender match, so group them that way
+    groups = [(heading, [p for p in players if defender_gender(p) == key])
+              for key, heading in (('female', 'Women-matching'), ('male', 'Men-matching'), (None, 'Others'))]
+    return render_template('scouting/defenders.html', players=players, groups=groups, roles=DEFENDER_ROLES,
+                           report_id=request.args.get('report', type=int))
 
 
 @bp.route('/<int:report_id>/players')
@@ -315,7 +529,8 @@ def add_player(report_id):
             return redirect(url_for('scouting.add_player', report_id=report.id))
         return redirect(url_for('scouting.players', report_id=report.id))
 
-    return render_template('scouting/player_form.html', form=form, report=report, title='Add Player')
+    return render_template('scouting/player_form.html', form=form, report=report, title='Add Player',
+                           draft_key=f'player-new-{report.id}')
 
 
 ROSTER_LINE = re.compile(
@@ -377,9 +592,12 @@ def edit_player(player_id):
         form.populate_obj(player)
         db.session.commit()
         flash(f'Player "{player.name}" has been updated!', 'success')
+        if request.args.get('back') == 'matchups':
+            return redirect(url_for('scouting.matchups', report_id=player.scouting_report_id))
         return redirect(url_for('scouting.players', report_id=player.scouting_report_id))
 
-    return render_template('scouting/player_form.html', form=form, player=player, report=report, title='Edit Player')
+    return render_template('scouting/player_form.html', form=form, player=player, report=report, title='Edit Player',
+                           draft_key=f'player-{player.id}')
 
 
 @bp.route('/delete_player/<int:player_id>', methods=['POST'])

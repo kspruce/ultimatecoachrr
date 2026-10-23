@@ -49,6 +49,9 @@ class Player(db.Model):
     # Development tracking
     notes = db.Column(db.Text)
 
+    # What they're good at marking (keys of scouting.DEFENDER_ROLES), comma-separated
+    defensive_roles = db.Column(db.String(255))
+
     short_term_goals = db.Column(db.Text)
     mid_term_goals = db.Column(db.Text)
     long_term_goals = db.Column(db.Text)

@@ -45,6 +45,30 @@
 .info-row > span:first-child { color:var(--uc-gray-400) }
 .result-w { color:var(--uc-green); font-weight:700 }
 .result-l { color:var(--uc-red); font-weight:700 }
+.mu-line { padding:.45rem 0; border-bottom:1px solid var(--uc-gray-100) }
+.mu-line:last-of-type { border-bottom:none }
+.mu-pair { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; font-size:.9rem }
+.mu-why { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.25rem }
+.mu-why span { font-size:.72rem; color:var(--uc-green); background:color-mix(in srgb, var(--ok) 10%, transparent);
+  border-radius:6px; padding:.1rem .45rem }
+.record-line { font-size:.85rem; color:var(--uc-gray-600); margin:.15rem 0 .35rem }
+.section-bar { position:sticky; top:var(--nav-h, 60px); z-index:1020; display:flex; margin:0 calc(var(--bs-gutter-x, 1.5rem) * -.5) 1rem;
+  background:var(--bg, var(--uc-gray-50)); border-bottom:1px solid var(--uc-card-border) }
+.section-bar { overflow-x:auto; scrollbar-width:none }
+.section-bar::-webkit-scrollbar { display:none }
+.section-bar a { flex:1 0 auto; text-align:center; padding:.7rem .6rem; font-size:.85rem; font-weight:600; white-space:nowrap;
+  color:var(--uc-gray-600); text-decoration:none; border-bottom:2px solid transparent }
+.section-bar a.active { color:var(--uc-gray-800); border-bottom-color:var(--club-ink) }
+.section-bar a span { font-size:.7rem; color:var(--uc-gray-400) }
+.offcanvas.quick-note { --bs-offcanvas-height:auto; height:auto; max-height:85vh; border-radius:16px 16px 0 0 }
+.btn.look-toggle { border:1px solid transparent; --bs-btn-color:currentColor; --bs-btn-hover-color:currentColor;
+  --bs-btn-active-color:currentColor }
+.btn.look-o { --bs-btn-bg:color-mix(in srgb, var(--club-ink) 10%, transparent); --bs-btn-hover-bg:var(--bs-btn-bg);
+  --bs-btn-active-bg:var(--bs-btn-bg); color:var(--uc-blue) }
+.btn.look-d { --bs-btn-bg:color-mix(in srgb, var(--bad) 10%, transparent); --bs-btn-hover-bg:var(--bs-btn-bg);
+  --bs-btn-active-bg:var(--bs-btn-bg); color:var(--uc-red) }
+.look-toggle.on { border-color:currentColor; font-weight:700 }
+.look-toggle.on::before { content:'\F26E'; font-family:'bootstrap-icons'; margin-right:.25rem }
 @media print {
   .uc-navbar, .footer, .no-print, .btn, form { display:none !important }
   .card { break-inside:avoid; border:1px solid #ccc !important; box-shadow:none !important }
@@ -52,7 +76,7 @@
 }
 </style>
 
-<div class="container py-4">
+<div class="container py-4 scouting-page">
 
   <div class="uc-page-header mb-3">
     <div>
@@ -63,13 +87,23 @@
         {% if report.game %} · <a href="{{ url_for('game.detail', game_id=report.game.id) }}">Game {{ report.game.date.strftime('%d %b') if report.game.date else '' }}
           {% if report.game.our_score or report.game.their_score %}({{ report.game.result_string }}){% endif %}</a>{% endif %}
       </p>
+      {% if record.played or next_game %}
+      <p class="record-line">
+        {% if record.played %}<strong>{{ record.wins }}–{{ record.losses }}{% if record.ties %}–{{ record.ties }}{% endif %}</strong> all time{% endif %}
+        {% if record.played and next_game %} · {% endif %}
+        {% if next_game %}next game <a href="{{ url_for('game.detail', game_id=next_game.id) }}">{{ next_game.date.strftime('%a %d %b') }}</a>{% endif %}
+      </p>
+      {% endif %}
       {% if report.offense_tag_list or report.defense_tag_list %}<div>{{ m.tag_chips(report) }}</div>{% endif %}
     </div>
-    <div class="d-flex gap-2 flex-wrap no-print">
+    <div class="d-none d-lg-flex gap-2 flex-wrap no-print">
       <a href="{{ url_for('scouting.card', report_id=report.id) }}" class="btn btn-primary btn-sm">
         <i class="bi bi-card-text me-1"></i>Game card
       </a>
       {% if current_user.is_coach %}
+      <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#quickNote">
+        <i class="bi bi-plus-lg me-1"></i>Note
+      </button>
       <a href="{{ url_for('scouting.edit_report', report_id=report.id) }}" class="btn btn-outline-primary btn-sm">
         <i class="bi bi-pencil me-1"></i>Edit
       </a>
@@ -80,11 +114,20 @@
     </div>
   </div>
 
+  <!-- Jump between sections on a phone -->
+  <nav class="section-bar d-lg-none no-print" aria-label="Report sections">
+    <a href="#plan">Plan</a>
+    <a href="#matchups">Matchups</a>
+    <a href="#players">Players{% if players %} <span>{{ players|length }}</span>{% endif %}</a>
+    <a href="#clips">Clips{% if clips %} <span>{{ clips|length }}</span>{% endif %}</a>
+    <a href="#history">History</a>
+  </nav>
+
   <div class="row g-4">
     <div class="col-lg-8">
 
       <!-- Game plan -->
-      <div class="card mb-4">
+      <div class="card mb-4 scout-anchor" id="plan">
         <div class="card-header">
           <h5 class="mb-0"><i class="bi bi-check2-square me-2" style="color:var(--uc-green)"></i>Our Game Plan</h5>
         </div>
@@ -111,21 +154,38 @@
             {% endif %}
           {% endif %}
 
-          {% set matchups = players|selectattr('matched_player')|list %}
-          {% if matchups %}
-          <div class="section-kicker mt-3">Key matchups</div>
-          <div class="row g-2">
-            {% for p in matchups %}
-            <div class="col-md-6">
-              <div class="d-flex flex-wrap align-items-center gap-2 small">
-                <strong class="text-nowrap">{{ p.matched_player.name }}</strong>
-                <i class="bi bi-arrow-left-right text-muted"></i>
-                <span class="text-nowrap">{% if p.jersey_number %}#{{ p.jersey_number }} {% endif %}{{ p.name }}</span>
-                <span class="text-nowrap">{{ m.threat_badge(p, small=true) }}</span>
-              </div>
+        </div>
+      </div>
+
+      <!-- Matchups -->
+      {% set matchups = players|selectattr('matched_player')|list %}
+      <div class="card mb-4 scout-anchor" id="matchups">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-blue)"></i>Matchups</h5>
+          <a href="{{ url_for('scouting.matchups', report_id=report.id) }}" class="btn btn-sm btn-outline-primary no-print">Matchup board</a>
+        </div>
+        <div class="card-body">
+          {% for p in matchups %}
+          <div class="mu-line">
+            <div class="mu-pair">
+              <strong>{{ p.matched_player.name }}</strong>
+              <i class="bi bi-arrow-left-right text-muted"></i>
+              <span>{% if p.jersey_number %}#{{ p.jersey_number }} {% endif %}{{ p.name }}</span>
+              {{ m.threat_badge(p, small=true) }}
             </div>
-            {% endfor %}
+            {% if reasons.get(p.id) %}
+            <div class="mu-why">{% for theirs, ours in reasons[p.id] %}<span>{{ ours }} vs {{ theirs|lower }}</span>{% endfor %}</div>
+            {% endif %}
           </div>
+          {% endfor %}
+          {% if uncovered %}
+          <div class="small {{ 'mt-2' if matchups }} text-muted">
+            <i class="bi bi-exclamation-circle me-1" style="color:var(--warn)"></i>
+            No one on {{ uncovered|map(attribute='name')|join(', ') }} yet.
+            {% if current_user.is_coach %}<a href="{{ url_for('scouting.matchups', report_id=report.id) }}">Pick markers</a>{% endif %}
+          </div>
+          {% elif not matchups %}
+          <p class="small text-muted mb-0">Flag their key threats, then pick who of ours marks each one{% if current_user.is_coach %} on the <a href="{{ url_for('scouting.matchups', report_id=report.id) }}">matchup board</a>{% endif %}.</p>
           {% endif %}
         </div>
       </div>
@@ -186,7 +246,7 @@
       </div>
 
       <!-- Players -->
-      <div class="card mb-4">
+      <div class="card mb-4 scout-anchor" id="players">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-red)"></i>Players</h5>
           <div class="d-flex gap-2 no-print">
@@ -241,7 +301,7 @@
       </div>
 
       <!-- Clips -->
-      <div class="card">
+      <div class="card scout-anchor" id="clips">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0"><i class="bi bi-play-circle me-2" style="color:var(--uc-purple)"></i>Video Clips {% if clips %}({{ clips|length }}){% endif %}</h5>
           <div class="d-flex gap-2 no-print">
@@ -286,7 +346,7 @@
     <div class="col-lg-4">
 
       {% if current_user.is_coach %}
-      <div class="card mb-4 no-print">
+      <div class="card mb-4 no-print d-none d-lg-block">
         <div class="card-header"><h5 class="mb-0">Quick Actions</h5></div>
         <div class="card-body d-flex flex-column gap-2">
           <a href="{{ url_for('scouting.add_player', report_id=report.id) }}" class="qa-list-btn">
@@ -306,7 +366,7 @@
       {% endif %}
 
       <!-- Head to head -->
-      <div class="card mb-4">
+      <div class="card mb-4 scout-anchor" id="history">
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Head to Head</h5>
           <a href="{{ url_for('scouting.opponent', name=report.team_name) }}" class="small no-print">History →</a>
@@ -402,5 +462,84 @@
       </div>
     </div>
   </div>
+
+  <div class="d-lg-none" style="height:4.5rem" aria-hidden="true"></div>
 </div>
+
+<!-- Phone: the main actions stay at the bottom of the screen -->
+<div class="phone-bar no-print scouting-page">
+  <a href="{{ url_for('scouting.card', report_id=report.id) }}" class="btn btn-primary"><i class="bi bi-card-text"></i>Card</a>
+  <a href="{{ url_for('scouting.matchups', report_id=report.id) }}" class="btn btn-outline-primary"><i class="bi bi-people"></i>Matchups</a>
+  {% if current_user.is_coach %}
+  <button type="button" class="btn btn-outline-primary" data-bs-toggle="offcanvas" data-bs-target="#quickNote"><i class="bi bi-plus-lg"></i>Note</button>
+  <div class="dropup" style="flex:0 0 auto">
+    <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots"></i></button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="{{ url_for('scouting.edit_report', report_id=report.id) }}"><i class="bi bi-pencil me-2"></i>Edit report</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('scouting.add_player', report_id=report.id) }}"><i class="bi bi-person-plus me-2"></i>Add a player</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('scouting.add_players', report_id=report.id) }}"><i class="bi bi-list-ol me-2"></i>Paste a roster</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('scouting.add_clip', report_id=report.id) }}"><i class="bi bi-camera-video me-2"></i>Add a clip</a></li>
+      <li><form method="post" action="{{ url_for('scouting.copy_report', report_id=report.id) }}" class="m-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="dropdown-item"><i class="bi bi-files me-2"></i>New report from this one</button></form></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{{ url_for('scouting.index') }}"><i class="bi bi-arrow-left me-2"></i>All reports</a></li>
+    </ul>
+  </div>
+  {% else %}
+  <a href="{{ url_for('scouting.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>Reports</a>
+  {% endif %}
+</div>
+
+{% if current_user.is_coach %}
+<!-- Quick note: a line typed (or dictated) while watching them play -->
+<div class="offcanvas offcanvas-bottom scouting-page quick-note" tabindex="-1" id="quickNote" aria-labelledby="quickNoteLabel"
+     data-tag-url="{{ url_for('scouting.toggle_tag', report_id=report.id) }}">
+  <div class="offcanvas-header pb-1">
+    <h5 class="offcanvas-title" id="quickNoteLabel">Quick note · {{ report.team_name }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body pt-1">
+    <form method="post" action="{{ url_for('scouting.add_note', report_id=report.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="section-kicker mb-1">Goes to</div>
+      <div class="scroll-strip mb-2" role="radiogroup" aria-label="Where the note goes">
+        {% for value, label in [('note', 'Notes'), ('offense', 'Offence'), ('defense', 'Defence'), ('weakness', 'Weakness'), ('strength', 'Strength')] %}
+        <input type="radio" class="btn-check" name="section" id="ns-{{ value }}" value="{{ value }}" {% if loop.first %}checked{% endif %}>
+        <label class="btn btn-sm btn-outline-secondary note-chip" for="ns-{{ value }}">{{ label }}</label>
+        {% endfor %}
+        {% for p in players %}
+        <input type="radio" class="btn-check" name="section" id="ns-p{{ p.id }}" value="player:{{ p.id }}">
+        <label class="btn btn-sm btn-outline-secondary note-chip" for="ns-p{{ p.id }}">{% if p.jersey_number %}#{{ p.jersey_number }} {% endif %}{{ p.name }}</label>
+        {% endfor %}
+      </div>
+      <div class="d-flex gap-2 align-items-end">
+        <textarea name="text" class="form-control" rows="2" maxlength="1000" data-autogrow
+                  placeholder="e.g. Switching to zone on the downwind end" aria-label="Note" enterkeyhint="send"></textarea>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+      <div data-note-status class="small mt-2 text-muted">Tip: use your keyboard's microphone to dictate.</div>
+    </form>
+
+    <div class="section-kicker mt-3 mb-1">Looks they're showing <span class="text-muted fw-normal text-lowercase">(tap to switch on or off)</span></div>
+    <div class="scroll-strip mb-1">
+      {% for key, label in offense_tags %}
+      {% set on = key in report.offense_tag_list %}
+      <button type="button" class="btn btn-sm note-chip look-toggle look-o{% if on %} on{% endif %}" data-tag="{{ key }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+    <div class="scroll-strip">
+      {% for key, label in defense_tags %}
+      {% set on = key in report.defense_tag_list %}
+      <button type="button" class="btn btn-sm note-chip look-toggle look-d{% if on %} on{% endif %}" data-tag="{{ key }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ m.scripts() }}
 {% endblock %}
