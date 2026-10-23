@@ -1,0 +1,37 @@
+{% extends "handbook/_layout.html" %}
+
+{% block hb_content %}
+<div class="uc-page-header">
+  <div>
+    <div class="hb-label">{{ section_title }}</div>
+    <h1>Edit page</h1>
+    <p>Changes show straight away for every leader on the team.</p>
+  </div>
+</div>
+<form method="post" class="hb-card hb-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3">
+    <label class="form-label" for="title">Title</label>
+    <input class="form-control" id="title" name="title" value="{{ page.title }}" maxlength="200" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="lead">Lead</label>
+    <textarea class="form-control" id="lead" name="lead" rows="2">{{ page.lead or '' }}</textarea>
+    <div class="form-text">The short summary under the title.</div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="body_html">Page</label>
+    <textarea class="form-control hb-code" id="body_html" name="body_html" rows="24" spellcheck="true">{{ page.body_html or '' }}</textarea>
+    <div class="form-text">
+      Simple HTML: <code>&lt;p&gt;</code>, <code>&lt;h4&gt;</code>, <code>&lt;ul&gt;&lt;li&gt;</code>, <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, tables and links.
+      Link to another handbook page with <code>&lt;a href="#page-id"&gt;</code>, using the last part of its address.
+      Boxes: <code>&lt;div class="herd"&gt;</code> (At Herd), <code>&lt;div class="try"&gt;</code> (Try this).
+      Anything else, like scripts or styles, is removed when you save.
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('handbook.page', slug=page.slug) }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -203,6 +203,43 @@ def import_season_plan_command(folder, team_slug, season, dry_run, replace, buil
         click.echo('The Season plan feature is off for this team: switch it on in Team settings > Features.')
 
 
+@click.command('import-handbook')
+@click.argument('path', type=click.Path(exists=True, dir_okay=False))
+@click.option('--team', 'team_slug', required=True, help='Slug of the team to import into')
+@click.option('--dry-run', is_flag=True, help='Parse and report, but write nothing')
+@click.option('--replace', is_flag=True, help='Overwrite pages already on the site with the file\'s wording')
+@with_appcontext
+def import_handbook_command(path, team_slug, dry_run, replace):
+    """Load the leadership handbook (imports/leadership-handbook/handbook.html)
+    into a team.
+
+    Re-running adds new pages and reorders, but leaves pages already on the
+    site as leaders edited them unless --replace is given. The team's
+    Leadership handbook feature is left as it is; switch it on in team
+    settings.
+    """
+    from app.models.team_organization import TeamOrganization
+    from app.utils.handbook import import_handbook, HandbookImportError
+
+    team = TeamOrganization.query.filter_by(slug=team_slug).first()
+    if team is None:
+        raise click.ClickException(f'No team with slug {team_slug!r}')
+
+    try:
+        report = import_handbook(path, team, dry_run=dry_run, replace=replace)
+    except HandbookImportError as e:
+        click.echo(f'Import failed, nothing was written ({len(e.errors)} problems):', err=True)
+        for error in e.errors:
+            click.echo(f'  - {error}', err=True)
+        raise SystemExit(1)
+
+    click.echo(f'{team.name} ({team.slug})')
+    click.echo(report.text())
+    settings = team.settings
+    if not dry_run and not (settings and settings.leadership_handbook_enabled):
+        click.echo('The Leadership handbook feature is off for this team: switch it on in Team settings > Features.')
+
+
 @click.command('import-programme')
 @click.argument('folder', type=click.Path(exists=True, file_okay=False))
 @click.option('--team', 'team_slug', required=True, help='Slug of the team to import into')
@@ -274,6 +311,7 @@ def register_commands(app):
     app.cli.add_command(export_data)
     app.cli.add_command(import_season_command)
     app.cli.add_command(import_season_plan_command)
+    app.cli.add_command(import_handbook_command)
     app.cli.add_command(import_programme_command)
     app.cli.add_command(import_data)
     app.cli.add_command(show_models)
