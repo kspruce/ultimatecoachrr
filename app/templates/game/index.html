@@ -7,7 +7,7 @@
             <h1>Games</h1>
         </div>
         <div class="col-md-4 text-end">
-            {% if current_user.is_admin %}
+            {% if current_user.is_stat_taker %}
                 <a href="{{ url_for('game.add') }}" class="btn btn-outline-primary me-2">Add Game</a>
                 <a href="{{ url_for('game.add_multiple') }}" class="btn btn-primary">Add Multiple Games</a>
             {% endif %}
@@ -22,6 +22,7 @@
                 </div>
                 <div class="card-body">
                     <form method="get" action="{{ url_for('game.index') }}">
+                        {% for key in ('season', 'squad') %}{% if request.args.get(key) %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
                         <div class="row">
                             <div class="col-md-3">
                                 {{ form.tournament_id.label(class="form-label") }}
@@ -54,6 +55,17 @@
             <a href="{{ url_for('game.index', tournament_id=tournament.id) }}" class="btn btn-sm btn-outline-primary">{{ tournament.name }}</a>
         {% endfor %}
     </div>
+
+    {% if scoped %}
+    <p class="text-muted small mb-3" id="games-scope">
+        <i class="bi bi-funnel"></i>
+        Showing {% if viewing_season %}the {{ viewing_season.name }} season{% else %}all seasons{% endif %}{% if viewing_squad %}, {{ viewing_squad.name }} only{% endif %} (change it in the season menu at the top).
+        {% if hidden %}
+        {{ hidden }} more game{{ 's' if hidden != 1 }} {{ 'is' if hidden == 1 else 'are' }} in other {% if viewing_season and viewing_squad %}seasons or squads{% elif viewing_squad %}squads{% else %}seasons{% endif %}:
+        <a href="{{ url_for('game.index', season='all', squad='all', opponent=request.args.get('opponent') or None, result=request.args.get('result') or None) }}">show every game</a>.
+        {% endif %}
+    </p>
+    {% endif %}
 
     <div class="row">
         <div class="col-12">

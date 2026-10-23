@@ -424,3 +424,62 @@ def test_email_preference_is_saved_without_a_password(club):
     c.post('/auth/account', data={'action': 'notifications'})
     db.session.expire_all()
     assert db.session.get(User, club['users'][0]).email_event_updates is False
+
+
+def test_tournament_games_are_in_the_tournaments_season(club):
+    """A game added to a tournament goes in the tournament's season, whatever
+    its own date, so the games list for that season shows it."""
+    c = club['coach_client']
+    next_year = TODAY.year + 1
+    c.post('/tournaments/add', data={'name': 'Next year open', 'season': str(next_year), 'squad_id': ''})
+    t = Tournament.query.filter_by(name='Next year open').one()
+    c.post('/games/add', data={'opponent': 'Dated today', 'tournament_id': t.id, 'our_score': 0,
+                               'their_score': 0, 'date': TODAY.isoformat()})
+    c.post('/games/add', data={'opponent': 'No date', 'tournament_id': t.id, 'our_score': 0, 'their_score': 0})
+    c.post(f'/tournaments/{t.id}/schedule', data={'schedule': 'vs Pasted', 'action': 'save'})
+    db.session.expire_all()
+    games = Game.query.filter_by(tournament_id=t.id).all()
+    assert len(games) == 3 and {g.season_id for g in games} == {t.season_id}
+
+    def listed(url):
+        page = c.get(url).get_data(as_text=True)
+        return {g.opponent for g in games if f'/games/{g.id}"' in page}, page
+
+    shown, _ = listed(f'/games/?season={next_year}')
+    assert shown == {'Dated today', 'No date', 'Pasted'}
+    # Viewing this season: they're not listed, but the page says so and links to all
+    shown, page = listed('/games/')
+    assert shown == set()
+    assert '3 more games are in other seasons' in page and 'season=all' in page
+    shown, _ = listed('/games/?season=all&squad=all')
+    assert shown == {'Dated today', 'No date', 'Pasted'}
+
+
+def test_existing_games_are_moved_into_their_tournaments_season(club):
+    """The migration's repair: games already in the wrong season move."""
+    import importlib.util
+    import pathlib
+    from unittest import mock
+
+    from app.models.season import Season
+
+    t = db.session.get(Tournament, club['tournament'])
+    other = Season(team_organization_id=club['team'], year=TODAY.year + 5,
+                   start_date=date(TODAY.year + 5, 1, 1), end_date=date(TODAY.year + 5, 12, 31))
+    db.session.add(other)
+    db.session.flush()
+    game = Game(opponent='Stray', tournament_id=t.id, team_organization_id=club['team'], season_id=other.id)
+    db.session.add(game)
+    db.session.commit()
+    db.session.execute(db.text('UPDATE game SET season_id = :s WHERE id = :g'), {'s': other.id, 'g': game.id})
+    db.session.commit()
+
+    path = next(pathlib.Path('migrations/versions').glob('b5d7f9a1c3e6_*.py'))
+    spec = importlib.util.spec_from_file_location('repair', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with mock.patch.object(module, 'op', mock.Mock(execute=lambda sql: db.session.execute(db.text(sql)))):
+        module.upgrade()
+    db.session.commit()
+    db.session.expire_all()
+    assert db.session.get(Game, game.id).season_id == t.season_id

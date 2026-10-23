@@ -446,8 +446,9 @@ def _fill_seasons(session, flush_context, instances):
                 _set_season(obj, season)
                 if isinstance(obj, Tournament) and not obj.season:
                     obj.season = season.name
-            if isinstance(obj, Game) and obj.squad_id is None and obj.tournament is not None:
-                obj.squad_id = obj.tournament.squad_id
+            tournament = _game_tournament(session, obj) if isinstance(obj, Game) else None
+            if tournament is not None and obj.squad_id is None:
+                obj.squad_id = tournament.squad_id
 
 
 def _add_new_players_to_roster(session):
@@ -502,6 +503,18 @@ def _redated(obj):
     return state.attrs.start_date.history.has_changes()
 
 
+def _game_tournament(session, game):
+    """The game's tournament, also when only tournament_id was set (a new
+    game's relationship isn't loaded from its id until after the flush)."""
+    from app.models.tournament import Tournament
+
+    if game.tournament is not None:
+        return game.tournament
+    if game.tournament_id:
+        return session.get(Tournament, game.tournament_id)
+    return None
+
+
 def _season_for_row(session, obj, seasons, made):
     from app.models.game import Game
     from app.models.tournament import Tournament
@@ -509,12 +522,14 @@ def _season_for_row(session, obj, seasons, made):
     current = next((s for s in seasons if s.is_current), None)
     if isinstance(obj, Game):
         day = obj.date
-        if day is None and obj.tournament is not None:
-            linked = obj.tournament.season_obj or next(
-                (s for s in seasons if s.id is not None and s.id == obj.tournament.season_id), None)
+        tournament = _game_tournament(session, obj)
+        if tournament is not None:
+            # A tournament's games are in its season, whatever their own dates
+            linked = tournament.season_obj or next(
+                (s for s in seasons if s.id is not None and s.id == tournament.season_id), None)
             if linked is not None:
                 return linked
-            day = obj.tournament.start_date
+            day = day or tournament.start_date
     elif isinstance(obj, Tournament):
         day = obj.start_date
         if day is None:

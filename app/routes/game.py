@@ -18,7 +18,7 @@ from app.utils.tournament_rsvp import assign_default_players
 from app.models.scouting import scouting_for_game
 from app.utils.team_filter import get_current_team_id, team_player_ids
 from app.utils.point_flow import analysis_progress
-from app.utils.season import scope_games, scope_tournaments, team_squads, viewing_squad
+from app.utils.season import scope_games, scope_tournaments, team_squads, viewing_season, viewing_squad
 
 bp = Blueprint('game', __name__, url_prefix='/games')
 
@@ -43,10 +43,9 @@ def index():
     # Build query based on filters: a tournament, else the season (and squad) being viewed
     query = Game.query.filter_by(team_organization_id=get_current_team_id())
     
+    scoped = False
     if tournament_id and tournament_id > 0:
         query = query.filter(Game.tournament_id == tournament_id)
-    else:
-        query = scope_games(query)
     if opponent:
         query = query.filter(Game.opponent.ilike(f'%{opponent}%'))
     if result == 'win':
@@ -56,8 +55,17 @@ def index():
     elif result == 'tie':
         query = query.filter(Game.our_score == Game.their_score)
     
-    # Get games and sort by date (most recent first)
-    games = query.order_by(Game.date.desc()).all()
+    # Without a tournament picked, only the season (and squad) being viewed;
+    # say how many games that leaves out so none seem to be missing
+    hidden = 0
+    if not (tournament_id and tournament_id > 0):
+        everywhere = query.count()
+        query = scope_games(query)
+        scoped = viewing_season() is not None or viewing_squad() is not None
+        hidden = everywhere - query.count() if scoped else 0
+
+    # Get games and sort by date (most recent first); undated last
+    games = query.order_by(Game.date.is_(None), Game.date.desc(), Game.start_time, Game.id.desc()).all()
     
     # Get tournaments for quick filters
     tournaments = scope_tournaments(Tournament.query.filter_by(team_organization_id=get_current_team_id())).order_by(Tournament.start_date.desc()).all()
@@ -66,7 +74,9 @@ def index():
                          games=games, 
                          form=form,
                          delete_form=delete_form,
-                         tournaments=tournaments)
+                         tournaments=tournaments,
+                         scoped=scoped,
+                         hidden=hidden)
 
 @bp.route('/<int:game_id>')
 @login_required
