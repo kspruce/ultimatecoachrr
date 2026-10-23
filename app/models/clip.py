@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime
 from sqlalchemy import Integer, ForeignKey
+from app.utils.clip_video import youtube_embed_url
 
 # Association table for clip tags (video-level)
 clip_tag_relation = db.Table('clip_tag_relation',
@@ -36,6 +37,7 @@ class Clip(db.Model):
     view_count = db.Column(db.Integer, default=0)
     is_hidden = db.Column(db.Boolean, default=False)          # Admin can hide a clip from players
     is_flagged_for_sharing = db.Column(db.Boolean, default=False)  # Admin marks clip ready to share
+    share_version = db.Column(db.Integer, default=0, nullable=False)  # Bumped to revoke share links
     
     # Relationships
     game = db.relationship('Game', back_populates='clips')
@@ -74,30 +76,7 @@ class Clip(db.Model):
     @property
     def youtube_embed_url(self):
         """Return the YouTube embed URL for this clip."""
-        if not self.youtube_link:
-            return None
-        
-        # Extract video ID from YouTube link
-        if 'youtube.com/watch?v=' in self.youtube_link:
-            video_id = self.youtube_link.split('v=')[1].split('&')[0]
-        elif 'youtu.be/' in self.youtube_link:
-            video_id = self.youtube_link.split('youtu.be/')[1].split('?')[0]
-        else:
-            return None
-        
-        # Create embed URL with start time if available
-        embed_url = f'https://www.youtube.com/embed/{video_id}'
-        params = []
-        
-        if self.start_time:
-            params.append(f'start={self.start_time}')
-        if self.end_time:
-            params.append(f'end={self.end_time}')
-        
-        if params:
-            embed_url += '?' + '&'.join(params)
-        
-        return embed_url
+        return youtube_embed_url(self.youtube_link, self.start_time, self.end_time)
 
     @property
     def veo_embed_url(self):

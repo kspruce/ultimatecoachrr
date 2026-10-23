@@ -34,6 +34,7 @@ from app.models.fitness import FitnessMetric, FitnessRecord
 # Video and Analysis models
 from app.models.clip import Clip, ClipTag, ClipPointSegment
 from app.models.annotation import ClipAnnotation, AnnotationTag
+from app.models.clip_playlist import ClipPlaylist, ClipPlaylistItem
 from app.models.scouting import ScoutingReport, OpponentPlayer, ScoutingClip
 from app.models.cutting_skill import CuttingSkill
 
@@ -96,7 +97,7 @@ __all__ = [
     # Events & Actions
     'Event', 'Pull', 'Throw', 'GamePlayer',
     # Video & Clips
-    'Clip', 'ClipTag', 'ClipPointSegment', 'ClipAnnotation', 'AnnotationTag',
+    'Clip', 'ClipTag', 'ClipPointSegment', 'ClipAnnotation', 'AnnotationTag', 'ClipPlaylist', 'ClipPlaylistItem',
     # Scouting
     'ScoutingReport', 'OpponentPlayer', 'ScoutingClip',
     # Stats
