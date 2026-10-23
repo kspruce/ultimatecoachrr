@@ -24,7 +24,7 @@
                         <div class="row">
                             <div class="col-md-4">
                                 {{ form.season.label(class="form-label") }}
-                                {{ form.season(class="form-control") }}
+                                {{ form.season(class="form-select") }}
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label"> </label>
@@ -71,7 +71,7 @@
                                 {% endif %}
                             </td>
                             <td>{{ tournament.location or 'N/A' }}</td>
-                            <td>{{ tournament.season or 'N/A' }}</td>
+                            <td>{{ tournament.season_obj.name if tournament.season_obj else (tournament.season or 'N/A') }}{% if tournament.squad %} <span class="badge bg-light text-dark">{{ tournament.squad.name }}</span>{% endif %}</td>
                             <td>{{ tournament.game_count }}</td>
                             <td>{{ tournament.win_count }}-{{ tournament.loss_count }}</td>
                             <td>

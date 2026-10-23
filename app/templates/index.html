@@ -348,7 +348,7 @@
     </section>
     {% endif %}
     <section class="panel">
-      <div class="panel-h"><h2>Season {{ season.year if season else '' }}</h2>{% if not s or s.stats_enabled %}<a href="{{ url_for('stats_dashboard.index') }}">Stats →</a>{% endif %}</div>
+      <div class="panel-h"><h2>{% if season and season.year == 'all time' %}All time{% else %}Season {{ season.year if season else '' }}{% endif %}</h2>{% if not s or s.stats_enabled %}<a href="{{ url_for('stats_dashboard.index') }}">Stats →</a>{% endif %}</div>
       {% if season and season.games %}
       <div class="stat"><b>{{ season.wins }}–{{ season.losses }}</b><span>Won–lost · {{ season.win_rate }}% of {{ season.games }} games</span></div>
       <div class="stat">

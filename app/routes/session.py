@@ -15,6 +15,7 @@ import hashlib
 import hmac
 from flask_wtf.csrf import CSRFProtect
 from app.utils.utils import admin_required, coach_required
+from app.utils.season import scope_sessions
 from app.forms.session import (
     SessionRSVPForm, SessionPlanForm, DrillForm, 
     SessionComponentForm, AttendanceForm, SessionFilterForm, AdminBulkRSVPForm,
@@ -78,6 +79,8 @@ def index():
 
     if season:
         query = query.filter(SessionPlan.season == season)
+    else:
+        query = scope_sessions(query)  # the club season being viewed
     if phase.isdigit():
         query = query.filter(SessionPlan.phase_number == int(phase))
     if block:

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block styles %}{% include "seasons/_styles.html" %}{% endblock %}
+
+{% block content %}
+<div class="uc-settings">
+  {% include "team/_settings_nav.html" %}
+  <div>
+    <div class="uc-page-header">
+      <div>
+        <h1>{{ season.name }} roster{% if season.is_current %} <span class="badge bg-success align-middle" style="font-size:.8rem">Current</span>{% endif %}</h1>
+        <p>Squad, shirt number and position for {{ season.name }} only; other seasons keep their own.{% if season.is_current %} Players marked as left drop out of this season's pickers and sign-ups but keep their account and history.{% endif %}</p>
+      </div>
+      <a class="btn btn-outline-secondary" href="{{ url_for('seasons.index') }}">All seasons</a>
+    </div>
+
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="fs-card">
+        <div class="table-responsive">
+          <table class="table ss-table mb-0">
+            <thead><tr><th>Player</th>{% if squads %}<th>Squad</th>{% endif %}<th>Shirt</th><th>Position</th><th>Status</th><th>Remove</th></tr></thead>
+            <tbody>
+              {% for e in entries %}
+              <tr>
+                <td><a href="{{ url_for('team.player_detail', player_id=e.player_id) }}">{{ e.player.name }}</a>
+                  {% if e.left_date %}<div class="hint">Left {{ e.left_date.strftime('%d %b %Y') }}</div>{% endif %}</td>
+                {% if squads %}
+                <td><select class="form-select form-select-sm" name="squad_{{ e.id }}" aria-label="Squad for {{ e.player.name }}">
+                  <option value="">No squad</option>
+                  {% for sq in squads %}<option value="{{ sq.id }}" {% if e.squad_id == sq.id %}selected{% endif %}>{{ sq.name }}</option>{% endfor %}
+                </select></td>
+                {% endif %}
+                <td><input class="form-control form-control-sm shirt" type="number" min="0" max="999" name="jersey_{{ e.id }}" value="{{ e.jersey_number if e.jersey_number is not none else '' }}" aria-label="Shirt number for {{ e.player.name }}"></td>
+                <td><select class="form-select form-select-sm" name="position_{{ e.id }}" aria-label="Position for {{ e.player.name }}">
+                  {% for value, label in [('', '—'), ('handler', 'Handler'), ('cutter', 'Cutter'), ('hybrid', 'Hybrid')] %}<option value="{{ value }}" {% if (e.position or '') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select></td>
+                <td><select class="form-select form-select-sm" name="status_{{ e.id }}" aria-label="Status for {{ e.player.name }}">
+                  {% for value, label in statuses %}<option value="{{ value }}" {% if e.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select></td>
+                <td><input class="form-check-input" type="checkbox" name="remove_{{ e.id }}" value="1" aria-label="Take {{ e.player.name }} off the {{ season.name }} roster" title="Take off this season's roster (their games and stats are kept)"></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="hint">Nobody on the {{ season.name }} roster yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% if others %}
+      <div class="fs-card">
+        <h3>Add players to {{ season.name }}</h3>
+        <p class="hint">Players from other seasons. New players are added from the team roster's Add Player button.</p>
+        <div class="d-flex flex-wrap gap-3 mb-2">
+          {% for p in others %}
+          <label class="form-check m-0"><input class="form-check-input" type="checkbox" name="add_player_id" value="{{ p.id }}"> {{ p.name }}</label>
+          {% endfor %}
+        </div>
+        {% if squads %}
+        <label class="form-label small mb-0" for="add_squad_id">Into squad</label>
+        <select class="form-select form-select-sm" id="add_squad_id" name="add_squad_id" style="max-width:220px">
+          <option value="">No squad</option>
+          {% for sq in squads %}<option value="{{ sq.id }}">{{ sq.name }}</option>{% endfor %}
+        </select>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-end"><button class="btn btn-primary" type="submit">Save roster</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -627,7 +627,7 @@
                                     </div>
                                   </div>
                                 {% else %}
-                                  <input type="hidden" name="team_id" value="{{ current_user.team_organization_id }}">
+                                  <input type="hidden" name="team_id" value="{{ current_team.id if current_team }}">
                                   <div class="alert alert-secondary">
                                     Reset will be applied to your team only.
                                   </div>

@@ -1,7 +1,6 @@
 from flask import render_template, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models.player import Player
 from app.models.game import Game
 from jinja2.utils import htmlsafe_json_dumps  # JSON that is safe inside <script>
 from app.utils.team_filter import get_current_team_id
@@ -9,7 +8,8 @@ from app.utils.team_filter import get_current_team_id
 from app.routes.stats import bp
 from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_optimized_line_efficiency, calculate_per, calculate_team_avg_stats
-from app.stats.players import get_players_base_stats
+from app.stats.players import get_players_base_stats, get_point_ids_from_games
+from app.utils.season import scope_games, season_players, viewing_season, viewing_squad
 from app.stats.team import calculate_additional_team_metrics, calculate_game_stats, calculate_possession_based_team_metrics, calculate_team_summary, generate_player_connections, process_heatmap_data
 from app.stats.loaders import preload_game_points
 
@@ -18,18 +18,25 @@ from app.stats.loaders import preload_game_points
 @login_required
 def index():
     team_id = get_current_team_id()
-    players = Player.query.filter_by(active=True, team_organization_id=team_id).all()
-    recent_games = (Game.query.filter_by(team_organization_id=team_id)
+    # The season (and squad) being viewed; all time if "All time" is picked
+    season = viewing_season(team_id)
+    players = season_players(team_id)
+    recent_games = (scope_games(Game.query.filter_by(team_organization_id=team_id), team_id)
                     .options(db.joinedload(Game.tournament))
                     .order_by(Game.date.desc()).all())
 
     if not players or not recent_games:
         if not players:
             flash("No active players found", "warning")
+        elif season is not None:
+            flash(f"No games in the {season.name} season yet. Pick another season from the season menu to see "
+                  "earlier stats.", "info")
         return render_template('stats/index.html', **EMPTY_CONTEXT)
 
     # Load every game's points (and events) in one go for the calculations below
     preload_game_points(recent_games)
+    # Heatmap and connections for these games only (None: every game)
+    point_ids = (get_point_ids_from_games(recent_games) or [-1]) if season is not None or viewing_squad(team_id) else None
 
     team_summary = calculate_team_summary(recent_games)
     team_summary.update(calculate_additional_team_metrics(recent_games))
@@ -71,8 +78,8 @@ def index():
         d_line_men=d_line_men,
         o_line_efficiency=dict(o_line_efficiency),
         d_line_efficiency=dict(d_line_efficiency),
-        heatmap_data=htmlsafe_json_dumps(process_heatmap_data(limit=1000)),
-        connection_data=htmlsafe_json_dumps(generate_player_connections()),
+        heatmap_data=htmlsafe_json_dumps(process_heatmap_data(limit=1000, point_ids=point_ids)),
+        connection_data=htmlsafe_json_dumps(generate_player_connections(point_ids=point_ids)),
         team_avg_stats=calculate_team_avg_stats(player_stats),
         is_admin=current_user.is_admin,
         is_coach=current_user.is_coach,

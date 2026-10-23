@@ -46,7 +46,12 @@
       <p>This permanently deletes, straight away:</p>
       <ul>
         <li>every player, game, stat, session, drill, play, clip and note</li>
-        <li>all {{ members }} member account{{ '' if members == 1 else 's' }}{% if not current_user.is_superadmin %}, including yours{% endif %}</li>
+        <li>all {{ members }} member account{{ '' if members == 1 else 's' }}{% if not current_user.is_superadmin and not keeps_own_account %}, including yours{% endif %}</li>
+        {% if shared_members %}
+        <li>{{ shared_members }} member{{ '' if shared_members == 1 else 's' }} also on another team
+          {{ 'keeps their' if shared_members == 1 else 'keep their' }} account{% if keeps_own_account %} (you included){% endif %},
+          and just {{ 'comes' if shared_members == 1 else 'come' }} off this team</li>
+        {% endif %}
       </ul>
       <p>It can't be undone. Download your data first if you might want it.</p>
       <form method="post" action="{{ url_for('team.delete_team') }}" class="mt-3"

@@ -2,6 +2,7 @@
 from app.models.game import Game
 from app.models.point import Point, LineUp
 from app.utils.team_filter import get_current_team_id
+from app.utils.season import scope_games
 from app.stats.cache import get_cached_team_averages
 from app.stats.formulas import calculate_per
 from app.stats.players import get_players_base_stats
@@ -15,7 +16,9 @@ def get_player_game_history(player, tournament_id, game_id):
         games_query = games_query.filter_by(tournament_id=tournament_id)
     elif game_id:
         games_query = games_query.filter_by(id=game_id)
-    
+    else:
+        games_query = scope_games(games_query)  # the season (and squad) being viewed
+
     for game in games_query.order_by(Game.date.desc()).all():
         if LineUp.query.join(Point).filter(LineUp.player_id == player.id, Point.game_id == game.id).first():
             game_stats_dict = get_players_base_stats([player], [game])

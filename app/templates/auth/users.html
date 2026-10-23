@@ -57,7 +57,8 @@
                     <p class="text-muted small mb-0">
                         Share one link with the whole team (group chat, email, QR code). Anyone with it
                         can create a <strong>player</strong> account on {{ current_team.name }}. Turn it
-                        off once everyone has joined.
+                        off once everyone has joined. Players already on another team log in with the
+                        link instead, and keep one account for both teams.
                     </p>
                 </div>
                 <span class="badge {{ 'bg-success' if current_team.join_enabled else 'bg-secondary' }}">
@@ -174,14 +175,21 @@
                                 {{ 'Team Admin' if user.role == 'admin' else user.role|replace('_', ' ')|title }}
                             </span>
                             {% if user.is_superadmin %}<span class="badge bg-danger ms-1">Superadmin</span>{% endif %}
+                            {% if not is_superadmin and user.memberships|length > 1 %}
+                            <span class="badge bg-light text-dark border ms-1"
+                                  title="Also on {{ user.memberships|length - 1 }} other team{{ 's' if user.memberships|length > 2 }}, with the same login">
+                                <i class="bi bi-people"></i> +{{ user.memberships|length - 1 }}</span>
+                            {% endif %}
                         </td>
 
                         {% if is_superadmin %}
                         <td>
-                            {% if user.team_organization %}
+                            {% if user.memberships %}
+                                {% for m in user.memberships %}
                                 <span class="badge bg-light text-dark border" style="font-size:.75rem">
-                                    {{ user.team_organization.name }}
+                                    {{ m.team_organization.name }}
                                 </span>
+                                {% endfor %}
                             {% else %}
                                 <span class="badge bg-warning text-dark" style="font-size:.75rem">
                                     <i class="bi bi-exclamation-triangle me-1"></i>No team
@@ -224,6 +232,7 @@
                             </a>
 
                             {% if user.id != current_user.id %}
+                            {% if user.id in account_ids %}
                             <form method="POST"
                                   action="{{ url_for('auth.create_reset_link', user_id=user.id) }}"
                                   class="d-inline">
@@ -233,15 +242,24 @@
                                     Reset link
                                 </button>
                             </form>
+                            {% endif %}
 
                             <form method="POST"
                                   action="{{ url_for('auth.delete_user', user_id=user.id) }}"
                                   class="d-inline">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if user.memberships|length > 1 %}
+                                <button class="btn btn-sm btn-outline-danger"
+                                        title="They stay on their other teams"
+                                        onclick="return confirm('Remove this user from the team? Their account stays for their other teams.')">
+                                    Remove
+                                </button>
+                                {% else %}
                                 <button class="btn btn-sm btn-outline-danger"
                                         onclick="return confirm('Delete this user?')">
                                     Delete
                                 </button>
+                                {% endif %}
                             </form>
                             {% endif %}
                             {% else %}

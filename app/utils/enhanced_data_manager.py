@@ -806,6 +806,18 @@ class EnhancedDataManager:
 
     def import_all_data(self, import_dir, clear_existing=False):
         """Import all data from JSON files"""
+        from app.models.team_membership import add_missing_home_memberships
+        # Memberships come from the backup itself; backups from before teams
+        # had memberships get one per user for their home team afterwards
+        db.session.info['restoring_backup'] = True
+        try:
+            summary = self._import_all_data(import_dir, clear_existing)
+        finally:
+            db.session.info.pop('restoring_backup', None)
+        add_missing_home_memberships()
+        return summary
+
+    def _import_all_data(self, import_dir, clear_existing=False):
         logger.info(f"Starting import from directory: {import_dir}")
         
         if not os.path.exists(import_dir):

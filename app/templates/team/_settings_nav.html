@@ -3,6 +3,7 @@
   <div class="uc-eyebrow mb-2 px-3">Team settings</div>
   <a href="{{ url_for('team.colour_settings') }}" class="{% if request.endpoint == 'team.colour_settings' %}on{% endif %}"><i class="bi bi-palette"></i> Colours &amp; crest</a>
   <a href="{{ url_for('team.feature_settings') }}" class="{% if request.endpoint == 'team.feature_settings' %}on{% endif %}"><i class="bi bi-sliders"></i> Features</a>
+  <a href="{{ url_for('seasons.index') }}" class="{% if request.endpoint and request.endpoint.startswith('seasons.') %}on{% endif %}"><i class="bi bi-calendar3"></i> Seasons &amp; squads</a>
   <a href="{{ url_for('auth.users') }}"><i class="bi bi-people"></i> Members</a>
   {% if current_user.is_admin %}
   <a href="{{ url_for('team.data_settings') }}" class="{% if request.endpoint == 'team.data_settings' %}on{% endif %}"><i class="bi bi-database"></i> Your data</a>

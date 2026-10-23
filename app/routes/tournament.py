@@ -15,6 +15,8 @@ from app.forms.rsvp_form import RSVPForm
 from app.utils.utils import coach_required
 from wtforms import SubmitField
 from app.utils.team_filter import get_current_team_id, team_player_ids, team_row_or_404
+from app.utils.season import (current_season, get_or_create_season, label_year, scope_tournaments, season_for_date,
+                              team_seasons, team_squads, viewing_season, viewing_squad)
 
 bp = Blueprint('tournament', __name__, url_prefix='/tournaments')
 
@@ -25,18 +27,14 @@ def index():
     form = TournamentFilterForm()
     delete_form = FlaskForm()  # Add this for CSRF protection
     
-    # Get filter parameters
-    season = request.args.get('season', '')
-    
-    # Set form values from query parameters
-    form.season.data = season
-    
-    # Build query based on filters
-    query = Tournament.query.filter_by(team_organization_id=get_current_team_id())
-    
-    if season:
-        query = query.filter(Tournament.season == season)
-    
+    # The season (and squad) being viewed, or ?season=<year|all>
+    team_id = get_current_team_id()
+    form.season.choices = [('all', 'All time')] + [(str(s.year), s.name) for s in team_seasons(team_id)]
+    season = viewing_season(team_id)
+    form.season.data = str(season.year) if season else 'all'
+
+    query = scope_tournaments(Tournament.query.filter_by(team_organization_id=team_id), team_id)
+
     # Get tournaments and sort by start date (most recent first)
     tournaments = query.order_by(Tournament.start_date.desc()).all()
     
@@ -44,6 +42,35 @@ def index():
                          tournaments=tournaments, 
                          form=form,
                          delete_form=delete_form)
+
+def _season_choices(form):
+    team_id = get_current_team_id()
+    form.season.choices = [('', 'From the start date')] + [(str(s.year), s.name) for s in team_seasons(team_id)]
+    form.squad_id.choices = [('', 'Whole club')] + [(str(s.id), s.name) for s in team_squads(team_id)]
+
+
+def _apply_season(form, tournament):
+    """The picked season (made if it's a new year), else the one the start
+    date is in; the tournament's games move with it."""
+    team_id = get_current_team_id()
+    year = label_year(form.season.data)
+    season = None
+    if year:
+        season = get_or_create_season(team_id, year)
+    elif tournament.start_date and team_seasons(team_id):
+        season = season_for_date(team_id, tournament.start_date) or get_or_create_season(
+            team_id, tournament.start_date.year)
+    if season is not None:
+        tournament.season_obj = season
+        tournament.season = season.name
+    squad_id = next((s.id for s in team_squads(team_id) if str(s.id) == (form.squad_id.data or '')), None)
+    tournament.squad_id = squad_id
+    if tournament.id is not None:
+        for game in tournament.games:
+            if season is not None:
+                game.season = season
+            game.squad_id = squad_id
+
 
 @bp.route('/<int:tournament_id>')
 @login_required
@@ -75,6 +102,12 @@ def detail(tournament_id):
 @coach_required
 def add():
     form = TournamentForm()
+    _season_choices(form)
+    if request.method == 'GET':
+        current = current_season(get_current_team_id())
+        form.season.data = str(current.year) if current else ''
+        squad = viewing_squad()
+        form.squad_id.data = str(squad.id) if squad else ''
     if form.validate_on_submit():
         
         tournament = Tournament(
@@ -82,9 +115,9 @@ def add():
             start_date=form.start_date.data,
             end_date=form.end_date.data,
             location=form.location.data,
-            season=form.season.data,
             team_organization_id=get_current_team_id()  # Add team organization ID
         )
+        _apply_season(form, tournament)
         
         try:
             db.session.add(tournament)
@@ -108,13 +141,17 @@ def edit(tournament_id):
     ).first_or_404()
     
     form = TournamentForm(obj=tournament)
-    
+    _season_choices(form)
+    if request.method == 'GET':
+        form.season.data = str(tournament.season_obj.year) if tournament.season_obj else ''
+        form.squad_id.data = str(tournament.squad_id or '')
+
     if form.validate_on_submit():
         tournament.name = form.name.data
         tournament.start_date = form.start_date.data
         tournament.end_date = form.end_date.data
         tournament.location = form.location.data
-        tournament.season = form.season.data
+        _apply_season(form, tournament)
         
         db.session.commit()
         flash(f'Tournament {tournament.name} has been updated!', 'success')

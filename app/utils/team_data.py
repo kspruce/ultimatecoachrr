@@ -52,14 +52,29 @@ def team_conditions(team_id):
     return conditions
 
 
+def members_only_here(team_id):
+    """The team's members who aren't on any other team (deleting the team
+    deletes their accounts)."""
+    from app.models.team_membership import TeamMembership
+    from app.models.user import User
+    return (User.query.filter(User.memberships.any(TeamMembership.team_organization_id == team_id),
+                              ~User.memberships.any(TeamMembership.team_organization_id != team_id),
+                              User.is_superadmin.is_(False)).all())
+
+
 def delete_team_data(team_id):
     """Delete every row that belongs to a team, children before parents,
-    including the team itself. Superadmins on the team are moved off it
-    rather than deleted. The caller commits."""
+    including the team itself. Superadmins, and members who are also on
+    another team, are moved off it rather than deleted. The caller commits."""
     from app.models.user import User
 
-    User.query.filter_by(team_organization_id=team_id, is_superadmin=True).update(
-        {'team_organization_id': None}, synchronize_session=False)
+    # Accounts deleted with the team are the ones whose home is the team, so
+    # first move everyone who stays to another team they're on (or none)
+    for user in User.query.filter_by(team_organization_id=team_id).all():
+        others = [m for m in user.memberships if m.team_organization_id != team_id]
+        if others or user.is_superadmin:
+            user.leave_team(team_id)
+    db.session.flush()
     deleted = {}
     for table, condition in reversed(list(team_conditions(team_id).items())):
         result = db.session.execute(table.delete().where(condition))
@@ -82,6 +97,11 @@ def team_tables(team_id):
     """{table name: [row dicts]} of the team's data, secrets left out."""
     tables = {}
     for table, condition in team_conditions(team_id).items():
+        if table.name == 'user':
+            # Every member's account, not only those whose home team it is
+            membership = db.metadata.tables['team_membership']
+            condition = table.c.id.in_(select(membership.c.user_id)
+                                       .where(membership.c.team_organization_id == team_id))
         hidden = SECRET_COLUMNS.get(table.name, set())
         rows = db.session.execute(table.select().where(condition)).mappings().all()
         if rows:

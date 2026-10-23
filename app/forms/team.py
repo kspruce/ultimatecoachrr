@@ -24,13 +24,9 @@ class PlayerForm(FlaskForm):
         ('D-line', 'D-line'),
         ('both', 'Both')
     ])
-    team = SelectField('Team', choices=[
-        ('', 'Select Team'),  # Add a placeholder
-        ('A', 'Team A'),  # Replace with your actual teams
-        ('B', 'Team B'),
-        ('C', 'Team C')
-    ])
-    active = BooleanField('Active', default=True)
+    # The club's squads (filled in by the route); saved on this season's roster
+    squad_id = SelectField('Squad', choices=[('', 'No squad')], validate_choice=False)
+    active = BooleanField('On the current season roster', default=True)
     
     # User account fields
     create_account = BooleanField('Create User Account')
@@ -58,5 +54,4 @@ class PlayerFilterForm(FlaskForm):
         ('male', 'Male'),
         ('female', 'Female')
     ])
-    team = SelectField('Team', choices=[('', 'All')])  # Dynamically populated in route
-    active_only = BooleanField('Active Only', default=True)
+    active_only = BooleanField("Hide players who've left", default=True)

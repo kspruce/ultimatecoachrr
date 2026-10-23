@@ -67,13 +67,13 @@
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
+                            {% if form.squad_id.choices|length > 1 %}
                             <div class="col-md-6">
-                                {{ form.team.label(class="form-label") }}
-                                {{ form.team(class="form-select") }}
-                                {% for error in form.team.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
+                                {{ form.squad_id.label(class="form-label") }}
+                                {{ form.squad_id(class="form-select") }}
+                                <div class="form-text">For {{ current_season.name if current_season else 'this season' }}; other seasons keep their own squad.</div>
                             </div>
+                            {% endif %}
                         </div>
 
                         <div class="card mb-3">

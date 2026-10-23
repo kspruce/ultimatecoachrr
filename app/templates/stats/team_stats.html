@@ -71,8 +71,8 @@
                             <div class="col-md-4">
                                 <label for="season" class="form-label">Season</label>
                                 <select name="season" id="season" class="form-select">
-                                    <option value="">All Seasons</option>
-                                    {% for season in seasons %}
+                                    <option value="all" {% if selected_season == 'all' %}selected{% endif %}>All time</option>
+                                    {% for season in season_options %}
                                     <option value="{{ season }}" {% if selected_season == season %}selected{% endif %}>
                                         {{ season }}
                                     </option>

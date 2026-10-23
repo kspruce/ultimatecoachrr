@@ -20,6 +20,14 @@ class UltimateCoachBot:
         if app is not None:
             self.init_app(app)
     
+    async def _send_not_linked(self, user):
+        """DM someone whose account has no player on the event's team."""
+        try:
+            await user.send("Your account is not linked to a player profile on that team. "
+                            "Please link your account to a player profile in the Ultimate Coach app.")
+        except Exception:
+            pass
+
     def init_app(self, app):
         """Initialize the bot with Flask app context"""
         self.app = app
@@ -123,25 +131,20 @@ class UltimateCoachBot:
                             pass
                         return
                     
-                    if not db_user.player:
-                        # Send a DM if they don't have a player profile
-                        try:
-                            await user.send("Your account is not linked to a player profile. "
-                                           "Please link your account to a player profile in the Ultimate Coach app.")
-                        except:
-                            pass
-                        return
-                    
                     # Process the RSVP based on event type
                     if event_type == 'session':
                         event = SessionPlan.query.get(event_id)
                         if not event:
                             return
+                        player = db_user.player_for(event.team_organization_id)
+                        if not player:
+                            await self._send_not_linked(user)
+                            return
                         
                         status = emoji_to_session_status[emoji]
                         
                         # Check if RSVP already exists
-                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=db_user.player.id).first()
+                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=player.id).first()
                         
                         if rsvp:
                             rsvp.status = status
@@ -150,7 +153,7 @@ class UltimateCoachBot:
                         else:
                             new_rsvp = SessionRSVP(
                                 session_id=event_id,
-                                player_id=db_user.player.id,
+                                player_id=player.id,
                                 status=status
                             )
                             db.session.add(new_rsvp)
@@ -161,11 +164,15 @@ class UltimateCoachBot:
                         event = Tournament.query.get(event_id)
                         if not event:
                             return
+                        player = db_user.player_for(event.team_organization_id)
+                        if not player:
+                            await self._send_not_linked(user)
+                            return
                         
                         status = emoji_to_tournament_status[emoji]
                         
                         # Check if RSVP already exists
-                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=db_user.player.id).first()
+                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=player.id).first()
                         
                         if rsvp:
                             rsvp.status = status
@@ -174,7 +181,7 @@ class UltimateCoachBot:
                         else:
                             new_rsvp = TournamentRSVP(
                                 tournament_id=event_id,
-                                player_id=db_user.player.id,
+                                player_id=player.id,
                                 status=status
                             )
                             db.session.add(new_rsvp)
@@ -250,7 +257,7 @@ class UltimateCoachBot:
                     discord_id = str(user.id)
                     db_user = User.query.filter_by(discord_id=discord_id).first()
                     
-                    if not db_user or not db_user.player:
+                    if not db_user:
                         return  # User not properly linked, nothing to cancel
                     
                     # Check if the user has other reactions on this message
@@ -271,9 +278,13 @@ class UltimateCoachBot:
                         event = SessionPlan.query.get(event_id)
                         if not event:
                             return
+                        # Their player on the event's team
+                        player = db_user.player_for(event.team_organization_id)
+                        if not player:
+                            return
                         
                         # Find and delete the RSVP
-                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=db_user.player.id).first()
+                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=player.id).first()
                         if rsvp:
                             db.session.delete(rsvp)
                             db.session.commit()
@@ -290,9 +301,13 @@ class UltimateCoachBot:
                         event = Tournament.query.get(event_id)
                         if not event:
                             return
+                        # Their player on the event's team
+                        player = db_user.player_for(event.team_organization_id)
+                        if not player:
+                            return
                         
                         # Find and delete the RSVP
-                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=db_user.player.id).first()
+                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=player.id).first()
                         if rsvp:
                             db.session.delete(rsvp)
                             db.session.commit()
@@ -610,19 +625,19 @@ class UltimateCoachBot:
                     await ctx.send("Your Discord account is not linked to an Ultimate Coach account. Please link your account first.")
                     return
                 
-                if not user.player:
-                    await ctx.send("Your account is not linked to a player profile. Please link your account to a player first.")
-                    return
-                
                 try:
                     if event_type.lower() == 'session':
                         event = SessionPlan.query.get(event_id)
                         if not event:
                             await ctx.send(f"Session with ID {event_id} not found.")
                             return
+                        player = user.player_for(event.team_organization_id)
+                        if not player:
+                            await ctx.send("Your account is not linked to a player profile. Please link your account to a player first.")
+                            return
                         
                         # Check if RSVP already exists
-                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=user.player.id).first()
+                        rsvp = SessionRSVP.query.filter_by(session_id=event_id, player_id=player.id).first()
                         
                         if rsvp:
                             rsvp.status = response.lower()
@@ -631,7 +646,7 @@ class UltimateCoachBot:
                         else:
                             new_rsvp = SessionRSVP(
                                 session_id=event_id,
-                                player_id=user.player.id,
+                                player_id=player.id,
                                 status=response.lower()
                             )
                             db.session.add(new_rsvp)
@@ -645,9 +660,13 @@ class UltimateCoachBot:
                         if not event:
                             await ctx.send(f"Tournament with ID {event_id} not found.")
                             return
+                        player = user.player_for(event.team_organization_id)
+                        if not player:
+                            await ctx.send("Your account is not linked to a player profile. Please link your account to a player first.")
+                            return
                         
                         # Check if RSVP already exists
-                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=user.player.id).first()
+                        rsvp = TournamentRSVP.query.filter_by(tournament_id=event_id, player_id=player.id).first()
                         
                         if rsvp:
                             rsvp.status = response.lower()
@@ -656,7 +675,7 @@ class UltimateCoachBot:
                         else:
                             new_rsvp = TournamentRSVP(
                                 tournament_id=event_id,
-                                player_id=user.player.id,
+                                player_id=player.id,
                                 status=response.lower()
                             )
                             db.session.add(new_rsvp)

@@ -1,9 +1,9 @@
 from flask import request, jsonify
 from flask_login import login_required, current_user
-from app.models.player import Player
 from app.models.game import Game
 from app.models.tournament import Tournament
 from app.utils.team_filter import get_current_team_id
+from app.utils.season import scope_games, season_players
 
 from app.routes.stats import bp
 from app.stats.formulas import calculate_per
@@ -63,9 +63,9 @@ def api_player_connections_sankey(player_id): # <-- Accept player_id here
             team_organization_id=get_current_team_id()
         ).all() if tournament else []
     else:
-        games = Game.query.filter_by(
+        games = scope_games(Game.query.filter_by(
             team_organization_id=get_current_team_id()
-        ).all()
+        )).all()
     
     # Get point IDs for filtering
     point_ids = get_point_ids_from_games(games)
@@ -115,15 +115,12 @@ def api_player_stats():
             team_organization_id=get_current_team_id()
         ).all() if tournament else []
     else:
-        games = Game.query.filter_by(
+        games = scope_games(Game.query.filter_by(
             team_organization_id=get_current_team_id()
-        ).all()
+        )).all()
     
     # Get active players scoped to the current team organisation
-    players = Player.query.filter_by(
-        active=True,
-        team_organization_id=get_current_team_id()
-    ).all()
+    players = season_players()
 
     # Get cached team averages
     team_avgs = get_cached_team_averages(games)

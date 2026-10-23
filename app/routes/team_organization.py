@@ -10,6 +10,7 @@ from app.utils.email import email_configured, email_provider, is_real_email, sen
 from app.utils.utils import superadmin_required
 from app.utils.team_filter import accessible_teams, can_access_team
 from app.models.team_organization import TeamOrganization
+from app.models.user import TEAM_ADMIN_ROLES
 from app.forms.team_organization import TeamOrganizationForm
 import logging
 from app.utils.team_data import delete_team_data
@@ -18,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('team_organization', __name__, url_prefix='/teams')
 
+
+def _runs_team(team_id):
+    return current_user.is_superadmin or current_user.role_in(team_id) in TEAM_ADMIN_ROLES
+
 @bp.route('/')
 @login_required
 def index():
@@ -25,7 +30,8 @@ def index():
         flash('You do not have permission to access this page.', 'danger')
         return redirect(url_for('main.index'))
 
-    teams = accessible_teams(current_user)
+    # Only the teams they run (they may just play on others)
+    teams = [t for t in accessible_teams(current_user) if _runs_team(t.id)]
     return render_template('team_organization/index.html', teams=teams)
 
 @bp.route('/add', methods=['GET', 'POST'])
@@ -55,7 +61,7 @@ def add():
 @bp.route('/edit/<int:team_id>', methods=['GET', 'POST'])
 @login_required
 def edit(team_id):
-    if not (current_user.is_admin and can_access_team(current_user, team_id)):
+    if not _runs_team(team_id):
         flash('You can only edit your own team.', 'danger')
         return redirect(url_for('main.index'))
 
@@ -78,8 +84,9 @@ def edit(team_id):
 @bp.route('/switch/<int:team_id>')
 @login_required
 def switch(team_id):
-    if not current_user.is_superadmin:
-        flash('Only site superadmins can switch teams.', 'danger')
+    """Superadmins switch to any team; everyone else to a team they're on."""
+    if not can_access_team(current_user, team_id):
+        flash('You are not on that team.', 'danger')
         return redirect(url_for('main.index'))
 
     team = TeamOrganization.query.get_or_404(team_id)

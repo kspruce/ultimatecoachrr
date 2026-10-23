@@ -18,9 +18,14 @@ class Game(db.Model):
     
     # Add team organization relationship
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'))
-    
+    # Filled from the date (or the tournament) when the game is added
+    season_id = db.Column(db.Integer, db.ForeignKey('season.id', ondelete='SET NULL'), nullable=True, index=True)
+    squad_id = db.Column(db.Integer, db.ForeignKey('squad.id', ondelete='SET NULL'), nullable=True)
+
     # Existing relationships
     tournament = db.relationship('Tournament', back_populates='games')
+    season = db.relationship('Season')
+    squad = db.relationship('Squad')
     points = db.relationship('Point', back_populates='game', 
                            cascade='all, delete-orphan', lazy='dynamic')
     clips = db.relationship('Clip', back_populates='game', 

@@ -53,12 +53,21 @@
                             </div>
                             <div class="col-md-6">
                                 {{ form.season.label(class="form-label") }}
-                                {{ form.season(class="form-control") }}
+                                {{ form.season(class="form-select") }}
                                 {% for error in form.season.errors %}
                                 <div class="text-danger">{{ error }}</div>
                                 {% endfor %}
                             </div>
                         </div>
+                        {% if form.squad_id.choices|length > 1 %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.squad_id.label(class="form-label") }}
+                                {{ form.squad_id(class="form-select") }}
+                                <div class="form-text">Its games count for this squad's stats.</div>
+                            </div>
+                        </div>
+                        {% endif %}
                         
                         <div class="d-grid gap-2">
                             {{ form.submit(class="btn btn-primary") }}

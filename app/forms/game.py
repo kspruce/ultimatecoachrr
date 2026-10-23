@@ -14,6 +14,8 @@ class GameForm(FlaskForm):
     youtube_link = StringField('YouTube Link', validators=[Optional(), URL()])
     notes = TextAreaField('Notes', validators=[Optional()])
     players_present = SelectMultipleField('Players Present', coerce=int, validators=[Optional()])
+    # Blank: the tournament's squad, or the whole club
+    squad_id = SelectField('Squad', choices=[('', 'Whole club')], validate_choice=False)
     submit = SubmitField('Submit')
 
     def __init__(self, *args, team_id=None, **kwargs):
@@ -30,6 +32,9 @@ class GameForm(FlaskForm):
         if team_id:
             p_query = p_query.filter_by(team_organization_id=team_id)
         self.players_present.choices = [(p.id, f"{p.name} (#{p.jersey_number})") for p in p_query.all()]
+        if team_id:
+            from app.utils.season import team_squads
+            self.squad_id.choices = [('', 'Whole club')] + [(str(s.id), s.name) for s in team_squads(team_id)]
 
 class GameFilterForm(FlaskForm):
     tournament_id = SelectField('Tournament', coerce=int, validators=[Optional()])

@@ -1,6 +1,7 @@
 from flask_login import current_user
 
 from app.models.user import ROLE_ORDER
+from app.utils.team_filter import get_current_team_id
 
 
 def _level(role):
@@ -13,11 +14,9 @@ def can_manage_team_users(team_id: int) -> bool:
         return False
     if getattr(current_user, "is_superadmin", False):
         return True
-    if not team_id or not current_user.team_organization_id:
+    if not team_id or not current_user.is_member_of(int(team_id)):
         return False
-    if int(current_user.team_organization_id) != int(team_id):
-        return False
-    return _level(current_user.role) >= ROLE_ORDER["coach"]
+    return _level(current_user.role_in(int(team_id))) >= ROLE_ORDER["coach"]
 
 
 def can_manage_user(target, actor=None) -> bool:
@@ -35,9 +34,27 @@ def can_manage_user(target, actor=None) -> bool:
         return True
     if target.is_superadmin or target.id == actor.id:
         return False
-    if not can_manage_team_users(target.team_organization_id):
+    team_id = get_current_team_id()
+    if not target.is_member_of(team_id) or not can_manage_team_users(team_id):
         return False
-    return _level(target.role) < _level(actor.role)
+    return _level(target.role_in(team_id)) < _level(actor.role_in(team_id))
+
+
+def can_manage_account(target, actor=None) -> bool:
+    """May `actor` change `target`'s login itself (username, email,
+    password, reset link, deleting the account)? Someone on several teams
+    shares one login across them, so only a superadmin, or someone who
+    outranks them on every team they're on, may: a coach on one team can't
+    take over the account of someone who also plays elsewhere."""
+    actor = actor or current_user
+    if not can_manage_user(target, actor):
+        return False
+    if actor.is_superadmin:
+        return True
+    return all(actor.is_member_of(m.team_organization_id)
+               and _level(actor.role_in(m.team_organization_id)) >= ROLE_ORDER["coach"]
+               and _level(m.role) < _level(actor.role_in(m.team_organization_id))
+               for m in target.memberships)
 
 
 def grantable_roles(actor=None):
