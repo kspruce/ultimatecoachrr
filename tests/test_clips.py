@@ -317,3 +317,17 @@ def test_point_markers_are_for_coaches(app, herd):
     url = f"/clips/{herd['shown']}"
     assert 'btn-point-start' not in client(app, herd, 'player').get(url).get_data(as_text=True)
     assert 'btn-point-start' in client(app, herd, 'coach').get(url).get_data(as_text=True)
+
+
+def test_clip_actions_fit_a_phone(app, herd):
+    """Edit/Share/Playlist stay as buttons; the rest live under one "More" menu."""
+    url = f"/clips/{herd['shown']}"
+    admin = client(app, herd, 'admin').get(url).get_data(as_text=True)
+    more = admin[admin.index('id="clipMoreMenu"'):]
+    for item in ('Edit clip', 'Hide from players', 'Flag as ready to share', 'Revoke share links',
+                 'Export notes (Markdown)', 'Export notes (CSV)'):
+        assert item in more, item
+    coach = client(app, herd, 'coach').get(url).get_data(as_text=True)
+    assert 'clipMoreMenu' in coach and 'Hide from players' not in coach  # hiding is for admins
+    player = client(app, herd, 'player').get(url).get_data(as_text=True)
+    assert 'clipMoreMenu' not in player and 'createShareForm' not in player

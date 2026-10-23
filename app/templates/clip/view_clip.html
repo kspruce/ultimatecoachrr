@@ -78,7 +78,32 @@
 }
 
 /* ── Action buttons bar ─────────────────────────────────── */
-.clip-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.clip-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.annotate-buttons { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* ── Phones and small tablets ───────────────────────────── */
+@media (max-width: 991.98px) {
+  /* Keep the video in view while scrolling notes, so tapping a timestamp shows the moment */
+  /* The left column's cards join the page row directly, so the pinned video can
+     stay up while the annotation list (in the other column) scrolls past */
+  .clip-main-col { display: contents !important; }  /* beats .d-flex */
+  .clip-main-col > * { width: calc(100% - var(--bs-gutter-x)); margin-left: calc(var(--bs-gutter-x) * .5);
+                       margin-right: calc(var(--bs-gutter-x) * .5); }
+  .video-card { position: sticky; top: var(--uc-nav-h, 0px); z-index: 5; }  /* under menus (1000+) */
+  .ann-card-actions .btn { min-width: 40px; min-height: 36px; font-size: .85rem !important; }
+  /* One page scroll instead of a scrolling box inside the page */
+  .side-panel-body { max-height: none !important; }
+  .clip-header-bar { padding: .85rem 1rem; }
+  .clip-actions { margin-top: .75rem; width: 100%; }
+  .clip-actions .btn { min-height: 40px; }
+  .annotate-buttons { display: grid; grid-template-columns: 1fr 1fr; }
+  .annotate-buttons .annotate-main { grid-column: 1 / -1; }
+  .annotate-buttons .btn { min-height: 44px; }
+  .dropdown-menu .dropdown-item { padding-top: .6rem; padding-bottom: .6rem; }
+}
+@media (max-width: 991.98px) and (orientation: landscape) {
+  .video-card { position: static; }
+}
 
 /* ── Add annotation card ────────────────────────────────── */
 .annotation-actions-card {
@@ -422,10 +447,10 @@
   <div class="row g-3">
 
     <!-- ── Left: Video + info ────────────────────────────── -->
-    <div class="col-lg-8 d-flex flex-column">
+    <div class="col-lg-8 d-flex flex-column clip-main-col">
 
-      <!-- Video — 3rd on mobile, 1st on desktop -->
-      <div class="video-card order-3 order-lg-1">
+      <!-- Video first everywhere; on phones it stays pinned while you scroll -->
+      <div class="video-card">
         <div class="video-ratio">
           {% if clip.embed_url %}
             {% set sep = '&' if '?' in clip.embed_url else '?' %}
@@ -451,8 +476,8 @@
         </div>
       </div>
 
-      <!-- Clip info bar — 1st on mobile, 2nd on desktop -->
-      <div class="clip-header-bar order-1 order-lg-2">
+      <!-- Clip info bar -->
+      <div class="clip-header-bar">
         <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
           <div style="flex:1;min-width:0">
             <h1 class="clip-main-title">{{ clip.title }}</h1>
@@ -519,47 +544,18 @@
             {% endif %}
           </div>
 
-          <!-- Actions -->
-          <div class="clip-actions flex-shrink-0">
-            {% if current_user.is_admin or current_user.is_coach %}
+          <!-- Actions: the main ones as buttons, the rest under "More" -->
+          {% set can_manage = current_user.is_admin or current_user.is_coach %}
+          {% set can_share = can_manage or clip.created_by_id == current_user.id %}
+          {% if can_manage or can_share %}
+          <div class="clip-actions">
+            {% if can_manage %}
             <a href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}"
-               class="btn btn-outline-secondary btn-sm">
+               class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex align-items-center">
               <i class="bi bi-pencil me-1"></i>Edit
             </a>
             {% endif %}
-            {% if current_user.is_admin %}
-            {# ── Hide/Show toggle ─────────────────────────── #}
-            <form method="post" action="{{ url_for('clip.toggle_hidden', clip_id=clip.id) }}" class="d-inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              {% if clip.is_hidden %}
-              <button type="submit" class="btn btn-sm btn-warning"
-                      title="Clip is hidden from players — click to make visible">
-                <i class="bi bi-eye-slash-fill me-1"></i>Hidden
-              </button>
-              {% else %}
-              <button type="submit" class="btn btn-sm btn-outline-warning"
-                      title="Click to hide this clip from players">
-                <i class="bi bi-eye-slash me-1"></i>Hide
-              </button>
-              {% endif %}
-            </form>
-            {# ── Flag for sharing toggle ───────────────────── #}
-            <form method="post" action="{{ url_for('clip.toggle_share_flag', clip_id=clip.id) }}" class="d-inline">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              {% if clip.is_flagged_for_sharing %}
-              <button type="submit" class="btn btn-sm btn-success"
-                      title="Flagged for sharing — click to unflag">
-                <i class="bi bi-flag-fill me-1"></i>Sharing
-              </button>
-              {% else %}
-              <button type="submit" class="btn btn-sm btn-outline-success"
-                      title="Flag this clip as ready to share">
-                <i class="bi bi-flag me-1"></i>Flag to Share
-              </button>
-              {% endif %}
-            </form>
-            {% endif %}
-            {% if current_user.is_admin or current_user.is_coach or clip.created_by_id == current_user.id %}
+            {% if can_share %}
             <form id="createShareForm" method="post"
                   action="{{ url_for('clip.create_share_link', clip_id=clip.id) }}" class="d-inline">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -568,20 +564,15 @@
                 <i class="bi bi-share me-1"></i>Share
               </button>
             </form>
-            <form method="post" action="{{ url_for('clip.revoke_share_links', clip_id=clip.id) }}" class="d-inline"
-                  onsubmit="return confirm('Stop every share link already sent for this clip from working?');">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-outline-secondary btn-sm" title="Make existing share links stop working">
-                <i class="bi bi-x-circle me-1"></i>Revoke links
-              </button>
-            </form>
-            {% if current_user.is_admin or current_user.is_coach %}
+            {% endif %}
+            {% if can_manage %}
             <div class="dropdown d-inline">
               <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button"
                       data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-collection-play me-1"></i>Add to playlist
+                <i class="bi bi-collection-play me-1"></i>Playlist
               </button>
               <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Add to playlist</h6></li>
                 {% for playlist in playlists %}
                 <li>
                   {% if clip.id in playlist.items | map(attribute='clip_id') | list %}
@@ -604,31 +595,72 @@
               </ul>
             </div>
             {% endif %}
-            <a href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}"
-               class="btn btn-outline-secondary btn-sm">
-              <i class="bi bi-download me-1"></i>Export
-            </a>
-            {% endif %}
+            <div class="dropdown d-inline">
+              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                      data-bs-toggle="dropdown" aria-expanded="false" id="clipMoreMenu">
+                <i class="bi bi-three-dots me-1"></i>More
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="clipMoreMenu">
+                {% if can_manage %}
+                <li class="d-md-none"><a class="dropdown-item" href="{{ url_for('clip.edit_clip', clip_id=clip.id) }}">
+                  <i class="bi bi-pencil me-2"></i>Edit clip</a></li>
+                {% endif %}
+                {% if current_user.is_admin %}
+                <li>
+                  <form method="post" action="{{ url_for('clip.toggle_hidden', clip_id=clip.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item">
+                      {% if clip.is_hidden %}<i class="bi bi-eye me-2"></i>Show to players
+                      {% else %}<i class="bi bi-eye-slash me-2"></i>Hide from players{% endif %}
+                    </button>
+                  </form>
+                </li>
+                <li>
+                  <form method="post" action="{{ url_for('clip.toggle_share_flag', clip_id=clip.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item">
+                      {% if clip.is_flagged_for_sharing %}<i class="bi bi-flag me-2"></i>Unflag for sharing
+                      {% else %}<i class="bi bi-flag-fill me-2"></i>Flag as ready to share{% endif %}
+                    </button>
+                  </form>
+                </li>
+                {% endif %}
+                {% if can_share %}
+                <li>
+                  <form method="post" action="{{ url_for('clip.revoke_share_links', clip_id=clip.id) }}"
+                        onsubmit="return confirm('Stop every share link already sent for this clip from working?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="dropdown-item"><i class="bi bi-x-circle me-2"></i>Revoke share links</button>
+                  </form>
+                </li>
+                {% endif %}
+                <li><a class="dropdown-item" href="{{ url_for('clip.export_annotations_markdown', clip_id=clip.id) }}">
+                  <i class="bi bi-download me-2"></i>Export notes (Markdown)</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('clip.export_annotations_csv', clip_id=clip.id) }}">
+                  <i class="bi bi-filetype-csv me-2"></i>Export notes (CSV)</a></li>
+              </ul>
+            </div>
           </div>
+          {% endif %}
         </div>
       </div>
 
-      <!-- Add annotation + point markers — 2nd on mobile, 3rd on desktop -->
+      <!-- Add annotation + point markers -->
       {% if current_user.is_authenticated %}
-      <div class="annotation-actions-card order-2 order-lg-3">
+      <div class="annotation-actions-card">
         <h6><i class="bi bi-plus-circle me-1"></i>Annotate</h6>
-        <div class="d-flex gap-2 flex-wrap">
-          <button id="btn-add-annotation" type="button" class="btn btn-primary btn-sm"
+        <div class="annotate-buttons">
+          <button id="btn-add-annotation" type="button" class="btn btn-primary btn-sm annotate-main"
                   data-bs-toggle="offcanvas" data-bs-target="#annotationOffcanvas">
             <i class="bi bi-plus-circle me-1"></i>Add Annotation
             <span style="font-size:.7rem;opacity:.75;margin-left:.2rem">(at current time)</span>
           </button>
           {% if current_user.is_admin or current_user.is_coach %}
           <button id="btn-point-start" class="btn btn-outline-success btn-sm" type="button">
-            <i class="bi bi-flag me-1"></i>Mark Point Start
+            <i class="bi bi-flag me-1"></i>Point Start
           </button>
           <button id="btn-point-end" class="btn btn-outline-danger btn-sm" type="button">
-            <i class="bi bi-flag-fill me-1"></i>Mark Point End
+            <i class="bi bi-flag-fill me-1"></i>Point End
           </button>
           {% endif %}
         </div>
@@ -810,14 +842,14 @@
                   {{ annotation.created_at.strftime('%d %b %Y') }}
                 </span>
                 {% if current_user.is_authenticated and (current_user.id == annotation.user_id or current_user.is_admin or current_user.is_coach) %}
-                <div class="d-flex gap-1">
+                <div class="d-flex gap-1 ann-card-actions">
                   <a href="{{ url_for('clip.edit_annotation', annotation_id=annotation.id) }}"
-                     class="btn btn-xs btn-outline-secondary"
+                     class="btn btn-xs btn-outline-secondary" aria-label="Edit annotation"
                      style="padding:.15rem .4rem;font-size:.7rem">
                     <i class="bi bi-pencil"></i>
                   </a>
                   <button type="button"
-                          class="btn btn-xs btn-outline-danger"
+                          class="btn btn-xs btn-outline-danger" aria-label="Delete annotation"
                           style="padding:.15rem .4rem;font-size:.7rem"
                           data-bs-toggle="modal"
                           data-bs-target="#delAnn{{ annotation.id }}">

@@ -296,3 +296,14 @@ document.addEventListener('keydown', function (e) {
   }
   e.preventDefault();
 });
+
+/* ── Phones: pin the video just under the (sticky) navbar ── */
+function measureNavbar() {
+  const nav = document.querySelector('.uc-navbar');
+  if (!nav) return;
+  // The club stripe is drawn as a 10px shadow under the bar
+  const h = nav.offsetHeight + (nav.classList.contains('uc-has-stripe') ? 10 : 0);
+  document.documentElement.style.setProperty('--uc-nav-h', h + 'px');
+}
+measureNavbar();
+window.addEventListener('resize', measureNavbar);
