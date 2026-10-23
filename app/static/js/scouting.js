@@ -321,7 +321,72 @@
     });
   }
 
+  // ── Key player panel: best markers float up as their threats are picked ──
+  function initKeyPlayer() {
+    var panel = document.getElementById('keyPlayer');
+    var dataEl = document.getElementById('kp-data');
+    if (!panel || !dataEl) return;
+    var data = JSON.parse(dataEl.textContent);
+    var form = panel.querySelector('form');
+    var list = panel.querySelector('.kp-markers');
+    var hint = panel.querySelector('[data-kp-hint]');
+    var defenders = {};
+    data.defenders.forEach(function (d) { defenders[d.id] = d; });
+    var original = Array.prototype.slice.call(list.querySelectorAll('label[data-defender]'));
+
+    function threats() {
+      var picked = Array.prototype.map.call(form.querySelectorAll('[name=threat_roles]:checked'), function (el) { return el.value; });
+      if (picked.length) return picked;
+      var pos = form.querySelector('[name=position]:checked');
+      return pos ? (data.positionThreats[pos.value] || []) : [];
+    }
+
+    function update() {
+      var wanted = threats();
+      var gender = (form.querySelector('[name=gender]:checked') || {}).value;
+      var scored = original.map(function (label, i) {
+        var d = defenders[label.dataset.defender];
+        var score = 0, why = [];
+        wanted.forEach(function (t) {
+          var answers = data.counters[t] || [];
+          var hit = answers.filter(function (r) { return d.roles.indexOf(r) !== -1; })[0];
+          if (hit) {
+            score += hit === answers[0] ? 2 : 1;
+            why.push(data.labels[hit] + ' vs ' + data.labels[t].toLowerCase());
+          }
+        });
+        var clash = gender && d.gender && d.gender !== gender;
+        return { label: label, score: clash ? -1 : score, why: why, clash: clash, i: i };
+      });
+      scored.sort(function (a, b) { return (b.score - a.score) || (a.i - b.i); });
+      var good = 0;
+      scored.forEach(function (x) {
+        var input = document.getElementById(x.label.getAttribute('for'));
+        var fit = x.label.querySelector('.kp-fit');
+        fit.hidden = !(x.score > 0);
+        fit.textContent = x.score > 0 ? 'Good fit: ' + x.why.join(', ') : '';
+        x.label.classList.toggle('good', x.score > 0);
+        x.label.classList.toggle('off', x.clash);
+        input.disabled = x.clash;
+        if (x.clash && input.checked) form.querySelector('#kp-m-0').checked = true;
+        if (x.score > 0) good++;
+        list.appendChild(input);
+        list.appendChild(x.label);
+      });
+      hint.textContent = wanted.length ? (good ? '(best fits first)' : '(no one tagged for this yet)') : '';
+    }
+
+    form.addEventListener('change', function (e) {
+      if (['threat_roles', 'position', 'gender'].indexOf(e.target.name) !== -1) update();
+    });
+    panel.addEventListener('shown.bs.offcanvas', function () { form.querySelector('#kp-number').focus(); });
+    if (/[?&]add=key/.test(location.search) && window.bootstrap) {
+      bootstrap.Offcanvas.getOrCreateInstance(panel).show();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    initKeyPlayer();
     initSectionBar();
     initAutoGrow(document);
     initDrafts();

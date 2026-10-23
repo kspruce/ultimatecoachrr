@@ -45,6 +45,15 @@
 .info-row > span:first-child { color:var(--uc-gray-400) }
 .result-w { color:var(--uc-green); font-weight:700 }
 .result-l { color:var(--uc-red); font-weight:700 }
+.kp-line { padding:.6rem 0; border-bottom:1px solid var(--uc-gray-100) }
+.kp-line:last-child { border-bottom:none }
+.kp-them { display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; font-size:.95rem }
+.kp-type { font-size:.7rem; font-weight:600; padding:.1rem .45rem; border-radius:6px;
+  background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
+.kp-note { font-size:.85rem; color:var(--uc-gray-600); margin-top:.2rem }
+.kp-ours { font-size:.85rem; margin-top:.25rem; color:var(--uc-gray-800) }
+.kp-ours .bi-arrow-return-right { color:var(--uc-green) }
+.kp-why { font-size:.72rem; color:var(--uc-green); margin-left:.35rem }
 .mu-line { padding:.45rem 0; border-bottom:1px solid var(--uc-gray-100) }
 .mu-line:last-of-type { border-bottom:none }
 .mu-pair { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem; font-size:.9rem }
@@ -117,7 +126,7 @@
   <!-- Jump between sections on a phone -->
   <nav class="section-bar d-lg-none no-print" aria-label="Report sections">
     <a href="#plan">Plan</a>
-    <a href="#matchups">Matchups</a>
+    <a href="#matchups">Key players</a>
     <a href="#players">Players{% if players %} <span>{{ players|length }}</span>{% endif %}</a>
     <a href="#clips">Clips{% if clips %} <span>{{ clips|length }}</span>{% endif %}</a>
     <a href="#history">History</a>
@@ -157,36 +166,42 @@
         </div>
       </div>
 
-      <!-- Matchups -->
-      {% set matchups = players|selectattr('matched_player')|list %}
+      <!-- Key players and who marks them -->
       <div class="card mb-4 scout-anchor" id="matchups">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-blue)"></i>Matchups</h5>
-          <a href="{{ url_for('scouting.matchups', report_id=report.id) }}" class="btn btn-sm btn-outline-primary no-print">Matchup board</a>
+        <div class="card-header d-flex justify-content-between align-items-center gap-2">
+          <h5 class="mb-0"><i class="bi bi-people me-2" style="color:var(--uc-blue)"></i>Key Players &amp; Matchups</h5>
+          <div class="d-flex gap-2 no-print flex-shrink-0">
+            {% if panel %}
+            <button type="button" class="btn btn-sm btn-primary text-nowrap" data-bs-toggle="offcanvas" data-bs-target="#keyPlayer" aria-label="Add a key player"><i class="bi bi-plus-lg"></i> Add</button>
+            {% endif %}
+            <a href="{{ url_for('scouting.matchups', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">Board</a>
+          </div>
         </div>
         <div class="card-body">
-          {% for p in matchups %}
-          <div class="mu-line">
-            <div class="mu-pair">
-              <strong>{{ p.matched_player.name }}</strong>
-              <i class="bi bi-arrow-left-right text-muted"></i>
-              <span>{% if p.jersey_number %}#{{ p.jersey_number }} {% endif %}{{ p.name }}</span>
+          {% for p in key_players %}
+          <div class="kp-line">
+            <div class="kp-them">
+              <strong>{{ p.label }}</strong>
+              {% if p.threat_role_list %}{% for r in p.threat_role_list %}<span class="kp-type">{{ scouting_role_labels.get(r, r) }}</span>{% endfor %}
+              {% elif p.position %}<span class="kp-type">{{ p.position|capitalize }}</span>{% endif %}
               {{ m.threat_badge(p, small=true) }}
             </div>
-            {% if reasons.get(p.id) %}
-            <div class="mu-why">{% for theirs, ours in reasons[p.id] %}<span>{{ ours }} vs {{ theirs|lower }}</span>{% endfor %}</div>
-            {% endif %}
+            {% if p.notes %}<div class="kp-note">{{ p.notes.strip().split('\n')[0] }}</div>{% endif %}
+            <div class="kp-ours">
+              {% if p.matched_player %}
+              <i class="bi bi-arrow-return-right"></i> <strong>{{ defender_label(p.matched_player, with_roles=false) }}</strong>
+              {% if reasons.get(p.id) %}<span class="kp-why">{% for theirs, ours in reasons[p.id] %}{{ ours }} vs {{ theirs|lower }}{{ ', ' if not loop.last }}{% endfor %}</span>{% endif %}
+              {% else %}
+              <span class="text-muted"><i class="bi bi-exclamation-circle me-1" style="color:var(--warn)"></i>No marker yet</span>
+              {% if current_user.is_coach %}<a href="{{ url_for('scouting.matchups', report_id=report.id) }}" class="ms-1">pick one</a>{% endif %}
+              {% endif %}
+            </div>
           </div>
+          {% else %}
+          <p class="small text-muted mb-0">
+            Note down who matters, e.g. their #10 is an under cutter who wants it open under, and who of ours marks them.
+          </p>
           {% endfor %}
-          {% if uncovered %}
-          <div class="small {{ 'mt-2' if matchups }} text-muted">
-            <i class="bi bi-exclamation-circle me-1" style="color:var(--warn)"></i>
-            No one on {{ uncovered|map(attribute='name')|join(', ') }} yet.
-            {% if current_user.is_coach %}<a href="{{ url_for('scouting.matchups', report_id=report.id) }}">Pick markers</a>{% endif %}
-          </div>
-          {% elif not matchups %}
-          <p class="small text-muted mb-0">Flag their key threats, then pick who of ours marks each one{% if current_user.is_coach %} on the <a href="{{ url_for('scouting.matchups', report_id=report.id) }}">matchup board</a>{% endif %}.</p>
-          {% endif %}
         </div>
       </div>
 
@@ -476,6 +491,7 @@
     <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots"></i></button>
     <ul class="dropdown-menu dropdown-menu-end">
       <li><a class="dropdown-item" href="{{ url_for('scouting.edit_report', report_id=report.id) }}"><i class="bi bi-pencil me-2"></i>Edit report</a></li>
+      <li><button type="button" class="dropdown-item" data-bs-toggle="offcanvas" data-bs-target="#keyPlayer"><i class="bi bi-star me-2"></i>Add a key player</button></li>
       <li><a class="dropdown-item" href="{{ url_for('scouting.add_player', report_id=report.id) }}"><i class="bi bi-person-plus me-2"></i>Add a player</a></li>
       <li><a class="dropdown-item" href="{{ url_for('scouting.add_players', report_id=report.id) }}"><i class="bi bi-list-ol me-2"></i>Paste a roster</a></li>
       <li><a class="dropdown-item" href="{{ url_for('scouting.add_clip', report_id=report.id) }}"><i class="bi bi-camera-video me-2"></i>Add a clip</a></li>
@@ -490,6 +506,8 @@
   <a href="{{ url_for('scouting.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i>Reports</a>
   {% endif %}
 </div>
+
+{% if panel %}{% with back='detail' %}{% include 'scouting/_key_player_panel.html' %}{% endwith %}{% endif %}
 
 {% if current_user.is_coach %}
 <!-- Quick note: a line typed (or dictated) while watching them play -->

@@ -6,7 +6,7 @@ from wtforms.widgets import CheckboxInput, ListWidget, TextInput
 
 from app.models.game import Game
 from app.models.player import Player
-from app.models.scouting import (DEFENSE_TAGS, OFFENSE_TAGS, POSITIONS, THREAT_ROLES, extract_youtube_id, format_time,
+from app.models.scouting import (DEFENSE_TAGS, OFFENSE_TAGS, POSITIONS, THREAT_ROLES, defender_label, extract_youtube_id, format_time,
                                  parse_moments, parse_time)
 from app.models.tournament import Tournament
 from app.utils.team_filter import get_current_team_id
@@ -133,7 +133,7 @@ class OpponentPlayerForm(ModelForm):
         super().__init__(*args, **kwargs)
         ours = (Player.query.filter_by(team_organization_id=get_current_team_id(), active=True)
                 .order_by(Player.name).all())
-        self.matched_player_id.choices = [(0, 'Nobody yet')] + [(p.id, p.name) for p in ours]
+        self.matched_player_id.choices = [(0, 'Nobody yet')] + [(p.id, defender_label(p)) for p in ours]
         if self.matched_player_id.data is None:
             self.matched_player_id.data = 0
 

@@ -10,8 +10,7 @@
 <div class="mu-row{% if o.is_key_threat %} key{% endif %}">
   <div class="mu-them">
     <div class="mu-name">
-      {% if o.jersey_number %}<span class="mu-num">#{{ o.jersey_number }}</span>{% endif %}
-      <strong>{{ o.name }}</strong>
+      <strong>{{ o.label }}</strong>
       {{ m.threat_badge(o, small=true) }}
     </div>
     <div class="mu-roles">
@@ -20,6 +19,7 @@
       {% else %}<span class="small text-muted">No threat type yet</span>{% endif %}
       {% if current_user.is_coach %}<a href="{{ url_for('scouting.edit_player', player_id=o.id, back='matchups') }}" class="mu-edit" aria-label="Edit {{ o.name }}"><i class="bi bi-pencil"></i></a>{% endif %}
     </div>
+    {% if o.notes %}<div class="mu-note">{{ o.notes.strip().split('\n')[0] }}</div>{% endif %}
   </div>
 
   <div class="mu-us">
@@ -27,12 +27,20 @@
     <label class="visually-hidden" for="match-{{ o.id }}">Who marks {{ o.name }}</label>
     <select class="form-select mu-select{% if o.matched_player_id %} set{% endif %}" id="match-{{ o.id }}" name="match-{{ o.id }}">
       <option value="0">Nobody yet</option>
-      {% for d in defenders %}
-      {% set ok = can_mark(o, d) %}
-      <option value="{{ d.id }}" {% if d.id == o.matched_player_id %}selected{% elif not ok %}disabled{% endif %}>
-        {{ d.name }}{% if d.defensive_roles %} · {{ d.defensive_roles|role_labels }}{% endif %}{% if d.id in doubled %} (marks {{ doubled[d.id]|length }}){% endif %}
-      </option>
-      {% endfor %}
+      {% set good, rest = ranked[o.id] %}
+      {% if good %}
+      <optgroup label="Good fits">
+        {% for d in good %}
+        <option value="{{ d.id }}" {% if d.id == o.matched_player_id %}selected{% endif %}>{{ defender_label(d) }}{% if d.id in doubled and d.id != o.matched_player_id %} (marks {{ doubled[d.id]|length }}){% endif %}</option>
+        {% endfor %}
+      </optgroup>
+      {% endif %}
+      <optgroup label="{{ 'Everyone else' if good else 'Our players' }}">
+        {% for d in rest %}
+        {% set ok = can_mark(o, d) %}
+        <option value="{{ d.id }}" {% if d.id == o.matched_player_id %}selected{% elif not ok %}disabled{% endif %}>{{ defender_label(d) }}{% if not ok %} (other gender match){% endif %}</option>
+        {% endfor %}
+      </optgroup>
     </select>
     {% else %}
     <div class="mu-marker">{% if o.matched_player %}<i class="bi bi-person-check me-1"></i><strong>{{ o.matched_player.name }}</strong>{% else %}<span class="text-muted">No one yet</span>{% endif %}</div>
@@ -46,7 +54,7 @@
     {% elif suggestion %}
     {% set d, why = suggestion %}
     <div class="mu-suggest">
-      <span><i class="bi bi-lightbulb"></i> <strong>{{ d.name }}</strong>{% if why %}: {{ why|map('last')|join(', ')|lower }} vs {{ why|map('first')|join(', ')|lower }}{% endif %}</span>
+      <span><i class="bi bi-lightbulb"></i> <strong>{{ defender_label(d, with_roles=false) }}</strong>{% if why %}: {{ why|map('last')|join(', ')|lower }} vs {{ why|map('first')|join(', ')|lower }}{% endif %}</span>
       {% if current_user.is_coach %}<button type="submit" name="use" value="{{ o.id }}:{{ d.id }}" class="btn btn-sm btn-outline-primary">Use</button>{% endif %}
     </div>
     {% elif not o.matched_player %}
@@ -66,6 +74,7 @@
 .mu-name { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; font-size:.95rem }
 .mu-num { font-weight:800; color:var(--uc-gray-400) }
 .mu-roles { display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.35rem; align-items:center }
+.mu-note { font-size:.82rem; color:var(--uc-gray-600); margin-top:.3rem }
 .mu-edit { margin-left:auto; color:var(--uc-gray-400); padding:.25rem .4rem }
 .role-chip { font-size:.72rem; font-weight:600; padding:.12rem .5rem; border-radius:6px; white-space:nowrap }
 .role-chip.threat { background:color-mix(in srgb, var(--bad) 10%, transparent); color:var(--uc-red) }
@@ -101,6 +110,7 @@ details.mu-others > summary { cursor:pointer; font-weight:600; color:var(--uc-gr
     <div class="d-flex gap-2 flex-wrap">
       <a href="{{ url_for('scouting.card', report_id=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-card-text me-1"></i>Game card</a>
       {% if current_user.is_coach %}
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#keyPlayer"><i class="bi bi-plus-lg me-1"></i>Key player</button>
       <a href="{{ url_for('scouting.defenders', report=report.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-shield-check me-1"></i>Our defenders</a>
       {% endif %}
     </div>
@@ -146,8 +156,9 @@ details.mu-others > summary { cursor:pointer; font-weight:600; color:var(--uc-gr
     </div>
     {% else %}
     <div class="uc-empty card py-4">
-      <p class="mb-1">No threats picked out yet.</p>
-      <p class="small text-muted mb-0">Mark players as key threats, give them a threat type or rate them, and they'll show here.</p>
+      <p class="mb-1">No key players yet.</p>
+      <p class="small text-muted mb-2">Add who matters, what they do and who of ours marks them.</p>
+      {% if current_user.is_coach %}<div><button type="button" class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" data-bs-target="#keyPlayer"><i class="bi bi-plus-lg me-1"></i>Key player</button></div>{% endif %}
     </div>
     {% endif %}
 
@@ -169,13 +180,17 @@ details.mu-others > summary { cursor:pointer; font-weight:600; color:var(--uc-gr
   {% else %}
   <div class="uc-empty card py-5">
     <div class="uc-empty-icon"><i class="bi bi-people"></i></div>
-    <p>Add their players to this report to plan matchups.</p>
+    <p>Add their key players to plan who marks them.</p>
     {% if current_user.is_coach %}
-    <a href="{{ url_for('scouting.add_players', report_id=report.id) }}" class="btn btn-primary btn-sm">Paste their roster</a>
+    <div class="d-flex gap-2 justify-content-center">
+      <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#keyPlayer"><i class="bi bi-plus-lg me-1"></i>Key player</button>
+      <a href="{{ url_for('scouting.add_players', report_id=report.id) }}" class="btn btn-outline-primary btn-sm">Paste their roster</a>
+    </div>
     {% endif %}
   </div>
   {% endif %}
 </div>
+{% if current_user.is_coach %}{% with back='matchups' %}{% include 'scouting/_key_player_panel.html' %}{% endwith %}{% endif %}
 {% endblock %}
 
 {% block scripts %}

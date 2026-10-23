@@ -9,7 +9,8 @@ from sqlalchemy import func
 
 from app import db
 from app.models.scouting import (ScoutingReport, OpponentPlayer, ScoutingClip, POSITIONS, TAG_LABELS,
-                                 OFFENSE_TAGS, DEFENSE_TAGS, DEFENDER_ROLES, ROLE_LABELS, can_mark, defender_gender,
+                                 OFFENSE_TAGS, DEFENSE_TAGS, DEFENDER_ROLES, ROLE_LABELS, THREAT_ROLES, COUNTERS,
+                                 POSITION_THREATS, can_mark, defender_gender, defender_label, rank_defenders,
                                  format_time, games_against, matchup_reasons, opponent_key, suggest_matchups)
 from app.models.player import Player
 from app.models.game import Game
@@ -298,7 +299,10 @@ def detail(report_id):
                            history=history, games=games, record=_record(games), next_game=_next_game(games),
                            reasons={p.id: matchup_reasons(p, p.matched_player) for p in players if p.matched_player},
                            uncovered=[p for p in players if p.on_matchup_board and not p.matched_player_id],
-                           offense_tags=OFFENSE_TAGS, defense_tags=DEFENSE_TAGS)
+                           offense_tags=OFFENSE_TAGS, defense_tags=DEFENSE_TAGS,
+                           key_players=[p for p in players if p.on_matchup_board],
+                           defender_label=defender_label,
+                           panel=key_player_panel(report, _defenders(players)) if current_user.is_coach else None)
 
 
 def _next_game(games):
@@ -424,6 +428,59 @@ def _defenders(opponents=()):
     return sorted(players, key=lambda p: p.name.lower())
 
 
+def key_player_panel(report, defenders):
+    """What the 'Add key player' panel needs, including what the page's
+    script uses to float the best markers to the top as threats are picked."""
+    return {
+        'report': report,
+        'threat_roles': THREAT_ROLES,
+        'positions': POSITIONS,
+        'defenders': defenders,
+        'data': {
+            'counters': COUNTERS,
+            'positionThreats': POSITION_THREATS,
+            'labels': ROLE_LABELS,
+            'defenders': [{'id': d.id, 'roles': [r for r in (d.defensive_roles or '').split(',') if r],
+                           'gender': defender_gender(d)} for d in defenders],
+        },
+    }
+
+
+@bp.route('/<int:report_id>/key_player', methods=['POST'])
+@login_required
+@coach_required
+def add_key_player(report_id):
+    """'Their #10 is a cutter who wants it open under; our #12 marks them', in one go."""
+    report = _report_or_404(report_id)
+    number = (request.form.get('jersey_number') or '').strip().lstrip('#')[:10]
+    name = (request.form.get('name') or '').strip()[:100]
+    back = 'matchups' if request.form.get('back') == 'matchups' else 'detail'
+    back_url = url_for(f'scouting.{back}', report_id=report.id)
+    if not number and not name:
+        flash('Give their number or name.', 'danger')
+        return redirect(back_url)
+
+    position = request.form.get('position') if request.form.get('position') in POSITIONS else None
+    threats = [t for t in request.form.getlist('threat_roles') if t in dict(THREAT_ROLES)]
+    gender = request.form.get('gender') if request.form.get('gender') in ('male', 'female') else None
+    ours = {d.id: d for d in _defenders()}
+    marker = ours.get(request.form.get('matched_player_id', type=int))
+    player = OpponentPlayer(
+        scouting_report_id=report.id, team_organization_id=get_current_team_id(),
+        name=name or f'#{number}', jersey_number=number or None, position=position, gender=gender,
+        threat_roles=','.join(threats) or None, is_key_threat=True,
+        notes=(request.form.get('notes') or '').strip() or None,
+        matched_player_id=marker.id if marker else None)
+    db.session.add(player)
+    report.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f'{player.name} added{" — " + defender_label(marker, with_roles=False) + " marks them" if marker else ""}.',
+          'success')
+    if request.form.get('add_another'):
+        return redirect(back_url + '?add=key#keyPlayer')
+    return redirect(back_url + ('#matchups' if back == 'detail' else ''))
+
+
 @bp.route('/<int:report_id>/matchups', methods=['GET', 'POST'])
 @login_required
 def matchups(report_id):
@@ -468,6 +525,8 @@ def matchups(report_id):
         if o.matched_player_id:
             marking.setdefault(o.matched_player_id, []).append(o)
     return render_template('scouting/matchups.html', report=report, board=board,
+                           ranked={o.id: rank_defenders(o, defenders) for o in opponents},
+                           defender_label=defender_label, panel=key_player_panel(report, defenders),
                            others=[o for o in opponents if not o.on_matchup_board], defenders=defenders,
                            suggestions=suggestions, reasons={o.id: matchup_reasons(o, o.matched_player)
                                                              for o in opponents if o.matched_player},

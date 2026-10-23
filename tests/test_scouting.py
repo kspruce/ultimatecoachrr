@@ -554,9 +554,9 @@ def test_matchup_board_suggests_and_coach_applies(scout):
     assert db.session.get(OpponentPlayer, bench.id).matched_player_id is None
 
     card = page(c, f'/scouting/{rid}/card')
-    assert 'Matchups' in card and 'Handler defender' in card and 'No marker yet:</strong> Hucker' in card
+    assert 'Matchups' in card and '(handler defender vs main handler)' in card and 'No marker yet:</strong> Hucker' in card
     detail = page(c, f'/scouting/{rid}')
-    assert 'Handler defender vs main handler' in detail and 'No one on Hucker yet' in detail
+    assert 'Handler defender vs main handler' in detail and 'No marker yet' in detail
 
 
 def test_players_see_the_board_but_cannot_change_it(scout):
@@ -661,3 +661,57 @@ def test_list_shows_removable_filter_chips(scout):
     html = page(scout['coach'], '/scouting/?q=bad&tag=vertical')
     assert 'Remove filter: &#34;bad&#34;' in html and 'Remove filter: Vertical stack' in html
     assert 'href="/scouting/?tag=vertical"' in html  # dropping the search keeps the look
+
+
+# ── Key players in one go ────────────────────────────────────────────────
+
+def test_their_ten_is_an_under_cutter_marked_by_our_fast_twelve(scout):
+    """'Their #10 is a cutter who wants it open under; our fast #12 marks them.'"""
+    c, rid = scout['coach'], scout['report']
+    twelve = db.session.get(Player, scout['ours'][1])
+    twelve.jersey_number, twelve.defensive_roles = 12, 'fast_d'
+    db.session.commit()
+
+    html = page(c, f'/scouting/{rid}')
+    assert 'Key Players &amp; Matchups' in html and 'id="keyPlayer"' in html and 'Under cutter' in html
+    assert '#12 Herd Player 02' in html  # our players are listed with their numbers
+
+    r = c.post(f'/scouting/{rid}/key_player', data={
+        'jersey_number': '#10', 'name': '', 'position': 'cutter', 'threat_roles': ['under_cutter', 'bogus'],
+        'notes': 'Wants it open under', 'matched_player_id': twelve.id})
+    assert r.status_code == 302 and r.headers['Location'].endswith(f'/scouting/{rid}#matchups')
+    ten = OpponentPlayer.query.filter_by(scouting_report_id=rid, jersey_number='10').one()
+    assert (ten.label, ten.position, ten.threat_roles, ten.is_key_threat) == ('#10', 'cutter', 'under_cutter', True)
+    assert ten.notes == 'Wants it open under' and ten.matched_player_id == twelve.id
+
+    for url in (f'/scouting/{rid}', f'/scouting/{rid}/card', f'/scouting/{rid}/matchups'):
+        html = page(c, url)
+        assert 'Wants it open under' in html and 'Herd Player 02' in html, url
+    assert 'fast defender vs under cutter' in page(c, f'/scouting/{rid}/card')
+    board = page(c, f'/scouting/{rid}/matchups')
+    assert '<optgroup label="Good fits">' in board and '#12 Herd Player 02 · Fast defender' in board
+
+
+def test_key_player_needs_a_number_or_name_and_our_own_marker(scout):
+    c, rid = scout['coach'], scout['report']
+    c.post(f'/scouting/{rid}/key_player', data={'jersey_number': '', 'name': ' '})
+    outsider = stats_data.build_players(db.session.get(TeamOrganization, scout['other']), 1)[0]
+    r = c.post(f'/scouting/{rid}/key_player', data={'name': 'Bomber', 'matched_player_id': outsider.id,
+                                                    'back': 'matchups', 'add_another': '1'})
+    assert r.headers['Location'].endswith(f'/scouting/{rid}/matchups?add=key#keyPlayer')
+    assert OpponentPlayer.query.filter_by(scouting_report_id=rid).count() == 1
+    assert OpponentPlayer.query.filter_by(name='Bomber').one().matched_player_id is None
+    scout['player'].post(f'/scouting/{rid}/key_player', data={'name': 'Sneaky'})
+    assert OpponentPlayer.query.filter_by(name='Sneaky').count() == 0
+    assert 'id="keyPlayer"' not in page(scout['player'], f'/scouting/{rid}')
+
+
+def test_good_fits_rank_first():
+    from app.models.scouting import rank_defenders
+    ten = _opp(1, '#10', 'under_cutter', gender='male')
+    fast = _ours(10, 'Fast', 'fast_d', gender='male')
+    handler = _ours(11, 'Wall', 'handler_d', gender='male')
+    deep = _ours(12, 'Deep', 'deep_d', gender='male')
+    her = _ours(13, 'Her', 'fast_d', gender='female')
+    good, rest = rank_defenders(ten, [deep, handler, her, fast])
+    assert good == [fast, handler] and rest == [deep, her]
