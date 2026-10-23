@@ -1,7 +1,7 @@
 """One login on several teams: team memberships
 
 Revision ID: d7e8f9a0b1c2
-Revises: 52c437aed7f5
+Revises: 4df1e9017ad4
 Create Date: 2026-10-23
 
 - team_membership: a user's place on a team, with their role there. Every
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 
 revision = 'd7e8f9a0b1c2'
-down_revision = '52c437aed7f5'
+down_revision = '4df1e9017ad4'
 branch_labels = None
 depends_on = None
 
