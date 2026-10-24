@@ -6,10 +6,11 @@ from sqlalchemy import event  # Add this import at the top
 
 class TheorySection(db.Model):
     __tablename__ = 'theory_section'
-    
+    __table_args__ = (db.UniqueConstraint('team_organization_id', 'slug', name='uq_theory_section_team_slug'),)
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    slug = db.Column(db.String(100), unique=True)
+    slug = db.Column(db.String(100))  # unique within the team
     description = db.Column(db.Text)
     order = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -23,6 +24,16 @@ class TheorySection(db.Model):
     def generate_slug(self):
         if not self.slug:
             self.slug = slugify(self.name)
+
+    @classmethod
+    def free_slug(cls, team_id, name):
+        """A slug for `name` that no other section of the team has."""
+        base = slugify(name) or 'section'
+        taken = {s for (s,) in db.session.query(cls.slug).filter_by(team_organization_id=team_id)}
+        slug, n = base, 2
+        while slug in taken:
+            slug, n = f'{base}-{n}', n + 1
+        return slug
 
     @staticmethod
     def before_save(mapper, connection, target):
@@ -91,9 +102,10 @@ class TheoryVideo(db.Model):
 
 class TheoryTag(db.Model):
     __tablename__ = 'theory_tag'
-    
+    __table_args__ = (db.UniqueConstraint('team_organization_id', 'name', name='uq_theory_tag_team_name'),)
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     

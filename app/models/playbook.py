@@ -8,8 +8,10 @@ play_tag_association = db.Table('play_tag_association',
 )
 
 class PlayTag(db.Model):
+    __table_args__ = (db.UniqueConstraint('team_organization_id', 'name', name='uq_play_tag_team_name'),)
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(30), unique=True)
+    name = db.Column(db.String(30))
     team_organization_id = db.Column(db.Integer, db.ForeignKey('team_organization.id'), nullable=True)
     
     def __repr__(self):

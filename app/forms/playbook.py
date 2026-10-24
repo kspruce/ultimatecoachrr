@@ -9,6 +9,7 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, Length, URL, NumberRange
 from app.models.playbook import Formation, PlayTag
+from app.utils.team_filter import get_current_team_id
 
 class PlayForm(FlaskForm):
     name = StringField('Play Name', validators=[DataRequired(), Length(max=100)])
@@ -28,15 +29,14 @@ class PlayForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(PlayForm, self).__init__(*args, **kwargs)
-        # Populate formation choices
+        team_id = get_current_team_id()
         self.formation_id.choices = [(0, 'None')] + [
-            (f.id, f.name) 
-            for f in Formation.query.order_by(Formation.name).all()
+            (f.id, f.name)
+            for f in Formation.query.filter_by(team_organization_id=team_id).order_by(Formation.name)
         ]
-        # Populate tag choices
         self.tags.choices = [
-            (t.id, t.name) 
-            for t in PlayTag.query.order_by(PlayTag.name).all()
+            (t.id, t.name)
+            for t in PlayTag.query.filter_by(team_organization_id=team_id).order_by(PlayTag.name)
         ]
 
 class FormationForm(FlaskForm):

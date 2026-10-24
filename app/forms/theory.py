@@ -59,7 +59,8 @@ class TheoryTagForm(FlaskForm):
 
     def validate_name(self, field):
         from app.models.theory import TheoryTag
-        tag = TheoryTag.query.filter_by(name=field.data).first()
+        from app.utils.team_filter import get_current_team_id
+        tag = TheoryTag.query.filter_by(name=field.data, team_organization_id=get_current_team_id()).first()
         if tag:
             raise ValidationError('This tag already exists.')
 

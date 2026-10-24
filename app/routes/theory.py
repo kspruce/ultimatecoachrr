@@ -79,6 +79,7 @@ def add_section():
         
         section = TheorySection(
             name=form.name.data,
+            slug=TheorySection.free_slug(get_current_team_id(), form.name.data),
             description=form.description.data,
             order=form.order.data,
             team_organization_id=get_current_team_id()  # Add team organization ID
