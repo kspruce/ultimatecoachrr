@@ -18,11 +18,12 @@ class PlayerFeedback(db.Model):
         index=True
     )
 
-    # Who wrote the note (User record — the coach/admin)
+    # Who wrote the note (User record — the coach/admin). Empty for notes
+    # brought over from the old notes box on the player page.
     coach_id = db.Column(
         db.Integer,
         db.ForeignKey('user.id'),
-        nullable=False,
+        nullable=True,
         index=True
     )
 
@@ -33,6 +34,15 @@ class PlayerFeedback(db.Model):
         nullable=True,
         index=True
     )
+
+    # Optional: the game or clip it's about
+    game_id = db.Column(db.Integer, db.ForeignKey('game.id', ondelete='SET NULL'), nullable=True, index=True)
+    clip_id = db.Column(db.Integer, db.ForeignKey('clip.id', ondelete='SET NULL'), nullable=True, index=True)
+
+    # The player sees it under My Feedback; otherwise it's for coaches only
+    shared = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # When the player first saw it (shared notes only)
+    seen_at = db.Column(db.DateTime, nullable=True)
 
     # The note content (qualitative, no ratings)
     content = db.Column(db.Text, nullable=False)
@@ -57,6 +67,12 @@ class PlayerFeedback(db.Model):
         foreign_keys=[session_id],
         backref=db.backref('feedback_entries', lazy='dynamic')
     )
+    game = db.relationship('Game', foreign_keys=[game_id])
+    clip = db.relationship('Clip', foreign_keys=[clip_id])
+
+    @property
+    def author(self):
+        return self.coach.username if self.coach else 'Coach'
 
     def __repr__(self):
         return f'<PlayerFeedback id={self.id} player={self.player_id} tag={self.context_tag}>'

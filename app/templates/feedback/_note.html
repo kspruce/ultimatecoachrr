@@ -1,0 +1,171 @@
+{# Feedback notes: the card for one note and the form for a new one, shared by
+   the coach's feedback page, the player's own page, the player profile, games
+   and clips. #}
+
+{% macro styles() %}
+<style>
+.fb-entry {
+    border-left: 3px solid var(--uc-blue);
+    padding: 0.65rem 1rem;
+    margin-bottom: 0.75rem;
+    background: var(--uc-card-bg);
+    border-radius: 0 8px 8px 0;
+    box-shadow: var(--uc-shadow-sm);
+}
+.fb-entry.fb-private { border-left-color: var(--uc-gray-400); }
+.fb-entry.fb-new { border-left-color: var(--uc-green); }
+.fb-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--uc-gray-400);
+}
+.fb-meta a { color: var(--uc-blue); text-decoration: none; font-weight: 600; }
+.fb-meta a:hover { text-decoration: underline; }
+.fb-date { font-weight: 600; }
+.fb-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.18rem 0.55rem;
+    border-radius: 99px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+.fb-content {
+    font-size: 0.92rem;
+    color: var(--uc-gray-800);
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.fb-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; margin-top: 0.5rem; }
+.fb-actions button { font-size: 0.75rem; padding: 0.2rem 0.55rem; }
+.tag-ingame     { background: var(--warn-soft); color: var(--ink); }
+.tag-drill      { background: var(--club-soft); color: var(--uc-blue); }
+.tag-debrief    { background: var(--ok-soft); color: var(--ink); }
+.tag-tournament { background: var(--club-soft); color: var(--ink); }
+.tag-general    { background: var(--sunken); color: var(--ink); }
+.fb-share { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; }
+</style>
+{% endmacro %}
+
+{# One note. coach=True shows who can see it and the share/delete buttons. #}
+{% macro note(entry, coach=False, is_new=False, show_player=False, next=None) %}
+<div class="fb-entry{% if coach and not entry.shared %} fb-private{% endif %}{% if is_new %} fb-new{% endif %}">
+    <div class="fb-meta">
+        <span class="fb-date"><i class="bi bi-clock me-1"></i>{{ entry.created_at.strftime('%-d %b %Y') }}</span>
+        <span class="fb-tag tag-{{ entry.context_tag|lower|replace('-','') }}">{{ entry.context_tag }}</span>
+        {% if is_new %}<span class="badge bg-success">New</span>{% endif %}
+        {% if show_player %}
+        <a href="{{ url_for('feedback.player_feedback', player_id=entry.player_id) }}"><i class="bi bi-person me-1"></i>{{ entry.player.name }}</a>
+        {% endif %}
+        <span><i class="bi bi-person-badge me-1"></i>{{ entry.author }}</span>
+        {% if entry.session %}
+        <a href="{{ url_for('session.detail', session_id=entry.session.id) }}"><i class="bi bi-calendar-event me-1"></i>{{ entry.session.title }}</a>
+        {% endif %}
+        {% if entry.game %}
+        <a href="{{ url_for('game.detail', game_id=entry.game.id) }}"><i class="bi bi-controller me-1"></i>vs {{ entry.game.opponent }}</a>
+        {% endif %}
+        {% if entry.clip %}
+        <a href="{{ url_for('clip.view_clip', clip_id=entry.clip.id) }}"><i class="bi bi-camera-video me-1"></i>{{ entry.clip.title }}</a>
+        {% endif %}
+        {% if coach %}
+            {% if entry.shared %}
+            <span class="badge bg-info text-dark"><i class="bi bi-eye me-1"></i>Shared{% if entry.seen_at %} · seen{% endif %}</span>
+            {% else %}
+            <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i>Coaches only</span>
+            {% endif %}
+        {% endif %}
+    </div>
+    <div class="fb-content">{{ entry.content }}</div>
+    {% if coach %}
+    <div class="fb-actions">
+        <form method="POST" action="{{ url_for('feedback.toggle_share', feedback_id=entry.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                {% if entry.shared %}<i class="bi bi-lock"></i> Make coaches only{% else %}<i class="bi bi-share"></i> Share with player{% endif %}
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('feedback.delete_feedback', feedback_id=entry.id) }}"
+              onsubmit="return confirm('Delete this note?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# A new note. Pass players to choose who it's for, or player for one player;
+   game_id / clip_id / session_id link it; next is where to come back to. #}
+{% macro form(context_tags, player=None, players=None, games=None, game_id=None, clip_id=None,
+              session_id=None, next=None, default_tag='General') %}
+<form method="POST" class="fb-form"
+      action="{{ url_for('feedback.add_feedback', player_id=player.id) if player else '' }}"
+      {% if not player %}data-action-template="{{ url_for('feedback.add_feedback', player_id=0) }}"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% if clip_id %}<input type="hidden" name="clip_id" value="{{ clip_id }}">{% endif %}
+    {% if session_id %}<input type="hidden" name="session_id" value="{{ session_id }}">{% endif %}
+    {% if games is none and game_id %}<input type="hidden" name="game_id" value="{{ game_id }}">{% endif %}
+    <div class="row g-2 mb-2">
+        {% if not player %}
+        <div class="col-sm-6">
+            <select class="form-select form-select-sm fb-player" required aria-label="Player">
+                <option value="">Note for…</option>
+                {% for p in players %}
+                <option value="{{ p.id }}">{{ p.name }}{% if p.jersey_number is not none %} #{{ p.jersey_number }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="col-sm-{{ 6 if not player or games is not none else 12 }}">
+            <select name="context_tag" class="form-select form-select-sm" aria-label="Context">
+                {% for tag in context_tags %}
+                <option value="{{ tag }}" {% if tag == default_tag %}selected{% endif %}>{{ tag }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if games is not none %}
+        <div class="col-sm-6">
+            <select name="game_id" class="form-select form-select-sm" aria-label="Game">
+                <option value="">No game</option>
+                {% for g in games %}
+                <option value="{{ g.id }}" {% if g.id == game_id %}selected{% endif %}>
+                    vs {{ g.opponent }}{% if g.date %} · {{ g.date.strftime('%-d %b %Y') }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </div>
+    <textarea name="content" class="form-control mb-2" rows="3" required
+              placeholder="What did you see? What should they work on?"></textarea>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <label class="fb-share mb-0">
+            <input type="checkbox" name="shared" value="1" class="form-check-input mt-0">
+            Share with the player
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Save note</button>
+    </div>
+</form>
+{% endmacro %}
+
+{# Points a form with a player picker at the chosen player's address. #}
+{% macro picker_script() %}
+<script>
+document.querySelectorAll('form.fb-form[data-action-template]').forEach(function (form) {
+    var select = form.querySelector('.fb-player');
+    function point() {
+        form.action = select.value ? form.dataset.actionTemplate.replace(/0$/, select.value) : '';
+    }
+    select.addEventListener('change', point);
+    form.addEventListener('submit', function (e) { point(); if (!select.value) { e.preventDefault(); select.focus(); } });
+});
+</script>
+{% endmacro %}

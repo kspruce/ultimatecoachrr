@@ -261,6 +261,18 @@
   {% endif %}
 </section>
 
+{# ══════════ NEW FEEDBACK ══════════ #}
+{% if current_user.is_authenticated and current_user.player %}
+{% set unseen = unseen_feedback_count() %}
+{% if unseen %}
+<a href="{{ url_for('feedback.mine') }}" class="panel my-4 d-flex align-items-center gap-3 text-decoration-none" id="new-feedback">
+  <i class="bi bi-chat-square-heart-fill fs-3 text-success"></i>
+  <span><strong>{{ unseen }} new note{{ 's' if unseen != 1 }} from your coaches</strong><br>
+  <span class="small text-muted">Read your feedback</span></span>
+</a>
+{% endif %}
+{% endif %}
+
 {# ══════════ NEEDS YOUR REPLY ══════════ #}
 {% if needs_reply %}
 <section class="panel my-4" id="needs-reply" aria-labelledby="needs-reply-h">

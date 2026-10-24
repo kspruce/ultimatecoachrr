@@ -130,6 +130,12 @@
           <li><a class="dropdown-item" href="{{ url_for('programmes.index') }}">
             <i class="bi bi-journal-check"></i> Programmes</a></li>
           {% endif %}
+          {% if current_user.is_authenticated and current_user.player %}
+          {% set unseen = unseen_feedback_count() %}
+          <li><a class="dropdown-item" href="{{ url_for('feedback.mine') }}">
+            <i class="bi bi-chat-square-heart-fill"></i> My Feedback
+            {% if unseen %}<span class="badge rounded-pill bg-success ms-1">{{ unseen }}</span>{% endif %}</a></li>
+          {% endif %}
           {% if not ts or ts.sessions_enabled %}
           {% if current_user.is_authenticated and current_user.player %}
           <li><a class="dropdown-item" href="{{ url_for('training.availability') }}">

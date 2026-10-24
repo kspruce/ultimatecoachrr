@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "feedback/_note.html" as fb %}
 
 {% block content %}
 <div class="container">
@@ -371,8 +372,6 @@
                     <div id="goalsEditSection" style="display: none;">
                         <form id="goalsForm" method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            {# Keep coach_feedback in sync so it isn't wiped on goals save #}
-                            <input type="hidden" name="coach_feedback" id="coachFeedbackHidden" value="{{ player.coach_feedback or '' }}">
 
                             <div class="row">
                                 <div class="col-md-4">
@@ -417,91 +416,33 @@
     </div>
     {% endif %}
 
-    {# ── Coach Feedback / Notes section ──────────────────────────────────── #}
-    {% if current_user.is_admin or current_user.id == player.user_id or current_user.role == 'coach' %}
+    {# ── Coach feedback ──────────────────────────────────────────────────── #}
+    {% if current_user.is_coach or current_user.id == player.user_id %}
     <div class="row mt-4">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="bi bi-chat-square-text-fill text-primary me-2"></i>
-                        Coach's Notes &amp; Feedback
-                        <span class="badge bg-info text-white ms-2" style="font-size:.7rem">Private</span>
+                        <i class="bi bi-chat-square-text-fill text-primary me-2"></i>Coach Feedback
                     </h5>
-                    {% if current_user.is_admin or current_user.role == 'coach' %}
-                    <button class="btn btn-sm btn-outline-primary" id="addFeedbackBtn">
-                        <i class="bi bi-plus-circle me-1"></i>Add Note
-                    </button>
+                    {% if current_user.is_coach %}
+                    <a href="{{ url_for('feedback.player_feedback', player_id=player.id) }}" class="btn btn-sm btn-outline-primary">All notes</a>
+                    {% else %}
+                    <a href="{{ url_for('feedback.mine') }}" class="btn btn-sm btn-outline-primary">My Feedback</a>
                     {% endif %}
                 </div>
                 <div class="card-body">
-
-                    {# Add-note form (hidden by default) #}
-                    {% if current_user.is_admin or current_user.role == 'coach' %}
-                    <div id="addFeedbackForm" style="display:none;" class="mb-4">
-                        <form method="POST" action="{{ url_for('team.update_player_goals', player_id=player.id) }}" id="feedbackForm">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            {# Pass goals unchanged #}
-                            <input type="hidden" name="short_term_goals" value="{{ player.short_term_goals or '' }}">
-                            <input type="hidden" name="mid_term_goals" value="{{ player.mid_term_goals or '' }}">
-                            <input type="hidden" name="long_term_goals" value="{{ player.long_term_goals or '' }}">
-                            <input type="hidden" name="skills_to_develop" value="{{ player.skills_to_develop or '' }}">
-                            {# coach_feedback will be built by JS to prepend the new note #}
-                            <input type="hidden" name="coach_feedback" id="combinedFeedback" value="{{ player.coach_feedback or '' }}">
-
-                            <div class="card border-primary mb-2">
-                                <div class="card-body py-3">
-                                    <label class="form-label fw-semibold">New Note</label>
-                                    <textarea class="form-control mb-2" id="newFeedbackText" rows="4"
-                                              placeholder="Write your coaching note here…"></textarea>
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button type="button" class="btn btn-sm btn-secondary" id="cancelFeedbackBtn">Cancel</button>
-                                        <button type="submit" class="btn btn-sm btn-primary" id="saveFeedbackBtn">
-                                            <i class="bi bi-save me-1"></i>Save Note
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+                    {% if current_user.is_coach %}
+                    <details class="mb-3">
+                        <summary class="btn btn-sm btn-outline-secondary"><i class="bi bi-plus-circle me-1"></i>Add a note</summary>
+                        <div class="mt-3">{{ fb.form(feedback_tags, player=player, next=request.path) }}</div>
+                    </details>
                     {% endif %}
-
-                    {# Display existing entries #}
-                    {% if player.coach_feedback %}
-                        {% set entries = [] %}
-                        {% for entry in player.coach_feedback.split('---') %}
-                            {% if entry.strip() %}
-                                {% if entries.append(entry.strip()) %}{% endif %}
-                            {% endif %}
-                        {% endfor %}
-
-                        {% if entries %}
-                        <div class="feedback-timeline">
-                            {% for entry in entries %}
-                            <div class="feedback-entry">
-                                {# Try to extract a leading date line e.g. "[16 Mar 2026]" #}
-                                {% if entry.startswith('[') and ']' in entry %}
-                                    {% set bracket_end = entry.index(']') %}
-                                    {% set date_part  = entry[1:bracket_end] %}
-                                    {% set body_part  = entry[bracket_end+1:].strip() %}
-                                    <div class="feedback-entry-meta">
-                                        <i class="bi bi-calendar3 me-1"></i>{{ date_part }}
-                                    </div>
-                                    <div class="feedback-entry-body">{{ body_part|nl2br|safe }}</div>
-                                {% else %}
-                                    <div class="feedback-entry-body">{{ entry|nl2br|safe }}</div>
-                                {% endif %}
-                            </div>
-                            {% if not loop.last %}<hr class="feedback-divider">{% endif %}
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <p class="text-muted mb-0">No coaching notes recorded yet.</p>
-                        {% endif %}
+                    {% for entry in recent_feedback %}
+                        {{ fb.note(entry, coach=current_user.is_coach, next=request.path) }}
                     {% else %}
-                        <p class="text-muted mb-0">No coaching notes recorded yet.</p>
-                    {% endif %}
-
+                        <p class="text-muted mb-0">{% if current_user.is_coach %}No coaching notes yet.{% else %}No notes shared with you yet.{% endif %}</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -531,68 +472,16 @@ document.addEventListener('DOMContentLoaded', function() {
             goalsViewSection.style.display = 'block';
         });
     }
-
-    // Feedback note functionality
-    const addFeedbackBtn    = document.getElementById('addFeedbackBtn');
-    const cancelFeedbackBtn = document.getElementById('cancelFeedbackBtn');
-    const addFeedbackForm   = document.getElementById('addFeedbackForm');
-    const feedbackForm      = document.getElementById('feedbackForm');
-    const newFeedbackText   = document.getElementById('newFeedbackText');
-    const combinedFeedback  = document.getElementById('combinedFeedback');
-
-    if (addFeedbackBtn) {
-        addFeedbackBtn.addEventListener('click', function() {
-            addFeedbackForm.style.display = 'block';
-            newFeedbackText.focus();
-            addFeedbackBtn.style.display = 'none';
-        });
-    }
-    if (cancelFeedbackBtn) {
-        cancelFeedbackBtn.addEventListener('click', function() {
-            addFeedbackForm.style.display = 'none';
-            newFeedbackText.value = '';
-            if (addFeedbackBtn) addFeedbackBtn.style.display = '';
-        });
-    }
-
-    if (feedbackForm) {
-        feedbackForm.addEventListener('submit', function(e) {
-            const noteText = newFeedbackText ? newFeedbackText.value.trim() : '';
-            if (!noteText) { e.preventDefault(); return; }
-
-            // Build a dated entry and prepend to existing content
-            const now   = new Date();
-            const day   = String(now.getDate()).padStart(2, '0');
-            const months= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            const dateStr = day + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
-            const newEntry = '[' + dateStr + ']\n' + noteText;
-
-            const existing = (combinedFeedback.value || '').trim();
-            combinedFeedback.value = existing ? newEntry + '\n---\n' + existing : newEntry;
-        });
-    }
 });
 </script>
 {% endblock %}
 
 {% block styles %}
+{{ fb.styles() }}
 <style>
-    /* ── Feedback timeline ──────────────────────────────── */
-    .feedback-timeline { display: flex; flex-direction: column; gap: .5rem; }
-    .feedback-entry { padding: .75rem 0; }
-    .feedback-entry-meta {
-        font-size: .75rem; font-weight: 700; color: var(--uc-blue);
-        letter-spacing: .04em; margin-bottom: .35rem;
-    }
-    .feedback-entry-body {
-        font-size: .875rem; color: var(--uc-gray-800); line-height: 1.55;
-    }
-    .feedback-divider { border-color: var(--uc-gray-100); margin: .25rem 0; }
-
     /* Goal cards equal height */
     .card.h-100 { height: 100%; }
-
-    /* Private badge styling */
-    .badge.bg-info { font-size: 0.7rem; vertical-align: middle; }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
 </style>
 {% endblock %}
