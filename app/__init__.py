@@ -265,10 +265,6 @@ def create_app(config_class=Config):
     from app.routes.team_organization import bp as team_organization_bp
     app.register_blueprint(team_organization_bp)
 
-    # IMPORTANT: Register off_season blueprint
-    from app.routes.off_season import bp as off_season_bp
-    app.register_blueprint(off_season_bp)
-
     from app.routes.programmes import bp as programmes_bp
     app.register_blueprint(programmes_bp)
 

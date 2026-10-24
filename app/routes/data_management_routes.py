@@ -225,7 +225,7 @@ def season_reset():
 
     Preserves:
       - Admin user and admin player (for the selected team)
-      - Session plans, drills, playbook, theory, scouting, off-season content
+      - Session plans, drills, playbook, theory, scouting, programmes
       - Clip library not linked to a game/point for this team
     """
     from app import db
@@ -536,7 +536,7 @@ def season_reset():
         if also_delete_non_admin_users:
             summary_lines.append(f"- Non-admin users deleted (team): {deleted['users']}")
         summary_lines.append("")
-        summary_lines.append("Preserved: admin account, session plans, non-game clip library, scouting reports, theory, playbook, drills, off-season content.")
+        summary_lines.append("Preserved: admin account, session plans, non-game clip library, scouting reports, theory, playbook, drills, programmes.")
 
         flash("<br>".join(summary_lines), "success")
         return redirect(url_for('data_management.data_management'))

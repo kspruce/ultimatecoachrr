@@ -12,7 +12,6 @@ from app.models.event import Event
 from app.models.fitness import FitnessMetric
 from app.models.game import Game
 from app.models.game_player import GamePlayer
-from app.models.off_season import TrackWorkoutWeek
 from app.models.onboarding import UserOnboarding
 from app.models.playbook import Play
 from app.models.point import Point
@@ -155,12 +154,6 @@ def test_quick_checkin_is_for_your_own_session_and_players(app, teams):
     assert Attendance.query.one().player_id == teams['other_player']
 
 
-def test_track_weeks_only_link_your_sessions(app, teams):
-    client(app, teams).post('/off-season/track-workout/add', data={
-        'week_number': 1, 'title': 'Week one', 'session_plan_id': teams['herd_session']})
-    assert TrackWorkoutWeek.query.one().session_plan_id is None
-
-
 def test_drill_search_filters_your_library(app, teams):
     c = client(app, teams, 'coach')
     everything = page(c, '/sessions/drills')
@@ -171,7 +164,3 @@ def test_drill_search_filters_your_library(app, teams):
     assert 'Huck drill' in found and 'Zone drill' not in found and 'Herd secret' not in found
     beginner = page(c, '/sessions/drills?skill_level=beginner')
     assert 'Zone drill' in beginner and 'Huck drill' not in beginner
-
-
-def test_off_season_goals_page_opens(app, teams):
-    page(client(app, teams, 'coach'), '/off-season/goals')
