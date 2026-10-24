@@ -268,10 +268,14 @@ def test_players_are_emailed_their_games(club):
     sent = _emails(app)
     for pid in club['players'][:2]:
         c.post(f'/tournaments/{tid}/selection', json={'player_id': pid, 'selection': 'picked'})
-    c.post(f'/tournaments/{tid}/schedule', data={'schedule': 'Sat 09:00 vs Hucks Field 2\nSun 11:00 vs Fire', 'action': 'save'})
-    games = Game.query.filter_by(tournament_id=tid).order_by(Game.date).all()
-    # Player 1 sits out Sunday
-    r = c.post(f'/tournaments/{tid}/games/{games[1].id}/player', json={'player_id': club['players'][1], 'playing': False})
+    # Real dates, not day names: the tournament's weekdays depend on today
+    day1, day2 = TODAY + timedelta(days=20), TODAY + timedelta(days=21)
+    c.post(f'/tournaments/{tid}/schedule', data={
+        'schedule': f'{day1.isoformat()} 09:00 vs Hucks Field 2\n{day2.isoformat()} 11:00 vs Fire', 'action': 'save'})
+    fire = Game.query.filter_by(tournament_id=tid, opponent='Fire').one()
+    assert fire.date == day2
+    # Player 1 sits out the second day
+    r = c.post(f'/tournaments/{tid}/games/{fire.id}/player', json={'player_id': club['players'][1], 'playing': False})
     assert r.get_json()['count'] == 1
     sent.clear()
     c.post(f'/tournaments/{tid}/send-schedule')
