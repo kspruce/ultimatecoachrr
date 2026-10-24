@@ -414,9 +414,11 @@ def test_quick_add_puts_names_on_the_roster(club):
 def test_home_page_lists_what_needs_a_reply(club):
     c, tid = club['player_client'], club['tournament']
     page = c.get('/').get_data(as_text=True)
-    assert 'Can you make it?' in page and 'Nationals' in page
+    assert '1 thing needs you' in page and 'Nationals' in page
+    assert f'class="ev needs" data-row="tournament-{tid}"' in page
     c.post(f'/tournaments/{tid}/rsvp', json={'status': 'attending'})
-    assert 'Can you make it?' not in c.get('/').get_data(as_text=True)
+    page = c.get('/').get_data(as_text=True)
+    assert 'needs you' not in page and f'class="ev needs" data-row="tournament-{tid}"' not in page
 
 
 def test_email_preference_is_saved_without_a_password(club):
